@@ -11,7 +11,15 @@ describe('CSP', () => {
     expect(policy).toContain(`script-src 'self' ${scriptHash(bootScript(html))}`)
     expect(policy).not.toContain('unsafe-inline')
     expect(policy).toContain("frame-ancestors 'none'")
-    expect(html.match(/<script>/g)).toHaveLength(1)
+    // todo script en línea, con o sin atributos; los externos (con src) no cuentan
+    expect(html.match(/<script(?![^>]*\bsrc=)/g)).toHaveLength(1)
+  })
+
+  it('no nombra ningún host externo: todo es del mismo origen', () => {
+    const policy = contentSecurityPolicy(html)
+    expect(policy).not.toMatch(/https?:|\*/)
+    expect(policy).toContain("font-src 'self'")
+    expect(policy).toContain("style-src 'self'")
   })
 
   it('el hash cambia si cambia el script', () => {

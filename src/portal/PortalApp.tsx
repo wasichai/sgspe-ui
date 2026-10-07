@@ -8,7 +8,10 @@ import { LoginPage } from './auth/LoginPage'
 import { RequireSession } from './auth/RequireSession'
 import { crearI18n, IDIOMAS, NS } from './i18n'
 import { InicioPage } from './pages/InicioPage'
+import { PANTALLAS } from './pantallas'
 import { AppShell } from './shell/AppShell'
+import { GuardaDeSeccion } from './shell/GuardaDeSeccion'
+import { NAV_TREE } from './shell/navTree'
 
 // un 4xx no cambia por preguntar otra vez; un corte de red o un 5xx tal vez sí
 const retry = (count: number, error: unknown) => !(error instanceof ApiError && error.status >= 400 && error.status < 500) && count < 2
@@ -18,6 +21,8 @@ function NoEncontrada() {
   return <EmptyState title={t('noEncontrada')} />
 }
 
+// el Dashboard es la ruta índice; cada otra sección tiene ruta solo con su pantalla (PANTALLAS), y la pantalla se guarda
+// con los mismos permisos que el árbol (GuardaDeSeccion)
 const rutas = () =>
   createRoutesFromElements(
     <>
@@ -30,6 +35,22 @@ const rutas = () =>
         }
       >
         <Route index element={<InicioPage />} />
+        {NAV_TREE.flatMap((seccion) => {
+          const Pantalla = PANTALLAS[seccion.clave]
+          return Pantalla
+            ? [
+                <Route
+                  key={seccion.clave}
+                  path={seccion.to}
+                  element={
+                    <GuardaDeSeccion seccion={seccion}>
+                      <Pantalla />
+                    </GuardaDeSeccion>
+                  }
+                />
+              ]
+            : []
+        })}
         <Route path="*" element={<NoEncontrada />} />
       </Route>
     </>
