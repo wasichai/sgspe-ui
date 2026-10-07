@@ -30,7 +30,9 @@ el idioma:
   territorio (`?territory=`); el selector de proyecto y la `ContextBar` lo usan desde F2.
 - **Inicio:** en F1, la bienvenida con cuenta, organización, roles y mapa de módulos por fase, sin indicadores. El inicio
   por rol se registra en `src/portal/inicios.ts` con los permisos que lo ofrecen, nunca con nombres de rol.
-- **Idioma:** español por defecto e inglés (`src/portal/textos/`), con números y fechas es-PE.
+- **Idioma:** español por defecto e inglés (`src/portal/textos/`), con números y fechas es-PE. La elección se comparte con
+  `/admin`: se guarda en `sgspe.lang` y en las preferencias del usuario (`useSetLocale` de core), y `<html lang>` la sigue
+  en las dos apps (`es-PE` para el español).
 - **Temas:** «Pino y piedra» en claro y oscuro. `src/theme/tokens.css` es copia exacta de `docs/ux/tokens.css` (se compara
   con `cmp`, prettier no la toca) y `src/theme/wasichai.css` lee de ella los tokens de `@wasichai/ui`; IBM Plex Sans y Mono
   vienen de `@fontsource/*` y se sirven desde el mismo origen. Dentro de `cn()`, el cuerpo se escribe `text-sm`, no
@@ -42,7 +44,9 @@ el idioma:
 
 - Node 26 y Yarn 1.
 - Lectura de GitHub Packages: el scope está en el `.npmrc` del proyecto y el token en `~/.npmrc`, fuera del repositorio
-  (`//npm.pkg.github.com/:_authToken=…`, con `read:packages`). Instalar con `NODE_AUTH_TOKEN=$(gh auth token) yarn install`.
+  (`//npm.pkg.github.com/:_authToken=…`, con `read:packages`); con eso basta `yarn install`. El `.npmrc` del proyecto no
+  lee ninguna variable de entorno, a propósito: Yarn 1 falla si falta la variable que nombra. La CI no lo necesita:
+  `setup-node` escribe su propio `.npmrc` con `${NODE_AUTH_TOKEN}`, el secreto `PACKAGES_TOKEN`.
 
 ## Comandos
 

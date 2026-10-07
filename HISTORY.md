@@ -2,6 +2,23 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-07 — Cierre de la revisión final de la Fase 1
+
+- El idioma se comparte de verdad con `/admin`: `LanguageMenu` usa `useSetLocale` de core, que además de `sgspe.lang` guarda
+  la elección en las preferencias del usuario; antes, `LocaleSync` la revertía en la siguiente carga.
+- `<html lang>` sigue al idioma también en `/admin` (`idiomaHtmlModule`, un módulo que solo aporta un proveedor) y el español
+  es `es-PE`, en `index.html` y al cambiar de idioma; el código de i18n sigue siendo `es`.
+- Un `next=/admin…` después del login sale a la consola con una navegación completa; `/administracion` sigue en el portal.
+- Una sección del árbol sin pantalla dice «Esta sección llega en Fx» (la primera de sus fases); una ruta desconocida sigue
+  siendo la página no encontrada.
+- El login tiene `<main>` y el selector de idioma; los botones de tema y de salida miden 32 px; «Inténtelo de nuevo» trata
+  de usted; `scopeFromPath` tolera un `%` mal formado.
+- Documentación: la instalación es `yarn install` con el token en `~/.npmrc` (la CI lo recibe de `setup-node`), y la regla de
+  idioma del código dice lo que el código hace (identificadores del portal en español; técnicos y rutas, en inglés).
+- Pruebas: 133 en 11 archivos (24 más que las 109 de la fase).
+- Pendiente: dividir el bundle por app con carga diferida de `AdminApp` y `PortalApp` (un chunk de unos 850 kB; F2, antes de
+  MapLibre y ECharts), el alcance del token de la CI y el secreto de Dependabot (decisiones del usuario).
+
 ## 2026-10-07 — Fase 1: fundación
 
 - Andamiaje copiado de caja-ui: Vite 8 en el puerto 5182 con proxy de `/api` al 8094, Tailwind con `@wasichai/ui`,
