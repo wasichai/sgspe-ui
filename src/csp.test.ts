@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { bootScript, contentSecurityPolicy, scriptHash } from '../csp'
 import html from '../index.html?raw'
@@ -20,6 +21,13 @@ describe('CSP', () => {
     expect(policy).not.toMatch(/https?:|\*/)
     expect(policy).toContain("font-src 'self'")
     expect(policy).toContain("style-src 'self'")
+  })
+
+  it('el ícono de la pestaña es un archivo del mismo origen, que la CSP deja pasar', () => {
+    const href = /<link rel="icon"[^>]*href="([^"]+)"/.exec(html)?.[1]
+    expect(href).toBe('/favicon.svg')
+    expect(existsSync(`public${href}`)).toBe(true)
+    expect(contentSecurityPolicy(html)).toMatch(/img-src 'self'/)
   })
 
   it('el hash cambia si cambia el script', () => {
