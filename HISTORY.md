@@ -15,7 +15,9 @@ La entrada más reciente va primero. El diseño y los ADR están en el repositor
   de usted; `scopeFromPath` tolera un `%` mal formado.
 - Documentación: la instalación es `yarn install` con el token en `~/.npmrc` (la CI lo recibe de `setup-node`), y la regla de
   idioma del código dice lo que el código hace (identificadores del portal en español; técnicos y rutas, en inglés).
-- Pruebas: 133 en 11 archivos (24 más que las 109 de la fase).
+- Si el servidor rechaza guardar el idioma, `LanguageMenu` lo dice (`title`, color de error y aviso para lectores de pantalla)
+  en lugar de dejar el rechazo sin atender; core ya devolvió el idioma anterior.
+- Pruebas: 134 en 11 archivos (25 más que las 109 de la fase).
 - Pendiente: dividir el bundle por app con carga diferida de `AdminApp` y `PortalApp` (un chunk de unos 850 kB; F2, antes de
   MapLibre y ECharts), el alcance del token de la CI y el secreto de Dependabot (decisiones del usuario).
 

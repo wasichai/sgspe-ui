@@ -82,6 +82,18 @@ describe('i18n del portal', () => {
     expect(localStorage.getItem('sgspe.lang')).toBe('en')
   })
 
+  // si el servidor rechaza el PUT, core devuelve el idioma anterior y vuelve a lanzar: el menú lo dice y no queda sin atender
+  it('si el servidor rechaza guardar el idioma, vuelve al anterior y lo dice', async () => {
+    start({ method: 'PUT', path: '/auth/me/preferences', status: 500, body: { title: 'Error', status: 500, detail: 'Fallo de prueba' } }, preferencias('es'))
+    const selector = await screen.findByRole('combobox', { name: 'Idioma' })
+    await userEvent.selectOptions(selector, 'en')
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo guardar el idioma')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Idioma' })).toHaveValue('es'))
+    expect(localStorage.getItem('sgspe.lang')).toBe('es')
+    expect(document.documentElement.lang).toBe('es-PE')
+    expect(selector).toHaveAttribute('title', expect.stringContaining('No se pudo guardar el idioma'))
+  })
+
   it('el idioma guardado en el servidor se aplica al cargar y se recuerda en sgspe.lang', async () => {
     start(preferencias('en'))
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()

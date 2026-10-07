@@ -19,7 +19,8 @@ export const EN: Textos = {
     sinAcceso: 'Your account cannot open “{{seccion}}”.',
     preguntar: 'Ask',
     asistentePorLlegar: 'The AI assistant arrives in a later phase',
-    idioma: 'Language'
+    idioma: 'Language',
+    idiomaNoGuardado: 'Could not save the language'
   },
   secciones: {
     dashboard: 'Dashboard',

@@ -17,7 +17,8 @@ export const ES = {
     sinAcceso: 'Su cuenta no puede abrir «{{seccion}}».',
     preguntar: 'Preguntar',
     asistentePorLlegar: 'El asistente de IA llega en una próxima fase',
-    idioma: 'Idioma'
+    idioma: 'Idioma',
+    idiomaNoGuardado: 'No se pudo guardar el idioma'
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
   secciones: {
