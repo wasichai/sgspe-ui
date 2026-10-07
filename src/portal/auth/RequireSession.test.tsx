@@ -31,9 +31,33 @@ describe('safeNext', () => {
     ['/\n/otro.example', '/'],
     ['https://otro.example', '/'],
     ['javascript:alert(1)', '/'],
-    ['projects', '/']
+    ['projects', '/'],
+    ['\\x', '/'],
+    ['/\r/x', '/'],
+    ['/ /x', '/'],
+    ['/\u00a0/x', '/'],
+    ['/\u2028/x', '/'],
+    ['/\u007f/x', '/'],
+    ['/\u0000/x', '/'],
+    // los porcentajes no se decodifican al navegar: son rutas internas del mismo origen, no otro host
+    ['/%2F%2Fx', '/%2F%2Fx'],
+    ['/%5Cx', '/%5Cx'],
+    // volver al login después del login no lleva a ningún lado
+    ['/login', '/'],
+    ['/login?next=/projects', '/'],
+    ['/login/x', '/'],
+    ['/loginx', '/loginx']
   ])('%j lleva a %j', (next, esperado) => {
     expect(safeNext(next)).toBe(esperado)
+  })
+})
+
+describe('safeNext, rutas largas', () => {
+  it('acepta una ruta válida de 10 000 caracteres sin demora', () => {
+    const larga = `/${'a'.repeat(9_999)}`
+    const inicio = performance.now()
+    expect(safeNext(larga)).toBe(larga)
+    expect(performance.now() - inicio).toBeLessThan(100)
   })
 })
 

@@ -73,8 +73,8 @@ describe('login', () => {
     expect(alerta).not.toHaveTextContent('Correo o contraseña incorrectos')
   })
 
-  it('va al inicio en lugar de a otro sitio', async () => {
-    start('/login?next=//otro.example', [login(), ...rutasDeSesion(RELACIONISTA, SIN_PERMISOS)])
+  it.each(['//otro.example', '/\\otro.example', '/\t/otro.example'])('va al inicio en lugar de a otro sitio: %j', async (next) => {
+    start(`/login?next=${encodeURIComponent(next)}`, [login(), ...rutasDeSesion(RELACIONISTA, SIN_PERMISOS)])
     await ingresar('relacionista@sgspe.test', 'secreta')
     expect(await screen.findByRole('banner')).toBeInTheDocument()
     expect(aqui()).toBe('/')

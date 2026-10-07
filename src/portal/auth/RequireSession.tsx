@@ -14,5 +14,7 @@ export function RequireSession({ children }: { children: ReactNode }) {
 // solo rutas internas después del login (security.md §3.2). //otro.sitio y /\otro.sitio salen del sitio, y un espacio o un
 // carácter de control puede convertir una ruta en otra al pasar por el navegador: todo eso lleva al inicio
 export function safeNext(next: string | null): string {
-  return next !== null && /^\/(?![/\\])[^\\\s\u0000-\u001f\u007f]*$/.test(next) ? next : '/'
+  if (next === null || !/^\/(?![/\\])[^\\\s\u0000-\u001f\u007f]*$/.test(next)) return '/'
+  // volver al login después del login no lleva a ningún lado
+  return next === '/login' || next.startsWith('/login?') || next.startsWith('/login/') ? '/' : next
 }
