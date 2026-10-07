@@ -10,8 +10,8 @@
     "scripts": {
         "dev": "vite",
         "preview": "vite preview",
-        "lint": "prettier --check src index.html package.json tsconfig.json tsconfig.build.json vite.config.ts csp.ts commitlint.config.mjs",
-        "format": "prettier --write src index.html package.json tsconfig.json tsconfig.build.json vite.config.ts csp.ts commitlint.config.mjs",
+        "lint": "prettier --check src index.html package.json tsconfig.json tsconfig.build.json vite.config.ts csp.ts commitlint.config.mjs .github",
+        "format": "prettier --write src index.html package.json tsconfig.json tsconfig.build.json vite.config.ts csp.ts commitlint.config.mjs .github",
         "csp": "node --input-type=module -e \"import { readFileSync } from 'node:fs'; import { contentSecurityPolicy } from './csp.ts'; console.log(contentSecurityPolicy(readFileSync('index.html', 'utf8')))\"",
         "test": "vitest run",
         "build": "tsc -p tsconfig.build.json && vite build",
