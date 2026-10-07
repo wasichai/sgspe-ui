@@ -146,8 +146,22 @@ describe('navegación del portal', () => {
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
     const preguntar = await within(await screen.findByRole('banner')).findByRole('button', { name: 'Preguntar' })
     expect(preguntar).toHaveAttribute('aria-disabled', 'true')
-    expect(preguntar).toHaveAttribute('title', 'El asistente de IA llega en una próxima fase')
+    expect(preguntar).toHaveAccessibleDescription('El asistente de IA llega en una próxima fase')
     await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
+  })
+
+  it('un admin con todas las pantallas registradas ve las 13 secciones', async () => {
+    for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
+    await screen.findByRole('navigation', { name: 'Secciones' })
+    await waitFor(() => expect(enlaces()).toEqual(NAV_TREE.map((s) => s.label)))
+    expect(enlaces()).toHaveLength(13)
+  })
+
+  it('la ruta directa a una sección sin pantalla muestra la página no encontrada', async () => {
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/projects')
+    expect(await screen.findByText('Esta página no existe')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
   })
 
   it('la sección abierta se marca como la página actual', async () => {

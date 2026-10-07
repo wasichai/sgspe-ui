@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
-import { contentSecurityPolicy } from './csp'
+import { contentSecurityPolicy } from './csp.ts'
 
 const api = process.env.WASICHAI_API_URL ?? 'http://localhost:8094'
 // la CSP de security.md §3.2 en modo de solo informe (ADR-0020): en desarrollo la manda Vite; en producción, el proxy

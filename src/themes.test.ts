@@ -66,9 +66,9 @@ describe('Pino y piedra', () => {
     const deWasichai = [...declaradas(bloque(wasichaiTheme, ":root,\n[data-theme='light'] {"))].filter((v) => v !== '--overlay' && v !== '--map-selected')
     expect(Object.keys(correspondencia).sort()).toEqual(deWasichai.sort())
     expect(Object.values(correspondencia).filter((sg) => !claro.has(sg))).toEqual([])
-    // el bloque oscuro de wasichai declara las mismas variables que el claro: el puente las cubre en los dos temas
+    // todo lo que declara el bloque oscuro de wasichai lo cubre el puente (puede cubrir más: lo que solo declara el claro)
     const oscuroDeWasichai = [...declaradas(bloque(wasichaiTheme, "[data-theme='dark'] {"))].filter((v) => v !== '--overlay' && v !== '--map-selected')
-    expect(Object.keys(correspondencia).sort()).toEqual(oscuroDeWasichai.sort())
+    expect(oscuroDeWasichai.filter((v) => !(v in correspondencia))).toEqual([])
   })
 
   it('el tema oscuro de SGSPE cambia todo lo que lee el puente, salvo el texto blanco sobre pino', () => {

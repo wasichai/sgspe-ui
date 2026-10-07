@@ -4,6 +4,7 @@ import { ExternalLink, LayoutDashboard, LogOut, Mountain, Sparkles } from 'lucid
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet } from 'react-router'
 import { NS } from '../i18n'
+import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
 import { ThemeMenu } from './ThemeMenu'
 
@@ -39,11 +40,17 @@ export function AppShell() {
           type="button"
           aria-disabled="true"
           title={t('shell.asistentePorLlegar')}
+          aria-describedby="asistente-por-llegar"
           className="flex h-8 cursor-not-allowed items-center gap-1.5 rounded-sg-md border border-dashed border-sg-ai-border px-2.5 text-sg-body-sm text-sg-ai opacity-60"
         >
           <Sparkles aria-hidden className="size-4" />
           {t('shell.preguntar')}
         </button>
+        {/* el motivo también para lectores de pantalla: title solo no se lee de forma fiable */}
+        <span id="asistente-por-llegar" className="sr-only">
+          {t('shell.asistentePorLlegar')}
+        </span>
+        <LanguageMenu />
         <ThemeMenu />
         <span className="hidden max-w-56 flex-col text-right leading-tight sm:flex" title={user?.email}>
           <span className="truncate text-sg-body-sm text-sg-text">{user?.displayName}</span>
