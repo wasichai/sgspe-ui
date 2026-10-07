@@ -15,35 +15,54 @@ vi.mock('../inicios', async (original) => ({ ...(await original<typeof import('.
 const ORGANIZACION = { id: 'o1', name: 'Organización de prueba', slug: 'prueba', createdAt: null }
 
 let fetch: FetchMock | null = null
+let fetchDelNavegador: typeof globalThis.fetch | null = null
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   variantes.length = 0
+  fetchDelNavegador = globalThis.fetch
 })
 afterEach(() => {
   fetch?.restore()
   fetch = null
+  // por si una prueba dejó su envoltura de fetch puesta
+  if (fetchDelNavegador) globalThis.fetch = fetchDelNavegador
 })
 
-function start(user: AuthUser, permisos: CallerPermissions, primero: MockRoute[] = []) {
-  abrirSesion(user)
-  window.history.pushState({}, '', '/')
-  fetch = mockFetch([...primero, { path: '/organizations/current', body: ORGANIZACION }, ...rutasDeSesion(user, permisos)])
-  render(<PortalApp />)
+// retiene la respuesta de los permisos hasta que se llame a liberar(): el estado de carga de core, que mockFetch no sabe
+// hacer. se instala sobre el fetch que dejó mockFetch, no antes, y solicitada se cumple cuando la petición ya está retenida
+interface Retencion {
+  liberar: () => void
+  solicitada: Promise<void>
 }
-
-// retiene la respuesta de los permisos hasta que se llame a liberar(): el estado de carga de core, que mockFetch no sabe hacer
-function retenerPermisos() {
-  const original = globalThis.fetch
+function retenerPermisos(): Retencion {
+  const siguiente = globalThis.fetch
   let liberar = () => {}
+  let avisar = () => {}
   const retenida = new Promise<void>((resolver) => {
     liberar = resolver
   })
+  const solicitada = new Promise<void>((resolver) => {
+    avisar = resolver
+  })
   globalThis.fetch = async (entrada, opciones) => {
-    if (String(entrada instanceof Request ? entrada.url : entrada).includes('/auth/me/permissions')) await retenida
-    return original(entrada, opciones)
+    if (String(entrada instanceof Request ? entrada.url : entrada).includes('/auth/me/permissions')) {
+      avisar()
+      await retenida
+    }
+    return siguiente(entrada, opciones)
   }
-  return () => liberar()
+  return { liberar, solicitada }
+}
+
+// retener: la respuesta de los permisos no llega hasta que la prueba la libera
+function start(user: AuthUser, permisos: CallerPermissions, primero: MockRoute[] = [], retener = false): Retencion | null {
+  abrirSesion(user)
+  window.history.pushState({}, '', '/')
+  fetch = mockFetch([...primero, { path: '/organizations/current', body: ORGANIZACION }, ...rutasDeSesion(user, permisos)])
+  const retencion = retener ? retenerPermisos() : null
+  render(<PortalApp />)
+  return retencion
 }
 
 // el contenido de la página, sin la barra superior (que también muestra el nombre y los roles)
@@ -119,18 +138,24 @@ describe('inicio de F1', () => {
   })
 
   it('mientras los permisos se leen, dice «Cargando…» y no «Solo para administración»', async () => {
-    const liberar = retenerPermisos()
-    start(ADMINISTRACION, ADMIN_PERMISOS)
-    expect(await pagina().findByText('Administración de prueba (admin@sgspe.test)')).toBeInTheDocument()
+    const retencion = start(ADMINISTRACION, ADMIN_PERMISOS, [], true)
+    // la petición de los permisos ya salió y su respuesta está retenida: lo que se ve es el estado de carga de verdad
+    await retencion?.solicitada
+    // las demás lecturas sí llegan: la página ya procesó respuestas y los permisos siguen retenidos
+    expect(await pagina().findByText('Organización de prueba')).toBeInTheDocument()
+    expect(await pagina().findByText('ADMIN')).toBeInTheDocument()
+    expect(filas()).toHaveLength(13)
     expect(filas().every(([, , estado]) => estado === 'Cargando…')).toBe(true)
     expect(pagina().queryByText('Solo para administración')).not.toBeInTheDocument()
-    liberar()
+    expect(pagina().queryByText(/secciones disponibles/)).not.toBeInTheDocument()
+    // solo liberar la respuesta mueve la tabla a sus estados
+    retencion?.liberar()
     await waitFor(() => expect(filas()[0][2]).toBe('Disponible'))
     expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
   })
 
   it('dice que no pudo leer la cuenta cuando /auth/me falla', async () => {
-    start(AUDITORA, SIN_PERMISOS, [{ path: '/auth/me', status: 500, body: { title: 'Error', status: 500 } }])
+    start(AUDITORA, SIN_PERMISOS, [{ path: '/auth/me', status: 403, body: { title: 'Forbidden', status: 403 } }])
     expect(await pagina().findByText('No se pudo leer la cuenta')).toBeInTheDocument()
   })
 
