@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+@import '@wasichai/ui/theme.css';
+/* "Pino y piedra" (ASM-077): los tokens de docs/ux/tokens.css y, después, los de wasichai leídos de ellos */
+@import './theme/tokens.css';
+@import './theme/wasichai.css';
+/* IBM Plex Sans (400, 500, 600) e IBM Plex Mono (400, 500), latín y latín extendido, servidas desde el mismo origen:
+   vite copia los woff2 a dist/assets (CSP font-src 'self', ADR-0026) */
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-600.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-ext-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-ext-500.css';
+/* los paquetes @wasichai traen nombres de clase, no css: tailwind los escanea */
+@source '../node_modules/@wasichai';

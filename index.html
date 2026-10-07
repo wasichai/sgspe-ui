@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es-PE">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>SGSPE</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <script>
+            // antes del bundle: el tema guardado (portal y /admin comparten sgspe.*), para que un usuario en oscuro no vea un
+            // destello claro. cada tema de core, id -> esquema de color: claro y oscuro (themes.test.ts los mantiene a la par).
+            // system y un id desconocido toman el ajuste del sistema operativo, como resolveTheme de core. es el único
+            // script en línea: la CSP lo autoriza por su hash (csp.ts)
+            try {
+                const schemes = { light: 'light', dark: 'dark' }
+                const stored = localStorage.getItem('sgspe.theme')
+                const dark = matchMedia('(prefers-color-scheme: dark)').matches
+                const theme = stored && Object.hasOwn(schemes, stored) ? stored : dark ? 'dark' : 'light'
+                document.documentElement.dataset.theme = theme
+                document.documentElement.style.colorScheme = schemes[theme]
+            } catch {}
+        </script>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>

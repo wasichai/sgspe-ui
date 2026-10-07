@@ -1,0 +1,29 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// la configuración se evalúa al importarla: cada caso fija WASICHAI_API_URL antes de cargarla, de modo que la prueba no
+// depende de lo que haya en el shell de quien la corre
+async function cargar(api: string | undefined) {
+  vi.resetModules()
+  vi.stubEnv('WASICHAI_API_URL', api)
+  return (await import('../vite.config')).default
+}
+
+afterEach(() => vi.unstubAllEnvs())
+
+// ADR-0026: Vite sirve en el 5182 y reenvía /api al backend en el 8094; mismo origen, sin CORS
+describe('vite.config', () => {
+  it('sirve en 5182 y reenvía /api al backend en 8094', async () => {
+    const config = await cargar(undefined)
+    expect(config.server?.port).toBe(5182)
+    expect(config.server?.strictPort).toBe(true)
+    expect(config.server?.proxy).toEqual({ '/api': 'http://localhost:8094' })
+    expect(config.preview?.port).toBe(5182)
+    expect(config.preview?.proxy).toEqual({ '/api': 'http://localhost:8094' })
+  })
+
+  it('WASICHAI_API_URL cambia el destino del proxy', async () => {
+    const config = await cargar('http://otro-backend.test:9000')
+    expect(config.server?.proxy).toEqual({ '/api': 'http://otro-backend.test:9000' })
+    expect(config.preview?.proxy).toEqual({ '/api': 'http://otro-backend.test:9000' })
+  })
+})
