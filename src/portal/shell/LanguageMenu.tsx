@@ -13,8 +13,12 @@ export function LanguageMenu() {
       onChange={(event) => void changeLanguage(i18n, client.keys.lang, event.target.value)}
       className="h-8 rounded-sg-md border border-sg-border-strong bg-sg-surface px-1.5 text-sm text-sg-text"
     >
-      <option value="es">Español</option>
-      <option value="en">English</option>
+      <option value="es" lang="es">
+        Español
+      </option>
+      <option value="en" lang="en">
+        English
+      </option>
     </select>
   )
 }

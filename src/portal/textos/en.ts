@@ -35,6 +35,25 @@ export const EN: Textos = {
     reports: 'Reports',
     admin: 'Administration'
   },
-  inicio: { titulo: 'Dashboard' },
+  inicio: {
+    titulo: 'Dashboard',
+    bienvenida: 'Welcome, {{nombre}}.',
+    porRol: 'Each role gets its own home when its module arrives; until then, every account starts here.',
+    cuenta: 'Your account',
+    usuario: 'User',
+    organizacion: 'Organization',
+    roles: 'Roles',
+    cargando: 'Loading…',
+    sinOrganizacion: 'Could not read the organization',
+    sinCuenta: 'Could not read the account',
+    sinRoles: 'No roles',
+    modulos: 'Modules by phase',
+    resumen: '{{disponibles, number}} of {{total, number}} sections available to your account',
+    seccion: 'Section',
+    fases: 'Phases',
+    estado: 'Status',
+    llegaEn: 'Arrives in {{fase}}',
+    estados: { disponible: 'Available', 'sin-acceso': 'No access with your permissions', 'solo-admin': 'Administrators only' }
+  },
   noEncontrada: 'This page does not exist'
 }

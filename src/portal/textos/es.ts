@@ -34,7 +34,26 @@ export const ES = {
     reports: 'Reportes',
     admin: 'Administración'
   },
-  inicio: { titulo: 'Dashboard' },
+  inicio: {
+    titulo: 'Dashboard',
+    bienvenida: 'Le damos la bienvenida, {{nombre}}.',
+    porRol: 'Cada rol tendrá su propio inicio cuando llegue su módulo; mientras tanto, todas las cuentas empiezan aquí.',
+    cuenta: 'Su cuenta',
+    usuario: 'Usuario',
+    organizacion: 'Organización',
+    roles: 'Roles',
+    cargando: 'Cargando…',
+    sinOrganizacion: 'No se pudo leer la organización',
+    sinCuenta: 'No se pudo leer la cuenta',
+    sinRoles: 'Sin roles',
+    modulos: 'Módulos por fase',
+    resumen: '{{disponibles, number}} de {{total, number}} secciones disponibles para su cuenta',
+    seccion: 'Sección',
+    fases: 'Fases',
+    estado: 'Estado',
+    llegaEn: 'Llega en {{fase}}',
+    estados: { disponible: 'Disponible', 'sin-acceso': 'Sin acceso con sus permisos', 'solo-admin': 'Solo para administración' }
+  },
   noEncontrada: 'Esta página no existe'
 }
 

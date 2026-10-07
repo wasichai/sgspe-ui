@@ -68,6 +68,8 @@ describe('Pino y piedra', () => {
     expect(Object.values(correspondencia).filter((sg) => !claro.has(sg))).toEqual([])
     // todo lo que declara el bloque oscuro de wasichai lo cubre el puente (puede cubrir más: lo que solo declara el claro)
     const oscuroDeWasichai = [...declaradas(bloque(wasichaiTheme, "[data-theme='dark'] {"))].filter((v) => v !== '--overlay' && v !== '--map-selected')
+    // sin esto, un bloque que no se encontrara declararía cero variables y la comprobación pasaría sin mirar nada
+    expect(oscuroDeWasichai.length).toBeGreaterThan(0)
     expect(oscuroDeWasichai.filter((v) => !(v in correspondencia))).toEqual([])
   })
 

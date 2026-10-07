@@ -147,6 +147,8 @@ describe('navegación del portal', () => {
     const preguntar = await within(await screen.findByRole('banner')).findByRole('button', { name: 'Preguntar' })
     expect(preguntar).toHaveAttribute('aria-disabled', 'true')
     expect(preguntar).toHaveAccessibleDescription('El asistente de IA llega en una próxima fase')
+    // el motivo también se ve al pasar el puntero
+    expect(preguntar).toHaveAttribute('title', 'El asistente de IA llega en una próxima fase')
     await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
   })
 

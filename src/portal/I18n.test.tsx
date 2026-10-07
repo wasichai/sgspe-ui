@@ -44,6 +44,8 @@ describe('i18n del portal', () => {
     start()
     expect(await screen.findByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Idioma' })).toHaveValue('es')
+    // WCAG 3.1.1: el idioma de la página es el del portal
+    expect(document.documentElement.lang).toBe('es')
   })
 
   it('con sgspe.lang en inglés, el login también habla inglés', async () => {
@@ -61,6 +63,7 @@ describe('i18n del portal', () => {
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument()
     expect(localStorage.getItem('sgspe.lang')).toBe('en')
+    expect(document.documentElement.lang).toBe('en')
   })
 
   it('los números y las fechas son es-PE en los dos idiomas', () => {
@@ -71,6 +74,7 @@ describe('i18n del portal', () => {
       expect(i18n.t('prueba', { ns: NS, lng: idioma, n: 12345.5, d: cuando })).toBe(`12,345.5 · ${fechaPe(cuando)}`)
     }
     expect(numeroPe(1234567.25)).toBe('1,234,567.25')
-    expect(fechaPe(cuando)).toBe(new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeZone: 'America/Lima' }).format(cuando))
+    // 03:00 UTC es todavía el 7 de octubre en Lima (UTC-5)
+    expect(fechaPe(new Date('2026-10-08T03:00:00Z'))).toBe('7 oct. 2026')
   })
 })

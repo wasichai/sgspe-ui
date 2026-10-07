@@ -20,6 +20,12 @@ export function ajustarI18n(i18n: I18n): void {
   i18n.addResourceBundle('en', NS, EN, true, true)
   i18n.services.formatter?.add('number', numeroPe)
   i18n.services.formatter?.add('datetime', fechaPe)
+  // WCAG 3.1.1: <html lang> sigue al idioma del portal, al arrancar y cada vez que cambia
+  const alIdioma = (idioma: string | undefined) => {
+    document.documentElement.lang = idioma ?? 'es'
+  }
+  alIdioma(i18n.resolvedLanguage ?? i18n.language)
+  i18n.on('languageChanged', alIdioma)
 }
 
 // el i18n de core (sus textos y los de los módulos) más los del portal
