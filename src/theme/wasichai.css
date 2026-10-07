@@ -1,0 +1,43 @@
+/* los tokens de @wasichai/ui/theme.css leídos de los de SGSPE ("Pino y piedra", ASM-077, docs/ux/tokens.css): las
+   primitivas de wasichai (Button, Card, Alert, Table, Badge) y /admin se ven con la misma paleta que el portal. es la
+   correspondencia que tokens.css deja para F1 (pregunta Q2 de docs/ux/ux-architecture.md). wasichai fija sus tokens en
+   :root y en [data-theme] (el atributo que core y el script de arranque ponen en <html>); este bloque va después, con la
+   misma especificidad, y los --sg-* ya cambian solos entre claro y oscuro. --overlay y --map-selected siguen siendo los
+   de wasichai: tokens.css no tiene un equivalente */
+:root,
+[data-theme='light'],
+[data-theme='dark'] {
+    --surface: var(--sg-surface);
+    --surface-muted: var(--sg-bg);
+    --border: var(--sg-border);
+    --ink: var(--sg-text);
+    --ink-muted: var(--sg-text-muted);
+    --brand: var(--sg-primary);
+    --brand-strong: var(--sg-primary-hover);
+    --brand-soft: var(--sg-primary-soft);
+    --on-brand: var(--sg-on-primary);
+    --shell: var(--sg-surface);
+    --shell-muted: var(--sg-text-secondary);
+    --shell-ink: var(--sg-text);
+    --danger: var(--sg-danger);
+    --on-danger: var(--sg-on-critical);
+    --success: var(--sg-success);
+    --warning: var(--sg-warning);
+    --warning-soft: var(--sg-warning-soft);
+    --success-soft: var(--sg-success-soft);
+    --danger-soft: var(--sg-danger-soft);
+    --notice: var(--sg-warning);
+    --notice-soft: var(--sg-warning-soft);
+    --link: var(--sg-primary-text);
+    --focus: var(--sg-focus);
+    --table-head: var(--sg-surface-sunken);
+    --table-stripe: var(--sg-surface-hover);
+    --line: var(--sg-border-subtle);
+}
+
+/* IBM Plex Sans y Plex Mono para todo, también para /admin: font-sans y font-mono son las familias por defecto de
+   tailwind. las fuentes se sirven desde el mismo origen (index.css), nunca desde un CDN (font-src 'self') */
+@theme {
+    --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}

@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Outlet } from 'react-router'
 import { NS } from '../i18n'
+import { ThemeMenu } from './ThemeMenu'
 
 // el marco del portal: cabecera con la marca, la cuenta y la salida; debajo, el contenido
 export function AppShell() {
@@ -14,6 +15,7 @@ export function AppShell() {
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-surface px-4">
         <span className="text-sm font-bold text-brand">{appName}</span>
         <div className="flex-1" />
+        <ThemeMenu />
         <span className="text-sm text-ink">{user?.displayName}</span>
         <button type="button" onClick={signOut} aria-label={t('shell.salir')} className="rounded p-1.5 text-ink-muted hover:bg-surface-muted hover:text-ink">
           <LogOut className="size-4" />
