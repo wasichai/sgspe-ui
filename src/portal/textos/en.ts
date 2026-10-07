@@ -15,6 +15,7 @@ export const EN: Textos = {
     salir: 'Sign out',
     secciones: 'Sections',
     leyendoPermisos: 'Reading your account permissions…',
+    sinPermisos: 'Your permissions could not be read',
     sinAcceso: 'Your account cannot open “{{seccion}}”.',
     preguntar: 'Ask',
     asistentePorLlegar: 'The AI assistant arrives in a later phase',
@@ -47,12 +48,14 @@ export const EN: Textos = {
     sinOrganizacion: 'Could not read the organization',
     sinCuenta: 'Could not read the account',
     sinRoles: 'No roles',
+    sinPermisos: 'Your permissions could not be read',
     modulos: 'Modules by phase',
     resumen: '{{disponibles, number}} of {{total, number}} sections available to your account',
     seccion: 'Section',
     fases: 'Phases',
     estado: 'Status',
     llegaEn: 'Arrives in {{fase}}',
+    notasDeFases: { reports: 'F2–F4 exports; F8 deliverables' },
     estados: { disponible: 'Available', 'sin-acceso': 'No access with your permissions', 'solo-admin': 'Administrators only' }
   },
   noEncontrada: 'This page does not exist'

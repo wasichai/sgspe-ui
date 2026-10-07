@@ -1,6 +1,6 @@
 import { useAuth } from '@wasichai/core'
 import { Badge, Table, Td, Th } from '@wasichai/ui'
-import { CircleCheck, Clock, Lock, type LucideIcon } from 'lucide-react'
+import { CircleCheck, Clock, Lock, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
 import { INICIOS, inicioPara } from '../inicios'
@@ -27,13 +27,15 @@ export function InicioPage() {
 // sus etiquetas en español solo las lee quien administra (/api/roles). lo que no se pudo leer se dice; nunca se inventa
 function Bienvenida() {
   const { t } = useTranslation(NS)
-  const { user } = useAuth()
+  const { user, permissions, permissionsError } = useAuth()
   const cuenta = useCuenta()
   const organizacion = useOrganizacion()
   const oferta = useOferta()
   const estados = NAV_TREE.map((seccion) => ({ seccion, estado: estadoDe(seccion, oferta) }))
   const disponibles = estados.filter(({ estado }) => estado === 'disponible').length
   const rotulo = (estado: Estado, fase: string) => (estado === 'por-llegar' ? t('inicio.llegaEn', { fase }) : t(`inicio.estados.${estado}`))
+  // mientras los permisos se leen, o si no se pudieron leer, can e isAdmin son falsos sin serlo: ningún estado sale de ellos
+  const permisosNoListos = permissions ? null : permissionsError ? 'error' : 'cargando'
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-8">
@@ -70,7 +72,13 @@ function Bienvenida() {
           <h2 id="inicio-modulos" className="text-sg-h2 font-semibold text-sg-text">
             {t('inicio.modulos')}
           </h2>
-          <p className="text-sg-body-sm text-sg-text-muted">{t('inicio.resumen', { disponibles, total: NAV_TREE.length })}</p>
+          <p className="text-sg-body-sm text-sg-text-muted">
+            {permisosNoListos === 'error'
+              ? t('inicio.sinPermisos')
+              : permisosNoListos
+                ? t('inicio.cargando')
+                : t('inicio.resumen', { disponibles, total: NAV_TREE.length })}
+          </p>
         </div>
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table>
@@ -87,12 +95,19 @@ function Bienvenida() {
                 return (
                   <tr key={seccion.clave}>
                     <Td>{t(`secciones.${seccion.clave}`)}</Td>
-                    <Td className="font-sg-mono tabular-nums">{seccion.fases.join(', ')}</Td>
+                    <Td className="font-sg-mono tabular-nums">{t(`inicio.notasDeFases.${seccion.clave}`, { defaultValue: seccion.fases.join(', ') })}</Td>
                     <Td>
-                      <Badge className={`gap-1 ${clase}`}>
-                        <Icono aria-hidden className="size-3" />
-                        {rotulo(estado, seccion.fases[0])}
-                      </Badge>
+                      {permisosNoListos ? (
+                        <Badge className="gap-1 bg-sg-neutral-soft text-sg-neutral">
+                          {permisosNoListos === 'error' ? <TriangleAlert aria-hidden className="size-3" /> : <Clock aria-hidden className="size-3" />}
+                          {permisosNoListos === 'error' ? t('inicio.sinPermisos') : t('inicio.cargando')}
+                        </Badge>
+                      ) : (
+                        <Badge className={`gap-1 ${clase}`}>
+                          <Icono aria-hidden className="size-3" />
+                          {rotulo(estado, seccion.fases[0])}
+                        </Badge>
+                      )}
                     </Td>
                   </tr>
                 )

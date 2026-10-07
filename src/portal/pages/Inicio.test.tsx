@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import type { AuthUser, CallerPermissions } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { abrirSesion, ADMIN_PERMISOS, ADMINISTRACION, AUDITORA, RELACIONISTA, rutasDeSesion, SIN_PERMISOS } from '../../test/portal'
+import { abrirSesion, ADMIN_PERMISOS, ADMINISTRACION, AUDITORA, RELACIONISTA, rutasDeSesion, SIN_PERMISOS, yo } from '../../test/portal'
 import type { VarianteDeInicio } from '../inicios'
 import { PortalApp } from '../PortalApp'
 
@@ -32,6 +32,20 @@ function start(user: AuthUser, permisos: CallerPermissions, primero: MockRoute[]
   render(<PortalApp />)
 }
 
+// retiene la respuesta de los permisos hasta que se llame a liberar(): el estado de carga de core, que mockFetch no sabe hacer
+function retenerPermisos() {
+  const original = globalThis.fetch
+  let liberar = () => {}
+  const retenida = new Promise<void>((resolver) => {
+    liberar = resolver
+  })
+  globalThis.fetch = async (entrada, opciones) => {
+    if (String(entrada instanceof Request ? entrada.url : entrada).includes('/auth/me/permissions')) await retenida
+    return original(entrada, opciones)
+  }
+  return () => liberar()
+}
+
 // el contenido de la página, sin la barra superior (que también muestra el nombre y los roles)
 const pagina = () => within(screen.getByRole('main'))
 
@@ -56,7 +70,7 @@ const POR_LLEGAR = [
   ['Programas sociales', 'F5', 'Llega en F5'],
   ['Documentos', 'F3', 'Llega en F3'],
   ['Tareas', 'F3', 'Llega en F3'],
-  ['Reportes', 'F2, F8', 'Llega en F2']
+  ['Reportes', 'F2–F4 exportaciones; F8 entregables', 'Llega en F2']
 ]
 
 function InicioDePrueba() {
@@ -85,6 +99,44 @@ describe('inicio de F1', () => {
   it('dice que no pudo leer la organización en lugar de inventarla', async () => {
     start(AUDITORA, { admin: false, objects: {} }, [{ path: '/organizations/current', status: 404, body: { title: 'Not Found', status: 404 } }])
     expect(await pagina().findByText('No se pudo leer la organización')).toBeInTheDocument()
+  })
+
+  it('también lo dice cuando la organización contesta 403', async () => {
+    start(AUDITORA, { admin: false, objects: {} }, [{ path: '/organizations/current', status: 403, body: { title: 'Forbidden', status: 403 } }])
+    expect(await pagina().findByText('No se pudo leer la organización')).toBeInTheDocument()
+  })
+
+  // los permisos que no se pueden leer, o que aún no llegan, no son «sin acceso»: la tabla no inventa un estado (RQ-SEC-005)
+  it('si los permisos no se pueden leer, lo dice y no calcula estados con permisos que no tiene', async () => {
+    start(ADMINISTRACION, SIN_PERMISOS, [{ path: '/auth/me/permissions', status: 403, body: { title: 'Forbidden', status: 403 } }])
+    await waitFor(() => expect(pagina().getAllByText('No se pudieron leer sus permisos').length).toBeGreaterThan(0))
+    expect(pagina().queryByText(/Sin acceso/)).not.toBeInTheDocument()
+    expect(pagina().queryByText('Solo para administración')).not.toBeInTheDocument()
+    expect(pagina().queryByText('Disponible')).not.toBeInTheDocument()
+    expect(pagina().queryByText(/secciones disponibles/)).not.toBeInTheDocument()
+    expect(filas().every(([, , estado]) => estado === 'No se pudieron leer sus permisos')).toBe(true)
+    expect(filas()).toHaveLength(13)
+  })
+
+  it('mientras los permisos se leen, dice «Cargando…» y no «Solo para administración»', async () => {
+    const liberar = retenerPermisos()
+    start(ADMINISTRACION, ADMIN_PERMISOS)
+    expect(await pagina().findByText('Administración de prueba (admin@sgspe.test)')).toBeInTheDocument()
+    expect(filas().every(([, , estado]) => estado === 'Cargando…')).toBe(true)
+    expect(pagina().queryByText('Solo para administración')).not.toBeInTheDocument()
+    liberar()
+    await waitFor(() => expect(filas()[0][2]).toBe('Disponible'))
+    expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
+  })
+
+  it('dice que no pudo leer la cuenta cuando /auth/me falla', async () => {
+    start(AUDITORA, SIN_PERMISOS, [{ path: '/auth/me', status: 500, body: { title: 'Error', status: 500 } }])
+    expect(await pagina().findByText('No se pudo leer la cuenta')).toBeInTheDocument()
+  })
+
+  it('dice «Sin roles» cuando la cuenta no tiene ninguno', async () => {
+    start(AUDITORA, SIN_PERMISOS, [{ path: '/auth/me', body: { ...yo(AUDITORA), roles: [] } }])
+    expect(await pagina().findByText('Sin roles')).toBeInTheDocument()
   })
 })
 

@@ -11,7 +11,9 @@ export function GuardaDeSeccion({ seccion, children }: { seccion: SeccionNav; ch
   const { t } = useTranslation(NS)
   const { permissions, permissionsError } = useAuth()
   const oferta = useOferta()
-  if (!permissions && !permissionsError) return <p className="text-sm text-sg-text-muted">{t('shell.leyendoPermisos')}</p>
+  // permisos que no se pudieron leer no son permisos que faltan: no se afirma que la cuenta no pueda abrirla
+  if (!permissions && permissionsError) return <Alert tone="warning">{t('shell.sinPermisos')}</Alert>
+  if (!permissions) return <p className="text-sm text-sg-text-muted">{t('shell.leyendoPermisos')}</p>
   if (estadoDe(seccion, oferta) === 'disponible') return children
   return <Alert tone="warning">{t('shell.sinAcceso', { seccion: t(`secciones.${seccion.clave}`) })}</Alert>
 }

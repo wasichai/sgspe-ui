@@ -133,6 +133,21 @@ describe('navegación del portal', () => {
     expect(enlaces()).toEqual(['Dashboard'])
   })
 
+  it('si los permisos no se pueden leer, la URL de una sección lo dice y no afirma que la cuenta no pueda abrirla', async () => {
+    registradas.projects = Prueba
+    start(
+      ADMINISTRACION,
+      [
+        { path: '/auth/me', body: yo(ADMINISTRACION) },
+        { path: '/auth/me/permissions', status: 403, body: { title: 'Forbidden', status: 403 } }
+      ],
+      '/projects'
+    )
+    expect(await screen.findByText('No se pudieron leer sus permisos')).toBeInTheDocument()
+    expect(screen.queryByText(/no puede abrir/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
+  })
+
   it('una sección con pantalla se ofrece con su permiso y abre su pantalla', async () => {
     registradas.projects = Prueba
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, { admin: false, objects: { project: ['READ'] } }), '/projects')

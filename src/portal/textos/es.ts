@@ -13,6 +13,7 @@ export const ES = {
     salir: 'Cerrar sesión',
     secciones: 'Secciones',
     leyendoPermisos: 'Leyendo los permisos de su cuenta…',
+    sinPermisos: 'No se pudieron leer sus permisos',
     sinAcceso: 'Su cuenta no puede abrir «{{seccion}}».',
     preguntar: 'Preguntar',
     asistentePorLlegar: 'El asistente de IA llega en una próxima fase',
@@ -46,12 +47,14 @@ export const ES = {
     sinOrganizacion: 'No se pudo leer la organización',
     sinCuenta: 'No se pudo leer la cuenta',
     sinRoles: 'Sin roles',
+    sinPermisos: 'No se pudieron leer sus permisos',
     modulos: 'Módulos por fase',
     resumen: '{{disponibles, number}} de {{total, number}} secciones disponibles para su cuenta',
     seccion: 'Sección',
     fases: 'Fases',
     estado: 'Estado',
     llegaEn: 'Llega en {{fase}}',
+    notasDeFases: { reports: 'F2–F4 exportaciones; F8 entregables' },
     estados: { disponible: 'Disponible', 'sin-acceso': 'Sin acceso con sus permisos', 'solo-admin': 'Solo para administración' }
   },
   noEncontrada: 'Esta página no existe'
