@@ -175,10 +175,31 @@ describe('navegación del portal', () => {
     expect(enlaces()).toHaveLength(13)
   })
 
-  it('la ruta directa a una sección sin pantalla muestra la página no encontrada', async () => {
-    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/projects')
-    expect(await screen.findByText('Esta página no existe')).toBeInTheDocument()
+  // design-system.md §6.5: una sección que aún no llega lo dice, sin un error técnico; llega en la primera de sus fases
+  it.each([
+    ['/projects', 'Esta sección llega en F2'],
+    ['/territory', 'Esta sección llega en F2'],
+    ['/commitments', 'Esta sección llega en F3'],
+    ['/attention', 'Esta sección llega en F4'],
+    ['/programs', 'Esta sección llega en F5'],
+    ['/reports', 'Esta sección llega en F2']
+  ])('la ruta directa a %s, sin pantalla todavía, dice «%s»', async (ruta, texto) => {
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), ruta)
+    expect(await screen.findByText(texto)).toBeInTheDocument()
+    expect(screen.queryByText('Esta página no existe')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
+  })
+
+  it('la sección por llegar habla inglés con el idioma en inglés', async () => {
+    localStorage.setItem('sgspe.lang', 'en')
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/projects')
+    expect(await screen.findByText('This section arrives in F2')).toBeInTheDocument()
+  })
+
+  it('una ruta que no es de ninguna sección sigue siendo la página no encontrada', async () => {
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/no-existe')
+    expect(await screen.findByText('Esta página no existe')).toBeInTheDocument()
+    expect(screen.queryByText(/Esta sección llega en/)).not.toBeInTheDocument()
   })
 
   it('la sección abierta se marca como la página actual', async () => {
@@ -207,6 +228,16 @@ describe('contexto en la URL', () => {
     ['/territory/communities/c-1', { kind: 'mine' }]
   ])('%s tiene el alcance %j', (ruta, alcance) => {
     expect(scopeFromPath(ruta)).toEqual(alcance)
+  })
+
+  // un % mal formado en la URL no tumba la pantalla: sin proyecto legible, el alcance es el global
+  it.each(['/projects/%E0', '/projects/%', '/projects/%E0%A4%A/documents', '/projects/ok%zz'])('%s, tiene el alcance global', (ruta) => {
+    expect(() => scopeFromPath(ruta)).not.toThrow()
+    expect(scopeFromPath(ruta)).toEqual({ kind: 'mine' })
+  })
+
+  it('un proyecto con caracteres codificados bien formados se lee', () => {
+    expect(scopeFromPath('/projects/a%20b/risks')).toEqual({ kind: 'project', projectId: 'a b' })
   })
 
   it.each([

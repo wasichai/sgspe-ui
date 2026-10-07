@@ -7,7 +7,7 @@ export const ES = {
     ingresar: 'Ingresar',
     ingresando: 'Ingresando…',
     incorrectas: 'Correo o contraseña incorrectos',
-    fallo: 'No se pudo iniciar sesión. Inténtalo de nuevo.'
+    fallo: 'No se pudo iniciar sesión. Inténtelo de nuevo.'
   },
   shell: {
     salir: 'Cerrar sesión',
@@ -57,6 +57,7 @@ export const ES = {
     notasDeFases: { reports: 'F2–F4 exportaciones; F8 entregables' },
     estados: { disponible: 'Disponible', 'sin-acceso': 'Sin acceso con sus permisos', 'solo-admin': 'Solo para administración' }
   },
+  seccionPorLlegar: 'Esta sección llega en {{fase}}',
   noEncontrada: 'Esta página no existe'
 }
 

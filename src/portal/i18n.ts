@@ -1,5 +1,6 @@
 import { createWasichaiI18n, type WasichaiModule } from '@wasichai/core'
 import type { i18n as I18n } from 'i18next'
+import { langHtml } from '../idiomaHtml'
 import { client } from './api'
 import { EN } from './textos/en'
 import { ES } from './textos/es'
@@ -20,9 +21,9 @@ export function ajustarI18n(i18n: I18n): void {
   i18n.addResourceBundle('en', NS, EN, true, true)
   i18n.services.formatter?.add('number', numeroPe)
   i18n.services.formatter?.add('datetime', fechaPe)
-  // WCAG 3.1.1: <html lang> sigue al idioma del portal, al arrancar y cada vez que cambia
+  // WCAG 3.1.1: <html lang> sigue al idioma del portal, al arrancar y cada vez que cambia; es-PE para el español
   const alIdioma = (idioma: string | undefined) => {
-    document.documentElement.lang = idioma ?? 'es'
+    document.documentElement.lang = langHtml(idioma)
   }
   alIdioma(i18n.resolvedLanguage ?? i18n.language)
   i18n.on('languageChanged', alIdioma)

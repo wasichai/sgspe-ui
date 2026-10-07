@@ -10,6 +10,7 @@ let fetch: FetchMock | null = null
 beforeEach(() => {
   localStorage.clear()
   delete document.documentElement.dataset.theme
+  document.documentElement.lang = 'es-PE'
   window.history.pushState({}, '', '/admin')
 })
 afterEach(() => {
@@ -61,5 +62,20 @@ describe('admin', () => {
     await userEvent.selectOptions(theme, 'light')
     expect(document.documentElement.dataset.theme).toBe('light')
     expect(localStorage.getItem('sgspe.theme')).toBe('light')
+  })
+
+  // core no toca <html lang>: /admin lo sigue con el idioma de la interfaz (WCAG 3.1.1), con es-PE para el español
+  it('<html lang> es es-PE en español y sigue al idioma guardado', async () => {
+    document.documentElement.lang = ''
+    fetch = mockFetch([])
+    const { unmount } = render(<AdminApp />)
+    expect(await screen.findByLabelText('Correo')).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('es-PE')
+    unmount()
+
+    localStorage.setItem('sgspe.lang', 'en')
+    render(<AdminApp />)
+    expect(await screen.findByLabelText('Email')).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('en')
   })
 })

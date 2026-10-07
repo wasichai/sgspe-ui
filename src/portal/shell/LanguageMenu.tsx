@@ -1,16 +1,17 @@
-import { changeLanguage } from '@wasichai/core'
+import { useSetLocale } from '@wasichai/core'
 import { useTranslation } from 'react-i18next'
-import { client } from '../api'
 import { NS } from '../i18n'
 
-// español o inglés. changeLanguage de core guarda la elección en sgspe.lang, la clave de /admin: el idioma se comparte
+// español o inglés. useSetLocale de core es lo que usa /admin: guarda la elección en sgspe.lang y, con la sesión abierta,
+// en las preferencias del usuario (PUT /auth/me/preferences), así que el idioma se comparte y sobrevive a la recarga
 export function LanguageMenu() {
   const { t, i18n } = useTranslation(NS)
+  const setLocale = useSetLocale()
   return (
     <select
       aria-label={t('shell.idioma')}
       value={i18n.resolvedLanguage ?? 'es'}
-      onChange={(event) => void changeLanguage(i18n, client.keys.lang, event.target.value)}
+      onChange={(event) => void setLocale(event.target.value)}
       className="h-8 rounded-sg-md border border-sg-border-strong bg-sg-surface px-1.5 text-sm text-sg-text"
     >
       <option value="es" lang="es">

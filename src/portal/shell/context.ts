@@ -21,7 +21,13 @@ const TERRITORIOS: readonly string[] = ['community', 'locality', 'admin-unit', '
 // /projects/:projectId/… es el alcance de ese proyecto; /projects, /projects/new y cualquier otra ruta, el global
 export function scopeFromPath(pathname: string): Scope {
   const match = /^\/projects\/([^/]+)(?:\/|$)/.exec(pathname)
-  return match && match[1] !== 'new' ? { kind: 'project', projectId: decodeURIComponent(match[1]) } : { kind: 'mine' }
+  if (!match || match[1] === 'new') return { kind: 'mine' }
+  try {
+    return { kind: 'project', projectId: decodeURIComponent(match[1]) }
+  } catch {
+    // un % mal formado (/projects/%E0) no nombra ningún proyecto: sin contexto legible, el alcance es el global
+    return { kind: 'mine' }
+  }
 }
 
 // ?territory=community:<id>; un tipo desconocido o sin identificador no filtra nada

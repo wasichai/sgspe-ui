@@ -1,11 +1,13 @@
 import { ApiError, useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Button, Card, CardBody, Input, Label } from '@wasichai/ui'
 import { Mountain } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useSearchParams } from 'react-router'
 import { NS } from '../i18n'
-import { safeNext } from './RequireSession'
+import { LanguageMenu } from '../shell/LanguageMenu'
+import { irA } from './navegacion'
+import { esRutaDeAdmin, safeNext } from './RequireSession'
 
 // el login del portal: la sesión de core. POST /api/auth/login guarda sgspe.token y sgspe.user, los mismos de /admin.
 // empieza sin correo: el administrador sembrado es el login de desarrollo de /admin
@@ -16,12 +18,19 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = safeNext(params.get('next'))
+  // /admin no está en el router del portal: se llega con una navegación completa, no con navigate
+  const haciaAdmin = esRutaDeAdmin(next)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (user) return <Navigate to={next} replace />
+  const sesionAbierta = user !== null
+  useEffect(() => {
+    if (sesionAbierta && haciaAdmin) irA(next)
+  }, [sesionAbierta, haciaAdmin, next])
+
+  if (user) return haciaAdmin ? null : <Navigate to={next} replace />
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -29,7 +38,8 @@ export function LoginPage() {
     setError(null)
     try {
       await signIn(email, password)
-      navigate(next, { replace: true })
+      // hacia /admin sale el efecto de arriba, en cuanto la sesión queda abierta
+      if (!haciaAdmin) navigate(next, { replace: true })
     } catch (e) {
       setError(e instanceof ApiError && e.status === 401 ? t('login.incorrectas') : t('login.fallo'))
     } finally {
@@ -38,7 +48,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center px-4">
+    <main className="relative flex min-h-full items-center justify-center px-4">
+      <div className="absolute top-4 right-4">
+        <LanguageMenu />
+      </div>
       <Card className="w-full max-w-sm">
         <CardBody className="space-y-6 py-8">
           <div className="flex flex-col items-center gap-2 text-center">
@@ -68,6 +81,6 @@ export function LoginPage() {
           </form>
         </CardBody>
       </Card>
-    </div>
+    </main>
   )
 }

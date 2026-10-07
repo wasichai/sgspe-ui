@@ -11,7 +11,7 @@ import { InicioPage } from './pages/InicioPage'
 import { PANTALLAS } from './pantallas'
 import { AppShell } from './shell/AppShell'
 import { GuardaDeSeccion } from './shell/GuardaDeSeccion'
-import { NAV_TREE } from './shell/navTree'
+import { conPantalla, NAV_TREE, type SeccionNav } from './shell/navTree'
 
 // un 4xx no cambia por preguntar otra vez; un corte de red o un 5xx tal vez sí
 const retry = (count: number, error: unknown) => !(error instanceof ApiError && error.status >= 400 && error.status < 500) && count < 2
@@ -21,8 +21,15 @@ function NoEncontrada() {
   return <EmptyState title={t('noEncontrada')} />
 }
 
+// design-system.md §6.5: la sección que aún no llega lo dice, sin un error técnico; llega en la primera de sus fases
+function SeccionPorLlegar({ seccion }: { seccion: SeccionNav }) {
+  const { t } = useTranslation(NS)
+  return <EmptyState title={t('seccionPorLlegar', { fase: seccion.fases[0] })} />
+}
+
 // el Dashboard es la ruta índice; cada otra sección tiene ruta solo con su pantalla (PANTALLAS), y la pantalla se guarda
-// con los mismos permisos que el árbol (GuardaDeSeccion)
+// con los mismos permisos que el árbol (GuardaDeSeccion); una sección del árbol sin pantalla todavía dice en qué fase llega,
+// y cualquier otra ruta es la página no encontrada
 const rutas = () =>
   createRoutesFromElements(
     <>
@@ -37,6 +44,9 @@ const rutas = () =>
         <Route index element={<InicioPage />} />
         {NAV_TREE.flatMap((seccion) => {
           const Pantalla = PANTALLAS[seccion.clave]
+          if (!Pantalla && !seccion.external && !conPantalla(seccion.clave)) {
+            return [<Route key={seccion.clave} path={seccion.to} element={<SeccionPorLlegar seccion={seccion} />} />]
+          }
           return Pantalla
             ? [
                 <Route

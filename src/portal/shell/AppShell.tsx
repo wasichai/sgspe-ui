@@ -61,7 +61,7 @@ export function AppShell() {
           onClick={signOut}
           aria-label={t('shell.salir')}
           title={t('shell.salir')}
-          className="rounded-sg-md p-1.5 text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text"
+          className="flex size-8 items-center justify-center rounded-sg-md text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text"
         >
           <LogOut className="size-4" />
         </button>

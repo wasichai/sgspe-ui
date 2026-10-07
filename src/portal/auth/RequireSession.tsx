@@ -18,3 +18,6 @@ export function safeNext(next: string | null): string {
   // volver al login después del login no lleva a ningún lado
   return next === '/login' || next.startsWith('/login?') || next.startsWith('/login/') ? '/' : next
 }
+
+// /admin y /admin/… (con su consulta) son la otra app del bundle, no una ruta del portal: /administracion no cuenta
+export const esRutaDeAdmin = (ruta: string): boolean => /^\/admin(?:[/?#]|$)/.test(ruta)

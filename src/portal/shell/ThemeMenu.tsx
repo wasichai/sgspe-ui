@@ -89,7 +89,11 @@ export function ThemeMenu({ className }: { className?: string }) {
         title={error ?? `${t('theme.label')}: ${current.label}`}
         onClick={() => setOpen((was) => !was)}
         onKeyDown={onButtonKey}
-        className={cn('rounded p-1.5 hover:bg-surface-muted hover:text-ink', error ? 'text-danger' : 'text-ink-muted', className)}
+        className={cn(
+          'flex size-8 items-center justify-center rounded hover:bg-surface-muted hover:text-ink',
+          error ? 'text-danger' : 'text-ink-muted',
+          className
+        )}
       >
         <Icon className="size-4" />
       </button>

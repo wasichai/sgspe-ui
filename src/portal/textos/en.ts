@@ -58,5 +58,6 @@ export const EN: Textos = {
     notasDeFases: { reports: 'F2–F4 exports; F8 deliverables' },
     estados: { disponible: 'Available', 'sin-acceso': 'No access with your permissions', 'solo-admin': 'Administrators only' }
   },
+  seccionPorLlegar: 'This section arrives in {{fase}}',
   noEncontrada: 'This page does not exist'
 }

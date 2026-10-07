@@ -27,6 +27,13 @@ function start(routes: MockRoute[] = []) {
 }
 
 describe('menú de tema', () => {
+  // design-system.md §3.6: 32 px como mínimo en escritorio (size-8); a 28 px (p-1.5 y size-4) solo cumplían WCAG 2.5.8
+  it('los botones de tema y de salida miden 32 px como mínimo', async () => {
+    start()
+    expect(await screen.findByRole('button', { name: /^Tema: Sistema/ })).toHaveClass('size-8')
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toHaveClass('size-8')
+  })
+
   it('cambia el tema desde un menú, lo guarda en sgspe.theme y en las preferencias', async () => {
     start([{ method: 'PUT', path: '/auth/me/preferences', body: { theme: 'dark', locale: null } }])
     const button = await screen.findByRole('button', { name: /^Tema: Sistema/ })

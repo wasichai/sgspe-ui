@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock } from '@wasichai/testing'
+import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { abrirSesion, RELACIONISTA, rutasDeSesion, SIN_PERMISOS } from '../test/portal'
 import { crearI18n, fechaPe, NS, numeroPe } from './i18n'
@@ -28,10 +28,13 @@ function claves(textos: object, prefijo = ''): string[] {
   )
 }
 
-function start() {
+// las preferencias del usuario en el servidor, las mismas que lee y guarda /admin (GET y PUT /auth/me/preferences)
+const preferencias = (locale: string | null): MockRoute => ({ path: '/auth/me/preferences', body: { theme: 'system', locale } })
+
+function start(...extra: MockRoute[]) {
   abrirSesion(RELACIONISTA)
   window.history.pushState({}, '', '/')
-  fetch = mockFetch(rutasDeSesion(RELACIONISTA, SIN_PERMISOS))
+  fetch = mockFetch([...rutasDeSesion(RELACIONISTA, SIN_PERMISOS), ...extra])
   render(<PortalApp />)
 }
 
@@ -45,7 +48,7 @@ describe('i18n del portal', () => {
     expect(await screen.findByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Idioma' })).toHaveValue('es')
     // WCAG 3.1.1: el idioma de la página es el del portal
-    expect(document.documentElement.lang).toBe('es')
+    expect(document.documentElement.lang).toBe('es-PE')
   })
 
   it('con sgspe.lang en inglés, el login también habla inglés', async () => {
@@ -62,6 +65,27 @@ describe('i18n del portal', () => {
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Idioma' }), 'en')
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument()
+    expect(localStorage.getItem('sgspe.lang')).toBe('en')
+    expect(document.documentElement.lang).toBe('en')
+  })
+
+  // el idioma es una preferencia del usuario, no solo del navegador: /admin la guarda en el servidor y el portal igual
+  it('elegir inglés lo guarda también en el servidor, como /admin', async () => {
+    // el servidor contesta el PUT con lo guardado
+    start({ method: 'PUT', path: '/auth/me/preferences', body: { theme: 'system', locale: 'en' } }, preferencias('es'))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Idioma' }), 'en')
+    await screen.findByRole('button', { name: 'Sign out' })
+    await waitFor(() => {
+      const put = fetch!.calls.find((call) => call.method === 'PUT' && call.path === '/auth/me/preferences')
+      expect(put?.body).toEqual({ locale: 'en' })
+    })
+    expect(localStorage.getItem('sgspe.lang')).toBe('en')
+  })
+
+  it('el idioma guardado en el servidor se aplica al cargar y se recuerda en sgspe.lang', async () => {
+    start(preferencias('en'))
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en')
     expect(localStorage.getItem('sgspe.lang')).toBe('en')
     expect(document.documentElement.lang).toBe('en')
   })
