@@ -62,6 +62,14 @@ export const ES_P360 = {
     guardarParametros: 'Guardar parámetros',
     guardados: 'Parámetros guardados'
   },
+  asistente: {
+    noEncontrado: 'No se encontró este borrador. Puede que otra persona lo haya borrado.',
+    noEsBorrador: 'Este proyecto ya salió de borrador: el asistente solo completa borradores.',
+    eligeElRol: 'Elija el rol de la parte antes de agregar la organización.',
+    latitudFuera: 'Escriba la latitud como número entre -90 y 90.',
+    longitudFuera: 'Escriba la longitud como número entre -180 y 180.',
+    ubicacionIncompleta: 'Escriba latitud y longitud, o deje ambas vacías.'
+  },
   parametros: {
     interest_threshold: 'Umbral de interés',
     power_threshold: 'Umbral de poder',
@@ -136,6 +144,14 @@ export const EN_P360: typeof ES_P360 = {
     concesiones: 'Project concessions',
     guardarParametros: 'Save parameters',
     guardados: 'Parameters saved'
+  },
+  asistente: {
+    noEncontrado: 'This draft was not found. Someone else may have deleted it.',
+    noEsBorrador: 'This project is no longer a draft: the wizard only completes drafts.',
+    eligeElRol: 'Choose the role of the party before adding the organization.',
+    latitudFuera: 'Type the latitude as a number between -90 and 90.',
+    longitudFuera: 'Type the longitude as a number between -180 and 180.',
+    ubicacionIncompleta: 'Type both latitude and longitude, or leave both empty.'
   },
   parametros: {
     interest_threshold: 'Interest threshold',

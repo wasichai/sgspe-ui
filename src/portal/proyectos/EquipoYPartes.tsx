@@ -1,3 +1,4 @@
+import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Table, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -18,28 +19,51 @@ export function PartesDelProyecto({ proyecto, editable = true }: { proyecto: str
   const definicion = useDefinicion('project_party')
   const crear = useCrear('project_party')
   const mensaje = useMensajeDeError()
+  const { can } = useAuth()
   const [rol, setRol] = useState('')
+  const [faltaRol, setFaltaRol] = useState(false)
+  const puedeAgregar = editable && can('project_party', 'CREATE')
   const roles = definicion.data?.fields.find((f) => f.name === 'party_role')?.enumOptions ?? []
   return (
     <section className="space-y-3" aria-label={t('proyectos.asistente.partes')}>
       <ul className="space-y-1 text-sm">
-        {(partes.data ?? []).map((p) => (
-          <li key={p.id}>
-            {texto(p, 'party_role')} · <OrganizacionNombre id={String(atributo(p, 'organization'))} />
-          </li>
-        ))}
+        {(partes.data ?? []).map((p) => {
+          const organizacion = atributo(p, 'organization')
+          return (
+            <li key={p.id}>
+              {texto(p, 'party_role')} · {organizacion ? <OrganizacionNombre id={String(organizacion)} /> : '—'}
+            </li>
+          )
+        })}
       </ul>
-      {editable ? (
+      {puedeAgregar ? (
         <>
           <Campo etiqueta={t('proyectos.asistente.rol')}>
-            {(p) => <SelectNativo {...p} opciones={roles} value={rol} onChange={(e) => setRol(e.target.value)} />}
+            {(p) => (
+              <SelectNativo
+                {...p}
+                opciones={roles}
+                value={rol}
+                onChange={(e) => {
+                  setRol(e.target.value)
+                  setFaltaRol(false)
+                }}
+              />
+            )}
           </Campo>
           <BuscadorDeRegistro
             objeto="organization"
             etiqueta={t('proyectos.asistente.parte')}
             rotulo={(o) => texto(o, 'name')}
-            alElegir={(o) => rol && crear.mutate({ atributos: { project: proyecto, organization: o.id, party_role: rol } })}
+            alElegir={(o) => {
+              if (!rol) {
+                setFaltaRol(true)
+                return
+              }
+              crear.mutate({ atributos: { project: proyecto, organization: o.id, party_role: rol } })
+            }}
           />
+          {faltaRol ? <Alert tone="warning">{t('p360.asistente.eligeElRol')}</Alert> : null}
         </>
       ) : null}
       {crear.isError ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
@@ -58,6 +82,7 @@ export function CampanaDelProyecto({ proyecto, editable = true }: { proyecto: st
   const definicion = useDefinicion('exploration_campaign')
   const crear = useCrear('exploration_campaign')
   const mensaje = useMensajeDeError()
+  const { can } = useAuth()
   const { register, handleSubmit, reset } = useForm({
     defaultValues: { name: '', activity_type: '', social_support_cap: '', currency: 'PEN', planned_start_date: '', planned_end_date: '' }
   })
@@ -77,7 +102,7 @@ export function CampanaDelProyecto({ proyecto, editable = true }: { proyecto: st
           </li>
         ))}
       </ul>
-      {editable ? (
+      {editable && can('exploration_campaign', 'CREATE') ? (
         <>
           <div className="grid gap-3 md:grid-cols-2">
             <Campo etiqueta={t('proyectos.asistente.nombreCampana')}>{(p) => <Input {...p} {...register('name')} />}</Campo>
@@ -102,6 +127,7 @@ export function CampanaDelProyecto({ proyecto, editable = true }: { proyecto: st
 export function EquipoDelProyecto({ proyecto, editable = true }: { proyecto: string; editable?: boolean }) {
   const { t } = useTranslation(NS)
   const asignaciones = useTodos('project_assignment', { project: proyecto })
+  const { can } = useAuth()
   return (
     <section className="space-y-3" aria-label={t('proyectos.asistente.equipo')}>
       <Table aria-label={t('proyectos.asistente.equipo')}>
@@ -120,7 +146,7 @@ export function EquipoDelProyecto({ proyecto, editable = true }: { proyecto: str
           ))}
         </tbody>
       </Table>
-      {editable ? <FormularioDeAsignacion proyecto={proyecto} /> : null}
+      {editable && can('project_assignment', 'CREATE') ? <FormularioDeAsignacion proyecto={proyecto} /> : null}
     </section>
   )
 }
