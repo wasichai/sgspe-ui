@@ -1,9 +1,13 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { FetchMock } from '@wasichai/testing'
+import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { definicion, pagina, registro, workflow } from '../../test/montar'
+import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
+import { ROL_DE_JEFATURA } from '../config'
+import { useMisAsignaciones } from '../contexto/proyectos'
+import { useTodos } from '../datos/registros'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
+import { ProyectosPage } from './ProyectosPage'
 import { ADMINISTRACION_DE_PROYECTO, permisos, RELACIONISTA } from '../../test/portal'
 
 let fetch: FetchMock | null = null
@@ -222,5 +226,56 @@ describe('S06 · lista de proyectos', () => {
       sueltaJefatura()
       expect(await screen.findAllByText('Sin jefatura asignada')).not.toHaveLength(0)
     })
+  })
+})
+
+describe('un refetch fallido con la lista ya cargada', () => {
+  const FALLA = { title: 'Error', status: 500, detail: 'x', errors: [] }
+  // observa las mismas consultas que la página (misma clave, misma caché): cuando dice que fallaron, la página ya las vio
+  function Sonda() {
+    const consultas = {
+      proyectos: useTodos('project', { sort: 'name', dir: 'asc' }),
+      asignaciones: useMisAsignaciones(),
+      jefaturas: useTodos('project_assignment', { role_name: ROL_DE_JEFATURA, active: true }),
+      campanas: useTodos('exploration_campaign', { campaign_status: 'EN EJECUCION' })
+    }
+    return (
+      <p>
+        {Object.entries(consultas)
+          .filter(([, q]) => q.isError)
+          .map(([nombre]) => nombre)
+          .join(' ')}{' '}
+        fallaron
+      </p>
+    )
+  }
+
+  it('deja la lista, la jefatura y la campaña ya cargadas, sin error ni «No disponible»', async () => {
+    fetch = mockFetch(rutas())
+    montar(
+      <>
+        <ProyectosPage />
+        <Sonda />
+      </>,
+      { ruta: '/projects', permisos: LECTOR }
+    )
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(await within(filas()[0]).findByText('jefa@sgspe.test')).toBeInTheDocument()
+    expect(await within(filas()[0]).findByText('Perforación 2026')).toBeInTheDocument()
+    fetch.restore()
+    fetch = mockFetch([
+      { path: '/objects/project/records', status: 500, body: FALLA },
+      { path: /^\/objects\/project_assignment\/records/, status: 500, body: FALLA },
+      { path: '/objects/exploration_campaign/records', status: 500, body: FALLA }
+    ])
+    // volver a la pestaña refetcha lo viejo, y ahora el servidor falla
+    fireEvent(window, new Event('visibilitychange'))
+    await screen.findByText('proyectos asignaciones jefaturas campanas fallaron')
+    expect(filas()).toHaveLength(2)
+    expect(within(filas()[0]).getByText('jefa@sgspe.test')).toBeInTheDocument()
+    expect(within(filas()[0]).getByText('Perforación 2026')).toBeInTheDocument()
+    expect(screen.getByText('2 proyectos')).toBeInTheDocument()
+    expect(screen.queryByText('No disponible')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 })

@@ -47,12 +47,22 @@ export function ProyectosPage() {
   }
   const jefes = porProyecto(jefaturas.data, 'member_user_email')
   const enCurso = porProyecto(campanas.data, 'name')
-  // la jefatura y la campaña son de otras consultas: mientras cargan no se afirma nada, y si fallan o dan 403 se dice
-  const celda = (consulta: { isPending: boolean; isError: boolean }, valores: Set<string> | undefined, vacio: ReactNode) =>
-    consulta.isError ? <NoDisponible /> : consulta.isPending ? <span className="text-sg-text-muted">…</span> : valores ? [...valores].join(', ') : vacio
+  // la jefatura y la campaña son de otras consultas: mientras cargan no se afirma nada, y si fallan o dan 403 se dice. solo
+  // sin datos: un refetch fallido (volver a la pestaña) no reemplaza lo ya cargado por «No disponible»
+  const celda = (consulta: { isPending: boolean; isError: boolean; data: unknown }, valores: Set<string> | undefined, vacio: ReactNode) =>
+    consulta.isError && !consulta.data ? (
+      <NoDisponible />
+    ) : consulta.isPending ? (
+      <span className="text-sg-text-muted">…</span>
+    ) : valores ? (
+      [...valores].join(', ')
+    ) : (
+      vacio
+    )
   const lasMias = lista.vista === 'mine'
   const cargando = proyectos.isPending || (lasMias && asignaciones.isPending)
-  const fallo = proyectos.isError ? proyectos : lasMias && asignaciones.isError ? asignaciones : null
+  // el error de carga reemplaza la lista solo si no hay lista: un refetch fallido deja la ya cargada
+  const fallo = proyectos.isError && !proyectos.data ? proyectos : lasMias && asignaciones.isError && !asignaciones.data ? asignaciones : null
 
   const filtrados = (proyectos.data ?? []).filter((p) => {
     if (lasMias && !mios.has(p.id)) return false
