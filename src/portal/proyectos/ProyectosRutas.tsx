@@ -3,6 +3,7 @@ import { ProyectoLayout } from '../contexto/ProyectoLayout'
 import { GuardaDeSeccion } from '../shell/GuardaDeSeccion'
 import { NAV_TREE } from '../shell/navTree'
 import { RUTAS_EN_PROYECTO } from './rutasEnProyecto'
+import { NuevoProyectoPage } from './NuevoProyectoPage'
 import { ProyectosPage } from './ProyectosPage'
 
 // la sección Proyectos (ux-architecture.md §6.2): /projects, /projects/new y, bajo /projects/:projectId, Project 360 con
@@ -12,6 +13,7 @@ export function ProyectosRutas() {
   return (
     <Routes>
       <Route index element={<ProyectosPage />} />
+      <Route path="new" element={<NuevoProyectoPage />} />
       <Route path=":projectId" element={<ProyectoLayout />}>
         <Route index element={<Navigate to="overview" replace />} />
         {RUTAS_EN_PROYECTO.map(({ ruta, Pantalla, seccion }) => {

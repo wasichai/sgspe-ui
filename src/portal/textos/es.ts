@@ -1,5 +1,6 @@
 import { ES_COMUN } from './comun'
 import { ES_CONTEXTO } from './contexto'
+import { ES_P360 } from './p360'
 import { ES_PROYECTOS } from './proyectos'
 import { ES_TRANSICIONES } from './transiciones'
 
@@ -8,6 +9,7 @@ import { ES_TRANSICIONES } from './transiciones'
 export const ES = {
   comun: ES_COMUN,
   contexto: ES_CONTEXTO,
+  p360: ES_P360,
   proyectos: ES_PROYECTOS,
   transiciones: ES_TRANSICIONES,
   app: { lema: 'Gestión social de proyectos extractivos' },
