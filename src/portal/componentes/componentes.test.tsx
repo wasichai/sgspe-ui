@@ -101,6 +101,32 @@ describe('estados comunes', () => {
     expect(await screen.findByText('Restringido')).toHaveAttribute('title', 'Su rol no puede leer este dato')
     expect(screen.getByText('No disponible')).toBeInTheDocument()
   })
+
+  it('el motivo no depende del title: va enlazado con aria-describedby y un botón de ayuda lo despliega a teclado y táctil', async () => {
+    montar(
+      <>
+        <Restringido />
+        <NoDisponible motivo="OBJECT_NOT_READABLE" />
+      </>
+    )
+    const [restringido, noDisponible] = [await screen.findByText('Restringido'), screen.getByText('No disponible')]
+    for (const [etiqueta, motivo] of [
+      [restringido, 'Su rol no puede leer este dato'],
+      [noDisponible, 'Su rol no puede leer los registros de esta cifra']
+    ] as const) {
+      const id = etiqueta.getAttribute('aria-describedby')!
+      expect(document.getElementById(id)).toHaveTextContent(motivo)
+      expect(document.getElementById(id)).toHaveClass('sr-only')
+    }
+    const [ayudaDeRestringido, ayudaDeNoDisponible] = screen.getAllByRole('button', { name: 'Por qué no se muestra' })
+    expect(ayudaDeRestringido).toHaveAttribute('aria-expanded', 'false')
+    expect(ayudaDeRestringido).toHaveAccessibleDescription('Su rol no puede leer este dato')
+    await userEvent.click(ayudaDeRestringido)
+    expect(ayudaDeRestringido).toHaveAttribute('aria-expanded', 'true')
+    expect(document.getElementById(restringido.getAttribute('aria-describedby')!)).not.toHaveClass('sr-only')
+    expect(document.getElementById(noDisponible.getAttribute('aria-describedby')!)).toHaveClass('sr-only')
+    expect(ayudaDeNoDisponible).toHaveAttribute('aria-expanded', 'false')
+  })
 })
 
 describe('KpiCard', () => {
