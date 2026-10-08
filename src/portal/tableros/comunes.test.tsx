@@ -96,10 +96,26 @@ describe('ConsultaDeTablero', () => {
   })
 
   it('cualquier otro error sí es un error de carga, con reintento', async () => {
-    fetch = mockFetch([{ path: '/sgspe/dashboards/indicators/KPI-STK-01', status: 403, body: { title: 'Forbidden', status: 403, detail: 'x', errors: [] } }])
+    fetch = mockFetch([{ path: '/sgspe/dashboards/indicators/KPI-STK-01', status: 404, body: { title: 'Not Found', status: 404, detail: 'x', errors: [] } }])
     montar(<Tablero />)
     expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByText('Acote los filtros')).toBeNull()
+    expect(screen.queryByText('No disponible')).toBeNull()
+  })
+
+  it('un 403 es "No disponible" con el motivo de su código, no un error de carga', async () => {
+    fetch = mockFetch([
+      {
+        path: '/sgspe/dashboards/indicators/KPI-STK-01',
+        status: 403,
+        body: { title: 'Forbidden', status: 403, detail: 'x', errors: [{ field: 'project', message: 'NOT_ASSIGNED' }] }
+      }
+    ])
+    montar(<Tablero />)
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.getByText('No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+    expect(screen.queryByText('NOT_ASSIGNED')).toBeNull()
   })
 
   it('con datos dibuja la zona', async () => {

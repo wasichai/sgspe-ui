@@ -97,7 +97,9 @@ export const ES_GRUPOS = {
   matriz: {
     titulo: 'Matriz interés × poder',
     umbrales: 'Umbrales: interés {{interes}} · poder {{poder}}',
-    sinEvaluar: '{{n}} grupos de interés sin evaluar no aparecen',
+    sinEvaluar_one: '{{count}} grupo de interés sin evaluar no aparece',
+    sinEvaluar_other: '{{count}} grupos de interés sin evaluar no aparecen',
+    sinPuntos: 'Aún no hay grupos de interés evaluados con estos filtros: la matriz se llena con la primera evaluación.',
     verTabla: 'Ver como tabla',
     puntos: 'Puntos de la matriz',
     interes: 'Interés',
@@ -268,7 +270,9 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
   matriz: {
     titulo: 'Interest × power matrix',
     umbrales: 'Thresholds: interest {{interes}} · power {{poder}}',
-    sinEvaluar: '{{n}} unassessed stakeholders are not shown',
+    sinEvaluar_one: '{{count}} unassessed stakeholder is not shown',
+    sinEvaluar_other: '{{count}} unassessed stakeholders are not shown',
+    sinPuntos: 'There are no assessed stakeholders with these filters yet: the matrix fills up with the first assessment.',
     verTabla: 'View as table',
     puntos: 'Matrix points',
     interes: 'Interest',

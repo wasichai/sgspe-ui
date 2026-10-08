@@ -1,4 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query'
+import { ApiError } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +7,7 @@ import { useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
 import { Consulta, NoDisponible } from '../componentes/Estados'
 import { sonDemasiadosRegistros, useCatalogoDeIndicadores, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
+import { codigoDelError } from '../datos/http'
 import { useDefinicion } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { fechaPe, NS, numeroPe } from '../i18n'
@@ -108,9 +110,11 @@ export function FiltrosIgnorados({ indicador }: { indicador: Indicador | undefin
 }
 
 // la consulta de un tablero o un indicador: 400 TOO_MANY_RECORDS no es un error de carga sino un estado propio, "acote los
-// filtros", con los filtros a la vista (dashboards.md §6.2); lo demás, como Consulta
+// filtros", con los filtros a la vista (dashboards.md §6.2); un 403 es "no disponible" con su motivo (el código de la guarda,
+// como NOT_ASSIGNED); lo demás, como Consulta (alerta con su correlación y reintento)
 export function ConsultaDeTablero<T>({ consulta, children }: { consulta: UseQueryResult<T>; children: (datos: T) => ReactNode }) {
   const { t } = useTranslation(NS)
+  if (consulta.isError && consulta.error instanceof ApiError && consulta.error.status === 403) return <NoDisponible motivo={codigoDelError(consulta.error)} />
   if (consulta.isError && sonDemasiadosRegistros(consulta.error))
     return (
       <Alert tone="warning" title={t('tableros.acotar.titulo')}>

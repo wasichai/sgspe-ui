@@ -18,6 +18,8 @@ export const ES_TABLEROS = {
   masIndicadoresAyuda: 'No tienen zona en este tablero: cada uno se consulta en su detalle.',
   volverAlTablero: 'Volver al tablero',
   serie: 'Evolución mensual',
+  indicador: 'Indicador',
+  sinDatos: 'Sin datos para estos filtros.',
   desgloses: {
     sex: 'Por sexo',
     scope: 'Por ámbito',
@@ -27,7 +29,8 @@ export const ES_TABLEROS = {
     stance: 'Por postura',
     direction: 'Por dirección del cambio',
     engagement_type: 'Por tipo de interacción',
-    topic: 'Por tema'
+    topic: 'Por tema',
+    engagement: 'Por interacción'
   },
   direcciones: { MORE_FAVORABLE: 'Más favorable', LESS_FAVORABLE: 'Menos favorable' },
   fallo: 'No se pudo dibujar el gráfico. Los datos están en «Ver datos».',
@@ -70,6 +73,8 @@ export const EN_TABLEROS: typeof ES_TABLEROS = {
   masIndicadoresAyuda: 'They have no zone on this dashboard: each one is read in its detail.',
   volverAlTablero: 'Back to the dashboard',
   serie: 'Monthly trend',
+  indicador: 'Indicator',
+  sinDatos: 'No data for these filters.',
   desgloses: {
     sex: 'By sex',
     scope: 'By scope',
@@ -79,7 +84,8 @@ export const EN_TABLEROS: typeof ES_TABLEROS = {
     stance: 'By stance',
     direction: 'By direction of change',
     engagement_type: 'By engagement type',
-    topic: 'By topic'
+    topic: 'By topic',
+    engagement: 'By engagement'
   },
   direcciones: { MORE_FAVORABLE: 'More favorable', LESS_FAVORABLE: 'Less favorable' },
   fallo: 'The chart could not be drawn. The data is under “View data”.',

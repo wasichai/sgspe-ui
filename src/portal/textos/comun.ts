@@ -14,7 +14,8 @@ export const ES_COMUN = {
   noDisponiblePorMotivo: {
     FIELD_NOT_READABLE: 'Su rol no puede leer un dato de esta cifra',
     OBJECT_NOT_READABLE: 'Su rol no puede leer los registros de esta cifra',
-    SINGLE_PROJECT_REQUIRED: 'Esta cifra se calcula para un solo proyecto: elija uno en el selector'
+    SINGLE_PROJECT_REQUIRED: 'Esta cifra se calcula para un solo proyecto: elija uno en el selector',
+    NOT_ASSIGNED: 'No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.'
   },
   eligeUnProyecto: 'Elija un proyecto',
   llegaEn: 'Llega en {{fase}}',
@@ -139,7 +140,8 @@ export const EN_COMUN: typeof ES_COMUN = {
   noDisponiblePorMotivo: {
     FIELD_NOT_READABLE: 'Your role cannot read a field behind this figure',
     OBJECT_NOT_READABLE: 'Your role cannot read the records behind this figure',
-    SINGLE_PROJECT_REQUIRED: 'This figure is computed for one project: pick one in the selector'
+    SINGLE_PROJECT_REQUIRED: 'This figure is computed for one project: pick one in the selector',
+    NOT_ASSIGNED: 'You have no current assignment to this project: ask the project administration for one.'
   },
   eligeUnProyecto: 'Pick a project',
   llegaEn: 'Arrives in {{fase}}',
