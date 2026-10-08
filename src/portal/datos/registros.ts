@@ -58,16 +58,26 @@ export function useRegistros(objeto: string, parametros: Parametros, activo = tr
 }
 
 // todos los registros de una consulta, por cursor y sin conteo (api.md §3.4), hasta un tope: para conjuntos acotados
-// (las interacciones de un mes, los miembros de un área, las asignaciones de un proyecto)
-export async function leerTodos(pedir: Pedido, objeto: string, parametros: Parametros, tope = 1000): Promise<Registro[]> {
-  const todos: Registro[] = []
+// (las interacciones de un mes, los miembros de un área, las asignaciones de un proyecto). `truncado` dice que el tope cortó
+// la lectura con páginas pendientes: quien lo necesita (una lista que podría tener más) lo avisa en lugar de callarlo
+export interface Lectura {
+  registros: Registro[]
+  truncado: boolean
+}
+
+export async function leerConTope(pedir: Pedido, objeto: string, parametros: Parametros, tope = 1000): Promise<Lectura> {
+  const registros: Registro[] = []
   let despues: string | null | undefined = undefined
   do {
     const pagina: Pagina = await pedir<Pagina>(`/objects/${objeto}/records?${consulta({ ...parametros, size: 200, count: false, after: despues })}`)
-    todos.push(...pagina.content)
+    registros.push(...pagina.content)
     despues = pagina.nextCursor
-  } while (despues && todos.length < tope)
-  return todos
+  } while (despues && registros.length < tope)
+  return { registros, truncado: Boolean(despues) }
+}
+
+export async function leerTodos(pedir: Pedido, objeto: string, parametros: Parametros, tope = 1000): Promise<Registro[]> {
+  return (await leerConTope(pedir, objeto, parametros, tope)).registros
 }
 
 export function useTodos(objeto: string, parametros: Parametros, activo = true) {
@@ -78,6 +88,19 @@ export function useTodos(objeto: string, parametros: Parametros, activo = true) 
     queryFn: () => leerTodos(pedir, objeto, parametros),
     enabled: activo
   })
+}
+
+// como useTodos, pero dice si el tope cortó la lectura (`truncado`); `data` sigue siendo la lista. para las pantallas que
+// leen un alcance sin rango y no pueden afirmar que lo ven completo (el calendario de interacciones)
+export function useTodosConTope(objeto: string, parametros: Parametros, activo = true) {
+  const pedir = usePedir()
+  const busqueda = consulta(parametros)
+  const lectura = useQuery({
+    queryKey: ['records', objeto, 'todos-con-tope', busqueda],
+    queryFn: () => leerConTope(pedir, objeto, parametros),
+    enabled: activo
+  })
+  return { ...lectura, data: lectura.data?.registros, truncado: lectura.data?.truncado ?? false }
 }
 
 export function useRegistro(objeto: string, id: string | undefined) {

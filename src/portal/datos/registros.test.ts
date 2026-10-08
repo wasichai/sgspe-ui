@@ -2,8 +2,8 @@ import { createApiClient, type ObjectDefinition } from '@wasichai/core'
 import { mockFetch } from '@wasichai/testing'
 import { describe, expect, it, vi } from 'vitest'
 import { espiarRed, problema } from '../../test/red'
-import { crearPedido } from './http'
-import { atributosDeEscritura, consulta, escribeAlgunCampo, geometriasDeEscritura, guardarCambio, type Registro } from './registros'
+import { crearPedido, type Pedido } from './http'
+import { atributosDeEscritura, consulta, escribeAlgunCampo, geometriasDeEscritura, guardarCambio, leerConTope, leerTodos, type Registro } from './registros'
 
 const campo = (name: string, extra: Partial<ObjectDefinition['fields'][number]> = {}) => ({
   id: name,
@@ -171,5 +171,55 @@ describe('geometriasDeEscritura', () => {
 describe('consulta', () => {
   it('omite los vacíos y repite los filtros de varios valores', () => {
     expect(consulta({ project: ['p1', 'p2'], state: '', q: undefined, size: 25, count: false })).toBe('project=p1&project=p2&size=25&count=false')
+  })
+})
+
+// un servidor de páginas de 200 con cursor: la página n lleva n elementos y, mientras haya más, el cursor de la siguiente
+const servidorDePaginas = (paginas: number) => {
+  const pedidas: string[] = []
+  const pedir = (async (ruta: string) => {
+    pedidas.push(ruta)
+    const n = Number(new URLSearchParams(ruta.split('?')[1]).get('after') ?? 0)
+    const content = Array.from({ length: 200 }, (_, i) => ({
+      id: `r${n * 200 + i}`,
+      createdAt: '',
+      updatedAt: '',
+      state: null,
+      attributes: {},
+      geometries: {}
+    }))
+    return { content, nextCursor: n + 1 < paginas ? String(n + 1) : null }
+  }) as unknown as Pedido
+  return { pedir, pedidas }
+}
+
+describe('leerConTope', () => {
+  it('lee todas las páginas y no marca truncado si la última no trae cursor', async () => {
+    const { pedir, pedidas } = servidorDePaginas(3)
+    const lectura = await leerConTope(pedir, 'engagement', {})
+    expect(lectura.registros).toHaveLength(600)
+    expect(lectura.truncado).toBe(false)
+    expect(pedidas).toHaveLength(3)
+  })
+
+  it('con el tope cumplido y más páginas pendientes, devuelve lo leído y dice que truncó', async () => {
+    const { pedir, pedidas } = servidorDePaginas(8)
+    const lectura = await leerConTope(pedir, 'engagement', {})
+    expect(lectura.registros).toHaveLength(1000)
+    expect(lectura.truncado).toBe(true)
+    expect(pedidas).toHaveLength(5)
+  })
+
+  it('mil registros exactos sin cursor pendiente no es un truncamiento', async () => {
+    const { pedir } = servidorDePaginas(5)
+    expect((await leerConTope(pedir, 'engagement', {})).truncado).toBe(false)
+  })
+
+  it('el tope se puede bajar, y leerTodos sigue devolviendo solo la lista', async () => {
+    const { pedir } = servidorDePaginas(8)
+    expect((await leerConTope(pedir, 'engagement', {}, 400)).registros).toHaveLength(400)
+    const lista = await leerTodos(pedir, 'engagement', {})
+    expect(Array.isArray(lista)).toBe(true)
+    expect(lista).toHaveLength(1000)
   })
 })

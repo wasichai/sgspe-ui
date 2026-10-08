@@ -21,6 +21,12 @@ export const ES_RELACIONAMIENTO = {
   postergada: '{{titulo}}: postergada',
   columnas: { titulo: 'Interacción', proyecto: 'Proyecto', tipo: 'Tipo', estado: 'Estado', fecha: 'Fecha', lugar: 'Lugar', asistentes: 'Asistentes' },
   vacio: 'Una interacción nace con «Registrar interacción», planificada o ya realizada.',
+  vista: 'Vista',
+  truncado: 'Se leyeron solo las {{n}} interacciones más recientes del alcance; acote por proyecto o territorio para ver el resto.',
+  sinFecha: 'Interacciones sin fecha, que no aparecen en el calendario: {{n}}.',
+  canceladaSinMotivo: 'Cancelada',
+  festividadesCargando: 'Cargando las festividades…',
+  festividadesFallo: 'No se pudieron leer las festividades: el calendario no las marca.',
   visitas: 'Visitas de campo',
   ficha: {
     pestanas: {
@@ -184,6 +190,12 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
   postergada: '{{titulo}}: postponed',
   columnas: { titulo: 'Engagement', proyecto: 'Project', tipo: 'Type', estado: 'Status', fecha: 'Date', lugar: 'Place', asistentes: 'Attendees' },
   vacio: 'An engagement starts with “Register engagement”, planned or already held.',
+  vista: 'View',
+  truncado: 'Only the {{n}} most recent engagements in scope were read; narrow by project or territory to see the rest.',
+  sinFecha: 'Engagements without a date, not shown on the calendar: {{n}}.',
+  canceladaSinMotivo: 'Cancelled',
+  festividadesCargando: 'Loading the festivities…',
+  festividadesFallo: 'The festivities could not be read: the calendar does not mark them.',
   visitas: 'Field visits',
   ficha: {
     pestanas: {

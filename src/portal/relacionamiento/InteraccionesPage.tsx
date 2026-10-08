@@ -4,7 +4,7 @@ import { Alert, Button, Table, Td, Th, cn } from '@wasichai/ui'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
-import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
+import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
 import { VacioDeLista } from '../componentes/Lista'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
@@ -12,7 +12,7 @@ import { filtroDeTerritorio } from '../contexto/rutas'
 import { hoyEnLima } from '../datos/fechas'
 import { usePedir } from '../datos/http'
 import { useIndicador } from '../datos/indicadores'
-import { atributo, leerTodos, texto, useRegistro, useTodos, type Registro } from '../datos/registros'
+import { atributo, leerTodos, texto, useRegistro, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
@@ -41,7 +41,8 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const diaPedido = busqueda.get('day')
   const mes = esMes(mesPedido) ? mesPedido : mesActual()
   const territorio = filtroDeTerritorio(territory, { locality: 'locality', community: 'community' })
-  const interacciones = useTodos('engagement', { project: proyecto, ...(territorio ?? {}), sort: 'scheduled_at', dir: 'asc' })
+  // descendente: si el tope de lectura corta la lista, se pierden las más antiguas y no las del mes que se mira
+  const interacciones = useTodosConTope('engagement', { project: proyecto, ...(territorio ?? {}), sort: 'scheduled_at', dir: 'desc' })
   const base = proyecto ? `/projects/${proyecto}` : ''
   const cambiar = (cambios: Record<string, string>) => {
     const siguiente = new URLSearchParams(busqueda)
@@ -56,6 +57,8 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   // se dibuja cada interacción en el día de Lima de la celda que ocupa, también los días de otros meses que la grilla muestra
   const visibles = new Set(semanas.flat())
   const enPantalla = (interacciones.data ?? []).filter((i) => visibles.has(diaDe(i) ?? ''))
+  const sinFecha = (interacciones.data ?? []).filter((i) => diaDe(i) === null).length
+  const mesesVisibles = [...new Set(semanas.flat().map((d) => Number(d.slice(5, 7))))]
 
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
@@ -81,13 +84,12 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
       </div>
       {territorio === null ? <Alert tone="notice">{t('contexto.noAplica')}</Alert> : null}
       <div className="flex flex-wrap items-center gap-3">
-        <div role="tablist" aria-label={t('relacionamiento.calendario')} className="inline-flex rounded-sg-md border border-sg-border-strong">
+        <div role="group" aria-label={t('relacionamiento.vista')} className="inline-flex rounded-sg-md border border-sg-border-strong">
           {VISTAS.map((v) => (
             <button
               key={v}
               type="button"
-              role="tab"
-              aria-selected={vista === v}
+              aria-pressed={vista === v}
               onClick={() => cambiar({ view: v })}
               className={cn('px-3 py-1 text-sm', vista === v ? 'bg-sg-primary-soft font-medium' : '')}
             >
@@ -118,7 +120,9 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
         ) : null}
       </div>
       <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
-        <div>
+        <div className="space-y-3">
+          {interacciones.truncado ? <Alert tone="warning">{t('relacionamiento.truncado', { n: numeroPe(interacciones.data?.length ?? 0) })}</Alert> : null}
+          {vista !== 'lista' && sinFecha > 0 ? <Alert tone="notice">{t('relacionamiento.sinFecha', { n: numeroPe(sinFecha) })}</Alert> : null}
           {interacciones.isPending ? (
             <Cargando />
           ) : interacciones.isError && !interacciones.data ? (
@@ -130,7 +134,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
           ) : vista === 'lista' ? (
             <Lista interacciones={interacciones.data ?? []} global={!proyecto} />
           ) : (
-            <Calendario mes={mesVisible} interacciones={enPantalla} semanas={semanas} proyecto={proyecto} />
+            <Calendario mes={mesVisible} meses={mesesVisibles} interacciones={enPantalla} semanas={semanas} proyecto={proyecto} />
           )}
         </div>
         <PanelLateral proyecto={proyecto} mes={mesVisible} interacciones={interacciones} />
@@ -139,19 +143,20 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   )
 }
 
-function Evento({ interaccion }: { interaccion: Registro }) {
+// en la lista el motivo de una cancelada se ve siempre; en la celda del calendario no hay sitio y aparece al enfocar el enlace
+// (el title no se ve con el teclado) además de leerse como descripción
+function Evento({ interaccion, motivoVisible }: { interaccion: Registro; motivoVisible?: boolean }) {
   const { t } = useTranslation(NS)
-  const etiquetas = useEtiquetasDeEstado('engagement')
   const idMotivo = useId()
   const cancelada = interaccion.state === 'cancelled'
   const sinActa = interaccion.state === 'held' && esFormal(interaccion)
   const motivo = cancelada
     ? texto(interaccion, 'cancel_reason')
       ? t('relacionamiento.cancelada', { motivo: texto(interaccion, 'cancel_reason') })
-      : (etiquetas.cancelled ?? t('relacionamiento.columnas.estado'))
+      : t('relacionamiento.canceladaSinMotivo')
     : undefined
   return (
-    <>
+    <span className="group block">
       <Link
         to={`/projects/${texto(interaccion, 'project')}/engagements/${interaccion.id}`}
         title={motivo}
@@ -162,67 +167,85 @@ function Evento({ interaccion }: { interaccion: Registro }) {
         {sinActa ? <span className="ml-1 text-sg-warning">· {t('relacionamiento.sinActa')}</span> : null}
       </Link>
       {motivo ? (
-        <span id={idMotivo} className="sr-only">
+        <span id={idMotivo} className={cn('block text-sg-caption text-sg-text-muted', !motivoVisible && 'sr-only group-focus-within:not-sr-only')}>
           {motivo}
         </span>
       ) : null}
-    </>
+    </span>
   )
 }
 
-function Calendario({ mes, semanas, interacciones, proyecto }: { mes: string; semanas: string[][]; interacciones: Registro[]; proyecto?: string }) {
+function Calendario({
+  mes,
+  meses,
+  semanas,
+  interacciones,
+  proyecto
+}: {
+  mes: string
+  meses: number[]
+  semanas: string[][]
+  interacciones: Registro[]
+  proyecto?: string
+}) {
   const { t } = useTranslation(NS)
-  const festividades = useFestividades(proyecto, Number(mes.slice(5, 7)))
+  const festividades = useFestividades(proyecto, meses)
   const dias = t('relacionamiento.dias', { returnObjects: true }) as string[]
   const delDia = (dia: string) => interacciones.filter((i) => diaDe(i) === dia)
-  // la franja de contexto es la de los días del mes que se mira; los de otro mes no la llevan
+  // la franja de contexto: las festividades del mes de cada día, también en una semana que cruza de mes
   const festivas = (dia: string) =>
-    Number(dia.slice(5, 7)) === Number(mes.slice(5, 7))
-      ? festividades.lista.filter(
-          (f) =>
-            Number(atributo(f, 'start_day') ?? 0) <= Number(dia.slice(8)) &&
-            Number(atributo(f, 'end_day') ?? atributo(f, 'start_day') ?? 0) >= Number(dia.slice(8))
-        )
-      : []
+    festividades.lista.filter(
+      (f) =>
+        Number(atributo(f, 'month')) === Number(dia.slice(5, 7)) &&
+        Number(atributo(f, 'start_day') ?? 0) <= Number(dia.slice(8)) &&
+        Number(atributo(f, 'end_day') ?? atributo(f, 'start_day') ?? 0) >= Number(dia.slice(8))
+    )
   return (
-    <table aria-label={t('relacionamiento.calendario')} className="w-full table-fixed border-collapse text-sm">
-      <thead>
-        <tr>
-          {dias.map((d) => (
-            <th key={d} scope="col" className="border-b border-sg-border py-1 text-sg-caption text-sg-text-muted">
-              {d}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {semanas.map((semana) => (
-          <tr key={semana[0]}>
-            {semana.map((dia) => (
-              <td
-                key={dia}
-                aria-label={dia}
-                className={cn('h-24 border border-sg-border-subtle p-1 align-top', !dia.startsWith(mes) && 'bg-sg-surface-sunken text-sg-text-muted')}
-              >
-                <span className="text-sg-caption tabular-nums">{Number(dia.slice(8))}</span>
-                {festivas(dia).map((f) => (
-                  <span key={f.id} className="block truncate rounded-sg-xs bg-sg-territory-soft px-1 text-sg-caption text-sg-territory">
-                    {texto(f, 'name')}
-                  </span>
-                ))}
-                <ul className="space-y-0.5">
-                  {delDia(dia).map((i) => (
-                    <li key={i.id}>
-                      <Evento interaccion={i} />
-                    </li>
-                  ))}
-                </ul>
-              </td>
+    <div className="space-y-2">
+      {festividades.pendiente ? (
+        <Cargando compacto etiqueta={t('relacionamiento.festividadesCargando')} />
+      ) : festividades.error ? (
+        <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.festividadesFallo')}</p>
+      ) : null}
+      <table aria-label={t('relacionamiento.calendario')} className="w-full table-fixed border-collapse text-sm">
+        <thead>
+          <tr>
+            {dias.map((d) => (
+              <th key={d} scope="col" className="border-b border-sg-border py-1 text-sg-caption text-sg-text-muted">
+                {d}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {semanas.map((semana) => (
+            <tr key={semana[0]}>
+              {semana.map((dia) => (
+                <td
+                  key={dia}
+                  aria-label={dia}
+                  className={cn('h-24 border border-sg-border-subtle p-1 align-top', !dia.startsWith(mes) && 'bg-sg-surface-sunken text-sg-text-muted')}
+                >
+                  <span className="text-sg-caption tabular-nums">{Number(dia.slice(8))}</span>
+                  {festivas(dia).map((f) => (
+                    <span key={f.id} className="block truncate rounded-sg-xs bg-sg-territory-soft px-1 text-sg-caption text-sg-territory">
+                      {texto(f, 'name')}
+                    </span>
+                  ))}
+                  <ul className="space-y-0.5">
+                    {delDia(dia).map((i) => (
+                      <li key={i.id}>
+                        <Evento interaccion={i} />
+                      </li>
+                    ))}
+                  </ul>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -252,7 +275,7 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
           {ordenadas.map((i) => (
             <tr key={i.id}>
               <Td>
-                <Evento interaccion={i} />
+                <Evento interaccion={i} motivoVisible />
               </Td>
               {global ? (
                 <Td className="font-sg-mono text-sg-caption">
@@ -302,9 +325,17 @@ interface Festividades {
   reintentar: () => void
 }
 
-function useFestividades(proyecto: string | undefined, mes: number): Festividades {
+function useFestividades(proyecto: string | undefined, meses: number[]): Festividades {
   const pedir = usePedir()
-  const festividades = useTodos('festivity', { month: mes })
+  const clave = meses.join(',')
+  const festividades = useQuery({
+    queryKey: ['records', 'festivity', 'meses', clave],
+    queryFn: async () => {
+      const porMes = await Promise.all(meses.map((month) => leerTodos(pedir, 'festivity', { month })))
+      // un mes repetido no duplica la festividad
+      return [...new Map(porMes.flat().map((f) => [f.id, f])).values()]
+    }
+  })
   const localidades = useQuery({
     queryKey: ['records', 'area_of_influence_member', 'localidades-aprobadas', proyecto],
     queryFn: async () => {
@@ -323,10 +354,10 @@ function useFestividades(proyecto: string | undefined, mes: number): Festividade
   }
 }
 
-function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes: string; interacciones: ReturnType<typeof useTodos> }) {
+function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes: string; interacciones: ReturnType<typeof useTodosConTope> }) {
   const { t } = useTranslation(NS)
   const eng02 = useIndicador('KPI-ENG-02', { ...(proyecto ? { project: [proyecto] } : {}), periodStart: `${mes}-01`, periodEnd: `${sumarMeses(mes, 1)}-01` })
-  const festividades = useFestividades(proyecto, Number(mes.slice(5, 7)))
+  const festividades = useFestividades(proyecto, [Number(mes.slice(5, 7))])
   const delMes = eng02.data?.series?.find((s) => s.period === mes)
   const pendientes = (interacciones.data ?? []).filter((i) => (i.state === 'held' && esFormal(i)) || i.state === 'postponed')
   return (
