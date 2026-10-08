@@ -18,9 +18,9 @@ export interface Utm {
   norte: number
 }
 
-// la zona UTM de un CRS de trabajo del catálogo ('EPSG 32717' → 17), o null si no es UTM sur WGS 84
+// la zona UTM de un CRS de trabajo del catálogo (gis.md §3.2: 'EPSG 32717' a 'EPSG 32719' → 17 a 19), o null si no es de ellos
 export function zonaDe(crs: string | null | undefined): number | null {
-  const m = /^EPSG 327(\d\d)$/.exec(crs ?? '')
+  const m = /^EPSG 327(1[7-9])$/.exec(crs ?? '')
   return m ? Number(m[1]) : null
 }
 

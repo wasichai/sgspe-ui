@@ -1,6 +1,9 @@
 // el mapa del proyecto (S09), el mapa territorial (S12) y el control de capas (gis.md §2.2)
 export const ES_MAPA = {
   cargando: 'Cargando el mapa…',
+  fallo: 'No se pudo mostrar el mapa: revise que su navegador admita WebGL y vuelva a cargar la página.',
+  cargandoCapa: 'Cargando la capa…',
+  errorDeCapa: 'No se pudo leer la capa',
   mapaDelProyecto: 'Mapa del proyecto',
   mapaTerritorial: 'Mapa territorial',
   capas: 'Capas',
@@ -54,6 +57,9 @@ export const ES_MAPA = {
 
 export const EN_MAPA: typeof ES_MAPA = {
   cargando: 'Loading the map…',
+  fallo: 'The map could not be shown: check that your browser supports WebGL and reload the page.',
+  cargandoCapa: 'Loading the layer…',
+  errorDeCapa: 'The layer could not be read',
   mapaDelProyecto: 'Project map',
   mapaTerritorial: 'Territorial map',
   capas: 'Layers',

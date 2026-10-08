@@ -53,6 +53,16 @@ export function ControlDeCapas({
                       <Lock aria-label={bloqueada ? t('mapa.bloqueada') : t('mapa.sensible')} className="size-3.5 text-sg-text-muted" />
                     ) : null}
                   </label>
+                  {encendidas.has(c.id) && !bloqueada && estado(c.id)?.cargando ? (
+                    <p role="status" className="ml-6 text-sg-caption text-sg-text-muted">
+                      {t('mapa.cargandoCapa')}
+                    </p>
+                  ) : null}
+                  {encendidas.has(c.id) && !bloqueada && estado(c.id)?.error ? (
+                    <p role="alert" className="ml-6 text-sg-caption text-sg-danger">
+                      {t('mapa.errorDeCapa')}
+                    </p>
+                  ) : null}
                   {truncada ? (
                     <p role="status" className="ml-6 flex items-center gap-1 text-sg-caption text-sg-warning">
                       <ZoomIn aria-hidden className="size-3.5" />

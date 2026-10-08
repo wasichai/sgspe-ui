@@ -11,6 +11,8 @@ globalThis.ResizeObserver ??= class {
 // con vi.mock('maplibre-gl', () => import('../../test/maplibre')) y disparan la carga con cargarMapas()
 export class Map {
   static todos: Map[] = []
+  // una prueba lo enciende para simular un navegador sin WebGL: MapLibre lanza al crear el mapa
+  static fallar = false
   opciones: Record<string, unknown>
   fuentes = new globalThis.Map<string, { data: unknown; setData: (d: unknown) => void }>()
   capas: { id: string; type: string; paint: Record<string, unknown> }[] = []
@@ -19,6 +21,7 @@ export class Map {
   setPaintProperty = vi.fn()
   remove = vi.fn()
   constructor(opciones: Record<string, unknown>) {
+    if (Map.fallar) throw new Error('Failed to initialize WebGL')
     this.opciones = opciones
     Map.todos.push(this)
   }

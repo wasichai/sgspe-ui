@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { Component, lazy, Suspense, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
 import type { Coleccion, Encuadre } from './api'
@@ -30,13 +30,33 @@ export interface MapaProps {
 
 const MapaImpl = lazy(() => import('./MapaImpl'))
 
+// si el chunk de MapLibre no baja o el navegador no tiene WebGL, el mapa dice por qué no está en lugar de tirar la pantalla:
+// la lista o tabla que lo acompaña sigue funcionando
+class LimiteDeError extends Component<{ mensaje: string; children: ReactNode }, { fallo: boolean }> {
+  state = { fallo: false }
+  static getDerivedStateFromError() {
+    return { fallo: true }
+  }
+  render() {
+    return this.state.fallo ? (
+      <p role="alert" className="p-4 text-sm text-sg-text-muted">
+        {this.props.mensaje}
+      </p>
+    ) : (
+      this.props.children
+    )
+  }
+}
+
 export function Mapa({ className, ...props }: MapaProps) {
   const { t } = useTranslation(NS)
   return (
     <div className={className ?? 'relative h-[480px] w-full overflow-hidden rounded-sg-lg border border-sg-border bg-sg-surface-sunken'}>
-      <Suspense fallback={<p className="p-4 text-sm text-sg-text-muted">{t('mapa.cargando')}</p>}>
-        <MapaImpl {...props} />
-      </Suspense>
+      <LimiteDeError mensaje={t('mapa.fallo')}>
+        <Suspense fallback={<p className="p-4 text-sm text-sg-text-muted">{t('mapa.cargando')}</p>}>
+          <MapaImpl {...props} />
+        </Suspense>
+      </LimiteDeError>
     </div>
   )
 }

@@ -60,6 +60,16 @@ function encuadreDe(colecciones: Coleccion[]): [[number, number], [number, numbe
     : null
 }
 
+// cada colección tiene un número propio: la clave de los efectos cambia cuando llega otra, aunque tenga los mismos
+// elementos que la anterior (una capa recortada al tope trae siempre el mismo conteo)
+const identidades = new WeakMap<object, number>()
+let siguiente = 0
+const identidad = (datos: Coleccion): number => {
+  let numero = identidades.get(datos)
+  if (numero === undefined) identidades.set(datos, (numero = ++siguiente))
+  return numero
+}
+
 export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, alMoverVista, alMoverCursor, alCapturar }: MapaProps) {
   const contenedor = useRef<HTMLDivElement>(null)
   const mapa = useRef<MapLibreMap | null>(null)
@@ -72,6 +82,9 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
   // el clic se escucha una sola vez por capa, aunque la capa se apague y se vuelva a encender
   const conClic = useRef(new Set<string>())
   const encuadrado = useRef(false)
+  // los datos que cada fuente tiene puestos y la selección sobre la que ya se encuadró
+  const puestos = useRef(new globalThis.Map<string, Coleccion>())
+  const encuadradoA = useRef<string | null>(null)
 
   useEffect(() => {
     if (!contenedor.current) return
@@ -88,6 +101,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     instancia.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     instancia.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
     instancia.on('load', () => {
+      if (mapa.current !== instancia) return
       const informar = () => {
         const b = instancia.getBounds()
         ultimo.current.alMoverVista?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])
@@ -114,12 +128,18 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
       mapa.current = null
       dibujadas.current.clear()
       conMiembros.current.clear()
+      conClic.current.clear()
+      puestos.current.clear()
+      encuadrado.current = false
+      encuadradoA.current = null
+      // StrictMode monta, desmonta y monta de nuevo: la instancia nueva vuelve a cargar y a dibujar sus capas
+      setListo(false)
     }
     // un mapa por montaje: las funciones nuevas se leen de `ultimo`
   }, [])
 
   // las capas: se agregan las nuevas, se actualizan sus datos y se quitan las que se apagaron
-  const clave = JSON.stringify(capas.map((c) => [c.id, c.datos.features.length]))
+  const clave = capas.map((c) => `${c.id}:${identidad(c.datos)}`).join('|')
   useEffect(() => {
     const instancia = mapa.current
     if (!instancia || !listo) return
@@ -130,13 +150,19 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
       instancia.removeSource(id)
       dibujadas.current.delete(id)
       conMiembros.current.delete(id)
+      puestos.current.delete(id)
     }
     for (const capa of capas) {
       const color = colorDe(capa.color)
       if (dibujadas.current.has(capa.id)) {
-        ;(instancia.getSource(capa.id) as GeoJSONSource).setData(capa.datos as never)
+        // otra colección (otro encuadre o proyecto), aunque tenga el mismo conteo: se cambian los datos de la fuente
+        if (puestos.current.get(capa.id) !== capa.datos) {
+          ;(instancia.getSource(capa.id) as GeoJSONSource).setData(capa.datos as never)
+          puestos.current.set(capa.id, capa.datos)
+        }
         continue
       }
+      puestos.current.set(capa.id, capa.datos)
       // con miembros, los dibujos de la capa son solo de sus registros y los miembros van en los suyos
       const propios = (filtro: ExpressionSpecification): ExpressionSpecification => (capa.miembros ? ['all', filtro, NO_ES_MIEMBRO] : filtro)
       instancia.addSource(capa.id, { type: 'geojson', data: capa.datos as never })
@@ -215,7 +241,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     }
   }, [listo, clave])
 
-  // la selección: borde de 2.5 px y el encuadre sobre ella
+  // la selección: borde de 2.5 px
   useEffect(() => {
     const instancia = mapa.current
     if (!instancia || !listo) return
@@ -225,9 +251,23 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
         instancia.setPaintProperty(`${id}-${prefijo}punto`, 'circle-radius', ['case', elegido(seleccion), 8, 5])
       }
     }
+  }, [listo, seleccion, clave])
+
+  // el encuadre sobre lo elegido: una vez por selección. mover el mapa cambia las capas, no la selección, y no debe
+  // devolver a la persona al elemento; si el elemento aún no llegó (las capas se están pidiendo), se encuadra cuando llegue
+  useEffect(() => {
+    const instancia = mapa.current
+    if (!instancia || !listo) return
+    if (!seleccion) {
+      encuadradoA.current = null
+      return
+    }
+    if (encuadradoA.current === seleccion) return
     const elemento = capas.flatMap((c) => c.datos.features).find((e) => idDeElemento(e) === seleccion || e.properties.__targetId === seleccion)
     const encuadre = elemento ? encuadreDe([{ type: 'FeatureCollection', features: [elemento] }]) : null
-    if (encuadre) instancia.fitBounds(encuadre, { padding: 80, maxZoom: 16, duration: 300 })
+    if (!encuadre) return
+    encuadradoA.current = seleccion
+    instancia.fitBounds(encuadre, { padding: 80, maxZoom: 16, duration: 300 })
   }, [listo, seleccion, clave])
 
   // otro tema repinta las mismas capas con sus tokens
@@ -236,12 +276,15 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     return alCambiarTema(() => {
       const instancia = mapa.current
       if (!instancia) return
+      // el fondo del estilo propio (sin mapa base del despliegue) y el trazo de los puntos también son tokens
+      if (!ESTILO_DEL_MAPA_BASE) instancia.setPaintProperty('fondo', 'background-color', colorDe('--sg-map-ground'))
       for (const capa of capas) {
         if (!dibujadas.current.has(capa.id)) continue
         const color = colorDe(capa.color)
         instancia.setPaintProperty(`${capa.id}-relleno`, 'fill-color', color)
         instancia.setPaintProperty(`${capa.id}-linea`, 'line-color', color)
         instancia.setPaintProperty(`${capa.id}-punto`, 'circle-color', color)
+        instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-color', colorDe('--sg-surface'))
         if (conMiembros.current.has(capa.id)) {
           instancia.setPaintProperty(`${capa.id}-miembro-relleno`, 'fill-color', color)
           instancia.setPaintProperty(`${capa.id}-miembro-linea`, 'line-color', color)
