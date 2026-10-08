@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { ADMIN_PERMISOS, RELACIONISTA } from '../../test/portal'
 import { BarraDeContexto } from './BarraDeContexto'
+import { useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
 import { filtroDeTerritorio, rutaEquivalente } from './rutas'
 import { SelectorDeProyecto } from './SelectorDeProyecto'
@@ -94,10 +95,22 @@ describe('barra de contexto y Project 360', () => {
     expect(ubicacion.actual).toBe('/projects/p1/stakeholders')
   })
 
+  // observa las mismas consultas que el layout (misma clave, misma caché): cuando dice que llegaron, el layout ya las vio
+  function Sonda() {
+    const asignaciones = useMisAsignaciones()
+    const proyecto = useProyecto('p1')
+    return (
+      <>
+        <input aria-label="Motivo" />
+        {asignaciones.isSuccess ? <span>asignaciones llegaron</span> : null}
+        {proyecto.isError ? <span>proyecto falló</span> : null}
+      </>
+    )
+  }
   const LAYOUT = (
     <Routes>
       <Route path="/projects/:projectId" element={<ProyectoLayout />}>
-        <Route path="overview" element={<input aria-label="Motivo" />} />
+        <Route path="overview" element={<Sonda />} />
       </Route>
     </Routes>
   )
@@ -122,19 +135,15 @@ describe('barra de contexto y Project 360', () => {
       }
     ])
     montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: LEE_PROYECTOS })
-    await screen.findByLabelText('Motivo')
-    await waitFor(() => expect(fetch?.calls.some((c) => c.path.includes('project_assignment'))).toBe(true))
     // las asignaciones ya llegaron: el aviso, de haber salido, saldría ahora
-    await new Promise((r) => setTimeout(r, 50))
+    await screen.findByText('asignaciones llegaron')
     expect(screen.queryByText(AVISO)).not.toBeInTheDocument()
   })
 
   it('ADMIN no necesita asignación: no avisa aunque no tenga ninguna', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
-    await screen.findByLabelText('Motivo')
-    await waitFor(() => expect(fetch?.calls.some((c) => c.path.includes('project_assignment'))).toBe(true))
-    await new Promise((r) => setTimeout(r, 50))
+    await screen.findByText('asignaciones llegaron')
     expect(screen.queryByText(AVISO)).not.toBeInTheDocument()
   })
 
@@ -166,8 +175,7 @@ describe('barra de contexto y Project 360', () => {
     ])
     // volver a la pestaña refetcha lo viejo, y ahora el servidor falla
     fireEvent(window, new Event('visibilitychange'))
-    await waitFor(() => expect(fetch?.calls.some((c) => c.path === '/objects/project/records/p1')).toBe(true))
-    await new Promise((r) => setTimeout(r, 50))
+    await screen.findByText('proyecto falló')
     expect(screen.getByLabelText('Motivo')).toHaveValue('Porque sí')
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
