@@ -149,6 +149,9 @@ const COLUMNA_DE_CAMPO: Record<string, keyof Columnas> = {
   code: 'code',
   source_easting: 'easting',
   source_northing: 'northing',
+  // el servidor nombra easting y northing (sin source_) en las filas sin coordenadas o con los ejes cambiados
+  easting: 'easting',
+  northing: 'northing',
   source_elevation: 'elevation',
   elevation: 'elevation',
   azimuth: 'azimuth',

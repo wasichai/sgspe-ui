@@ -282,7 +282,9 @@ function Predios({
     const estado = estados.find((e) => e.id === id)
     if (!encendidas.has(id)) return [t('mapa.predios.apagada', { capa: nombre })]
     if (estado?.bloqueada) return [t('mapa.predios.bloqueada', { capa: nombre })]
-    if (estado?.error) return [t('mapa.predios.conError', { capa: nombre })]
+    // al mover la vista, una recarga que falla conserva lo último que se leyó (mapa/api.ts): la tabla sí muestra predios, los de
+    // la vista anterior
+    if (estado?.error) return [t(estado.datos ? 'mapa.predios.conErrorConDatos' : 'mapa.predios.conError', { capa: nombre })]
     if (estado?.truncada) return [t('mapa.predios.truncada', { capa: nombre })]
     if (estado?.datos && estado.datos.features.length === 0) return [t('mapa.predios.sinPredios', { capa: nombre })]
     return []

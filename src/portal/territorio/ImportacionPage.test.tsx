@@ -6,6 +6,7 @@ import { definicion, pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { archivoXlsx, espiarRed, problema, type Red } from '../../test/red'
+import { crearI18n, NS } from '../i18n'
 import { reiniciarImportacion } from './ImportacionPage'
 
 let fetch: FetchMock | null = null
@@ -412,7 +413,9 @@ describe('S15 · importación geoespacial', () => {
       ...VISTA,
       invalid: [
         { row: 7, field: 'source_northing', message: 'fuera de la zona UTM esperada' },
-        { row: 8, field: 'footprint', message: 'geometría inválida' }
+        { row: 8, field: 'footprint', message: 'geometría inválida' },
+        { row: 9, field: 'easting', message: 'faltan el este y el norte' },
+        { row: 10, field: 'northing', message: 'ejes cambiados' }
       ]
     }
     red = espiarRed([{ method: 'POST', path: '/sgspe/territory/imports', responder: () => new Response(JSON.stringify(vista)) }])
@@ -420,6 +423,9 @@ describe('S15 · importación geoespacial', () => {
     const seccion = screen.getByRole('region', { name: 'Filas inválidas' })
     expect(within(seccion).getByText('Fila 7 · Norte: fuera de la zona UTM esperada')).toBeInTheDocument()
     expect(within(seccion).getByText('Fila 8: geometría inválida')).toBeInTheDocument()
+    // el backend manda easting y northing (no source_*) en las filas sin coordenadas o con los ejes cambiados
+    expect(within(seccion).getByText('Fila 9 · Este: faltan el este y el norte')).toBeInTheDocument()
+    expect(within(seccion).getByText('Fila 10 · Norte: ejes cambiados')).toBeInTheDocument()
     expect(screen.queryByText(/source_northing|footprint/)).not.toBeInTheDocument()
     expect(screen.queryByText(/CON-024/)).not.toBeInTheDocument()
   })
@@ -492,5 +498,16 @@ describe('S15 · importación geoespacial', () => {
     fetch = abrirPortal('/territory/imports/new', RELACIONISTA, GAN, sinProyectos)
     expect(await screen.findByText(/No se pudo cargar esta información/)).toBeInTheDocument()
     expect(selectorDeProyecto()).toBeDisabled()
+  })
+})
+
+describe('el conteo de filas descartadas', () => {
+  it('se escribe en formato es-PE y conserva el plural, en los dos idiomas', () => {
+    const i18n = crearI18n()
+    const texto = (lng: string, count: number) => i18n.t('importacion.escritura', { ns: NS, lng, crear: '0', versiones: '0', actualizar: '0', count })
+    expect(texto('es', 1)).toContain('; 1 fila descartada')
+    expect(texto('es', 1234)).toContain('; 1,234 filas descartadas')
+    expect(texto('en', 1)).toContain('; 1 row discarded')
+    expect(texto('en', 1234)).toContain('; 1,234 rows discarded')
   })
 })

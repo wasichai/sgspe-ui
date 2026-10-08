@@ -11,6 +11,7 @@ import { espiarRed, type Red } from '../../test/red'
 // el doble del mapa, más lo que el mapa real informa: la vista (que acota las capas con un bbox) y el cursor
 const doble = vi.hoisted(() => ({
   vista: null as [number, number, number, number] | null,
+  moverVista: null as ((vista: [number, number, number, number]) => void) | null,
   moverCursor: null as ((punto: [number, number] | null) => void) | null
 }))
 vi.mock('../mapa/Mapa', async () => {
@@ -20,6 +21,7 @@ vi.mock('../mapa/Mapa', async () => {
       const { alMoverVista, alMoverCursor } = props
       useEffect(() => {
         doble.moverCursor = alMoverCursor ?? null
+        doble.moverVista = alMoverVista ?? null
         if (doble.vista) alMoverVista?.(doble.vista)
       }, [alMoverVista, alMoverCursor])
       return <Falso {...props} />
@@ -32,7 +34,7 @@ let red: Red | null = null
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
-  doble.vista = doble.moverCursor = null
+  doble.vista = doble.moverCursor = doble.moverVista = null
 })
 afterEach(() => {
   red?.restaurar()
@@ -216,6 +218,28 @@ describe('S09 · mapa del proyecto', () => {
       await userEvent.click(await screen.findByRole('checkbox', { name: /Predios de propiedad/ }))
       expect(await screen.findByText(/No se pudo leer la capa «Predios de propiedad/)).toBeInTheDocument()
       expect(screen.queryByText(/no tiene predios/)).not.toBeInTheDocument()
+    })
+
+    it('si la capa falla al mover la vista y quedan predios de la vista anterior, no dice que la tabla no muestra predios', async () => {
+      fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), rutas())
+      red = espiarRed([
+        {
+          path: '/sgspe/territory/layers/LYR-14',
+          responder: (l) =>
+            l.ruta.includes('bbox=')
+              ? new Response(JSON.stringify({ title: 'Error', status: 500 }), { status: 500 })
+              : new Response(JSON.stringify(coleccion('land_parcel', [['lp1', { code: 'PRE-001', tenure_type: 'PROPIO' }]])))
+        }
+      ])
+      await userEvent.click(await screen.findByRole('tab', { name: 'Predios' }))
+      await userEvent.click(await screen.findByRole('checkbox', { name: /Predios de propiedad/ }))
+      const tabla = await screen.findByRole('table', { name: 'Predios' })
+      expect(await within(tabla).findByText('PRE-001')).toBeInTheDocument()
+      act(() => doble.moverVista!([-70, -10, -69, -9]))
+      const nota = await screen.findByText(/No se pudo actualizar la capa «Predios de propiedad/)
+      expect(nota).toHaveTextContent('la tabla muestra los predios de la vista anterior')
+      expect(within(tabla).getByText('PRE-001')).toBeInTheDocument()
+      expect(screen.queryByText(/la tabla no muestra sus predios/)).not.toBeInTheDocument()
     })
 
     it('una capa de predios encendida que cargó sin predios lo dice en lugar de dejar solo los encabezados', async () => {

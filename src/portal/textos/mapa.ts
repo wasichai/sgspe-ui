@@ -33,6 +33,7 @@ export const ES_MAPA = {
     bloqueada: 'Su cuenta no puede ver la capa «{{capa}}».',
     truncada: 'La capa «{{capa}}» tiene más predios de los que se muestran: acerque el mapa.',
     conError: 'No se pudo leer la capa «{{capa}}»: la tabla no muestra sus predios.',
+    conErrorConDatos: 'No se pudo actualizar la capa «{{capa}}»: la tabla muestra los predios de la vista anterior.',
     sinPredios: 'La capa «{{capa}}» no tiene predios en esta vista.'
   },
   tabla: { componentes: 'Componentes', miembros: 'Miembros del área vigente', predios: 'Predios', areas: 'Áreas de influencia' },
@@ -104,6 +105,7 @@ export const EN_MAPA: typeof ES_MAPA = {
     bloqueada: 'Your account cannot see the “{{capa}}” layer.',
     truncada: 'The “{{capa}}” layer has more parcels than shown: zoom in.',
     conError: 'The “{{capa}}” layer could not be read: the table does not show its parcels.',
+    conErrorConDatos: 'The “{{capa}}” layer could not be updated: the table shows the parcels from the previous view.',
     sinPredios: 'The “{{capa}}” layer has no parcels in this view.'
   },
   tabla: { componentes: 'Components', miembros: 'Members of the current area', predios: 'Parcels', areas: 'Areas of influence' },
