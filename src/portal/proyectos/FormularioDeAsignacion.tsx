@@ -111,7 +111,9 @@ export function FormularioDeAsignacion({ proyecto, alGuardar }: { proyecto: stri
         }
       </Campo>
       <div className="grid grid-cols-2 gap-3">
-        <Campo etiqueta={t('p360.asignacion.desde')}>{(props) => <Input {...props} type="date" {...register('start_date')} />}</Campo>
+        <Campo etiqueta={t('p360.asignacion.desde')} error={error('start_date')}>
+          {(props) => <Input {...props} type="date" {...register('start_date')} />}
+        </Campo>
         <Campo etiqueta={t('p360.asignacion.hasta')} error={error('end_date')}>
           {(props) => <Input {...props} type="date" {...register('end_date')} />}
         </Campo>

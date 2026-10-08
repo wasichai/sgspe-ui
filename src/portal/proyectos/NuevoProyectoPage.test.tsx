@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -189,6 +189,10 @@ const conBorrador = () => [
 ]
 const ID_DE_USUARIO = '11111111-1111-4111-8111-111111111111'
 
+// Enter en un campo: el navegador envía el formulario del campo por el botón «Siguiente» (asociado con form=), pero user-event
+// no resuelve esa asociación; el envío es el mismo evento
+const enviarConEnter = (campo: HTMLElement) => fireEvent.submit(campo.closest('form')!)
+
 async function avanzar(pasos: number) {
   for (let i = 0; i < pasos; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
 }
@@ -226,6 +230,14 @@ describe('S07 · asignación del equipo', () => {
     expect(screen.queryByText(/UNKNOWN_ROLE/)).not.toBeInTheDocument()
   })
 
+  it('un error del servidor sobre la fecha de inicio se ve junto a «Desde»', async () => {
+    await asignarAMano('no puede ser anterior al inicio del proyecto', 'start_date')
+    const texto = 'no puede ser anterior al inicio del proyecto'
+    expect(await screen.findByText(texto)).toBeInTheDocument()
+    expect(screen.getByLabelText('Desde')).toHaveAccessibleDescription(texto)
+    expect(screen.getByLabelText('Desde')).toBeInvalid()
+  })
+
   it('con el directorio, tras asignar el usuario elegido se limpia', async () => {
     fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, [
       { path: '/users', body: [{ id: ID_DE_USUARIO, email: 'ana@sgspe.test', displayName: 'Usuaria de prueba', enabled: true }] },
@@ -249,6 +261,53 @@ describe('S07 · asignación del equipo', () => {
     await avanzar(2)
     expect(await screen.findByText(/CLIENTE/)).toBeInTheDocument()
     expect(screen.queryByRole('searchbox', { name: 'Organización' })).not.toBeInTheDocument()
+  })
+
+  it('un error de campo de la campaña queda junto a su control, no solo al pie', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, [
+      {
+        path: '/metadata/objects/exploration_campaign',
+        body: definicion('exploration_campaign', ['project', 'name', 'activity_type', 'social_support_cap', 'currency'])
+      },
+      ...rutas()
+    ])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/objects/exploration_campaign/records',
+        responder: () => problema(400, 'detalle', [{ field: 'name', message: 'FIELD_REQUIRED' }])
+      }
+    ])
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(3)
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar' }))
+    const texto = 'Falta un dato que este paso necesita.'
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Nombre de la campaña' })).toHaveAccessibleDescription(texto))
+    // un solo mensaje: junto al campo, no repetido al pie
+    expect(screen.getAllByText(texto)).toHaveLength(1)
+    expect(screen.queryByText(/FIELD_REQUIRED/)).not.toBeInTheDocument()
+  })
+
+  it('un error de campo de las partes queda junto al rol, no solo al pie', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: '/objects/organization/records', body: pagina([registro('o2', { name: 'Minera Dos' })]) },
+      ...rutas()
+    ])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/objects/project_party/records',
+        responder: () => problema(400, 'detalle', [{ field: 'party_role', message: 'FIELD_REQUIRED' }])
+      }
+    ])
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(2)
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Rol' }), 'CONSULTORA')
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Organización' }), 'Mi')
+    await userEvent.click(await screen.findByRole('button', { name: 'Minera Dos' }))
+    const texto = 'Falta un dato que este paso necesita.'
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Rol' })).toHaveAccessibleDescription(texto))
+    expect(screen.getAllByText(texto)).toHaveLength(1)
   })
 
   it('elegir una organización sin elegir el rol lo dice y no escribe', async () => {
@@ -401,5 +460,89 @@ describe('S07 · borradores y errores', () => {
     expect(screen.getByText('Escriba la longitud como número entre -180 y 180.')).toBeInTheDocument()
     expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
     expect(screen.getByRole('heading', { name: 'Ubicación y CRS de trabajo' })).toBeInTheDocument()
+  })
+
+  const TEXTO_ENTERO = 'Escriba un número entero mayor o igual a 0, o deje el campo vacío para el valor por defecto.'
+
+  it('un parámetro entero no acepta decimales: lo dice junto al campo y no guarda hasta corregirlo', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, conBorrador())
+    red = espiarRed()
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(5)
+    await screen.findByRole('heading', { name: 'Parámetros y políticas' })
+    const dias = screen.getByRole('textbox', { name: /Días entre evaluaciones/ })
+    await userEvent.clear(dias)
+    await userEvent.type(dias, '30.5')
+    await userEvent.tab()
+    expect(await screen.findByText(TEXTO_ENTERO)).toBeInTheDocument()
+    expect(dias).toHaveAccessibleDescription(TEXTO_ENTERO)
+    // los decimales sí valen en los umbrales
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(screen.getByRole('heading', { name: 'Parámetros y políticas' })).toBeInTheDocument()
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
+    await userEvent.clear(dias)
+    await userEvent.type(dias, '31')
+    expect(screen.queryByText(TEXTO_ENTERO)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByRole('heading', { name: 'Revisar y enviar' })
+    expect(red.a('PUT', '/objects/project/records/p9')[0].cuerpo).toMatchObject({ attributes: { stakeholder_review_days: 31 } })
+  })
+
+  it('Enter en un parámetro inválido no guarda el valor anterior: muestra el error y se queda', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, conBorrador())
+    red = espiarRed()
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(5)
+    await screen.findByRole('heading', { name: 'Parámetros y políticas' })
+    const umbral = screen.getByRole('textbox', { name: /Umbral de interés/ })
+    await userEvent.clear(umbral)
+    await userEvent.type(umbral, '2')
+    await userEvent.type(umbral, 'x')
+    enviarConEnter(umbral)
+    expect(await screen.findByText('Escriba un número mayor o igual a 0, o deje el campo vacío para el valor por defecto.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Parámetros y políticas' })).toBeInTheDocument()
+    expect(umbral).toHaveValue('2x')
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
+  })
+
+  it('Enter en un parámetro vacío usa el valor por defecto, no el último tecleado', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, conBorrador())
+    red = espiarRed()
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(5)
+    await screen.findByRole('heading', { name: 'Parámetros y políticas' })
+    const umbral = screen.getByRole('textbox', { name: /Umbral de interés/ })
+    await userEvent.clear(umbral)
+    await userEvent.type(umbral, '2.5')
+    await userEvent.clear(umbral)
+    enviarConEnter(umbral)
+    await screen.findByRole('heading', { name: 'Revisar y enviar' })
+    // el 2.5 se descartó al vaciar el campo y el valor por defecto (3) es el guardado: no hay nada que escribir
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
+  })
+
+  it('«Anterior» y el indicador no quedan bloqueados por un dato inválido: se mueven sin guardar y lo avisan', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, conBorrador())
+    red = espiarRed()
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(1)
+    const latitud = await screen.findByRole('textbox', { name: 'Latitud de referencia (WGS 84)' })
+    await userEvent.type(latitud, '-7.9')
+    await userEvent.click(screen.getByRole('button', { name: 'Anterior' }))
+    await screen.findByRole('heading', { name: 'Identificación' })
+    const aviso = 'Hay datos no válidos que no se guardaron: siguen en el formulario con su error. Corríjalos para que el borrador los guarde.'
+    expect(screen.getByText(aviso)).toBeInTheDocument()
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
+    // Siguiente sí exige el dato válido: vuelve al paso con el error y lo escrito sigue ahí
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByRole('heading', { name: 'Ubicación y CRS de trabajo' })
+    expect(screen.queryByText(aviso)).not.toBeInTheDocument()
+    expect(screen.getByText('Escriba latitud y longitud, o deje ambas vacías.')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Latitud de referencia (WGS 84)' })).toHaveValue('-7.9')
+    // y el indicador de pasos también deja salir
+    await userEvent.click(screen.getByRole('button', { name: /Identificación/ }))
+    await screen.findByRole('heading', { name: 'Identificación' })
+    expect(screen.getByText(aviso)).toBeInTheDocument()
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
   })
 })

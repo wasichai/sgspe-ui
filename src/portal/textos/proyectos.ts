@@ -43,7 +43,10 @@ export const ES_PROYECTOS = {
     quePasara: 'Qué pasará',
     quePasaraTexto: 'El proyecto pasa a «En revisión» y la administración del proyecto decide si lo aprueba o lo devuelve.',
     sinCrear: 'Su cuenta no puede crear proyectos: abra un borrador existente para completarlo.',
-    sinEditar: 'Su cuenta puede ver este borrador, pero no cambiar sus datos.'
+    sinEditar: 'Su cuenta puede ver este borrador, pero no cambiar sus datos.',
+    numeroInvalido: 'Escriba un número mayor o igual a 0, o deje el campo vacío para el valor por defecto.',
+    enteroInvalido: 'Escriba un número entero mayor o igual a 0, o deje el campo vacío para el valor por defecto.',
+    sinGuardar: 'Hay datos no válidos que no se guardaron: siguen en el formulario con su error. Corríjalos para que el borrador los guarde.'
   }
 }
 
@@ -91,6 +94,9 @@ export const EN_PROYECTOS: typeof ES_PROYECTOS = {
     quePasara: 'What will happen',
     quePasaraTexto: 'The project moves to “In review” and the project administration approves it or returns it.',
     sinCrear: 'Your account cannot create projects: open an existing draft to complete it.',
-    sinEditar: 'Your account can see this draft but not change its data.'
+    sinEditar: 'Your account can see this draft but not change its data.',
+    numeroInvalido: 'Type a number greater than or equal to 0, or leave the field empty for the default value.',
+    enteroInvalido: 'Type a whole number greater than or equal to 0, or leave the field empty for the default value.',
+    sinGuardar: 'Some invalid data was not saved: it stays in the form with its error. Fix it so the draft saves it.'
   }
 }

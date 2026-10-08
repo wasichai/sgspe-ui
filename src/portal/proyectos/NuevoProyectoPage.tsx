@@ -123,28 +123,61 @@ export function NuevoProyectoPage() {
   return <Asistente inicial={existente.data} />
 }
 
-// un parámetro numérico conserva el texto tecleado (un decimal a medias, el campo vacío) y lo convierte al salir del campo;
-// vacío vuelve al valor por defecto (dashboards.md §3.3). cada texto válido ya viaja al formulario
-function ParametroNumerico({ id, valor, porDefecto, alCambiar }: { id: string; valor: number; porDefecto: number; alCambiar: (n: number) => void }) {
+// el valor de un parámetro numérico tecleado: vacío es el valor por defecto (dashboards.md §3.3); un texto que no es un número
+// mayor o igual a 0, o un decimal en un parámetro entero, es NaN, que el esquema rechaza: nunca se guarda un valor distinto
+// del que muestra el campo
+const convertir = (escrito: string, porDefecto: number, entero: boolean): number => {
+  if (escrito.trim() === '') return porDefecto
+  const n = aNumero(escrito)
+  return Number.isFinite(n) && n >= 0 && (!entero || Number.isInteger(n)) ? n : Number.NaN
+}
+
+// un parámetro numérico conserva el texto tecleado (un decimal a medias, el campo vacío) y lleva cada cambio al formulario;
+// el error de un texto inválido sale junto al campo al salir de él o al intentar guardar
+function ParametroNumerico({
+  id,
+  valor,
+  porDefecto,
+  entero,
+  intentoDeGuardar,
+  alCambiar
+}: {
+  id: string
+  valor: number
+  porDefecto: number
+  entero: boolean
+  intentoDeGuardar: boolean
+  alCambiar: (n: number) => void
+}) {
+  const { t } = useTranslation(NS)
   const [escrito, setEscrito] = useState(String(valor))
+  const [tocado, setTocado] = useState(false)
+  const invalido = Number.isNaN(convertir(escrito, porDefecto, entero))
+  const error = invalido && (tocado || intentoDeGuardar) ? t(entero ? 'proyectos.asistente.enteroInvalido' : 'proyectos.asistente.numeroInvalido') : undefined
   return (
-    <Input
-      id={id}
-      inputMode="decimal"
-      className="w-24"
-      value={escrito}
-      onChange={(e) => {
-        setEscrito(e.target.value)
-        const n = aNumero(e.target.value)
-        if (Number.isFinite(n) && n >= 0) alCambiar(n)
-      }}
-      onBlur={() => {
-        const n = aNumero(escrito)
-        const final = Number.isFinite(n) && n >= 0 ? n : porDefecto
-        setEscrito(String(final))
-        alCambiar(final)
-      }}
-    />
+    <div className="flex flex-col items-end gap-1">
+      <Input
+        id={id}
+        inputMode="decimal"
+        className="w-24"
+        value={escrito}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        onChange={(e) => {
+          setEscrito(e.target.value)
+          alCambiar(convertir(e.target.value, porDefecto, entero))
+        }}
+        onBlur={() => {
+          setTocado(true)
+          if (escrito.trim() === '') setEscrito(String(porDefecto))
+        }}
+      />
+      {error ? (
+        <p id={`${id}-error`} className="max-w-xs text-right text-sg-caption text-sg-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
   )
 }
 
@@ -162,6 +195,8 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   const [visitados, setVisitados] = useState(0)
   // el último error de escritura que no quedó junto a un campo
   const [fallo, setFallo] = useState<unknown>(null)
+  // se salió de un paso con datos inválidos: siguen en el formulario, pero no se guardaron
+  const [sinGuardar, setSinGuardar] = useState(false)
   const formulario = useForm<Valores>({ resolver: zodResolver(esquema), defaultValues: valoresDe(inicial) })
   const { register, handleSubmit, setError, formState, watch, setValue, reset } = formulario
   const sucio = formState.isDirty
@@ -221,12 +256,25 @@ function Asistente({ inicial }: { inicial?: Registro }) {
     if (pasosConError.length > 0 && !pasosConError.includes(paso)) ir(Math.min(...pasosConError))
   }
 
-  // cualquier movimiento (Siguiente, Anterior, el indicador) guarda el borrador si lo tecleado cambió o aún no existe
-  const moverA = (destino: number) =>
-    handleSubmit(async (v) => {
-      if ((!proyecto || sucio) && !(await persistir(v))) return
-      ir(destino)
-    }, alInvalidar)
+  // cualquier movimiento (Siguiente, Anterior, el indicador) guarda el borrador si lo tecleado cambió o aún no existe.
+  // Siguiente exige datos válidos; Anterior y el indicador (libre) no quedan bloqueados por ellos: se mueven sin guardar y
+  // avisan, y lo inválido sigue en el formulario con su error, nunca se descarta
+  const moverA =
+    (destino: number, libre = false) =>
+    (e?: React.BaseSyntheticEvent) => {
+      setSinGuardar(false)
+      return handleSubmit(
+        async (v) => {
+          if ((!proyecto || sucio) && !(await persistir(v))) return
+          ir(destino)
+        },
+        (errores) => {
+          if (!libre) return alInvalidar(errores)
+          setSinGuardar(true)
+          ir(destino)
+        }
+      )(e)
+    }
 
   const guardarYSalir = handleSubmit(async (v) => {
     const guardado = !proyecto || sucio ? await persistir(v) : proyecto
@@ -257,7 +305,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
     <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_1fr]">
       <div className="space-y-2">
         <h1 className="text-sg-h2 font-semibold">{proyecto ? t('proyectos.asistente.completar') : t('proyectos.asistente.titulo')}</h1>
-        <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void moverA(i)()} />
+        <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void moverA(i, true)()} />
       </div>
       <div role="group" className="space-y-4" aria-label={pasos[paso]}>
         <h2 className="text-sg-h3 font-semibold">{pasos[paso]}</h2>
@@ -325,6 +373,8 @@ function Asistente({ inicial }: { inicial?: Registro }) {
                         id={`par-${par.campo}`}
                         valor={Number(valor)}
                         porDefecto={Number(par.porDefecto)}
+                        entero={campoDe(definicion.data, par.campo)?.type === 'INTEGER'}
+                        intentoDeGuardar={formState.submitCount > 0}
                         alCambiar={(n) => setValue(`parametros.${par.campo}`, n, { shouldDirty: true })}
                       />
                     )}
@@ -335,6 +385,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
           </form>
         ) : null}
         {paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} /> : null}
+        {sinGuardar ? <Alert tone="notice">{t('proyectos.asistente.sinGuardar')}</Alert> : null}
         {fallo ? <Alert tone="danger">{mensaje(fallo)}</Alert> : null}
         {enviarARevision.isError ? <Alert tone="danger">{mensaje(enviarARevision.error)}</Alert> : null}
         <p className="text-sg-caption text-sg-text-muted">{t('proyectos.asistente.guardadoAuto')}</p>
@@ -343,7 +394,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
             {t('proyectos.asistente.guardarYSalir')}
           </Button>
           {paso > 0 ? (
-            <Button type="button" variant="secondary" disabled={guardando} onClick={() => void moverA(paso - 1)()}>
+            <Button type="button" variant="secondary" disabled={guardando} onClick={() => void moverA(paso - 1, true)()}>
               {t('comun.anterior')}
             </Button>
           ) : null}
