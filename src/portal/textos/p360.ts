@@ -14,6 +14,8 @@ export const ES_P360 = {
     actaPendiente: '{{titulo}}: acta por redactar',
     sinContacto: '{{nombre}}: sin contacto hace más de {{dias}} días',
     evaluacionVencida: '{{nombre}}: evaluación con más de {{dias}} días',
+    nuncaContactado: '{{nombre}}: sin contacto registrado',
+    fuentes: { interacciones: 'Interacciones', grupos: 'Grupos de interés' },
     salud: 'Salud del proyecto',
     kpis: {
       gruposVigentes: 'Grupos de interés vigentes',
@@ -29,10 +31,12 @@ export const ES_P360 = {
     verMatriz: 'Ver la matriz',
     reuniones: 'Reuniones al mes frente a la meta',
     reunionesMes: '{{mes}}: {{valor}} de {{meta}}',
+    sinReuniones: 'Aún no hay meses con reuniones que comparar con la meta.',
     areas: 'Áreas de influencia vigentes',
     sinAreas: 'Aún no hay un área aprobada',
     verMapa: 'Ver en el mapa',
     actividad: 'Actividad reciente',
+    sinActividad: 'Este proyecto aún no tiene actividad registrada.',
     operaciones: { CREATE: 'Creó', UPDATE: 'Cambió', DELETE: 'Borró', ISSUE: 'Emitió' }
   },
   asignacion: {
@@ -101,6 +105,8 @@ export const EN_P360: typeof ES_P360 = {
     actaPendiente: '{{titulo}}: minutes to draft',
     sinContacto: '{{nombre}}: no contact for more than {{dias}} days',
     evaluacionVencida: '{{nombre}}: assessment older than {{dias}} days',
+    nuncaContactado: '{{nombre}}: no contact recorded',
+    fuentes: { interacciones: 'Engagements', grupos: 'Stakeholders' },
     salud: 'Project health',
     kpis: {
       gruposVigentes: 'Current stakeholders',
@@ -116,10 +122,12 @@ export const EN_P360: typeof ES_P360 = {
     verMatriz: 'Open the matrix',
     reuniones: 'Meetings per month against the target',
     reunionesMes: '{{mes}}: {{valor}} of {{meta}}',
+    sinReuniones: 'There are no months with meetings to compare with the target yet.',
     areas: 'Current areas of influence',
     sinAreas: 'No approved area yet',
     verMapa: 'View on the map',
     actividad: 'Recent activity',
+    sinActividad: 'This project has no recorded activity yet.',
     operaciones: { CREATE: 'Created', UPDATE: 'Changed', DELETE: 'Deleted', ISSUE: 'Issued' }
   },
   asignacion: {

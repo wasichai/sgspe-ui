@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
-import { espiarRed, type Red } from '../../test/red'
+import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
 
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
@@ -76,6 +76,22 @@ const rutas = (postura: unknown) => [
 
 const LECTOR = permisos({ project: ['READ'], stakeholder: ['READ'], engagement: ['READ'], area_of_influence: ['READ'], project_assignment: ['READ'] })
 
+// abre el resumen y, sobre la red simulada, responde a mano lo que la prueba pide (un 403 o un error). los errores son 4xx: el
+// portal reintenta los 5xx con espera y la prueba no tiene por qué esperarlos
+const abrir = (rutasDelResumen: ReturnType<typeof rutas>, especiales: RutaEspecial[] = []) => {
+  fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutasDelResumen)
+  red = espiarRed(especiales)
+}
+const cerrar = () => {
+  red?.restaurar()
+  fetch?.restore()
+  document.body.innerHTML = ''
+}
+const falla = (ruta: string | RegExp, status = 400, correlacion = 'corr-123'): RutaEspecial => ({
+  path: ruta,
+  responder: () => problema(status, 'Falló', [], correlacion)
+})
+
 describe('S08 · Project 360, resumen', () => {
   it('muestra la jefatura, las cifras de F2 con el proyecto y dice cuándo llegan las demás', async () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
@@ -90,10 +106,16 @@ describe('S08 · Project 360, resumen', () => {
     expect(screen.getByText('12 sin evaluar')).toBeInTheDocument()
   })
 
-  it('sin permiso para la postura no dibuja la barra; con él, sí', async () => {
+  it('sin permiso para la postura no dibuja la barra y dice "No disponible" con su motivo; con él, sí', async () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
-    await screen.findByRole('region', { name: 'Paisaje de grupos de interés' })
-    expect(screen.queryByText('Posturas')).not.toBeInTheDocument()
+    red = espiarRed()
+    const paisaje = await screen.findByRole('region', { name: 'Paisaje de grupos de interés' })
+    // la respuesta de KPI-STK-02 llega después del proyecto: se espera el texto, no solo la región
+    const sinPostura = await within(paisaje).findByText('No disponible')
+    expect(sinPostura).toHaveAttribute('title', 'Su rol no puede leer un dato de esta cifra')
+    expect(red.a('GET', '/sgspe/dashboards/indicators/KPI-STK-02').length).toBeGreaterThan(0)
+    expect(within(paisaje).getByText('Posturas')).toBeInTheDocument()
+    expect(within(paisaje).queryByText(/A FAVOR/)).not.toBeInTheDocument()
     fetch.restore()
     document.body.innerHTML = ''
     fetch = abrirPortal(
@@ -118,6 +140,7 @@ describe('S08 · Project 360, resumen', () => {
     )
     expect(await screen.findByText('A FAVOR: 5')).toBeInTheDocument()
     expect(screen.getByText('EN CONTRA: 2')).toBeInTheDocument()
+    expect(screen.queryByText('No disponible')).not.toBeInTheDocument()
   })
 
   it('"Atención requerida" lista las actas por redactar de reuniones formales y los grupos sin contacto', async () => {
@@ -157,5 +180,137 @@ describe('S08 · Project 360, resumen', () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
     expect(await screen.findByText('2026-10: 3 de 2')).toBeInTheDocument()
     expect(await screen.findByText(/cambio de etapa/)).toBeInTheDocument()
+  })
+
+  it('la jefatura dice "No disponible" ante un 403 o un error, nunca "Sin jefatura"; con datos vacíos, sí', async () => {
+    const asignaciones = /^\/objects\/project_assignment\/records\?.*role_name/
+    abrir(rutas(SIN_STANCE), [falla(asignaciones, 403)])
+    const cabecera = (await screen.findByRole('heading', { level: 1 })).closest('header')!
+    expect(await within(cabecera).findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByText('Sin jefatura asignada')).not.toBeInTheDocument()
+    cerrar()
+    abrir(rutas(SIN_STANCE), [falla(asignaciones)])
+    expect(await within((await screen.findByRole('heading', { level: 1 })).closest('header')!).findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByText('Sin jefatura asignada')).not.toBeInTheDocument()
+    cerrar()
+    abrir([{ path: asignaciones, body: pagina([]) }, ...rutas(SIN_STANCE)])
+    expect(await screen.findByText('Sin jefatura asignada')).toBeInTheDocument()
+  })
+
+  it('"Atención requerida" no tranquiliza cuando una lectura no se puede hacer: dice cuál', async () => {
+    abrir(rutas(SIN_STANCE), [falla(/^\/objects\/stakeholder\/records/, 403)])
+    const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
+    expect(await within(atencion).findByText('Grupos de interés')).toBeInTheDocument()
+    expect(within(atencion).getByText('No disponible')).toBeInTheDocument()
+    // la otra lectura sí respondió: su aviso se lista
+    expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto: acta por redactar' })).toBeInTheDocument()
+    expect(within(atencion).queryByText(/Nada pide atención/)).not.toBeInTheDocument()
+    cerrar()
+    abrir(rutas(SIN_STANCE), [falla(/^\/objects\/engagement\/records/, 400, 'corr-77')])
+    const conError = await screen.findByRole('region', { name: 'Atención requerida' })
+    expect(await within(conError).findByText('Interacciones')).toBeInTheDocument()
+    expect(await within(conError).findByText(/corr-77/)).toBeInTheDocument()
+    expect(within(conError).queryByText(/Nada pide atención/)).not.toBeInTheDocument()
+  })
+
+  it('"Nada pide atención hoy" solo se dice cuando las dos lecturas respondieron y no hay nada', async () => {
+    abrir([{ path: '/objects/engagement/records', body: pagina([]) }, { path: '/objects/stakeholder/records', body: pagina([]) }, ...rutas(SIN_STANCE)])
+    const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
+    expect(await within(atencion).findByText(/Nada pide atención hoy/)).toBeInTheDocument()
+  })
+
+  it('un grupo que nunca tuvo contacto entra en "sin contacto" con su propio texto', async () => {
+    abrir([{ path: '/objects/stakeholder/records', body: pagina([registro('s9', { organization: 'o1' }, { state: 'identified' })]) }, ...rutas(SIN_STANCE)])
+    const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
+    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas: sin contacto registrado' })).toBeInTheDocument()
+  })
+
+  describe('con el reloj cerca de la medianoche de Lima', () => {
+    afterEach(() => vi.useRealTimers())
+    // 2026-10-08T03:00Z es el 7 de octubre a las 22:00 en Lima: hoy es el 7. desde el 9 de julio hay 90 días, y "más de 90" no
+    // se cumple; contra la hora UTC (8 de octubre) serían 91 y el aviso saldría un día antes
+    it('cuenta los días de calendario contra hoy en Lima, no contra la medianoche UTC', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-10-08T03:00:00Z'))
+      const con = (fecha: string) => [
+        { path: '/objects/stakeholder/records', body: pagina([registro('s1', { organization: 'o1', last_contact_date: fecha }, { state: 'profiled' })]) },
+        ...rutas(SIN_STANCE)
+      ]
+      abrir(con('2026-07-09'))
+      const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
+      await within(atencion).findByRole('link', { name: 'Asamblea de agosto: acta por redactar' })
+      expect(within(atencion).queryByText(/sin contacto/)).not.toBeInTheDocument()
+      cerrar()
+      abrir(con('2026-07-08'))
+      const mas = await screen.findByRole('region', { name: 'Atención requerida' })
+      expect(await within(mas).findByRole('link', { name: 'Ronda campesina Tunas: sin contacto hace más de 90 días' })).toBeInTheDocument()
+    })
+  })
+
+  it('un indicador que falla dice el error, no "Cargando" para siempre; la matriz no disponible dice su motivo', async () => {
+    abrir(
+      [indicador('KPI-STK-03', { available: false, unavailableReason: 'OBJECT_NOT_READABLE' }), ...rutas(SIN_STANCE)],
+      [falla('/sgspe/dashboards/indicators/KPI-STK-01', 400, 'corr-501')]
+    )
+    const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
+    expect(await within(salud).findByText(/corr-501/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Salud del proyecto' })).toBeInTheDocument()
+    const paisaje = screen.getByRole('region', { name: 'Paisaje de grupos de interés' })
+    await waitFor(() =>
+      expect(
+        within(paisaje)
+          .getAllByText('No disponible')
+          .some((m) => m.getAttribute('title') === 'Su rol no puede leer los registros de esta cifra')
+      ).toBe(true)
+    )
+    expect(within(paisaje).queryByRole('img', { name: 'Interés × poder' })).not.toBeInTheDocument()
+  })
+
+  it('la matriz no se dibuja vacía cuando su lectura falla', async () => {
+    abrir(rutas(SIN_STANCE), [falla('/sgspe/dashboards/indicators/KPI-STK-03', 400, 'corr-503')])
+    const paisaje = await screen.findByRole('region', { name: 'Paisaje de grupos de interés' })
+    expect(await within(paisaje).findByText(/corr-503/)).toBeInTheDocument()
+    expect(within(paisaje).queryByRole('img', { name: 'Interés × poder' })).not.toBeInTheDocument()
+  })
+
+  it('las reuniones y la actividad dicen su error, su vacío y un mes sin cifra', async () => {
+    abrir(
+      [{ path: '/objects/project/records/p1/history', body: [] }, ...rutas(SIN_STANCE)],
+      [falla('/sgspe/dashboards/indicators/KPI-ENG-02', 400, 'corr-502')]
+    )
+    const reuniones = await screen.findByRole('region', { name: 'Reuniones al mes frente a la meta' })
+    expect(await within(reuniones).findByText(/corr-502/)).toBeInTheDocument()
+    const actividad = screen.getByRole('region', { name: 'Actividad reciente' })
+    expect(await within(actividad).findByText('Este proyecto aún no tiene actividad registrada.')).toBeInTheDocument()
+    cerrar()
+    abrir(
+      [
+        indicador('KPI-ENG-02', {
+          value: 1,
+          series: [
+            { period: '2026-09', value: null, target: 2 },
+            { period: '2026-10', value: 1, target: 2 }
+          ]
+        }),
+        ...rutas(SIN_STANCE)
+      ],
+      [falla(/^\/objects\/project\/records\/p1\/history/, 400, 'corr-504')]
+    )
+    expect(await screen.findByText('2026-09: — de 2')).toBeInTheDocument()
+    expect(await screen.findByText(/corr-504/)).toBeInTheDocument()
+    cerrar()
+    abrir([indicador('KPI-ENG-02', { value: 0, series: [] }), ...rutas(SIN_STANCE)])
+    expect(await screen.findByText('Aún no hay meses con reuniones que comparar con la meta.')).toBeInTheDocument()
+  })
+
+  it('el mini mapa dice por qué está en blanco: bloqueado, con error o sin geometrías', async () => {
+    abrir(rutas(SIN_STANCE), [falla(/^\/sgspe\/territory\/layers\//, 403)])
+    expect(await screen.findByText('Su cuenta no puede ver ninguna de las capas encendidas.')).toBeInTheDocument()
+    cerrar()
+    abrir(rutas(SIN_STANCE), [falla(/^\/sgspe\/territory\/layers\//)])
+    expect(await screen.findByText('No se pudo leer ninguna de las capas encendidas: vuelva a cargar la página.')).toBeInTheDocument()
+    cerrar()
+    abrir(rutas(SIN_STANCE))
+    expect(await screen.findByText('Este proyecto aún no tiene geometrías: impórtelas o dibújelas para verlas aquí.')).toBeInTheDocument()
   })
 })

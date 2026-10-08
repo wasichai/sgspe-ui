@@ -17,15 +17,16 @@ export function MiniMatriz({
   umbralInteres = 3,
   umbralPoder = 3,
   etiqueta,
-  disponible = true
+  noDisponible
 }: {
   puntos: Punto[]
   umbralInteres?: number
   umbralPoder?: number
   etiqueta: string
-  disponible?: boolean
+  // el indicador no está disponible: la matriz no se dibuja y dice por qué (unavailableReason, decisión 22)
+  noDisponible?: { motivo?: string | null }
 }) {
-  if (!disponible) return <NoDisponible />
+  if (noDisponible) return <NoDisponible motivo={noDisponible.motivo} />
   // de 1 a 5 en los dos ejes, en un cuadro de 100 × 100
   const escala = (v: number) => ((v - 1) / 4) * 100
   return (

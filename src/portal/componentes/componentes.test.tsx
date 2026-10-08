@@ -124,6 +124,12 @@ describe('KpiCard', () => {
     expect(screen.getByText('Elija un proyecto')).toHaveAttribute('title', 'Esta cifra se calcula para un solo proyecto: elija uno en el selector')
   })
 
+  it('si la consulta del indicador falló, dice el error en lugar de "Cargando…" para siempre', async () => {
+    montar(<KpiCard titulo="Cifra" cargando={false} error={new ErrorDeSgspe(500, 'Falló', [], 'corr-9')} />)
+    expect(await screen.findByText(/corr-9/)).toBeInTheDocument()
+    expect(screen.queryByText('Cargando…')).not.toBeInTheDocument()
+  })
+
   it('un módulo que no llegó dice en qué fase llega', async () => {
     montar(<KpiCard titulo="Compromisos vencidos" llegaEn="F3" />)
     expect(await screen.findByText('Llega en F3')).toBeInTheDocument()

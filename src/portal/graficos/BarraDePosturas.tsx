@@ -14,9 +14,8 @@ export const COLOR_DE_POSTURA: Record<string, string> = {
   'EN CONTRA': 'var(--sg-stance-against)'
 }
 
-export function BarraDePosturas({ indicador, titulo }: { indicador: Indicador | undefined; titulo: string }) {
+export function BarraDePosturas({ indicador, titulo }: { indicador: Indicador; titulo: string }) {
   const { t } = useTranslation(NS)
-  if (!indicador) return null
   if (!indicador.available) return <NoDisponible motivo={indicador.unavailableReason} />
   const filas = indicador.breakdowns?.find((d) => d.by === 'stance')?.rows ?? []
   const total = filas.reduce((suma, f) => suma + (f.value ?? 0), 0)

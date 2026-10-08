@@ -8,6 +8,7 @@ import { useProyecto } from '../contexto/proyectos'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { idDeElemento, useCapas, type Encuadre, type EstadoDeCapa } from '../mapa/api'
+import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS, capa } from '../mapa/capas'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
 import { Mapa } from '../mapa/Mapa'
@@ -21,21 +22,6 @@ const FICHA: Record<string, string> = { community: 'communities', locality: 'loc
 const PREDIOS = ['LYR-14', 'LYR-15']
 
 type EscuchaDelCursor = (punto: [number, number] | null) => void
-
-// qué decir cuando el mapa no dibuja nada. «sin geometrías» solo vale si hay capas encendidas, ninguna falló ni está
-// bloqueada y la consulta cubre todo el proyecto (sin bbox): con una vista acotada, un mapa vacío solo dice que la vista lo está
-function avisoDelMapa(
-  estados: EstadoDeCapa[],
-  acotado: boolean
-): 'todasApagadas' | 'todasBloqueadas' | 'todasConError' | 'vistaVacia' | 'sinGeometrias' | null {
-  if (estados.length === 0) return 'todasApagadas'
-  if (estados.some((e) => e.cargando || (e.datos?.features.length ?? 0) > 0)) return null
-  const bloqueadas = estados.filter((e) => e.bloqueada).length
-  const conError = estados.filter((e) => !e.bloqueada && e.error).length
-  if (bloqueadas === estados.length) return 'todasBloqueadas'
-  if (bloqueadas + conError === estados.length) return 'todasConError'
-  return acotado || bloqueadas + conError > 0 ? 'vistaVacia' : 'sinGeometrias'
-}
 
 // la barra de coordenadas en el CRS de trabajo: guarda el cursor aquí para que el puntero no repinte la página
 function Coordenadas({ crs, escucha }: { crs: string; escucha: RefObject<EscuchaDelCursor | null> }) {
