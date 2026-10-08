@@ -1,5 +1,6 @@
 import { EN_COMUN } from './comun'
 import { EN_CONTEXTO } from './contexto'
+import { EN_PROYECTOS } from './proyectos'
 import { EN_TRANSICIONES } from './transiciones'
 import type { Textos } from './es'
 
@@ -7,6 +8,7 @@ import type { Textos } from './es'
 export const EN: Textos = {
   comun: EN_COMUN,
   contexto: EN_CONTEXTO,
+  proyectos: EN_PROYECTOS,
   transiciones: EN_TRANSICIONES,
   app: { lema: 'Social management for extractive projects' },
   login: {

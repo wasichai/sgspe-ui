@@ -1,5 +1,6 @@
 import { ES_COMUN } from './comun'
 import { ES_CONTEXTO } from './contexto'
+import { ES_PROYECTOS } from './proyectos'
 import { ES_TRANSICIONES } from './transiciones'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
@@ -7,6 +8,7 @@ import { ES_TRANSICIONES } from './transiciones'
 export const ES = {
   comun: ES_COMUN,
   contexto: ES_CONTEXTO,
+  proyectos: ES_PROYECTOS,
   transiciones: ES_TRANSICIONES,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
