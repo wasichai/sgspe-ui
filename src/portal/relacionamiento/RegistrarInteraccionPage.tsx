@@ -1,23 +1,26 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
-import { Button, Input, Textarea } from '@wasichai/ui'
+import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
-import { useFieldArray, useForm, useWatch } from 'react-hook-form'
+import { useFieldArray, useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
-import { NoDisponible } from '../componentes/Estados'
+import { Cargando, NoDisponible } from '../componentes/Estados'
+import { ConDefiniciones, DeLista, FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Pasos } from '../componentes/Pasos'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { nuevaClave } from '../datos/http'
-import { puedeLeer, texto, useDefinicion, useRegistro, useTodos } from '../datos/registros'
+import { puedeLeer, texto, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { ConDefiniciones, DeLista, ErrorDeGuardado } from './Avisos'
+import { ErrorDeGuardado } from './ErrorDeGuardado'
+import { conModo } from './modos'
 import { GuardadoParcial, useGuardarInteraccion, type NuevaInteraccion } from './guardarInteraccion'
 import { RegistroRapido } from './RegistroRapido'
 
@@ -75,10 +78,16 @@ export function RegistrarInteraccionPage() {
   const asignado = useAsignadoAlProyecto(projectId)
   const definicion = useDefinicion('engagement')
   const definicionDeParticipante = useDefinicion('engagement_participant')
-  const rapido = busqueda.get('mode') === 'quick' || (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches)
+  // ?mode=quick es el modo rápido, ?mode=full el asistente aunque la pantalla sea angosta; sin él, el teléfono usa el rápido
+  const modo = busqueda.get('mode')
+  const rapido = modo === 'quick' || (modo !== 'full' && typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches)
   // sin permiso para crear, o sin asignación vigente (el servidor rechazaría el alta), no hay formulario que llenar en vano
   if (!can('engagement', 'CREATE')) return <NoDisponible />
-  if (asignaciones.isSuccess && !asignado && !isAdmin) return <NoDisponible motivo="NOT_ASSIGNED" />
+  if (!isAdmin) {
+    if (asignaciones.isPending) return <Cargando />
+    if (asignaciones.isError && !asignaciones.data) return <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
+    if (!asignado) return <NoDisponible motivo="NOT_ASSIGNED" />
+  }
   return (
     <ConDefiniciones definiciones={[definicion, definicionDeParticipante]}>
       {([engagement, participante]) =>
@@ -138,6 +147,15 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   const total = asistentes.reduce((s, p) => s + (Number(p.represented_people_count) || 0), 0)
   const porSexo = (sexo: string) => asistentes.filter((p) => p.sex === sexo).reduce((s, p) => s + (Number(p.represented_people_count) || 0), 0)
 
+  // el paso de cada campo con error, para llevar a la persona adonde está lo que debe corregir
+  const PASO_DEL_CAMPO: Partial<Record<keyof Valores, number>> = {
+    engagement_type: 0,
+    title: 0,
+    held_at: 0,
+    scheduled_at: 0,
+    participantes: 2,
+    preguntas: 3
+  }
   const CAMPOS_DEL_PASO: (keyof Valores)[][] = [['engagement_type', 'title', 'held_at'], [], ['participantes'], ['preguntas'], []]
   const ir = async (siguiente: number) => {
     if (siguiente > paso && !(await trigger(CAMPOS_DEL_PASO[paso]))) return
@@ -145,8 +163,32 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
     setVisitados((x) => Math.max(x, siguiente))
   }
 
+  const [faltaAsistente, setFaltaAsistente] = useState(false)
+  const [conErrores, setConErrores] = useState<number | null>(null)
+  const irA = (destino: number) => {
+    setPaso(destino)
+    setVisitados((x) => Math.max(x, destino))
+  }
+  const hayAsistentes = asistentes.some((p) => Number(p.represented_people_count) >= 1)
+
+  // «Anterior» y el indicador de pasos no validan: lo que falla al guardar puede estar en un paso que no se ve, así que se lleva
+  // a la persona al primero con error y se le dice (nunca un botón que no hace nada)
+  const alFallar = (errores: FieldErrors<Valores>) => {
+    const destino = Math.min(4, ...Object.keys(errores).map((c) => PASO_DEL_CAMPO[c as keyof Valores] ?? 4))
+    setConErrores(destino)
+    irA(destino)
+  }
+
   const enviar = (transicion: NuevaInteraccion['transicion']) =>
     handleSubmit((valores) => {
+      setConErrores(null)
+      // register_held_unplanned exige al menos un participante que asistió (RF-ENG-004): comprobarlo antes de escribir evita
+      // dejar una interacción planificada y con fecha de realización, a medias
+      if (transicion === 'register_held_unplanned' && !valores.participantes.some((p) => p.attended && Number(p.represented_people_count) >= 1)) {
+        setFaltaAsistente(true)
+        return irA(2)
+      }
+      setFaltaAsistente(false)
       const nueva: NuevaInteraccion = {
         proyecto: projectId,
         atributos: {
@@ -178,7 +220,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
           navegar(`/projects/${projectId}/engagements/${i.id}`)
         }
       })
-    })
+    }, alFallar)
 
   // lo ya creado queda: guardar otra vez dejaría una interacción duplicada, así que lo que falta se completa desde su ficha
   const parcial = guardar.error instanceof GuardadoParcial
@@ -189,7 +231,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       <div className="space-y-2">
         <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.registro.titulo')}</h1>
         <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void ir(i)} />
-        <Link to="?mode=quick" className="text-sg-caption text-sg-primary-text underline">
+        <Link to={{ search: conModo(busqueda, 'quick') }} className="text-sg-caption text-sg-primary-text underline">
           {t('relacionamiento.registro.rapido')}
         </Link>
       </div>
@@ -227,9 +269,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             <Campo etiqueta={t('relacionamiento.registro.lugar')}>{(p) => <Input {...p} {...register('place')} />}</Campo>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <p className="text-sg-label font-medium">
-                  {t('relacionamiento.registro.localidad')}: {texto(localidad.data, 'name') || '—'}
-                </p>
+                <LugarElegido etiqueta={t('relacionamiento.registro.localidad')} id={v.locality} consulta={localidad} />
                 <BuscadorDeRegistro
                   objeto="locality"
                   etiqueta={t('relacionamiento.registro.localidad')}
@@ -238,9 +278,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                 />
               </div>
               <div className="space-y-1">
-                <p className="text-sg-label font-medium">
-                  {t('relacionamiento.registro.comunidad')}: {texto(comunidad.data, 'name') || '—'}
-                </p>
+                <LugarElegido etiqueta={t('relacionamiento.registro.comunidad')} id={v.community} consulta={comunidad} />
                 <BuscadorDeRegistro
                   objeto="community"
                   etiqueta={t('relacionamiento.registro.comunidad')}
@@ -363,6 +401,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             <p role="status" className="text-sm font-medium">
               {t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) })}
             </p>
+            {faltaAsistente && !hayAsistentes ? <Alert tone="warning">{t('relacionamiento.registro.sinAsistentes')}</Alert> : null}
           </div>
         ) : null}
         {paso === 3 ? (
@@ -371,7 +410,12 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
               <fieldset key={campo.id} className="grid gap-2 rounded-sg-md border border-sg-border p-3 md:grid-cols-2">
                 <legend className="px-1 text-sm">{t('relacionamiento.registro.pregunta')}</legend>
                 <div className="md:col-span-2">
-                  <Campo etiqueta={t('relacionamiento.registro.pregunta')}>{(p) => <Textarea {...p} {...register(`preguntas.${i}.question_text`)} />}</Campo>
+                  <Campo
+                    etiqueta={t('relacionamiento.registro.pregunta')}
+                    error={formState.errors.preguntas?.[i]?.question_text ? t('relacionamiento.registro.preguntaVacia') : undefined}
+                  >
+                    {(p) => <Textarea {...p} {...register(`preguntas.${i}.question_text`)} />}
+                  </Campo>
                 </div>
                 <Campo etiqueta={t('relacionamiento.registro.cargo')}>{(p) => <Input {...p} {...register(`preguntas.${i}.raised_by_role`)} />}</Campo>
                 <Campo etiqueta={t('relacionamiento.registro.tema')}>
@@ -435,6 +479,9 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.sinConexion')}</p>
           </section>
         ) : null}
+        {conErrores !== null && Object.keys(formState.errors).length > 0 ? (
+          <Alert tone="warning">{t('relacionamiento.registro.revisarPaso', { paso: pasos[conErrores] })}</Alert>
+        ) : null}
         {guardar.isError ? <ErrorDeGuardado error={guardar.error} proyecto={projectId} /> : null}
         <div className="flex flex-wrap justify-end gap-2 border-t border-sg-border pt-3">
           {paso > 0 ? (
@@ -464,6 +511,20 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
           )}
         </div>
       </form>
+    </div>
+  )
+}
+
+// la localidad o la comunidad elegida (o la del chip de territorio): el nombre llega de la API, así que mientras carga o si no
+// se puede leer se dice eso y no «—», que significa «ninguna»
+function LugarElegido({ etiqueta, id, consulta }: { etiqueta: string; id: string; consulta: UseQueryResult<Registro> }) {
+  const { t } = useTranslation(NS)
+  return (
+    <div className="space-y-1">
+      <p className="text-sg-label font-medium">
+        {etiqueta}: {!id ? '—' : consulta.isPending ? t('comun.cargando') : consulta.data ? texto(consulta.data, 'name') : null}
+      </p>
+      {id && consulta.isError && !consulta.data ? <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} /> : null}
     </div>
   )
 }

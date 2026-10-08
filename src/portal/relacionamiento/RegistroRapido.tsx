@@ -4,14 +4,16 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { DeLista } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { hoyEnLima } from '../datos/fechas'
 import { nuevaClave } from '../datos/http'
 import { useTodos } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { DeLista, ErrorDeGuardado } from './Avisos'
+import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { GuardadoParcial, useGuardarInteraccion, type Participante } from './guardarInteraccion'
+import { conModo } from './modos'
 
 // el modo rápido de campo de S24 (screens.md §6, S55): una sola pantalla con el tipo, la ubicación del teléfono, los
 // grupos presentes, contadores por sexo y ámbito (objetivos de 44 px) y una nota; guarda la interacción como realizada
@@ -91,7 +93,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
     <section className="mx-auto max-w-md space-y-4" aria-label={t('relacionamiento.registro.rapido')}>
       <div className="flex items-center justify-between">
         <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.registro.rapido')}</h1>
-        <Link to="?" className="text-sg-caption text-sg-primary-text underline">
+        <Link to={{ search: conModo(busqueda, 'full') }} className="text-sg-caption text-sg-primary-text underline">
           {t('relacionamiento.registro.titulo')}
         </Link>
       </div>

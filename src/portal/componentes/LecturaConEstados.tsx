@@ -1,13 +1,7 @@
-import { ApiError, type ObjectDefinition } from '@wasichai/core'
+// lo que una pantalla dibuja mientras una lectura carga, falla o llega: nunca un vacío ni un cero por una consulta que no terminó
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Alert } from '@wasichai/ui'
-import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
-import { useMensajeDeError } from '../componentes/errores'
-import { Cargando, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
-import { texto } from '../datos/registros'
-import { NS } from '../i18n'
-import { GuardadoParcial } from './guardarInteraccion'
+import { ApiError, type ObjectDefinition } from '@wasichai/core'
+import { Cargando, ErrorDeCarga, NoDisponible } from './Estados'
 
 // un 403 es «no disponible» (la cuenta no lee eso); cualquier otro error, la alerta con su correlación y reintento. nunca
 // un vacío: una consulta que carga o falla no se dibuja como una lista sin elementos
@@ -35,21 +29,4 @@ export function ConDefiniciones({
   if (fallida) return <FalloDeLectura error={fallida.error} alReintentar={() => definiciones.forEach((d) => void d.refetch())} />
   if (definiciones.some((d) => d.isPending)) return <Cargando />
   return <>{children(definiciones.map((d) => d.data as ObjectDefinition))}</>
-}
-
-// el error de guardar: si fue a mitad, lo ya creado queda y el aviso enlaza a la interacción para completarla
-export function ErrorDeGuardado({ error, proyecto }: { error: unknown; proyecto: string }) {
-  const { t } = useTranslation(NS)
-  const mensaje = useMensajeDeError()
-  if (error instanceof GuardadoParcial)
-    return (
-      <Alert tone="danger">
-        <p>{t('relacionamiento.registro.parcial')}</p>
-        <p>{mensaje(error.causa)}</p>
-        <Link to={`/projects/${proyecto}/engagements/${error.interaccion.id}`} className="underline">
-          {t('relacionamiento.registro.abrirCreada', { titulo: texto(error.interaccion, 'title') })}
-        </Link>
-      </Alert>
-    )
-  return <Alert tone="danger">{mensaje(error)}</Alert>
 }

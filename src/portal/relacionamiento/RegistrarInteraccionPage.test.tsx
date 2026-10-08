@@ -1,12 +1,17 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { FetchMock, MockRoute } from '@wasichai/testing'
+import { QueryClient, useQueryClient } from '@tanstack/react-query'
+import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { definicion, pagina, registro } from '../../test/montar'
+import { definicion, montar, pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { EQUIPO, base } from '../../test/relacionamiento'
+import { useGuardarInteraccion } from './guardarInteraccion'
+
+// lo que se teclea es la hora del reloj del navegador: el huso se fija para que el instante UTC sea el mismo en cualquier máquina
+process.env.TZ = 'America/Lima'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -28,13 +33,40 @@ afterEach(() => {
 describe('S24 · registrar interacción', () => {
   const rutas = (): MockRoute[] => [
     ...base(),
-    { path: '/metadata/objects/engagement', body: definicion('engagement', [['engagement_type', { type: 'ENUM', enumOptions: ['ASAMBLEA', 'LLAMADA'] }]]) },
+    {
+      path: '/metadata/objects/engagement',
+      body: definicion('engagement', [
+        ['engagement_type', { type: 'ENUM', enumOptions: ['ASAMBLEA', 'LLAMADA'] }],
+        'project',
+        'title',
+        'objective',
+        'description',
+        'held_at',
+        'scheduled_at',
+        'place',
+        'locality',
+        'community',
+        'convener',
+        'field_visit',
+        ['location', { type: 'GEOMETRY' }]
+      ])
+    },
     {
       path: '/metadata/objects/engagement_participant',
       body: definicion('engagement_participant', [
         ['sex', { type: 'ENUM', enumOptions: ['FEMENINO', 'MASCULINO'] }],
-        ['participant_scope', { type: 'ENUM', enumOptions: ['AIDS'] }]
+        ['participant_scope', { type: 'ENUM', enumOptions: ['AIDS'] }],
+        'engagement',
+        'participant_name',
+        'represented_group',
+        'represented_people_count',
+        'attended',
+        'stakeholder'
       ])
+    },
+    {
+      path: '/metadata/objects/engagement_question',
+      body: definicion('engagement_question', ['engagement', 'question_text', 'answered_on_site', 'answer', 'raised_by_role', 'topic'])
     },
     {
       path: '/objects/stakeholder/records',
@@ -98,7 +130,7 @@ describe('S24 · registrar interacción', () => {
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
     const [alta] = red.a('POST', '/objects/engagement/records')
     expect(alta.cuerpo).toMatchObject({
-      attributes: { project: 'p1', engagement_type: 'ASAMBLEA', title: 'Asamblea de octubre', held_at: new Date('2026-10-06T10:30').toISOString() }
+      attributes: { project: 'p1', engagement_type: 'ASAMBLEA', title: 'Asamblea de octubre', held_at: '2026-10-06T15:30:00.000Z' }
     })
     expect(red.a('POST', '/objects/engagement/records/e9/related/engagement_stakeholder')[0].cuerpo).toEqual({ otherId: 's1' })
     expect(red.a('POST', '/objects/engagement/records/e9/related/engagement_topic')[0].cuerpo).toEqual({ otherId: 't1' })
@@ -247,11 +279,13 @@ describe('S24 · registrar interacción', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea tardía')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '2026-10-06T23:30')
-    for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
+    for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
     const { attributes } = red.a('POST', '/objects/engagement/records')[0].cuerpo as { attributes: Record<string, string> }
-    expect(attributes.held_at).toBe(new Date('2026-10-06T23:30').toISOString())
+    expect(attributes.held_at).toBe('2026-10-07T04:30:00.000Z')
     expect(attributes).not.toHaveProperty('scheduled_at')
   })
 
@@ -294,6 +328,148 @@ describe('S24 · registrar interacción', () => {
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
     expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).toMatchObject({ attributes: { field_visit: 'v1' } })
     expect(red.a('POST', '/objects/engagement/records/e9/related/engagement_stakeholder')[0].cuerpo).toEqual({ otherId: 's1' })
+  })
+
+  // RF-ENG-004: register_held_unplanned exige al menos un participante que asistió; si el servidor lo rechazara al final, la
+  // interacción ya estaría creada, planificada y con held_at
+  it('guardar como realizada sin ningún participante que asistió no escribe nada y dice por qué', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'ASAMBLEA' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '2026-10-06T10:30')
+    for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
+    expect(await screen.findByText('Para guardar como realizada, agregue al menos un participante que asistió.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Participantes' })).toBeInTheDocument()
+    expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
+    // un participante que no asistió tampoco basta
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar persona' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Asistió' }))
+    for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
+    expect(await screen.findByText('Para guardar como realizada, agregue al menos un participante que asistió.')).toBeInTheDocument()
+    expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
+  })
+
+  // «Anterior» y el indicador de pasos no validan: el esquema puede invalidarse desde un paso que no se ve
+  it('si el formulario es inválido al guardar, lleva al paso con el error y lo dice', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'ASAMBLEA' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar grupo sin nombres' }))
+    for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('heading', { name: 'Revisión' })).toBeInTheDocument()
+    // de la revisión a los participantes, se deja el grupo en cero y se salta de vuelta a la revisión sin validar
+    await userEvent.click(screen.getByRole('button', { name: 'Participantes' }))
+    const personas = await screen.findByRole('spinbutton', { name: 'Personas' })
+    await userEvent.clear(personas)
+    await userEvent.type(personas, '0')
+    await userEvent.click(screen.getByRole('button', { name: 'Anterior' }))
+    await userEvent.click(screen.getByRole('button', { name: /Revisión/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar y completar después' }))
+    expect(await screen.findByRole('heading', { name: 'Participantes' })).toBeInTheDocument()
+    expect(screen.getByText('Un grupo representa al menos a una persona')).toBeInTheDocument()
+    expect(screen.getByText('Hay datos por corregir en «Participantes».')).toBeInTheDocument()
+    expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
+  })
+
+  it('sin una asignación vigente al proyecto no ofrece el formulario y dice por qué', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...rutas()
+    ])
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.getByText('No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Tipo de interacción' })).not.toBeInTheDocument()
+  })
+
+  // decisión 18: al crear viaja lo que el formulario trae y la definición de quien llama marca editable
+  it('no manda un campo que la cuenta no puede escribir', async () => {
+    const solo = rutas().filter((r) => r.path !== '/metadata/objects/engagement')
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick', RELACIONISTA, EQUIPO, [
+      {
+        path: '/metadata/objects/engagement',
+        body: definicion('engagement', [
+          ['engagement_type', { type: 'ENUM', enumOptions: ['ASAMBLEA'] }],
+          'project',
+          'title',
+          'held_at',
+          ['description', { editable: false }]
+        ])
+      },
+      ...solo
+    ])
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'ASAMBLEA' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nota' }), 'una nota')
+    await userEvent.click(await screen.findByRole('button', { name: 'Más FEMENINO · AIDS' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+    const { attributes } = red.a('POST', '/objects/engagement/records')[0].cuerpo as { attributes: Record<string, unknown> }
+    expect(attributes).toMatchObject({ project: 'p1', engagement_type: 'ASAMBLEA' })
+    expect(attributes).not.toHaveProperty('description')
+    expect(attributes).not.toHaveProperty('locality')
+  })
+
+  it('los enlaces entre el asistente y el modo rápido conservan los grupos, la visita y el territorio', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?stakeholders=s1&field_visit=v1&territory=locality:l1', RELACIONISTA, EQUIPO, rutas())
+    const aRapido = await screen.findByRole('link', { name: 'Modo rápido de campo' })
+    const rapido = new URL(aRapido.getAttribute('href') ?? '', 'http://x')
+    expect(rapido.pathname).toBe('/projects/p1/engagements/new')
+    expect(Object.fromEntries(rapido.searchParams)).toEqual({ stakeholders: 's1', field_visit: 'v1', territory: 'locality:l1', mode: 'quick' })
+    await userEvent.click(aRapido)
+    const alAsistente = await screen.findByRole('link', { name: 'Registrar interacción' })
+    const asistente = new URL(alAsistente.getAttribute('href') ?? '', 'http://x')
+    expect(Object.fromEntries(asistente.searchParams)).toEqual({ stakeholders: 's1', field_visit: 'v1', territory: 'locality:l1', mode: 'full' })
+  })
+
+  it('el modo rápido sigue disponible como asistente aunque la pantalla sea angosta', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }))
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=full', RELACIONISTA, EQUIPO, rutas())
+    expect(await screen.findByRole('textbox', { name: 'Título' })).toBeInTheDocument()
+  })
+
+  it('tras guardar, refresca las listas, los vínculos y los tableros que cambian', async () => {
+    let cliente: QueryClient | null = null
+    function Sonda() {
+      const c = useQueryClient()
+      cliente = c
+      const guardar = useGuardarInteraccion()
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            guardar.mutate({ proyecto: 'p1', atributos: { title: 'x' }, grupos: [], temas: [], participantes: [], preguntas: [], transicion: null })
+          }
+        >
+          guardar
+        </button>
+      )
+    }
+    fetch = mockFetch(rutas())
+    montar(<Sonda />, { permisos: EQUIPO })
+    const invalidar = vi.spyOn(cliente as unknown as QueryClient, 'invalidateQueries')
+    await userEvent.click(screen.getByRole('button', { name: 'guardar' }))
+    await waitFor(() => expect(invalidar).toHaveBeenCalled())
+    const claves = invalidar.mock.calls.map(([f]) => JSON.stringify((f as { queryKey: unknown[] }).queryKey))
+    for (const esperada of [
+      ['records', 'engagement'],
+      ['records', 'engagement_participant'],
+      ['records', 'stakeholder'],
+      ['record', 'stakeholder'],
+      ['related'],
+      ['indicator'],
+      ['dashboard']
+    ])
+      expect(claves).toContain(JSON.stringify(esperada))
   })
 
   describe('carga y errores', () => {
@@ -348,6 +524,27 @@ describe('S24 · registrar interacción', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
       expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    })
+
+    it('la localidad precargada dice que carga, que no está disponible o que falló, no «—»', async () => {
+      const ir = async (localidad: MockRoute) => {
+        fetch = abrirPortal('/projects/p1/engagements/new?territory=locality:l1', RELACIONISTA, EQUIPO, [localidad, ...rutas()])
+        await screen.findByRole('option', { name: 'ASAMBLEA' })
+        await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+        await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea')
+        await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+      }
+      await ir({ path: '/objects/locality/records/l1', body: registro('l1', { name: 'Pukaqaqa Alto' }) })
+      expect(await screen.findByText('Localidad: Pukaqaqa Alto')).toBeInTheDocument()
+      cleanup()
+      fetch?.restore()
+      await ir({ path: '/objects/locality/records/l1', status: 403, body: { title: 'Error', status: 403, detail: 'Sin acceso', errors: [] } })
+      expect(await screen.findByText('No disponible')).toBeInTheDocument()
+      expect(screen.queryByText('—')).not.toBeInTheDocument()
+      cleanup()
+      fetch?.restore()
+      await ir({ path: '/objects/locality/records/l1', status: 404, body: { title: 'Error', status: 404, detail: 'No existe', errors: [] } })
+      expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     })
 
     it('sin permiso para crear interacciones no ofrece el formulario', async () => {

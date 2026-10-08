@@ -71,7 +71,12 @@ export const ES_RELACIONAMIENTO = {
     deDondeViene: 'De dónde viene',
     visita: 'Visita de campo',
     grupos: 'Grupos de interés',
-    temas: 'Temas'
+    temas: 'Temas',
+    sinParticipantes: 'Aún no hay participantes registrados.',
+    sinPreguntas: 'Esta interacción no tiene preguntas registradas.',
+    sinActa: 'Aún no hay acta.',
+    sinActividad: 'Esta interacción aún no tiene actividad registrada.',
+    truncado: 'Se leyeron solo los primeros {{n}} registros; el resto no se muestra.'
   },
   registro: {
     titulo: 'Registrar interacción',
@@ -122,7 +127,10 @@ export const ES_RELACIONAMIENTO = {
     mas: 'Más {{etiqueta}}',
     menos: 'Menos {{etiqueta}}',
     parcial: 'La interacción se creó, pero no se pudo completar el registro.',
-    abrirCreada: 'Abrir «{{titulo}}» para completarla'
+    abrirCreada: 'Abrir «{{titulo}}» para completarla',
+    sinAsistentes: 'Para guardar como realizada, agregue al menos un participante que asistió.',
+    revisarPaso: 'Hay datos por corregir en «{{paso}}».',
+    preguntaVacia: 'Escriba la pregunta o quítela'
   },
   acta: {
     titulo: 'Acta de la interacción',
@@ -140,7 +148,10 @@ export const ES_RELACIONAMIENTO = {
     devuelta: 'Devuelta con este motivo: {{motivo}}',
     soloLectura: 'El acta ya no se edita en este estado.',
     proponerLlega: 'Proponer un compromiso desde el texto llega en F3; el borrador de IA, en F7.',
-    firmada: 'El acta firmada se sube como evidencia ACTA (F3): no es un estado.'
+    firmada: 'El acta firmada se sube como evidencia ACTA (F3): no es un estado.',
+    motivoNoLeido: 'No se pudo leer el motivo de la devolución.',
+    sinListas: 'Los asistentes o las preguntas no se leyeron completos: no se pueden insertar en el acta.',
+    restringida: 'Su cuenta no puede leer el acta.'
   },
   visita: {
     objetivo: 'Objetivo',
@@ -240,7 +251,12 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     deDondeViene: 'Where it comes from',
     visita: 'Field visit',
     grupos: 'Stakeholders',
-    temas: 'Topics'
+    temas: 'Topics',
+    sinParticipantes: 'No participants have been registered yet.',
+    sinPreguntas: 'This engagement has no registered questions.',
+    sinActa: 'There are no minutes yet.',
+    sinActividad: 'This engagement has no recorded activity yet.',
+    truncado: 'Only the first {{n}} records were read; the rest is not shown.'
   },
   registro: {
     titulo: 'Register engagement',
@@ -291,7 +307,10 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     mas: 'More {{etiqueta}}',
     menos: 'Fewer {{etiqueta}}',
     parcial: 'The engagement was created, but its registration could not be completed.',
-    abrirCreada: 'Open “{{titulo}}” to complete it'
+    abrirCreada: 'Open “{{titulo}}” to complete it',
+    sinAsistentes: 'To save as held, add at least one participant who attended.',
+    revisarPaso: 'There is data to fix in “{{paso}}”.',
+    preguntaVacia: 'Write the question or remove it'
   },
   acta: {
     titulo: 'Engagement minutes',
@@ -309,7 +328,10 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     devuelta: 'Returned with this reason: {{motivo}}',
     soloLectura: 'The minutes are no longer edited in this state.',
     proponerLlega: 'Proposing a commitment from the text arrives in F3; the AI draft, in F7.',
-    firmada: 'The signed minutes are uploaded as MINUTES evidence (F3): it is not a state.'
+    firmada: 'The signed minutes are uploaded as MINUTES evidence (F3): it is not a state.',
+    motivoNoLeido: 'The reason for the return could not be read.',
+    sinListas: 'The attendees or the questions were not read completely: they cannot be inserted into the minutes.',
+    restringida: 'Your account cannot read the minutes.'
   },
   visita: {
     objetivo: 'Objective',

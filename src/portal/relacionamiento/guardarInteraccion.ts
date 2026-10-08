@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ApiError } from '@wasichai/core'
+import { ApiError, type ObjectDefinition } from '@wasichai/core'
 import { usePedir, type Pedido } from '../datos/http'
-import type { Geometria, Registro } from '../datos/registros'
+import { atributosDeEscritura, geometriasDeEscritura, type Geometria, type Registro } from '../datos/registros'
 
 // registrar una interacción por la API genérica (api.md §4.4): la interacción, sus vínculos con grupos de interés y temas,
 // sus participantes, sus preguntas y, al final, la transición elegida. son escrituras sucesivas: si una falla, lo ya
@@ -48,17 +48,33 @@ export class GuardadoParcial extends Error {
 
 const limpio = (o: object) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v !== undefined))
 
-export async function guardarInteraccion(pedir: Pedido, n: NuevaInteraccion): Promise<Registro> {
+// la definición de un objeto para quien llama (decisión 18): al crear viaja lo que el formulario trae y ella marca editable
+export type DefinicionDe = (objeto: string) => Promise<ObjectDefinition>
+
+export async function guardarInteraccion(pedir: Pedido, n: NuevaInteraccion, definicionDe: DefinicionDe): Promise<Registro> {
+  // las definiciones se leen antes de escribir nada: si faltan, el error no deja una interacción a medias
+  const [definicion, deParticipante, dePregunta] = await Promise.all([
+    definicionDe('engagement'),
+    n.participantes.length > 0 ? definicionDe('engagement_participant') : undefined,
+    n.preguntas.length > 0 ? definicionDe('engagement_question') : undefined
+  ])
+  const escribible = (objeto: string, def: ObjectDefinition | undefined, atributos: object) => (def ? atributosDeEscritura(objeto, def, limpio(atributos)) : {})
+  const geometrias = geometriasDeEscritura(definicion, n.ubicacion ? { location: n.ubicacion } : undefined)
   const interaccion = await pedir<Registro>('/objects/engagement/records', {
-    json: { attributes: limpio({ ...n.atributos, project: n.proyecto }), ...(n.ubicacion ? { geometries: { location: n.ubicacion } } : {}) },
+    json: { attributes: escribible('engagement', definicion, { ...n.atributos, project: n.proyecto }), ...(geometrias ? { geometries: geometrias } : {}) },
     clave: n.clave
   })
   try {
     for (const grupo of n.grupos) await pedir(`/objects/engagement/records/${interaccion.id}/related/engagement_stakeholder`, { json: { otherId: grupo } })
     for (const tema of n.temas) await pedir(`/objects/engagement/records/${interaccion.id}/related/engagement_topic`, { json: { otherId: tema } })
     for (const p of n.participantes)
-      await pedir('/objects/engagement_participant/records', { json: { attributes: limpio({ ...p, engagement: interaccion.id }) } })
-    for (const q of n.preguntas) await pedir('/objects/engagement_question/records', { json: { attributes: limpio({ ...q, engagement: interaccion.id }) } })
+      await pedir('/objects/engagement_participant/records', {
+        json: { attributes: escribible('engagement_participant', deParticipante, { ...p, engagement: interaccion.id }) }
+      })
+    for (const q of n.preguntas)
+      await pedir('/objects/engagement_question/records', {
+        json: { attributes: escribible('engagement_question', dePregunta, { ...q, engagement: interaccion.id }) }
+      })
     // la transición lleva el updatedAt que devolvió el alta: los conteos de asistentes que el servidor recalcula al agregar
     // participantes y los vínculos tocan solo derivados y vínculos, que no son un conflicto de If-Match (api.md §3.6). el
     // servidor lo comprueba en las 500 entradas más recientes del historial; una asamblea con más escrituras que esas deja
@@ -84,10 +100,24 @@ export function useGuardarInteraccion() {
   const pedir = usePedir()
   const cliente = useQueryClient()
   return useMutation({
-    mutationFn: (n: NuevaInteraccion) => guardarInteraccion(pedir, n),
+    mutationFn: (n: NuevaInteraccion) =>
+      guardarInteraccion(pedir, n, (objeto) =>
+        cliente.ensureQueryData({ queryKey: ['objects', objeto], queryFn: () => pedir<ObjectDefinition>(`/metadata/objects/${objeto}`) })
+      ),
+    // aunque falle a mitad quedó algo escrito. cambian las interacciones y sus participantes, los vínculos con grupos de
+    // interés y temas, los grupos de interés (último contacto, JOB-03) y las cifras de los indicadores y los tableros
     onSettled: () => {
-      void cliente.invalidateQueries({ queryKey: ['records', 'engagement'] })
-      void cliente.invalidateQueries({ queryKey: ['indicator'] })
+      for (const clave of [
+        ['records', 'engagement'],
+        ['records', 'engagement_participant'],
+        ['records', 'engagement_question'],
+        ['records', 'stakeholder'],
+        ['record', 'stakeholder'],
+        ['related'],
+        ['indicator'],
+        ['dashboard']
+      ])
+        void cliente.invalidateQueries({ queryKey: clave })
     }
   })
 }
