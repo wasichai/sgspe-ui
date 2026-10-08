@@ -10,4 +10,4 @@ export interface RutaEnProyecto {
   seccion?: ClaveDeSeccion
 }
 
-export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [{ ruta: 'settings', Pantalla: EquipoYParametrosPage, seccion: 'projects' }]
+export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [{ ruta: 'settings', Pantalla: EquipoYParametrosPage }]

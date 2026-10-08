@@ -5,7 +5,7 @@ import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { ErrorDeCarga } from '../componentes/Estados'
 import { NS } from '../i18n'
 import { BarraDeContexto } from './BarraDeContexto'
-import { useMisAsignaciones, useProyecto } from './proyectos'
+import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyectos'
 import { Rastro } from './Rastro'
 
 // el ProjectLayout de screens.md §2: dentro de un proyecto, la barra de contexto y la sub-navegación de Project 360; por
@@ -55,8 +55,9 @@ export function ProyectoLayout() {
   )
 }
 
-// si la cuenta puede escribir en el proyecto: tiene una asignación activa (ProjectScopeGuard decide; esto solo oculta)
+// si la cuenta puede escribir en el proyecto: tiene una asignación vigente, activa y dentro de sus fechas (ProjectScopeGuard
+// decide; esto solo oculta lo que el servidor rechazaría)
 export function useAsignadoAlProyecto(projectId: string | undefined): boolean {
   const asignaciones = useMisAsignaciones()
-  return (asignaciones.data ?? []).some((a) => a.attributes.project === projectId)
+  return (asignaciones.data ?? []).some((a) => a.attributes.project === projectId && vigenciaDeAsignacion(a) === 'vigente')
 }

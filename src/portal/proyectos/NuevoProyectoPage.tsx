@@ -14,6 +14,7 @@ import { atributo, campoDe, escribeAlgunCampo, texto, useActualizar, useCrear, u
 import { NS } from '../i18n'
 import { useAplicarTransicion } from '../transiciones/api'
 import { CampanaDelProyecto, EquipoDelProyecto, PartesDelProyecto } from './EquipoYPartes'
+import { aNumero, ParametroNumerico } from './ParametroNumerico'
 import { PARAMETROS_F2, valoresPorDefecto } from './parametros'
 
 // S07 · crear proyecto (screens.md §3, flujo 1): siete pasos; el proyecto nace en draft al salir del paso 1 y cada cambio
@@ -45,8 +46,6 @@ const esquema = z
   })
 type Valores = z.infer<typeof esquema>
 
-// un número tecleado: acepta la coma decimal y no toma un texto vacío o de espacios por cero
-const aNumero = (texto: string): number => (texto.trim() === '' ? Number.NaN : Number(texto.trim().replace(',', '.')))
 const fueraDeRango = (texto: string, maximo: number): boolean => {
   const n = aNumero(texto)
   return !Number.isFinite(n) || Math.abs(n) > maximo
@@ -123,66 +122,10 @@ export function NuevoProyectoPage() {
   return <Asistente inicial={existente.data} />
 }
 
-// el valor de un parámetro numérico tecleado: vacío es el valor por defecto (dashboards.md §3.3); un texto que no es un número
-// mayor o igual a 0, o un decimal en un parámetro entero, es NaN, que el esquema rechaza: nunca se guarda un valor distinto
-// del que muestra el campo
-const convertir = (escrito: string, porDefecto: number, entero: boolean): number => {
-  if (escrito.trim() === '') return porDefecto
-  const n = aNumero(escrito)
-  return Number.isFinite(n) && n >= 0 && (!entero || Number.isInteger(n)) ? n : Number.NaN
-}
-
-// un parámetro numérico conserva el texto tecleado (un decimal a medias, el campo vacío) y lleva cada cambio al formulario;
-// el error de un texto inválido sale junto al campo al salir de él o al intentar guardar
-function ParametroNumerico({
-  id,
-  valor,
-  porDefecto,
-  entero,
-  intentoDeGuardar,
-  alCambiar
-}: {
-  id: string
-  valor: number
-  porDefecto: number
-  entero: boolean
-  intentoDeGuardar: boolean
-  alCambiar: (n: number) => void
-}) {
-  const { t } = useTranslation(NS)
-  const [escrito, setEscrito] = useState(String(valor))
-  const [tocado, setTocado] = useState(false)
-  const invalido = Number.isNaN(convertir(escrito, porDefecto, entero))
-  const error = invalido && (tocado || intentoDeGuardar) ? t(entero ? 'proyectos.asistente.enteroInvalido' : 'proyectos.asistente.numeroInvalido') : undefined
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <Input
-        id={id}
-        inputMode="decimal"
-        className="w-24"
-        value={escrito}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        onChange={(e) => {
-          setEscrito(e.target.value)
-          alCambiar(convertir(e.target.value, porDefecto, entero))
-        }}
-        onBlur={() => {
-          setTocado(true)
-          if (escrito.trim() === '') setEscrito(String(porDefecto))
-        }}
-      />
-      {error ? (
-        <p id={`${id}-error`} className="max-w-xs text-right text-sg-caption text-sg-danger">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
 function Asistente({ inicial }: { inicial?: Registro }) {
   const { t } = useTranslation(NS)
+  // el texto de cada parámetro numérico, para que un cambio de paso no lo pierda (un inválido es NaN en el formulario)
+  const textosDeParametros = useRef<Record<string, string>>({})
   const navegar = useNavigate()
   const mensaje = useMensajeDeError()
   const erroresDeCampo = useErroresDeCampo()
@@ -375,6 +318,8 @@ function Asistente({ inicial }: { inicial?: Registro }) {
                         porDefecto={Number(par.porDefecto)}
                         entero={campoDe(definicion.data, par.campo)?.type === 'INTEGER'}
                         intentoDeGuardar={formState.submitCount > 0}
+                        textoInicial={textosDeParametros.current[par.campo]}
+                        alEscribir={(x) => (textosDeParametros.current[par.campo] = x)}
                         alCambiar={(n) => setValue(`parametros.${par.campo}`, n, { shouldDirty: true })}
                       />
                     )}

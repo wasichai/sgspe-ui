@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos } from '../../test/portal'
@@ -14,6 +14,7 @@ beforeEach(() => {
   sessionStorage.clear()
 })
 afterEach(() => {
+  vi.useRealTimers()
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
@@ -26,7 +27,8 @@ const VIGENTE = registro('a1', {
   member_user_email: 'pad@sgspe.test',
   role_name: 'PROJECT_ADMIN',
   active: true,
-  start_date: '2026-01-01'
+  start_date: '2026-01-01',
+  end_date: null
 })
 const VENCIDA = registro('a2', {
   project: 'p1',
@@ -36,6 +38,22 @@ const VENCIDA = registro('a2', {
   active: true,
   end_date: '2026-01-31'
 })
+
+const PROGRAMADA = registro('a3', {
+  project: 'p1',
+  member_user_id: 'u-y',
+  member_user_email: 'despues@sgspe.test',
+  role_name: 'FIELD_AGENT',
+  active: true,
+  start_date: '2026-12-01',
+  end_date: null
+})
+
+// el reloj en 03:00Z del 2 de octubre: en Lima todavía es el 1 (UTC-5), y es la fecha que cuenta
+const enLima = () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-02T03:00:00Z'))
+}
 
 const rutas = () => [
   { path: '/objects/project/records/p1', body: P1 },
@@ -50,8 +68,9 @@ const rutas = () => [
     body: definicion('project_assignment', ['active', 'end_date', 'member_user_id', 'member_user_email', 'role_name', 'start_date', 'project'])
   },
   { path: /^\/objects\/project_assignment\/records\?.*member_user_id=u-pad/, body: pagina([VIGENTE]) },
-  { path: '/objects/project_assignment/records', body: pagina([VIGENTE, VENCIDA]) },
+  { path: '/objects/project_assignment/records', body: pagina([VIGENTE, VENCIDA, PROGRAMADA]) },
   { method: 'PUT', path: '/objects/project_assignment/records/a1', body: VIGENTE },
+  { method: 'PUT', path: '/objects/project_assignment/records/a3', body: PROGRAMADA },
   {
     path: '/objects/exploration_campaign/records',
     body: pagina([
@@ -70,15 +89,62 @@ const PAD = permisos({
 })
 
 describe('S11 · equipo y parámetros', () => {
-  it('marca las asignaciones vencidas y termina una vigente', async () => {
+  it('marca las asignaciones vencidas y programadas; termina una vigente con la fecha de Lima, tras confirmar', async () => {
+    enLima()
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed()
     const tabla = await screen.findByRole('table', { name: 'Equipo' })
-    const [, vigente, vencida] = within(tabla).getAllByRole('row')
+    const [, vigente, vencida, programada] = within(tabla).getAllByRole('row')
     expect(within(vencida).getByText('Vencida: no da acceso de escritura')).toBeInTheDocument()
-    await userEvent.click(within(vigente).getByRole('button', { name: 'Terminar asignación' }))
+    expect(within(vencida).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(programada).getByText('Programada: aún no da acceso de escritura')).toBeInTheDocument()
+    await userEvent.click(within(vigente).getByRole('button', { name: 'Terminar asignación de pad@sgspe.test' }))
+    // pide confirmar: nada se escribe todavía
+    expect(red.a('PUT', '/objects/project_assignment/records/a1')).toHaveLength(0)
+    await userEvent.click(within(vigente).getByRole('button', { name: 'Sí, terminar' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/project_assignment/records/a1')).toHaveLength(1))
-    expect(red.a('PUT', '/objects/project_assignment/records/a1')[0].cuerpo).toMatchObject({ attributes: { active: false } })
+    // son las 22:00 del 1 de octubre en Lima, no el 2 de UTC
+    expect(red.a('PUT', '/objects/project_assignment/records/a1')[0].cuerpo).toMatchObject({ attributes: { active: false, end_date: '2026-10-01' } })
+  })
+
+  it('cancelar la confirmación no escribe, y terminar una programada no deja el fin antes del inicio', async () => {
+    enLima()
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed()
+    const tabla = await screen.findByRole('table', { name: 'Equipo' })
+    const fila = () => within(tabla).getAllByRole('row')[3]
+    await userEvent.click(within(fila()).getByRole('button', { name: 'Terminar asignación de despues@sgspe.test' }))
+    await userEvent.click(within(fila()).getByRole('button', { name: 'Cancelar' }))
+    expect(red.a('PUT', '/objects/project_assignment/records/a3')).toHaveLength(0)
+    await userEvent.click(within(fila()).getByRole('button', { name: 'Terminar asignación de despues@sgspe.test' }))
+    await userEvent.click(within(fila()).getByRole('button', { name: 'Sí, terminar' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project_assignment/records/a3')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/project_assignment/records/a3')[0].cuerpo).toMatchObject({ attributes: { active: false, end_date: '2026-12-01' } })
+  })
+
+  it('una asignación propia vencida por fecha, aunque siga activa, no ofrece escribir', async () => {
+    const propiaVencida = { ...VIGENTE, attributes: { ...VIGENTE.attributes, end_date: '2026-01-31' } }
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id=u-pad/, body: pagina([propiaVencida]) },
+      ...rutas()
+    ])
+    await screen.findByRole('table', { name: 'Equipo' })
+    expect(screen.getByText(/No está asignado a este proyecto/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Asignar persona' })).not.toBeInTheDocument()
+  })
+
+  it('un 412 al terminar una asignación dice que otra persona la cambió y «Recargar» relee la lista', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed([{ method: 'PUT', path: '/objects/project_assignment/records/a1', responder: () => problema(412, 'Precondition Failed') }])
+    const tabla = await screen.findByRole('table', { name: 'Equipo' })
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Terminar asignación de pad@sgspe.test' }))
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Sí, terminar' }))
+    const antes = red.a('GET', '/objects/project_assignment/records').length
+    const recargar = await screen.findByRole('button', { name: 'Recargar' })
+    expect(screen.getByText(/pad@sgspe.test: /)).toBeInTheDocument()
+    await userEvent.click(recargar)
+    await waitFor(() => expect(red!.a('GET', '/objects/project_assignment/records').length).toBeGreaterThan(antes))
+    expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument()
   })
 
   it('un usuario que no es de la organización (400 USER_REFERENCE) marca el correo con el texto del código, nunca el código', async () => {
@@ -119,7 +185,7 @@ describe('S11 · equipo y parámetros', () => {
     await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
     expect(await screen.findByText('(cambiado)', { exact: false })).toBeInTheDocument()
     const poder = screen.getByLabelText(/Umbral de poder/)
-    expect(poder).toHaveValue(3)
+    expect(poder).toHaveValue('3')
     await userEvent.clear(poder)
     await userEvent.type(poder, '2.5')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
@@ -127,6 +193,123 @@ describe('S11 · equipo y parámetros', () => {
     const [guardado] = red.a('PUT', '/objects/project/records/p1')
     expect(guardado.cabeceras.get('If-Match')).toBe(`"${P1.updatedAt}"`)
     expect(guardado.cuerpo).toMatchObject({ attributes: { interest_threshold: 4, power_threshold: 2.5, name: 'Pukaqaqa' } })
+  })
+
+  it('las campañas y las concesiones dicen su error de carga, no una lista vacía', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: '/objects/exploration_campaign/records', status: 403, body: { title: 'Forbidden', status: 403 } },
+      { path: '/objects/project/records/p1/related/project_concession', status: 500, body: { title: 'Error', status: 500 } },
+      ...rutas()
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Campañas' }))
+    expect((await screen.findAllByText(/No se pudo cargar/)).length).toBeGreaterThan(0)
+    await userEvent.click(screen.getByRole('tab', { name: 'Partes y concesiones' }))
+    expect((await screen.findAllByText(/No se pudo cargar/)).length).toBeGreaterThan(0)
+  })
+
+  it('un parámetro numérico se vacía (vuelve al valor por defecto), acepta la coma y rechaza un negativo', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const interes = await screen.findByLabelText(/Umbral de interés/)
+    await userEvent.clear(interes)
+    expect(interes).toHaveValue('')
+    await userEvent.type(interes, '2,5')
+    expect(interes).toHaveValue('2,5')
+    await userEvent.clear(interes)
+    await userEvent.type(interes, '-1')
+    await userEvent.tab()
+    expect(await screen.findByText('Escriba un número mayor o igual a 0, o deje el campo vacío para el valor por defecto.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    expect(red.a('PUT', '/objects/project/records/p1')).toHaveLength(0)
+    await userEvent.clear(interes)
+    await userEvent.type(interes, '2,5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project/records/p1')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/project/records/p1')[0].cuerpo).toMatchObject({ attributes: { interest_threshold: 2.5 } })
+  })
+
+  it('guarda solo lo que cambió: un parámetro vacío no se materializa con su valor por defecto', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByRole('button', { name: 'Guardar parámetros' })).toBeDisabled()
+    const interes = screen.getByLabelText(/Umbral de interés/)
+    await userEvent.clear(interes)
+    await userEvent.type(interes, '5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project/records/p1')).toHaveLength(1))
+    const cuerpo = red.a('PUT', '/objects/project/records/p1')[0].cuerpo as { attributes: Record<string, unknown> }
+    expect(cuerpo.attributes).toMatchObject({ interest_threshold: 5, power_threshold: null })
+  })
+
+  it('tras guardar, la versión nueva no reinicia el formulario y se ve «Parámetros guardados»', async () => {
+    const guardado = { ...P1, updatedAt: '2026-10-06T10:00:00Z', attributes: { ...P1.attributes, interest_threshold: 5 } }
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { method: 'PUT', path: '/objects/project/records/p1', body: guardado },
+      ...rutas()
+    ])
+    red = espiarRed([
+      {
+        path: '/objects/project/records/p1',
+        responder: () =>
+          new Response(JSON.stringify(red!.a('PUT', '/objects/project/records/p1').length ? guardado : P1), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          })
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const interes = await screen.findByLabelText(/Umbral de interés/)
+    await userEvent.clear(interes)
+    await userEvent.type(interes, '5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    expect(await screen.findByText('Parámetros guardados')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Umbral de interés/)).toHaveValue('5')
+    expect(screen.getByRole('button', { name: 'Guardar parámetros' })).toBeDisabled()
+  })
+
+  it('un 412 dice que otra persona cambió el proyecto; «Recargar» relee, conserva lo tecleado y toma lo demás de la versión nueva', async () => {
+    const deOtra = { ...P1, updatedAt: '2026-10-06T10:00:00Z', attributes: { ...P1.attributes, interest_threshold: 5 } }
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    let conflicto = false
+    red = espiarRed([
+      {
+        method: 'PUT',
+        path: '/objects/project/records/p1',
+        responder: () => {
+          conflicto = true
+          return problema(412, 'Precondition Failed')
+        }
+      },
+      {
+        path: '/objects/project/records/p1',
+        responder: () => new Response(JSON.stringify(conflicto ? deOtra : P1), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const poder = await screen.findByLabelText(/Umbral de poder/)
+    await userEvent.clear(poder)
+    await userEvent.type(poder, '2.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    const recargar = await screen.findByRole('button', { name: 'Recargar' })
+    expect(screen.getByLabelText(/Umbral de poder/)).toHaveValue('2.5')
+    await userEvent.click(recargar)
+    await waitFor(() => expect(screen.getByLabelText(/Umbral de interés/)).toHaveValue('5'))
+    expect(screen.getByLabelText(/Umbral de poder/)).toHaveValue('2.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project/records/p1')).toHaveLength(2))
+    const segundo = red.a('PUT', '/objects/project/records/p1')[1]
+    expect(segundo.cabeceras.get('If-Match')).toBe(`"${deOtra.updatedAt}"`)
+    expect(segundo.cuerpo).toMatchObject({ attributes: { interest_threshold: 5, power_threshold: 2.5 } })
+  })
+
+  it('con permiso para escribir solo algunos campos, solo esos se habilitan (la definición ya llegó)', async () => {
+    const mixta = definicion('project', [['interest_threshold', { type: 'DECIMAL', editable: false }], ['power_threshold', { type: 'DECIMAL' }], 'name'])
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [{ path: '/metadata/objects/project', body: mixta }, ...rutas()])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    await waitFor(() => expect(screen.getByLabelText(/Umbral de poder/)).toBeEnabled())
+    expect(screen.getByLabelText(/Umbral de interés/)).toBeDisabled()
   })
 
   it('con "u" sobre project (todos los campos de solo lectura, como el analista SIG) los parámetros se ven pero no se guardan', async () => {
@@ -153,6 +336,6 @@ describe('S11 · equipo y parámetros', () => {
     )
     await screen.findByRole('table', { name: 'Equipo' })
     expect(screen.queryByRole('button', { name: 'Asignar persona' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Terminar asignación' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Terminar asignación/ })).not.toBeInTheDocument()
   })
 })

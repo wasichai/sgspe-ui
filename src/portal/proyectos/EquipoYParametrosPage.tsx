@@ -1,24 +1,35 @@
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Input, Table, Tabs, Td, Th } from '@wasichai/ui'
-import { useState } from 'react'
+import { Alert, Button, Table, Tabs, Td, Th } from '@wasichai/ui'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { Consulta } from '../componentes/Estados'
-import { useMensajeDeError } from '../componentes/errores'
+import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
-import { useProyecto } from '../contexto/proyectos'
-import { atributo, puedeEscribir, texto, useActualizar, useDefinicion, usePuedeEditar, useRelacionados, useTodos, type Registro } from '../datos/registros'
+import { useProyecto, vigenciaDeAsignacion } from '../contexto/proyectos'
+import { hoyEnLima } from '../datos/fechas'
+import {
+  atributo,
+  campoDe,
+  puedeEscribir,
+  texto,
+  useActualizar,
+  useDefinicion,
+  usePuedeEditar,
+  useRelacionados,
+  useTodos,
+  type Registro
+} from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { CampanaDelProyecto, PartesDelProyecto } from './EquipoYPartes'
 import { FormularioDeAsignacion } from './FormularioDeAsignacion'
+import { ParametroNumerico } from './ParametroNumerico'
 import { PARAMETROS_F2, vigente } from './parametros'
 
 // S11 · equipo y parámetros del proyecto (screens.md §3): asignaciones con su vigencia (una vencida no da escritura,
 // RQ-SEC-006), campañas con su tope y lo ejecutado por moneda (ASM-063), partes y concesiones, y los parámetros de F2 con
 // la marca "por defecto" o "cambiado" (ASM-019). quien no puede escribir ve todo en solo lectura
-const hoy = () => new Date().toISOString().slice(0, 10)
-
 export function EquipoYParametrosPage() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
@@ -66,7 +77,17 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
   const actualizar = useActualizar('project_assignment')
   const mensaje = useMensajeDeError()
   const [abierto, setAbierto] = useState(false)
-  const vencida = (a: Registro) => atributo(a, 'active') !== true || (Boolean(atributo(a, 'end_date')) && texto(a, 'end_date') < hoy())
+  // la asignación que se está por terminar (pide confirmación) y la última que se intentó terminar (dice cuál falló)
+  const [confirmando, setConfirmando] = useState<string | null>(null)
+  const [intentada, setIntentada] = useState('')
+  const hoy = hoyEnLima()
+  // terminar una asignación cierra su vigencia hoy (en Lima), nunca antes de su inicio: una programada termina el día que empezaría
+  const terminar = (a: Registro) => {
+    const inicio = texto(a, 'start_date')
+    setConfirmando(null)
+    setIntentada(texto(a, 'member_user_email'))
+    actualizar.mutate({ registro: a, cambios: { active: false, end_date: inicio > hoy ? inicio : hoy } })
+  }
   return (
     <div className="space-y-3 pt-3">
       {editable ? <Button onClick={() => setAbierto(true)}>{t('p360.asignacion.titulo')}</Button> : null}
@@ -84,30 +105,71 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
               </tr>
             </thead>
             <tbody>
-              {lista.map((a) => (
-                <tr key={a.id}>
-                  <Td>{texto(a, 'member_user_email')}</Td>
-                  <Td className="font-sg-mono text-sg-caption">{texto(a, 'role_name')}</Td>
-                  <Td className="text-sm">
-                    {texto(a, 'start_date') || '…'} – {texto(a, 'end_date') || '…'}
-                  </Td>
-                  <Td className="text-sm">{vencida(a) ? <span className="text-sg-warning">{t('p360.asignacion.vencida')}</span> : t('p360.equipo.activa')}</Td>
-                  {cambia ? (
-                    <Td>
-                      {!vencida(a) ? (
-                        <Button variant="ghost" size="sm" onClick={() => actualizar.mutate({ registro: a, cambios: { active: false, end_date: hoy() } })}>
-                          {t('p360.asignacion.terminar')}
-                        </Button>
-                      ) : null}
+              {lista.map((a) => {
+                const vigencia = vigenciaDeAsignacion(a, hoy)
+                const correo = texto(a, 'member_user_email')
+                return (
+                  <tr key={a.id}>
+                    <Td>{correo}</Td>
+                    <Td className="font-sg-mono text-sg-caption">{texto(a, 'role_name')}</Td>
+                    <Td className="text-sm">
+                      {texto(a, 'start_date') || '…'} – {texto(a, 'end_date') || '…'}
                     </Td>
-                  ) : null}
-                </tr>
-              ))}
+                    <Td className="text-sm">
+                      {vigencia === 'vigente' ? (
+                        t('p360.equipo.activa')
+                      ) : vigencia === 'terminada' ? (
+                        t('p360.equipo.inactiva')
+                      ) : (
+                        <span className="text-sg-warning">{t(vigencia === 'programada' ? 'p360.asignacion.programada' : 'p360.asignacion.vencida')}</span>
+                      )}
+                    </Td>
+                    {cambia ? (
+                      <Td>
+                        {vigencia === 'vigente' || vigencia === 'programada' ? (
+                          confirmando === a.id ? (
+                            <span className="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label={t('p360.asignacion.terminarDe', { correo })}>
+                              {t('p360.asignacion.confirmarTerminar', { correo })}
+                              <Button size="sm" onClick={() => terminar(a)} disabled={actualizar.isPending}>
+                                {t('p360.asignacion.terminarSi')}
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setConfirmando(null)}>
+                                {t('comun.cancelar')}
+                              </Button>
+                            </span>
+                          ) : (
+                            <Button variant="ghost" size="sm" aria-label={t('p360.asignacion.terminarDe', { correo })} onClick={() => setConfirmando(a.id)}>
+                              {t('p360.asignacion.terminar')}
+                            </Button>
+                          )
+                        ) : null}
+                      </Td>
+                    ) : null}
+                  </tr>
+                )
+              })}
             </tbody>
           </Table>
         )}
       </Consulta>
-      {actualizar.isError ? <Alert tone="danger">{mensaje(actualizar.error)}</Alert> : null}
+      {actualizar.isError ? (
+        <Alert tone="danger">
+          {intentada}: {mensaje(actualizar.error)}
+          {esConflictoDeVersion(actualizar.error) ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="ml-2"
+              onClick={() => {
+                void asignaciones.refetch()
+                actualizar.reset()
+              }}
+            >
+              {t('comun.recargar')}
+            </Button>
+          ) : null}
+        </Alert>
+      ) : null}
       <Drawer titulo={t('p360.asignacion.titulo')} abierto={abierto} alCerrar={() => setAbierto(false)}>
         <FormularioDeAsignacion proyecto={proyecto} alGuardar={() => setAbierto(false)} />
       </Drawer>
@@ -120,40 +182,44 @@ function Campanas({ proyecto, editable }: { proyecto: string; editable: boolean 
   const campanas = useTodos('exploration_campaign', { project: proyecto })
   return (
     <div className="space-y-3 pt-3">
-      <ul className="grid gap-3 md:grid-cols-2">
-        {(campanas.data ?? []).map((c) => {
-          const tope = atributo<number>(c, 'social_support_cap')
-          const ejecutado = atributo<number>(c, 'executed_social_amount') ?? 0
-          const otras = atributo<number>(c, 'other_currency_items_count') ?? 0
-          return (
-            <li key={c.id} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-              <p className="font-medium">{texto(c, 'name')}</p>
-              <p className="text-sg-caption text-sg-text-muted">
-                {texto(c, 'campaign_status')} · {texto(c, 'activity_type')}
-              </p>
-              {tope ? (
-                <div
-                  role="progressbar"
-                  aria-label={texto(c, 'name')}
-                  aria-valuemin={0}
-                  aria-valuemax={tope}
-                  aria-valuenow={ejecutado}
-                  aria-valuetext={t('p360.equipo.ejecutado', { ejecutado: numeroPe(ejecutado), tope: numeroPe(tope), moneda: texto(c, 'currency') })}
-                  className="h-2 rounded-full bg-sg-surface-sunken"
-                >
-                  <div className="h-2 rounded-full bg-sg-primary" style={{ width: `${Math.min(100, (ejecutado / tope) * 100)}%` }} />
-                </div>
-              ) : null}
-              <p className="text-sm">
-                {tope
-                  ? t('p360.equipo.ejecutado', { ejecutado: numeroPe(ejecutado), tope: numeroPe(tope), moneda: texto(c, 'currency') })
-                  : t('p360.equipo.sinTope')}
-              </p>
-              {otras > 0 ? <p className="text-sg-caption text-sg-warning">{t('p360.equipo.otraMoneda', { n: otras })}</p> : null}
-            </li>
-          )
-        })}
-      </ul>
+      <Consulta consulta={campanas}>
+        {(lista) => (
+          <ul className="grid gap-3 md:grid-cols-2">
+            {lista.map((c) => {
+              const tope = atributo<number>(c, 'social_support_cap')
+              const ejecutado = atributo<number>(c, 'executed_social_amount') ?? 0
+              const otras = atributo<number>(c, 'other_currency_items_count') ?? 0
+              return (
+                <li key={c.id} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+                  <p className="font-medium">{texto(c, 'name')}</p>
+                  <p className="text-sg-caption text-sg-text-muted">
+                    {texto(c, 'campaign_status')} · {texto(c, 'activity_type')}
+                  </p>
+                  {tope ? (
+                    <div
+                      role="progressbar"
+                      aria-label={texto(c, 'name')}
+                      aria-valuemin={0}
+                      aria-valuemax={tope}
+                      aria-valuenow={ejecutado}
+                      aria-valuetext={t('p360.equipo.ejecutado', { ejecutado: numeroPe(ejecutado), tope: numeroPe(tope), moneda: texto(c, 'currency') })}
+                      className="h-2 rounded-full bg-sg-surface-sunken"
+                    >
+                      <div className="h-2 rounded-full bg-sg-primary" style={{ width: `${Math.min(100, (ejecutado / tope) * 100)}%` }} />
+                    </div>
+                  ) : null}
+                  <p className="text-sm">
+                    {tope
+                      ? t('p360.equipo.ejecutado', { ejecutado: numeroPe(ejecutado), tope: numeroPe(tope), moneda: texto(c, 'currency') })
+                      : t('p360.equipo.sinTope')}
+                  </p>
+                  {otras > 0 ? <p className="text-sg-caption text-sg-warning">{t('p360.equipo.otraMoneda', { n: otras })}</p> : null}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Consulta>
       {editable ? <CampanaDelProyecto proyecto={proyecto} /> : null}
     </div>
   )
@@ -167,13 +233,17 @@ function PartesYConcesiones({ proyecto, editable }: { proyecto: string; editable
       <PartesDelProyecto proyecto={proyecto} editable={editable} />
       <section aria-label={t('p360.equipo.concesiones')} className="space-y-2">
         <h3 className="font-medium">{t('p360.equipo.concesiones')}</h3>
-        <ul className="text-sm">
-          {(concesiones.data?.content ?? []).map((c) => (
-            <li key={c.id}>
-              <span className="font-sg-mono text-sg-caption">{texto(c, 'code')}</span> {texto(c, 'name')}
-            </li>
-          ))}
-        </ul>
+        <Consulta consulta={concesiones}>
+          {(pagina) => (
+            <ul className="text-sm">
+              {pagina.content.map((c) => (
+                <li key={c.id}>
+                  <span className="font-sg-mono text-sg-caption">{texto(c, 'code')}</span> {texto(c, 'name')}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Consulta>
       </section>
     </div>
   )
@@ -181,29 +251,56 @@ function PartesYConcesiones({ proyecto, editable }: { proyecto: string; editable
 
 function Parametros({ proyecto, editable }: { proyecto: string; editable: boolean }) {
   const consulta = useProyecto(proyecto)
-  return <Consulta consulta={consulta}>{(p) => <FormularioDeParametros key={p.updatedAt} proyecto={p} editable={editable} />}</Consulta>
+  return <Consulta consulta={consulta}>{(p) => <FormularioDeParametros proyecto={p} editable={editable} recargar={() => void consulta.refetch()} />}</Consulta>
 }
 
-function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; editable: boolean }) {
+// el formulario guarda solo lo que la persona cambió, sobre lo leído: lo demás se muestra con el registro vigente, así que un
+// refetch en segundo plano actualiza lo que no se tocó y nunca borra lo tecleado. el formulario se limpia tras un guardado
+// propio; «Recargar» tras un 412 relee el registro y conserva lo escrito (se manda sobre la versión nueva)
+function FormularioDeParametros({ proyecto, editable, recargar }: { proyecto: Registro; editable: boolean; recargar: () => void }) {
   const { t } = useTranslation(NS)
   const actualizar = useActualizar('project')
   const definicion = useDefinicion('project')
   const mensaje = useMensajeDeError()
-  const [valores, setValores] = useState(() => Object.fromEntries(PARAMETROS_F2.map((p) => [p.campo, vigente(proyecto.attributes, p)])))
+  const [tecleados, setTecleados] = useState<Record<string, number | boolean>>({})
+  const [intento, setIntento] = useState(false)
+  // el texto de cada campo numérico: si un refetch cambia el registro y el campo se vuelve a pintar, no pierde lo tecleado
+  const textos = useRef<Record<string, string>>({})
   const grupos = [...new Set(PARAMETROS_F2.map((p) => p.grupo))]
+  const valorDe = (p: (typeof PARAMETROS_F2)[number]) => (p.campo in tecleados ? tecleados[p.campo] : vigente(proyecto.attributes, p))
+  const cambios = Object.fromEntries(
+    PARAMETROS_F2.filter((p) => p.campo in tecleados && tecleados[p.campo] !== vigente(proyecto.attributes, p)).map((p) => [p.campo, tecleados[p.campo]])
+  )
+  const hayCambios = Object.keys(cambios).length > 0
+  const invalido = Object.values(cambios).some((v) => typeof v === 'number' && Number.isNaN(v))
+  const cambiar = (campo: string, valor: number | boolean) => {
+    setTecleados((v) => ({ ...v, [campo]: valor }))
+    if (actualizar.isSuccess || actualizar.isError) actualizar.reset()
+  }
   return (
     <form
       className="space-y-4 pt-3"
       onSubmit={(e) => {
         e.preventDefault()
-        actualizar.mutate({ registro: proyecto, cambios: valores })
+        setIntento(true)
+        if (!hayCambios || invalido) return
+        actualizar.mutate(
+          { registro: proyecto, cambios },
+          {
+            onSuccess: () => {
+              setTecleados({})
+              setIntento(false)
+              textos.current = {}
+            }
+          }
+        )
       }}
     >
       {grupos.map((grupo) => (
         <fieldset key={grupo} className="space-y-2 rounded-sg-lg border border-sg-border p-4">
           <legend className="px-1 font-medium">{t(`p360.parametros.grupos.${grupo}`)}</legend>
           {PARAMETROS_F2.filter((p) => p.grupo === grupo).map((p) => {
-            const valor = valores[p.campo]
+            const valor = valorDe(p)
             const marca = valor === p.porDefecto ? t('proyectos.asistente.porDefecto') : t('proyectos.asistente.cambiado')
             const id = `param-${p.campo}`
             const bloqueado = !editable || !puedeEscribir(definicion.data, p.campo)
@@ -213,21 +310,21 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
                   {t(`p360.parametros.${p.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
                 </label>
                 {p.tipo === 'politica' ? (
-                  <input
-                    id={id}
-                    type="checkbox"
-                    disabled={bloqueado}
-                    checked={Boolean(valor)}
-                    onChange={(e) => setValores({ ...valores, [p.campo]: e.target.checked })}
-                  />
+                  <input id={id} type="checkbox" disabled={bloqueado} checked={Boolean(valor)} onChange={(e) => cambiar(p.campo, e.target.checked)} />
                 ) : (
-                  <Input
+                  // el campo se vuelve a pintar cuando el registro cambia su valor (lo no tocado se actualiza, lo tecleado
+                  // recupera su texto)
+                  <ParametroNumerico
+                    key={`${p.campo}:${String(vigente(proyecto.attributes, p))}`}
+                    textoInicial={textos.current[p.campo]}
+                    alEscribir={(x) => (textos.current[p.campo] = x)}
                     id={id}
-                    type="number"
-                    className="w-24"
+                    valor={Number(valor)}
+                    porDefecto={Number(p.porDefecto)}
+                    entero={campoDe(definicion.data, p.campo)?.type === 'INTEGER'}
+                    intentoDeGuardar={intento}
                     disabled={bloqueado}
-                    value={String(valor)}
-                    onChange={(e) => setValores({ ...valores, [p.campo]: Number(e.target.value) })}
+                    alCambiar={(n) => cambiar(p.campo, n)}
                   />
                 )}
               </div>
@@ -235,14 +332,32 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
           })}
         </fieldset>
       ))}
-      {actualizar.isError ? <Alert tone="danger">{mensaje(actualizar.error)}</Alert> : null}
-      {actualizar.isSuccess ? (
+      {actualizar.isError ? (
+        <Alert tone="danger">
+          {mensaje(actualizar.error)}
+          {esConflictoDeVersion(actualizar.error) ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="ml-2"
+              onClick={() => {
+                recargar()
+                actualizar.reset()
+              }}
+            >
+              {t('comun.recargar')}
+            </Button>
+          ) : null}
+        </Alert>
+      ) : null}
+      {actualizar.isSuccess && !hayCambios ? (
         <p role="status" className="text-sm text-sg-success">
           {t('p360.equipo.guardados')}
         </p>
       ) : null}
       {editable ? (
-        <Button type="submit" disabled={actualizar.isPending}>
+        <Button type="submit" disabled={actualizar.isPending || !hayCambios}>
           {actualizar.isPending ? t('comun.guardando') : t('p360.equipo.guardarParametros')}
         </Button>
       ) : null}

@@ -47,7 +47,11 @@ export const ES_P360 = {
     asignar: 'Asignar',
     invalido: 'Revise este dato',
     terminar: 'Terminar asignación',
-    vencida: 'Vencida: no da acceso de escritura'
+    vencida: 'Vencida: no da acceso de escritura',
+    programada: 'Programada: aún no da acceso de escritura',
+    terminarDe: 'Terminar asignación de {{correo}}',
+    confirmarTerminar: '¿Terminar la asignación de {{correo}}? Dejará de dar acceso de escritura.',
+    terminarSi: 'Sí, terminar'
   },
   equipo: {
     titulo: 'Equipo y parámetros',
@@ -130,7 +134,11 @@ export const EN_P360: typeof ES_P360 = {
     asignar: 'Assign',
     invalido: 'Check this value',
     terminar: 'End assignment',
-    vencida: 'Expired: grants no write access'
+    vencida: 'Expired: grants no write access',
+    programada: 'Scheduled: grants no write access yet',
+    terminarDe: 'End assignment of {{correo}}',
+    confirmarTerminar: 'End the assignment of {{correo}}? It will stop granting write access.',
+    terminarSi: 'Yes, end it'
   },
   equipo: {
     titulo: 'Team and parameters',
