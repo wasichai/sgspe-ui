@@ -7,7 +7,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { base, LEE, P1, S1 } from '../../test/grupos'
+import { base, LEE, P1 } from '../../test/grupos'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -141,37 +141,180 @@ describe('S16 · lista de grupos de interés', () => {
     ])
     await waitFor(() => expect(filas()).toHaveLength(2))
   })
+
+  it('un error al leer la definición se ve con su reintento: no una lista a medias', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    red = espiarRed([{ path: '/metadata/objects/stakeholder', responder: () => problema(500, 'Falló la definición') }])
+    expect(await screen.findByText('Falló la definición')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+  })
+
+  it('la vista "Sin contacto" espera al proyecto: mientras carga no usa 90 días, y con él usa los suyos', async () => {
+    let entregar: () => void = () => {}
+    const llegada = new Promise<void>((resolver) => (entregar = resolver))
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    red = espiarRed([
+      {
+        path: '/objects/project/records/p1',
+        responder: async () => {
+          await llegada
+          return Response.json(P1)
+        }
+      }
+    ])
+    expect(await screen.findByRole('status')).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Sin contacto en 90 días' })).not.toBeInTheDocument()
+    entregar()
+    expect(await screen.findByRole('tab', { name: 'Sin contacto en 60 días' })).toBeInTheDocument()
+  })
+
+  it('la selección se reinicia al cambiar de vista: no viaja una fila que ya no se ve', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(within(filas()[0]).getByRole('checkbox'))
+    await userEvent.click(within(filas()[1]).getByRole('checkbox'))
+    expect(screen.getByText('2 seleccionados')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Retirados' }))
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Todos' }))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()
+    await userEvent.click(within(filas()[0]).getByRole('checkbox'))
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar una interacción con ellos' }))
+    expect(rutaActual()).toBe('/projects/p1/engagements/new?stakeholders=s1')
+  })
+
+  it('la selección se reinicia al cambiar un filtro', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(within(filas()[1]).getByRole('checkbox'))
+    expect(screen.getByText('1 seleccionados')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Postura' }), 'EN CONTRA')
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()
+  })
+
+  it('un grupo evaluado cuyo grupo de influencia no se lee dice —, no una celda vacía', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
+      { path: '/objects/stakeholder/records', body: pagina([registro('s5', { project: 'p1', organization: 'o1' }, { state: 'assessed' })]) },
+      ...base()
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    const celdas = within(filas()[0]).getAllByRole('cell')
+    // seleccionar, grupo, territorio, influencia
+    expect(celdas[3]).toHaveTextContent('—')
+  })
+
+  it('en el límite, el día es el de Lima y no el del reloj: 60 días de calendario con un umbral de 60 no se marcan', async () => {
+    // 2026-10-02T03:00Z es el 1 de octubre a las 22:00 en Lima. desde el 2026-08-02 son 60 días de calendario (no pasa el
+    // umbral de 60), pero por reloj son 60 días y 3 horas, que sí lo pasarían. el 2026-08-01 son 61 y sí se marca
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-02T03:00:00Z'))
+    try {
+      fetch = abrirPortal('/projects/p1/stakeholders?view=sinContacto', RELACIONISTA, LEE, [
+        {
+          path: '/objects/stakeholder/records',
+          body: pagina([
+            registro('en-el-limite', { project: 'p1', organization: 'o1', last_contact_date: '2026-08-02' }, { state: 'profiled' }),
+            registro('pasado', { project: 'p1', organization: 'o1', last_contact_date: '2026-08-01' }, { state: 'profiled' })
+          ])
+        },
+        ...base()
+      ])
+      await waitFor(() => expect(filas()).toHaveLength(1))
+      expect(within(filas()[0]).getByRole('checkbox', { name: /pasado$/ })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('sin la definición no se decide la postura: espera a que llegue y no muestra Restringido a quien tiene acceso', async () => {
+    const definicionDelGrupo = base(GERENCIA_SOCIAL, true).find((r) => r.path === '/metadata/objects/stakeholder')!.body
+    let entregar: () => void = () => {}
+    const llegada = new Promise<void>((resolver) => (entregar = resolver))
+    fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    red = espiarRed([
+      {
+        path: '/metadata/objects/stakeholder',
+        responder: async () => {
+          await llegada
+          return Response.json(definicionDelGrupo)
+        }
+      }
+    ])
+    expect(await screen.findByRole('status')).toBeInTheDocument()
+    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
+    entregar()
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Postura' })).toBeInTheDocument()
+  })
 })
 
 describe('flujo 3 · registrar un grupo de interés', () => {
-  const ALTA = [
-    { method: 'POST', path: '/objects/stakeholder/records', body: registro('s9', { project: 'p1', organization: 'o1' }, { state: 'identified' }) },
-    { path: '/objects/stakeholder/records/s9', body: registro('s9', { project: 'p1', organization: 'o1' }, { state: 'identified' }) },
-    { path: '/objects/organization/records', body: pagina([registro('o1', { name: 'Ronda campesina Tunas' })]) }
+  // las relaciones son UUID, como en wasichai: Zod las valida aunque viajen ocultas, así que el alta se prueba con ellos
+  const PROYECTO = '6f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f'
+  const ORGANIZACION = '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d'
+  const PERSONA = '1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e'
+  const ALTA = (relacion: Record<string, string>) => [
+    // el proyecto del alta tiene un UUID: su registro y la asignación vigente de la cuenta
+    { path: `/objects/project/records/${PROYECTO}`, body: registro(PROYECTO, { code: 'PRJ-02', name: 'Pukaqaqa', inactivity_days: 60 }, { state: 'active' }) },
+    {
+      path: /^\/objects\/project_assignment\/records\?.*member_user_id/,
+      body: pagina([registro('as', { project: PROYECTO, member_user_id: RELACIONISTA.id, active: true })])
+    },
+    { method: 'POST', path: '/objects/stakeholder/records', body: registro('s9', { project: PROYECTO, ...relacion }, { state: 'identified' }) },
+    { path: '/objects/stakeholder/records/s9', body: registro('s9', { project: PROYECTO, ...relacion }, { state: 'identified' }) },
+    { path: `/objects/organization/records/${ORGANIZACION}`, body: registro(ORGANIZACION, { name: 'Ronda campesina Tunas' }) },
+    { path: `/objects/person/records/${PERSONA}`, body: registro(PERSONA, { sex: 'FEMENINO' }) },
+    { path: '/objects/organization/records', body: pagina([registro(ORGANIZACION, { name: 'Ronda campesina Tunas' })]) },
+    { path: '/objects/person/records', body: pagina([registro(PERSONA, { sex: 'FEMENINO' })]) }
   ]
+  const valorDe = (cuerpo: unknown, campo: string) => (cuerpo as { attributes: Record<string, unknown> }).attributes[campo] ?? null
+  const alta = (usuario = RELACIONISTA, conPostura = false, relacion: Record<string, string> = { organization: ORGANIZACION }) =>
+    abrirPortal(`/projects/${PROYECTO}/stakeholders`, usuario, LEE, [...ALTA(relacion), ...base(usuario, conPostura)])
 
   it('busca la organización antes de crear, crea el grupo del proyecto con ella y abre su ficha', async () => {
-    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [...ALTA, ...base()])
+    // una definición que sí tiene la postura: que el alta no la mande es una garantía y no un vacío
+    fetch = alta(GERENCIA_SOCIAL, true)
     red = espiarRed()
     await userEvent.click(await screen.findByRole('button', { name: 'Nuevo grupo de interés' }))
     await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar antes de crear' }), 'Ronda')
     await userEvent.click(await screen.findByRole('button', { name: 'Ronda campesina Tunas' }))
     expect(await screen.findByText('Actor: Ronda campesina Tunas')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
-    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s9'))
-    const [alta] = red.a('POST', '/objects/stakeholder/records')
-    expect(alta.cuerpo).toMatchObject({ attributes: { project: 'p1', organization: 'o1' } })
+    await waitFor(() => expect(rutaActual()).toBe(`/projects/${PROYECTO}/stakeholders/s9`))
+    const [envio] = red.a('POST', '/objects/stakeholder/records')
+    expect(envio.cuerpo).toMatchObject({ attributes: { project: PROYECTO, organization: ORGANIZACION } })
+    // la persona va vacía: la relación opcional y oculta pasa la validación sin valor (ExactlyOneGuard cuenta null como no informado)
+    expect(valorDe(envio.cuerpo, 'person')).toBeNull()
     // nunca un derivado ni la postura (restringida) en el alta
-    expect(alta.cuerpo).not.toHaveProperty('attributes.influence_group')
-    expect(alta.cuerpo).not.toHaveProperty('attributes.stance')
+    expect(envio.cuerpo).not.toHaveProperty('attributes.influence_group')
+    expect(envio.cuerpo).not.toHaveProperty('attributes.stance')
+  })
+
+  it('el alta de una persona manda person y deja organization sin valor: la relación opcional oculta pasa la validación', async () => {
+    fetch = alta(GERENCIA_SOCIAL, true, { person: PERSONA })
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo grupo de interés' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Persona' }))
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar antes de crear' }), 'Ana')
+    await userEvent.click(await screen.findByRole('button', { name: 'Persona registrada' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(rutaActual()).toBe(`/projects/${PROYECTO}/stakeholders/s9`))
+    const [envio] = red.a('POST', '/objects/stakeholder/records')
+    expect(envio.cuerpo).toMatchObject({ attributes: { project: PROYECTO, person: PERSONA } })
+    expect(valorDe(envio.cuerpo, 'organization')).toBeNull()
+    expect(envio.cuerpo).not.toHaveProperty('attributes.stance')
+    expect(envio.cuerpo).not.toHaveProperty('attributes.influence_group')
   })
 
   it('una persona sin los nombres legibles se ofrece como Persona registrada', async () => {
-    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
-      { path: '/objects/person/records', body: pagina([registro('pe1', { sex: 'FEMENINO' })]) },
-      ...ALTA,
-      ...base()
-    ])
+    fetch = alta()
     await userEvent.click(await screen.findByRole('button', { name: 'Nuevo grupo de interés' }))
     await userEvent.click(screen.getByRole('radio', { name: 'Persona' }))
     await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar antes de crear' }), 'Ana')
@@ -179,7 +322,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
   })
 
   it('un error del alta se dice con su texto, no con el código', async () => {
-    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [...ALTA, ...base()])
+    fetch = alta()
     red = espiarRed([
       {
         method: 'POST',
@@ -222,6 +365,15 @@ describe('flujo 3 · registrar un grupo de interés', () => {
     ])
     await screen.findByRole('table', { name: 'Grupos de interés' })
     expect(screen.queryByRole('button', { name: 'Nuevo grupo de interés' })).not.toBeInTheDocument()
-    expect(S1.id).toBe('s1')
+  })
+})
+
+describe('la ruta de los grupos de interés', () => {
+  it('una cuenta sin la sección stakeholders no entra a /projects/:p/stakeholders: lee que no puede y no se pide la lista', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, permisos({ project: ['READ'] }), base())
+    red = espiarRed()
+    expect(await screen.findByText('Su cuenta no puede abrir «Grupos de interés».')).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
+    expect(red.a('GET', '/objects/stakeholder/records')).toHaveLength(0)
   })
 })

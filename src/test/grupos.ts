@@ -27,11 +27,11 @@ export const S2 = registro('s2', { project: 'p1', person: 'pe1', stakeholder_typ
 export const S3 = registro('s3', { project: 'p1', organization: 'o3' }, { state: 'retired' })
 export const STK_DEF = (conPostura: boolean) =>
   definicion('stakeholder', [
-    // las relaciones del alta (las fija NuevoGrupo): sin estar en la definición, la escritura no las mandaría. TEXT y no
-    // RELATION porque los identificadores de estas pruebas ('p1') no son UUID, que es lo que el esquema de una relación exige
-    'project',
-    'organization',
-    'person',
+    // las relaciones del alta (las fija NuevoGrupo): sin estar en la definición, la escritura no las mandaría. son RELATION
+    // y sus valores UUID, como en wasichai: Zod los valida aunque viajen ocultos (la prueba del alta usa UUID)
+    ['project', { type: 'RELATION', relationTarget: 'project' }],
+    ['organization', { type: 'RELATION', relationTarget: 'organization' }],
+    ['person', { type: 'RELATION', relationTarget: 'person' }],
     ['influence_group', { type: 'ENUM', enumOptions: ['ESTRATEGICO', 'POLITICO'] }],
     ...(conPostura ? [['stance', { type: 'ENUM', enumOptions: ['A FAVOR', 'EN CONTRA'] }] as [string, Record<string, unknown>]] : []),
     ['stakeholder_scope', { type: 'ENUM', enumOptions: ['AIDS'] }],

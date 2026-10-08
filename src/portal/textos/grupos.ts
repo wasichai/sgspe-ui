@@ -35,7 +35,6 @@ export const ES_GRUPOS = {
     contacto: 'Último contacto'
   },
   sinEvaluarValor: 'Sin evaluar',
-  restringida: 'Restringida',
   registrarConEllos: 'Registrar una interacción con ellos',
   vacio: 'Un grupo de interés nace al buscar a la persona u organización y vincularla al proyecto.',
   nuevoGrupo: {
@@ -207,7 +206,6 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     contacto: 'Last contact'
   },
   sinEvaluarValor: 'Not assessed',
-  restringida: 'Restricted',
   registrarConEllos: 'Register an engagement with them',
   vacio: 'A stakeholder starts by searching the person or organization and linking it to the project.',
   nuevoGrupo: {

@@ -41,7 +41,11 @@ export function GruposPage() {
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
   const [creando, setCreando] = useState(false)
   const conTablero = useTableroDisponible('stakeholders')
-  const leePostura = puedeLeer(definicion.data, 'stance')
+  // ni la postura ni la tolerancia de inactividad se deciden antes de que lleguen la definición y el proyecto: sin ellas, una
+  // cuenta con acceso vería "Restringido" un instante y la vista "Sin contacto" usaría 90 días. en el alcance global no hay
+  // un proyecto: la tolerancia es la de 90 días de la etiqueta y de la vista (cada proyecto tiene la suya)
+  const preparando = definicion.isPending || (proyecto !== undefined && registroDelProyecto.isPending)
+  const leePostura = definicion.isSuccess && puedeLeer(definicion.data, 'stance')
   const inactividad = Number(atributo(registroDelProyecto.data, 'inactivity_days') ?? 90)
   const filtros = FILTROS.filter((f) => f !== 'stance' || leePostura)
 
@@ -67,6 +71,14 @@ export function GruposPage() {
   }
   const filtrados = (grupos.data ?? []).filter((g) => enVista(g) && filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f)))
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
+  // la selección es de lo que se ve: al cambiar de vista, de filtro o de página se reinicia, y nunca viaja una fila oculta
+  const claveDeVista = [lista.vista, lista.pagina, ...FILTROS.map((f) => lista.filtro(f))].join('|')
+  const [claveVista, setClaveVista] = useState(claveDeVista)
+  if (claveVista !== claveDeVista) {
+    setClaveVista(claveDeVista)
+    setSeleccion(new Set())
+  }
+  const elegidos = pagina.filter((g) => seleccion.has(g.id)).map((g) => g.id)
   const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${lista.filtro(f)}` }))
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
   const base = proyecto ? `/projects/${proyecto}` : ''
@@ -102,120 +114,128 @@ export function GruposPage() {
         </div>
       </div>
       {territorio === null ? <Alert tone="notice">{t('contexto.noAplica')}</Alert> : null}
-      <VistasGuardadas
-        vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }) }))}
-        actual={lista.vista}
-        alCambiar={(id) => lista.cambiar({ view: id })}
-      />
-      <div className="flex flex-wrap gap-3">
-        {filtros.map((f) => (
-          <SelectNativo
-            key={f}
-            aria-label={t(`grupos.filtros.${f}`)}
-            className="w-auto"
-            opciones={opciones(f)}
-            value={lista.filtro(f)}
-            onChange={(e) => lista.cambiar({ [f]: e.target.value })}
-          />
-        ))}
-      </div>
-      <ChipsDeFiltro
-        chips={chips}
-        alQuitar={(c) => lista.cambiar({ [c]: null })}
-        alLimpiar={() => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))}
-      />
-      {seleccion.size > 0 && proyecto ? (
-        <div
-          role="region"
-          aria-label={t('comun.seleccionados', { n: seleccion.size })}
-          className="flex items-center gap-3 rounded-sg-md bg-sg-primary-soft px-3 py-2 text-sm"
-        >
-          <span aria-live="polite">{t('comun.seleccionados', { n: seleccion.size })}</span>
-          {can('engagement', 'CREATE') && asignado ? (
-            <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${[...seleccion].join(',')}`)}>
-              {t('grupos.registrarConEllos')}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {grupos.isPending ? (
+      {definicion.isError && !definicion.data ? (
+        <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} />
+      ) : preparando ? (
         <Cargando />
-      ) : grupos.isError && !grupos.data ? (
-        sinPermiso(grupos.error) ? (
-          <NoDisponible />
-        ) : (
-          <ErrorDeCarga error={grupos.error} alReintentar={() => void grupos.refetch()} />
-        )
-      ) : filtrados.length === 0 ? (
-        <VacioDeLista
-          conFiltros={chips.length > 0 || lista.vista !== 'todos'}
-          alLimpiar={() => lista.cambiar({ view: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })}
-        >
-          {t('grupos.vacio')}
-        </VacioDeLista>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-            <Table aria-label={t('grupos.titulo')}>
-              <thead>
-                <tr>
-                  {proyecto ? (
-                    <Th>
-                      <span className="sr-only">{t('comun.seleccionar')}</span>
-                    </Th>
-                  ) : null}
-                  {(
-                    [
-                      'grupo',
-                      ...(proyecto ? [] : ['proyecto']),
-                      'territorio',
-                      'influencia',
-                      'postura',
-                      'prioridad',
-                      'estado',
-                      'relacion',
-                      'responsable',
-                      'evaluacion',
-                      'contacto'
-                    ] as const
-                  ).map((c) => (
-                    <Th key={c} scope="col">
-                      {t(`grupos.columnas.${c}`)}
-                    </Th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pagina.map((g) => (
-                  <Fila
-                    key={g.id}
-                    grupo={g}
-                    global={!proyecto}
-                    leePostura={leePostura}
-                    seleccionado={seleccion.has(g.id)}
-                    alSeleccionar={
-                      proyecto
-                        ? (si) => {
-                            const siguiente = new Set(seleccion)
-                            if (si) siguiente.add(g.id)
-                            else siguiente.delete(g.id)
-                            setSeleccion(siguiente)
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
-              </tbody>
-            </Table>
+          <VistasGuardadas
+            vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }) }))}
+            actual={lista.vista}
+            alCambiar={(id) => lista.cambiar({ view: id })}
+          />
+          <div className="flex flex-wrap gap-3">
+            {filtros.map((f) => (
+              <SelectNativo
+                key={f}
+                aria-label={t(`grupos.filtros.${f}`)}
+                className="w-auto"
+                opciones={opciones(f)}
+                value={lista.filtro(f)}
+                onChange={(e) => lista.cambiar({ [f]: e.target.value })}
+              />
+            ))}
           </div>
-          {filtrados.length > POR_PAGINA ? (
-            <Pagination
-              page={lista.pagina}
-              totalPages={Math.ceil(filtrados.length / POR_PAGINA)}
-              totalElements={filtrados.length}
-              onPage={(p) => lista.cambiar({ page: String(p) })}
-            />
+          <ChipsDeFiltro
+            chips={chips}
+            alQuitar={(c) => lista.cambiar({ [c]: null })}
+            alLimpiar={() => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))}
+          />
+          {elegidos.length > 0 && proyecto ? (
+            <div
+              role="region"
+              aria-label={t('comun.seleccionados', { n: elegidos.length })}
+              className="flex items-center gap-3 rounded-sg-md bg-sg-primary-soft px-3 py-2 text-sm"
+            >
+              <span aria-live="polite">{t('comun.seleccionados', { n: elegidos.length })}</span>
+              {can('engagement', 'CREATE') && asignado ? (
+                <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.join(',')}`)}>
+                  {t('grupos.registrarConEllos')}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
+          {grupos.isPending ? (
+            <Cargando />
+          ) : grupos.isError && !grupos.data ? (
+            sinPermiso(grupos.error) ? (
+              <NoDisponible />
+            ) : (
+              <ErrorDeCarga error={grupos.error} alReintentar={() => void grupos.refetch()} />
+            )
+          ) : filtrados.length === 0 ? (
+            <VacioDeLista
+              conFiltros={chips.length > 0 || lista.vista !== 'todos'}
+              alLimpiar={() => lista.cambiar({ view: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })}
+            >
+              {t('grupos.vacio')}
+            </VacioDeLista>
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+                <Table aria-label={t('grupos.titulo')}>
+                  <thead>
+                    <tr>
+                      {proyecto ? (
+                        <Th>
+                          <span className="sr-only">{t('comun.seleccionar')}</span>
+                        </Th>
+                      ) : null}
+                      {(
+                        [
+                          'grupo',
+                          ...(proyecto ? [] : ['proyecto']),
+                          'territorio',
+                          'influencia',
+                          'postura',
+                          'prioridad',
+                          'estado',
+                          'relacion',
+                          'responsable',
+                          'evaluacion',
+                          'contacto'
+                        ] as const
+                      ).map((c) => (
+                        <Th key={c} scope="col">
+                          {t(`grupos.columnas.${c}`)}
+                        </Th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagina.map((g) => (
+                      <Fila
+                        key={g.id}
+                        grupo={g}
+                        global={!proyecto}
+                        leePostura={leePostura}
+                        seleccionado={seleccion.has(g.id)}
+                        alSeleccionar={
+                          proyecto
+                            ? (si) => {
+                                const siguiente = new Set(seleccion)
+                                if (si) siguiente.add(g.id)
+                                else siguiente.delete(g.id)
+                                setSeleccion(siguiente)
+                              }
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+              {filtrados.length > POR_PAGINA ? (
+                <Pagination
+                  page={lista.pagina}
+                  totalPages={Math.ceil(filtrados.length / POR_PAGINA)}
+                  totalElements={filtrados.length}
+                  onPage={(p) => lista.cambiar({ page: String(p) })}
+                />
+              ) : null}
+            </>
+          )}
         </>
       )}
       {proyecto ? <NuevoGrupo proyecto={proyecto} abierto={creando} alCerrar={() => setCreando(false)} /> : null}
@@ -261,7 +281,7 @@ function Fila({
       </Td>
       {global ? <Td className="font-sg-mono text-sg-caption">{texto(del.data, 'code')}</Td> : null}
       <Td className="text-sm">{texto(localidad.data, 'name') || '—'}</Td>
-      <Td className="text-sm">{evaluado ? texto(grupo, 'influence_group') : t('grupos.sinEvaluarValor')}</Td>
+      <Td className="text-sm">{evaluado ? texto(grupo, 'influence_group') || '—' : t('grupos.sinEvaluarValor')}</Td>
       <Td className="text-sm">{leePostura ? texto(grupo, 'stance') || '—' : <Restringido />}</Td>
       <Td className="text-sm">{evaluado ? texto(grupo, 'information_priority') || '—' : t('grupos.sinEvaluarValor')}</Td>
       <Td>
