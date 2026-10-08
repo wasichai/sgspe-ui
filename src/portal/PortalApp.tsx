@@ -8,7 +8,7 @@ import { LoginPage } from './auth/LoginPage'
 import { RequireSession } from './auth/RequireSession'
 import { crearI18n, IDIOMAS, NS } from './i18n'
 import { InicioPage } from './pages/InicioPage'
-import { PANTALLAS } from './pantallas'
+import { PANTALLAS, RUTAS_ADICIONALES } from './pantallas'
 import { AppShell } from './shell/AppShell'
 import { GuardaDeSeccion } from './shell/GuardaDeSeccion'
 import { conPantalla, NAV_TREE, type SeccionNav } from './shell/navTree'
@@ -28,8 +28,9 @@ function SeccionPorLlegar({ seccion }: { seccion: SeccionNav }) {
 }
 
 // el Dashboard es la ruta índice; cada otra sección tiene ruta solo con su pantalla (PANTALLAS), y la pantalla se guarda
-// con los mismos permisos que el árbol (GuardaDeSeccion); una sección del árbol sin pantalla todavía dice en qué fase llega,
-// y cualquier otra ruta es la página no encontrada
+// con los mismos permisos que el árbol (GuardaDeSeccion); una sección del árbol sin pantalla todavía dice en qué fase llega.
+// las fichas de los maestros del tenant que no son secciones (/actors/:actorId, /field-visits) son RUTAS_ADICIONALES,
+// guardadas con su sección; cualquier otra ruta es la página no encontrada
 const rutas = () =>
   createRoutesFromElements(
     <>
@@ -47,11 +48,13 @@ const rutas = () =>
           if (!Pantalla && !seccion.external && !conPantalla(seccion.clave)) {
             return [<Route key={seccion.clave} path={seccion.to} element={<SeccionPorLlegar seccion={seccion} />} />]
           }
+          // la pantalla de una sección es su raíz: sus rutas hijas (/projects/:projectId/…, /territory/communities/:id…)
+          // las declara ella misma
           return Pantalla
             ? [
                 <Route
                   key={seccion.clave}
-                  path={seccion.to}
+                  path={`${seccion.to}/*`}
                   element={
                     <GuardaDeSeccion seccion={seccion}>
                       <Pantalla />
@@ -61,6 +64,17 @@ const rutas = () =>
               ]
             : []
         })}
+        {RUTAS_ADICIONALES.map(({ ruta, seccion, Pantalla }) => (
+          <Route
+            key={ruta}
+            path={ruta}
+            element={
+              <GuardaDeSeccion seccion={NAV_TREE.find((s) => s.clave === seccion)!}>
+                <Pantalla />
+              </GuardaDeSeccion>
+            }
+          />
+        ))}
         <Route path="*" element={<NoEncontrada />} />
       </Route>
     </>

@@ -12,6 +12,9 @@ import { PortalApp } from '../PortalApp'
 const variantes = vi.hoisted(() => [] as VarianteDeInicio[])
 vi.mock('../inicios', async (original) => ({ ...(await original<typeof import('../inicios')>()), INICIOS: variantes }))
 
+// el mapa de módulos se prueba con el portal de F1, sin pantallas: lo que cada fase registra lo prueban sus pantallas
+vi.mock('../pantallas', () => ({ PANTALLAS: {}, RUTAS_ADICIONALES: [] }))
+
 const ORGANIZACION = { id: 'o1', name: 'Organización de prueba', slug: 'prueba', createdAt: null }
 
 let fetch: FetchMock | null = null

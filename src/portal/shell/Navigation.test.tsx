@@ -14,7 +14,7 @@ import { arbolPara, estadoDe, NAV_TREE, type ClaveDeSeccion } from './navTree'
 // administra; el asistente no es una sección (ASM-073). en F1 no hay pantallas registradas:
 // cada prueba registra la suya
 const registradas = vi.hoisted(() => ({}) as Record<string, ComponentType>)
-vi.mock('../pantallas', () => ({ PANTALLAS: registradas }))
+vi.mock('../pantallas', () => ({ PANTALLAS: registradas, RUTAS_ADICIONALES: [] }))
 
 function Prueba() {
   return <h2>Pantalla de prueba</h2>
