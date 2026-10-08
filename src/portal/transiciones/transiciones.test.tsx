@@ -4,6 +4,7 @@ import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { definicion, montar, registro, workflow } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
+import { useRegistro } from '../datos/registros'
 import { BotonesDeTransicion } from './BotonesDeTransicion'
 
 // design-system.md §6.2 y screens.md §2: la lista sale de GET …/transitions (las que el rol no tiene no se muestran),
@@ -36,6 +37,12 @@ function start(extra: MockRoute[] = [], comprobacion: unknown = { allowed: true,
     { method: 'POST', path: '/sgspe/transition-checks', body: comprobacion },
     ...extra
   ])
+}
+
+// quien lee el registro de la pantalla: da un observador activo a ['record', …], como la ficha que monta los botones
+function LectorDelRegistro() {
+  const leido = useRegistro('project', 'p1')
+  return <p>{leido.data ? 'registro leído' : 'sin leer'}</p>
 }
 
 describe('transiciones', () => {
@@ -126,17 +133,64 @@ describe('transiciones', () => {
     expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument()
   })
 
-  it('un 412 dice que otra persona cambió el registro, ofrece recargar y conserva el motivo', async () => {
-    start()
+  it('un 412 dice que otra persona cambió el registro, ofrece recargar, conserva el motivo y relee todo lo viejo', async () => {
+    start([{ path: '/objects/project/records/p1', body: PROYECTO }])
     red = espiarRed([{ method: 'POST', path: '/objects/project/records/p1/transitions/suspend', responder: () => problema(412, 'El proyecto cambió') }])
-    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    montar(
+      <>
+        <LectorDelRegistro />
+        <BotonesDeTransicion objeto="project" registro={PROYECTO} />
+      </>
+    )
+    await screen.findByText('registro leído')
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     await screen.findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
     expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Recargar' })).toBeInTheDocument()
     expect(screen.getByLabelText('Motivo (obligatorio)')).toHaveValue('Paralización')
+    const lecturas = () => red!.a('GET', '/objects/project/records/p1').length
+    const botones = () => red!.a('GET', '/objects/project/records/p1/transitions').length
+    const reglas = () => red!.a('POST', '/sgspe/transition-checks').length
+    expect([lecturas(), botones(), reglas()]).toEqual([1, 1, 1])
+    await userEvent.click(screen.getByRole('button', { name: 'Recargar' }))
+    // se relee el registro, la lista de botones y las reglas del diálogo abierto; el aviso del 412 se va
+    await waitFor(() => expect([lecturas(), botones(), reglas()]).toEqual([2, 2, 2]))
+    expect(screen.queryByText(/Otra persona cambió este registro/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Motivo (obligatorio)')).toHaveValue('Paralización')
+  })
+
+  it('si las reglas no se pudieron comprobar, Confirmar queda deshabilitado y se puede reintentar', async () => {
+    start()
+    let intentos = 0
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        responder: () =>
+          ++intentos === 1
+            ? problema(500, 'Falló la comprobación')
+            : new Response(JSON.stringify({ allowed: true, blocking: [], warnings: [] }), { headers: { 'Content-Type': 'application/json' } })
+      }
+    ])
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    const reintentar = await screen.findByRole('button', { name: 'Reintentar' })
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    await userEvent.click(reintentar)
+    expect(await screen.findByText('Se cumplen las reglas para este paso.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(intentos).toBe(2)
+  })
+
+  it('allowed en falso sin bloqueos tampoco deja confirmar, y lo dice', async () => {
+    start([], { allowed: false, blocking: [], warnings: [] })
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    expect(await screen.findByText(/El servidor no permite este paso ahora/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    expect(screen.queryByText('Se cumplen las reglas para este paso.')).not.toBeInTheDocument()
   })
 
   it('las transiciones de comando no son botones', async () => {
@@ -162,5 +216,13 @@ describe('transiciones', () => {
     const boton = await screen.findByRole('button', { name: 'Suspender' })
     await waitFor(() => expect(boton).toBeDisabled())
     expect(boton).toHaveAccessibleDescription('Hay 1 pregunta pendiente')
+  })
+
+  it('un bloqueo sin mensaje deshabilita igual el botón, sin inventar una razón', async () => {
+    start([], { allowed: false, blocking: [{ code: 'PENDING_QUESTIONS', message: '', field: null }], warnings: [] })
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} comprobarAntes={['suspend']} />)
+    const boton = await screen.findByRole('button', { name: 'Suspender' })
+    await waitFor(() => expect(boton).toBeDisabled())
+    expect(boton).not.toHaveAttribute('aria-describedby')
   })
 })

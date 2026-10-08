@@ -45,7 +45,9 @@ export function DialogoDeTransicion({
   const motivoRequerido = exigeMotivo(objeto, transicion.name) || advertencias.length > 0
   const faltaMotivo = motivoRequerido && motivo.trim() === ''
   const desde = etiquetas[registro.state ?? ''] ?? registro.state ?? ''
-  const puede = comprobacion.isSuccess && bloqueos.length === 0 && !faltaMotivo && !aplicar.isPending
+  // las reglas permiten el paso: la comprobación llegó, nada lo bloquea y el servidor lo da por permitido
+  const reglasOk = comprobacion.isSuccess && comprobacion.data.allowed && bloqueos.length === 0
+  const puede = reglasOk && !faltaMotivo && !aplicar.isPending
 
   const confirmar = () => {
     setIntentado(true)
@@ -61,7 +63,14 @@ export function DialogoDeTransicion({
         <div className="mt-4 space-y-3">
           <section aria-label={t('transiciones.reglas')} className="space-y-2">
             {comprobacion.isPending ? <p className="text-sm text-sg-text-muted">{t('transiciones.comprobando')}</p> : null}
-            {comprobacion.isError ? <Alert tone="danger">{mensaje(comprobacion.error)}</Alert> : null}
+            {comprobacion.isError ? (
+              <Alert tone="danger">
+                {mensaje(comprobacion.error)}
+                <Button variant="secondary" size="sm" className="ml-2" onClick={() => void comprobacion.refetch()}>
+                  {t('comun.reintentar')}
+                </Button>
+              </Alert>
+            ) : null}
             {bloqueos.map((b) => (
               <Alert key={`${b.code}-${b.field ?? ''}-${b.message}`} tone="danger" title={t('transiciones.bloqueo')}>
                 <TextoDelAviso aviso={b} campo={etiqueta(b.field)} />
@@ -72,9 +81,10 @@ export function DialogoDeTransicion({
                 <TextoDelAviso aviso={a} campo={etiqueta(a.field)} />
               </Alert>
             ))}
-            {comprobacion.isSuccess && bloqueos.length === 0 && advertencias.length === 0 ? (
-              <p className="text-sm text-sg-success">{t('transiciones.sinBloqueos')}</p>
+            {comprobacion.isSuccess && !comprobacion.data.allowed && bloqueos.length === 0 ? (
+              <Alert tone="danger">{t('transiciones.noPermitido')}</Alert>
             ) : null}
+            {reglasOk && advertencias.length === 0 ? <p className="text-sm text-sg-success">{t('transiciones.sinBloqueos')}</p> : null}
           </section>
           <section className="rounded-sg-md bg-sg-surface-sunken p-3 text-sm">
             <h3 className="font-medium">{t('transiciones.quePasara')}</h3>
@@ -95,7 +105,10 @@ export function DialogoDeTransicion({
                   size="sm"
                   className="ml-2"
                   onClick={() => {
-                    void cliente.invalidateQueries({ queryKey: ['record', objeto, registro.id] })
+                    // el registro, la lista de botones y las reglas que muestra este diálogo: si el estado cambió, todo
+                    // lo demás quedó viejo y confirmar sobre reglas obsoletas daría un STATE_MISMATCH
+                    for (const clave of ['record', 'transitions', 'transition-check'])
+                      void cliente.invalidateQueries({ queryKey: [clave, objeto, registro.id] })
                     aplicar.reset()
                   }}
                 >
@@ -109,7 +122,7 @@ export function DialogoDeTransicion({
           <Button variant="secondary" onClick={alCerrar}>
             {t('comun.cancelar')}
           </Button>
-          <Button onClick={confirmar} disabled={comprobacion.isPending || bloqueos.length > 0 || aplicar.isPending} aria-busy={aplicar.isPending}>
+          <Button onClick={confirmar} disabled={!reglasOk || aplicar.isPending} aria-busy={aplicar.isPending}>
             {aplicar.isPending ? t('transiciones.confirmando') : t('transiciones.confirmar')}
           </Button>
         </div>
