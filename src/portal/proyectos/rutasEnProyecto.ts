@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import type { ClaveDeSeccion } from '../shell/navTree'
+import { EquipoYParametrosPage } from './EquipoYParametrosPage'
 
 // las rutas bajo /projects/:projectId que aporta cada módulo de F2, relativas al proyecto (screens.md §3 a §6). las de
 // otra sección (grupos de interés, relacionamiento, reportes) se guardan además con los permisos de esa sección
@@ -9,4 +10,4 @@ export interface RutaEnProyecto {
   seccion?: ClaveDeSeccion
 }
 
-export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = []
+export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [{ ruta: 'settings', Pantalla: EquipoYParametrosPage, seccion: 'projects' }]
