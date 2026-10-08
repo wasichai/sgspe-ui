@@ -1,5 +1,9 @@
-// los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves
+import { ES_COMUN } from './comun'
+
+// los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
+// F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
 export const ES = {
+  comun: ES_COMUN,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',
