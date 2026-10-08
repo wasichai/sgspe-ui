@@ -1,7 +1,8 @@
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-// ?worker&url empaqueta el worker de MapLibre con su parte compartida en un solo archivo, sin traer MapLibre a este chunk:
-// el mapa baja con el primer mapa (el del portal o el de gis en /admin), como en srtm-ui
+// ?worker&url empaqueta el worker de MapLibre con su parte compartida en un solo archivo y deja aquí solo su URL:
+// vite.config.ts (partirEnChunks) no la mete en el chunk de maplibre, que baja con el primer mapa (el del portal o el
+// de gis en /admin), como en srtm-ui
 import trabajador from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { fijarTrabajadorDelMapa } from './portal/mapa/trabajador'
 import './index.css'

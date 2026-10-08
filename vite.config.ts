@@ -12,6 +12,16 @@ const mapaBase = process.env.SGSPE_MAPA_BASE ?? ''
 // la CSP de security.md §3.2 en modo de solo informe (ADR-0020): en desarrollo la manda Vite; en producción, el proxy
 const csp = { 'Content-Security-Policy-Report-Only': contentSecurityPolicy(readFileSync('index.html', 'utf8'), mapaBase) }
 
+// maplibre y echarts solo bajan con la primera pantalla que los usa (dashboards.md §9.1, gis.md §6.5). los ids con `?`
+// (main.tsx importa maplibre-gl-worker.mjs?worker&url) quedan fuera: esa constante es solo una URL y, dentro del chunk
+// de maplibre, ataría la entrada a 1 MB que el portal no necesita
+export function partirEnChunks(id: string): string | undefined {
+  if (id.includes('?')) return undefined
+  if (id.includes('node_modules/maplibre-gl')) return 'maplibre'
+  if (id.includes('node_modules/echarts') || id.includes('node_modules/zrender')) return 'echarts'
+  return undefined
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
@@ -23,13 +33,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // maplibre y echarts solo bajan con la primera pantalla que los usa (dashboards.md §9.1, gis.md §6.5)
-        manualChunks: (id) =>
-          id.includes('node_modules/maplibre-gl')
-            ? 'maplibre'
-            : id.includes('node_modules/echarts') || id.includes('node_modules/zrender')
-              ? 'echarts'
-              : undefined
+        manualChunks: partirEnChunks
       }
     }
   },

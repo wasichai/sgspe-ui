@@ -52,4 +52,8 @@ describe('CSP', () => {
     expect(origenDelMapa(mapa)).toBeNull()
     expect(contentSecurityPolicy(html, mapa)).toBe(contentSecurityPolicy(html))
   })
+
+  it('una URL https mal formada falla nombrando SGSPE_MAPA_BASE', () => {
+    expect(() => origenDelMapa('https://')).toThrow(/SGSPE_MAPA_BASE/)
+  })
 })

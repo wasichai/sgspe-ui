@@ -18,7 +18,11 @@ export function scriptHash(script: string): string {
 // el origen del estilo del mapa base, o nada: una URL relativa o vacía es del mismo origen
 export function origenDelMapa(mapaBase: string): string | null {
   if (!/^https:\/\//.test(mapaBase)) return null
-  return new URL(mapaBase).origin
+  try {
+    return new URL(mapaBase).origin
+  } catch {
+    throw new Error(`SGSPE_MAPA_BASE no es una URL válida: ${mapaBase}`)
+  }
 }
 
 export function contentSecurityPolicy(html: string, mapaBase = ''): string {

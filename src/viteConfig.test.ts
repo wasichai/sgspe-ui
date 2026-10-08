@@ -29,6 +29,8 @@ describe('vite.config', () => {
 
   // ASM-080 y gis.md §6.4: la jefatura y el mapa base son configuración del despliegue, no literales de src/
   it('define el rol de la jefatura y el mapa base, con sus valores por defecto', async () => {
+    vi.stubEnv('SGSPE_ROL_JEFATURA', undefined)
+    vi.stubEnv('SGSPE_MAPA_BASE', undefined)
     const config = await cargar(undefined)
     expect(config.define).toEqual({ __SGSPE_ROL_JEFATURA__: JSON.stringify('PROJECT_MANAGER'), __SGSPE_MAPA_BASE__: JSON.stringify('') })
   })
@@ -39,5 +41,17 @@ describe('vite.config', () => {
     const config = await cargar(undefined)
     expect(config.define?.__SGSPE_ROL_JEFATURA__).toBe('"OTRO_ROL"')
     expect(config.server?.headers?.['Content-Security-Policy-Report-Only']).toContain('https://mapas.example')
+  })
+
+  // decisión 15: MapLibre y ECharts bajan con el primer mapa o gráfico; el módulo ?worker&url que importa main.tsx no
+  // puede meterse en su chunk, porque ataría la entrada a él
+  it('parte maplibre y echarts en chunks, pero no los módulos con ? como el del worker', async () => {
+    await cargar(undefined)
+    const { partirEnChunks } = await import('../vite.config')
+    expect(partirEnChunks('/x/node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url')).toBeUndefined()
+    expect(partirEnChunks('/x/node_modules/maplibre-gl/dist/maplibre-gl.js')).toBe('maplibre')
+    expect(partirEnChunks('/x/node_modules/echarts/lib/echarts.js')).toBe('echarts')
+    expect(partirEnChunks('/x/node_modules/zrender/lib/zrender.js')).toBe('echarts')
+    expect(partirEnChunks('/x/src/main.tsx')).toBeUndefined()
   })
 })
