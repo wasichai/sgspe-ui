@@ -41,6 +41,7 @@ export function TerritorioPage() {
       if (FICHA[objeto] && !lugares.has(`${objeto}:${id}`)) lugares.set(`${objeto}:${id}`, { id, objeto, nombre: String(f.properties.name ?? '') })
     }
   const cargando = estados.some((e) => e.cargando)
+  const bloqueadas = estados.some((e) => e.bloqueada)
   const conError = estados.some((e) => !e.bloqueada && e.error)
   // acotado: la consulta sigue la vista del mapa, así que un mapa vacío solo dice que la vista lo está
   const aviso = avisoDelMapa(estados, true)
@@ -81,7 +82,9 @@ export function TerritorioPage() {
         <div className="space-y-1">
           <Mapa
             etiqueta={t('mapa.mapaTerritorial')}
-            capas={estados.filter((e) => e.datos).map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, seleccionable: true }))}
+            capas={estados
+              .filter((e) => e.datos)
+              .map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) }))}
             alSeleccionar={(id, capaId, objeto) => abrir(objeto ?? capa(capaId)?.objeto ?? '', id)}
             alMoverVista={setEncuadre}
           />
@@ -106,14 +109,15 @@ export function TerritorioPage() {
               {t('mapa.errorDeCapa')}
             </p>
           ) : null}
-          {lugares.size === 0 && !cargando && !conError && (aviso === null || aviso === 'vistaVacia') ? (
+          {bloqueadas ? <p className="text-sg-caption text-sg-text-muted">{t('territorio.capasBloqueadas')}</p> : null}
+          {lugares.size === 0 && !cargando && !conError && !bloqueadas && (aviso === null || aviso === 'vistaVacia') ? (
             <p className="text-sg-caption text-sg-text-muted">{t('mapa.sinLugares')}</p>
           ) : null}
           <ul className="max-h-[420px] space-y-1 overflow-y-auto">
             {[...lugares.values()].map((l) => (
               <li key={`${l.objeto}-${l.id}`}>
                 <Link to={rutaDe(l.objeto, l.id)!} state={paso(t('mapa.mapaTerritorial'))} className="text-sg-primary-text underline">
-                  {l.nombre || l.id}
+                  {l.nombre || t('territorio.sinNombre')}
                 </Link>
               </li>
             ))}

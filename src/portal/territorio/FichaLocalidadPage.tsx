@@ -201,7 +201,8 @@ function LineaBase({ localidad }: { localidad: string }) {
 }
 
 // religión y proceso electoral: la definición para quien llama dice si la cuenta los lee (un campo restringido falta en ella).
-// mientras llega o si no se pudo leer, no se afirma ni que están restringidos ni que no hay dato
+// la etiqueta es siempre la del portal (un campo restringido no trae la suya); mientras llega la definición o si no se pudo
+// leer, no se afirma ni que están restringidos ni que no hay dato
 function CampoSensible({
   campo,
   perfil,
@@ -211,14 +212,14 @@ function CampoSensible({
   perfil: Registro
   definicion: ReturnType<typeof useDefinicion>
 }) {
-  const etiqueta = definicion.data?.fields.find((f) => f.name === campo)?.label ?? campo
+  const { t } = useTranslation(NS)
   let valor: ReactNode
   if (definicion.data) valor = puedeLeer(definicion.data, campo) ? texto(perfil, campo) || '—' : <Restringido />
   else if (definicion.isError) valor = <NoDisponible />
   else valor = '…'
   return (
     <>
-      <dt className="text-sg-text-muted">{etiqueta}</dt>
+      <dt className="text-sg-text-muted">{t(`territorio.localidad.campos.${campo}`)}</dt>
       <dd>{valor}</dd>
     </>
   )

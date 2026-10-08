@@ -2,8 +2,10 @@
 export const ES_TERRITORIO = {
   trabajarEnProyecto: 'Trabajar en el proyecto con este lugar',
   verEnMapa: 'Ver en el mapa',
+  sinNombre: 'Lugar sin nombre',
+  capasBloqueadas: 'Hay capas que su cuenta no puede ver: la lista no las incluye.',
   editar: 'Editar',
-  pestanas: { resumen: 'Resumen', registros: 'Registros del lugar', lineaBase: 'Línea base', documentos: 'Documentos', actividad: 'Actividad' },
+  pestanas: { resumen: 'Resumen', registros: 'Registros del lugar', lineaBase: 'Línea base', documentos: 'Documentos' },
   registrosLlegan: 'Los registros del lugar (compromisos, QCS, riesgos) y sus cifras llegan con la ficha contextual, en F6.',
   documentosLlegan: 'Las evidencias y documentos llegan en F3.',
   comunidad: {
@@ -22,7 +24,6 @@ export const ES_TERRITORIO = {
     comuneros: 'Comuneros inscritos',
     representa: 'Organización que la representa',
     cargos: 'Cargos',
-    vacante: 'VACANTE',
     sectores: 'Sectores comunales',
     delegados: '{{n}} delegados',
     agregarSector: 'Agregar sector',
@@ -50,7 +51,6 @@ export const ES_TERRITORIO = {
     variacion: '{{signo}}{{valor}} frente al {{fecha}}',
     noDisponibleEn: 'no disponible en {{fecha}}',
     restringidos: 'Religión y proceso electoral son datos sensibles: su rol no los lee.',
-    servicios: 'Servicios y accesos',
     escuelas: 'Instituciones educativas',
     salud: 'Establecimientos de salud',
     vias: 'Vías de acceso',
@@ -67,7 +67,9 @@ export const ES_TERRITORIO = {
       electricity: 'Electricidad',
       sanitation: 'Saneamiento',
       phone_coverage: 'Cobertura de telefonía',
-      migration: 'Migración'
+      migration: 'Migración',
+      religion: 'Religión',
+      electoral_process: 'Proceso electoral'
     }
   }
 }
@@ -75,8 +77,10 @@ export const ES_TERRITORIO = {
 export const EN_TERRITORIO: typeof ES_TERRITORIO = {
   trabajarEnProyecto: 'Work on the project with this place',
   verEnMapa: 'View on the map',
+  sinNombre: 'Unnamed place',
+  capasBloqueadas: 'Some layers are not visible to your account: the list does not include them.',
   editar: 'Edit',
-  pestanas: { resumen: 'Overview', registros: 'Records of the place', lineaBase: 'Baseline', documentos: 'Documents', actividad: 'Activity' },
+  pestanas: { resumen: 'Overview', registros: 'Records of the place', lineaBase: 'Baseline', documentos: 'Documents' },
   registrosLlegan: 'The records of the place (commitments, grievances, risks) and its figures arrive with the context card, in F6.',
   documentosLlegan: 'Evidence and documents arrive in F3.',
   comunidad: {
@@ -95,7 +99,6 @@ export const EN_TERRITORIO: typeof ES_TERRITORIO = {
     comuneros: 'Registered members',
     representa: 'Organization representing it',
     cargos: 'Positions',
-    vacante: 'VACANT',
     sectores: 'Communal sectors',
     delegados: '{{n}} delegates',
     agregarSector: 'Add sector',
@@ -123,7 +126,6 @@ export const EN_TERRITORIO: typeof ES_TERRITORIO = {
     variacion: '{{signo}}{{valor}} against {{fecha}}',
     noDisponibleEn: 'not available on {{fecha}}',
     restringidos: 'Religion and electoral process are sensitive data: your role does not read them.',
-    servicios: 'Services and access',
     escuelas: 'Schools',
     salud: 'Health facilities',
     vias: 'Access roads',
@@ -140,7 +142,9 @@ export const EN_TERRITORIO: typeof ES_TERRITORIO = {
       electricity: 'Electricity',
       sanitation: 'Sanitation',
       phone_coverage: 'Phone coverage',
-      migration: 'Migration'
+      migration: 'Migration',
+      religion: 'Religion',
+      electoral_process: 'Electoral process'
     }
   }
 }

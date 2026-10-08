@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, type UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Tabs } from '@wasichai/ui'
 import { useState } from 'react'
@@ -145,7 +145,7 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
           </Button>
         ) : null}
       </section>
-      <GruposDelLugar organizaciones={organizaciones.data} />
+      <GruposDelLugar organizaciones={organizaciones} />
       <Drawer titulo={t('territorio.comunidad.agregarSector')} abierto={agregando} alCerrar={() => setAgregando(false)}>
         <FormularioDeRegistro
           objeto="community_sector"
@@ -186,7 +186,8 @@ function Representante({ organizacion }: { organizacion: Registro }) {
 
 // los grupos de interés del lugar: los de las organizaciones que lo representan, en todos los proyectos legibles. una
 // consulta por organización, reunidas aquí para que la sección diga si todas llegaron, si alguna falló o si no hay ninguno
-function GruposDelLugar({ organizaciones }: { organizaciones: Registro[] | undefined }) {
+function GruposDelLugar({ organizaciones: lectura }: { organizaciones: UseQueryResult<Registro[]> }) {
+  const organizaciones = lectura.data
   const { t } = useTranslation(NS)
   const pedir = usePedir()
   const consultas = useQueries({
@@ -196,14 +197,21 @@ function GruposDelLugar({ organizaciones }: { organizaciones: Registro[] | undef
       retry: false
     }))
   })
-  const pendiente = organizaciones === undefined || consultas.some((c) => c.isPending)
-  const fallida = consultas.find((c) => c.isError && !c.data)
+  // si las organizaciones no se pudieron leer, el error es el de esa lectura y no hay nada que esperar
+  const fallidaDeOrganizaciones = lectura.isError && !lectura.data
+  const pendiente = !fallidaDeOrganizaciones && (organizaciones === undefined || consultas.some((c) => c.isPending))
+  const fallida = fallidaDeOrganizaciones ? { error: lectura.error } : consultas.find((c) => c.isError && !c.data)
   const grupos = consultas.flatMap((c) => c.data ?? [])
   return (
     <section aria-label={t('territorio.comunidad.grupos')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="font-medium">{t('territorio.comunidad.grupos')}</h2>
       {pendiente ? <Cargando /> : null}
-      {fallida ? <ErrorDeCarga error={fallida.error} alReintentar={() => consultas.forEach((c) => c.isError && void c.refetch())} /> : null}
+      {fallida ? (
+        <ErrorDeCarga
+          error={fallida.error}
+          alReintentar={() => (fallidaDeOrganizaciones ? void lectura.refetch() : consultas.forEach((c) => c.isError && void c.refetch()))}
+        />
+      ) : null}
       <ul className="text-sm">
         {grupos.map((g) => (
           <FilaDeGrupo key={g.id} grupo={g} />
