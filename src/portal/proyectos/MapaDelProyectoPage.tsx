@@ -74,7 +74,7 @@ export function MapaDelProyectoPage() {
   const aviso = avisoDelMapa(estados, encuadre !== null)
   // el elemento elegido (en una tabla o por la URL) no está dibujado: su capa está apagada o bloqueada, o cae fuera de la vista
   const cargando = estados.some((e) => e.cargando)
-  const enElMapa = dibujadas.some((d) => d.datos.features.some((e) => idDeElemento(e) === seleccion || e.properties.__targetId === seleccion))
+  const enElMapa = !!seleccion && dibujadas.some((d) => d.datos.features.some((e) => idDeElemento(e) === seleccion || e.properties.__targetId === seleccion))
 
   const descargar = () => {
     const png = capturar.current()
@@ -282,7 +282,9 @@ function Predios({
     const estado = estados.find((e) => e.id === id)
     if (!encendidas.has(id)) return [t('mapa.predios.apagada', { capa: nombre })]
     if (estado?.bloqueada) return [t('mapa.predios.bloqueada', { capa: nombre })]
+    if (estado?.error) return [t('mapa.predios.conError', { capa: nombre })]
     if (estado?.truncada) return [t('mapa.predios.truncada', { capa: nombre })]
+    if (estado?.datos && estado.datos.features.length === 0) return [t('mapa.predios.sinPredios', { capa: nombre })]
     return []
   })
   return (

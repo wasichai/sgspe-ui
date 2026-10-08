@@ -31,7 +31,9 @@ export const ES_MAPA = {
   predios: {
     apagada: 'La capa «{{capa}}» está apagada: enciéndala en el control de capas para ver sus predios.',
     bloqueada: 'Su cuenta no puede ver la capa «{{capa}}».',
-    truncada: 'La capa «{{capa}}» tiene más predios de los que se muestran: acerque el mapa.'
+    truncada: 'La capa «{{capa}}» tiene más predios de los que se muestran: acerque el mapa.',
+    conError: 'No se pudo leer la capa «{{capa}}»: la tabla no muestra sus predios.',
+    sinPredios: 'La capa «{{capa}}» no tiene predios en esta vista.'
   },
   tabla: { componentes: 'Componentes', miembros: 'Miembros del área vigente', predios: 'Predios', areas: 'Áreas de influencia' },
   columnas: {
@@ -100,7 +102,9 @@ export const EN_MAPA: typeof ES_MAPA = {
   predios: {
     apagada: 'The “{{capa}}” layer is off: turn it on in the layer control to see its parcels.',
     bloqueada: 'Your account cannot see the “{{capa}}” layer.',
-    truncada: 'The “{{capa}}” layer has more parcels than shown: zoom in.'
+    truncada: 'The “{{capa}}” layer has more parcels than shown: zoom in.',
+    conError: 'The “{{capa}}” layer could not be read: the table does not show its parcels.',
+    sinPredios: 'The “{{capa}}” layer has no parcels in this view.'
   },
   tabla: { componentes: 'Components', miembros: 'Members of the current area', predios: 'Parcels', areas: 'Areas of influence' },
   columnas: {

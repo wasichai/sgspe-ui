@@ -207,6 +207,27 @@ describe('S09 · mapa del proyecto', () => {
       expect(await screen.findByText(/tiene más predios de los que se muestran/)).toBeInTheDocument()
     })
 
+    it('una capa de predios encendida que falló lo dice en lugar de dejar solo los encabezados', async () => {
+      fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), [
+        { path: '/sgspe/territory/layers/LYR-14', status: 500, body: { title: 'Error', status: 500 } },
+        ...rutas().filter((r) => !String(r.path).includes('LYR-14'))
+      ])
+      await userEvent.click(await screen.findByRole('tab', { name: 'Predios' }))
+      await userEvent.click(await screen.findByRole('checkbox', { name: /Predios de propiedad/ }))
+      expect(await screen.findByText(/No se pudo leer la capa «Predios de propiedad/)).toBeInTheDocument()
+      expect(screen.queryByText(/no tiene predios/)).not.toBeInTheDocument()
+    })
+
+    it('una capa de predios encendida que cargó sin predios lo dice en lugar de dejar solo los encabezados', async () => {
+      fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), [
+        { path: '/sgspe/territory/layers/LYR-14', body: coleccion('land_parcel', []) },
+        ...rutas().filter((r) => !String(r.path).includes('LYR-14'))
+      ])
+      await userEvent.click(await screen.findByRole('tab', { name: 'Predios' }))
+      await userEvent.click(await screen.findByRole('checkbox', { name: /Predios de propiedad/ }))
+      expect(await screen.findByText(/La capa «Predios de propiedad.*no tiene predios/)).toBeInTheDocument()
+    })
+
     it('sin permiso para la capa de predios, la tabla dice que su cuenta no la ve', async () => {
       fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), rutas())
       await userEvent.click(await screen.findByRole('tab', { name: 'Predios' }))
@@ -215,16 +236,26 @@ describe('S09 · mapa del proyecto', () => {
     })
   })
 
-  it('elegir un área en su pestaña la marca en el mapa, y elegirla en el mapa la marca en la pestaña', async () => {
-    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], area_of_influence: ['READ'] }), [
-      { path: '/sgspe/territory/layers/LYR-13', body: coleccion('area_of_influence', [['a1', { name: 'AIDS' }]]) },
-      ...rutas()
-    ])
-    await userEvent.click(await screen.findByRole('tab', { name: 'Áreas de influencia' }))
-    await userEvent.click(await screen.findByRole('button', { name: /Ver en el mapa: AIDS v1/ }))
-    expect(rutaActual()).toBe('/projects/p1/map?selected=area_of_influence%3Aa1')
-    expect(screen.getByRole('list', { name: 'Mapa del proyecto' })).toHaveAttribute('data-seleccion', 'a1')
-    expect(screen.getByRole('link', { name: 'AIDS · v1' }).closest('li')).toHaveAttribute('aria-current', 'true')
+  describe('áreas', () => {
+    const conMapa = () => [{ path: '/sgspe/territory/layers/LYR-13', body: coleccion('area_of_influence', [['a1', { name: 'AIDS' }]]) }, ...rutas()]
+
+    it('elegir un área en su pestaña la marca en el mapa', async () => {
+      fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], area_of_influence: ['READ'] }), conMapa())
+      await userEvent.click(await screen.findByRole('tab', { name: 'Áreas de influencia' }))
+      await userEvent.click(await screen.findByRole('button', { name: /Ver en el mapa: AIDS v1/ }))
+      expect(rutaActual()).toBe('/projects/p1/map?selected=area_of_influence%3Aa1')
+      expect(screen.getByRole('list', { name: 'Mapa del proyecto' })).toHaveAttribute('data-seleccion', 'a1')
+      expect(screen.getByRole('link', { name: 'AIDS · v1' }).closest('li')).toHaveAttribute('aria-current', 'true')
+    })
+
+    it('elegir el área en el mapa la marca en su pestaña', async () => {
+      fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], area_of_influence: ['READ'] }), conMapa())
+      const mapa = await screen.findByRole('list', { name: 'Mapa del proyecto' })
+      await userEvent.click(await within(mapa).findByRole('button', { name: 'AIDS' }))
+      expect(rutaActual()).toBe('/projects/p1/map?selected=area_of_influence%3Aa1')
+      await userEvent.click(await screen.findByRole('tab', { name: 'Áreas de influencia' }))
+      expect((await screen.findByRole('link', { name: 'AIDS · v1' })).closest('li')).toHaveAttribute('aria-current', 'true')
+    })
   })
 
   describe('cuando el mapa no dibuja nada', () => {
