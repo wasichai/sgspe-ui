@@ -81,11 +81,16 @@ export function useTableroDisponible(tablero: string): boolean {
 
 export const indicadorDe = (indicadores: Indicador[] | undefined, code: string) => indicadores?.find((i) => i.code === code)
 
-// las categorías de un desglose en barras horizontales: las 10 de mayor valor y el resto en "Otros" (dashboards.md §3.3)
-export function diezYOtros(filas: { key: string; label?: string; value: number | null }[], otros: string): { nombre: string; valor: number }[] {
-  const ordenadas = [...filas].sort((a, b) => (b.value ?? 0) - (a.value ?? 0)).map((f) => ({ nombre: f.label ?? f.key, valor: f.value ?? 0 }))
+// las categorías de un desglose en barras horizontales: las 10 de mayor valor y el resto en "Otros" (dashboards.md §3.3). una
+// fila sin cifra (value null) queda al final y conserva el null: el gráfico la deja sin barra y la tabla dice "—", nunca 0.
+// "Otros" suma solo las cifras que hay, y es null si ninguna la tiene
+export function diezYOtros(filas: { key: string; label?: string; value: number | null }[], otros: string): { nombre: string; valor: number | null }[] {
+  const ordenadas = [...filas]
+    .sort((a, b) => (a.value === null ? 1 : 0) - (b.value === null ? 1 : 0) || (b.value ?? 0) - (a.value ?? 0))
+    .map((f) => ({ nombre: f.label ?? f.key, valor: f.value }))
   if (ordenadas.length <= 10) return ordenadas
-  return [...ordenadas.slice(0, 10), { nombre: otros, valor: ordenadas.slice(10).reduce((s, f) => s + f.valor, 0) }]
+  const resto = ordenadas.slice(10).filter((f) => f.valor !== null)
+  return [...ordenadas.slice(0, 10), { nombre: otros, valor: resto.length === 0 ? null : resto.reduce((s, f) => s + (f.valor ?? 0), 0) }]
 }
 
 // los filtros pedidos que el indicador no aplica (ignoredFilters, ruling P27): se dicen, para que la cifra no se lea como
@@ -116,25 +121,25 @@ export function ConsultaDeTablero<T>({ consulta, children }: { consulta: UseQuer
 }
 
 // una zona de un tablero: el título, "no disponible" si la cuenta no puede leer el indicador (RQ-DSH-032) o su contenido,
-// con los filtros que el indicador no aplica
-export function Zona({ titulo, indicador, children }: { titulo: string; indicador: Indicador | undefined; children: (i: Indicador) => React.ReactNode }) {
+// con los filtros que el indicador no aplica. un indicador ausente de la respuesta tampoco se lee como vacío
+export function Zona({ titulo, indicador, children }: { titulo: string; indicador: Indicador | undefined; children: (i: Indicador) => ReactNode }) {
   return (
     <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
-      {!indicador ? null : indicador.available ? (
+      {indicador?.available ? (
         <>
           <FiltrosIgnorados indicador={indicador} />
           {children(indicador)}
         </>
       ) : (
-        <NoDisponible motivo={indicador.unavailableReason} />
+        <NoDisponible motivo={indicador?.unavailableReason} />
       )}
     </section>
   )
 }
 
 // barras horizontales de un desglose
-export function Barras({ titulo, filas }: { titulo: string; filas: { nombre: string; valor: number }[] }) {
+export function Barras({ titulo, filas }: { titulo: string; filas: { nombre: string; valor: number | null }[] }) {
   const { t } = useTranslation(NS)
   const opciones = useMemo(
     () => ({
@@ -151,7 +156,7 @@ export function Barras({ titulo, filas }: { titulo: string; filas: { nombre: str
       etiqueta={titulo}
       alto={Math.max(160, filas.length * 28)}
       opciones={opciones}
-      datos={{ columnas: [t('tableros.categoria'), t('tableros.valor')], filas: filas.map((f) => [f.nombre, numeroPe(f.valor)]) }}
+      datos={{ columnas: [t('tableros.categoria'), t('tableros.valor')], filas: filas.map((f) => [f.nombre, f.valor === null ? '—' : numeroPe(f.valor)]) }}
     />
   )
 }
@@ -191,7 +196,7 @@ export function SerieConMeta({
           : [])
       ]
     }),
-    [JSON.stringify(serie), tipo]
+    [JSON.stringify(serie), tipo, conMeta, t]
   )
   return (
     <Grafico

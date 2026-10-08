@@ -1,11 +1,13 @@
 import type { EChartsCoreOption } from 'echarts/core'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LimiteDeError } from '../componentes/LimiteDeError'
 import { NS } from '../i18n'
 
 // el Chart del portal (design-system.md §5, dashboards.md §9): una envoltura delgada de ECharts, cargada bajo demanda,
 // con la descripción ARIA y los patrones de relleno activados, y siempre con su tabla "Ver datos" debajo (RQ-DSH-035):
-// el tooltip nunca es la única forma de leer un valor. cambiar de biblioteca es cambiar este archivo (ASM-046)
+// el tooltip nunca es la única forma de leer un valor. si el chunk de ECharts no baja o init lanza, un aviso ocupa el lugar
+// del gráfico y la tabla queda abierta. cambiar de biblioteca es cambiar este archivo (ASM-046)
 export interface DatosDelGrafico {
   columnas: string[]
   filas: (string | number)[][]
@@ -23,14 +25,18 @@ const GraficoImpl = lazy(() => import('./GraficoImpl'))
 
 export function Grafico({ etiqueta, datos, alto = 280, ...props }: GraficoProps) {
   const { t } = useTranslation(NS)
+  const [fallo, fijarFallo] = useState(false)
   return (
     <figure className="space-y-2">
-      <Suspense fallback={<div style={{ height: alto }} className="rounded-sg-md bg-sg-surface-sunken" aria-busy="true" />}>
-        <GraficoImpl etiqueta={etiqueta} datos={datos} alto={alto} {...props} />
-      </Suspense>
-      <details>
+      <LimiteDeError mensaje={t('tableros.fallo')} alFallar={() => fijarFallo(true)}>
+        <Suspense fallback={<div style={{ height: alto }} className="rounded-sg-md bg-sg-surface-sunken" aria-busy="true" />}>
+          <GraficoImpl etiqueta={etiqueta} datos={datos} alto={alto} {...props} />
+        </Suspense>
+      </LimiteDeError>
+      <details open={fallo || undefined}>
         <summary className="cursor-pointer text-sg-caption text-sg-primary-text">{t('comun.verDatos')}</summary>
-        <table aria-label={etiqueta} className="mt-2 w-full text-sg-body-sm">
+        <table className="mt-2 w-full text-sg-body-sm">
+          <caption className="sr-only">{etiqueta}</caption>
           <thead>
             <tr>
               {datos.columnas.map((c) => (

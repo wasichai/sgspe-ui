@@ -30,6 +30,7 @@ export const ES_TABLEROS = {
     topic: 'Por tema'
   },
   direcciones: { MORE_FAVORABLE: 'Más favorable', LESS_FAVORABLE: 'Menos favorable' },
+  fallo: 'No se pudo dibujar el gráfico. Los datos están en «Ver datos».',
   // ignoredFilters de un indicador (api.md §4.11, ruling P27): el filtro se pidió y esta cifra no lo aplica
   ignorados: 'Esta cifra no aplica el filtro de {{filtros}}',
   nombresDeFiltro: {
@@ -81,6 +82,7 @@ export const EN_TABLEROS: typeof ES_TABLEROS = {
     topic: 'By topic'
   },
   direcciones: { MORE_FAVORABLE: 'More favorable', LESS_FAVORABLE: 'Less favorable' },
+  fallo: 'The chart could not be drawn. The data is under “View data”.',
   ignorados: 'This figure does not apply the {{filtros}} filter',
   nombresDeFiltro: {
     project: 'project',

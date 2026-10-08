@@ -64,6 +64,16 @@ describe('Zona y filtros ignorados', () => {
     expect(screen.queryByRole('note')).toBeNull()
   })
 
+  it('un indicador ausente de la respuesta dice "No disponible", no deja la zona muda', () => {
+    montar(
+      <Zona titulo="Grupos" indicador={undefined}>
+        {() => <p>no debe verse</p>}
+      </Zona>
+    )
+    expect(screen.getByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByText('no debe verse')).toBeNull()
+  })
+
   it('un filtro desconocido se dice con su clave', () => {
     montar(<FiltrosIgnorados indicador={indicador({ ignoredFilters: ['nuevo'] })} />)
     expect(screen.getByRole('note')).toHaveTextContent('filtro de nuevo')
@@ -147,8 +157,42 @@ describe('diezYOtros, Barras y SerieConMeta', () => {
     expect(r[10]).toEqual({ nombre: 'Otros', valor: 3 })
   })
 
-  it('con diez o menos no agrupa, usa la etiqueta y trata null como cero', () => {
-    expect(diezYOtros([{ key: 'a', label: 'Alfa', value: null }], 'Otros')).toEqual([{ nombre: 'Alfa', valor: 0 }])
+  // el brief fijaba 0 para un value null; la revisión lo cambió: una cifra ausente no se lee como cero (RQ-DSH-032)
+  it('con diez o menos no agrupa, usa la etiqueta y deja una cifra ausente como null, al final', () => {
+    expect(
+      diezYOtros(
+        [
+          { key: 'a', label: 'Alfa', value: null },
+          { key: 'b', value: 0 }
+        ],
+        'Otros'
+      )
+    ).toEqual([
+      { nombre: 'b', valor: 0 },
+      { nombre: 'Alfa', valor: null }
+    ])
+  })
+
+  it('Otros suma solo las cifras que hay y es null si ninguna la tiene', () => {
+    const conCifras = [...Array.from({ length: 10 }, (_, i) => ({ key: `k${i}`, value: 100 + i })), { key: 'x', value: 2 }, { key: 'y', value: null }]
+    expect(diezYOtros(conCifras, 'Otros').at(-1)).toEqual({ nombre: 'Otros', valor: 2 })
+    const sinCifras = [...Array.from({ length: 10 }, (_, i) => ({ key: `k${i}`, value: 100 + i })), { key: 'x', value: null }, { key: 'y', value: null }]
+    expect(diezYOtros(sinCifras, 'Otros').at(-1)).toEqual({ nombre: 'Otros', valor: null })
+  })
+
+  it('Barras escribe "—" y no 0 para una cifra ausente, en la tabla "Ver datos"', () => {
+    montar(
+      <Barras
+        titulo="Por tipo"
+        filas={[
+          { nombre: 'Taller', valor: 3 },
+          { nombre: 'Visita', valor: null }
+        ]}
+      />
+    )
+    const visita = screen.getByRole('cell', { name: 'Visita' }).closest('tr')
+    expect(visita).toHaveTextContent('—')
+    expect(visita).not.toHaveTextContent('0')
   })
 
   it('Barras escribe su tabla "Ver datos" con el número en formato es-PE', () => {
