@@ -114,7 +114,9 @@ export const ES_RELACIONAMIENTO = {
     nota: 'Nota',
     fotoLlega: 'La foto como evidencia llega en F3.',
     mas: 'Más {{etiqueta}}',
-    menos: 'Menos {{etiqueta}}'
+    menos: 'Menos {{etiqueta}}',
+    parcial: 'La interacción se creó, pero no se pudo completar el registro.',
+    abrirCreada: 'Abrir «{{titulo}}» para completarla'
   },
   acta: {
     titulo: 'Acta de la interacción',
@@ -275,7 +277,9 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     nota: 'Note',
     fotoLlega: 'The photo as evidence arrives in F3.',
     mas: 'More {{etiqueta}}',
-    menos: 'Fewer {{etiqueta}}'
+    menos: 'Fewer {{etiqueta}}',
+    parcial: 'The engagement was created, but its registration could not be completed.',
+    abrirCreada: 'Open “{{titulo}}” to complete it'
   },
   acta: {
     titulo: 'Engagement minutes',

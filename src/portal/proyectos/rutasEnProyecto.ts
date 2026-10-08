@@ -6,6 +6,7 @@ import { MatrizPage } from '../grupos/MatrizPage'
 import { TableroGruposPage } from '../grupos/TableroGruposPage'
 import { DetalleDeIndicadorPage } from '../tableros/DetalleDeIndicadorPage'
 import { InteraccionesCalendarioPage, InteraccionesListaPage } from '../relacionamiento/RelacionamientoRutas'
+import { RegistrarInteraccionPage } from '../relacionamiento/RegistrarInteraccionPage'
 import { AreaDeInfluenciaPage } from './AreaDeInfluenciaPage'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
 import { MapaDelProyectoPage } from './MapaDelProyectoPage'
@@ -30,5 +31,6 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'stakeholders/indicators/:code', seccion: 'stakeholders', Pantalla: DetalleDeIndicadorPage },
   { ruta: 'stakeholders/:stakeholderId', seccion: 'stakeholders', Pantalla: FichaGrupoPage },
   { ruta: 'engagements', seccion: 'engagements', Pantalla: InteraccionesListaPage },
-  { ruta: 'engagements/calendar', seccion: 'engagements', Pantalla: InteraccionesCalendarioPage }
+  { ruta: 'engagements/calendar', seccion: 'engagements', Pantalla: InteraccionesCalendarioPage },
+  { ruta: 'engagements/new', seccion: 'engagements', Pantalla: RegistrarInteraccionPage }
 ]
