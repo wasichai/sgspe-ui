@@ -62,6 +62,7 @@ export const ES_GRUPOS = {
     pendientes: 'Pendientes',
     pendientesLlegan: 'Los compromisos y QCS pendientes llegan en F3 y F4.',
     sinEvaluar: 'Aún no tiene evaluación: evalúelo para ubicarlo en la matriz.',
+    sinInteracciones: 'Aún no participó en ninguna interacción.',
     divergencia: 'Dos evaluaciones cercanas tienen posturas distintas: revise la fuente de cada una (CON-006).',
     preocupaciones: 'Preocupaciones',
     expectativas: 'Expectativas',
@@ -149,7 +150,10 @@ export const ES_GRUPOS = {
       'Hay evaluaciones posteriores a esta fecha: esta no cambia los índices ni el grupo vigentes; la postura y la confianza siguen el último valor informado.',
     sinRegla: 'Ninguna fila de la matriz de priorización coincide: la prioridad informativa queda vacía.',
     sinVistaPrevia: 'Su rol no lee el historial de evaluaciones: la vista previa del cálculo no está disponible, el cálculo se hace al guardar.',
-    errores: { FIELD_NOT_WRITABLE: 'Evaluar escribe la postura del grupo de interés, un dato que su rol no puede escribir.' }
+    errores: {
+      FIELD_NOT_WRITABLE: 'Evaluar escribe la postura del grupo de interés, un dato que su rol no puede escribir.',
+      ROLE_REQUIRED: 'Evaluar a un grupo de interés es un paso que su rol no puede dar: pídalo a quien coordina la relación.'
+    }
   },
   tableroTitulo: 'Tablero de grupos de interés',
   periodo: { desde: 'Desde', hasta: 'Hasta', ambito: 'Ámbito' },
@@ -225,6 +229,7 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     pendientes: 'Pending',
     pendientesLlegan: 'Pending commitments and grievances arrive in F3 and F4.',
     sinEvaluar: 'Not assessed yet: assess it to place it in the matrix.',
+    sinInteracciones: 'It has not taken part in any engagement yet.',
     divergencia: 'Two close assessments have different stances: check the source of each (CON-006).',
     preocupaciones: 'Concerns',
     expectativas: 'Expectations',
@@ -310,7 +315,10 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     atrasada: 'There are later assessments: this one does not change the current indexes or group; stance and trust follow the last reported value.',
     sinRegla: 'No row of the prioritization matrix matches: the information priority stays empty.',
     sinVistaPrevia: 'Your role does not read the assessment history: the calculation preview is not available, it is calculated on saving.',
-    errores: { FIELD_NOT_WRITABLE: 'Assessing writes the stakeholder stance, a value your role cannot write.' }
+    errores: {
+      FIELD_NOT_WRITABLE: 'Assessing writes the stakeholder stance, a value your role cannot write.',
+      ROLE_REQUIRED: 'Assessing a stakeholder is a step your role cannot take: ask whoever coordinates the relationship.'
+    }
   },
   tableroTitulo: 'Stakeholder dashboard',
   periodo: { desde: 'From', hasta: 'To', ambito: 'Scope' },
