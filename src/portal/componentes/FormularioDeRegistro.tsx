@@ -35,7 +35,10 @@ export function prepararDefinicion(definicion: ObjectDefinition, objeto: string,
   }
 }
 
-export function FormularioDeRegistro({ objeto, registro, fijos = {}, campos, motivo, alGuardar, alCancelar }: FormularioDeRegistroProps) {
+// sin fijos, siempre el mismo objeto: uno nuevo por render desharía el useMemo de la definición preparada
+const SIN_FIJOS: Record<string, unknown> = {}
+
+export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, campos, motivo, alGuardar, alCancelar }: FormularioDeRegistroProps) {
   const definicion = useDefinicion(objeto)
   const crear = useCrear(objeto)
   const actualizar = useActualizar(objeto)
@@ -48,11 +51,12 @@ export function FormularioDeRegistro({ objeto, registro, fijos = {}, campos, mot
   if (definicion.isPending) return <Cargando />
   if (definicion.isError || !preparada) return <ErrorDeCarga error={definicion.error} />
   const error = crear.error ?? actualizar.error
-  // el primer error que apunta a un campo del formulario se dice con su etiqueta; el resto (un objeto, `record`) va como
-  // mensaje del formulario
-  const campo = Object.entries(erroresDeCampo(error))
+  // cada error que apunta a un campo del formulario se dice con su etiqueta («Etiqueta: texto») y se muestran todos, para
+  // que la persona corrija de una vez; lo que no es de un campo (un objeto, `record`) va como mensaje del formulario
+  const deCampo = Object.entries(erroresDeCampo(error))
     .map(([nombre, texto]) => [preparada.fields.find((f) => f.name === nombre)?.label, texto] as const)
-    .find(([etiqueta]) => etiqueta)
+    .filter(([etiqueta]) => etiqueta)
+    .map(([etiqueta, texto]) => `${etiqueta}: ${texto}`)
   const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: fijos }
   const enviar = ({ attributes }: RecordPayload) => {
     const atributos = { ...attributes, ...fijos }
@@ -64,7 +68,7 @@ export function FormularioDeRegistro({ objeto, registro, fijos = {}, campos, mot
       definition={preparada}
       record={base}
       submitting={crear.isPending || actualizar.isPending}
-      error={error ? (campo ? `${campo[0]}: ${campo[1]}` : mensaje(error)) : null}
+      error={error ? (deCampo.length > 0 ? deCampo.join('\n') : mensaje(error)) : null}
       onSubmit={enviar}
       onCancel={alCancelar}
     />

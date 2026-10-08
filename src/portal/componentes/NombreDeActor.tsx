@@ -21,6 +21,9 @@ export function useNombreDelGrupo(grupo: Registro | undefined): string {
   const { t } = useTranslation(NS)
   const { objeto, id } = useActorDelGrupo(grupo)
   const actor = useRegistro(objeto, id)
+  // sin id la consulta no corre (isPending sería eterno) y, si la lectura falla, el nombre no se pudo leer: en ambos casos
+  // la persona queda como registrada, nunca un «…» eterno ni un nombre vacío
+  if (!id || actor.isError) return t('comun.personaRegistrada')
   return nombreDe(actor.data, objeto, t('comun.personaRegistrada')) || (actor.isPending ? '…' : '')
 }
 

@@ -47,6 +47,7 @@ export const ES_COMUN = {
   vistas: 'Vistas',
   seleccionados: '{{n}} seleccionados',
   personaRegistrada: 'Persona registrada',
+  dependientesSinCampo: 'No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.',
   // los códigos de las guardas y los comandos de SGSPE (api.md §3.3 y §4, ruling P15): errors[0].message trae el código y
   // la interfaz dice su texto; uno que no está aquí muestra el detail del servidor. {{campo}} es errors[0].field
   codigos: {
@@ -170,6 +171,7 @@ export const EN_COMUN: typeof ES_COMUN = {
   vistas: 'Views',
   seleccionados: '{{n}} selected',
   personaRegistrada: 'Registered person',
+  dependientesSinCampo: 'It cannot be deleted: other records depend on it. Delete or change them first.',
   codigos: {
     DERIVED_FIELD: 'The system calculates this value: it is not typed in.',
     REASON_REQUIRED: 'This step needs a reason: write it and try again.',

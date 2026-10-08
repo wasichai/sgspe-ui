@@ -2,11 +2,15 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { montar, workflow } from '../../test/montar'
+import type { UseQueryResult } from '@tanstack/react-query'
+import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
+import type { Pagina } from '../datos/registros'
 import { EstadoChip } from './EstadoChip'
 import { ErrorDeCarga, NoDisponible, Restringido } from './Estados'
 import { KpiCard } from './KpiCard'
+import { TablaDeRegistros } from './Lista'
+import { NombreDelGrupo } from './NombreDeActor'
 import { Pasos } from './Pasos'
 
 let fetch: FetchMock | null = null
@@ -134,5 +138,87 @@ describe('Pasos', () => {
     expect(screen.getByRole('button', { name: /Tres/ })).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: /Uno/ }))
     await waitFor(() => expect(ir).toHaveBeenCalledWith(0))
+  })
+})
+
+describe('errores con varias violaciones', () => {
+  it('dice todas las violaciones con código, no solo la primera, y una repetida una vez', async () => {
+    montar(
+      <ErrorDeCarga
+        error={
+          new ErrorDeSgspe(
+            400,
+            'x',
+            [
+              { field: 'registered_members_count', message: 'DERIVED_FIELD' },
+              { field: 'calculated_area_ha', message: 'DERIVED_FIELD' },
+              { field: 'record', message: 'EXACTLY_ONE' }
+            ],
+            null
+          )
+        }
+      />
+    )
+    const derivado = 'Ese dato lo calcula el sistema: no se escribe a mano.'
+    const alerta = await screen.findByRole('alert')
+    expect(alerta.textContent).toContain(derivado)
+    expect(alerta.textContent?.split(derivado)).toHaveLength(2)
+    expect(alerta.textContent).toContain('Indique exactamente uno')
+    expect(screen.queryByText(/EXACTLY_ONE|DERIVED_FIELD/)).not.toBeInTheDocument()
+  })
+
+  it('HAS_DEPENDENTS sin campo no deja paréntesis vacíos', async () => {
+    montar(<ErrorDeCarga error={new ErrorDeSgspe(409, 'x', [{ field: '', message: 'HAS_DEPENDENTS' }], null)} />)
+    expect(await screen.findByText('No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.')).toBeInTheDocument()
+    expect(screen.queryByText(/\(\)/)).not.toBeInTheDocument()
+  })
+})
+
+describe('TablaDeRegistros', () => {
+  const consulta = {
+    isPending: false,
+    isError: false,
+    data: pagina([registro('r1', { name: 'Uno' }), registro('r2', { name: 'Dos' })])
+  } as unknown as UseQueryResult<Pagina>
+  const columnas = [{ id: 'nombre', encabezado: 'Nombre', celda: (r: { attributes: Record<string, unknown> }) => String(r.attributes.name) }]
+
+  it('una fila clicable se abre con el teclado: Enter y Espacio', async () => {
+    const abrir = vi.fn()
+    montar(<TablaDeRegistros consulta={consulta} columnas={columnas} etiqueta="Registros" vacio={null} alPagina={vi.fn()} alAbrir={abrir} />)
+    const fila = (await screen.findByText('Uno')).closest('tr')!
+    expect(fila).toHaveAttribute('tabindex', '0')
+    fila.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(abrir).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'r1' }))
+    await userEvent.keyboard(' ')
+    expect(abrir).toHaveBeenCalledTimes(2)
+  })
+
+  it('sin alAbrir las filas no entran en el orden del teclado, y la casilla no abre la fila', async () => {
+    const abrir = vi.fn()
+    const { unmount } = montar(<TablaDeRegistros consulta={consulta} columnas={columnas} etiqueta="Registros" vacio={null} alPagina={vi.fn()} />)
+    expect((await screen.findByText('Uno')).closest('tr')).not.toHaveAttribute('tabindex')
+    unmount()
+    montar(
+      <TablaDeRegistros consulta={consulta} columnas={columnas} etiqueta="Registros" vacio={null} alPagina={vi.fn()} alAbrir={abrir} alSeleccionar={vi.fn()} />
+    )
+    const casilla = (await screen.findAllByRole('checkbox'))[0]
+    casilla.focus()
+    await userEvent.keyboard(' ')
+    expect(abrir).not.toHaveBeenCalled()
+  })
+})
+
+describe('NombreDelGrupo', () => {
+  it('si la lectura del actor falla, dice «Persona registrada», no un nombre vacío', async () => {
+    fetch = mockFetch([{ path: '/objects/person/records/p1', status: 500, body: { title: 'Error', status: 500, detail: 'x', errors: [] } }])
+    montar(<NombreDelGrupo grupo={registro('g1', { person: 'p1' })} />)
+    expect(await screen.findByText('Persona registrada')).toBeInTheDocument()
+  })
+
+  it('un grupo sin actor no queda en «…» para siempre', async () => {
+    montar(<NombreDelGrupo grupo={registro('g1', {})} />)
+    expect(await screen.findByText('Persona registrada')).toBeInTheDocument()
+    expect(screen.queryByText('…')).not.toBeInTheDocument()
   })
 })

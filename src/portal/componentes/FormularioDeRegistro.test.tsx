@@ -59,6 +59,32 @@ describe('FormularioDeRegistro', () => {
     expect(screen.queryByText(/DERIVED_FIELD/)).not.toBeInTheDocument()
   })
 
+  it('muestra todos los errores de campo reconocidos, cada uno con su etiqueta, no solo el primero', async () => {
+    fetch = mockFetch([{ path: '/metadata/objects/community', body: COMUNIDAD }])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/objects/community/records',
+        responder: () =>
+          problema(400, 'Revise los datos', [
+            { field: 'registered_members_count', message: 'DERIVED_FIELD' },
+            { field: 'registered_members_count', message: 'INVALID_NUMBER' },
+            { field: 'calculated_area_ha', message: 'DERIVED_FIELD' },
+            { field: 'name', message: 'EXACTLY_ONE' }
+          ])
+      }
+    ])
+    montar(<FormularioDeRegistro objeto="community" />)
+    await userEvent.type(await screen.findByLabelText(/^Nombre/), 'CC Tunas Pampa')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    const derivado = 'Ese dato lo calcula el sistema: no se escribe a mano.'
+    const aviso = await screen.findByText(new RegExp(`^Comuneros inscritos: ${derivado} Escriba un número\\.`))
+    // dos violaciones del mismo campo se unen en lugar de pisarse
+    expect(aviso).toHaveTextContent(`Área calculada: ${derivado}`)
+    expect(aviso).toHaveTextContent(/Nombre: Indique exactamente uno/)
+    expect(screen.queryByText(/DERIVED_FIELD|EXACTLY_ONE/)).not.toBeInTheDocument()
+  })
+
   it('las relaciones fijas viajan ocultas y un cambio lleva la versión leída', async () => {
     fetch = mockFetch([
       {

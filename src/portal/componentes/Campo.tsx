@@ -19,7 +19,7 @@ export function Campo({
   const descripcion = error ? `${id}-error` : ayuda ? `${id}-ayuda` : undefined
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sg-label font-medium text-sg-text">
+      <label htmlFor={id} className="block text-sg-body-sm font-medium text-sg-text">
         {etiqueta}
       </label>
       {children({ id, 'aria-describedby': descripcion, 'aria-invalid': error ? true : undefined })}

@@ -136,6 +136,18 @@ export function TablaDeRegistros({
                 key={registro.id}
                 className={alAbrir ? 'cursor-pointer hover:bg-sg-surface-hover' : undefined}
                 onClick={alAbrir ? () => alAbrir(registro) : undefined}
+                // la fila se abre también con el teclado (Enter o Espacio); una tecla pulsada dentro de un control de la
+                // fila (la casilla, un enlace) es de ese control. la fila conserva su rol de fila de la tabla
+                tabIndex={alAbrir ? 0 : undefined}
+                onKeyDown={
+                  alAbrir
+                    ? (e) => {
+                        if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
+                        e.preventDefault()
+                        alAbrir(registro)
+                      }
+                    : undefined
+                }
               >
                 {alSeleccionar ? (
                   <Td onClick={(e) => e.stopPropagation()}>
