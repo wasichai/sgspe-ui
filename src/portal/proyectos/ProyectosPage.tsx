@@ -1,13 +1,14 @@
 import { useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
 import { ROL_DE_JEFATURA } from '../config'
-import { useMisProyectos } from '../contexto/proyectos'
+import { useMisAsignaciones } from '../contexto/proyectos'
 import { atributo, texto, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
@@ -28,23 +29,33 @@ export function ProyectosPage() {
   const lista = useParametrosDeLista('mine')
   const proyectos = useTodos('project', { sort: 'name', dir: 'asc' })
   const definicion = useDefinicion('project')
-  const mios = useMisProyectos()
+  const asignaciones = useMisAsignaciones()
   const jefaturas = useTodos('project_assignment', { role_name: ROL_DE_JEFATURA, active: true })
   const campanas = useTodos('exploration_campaign', { campaign_status: 'EN EJECUCION' })
 
+  // «Mis proyectos» sale de las asignaciones propias: sin ellas no hay lista que mostrar, ni siquiera vacía
+  const mios = new Set((asignaciones.data ?? []).map((a) => String(atributo(a, 'project'))))
   const porProyecto = (registros: Registro[] | undefined, campo: string) => {
-    const mapa = new Map<string, string[]>()
+    const mapa = new Map<string, Set<string>>()
     for (const r of registros ?? []) {
+      const valor = texto(r, campo)
+      if (!valor) continue
       const proyecto = String(atributo(r, 'project'))
-      mapa.set(proyecto, [...(mapa.get(proyecto) ?? []), texto(r, campo)])
+      mapa.set(proyecto, (mapa.get(proyecto) ?? new Set<string>()).add(valor))
     }
     return mapa
   }
   const jefes = porProyecto(jefaturas.data, 'member_user_email')
   const enCurso = porProyecto(campanas.data, 'name')
+  // la jefatura y la campaña son de otras consultas: mientras cargan no se afirma nada, y si fallan o dan 403 se dice
+  const celda = (consulta: { isPending: boolean; isError: boolean }, valores: Set<string> | undefined, vacio: ReactNode) =>
+    consulta.isError ? <NoDisponible /> : consulta.isPending ? <span className="text-sg-text-muted">…</span> : valores ? [...valores].join(', ') : vacio
+  const lasMias = lista.vista === 'mine'
+  const cargando = proyectos.isPending || (lasMias && asignaciones.isPending)
+  const fallo = proyectos.isError ? proyectos : lasMias && asignaciones.isError ? asignaciones : null
 
   const filtrados = (proyectos.data ?? []).filter((p) => {
-    if (lista.vista === 'mine' && !mios.has(p.id)) return false
+    if (lasMias && !mios.has(p.id)) return false
     if ((lista.vista === 'active' || lista.vista === 'in_review') && p.state !== lista.vista) return false
     return FILTROS.every(([campo]) => !lista.filtro(campo) || atributo(p, campo) === lista.filtro(campo))
   })
@@ -59,7 +70,7 @@ export function ProyectosPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-sg-h1 font-semibold text-sg-text">{t('proyectos.titulo')}</h1>
-          <p className="text-sm text-sg-text-muted">{t('proyectos.conteo', { n: filtrados.length })}</p>
+          {cargando || fallo ? null : <p className="text-sm text-sg-text-muted">{t('proyectos.conteo', { count: filtrados.length })}</p>}
         </div>
         {can('project', 'CREATE') ? (
           <Button asChild>
@@ -73,7 +84,7 @@ export function ProyectosPage() {
         alCambiar={(id) => lista.cambiar({ view: id })}
       />
       <div className="flex flex-wrap gap-3">
-        {FILTROS.map(([campo, clave]) => (
+        {FILTROS.filter(([campo]) => opciones(campo).length > 0).map(([campo, clave]) => (
           <SelectNativo
             key={campo}
             aria-label={t(`proyectos.filtros.${clave}`)}
@@ -89,10 +100,10 @@ export function ProyectosPage() {
         alQuitar={(clave) => lista.cambiar({ [clave]: null })}
         alLimpiar={() => lista.cambiar(Object.fromEntries(FILTROS.map(([c]) => [c, null])))}
       />
-      {proyectos.isPending ? (
+      {cargando ? (
         <Cargando />
-      ) : proyectos.isError ? (
-        <ErrorDeCarga error={proyectos.error} alReintentar={() => void proyectos.refetch()} />
+      ) : fallo ? (
+        <ErrorDeCarga error={fallo.error} alReintentar={() => void fallo.refetch()} />
       ) : filtrados.length === 0 ? (
         <VacioDeLista
           conFiltros={chips.length > 0 || lista.vista !== 'all'}
@@ -126,8 +137,8 @@ export function ProyectosPage() {
                   <Td>
                     <EstadoChip objeto="project" estado={p.state} />
                   </Td>
-                  <Td className="text-sm">{jefes.get(p.id)?.join(', ') ?? <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>}</Td>
-                  <Td className="text-sm">{enCurso.get(p.id)?.join(', ') ?? '—'}</Td>
+                  <Td className="text-sm">{celda(jefaturas, jefes.get(p.id), <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>)}</Td>
+                  <Td className="text-sm">{celda(campanas, enCurso.get(p.id), '—')}</Td>
                 </tr>
               ))}
             </tbody>

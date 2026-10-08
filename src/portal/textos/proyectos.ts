@@ -1,7 +1,8 @@
 // S06 lista de proyectos y S07 crear proyecto (screens.md §3)
 export const ES_PROYECTOS = {
   titulo: 'Proyectos',
-  conteo: '{{n}} proyectos',
+  conteo_one: '{{count}} proyecto',
+  conteo_other: '{{count}} proyectos',
   nuevo: 'Nuevo proyecto',
   vistas: { mine: 'Mis proyectos', active: 'Activos', in_review: 'En revisión', all: 'Todos' },
   columnas: { codigo: 'Código', nombre: 'Nombre', tipo: 'Tipo', etapa: 'Etapa', estado: 'Estado', jefatura: 'Jefatura', campana: 'Campaña en curso' },
@@ -48,7 +49,8 @@ export const ES_PROYECTOS = {
 
 export const EN_PROYECTOS: typeof ES_PROYECTOS = {
   titulo: 'Projects',
-  conteo: '{{n}} projects',
+  conteo_one: '{{count}} project',
+  conteo_other: '{{count}} projects',
   nuevo: 'New project',
   vistas: { mine: 'My projects', active: 'Active', in_review: 'In review', all: 'All' },
   columnas: { codigo: 'Code', nombre: 'Name', tipo: 'Type', etapa: 'Stage', estado: 'Status', jefatura: 'Project lead', campana: 'Current campaign' },
