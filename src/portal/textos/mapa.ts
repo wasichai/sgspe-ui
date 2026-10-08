@@ -19,7 +19,20 @@ export const ES_MAPA = {
   importar: 'Importar',
   coordenadas: 'E {{este}} · N {{norte}} ({{crs}})',
   coordenadasGeo: 'Lon {{lon}} · Lat {{lat}}',
-  sinGeometrias: 'Este proyecto aún no tiene geometrías: impórtelas o dibújelas para verlas aquí.',
+  avisos: {
+    todasApagadas: 'Todas las capas están apagadas: encienda una en el control de capas para verla en el mapa.',
+    todasBloqueadas: 'Su cuenta no puede ver ninguna de las capas encendidas.',
+    todasConError: 'No se pudo leer ninguna de las capas encendidas: vuelva a cargar la página.',
+    vistaVacia: 'No hay elementos de las capas encendidas en esta vista.',
+    sinGeometrias: 'Este proyecto aún no tiene geometrías: impórtelas o dibújelas para verlas aquí.'
+  },
+  fueraDeLaVista: 'El elemento elegido no está dibujado en el mapa: su capa está apagada o bloqueada, o cae fuera de la vista.',
+  verEnElMapa: 'Ver en el mapa',
+  predios: {
+    apagada: 'La capa «{{capa}}» está apagada: enciéndala en el control de capas para ver sus predios.',
+    bloqueada: 'Su cuenta no puede ver la capa «{{capa}}».',
+    truncada: 'La capa «{{capa}}» tiene más predios de los que se muestran: acerque el mapa.'
+  },
   tabla: { componentes: 'Componentes', miembros: 'Miembros del área vigente', predios: 'Predios', areas: 'Áreas de influencia' },
   columnas: {
     codigo: 'Código',
@@ -75,7 +88,20 @@ export const EN_MAPA: typeof ES_MAPA = {
   importar: 'Import',
   coordenadas: 'E {{este}} · N {{norte}} ({{crs}})',
   coordenadasGeo: 'Lon {{lon}} · Lat {{lat}}',
-  sinGeometrias: 'This project has no geometries yet: import or draw them to see them here.',
+  avisos: {
+    todasApagadas: 'All layers are off: turn one on in the layer control to see it on the map.',
+    todasBloqueadas: 'Your account cannot see any of the layers that are on.',
+    todasConError: 'None of the layers that are on could be read: reload the page.',
+    vistaVacia: 'There are no features from the layers that are on in this view.',
+    sinGeometrias: 'This project has no geometries yet: import or draw them to see them here.'
+  },
+  fueraDeLaVista: 'The selected item is not drawn on the map: its layer is off or blocked, or it falls outside the view.',
+  verEnElMapa: 'Show on the map',
+  predios: {
+    apagada: 'The “{{capa}}” layer is off: turn it on in the layer control to see its parcels.',
+    bloqueada: 'Your account cannot see the “{{capa}}” layer.',
+    truncada: 'The “{{capa}}” layer has more parcels than shown: zoom in.'
+  },
   tabla: { componentes: 'Components', miembros: 'Members of the current area', predios: 'Parcels', areas: 'Areas of influence' },
   columnas: {
     codigo: 'Code',
