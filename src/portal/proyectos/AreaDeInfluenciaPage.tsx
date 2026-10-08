@@ -8,7 +8,7 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
-import { Consulta } from '../componentes/Estados'
+import { Cargando, Consulta, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError, usePedir } from '../datos/http'
 import { atributo, leerTodos, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
@@ -28,10 +28,10 @@ const claveDe = (m: Registro) => `${tipoDe(m)}:${String(atributo(m, tipoDe(m)))}
 export function AreaDeInfluenciaPage() {
   const { areaId = '' } = useParams()
   const area = useRegistro('area_of_influence', areaId)
-  return <Consulta consulta={area}>{(a) => <Area area={a} />}</Consulta>
+  return <Consulta consulta={area}>{(a) => <Area area={a} refrescando={area.isFetching} />}</Consulta>
 }
 
-function Area({ area }: { area: Registro }) {
+function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const proyecto = String(atributo(area, 'project'))
@@ -62,10 +62,14 @@ function Area({ area }: { area: Registro }) {
     [area, vigente]
   )
 
+  // la comparación solo se dice con las dos listas leídas: mientras la de la vigente carga, "Comparando…"; si falla, "—" y el
+  // error con su reintento (nunca "Nuevo" en todas las filas)
+  const comparable = miembros.isSuccess && (!vigente || deLaVigente.isSuccess)
   const actuales = new Set((miembros.data ?? []).map(claveDe))
-  const anteriores = new Set((deLaVigente.data ?? []).map(claveDe))
-  const salen = (deLaVigente.data ?? []).filter((m) => !actuales.has(claveDe(m)))
-  const comparacion = (m: Registro) => (!vigente ? null : anteriores.has(claveDe(m)) ? 'igual' : 'nuevo')
+  const anteriores = new Set((deLaVigente.isSuccess ? deLaVigente.data : []).map(claveDe))
+  const salen = vigente && comparable ? (deLaVigente.data ?? []).filter((m) => !actuales.has(claveDe(m))) : []
+  const comparacion = (m: Registro): ComparacionDeMiembro =>
+    !vigente ? null : deLaVigente.isError ? 'sinDato' : !deLaVigente.isSuccess ? 'cargando' : anteriores.has(claveDe(m)) ? 'igual' : 'nuevo'
 
   return (
     <section className="space-y-4">
@@ -76,12 +80,16 @@ function Area({ area }: { area: Registro }) {
         </div>
         <div className="flex gap-2">
           {borrador && asignado && can('area_of_influence', 'APPROVE') ? (
-            <Button onClick={() => setAprobando(true)} disabled={!miembros.isSuccess || sinMiembros} title={sinMiembros ? t('areas.sinMiembros') : undefined}>
+            <Button
+              onClick={() => setAprobando(true)}
+              disabled={!miembros.isSuccess || sinMiembros}
+              title={sinMiembros ? t('areas.sinMiembros') : miembros.isError ? t('areas.miembrosNoCargaron') : undefined}
+            >
               {t('areas.aprobar', { version })}
             </Button>
           ) : null}
           {!borrador && asignado && can('area_of_influence', 'CREATE') && can('area_of_influence_member', 'CREATE') ? (
-            <NuevaVersion area={area} versiones={versiones.data} miembros={miembros.data ?? []} />
+            <NuevaVersion area={area} miembros={miembros.data ?? []} versionesListas={versiones.isSuccess} />
           ) : null}
         </div>
       </header>
@@ -113,6 +121,9 @@ function Area({ area }: { area: Registro }) {
         </p>
       </section>
       {!borrador ? <Alert tone="notice">{t('areas.congelada', { estado: (etiquetas[area.state ?? ''] ?? area.state ?? '').toLowerCase() })}</Alert> : null}
+      {versiones.isError ? <ErrorDeCarga error={versiones.error} alReintentar={() => void versiones.refetch()} /> : null}
+      {miembros.isError ? <ErrorDeCarga error={miembros.error} alReintentar={() => void miembros.refetch()} /> : null}
+      {deLaVigente.isError ? <ErrorDeCarga error={deLaVigente.error} alReintentar={() => void deLaVigente.refetch()} /> : null}
       <Table aria-label={t('areas.miembros')}>
         <thead>
           <tr>
@@ -133,32 +144,43 @@ function Area({ area }: { area: Registro }) {
           ))}
         </tbody>
       </Table>
+      {miembros.isPending ? <Cargando /> : null}
       {borrador && asignado && can('area_of_influence_member', 'CREATE') ? <AgregarMiembro area={area.id} /> : null}
       <Mapa etiqueta={t('areas.mapa')} className="relative h-72 w-full overflow-hidden rounded-sg-lg border border-sg-border" capas={capasDelMapa} />
-      {aprobando ? <DialogoDeAprobacion area={area} alCerrar={() => setAprobando(false)} /> : null}
+      {aprobando && borrador ? (
+        <DialogoDeAprobacion
+          area={area}
+          refrescando={refrescando}
+          puedeAgregarMiembros={asignado && can('area_of_influence_member', 'CREATE')}
+          alCerrar={() => setAprobando(false)}
+        />
+      ) : null}
     </section>
   )
 }
 
-function FilaDeMiembro({ miembro, comparacion }: { miembro: Registro; comparacion: 'igual' | 'nuevo' | 'sale' | null }) {
+type ComparacionDeMiembro = 'igual' | 'nuevo' | 'sale' | 'cargando' | 'sinDato' | null
+
+function FilaDeMiembro({ miembro, comparacion }: { miembro: Registro; comparacion: ComparacionDeMiembro }) {
   const { t } = useTranslation(NS)
   const tipo = tipoDe(miembro)
   const lugar = useRegistro(tipo, String(atributo(miembro, tipo)))
   return (
     <tr className={comparacion === 'sale' ? 'text-sg-text-muted line-through' : undefined}>
-      <Td>{texto(lugar.data, 'name') || String(atributo(miembro, tipo))}</Td>
+      <Td>{lugar.isError ? <NoDisponible /> : lugar.isPending ? '…' : texto(lugar.data, 'name') || '—'}</Td>
       <Td className="text-sm">{t(`areas.tiposDeMiembro.${tipo}`)}</Td>
       <Td className="text-sm">{texto(miembro, 'member_condition')}</Td>
       <Td className="text-sm">{texto(miembro, 'applied_criteria')}</Td>
       <Td className="text-sm">{texto(miembro, 'rationale')}</Td>
       <Td className="text-sm">{atributo(miembro, 'studied_in_diagnosis') ? t('comun.si') : t('comun.no')}</Td>
-      {comparacion ? <Td className="text-sm">{t(`areas.comparacion.${comparacion}`)}</Td> : null}
+      {comparacion ? <Td className="text-sm">{comparacion === 'sinDato' ? '—' : t(`areas.comparacion.${comparacion}`)}</Td> : null}
     </tr>
   )
 }
 
 function AgregarMiembro({ area }: { area: string }) {
   const { t } = useTranslation(NS)
+  const cliente = useQueryClient()
   const definicion = useDefinicion('area_of_influence_member')
   const crear = useCrear('area_of_influence_member')
   const mensaje = useMensajeDeError()
@@ -193,7 +215,16 @@ function AgregarMiembro({ area }: { area: string }) {
         alElegir={(r) =>
           crear.mutate(
             { atributos: { area_of_influence: area, [tipo]: r.id, member_condition: condicion, rationale: justificacion } },
-            { onSuccess: () => setJustificacion('') }
+            {
+              onSuccess: () => setJustificacion(''),
+              // el área se aprobó mientras se editaba: se relee para que la pantalla deje de ofrecer agregar
+              onError: (error) => {
+                if (codigoDelError(error) === 'FROZEN_MEMBERS') {
+                  void cliente.invalidateQueries({ queryKey: ['record', 'area_of_influence', area] })
+                  void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence'] })
+                }
+              }
+            }
           )
         }
       />
@@ -202,7 +233,17 @@ function AgregarMiembro({ area }: { area: string }) {
   )
 }
 
-function DialogoDeAprobacion({ area, alCerrar }: { area: Registro; alCerrar: () => void }) {
+function DialogoDeAprobacion({
+  area,
+  refrescando,
+  puedeAgregarMiembros,
+  alCerrar
+}: {
+  area: Registro
+  refrescando: boolean
+  puedeAgregarMiembros: boolean
+  alCerrar: () => void
+}) {
   const { t } = useTranslation(NS)
   const pedir = usePedir()
   const cliente = useQueryClient()
@@ -254,11 +295,15 @@ function DialogoDeAprobacion({ area, alCerrar }: { area: Registro; alCerrar: () 
             <Alert tone="danger">
               {mensaje(aprobar.error, { MEMBERS_REQUIRED: t('areas.errores.MEMBERS_REQUIRED'), STATE_MISMATCH: t('areas.errores.STATE_MISMATCH') })}
               {codigo === 'MEMBERS_REQUIRED' ? (
-                <Button variant="secondary" size="sm" className="ml-2" onClick={agregarMiembros}>
-                  {t('areas.agregarMiembros')}
-                </Button>
+                puedeAgregarMiembros ? (
+                  <Button variant="secondary" size="sm" className="mt-2 block" onClick={agregarMiembros}>
+                    {t('areas.agregarMiembros')}
+                  </Button>
+                ) : (
+                  <p className="mt-2">{t('areas.sinPermisoParaMiembros')}</p>
+                )
               ) : esConflictoDeVersion(aprobar.error) || codigo === 'STATE_MISMATCH' || (aprobar.error instanceof ApiError && aprobar.error.status === 428) ? (
-                <Button variant="secondary" size="sm" className="ml-2" onClick={() => recargar(codigo === 'STATE_MISMATCH')}>
+                <Button variant="secondary" size="sm" className="mt-2 block" onClick={() => recargar(codigo === 'STATE_MISMATCH')}>
                   {t('comun.recargar')}
                 </Button>
               ) : null}
@@ -270,7 +315,7 @@ function DialogoDeAprobacion({ area, alCerrar }: { area: Registro; alCerrar: () 
             {t('comun.cancelar')}
           </Button>
           <Button
-            disabled={aprobar.isPending}
+            disabled={aprobar.isPending || refrescando}
             onClick={() => {
               setIntentado(true)
               if (motivo.trim()) aprobar.mutate()
@@ -284,15 +329,27 @@ function DialogoDeAprobacion({ area, alCerrar }: { area: Registro; alCerrar: () 
   )
 }
 
-// una versión nueva desde una aprobada: el siguiente número, los mismos criterios y una copia de sus miembros en borrador
-function NuevaVersion({ area, versiones, miembros }: { area: Registro; versiones: Registro[] | undefined; miembros: Registro[] }) {
+// una versión nueva desde una aprobada: el siguiente número, los mismos criterios y una copia de sus miembros en borrador.
+// son escrituras sucesivas (la API genérica no es transaccional, decisión 17): si una falla, la versión ya creada queda a
+// medias y el aviso enlaza a ella para completarla; reintentar relee las versiones para tomar el número siguiente de verdad
+function NuevaVersion({ area, miembros, versionesListas }: { area: Registro; miembros: Registro[]; versionesListas: boolean }) {
   const { t } = useTranslation(NS)
   const pedir = usePedir()
+  const cliente = useQueryClient()
   const navegar = useNavigate()
   const mensaje = useMensajeDeError()
+  const proyecto = String(atributo(area, 'project'))
+  const [creada, setCreada] = useState<Registro | null>(null)
   const crear = useMutation({
     mutationFn: async () => {
-      const siguiente = Math.max(Number(atributo(area, 'version_number') ?? 0), ...(versiones ?? []).map((v) => Number(atributo(v, 'version_number') ?? 0))) + 1
+      setCreada(null)
+      const existentes = await leerTodos(pedir, 'area_of_influence', {
+        project: proyecto,
+        area_type: texto(area, 'area_type'),
+        sort: 'version_number',
+        dir: 'desc'
+      })
+      const siguiente = Math.max(Number(atributo(area, 'version_number') ?? 0), ...existentes.map((v) => Number(atributo(v, 'version_number') ?? 0))) + 1
       const nueva = await pedir<Registro>('/objects/area_of_influence/records', {
         json: {
           attributes: {
@@ -304,6 +361,7 @@ function NuevaVersion({ area, versiones, miembros }: { area: Registro; versiones
           }
         }
       })
+      setCreada(nueva)
       const todos = miembros.length ? miembros : await leerTodos(pedir, 'area_of_influence_member', { area_of_influence: area.id })
       for (const m of todos) {
         const tipo = tipoDe(m)
@@ -322,14 +380,31 @@ function NuevaVersion({ area, versiones, miembros }: { area: Registro; versiones
       }
       return nueva
     },
-    onSuccess: (nueva) => navegar(`/projects/${String(atributo(area, 'project'))}/areas/${nueva.id}`)
+    // con éxito o a medias, las listas de versiones y de miembros se releen
+    onSettled: () => {
+      void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence'] })
+      void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence_member'] })
+    },
+    onSuccess: (nueva) => navegar(`/projects/${proyecto}/areas/${nueva.id}`)
   })
   return (
-    <>
-      <Button variant="secondary" onClick={() => crear.mutate()} disabled={crear.isPending || !versiones}>
+    <div className="flex flex-col items-end gap-2">
+      <Button variant="secondary" onClick={() => crear.mutate()} disabled={crear.isPending || !versionesListas}>
         {crear.isPending ? t('areas.creandoVersion') : t('areas.nuevaVersion')}
       </Button>
-      {crear.isError ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
-    </>
+      {crear.isError ? (
+        <Alert tone="danger">
+          <p>{mensaje(crear.error)}</p>
+          {creada ? (
+            <p className="mt-1">
+              {t('areas.versionCreada', { version: texto(creada, 'version_number') })}{' '}
+              <Link to={`/projects/${proyecto}/areas/${creada.id}`} className="font-medium text-sg-primary-text underline">
+                {t('areas.continuarEnLaCreada')}
+              </Link>
+            </p>
+          ) : null}
+        </Alert>
+      ) : null}
+    </div>
   )
 }

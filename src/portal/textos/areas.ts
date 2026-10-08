@@ -3,7 +3,6 @@ export const ES_AREAS = {
   titulo: '{{tipo}} · versión {{version}}',
   versiones: 'Versiones',
   criterios: 'Criterios y origen',
-  criteriosAplicados: 'Criterios aplicados',
   definida: 'Fecha de definición',
   areaCalculada: 'Área calculada',
   miembros: 'Miembros',
@@ -16,7 +15,7 @@ export const ES_AREAS = {
     estudiado: 'Estudiado',
     comparacion: 'Frente a la vigente'
   },
-  comparacion: { igual: 'Igual', nuevo: 'Nuevo', sale: 'Sale' },
+  comparacion: { igual: 'Igual', nuevo: 'Nuevo', sale: 'Sale', cargando: 'Comparando…', sinDato: '—' },
   tiposDeMiembro: { locality: 'Localidad', community: 'Comunidad', administrative_unit: 'Unidad administrativa' },
   agregarMiembro: 'Agregar miembro',
   tipoDeMiembro: 'Tipo de lugar',
@@ -38,15 +37,17 @@ export const ES_AREAS = {
   agregarMiembros: 'Agregar miembros',
   nuevaVersion: 'Nueva versión',
   creandoVersion: 'Creando la versión…',
-  vigente: 'Vigente',
-  mapa: 'Las dos versiones en el mapa'
+  mapa: 'Las dos versiones en el mapa',
+  miembrosNoCargaron: 'No se pudieron leer los miembros de esta versión: sin ellos no se puede aprobar.',
+  sinPermisoParaMiembros: 'Su cuenta no puede agregar miembros: pida a quien administra el proyecto que los agregue.',
+  versionCreada: 'La versión {{version}} ya se creó, pero la copia de sus miembros quedó incompleta.',
+  continuarEnLaCreada: 'Continuar en la versión creada'
 }
 
 export const EN_AREAS: typeof ES_AREAS = {
   titulo: '{{tipo}} · version {{version}}',
   versiones: 'Versions',
   criterios: 'Criteria and source',
-  criteriosAplicados: 'Applied criteria',
   definida: 'Definition date',
   areaCalculada: 'Calculated area',
   miembros: 'Members',
@@ -59,7 +60,7 @@ export const EN_AREAS: typeof ES_AREAS = {
     estudiado: 'Studied',
     comparacion: 'Against the current one'
   },
-  comparacion: { igual: 'Same', nuevo: 'New', sale: 'Leaves' },
+  comparacion: { igual: 'Same', nuevo: 'New', sale: 'Leaves', cargando: 'Comparing…', sinDato: '—' },
   tiposDeMiembro: { locality: 'Locality', community: 'Community', administrative_unit: 'Administrative unit' },
   agregarMiembro: 'Add member',
   tipoDeMiembro: 'Place type',
@@ -80,6 +81,9 @@ export const EN_AREAS: typeof ES_AREAS = {
   agregarMiembros: 'Add members',
   nuevaVersion: 'New version',
   creandoVersion: 'Creating the version…',
-  vigente: 'Current',
-  mapa: 'Both versions on the map'
+  mapa: 'Both versions on the map',
+  miembrosNoCargaron: 'The members of this version could not be read: it cannot be approved without them.',
+  sinPermisoParaMiembros: 'Your account cannot add members: ask whoever manages the project to add them.',
+  versionCreada: 'Version {{version}} was created, but the copy of its members is incomplete.',
+  continuarEnLaCreada: 'Continue in the created version'
 }
