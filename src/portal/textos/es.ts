@@ -1,6 +1,7 @@
 import { ES_AREAS } from './areas'
 import { ES_COMUN } from './comun'
 import { ES_CONTEXTO } from './contexto'
+import { ES_GRUPOS } from './grupos'
 import { ES_IMPORTACION } from './importacion'
 import { ES_MAPA } from './mapa'
 import { ES_P360 } from './p360'
@@ -15,6 +16,7 @@ export const ES = {
   areas: ES_AREAS,
   comun: ES_COMUN,
   contexto: ES_CONTEXTO,
+  grupos: ES_GRUPOS,
   importacion: ES_IMPORTACION,
   mapa: ES_MAPA,
   p360: ES_P360,
