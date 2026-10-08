@@ -1,3 +1,4 @@
+import { ES_AREAS } from './areas'
 import { ES_COMUN } from './comun'
 import { ES_CONTEXTO } from './contexto'
 import { ES_MAPA } from './mapa'
@@ -8,6 +9,7 @@ import { ES_TRANSICIONES } from './transiciones'
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
 export const ES = {
+  areas: ES_AREAS,
   comun: ES_COMUN,
   contexto: ES_CONTEXTO,
   mapa: ES_MAPA,

@@ -1,0 +1,335 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ApiError, useAuth } from '@wasichai/core'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useNavigate, useParams } from 'react-router'
+import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
+import { Campo, SelectNativo } from '../componentes/Campo'
+import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
+import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
+import { Consulta } from '../componentes/Estados'
+import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { codigoDelError, usePedir } from '../datos/http'
+import { atributo, leerTodos, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
+import { NS, numeroPe } from '../i18n'
+import { Mapa } from '../mapa/Mapa'
+
+// S10 · área de influencia (screens.md §3, WF-O): versiones, criterios, miembros con su comparación frente a la vigente,
+// alta de miembros en borrador y aprobación por POST /api/sgspe/areas-of-influence/{id}/approve (If-Match y motivo, que
+// siempre se pide). una versión aprobada o reemplazada no cambia sus miembros (TerritoryWriteGuard: FROZEN_MEMBERS): se
+// crea una versión nueva. dos aprobaciones a la vez se serializan en el servidor: la segunda recibe 412 o STATE_MISMATCH
+type TipoDeMiembro = 'locality' | 'community' | 'administrative_unit'
+const TIPOS: TipoDeMiembro[] = ['locality', 'community', 'administrative_unit']
+
+const tipoDe = (m: Registro): TipoDeMiembro => TIPOS.find((t) => atributo(m, t)) ?? 'locality'
+const claveDe = (m: Registro) => `${tipoDe(m)}:${String(atributo(m, tipoDe(m)))}`
+
+export function AreaDeInfluenciaPage() {
+  const { areaId = '' } = useParams()
+  const area = useRegistro('area_of_influence', areaId)
+  return <Consulta consulta={area}>{(a) => <Area area={a} />}</Consulta>
+}
+
+function Area({ area }: { area: Registro }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const proyecto = String(atributo(area, 'project'))
+  const asignado = useAsignadoAlProyecto(proyecto)
+  const etiquetas = useEtiquetasDeEstado('area_of_influence')
+  const versiones = useTodos('area_of_influence', { project: proyecto, area_type: texto(area, 'area_type'), sort: 'version_number', dir: 'desc' })
+  const vigente = (versiones.data ?? []).find((v) => v.state === 'approved' && v.id !== area.id)
+  const miembros = useTodos('area_of_influence_member', { area_of_influence: area.id })
+  const deLaVigente = useTodos('area_of_influence_member', { area_of_influence: vigente?.id }, Boolean(vigente))
+  const [aprobando, setAprobando] = useState(false)
+  const borrador = area.state === 'draft'
+  const version = texto(area, 'version_number')
+  const sinMiembros = miembros.isSuccess && miembros.data.length === 0
+  // la misma colección mientras no cambien las versiones: el mapa vuelve a dibujar cuando cambia su identidad
+  const capasDelMapa = useMemo(
+    () =>
+      [area, ...(vigente ? [vigente] : [])]
+        .filter((v) => v.geometries?.boundary)
+        .map((v, i) => ({
+          id: `v${texto(v, 'version_number')}`,
+          color: i === 0 ? '--sg-primary' : '--sg-text-muted',
+          seleccionable: false,
+          datos: {
+            type: 'FeatureCollection' as const,
+            features: [{ type: 'Feature' as const, geometry: v.geometries!.boundary!, properties: { __id: v.id } }]
+          }
+        })),
+    [area, vigente]
+  )
+
+  const actuales = new Set((miembros.data ?? []).map(claveDe))
+  const anteriores = new Set((deLaVigente.data ?? []).map(claveDe))
+  const salen = (deLaVigente.data ?? []).filter((m) => !actuales.has(claveDe(m)))
+  const comparacion = (m: Registro) => (!vigente ? null : anteriores.has(claveDe(m)) ? 'igual' : 'nuevo')
+
+  return (
+    <section className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="text-sg-h2 font-semibold">{t('areas.titulo', { tipo: texto(area, 'area_type'), version })}</h1>
+          <EstadoChip objeto="area_of_influence" estado={area.state} />
+        </div>
+        <div className="flex gap-2">
+          {borrador && asignado && can('area_of_influence', 'APPROVE') ? (
+            <Button onClick={() => setAprobando(true)} disabled={!miembros.isSuccess || sinMiembros} title={sinMiembros ? t('areas.sinMiembros') : undefined}>
+              {t('areas.aprobar', { version })}
+            </Button>
+          ) : null}
+          {!borrador && asignado && can('area_of_influence', 'CREATE') && can('area_of_influence_member', 'CREATE') ? (
+            <NuevaVersion area={area} versiones={versiones.data} miembros={miembros.data ?? []} />
+          ) : null}
+        </div>
+      </header>
+      <nav aria-label={t('areas.versiones')}>
+        <ol className="flex flex-wrap gap-2 text-sm">
+          {(versiones.data ?? []).map((v) => (
+            <li key={v.id}>
+              <Link
+                to={`/projects/${proyecto}/areas/${v.id}`}
+                aria-current={v.id === area.id ? 'page' : undefined}
+                className="rounded-sg-sm border border-sg-border px-2 py-0.5"
+              >
+                v{texto(v, 'version_number')} · {etiquetas[v.state ?? ''] ?? v.state}
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </nav>
+      <section aria-label={t('areas.criterios')} className="grid gap-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm md:grid-cols-3">
+        <p className="md:col-span-3">{texto(area, 'criteria') || '—'}</p>
+        <p>
+          {t('areas.definida')}: {texto(area, 'defined_date') || '—'}
+        </p>
+        <p>
+          {t('areas.areaCalculada')}:{' '}
+          {atributo(area, 'calculated_area_ha') === null || atributo(area, 'calculated_area_ha') === undefined
+            ? '—'
+            : `${numeroPe(Number(atributo(area, 'calculated_area_ha')))} ha`}
+        </p>
+      </section>
+      {!borrador ? <Alert tone="notice">{t('areas.congelada', { estado: (etiquetas[area.state ?? ''] ?? area.state ?? '').toLowerCase() })}</Alert> : null}
+      <Table aria-label={t('areas.miembros')}>
+        <thead>
+          <tr>
+            {(['lugar', 'tipo', 'condicion', 'criterio', 'justificacion', 'estudiado'] as const).map((c) => (
+              <Th key={c} scope="col">
+                {t(`areas.columnas.${c}`)}
+              </Th>
+            ))}
+            {vigente ? <Th scope="col">{t('areas.columnas.comparacion')}</Th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {(miembros.data ?? []).map((m) => (
+            <FilaDeMiembro key={m.id} miembro={m} comparacion={comparacion(m)} />
+          ))}
+          {salen.map((m) => (
+            <FilaDeMiembro key={`sale-${m.id}`} miembro={m} comparacion="sale" />
+          ))}
+        </tbody>
+      </Table>
+      {borrador && asignado && can('area_of_influence_member', 'CREATE') ? <AgregarMiembro area={area.id} /> : null}
+      <Mapa etiqueta={t('areas.mapa')} className="relative h-72 w-full overflow-hidden rounded-sg-lg border border-sg-border" capas={capasDelMapa} />
+      {aprobando ? <DialogoDeAprobacion area={area} alCerrar={() => setAprobando(false)} /> : null}
+    </section>
+  )
+}
+
+function FilaDeMiembro({ miembro, comparacion }: { miembro: Registro; comparacion: 'igual' | 'nuevo' | 'sale' | null }) {
+  const { t } = useTranslation(NS)
+  const tipo = tipoDe(miembro)
+  const lugar = useRegistro(tipo, String(atributo(miembro, tipo)))
+  return (
+    <tr className={comparacion === 'sale' ? 'text-sg-text-muted line-through' : undefined}>
+      <Td>{texto(lugar.data, 'name') || String(atributo(miembro, tipo))}</Td>
+      <Td className="text-sm">{t(`areas.tiposDeMiembro.${tipo}`)}</Td>
+      <Td className="text-sm">{texto(miembro, 'member_condition')}</Td>
+      <Td className="text-sm">{texto(miembro, 'applied_criteria')}</Td>
+      <Td className="text-sm">{texto(miembro, 'rationale')}</Td>
+      <Td className="text-sm">{atributo(miembro, 'studied_in_diagnosis') ? t('comun.si') : t('comun.no')}</Td>
+      {comparacion ? <Td className="text-sm">{t(`areas.comparacion.${comparacion}`)}</Td> : null}
+    </tr>
+  )
+}
+
+function AgregarMiembro({ area }: { area: string }) {
+  const { t } = useTranslation(NS)
+  const definicion = useDefinicion('area_of_influence_member')
+  const crear = useCrear('area_of_influence_member')
+  const mensaje = useMensajeDeError()
+  const [tipo, setTipo] = useState<TipoDeMiembro>('locality')
+  const [condicion, setCondicion] = useState('INCLUIDO')
+  const [justificacion, setJustificacion] = useState('')
+  const condiciones = definicion.data?.fields.find((f) => f.name === 'member_condition')?.enumOptions ?? ['INCLUIDO', 'PROVISIONAL']
+  return (
+    <section id="agregar-miembro" tabIndex={-1} aria-label={t('areas.agregarMiembro')} className="space-y-3 rounded-sg-lg border border-sg-border p-4">
+      <h2 className="font-medium">{t('areas.agregarMiembro')}</h2>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Campo etiqueta={t('areas.tipoDeMiembro')}>
+          {(p) => (
+            <SelectNativo
+              {...p}
+              vacio={false}
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as TipoDeMiembro)}
+              opciones={TIPOS.map((x) => ({ valor: x, etiqueta: t(`areas.tiposDeMiembro.${x}`) }))}
+            />
+          )}
+        </Campo>
+        <Campo etiqueta={t('areas.columnas.condicion')}>
+          {(p) => <SelectNativo {...p} vacio={false} value={condicion} onChange={(e) => setCondicion(e.target.value)} opciones={condiciones} />}
+        </Campo>
+        <Campo etiqueta={t('areas.justificacion')}>{(p) => <Textarea {...p} value={justificacion} onChange={(e) => setJustificacion(e.target.value)} />}</Campo>
+      </div>
+      <BuscadorDeRegistro
+        objeto={tipo}
+        etiqueta={t('areas.buscarLugar')}
+        rotulo={(r) => texto(r, 'name')}
+        alElegir={(r) =>
+          crear.mutate(
+            { atributos: { area_of_influence: area, [tipo]: r.id, member_condition: condicion, rationale: justificacion } },
+            { onSuccess: () => setJustificacion('') }
+          )
+        }
+      />
+      {crear.isError ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
+    </section>
+  )
+}
+
+function DialogoDeAprobacion({ area, alCerrar }: { area: Registro; alCerrar: () => void }) {
+  const { t } = useTranslation(NS)
+  const pedir = usePedir()
+  const cliente = useQueryClient()
+  const mensaje = useMensajeDeError()
+  const [motivo, setMotivo] = useState('')
+  const [intentado, setIntentado] = useState(false)
+  const version = texto(area, 'version_number')
+  const aprobar = useMutation({
+    mutationFn: () =>
+      pedir<{ approved: Registro; superseded: Registro | null }>(`/sgspe/areas-of-influence/${area.id}/approve`, {
+        metodo: 'POST',
+        version: area.updatedAt,
+        motivo
+      }),
+    onSuccess: () => {
+      void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence'] })
+      void cliente.invalidateQueries({ queryKey: ['record', 'area_of_influence'] })
+      void cliente.invalidateQueries({ queryKey: ['layer'] })
+      alCerrar()
+    }
+  })
+  const codigo = codigoDelError(aprobar.error)
+  // relee el área (y sus versiones): un 412 o un 428 conserva el motivo para volver a aprobar; STATE_MISMATCH cierra, porque
+  // la versión ya no está en borrador
+  const recargar = (cerrar: boolean) => {
+    void cliente.invalidateQueries({ queryKey: ['record', 'area_of_influence', area.id] })
+    void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence'] })
+    void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence_member'] })
+    aprobar.reset()
+    if (cerrar) alCerrar()
+  }
+  // sin miembros en el servidor: se releen y el foco va a "Agregar miembro"
+  const agregarMiembros = () => {
+    void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence_member'] })
+    alCerrar()
+    setTimeout(() => document.getElementById('agregar-miembro')?.focus(), 0)
+  }
+  return (
+    <Dialog open onOpenChange={(abierto) => !abierto && alCerrar()}>
+      <DialogContent className="max-w-lg">
+        <DialogTitle className="text-sg-h3 font-semibold">{t('areas.aprobarTitulo', { version })}</DialogTitle>
+        <DialogDescription className="text-sm">{t('areas.reglas')}</DialogDescription>
+        <div className="mt-4 space-y-3">
+          <Alert tone="notice">{t('areas.quePasara', { version })}</Alert>
+          <Campo etiqueta={t('comun.motivoObligatorio')} error={intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined}>
+            {(p) => <Textarea {...p} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
+          </Campo>
+          {aprobar.isError ? (
+            <Alert tone="danger">
+              {mensaje(aprobar.error, { MEMBERS_REQUIRED: t('areas.errores.MEMBERS_REQUIRED'), STATE_MISMATCH: t('areas.errores.STATE_MISMATCH') })}
+              {codigo === 'MEMBERS_REQUIRED' ? (
+                <Button variant="secondary" size="sm" className="ml-2" onClick={agregarMiembros}>
+                  {t('areas.agregarMiembros')}
+                </Button>
+              ) : esConflictoDeVersion(aprobar.error) || codigo === 'STATE_MISMATCH' || (aprobar.error instanceof ApiError && aprobar.error.status === 428) ? (
+                <Button variant="secondary" size="sm" className="ml-2" onClick={() => recargar(codigo === 'STATE_MISMATCH')}>
+                  {t('comun.recargar')}
+                </Button>
+              ) : null}
+            </Alert>
+          ) : null}
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="secondary" onClick={alCerrar}>
+            {t('comun.cancelar')}
+          </Button>
+          <Button
+            disabled={aprobar.isPending}
+            onClick={() => {
+              setIntentado(true)
+              if (motivo.trim()) aprobar.mutate()
+            }}
+          >
+            {aprobar.isPending ? t('areas.aprobando') : t('areas.aprobar', { version })}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// una versión nueva desde una aprobada: el siguiente número, los mismos criterios y una copia de sus miembros en borrador
+function NuevaVersion({ area, versiones, miembros }: { area: Registro; versiones: Registro[] | undefined; miembros: Registro[] }) {
+  const { t } = useTranslation(NS)
+  const pedir = usePedir()
+  const navegar = useNavigate()
+  const mensaje = useMensajeDeError()
+  const crear = useMutation({
+    mutationFn: async () => {
+      const siguiente = Math.max(Number(atributo(area, 'version_number') ?? 0), ...(versiones ?? []).map((v) => Number(atributo(v, 'version_number') ?? 0))) + 1
+      const nueva = await pedir<Registro>('/objects/area_of_influence/records', {
+        json: {
+          attributes: {
+            project: atributo(area, 'project'),
+            area_type: atributo(area, 'area_type'),
+            version_number: siguiente,
+            criteria: atributo(area, 'criteria') ?? null,
+            study: atributo(area, 'study') ?? null
+          }
+        }
+      })
+      const todos = miembros.length ? miembros : await leerTodos(pedir, 'area_of_influence_member', { area_of_influence: area.id })
+      for (const m of todos) {
+        const tipo = tipoDe(m)
+        await pedir('/objects/area_of_influence_member/records', {
+          json: {
+            attributes: {
+              area_of_influence: nueva.id,
+              [tipo]: atributo(m, tipo),
+              member_condition: atributo(m, 'member_condition'),
+              applied_criteria: atributo(m, 'applied_criteria') ?? null,
+              rationale: atributo(m, 'rationale') ?? null,
+              studied_in_diagnosis: atributo(m, 'studied_in_diagnosis') ?? null
+            }
+          }
+        })
+      }
+      return nueva
+    },
+    onSuccess: (nueva) => navegar(`/projects/${String(atributo(area, 'project'))}/areas/${nueva.id}`)
+  })
+  return (
+    <>
+      <Button variant="secondary" onClick={() => crear.mutate()} disabled={crear.isPending || !versiones}>
+        {crear.isPending ? t('areas.creandoVersion') : t('areas.nuevaVersion')}
+      </Button>
+      {crear.isError ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
+    </>
+  )
+}

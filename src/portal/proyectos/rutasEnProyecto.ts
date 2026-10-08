@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import type { ClaveDeSeccion } from '../shell/navTree'
+import { AreaDeInfluenciaPage } from './AreaDeInfluenciaPage'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
 import { MapaDelProyectoPage } from './MapaDelProyectoPage'
 
@@ -13,5 +14,6 @@ export interface RutaEnProyecto {
 
 export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'settings', Pantalla: EquipoYParametrosPage },
-  { ruta: 'map', Pantalla: MapaDelProyectoPage }
+  { ruta: 'map', Pantalla: MapaDelProyectoPage },
+  { ruta: 'areas/:areaId', Pantalla: AreaDeInfluenciaPage }
 ]

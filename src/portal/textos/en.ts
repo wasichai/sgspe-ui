@@ -1,3 +1,4 @@
+import { EN_AREAS } from './areas'
 import { EN_COMUN } from './comun'
 import { EN_CONTEXTO } from './contexto'
 import { EN_MAPA } from './mapa'
@@ -8,6 +9,7 @@ import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
 export const EN: Textos = {
+  areas: EN_AREAS,
   comun: EN_COMUN,
   contexto: EN_CONTEXTO,
   mapa: EN_MAPA,
