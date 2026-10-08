@@ -1,5 +1,6 @@
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Input, Table, Td, Th } from '@wasichai/ui'
+import { Alert, Button, cn, Input, Table, Td, Th } from '@wasichai/ui'
+import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -12,6 +13,7 @@ import { codigoDelError, guardarArchivo } from '../datos/http'
 import { atributo, texto, useDefinicion, useRegistro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import {
+  columnaDeCampo,
   conteosPrevistos,
   decisionesDe,
   DESTINOS,
@@ -41,8 +43,18 @@ interface Estado {
   vista: VistaPrevia
 }
 
-// el estado de la importación en curso, fuera del árbol de rutas: /territory/imports/new y /territory/imports/:id lo comparten
-const enCurso: { estado: Estado | null } = { estado: null }
+// el estado de la importación en curso, fuera del árbol de rutas: /territory/imports/new y /territory/imports/:id lo comparten.
+// es de quien lo abrió: si en la misma pestaña entra otra cuenta, no lo ve (core no avisa del cierre de sesión)
+const enCurso: { estado: Estado | null; usuario: string | null } = { estado: null, usuario: null }
+
+const guardarEnCurso = (usuario: string | undefined, estado: Estado) => {
+  enCurso.estado = estado
+  enCurso.usuario = usuario ?? null
+}
+const enCursoDe = (usuario: string | undefined): Estado | null => {
+  if (enCurso.usuario !== (usuario ?? null)) enCurso.estado = null
+  return enCurso.estado
+}
 
 export function ImportacionPage() {
   const { id } = useParams()
@@ -51,12 +63,12 @@ export function ImportacionPage() {
 
 function Preparar() {
   const { t } = useTranslation(NS)
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const navegar = useNavigate()
   const [busqueda] = useSearchParams()
   const proyectos = useProyectos()
   const mios = useMisProyectos()
-  const previo = enCurso.estado?.pedido
+  const previo = enCursoDe(user?.id)?.pedido
   const [paso, setPaso] = useState(previo ? 1 : 0)
   const [archivo, setArchivo] = useState<File | null>(previo?.archivo ?? null)
   const destinos = DESTINOS.filter((d) => can(d, 'CREATE') && can(d, 'UPDATE'))
@@ -83,7 +95,7 @@ function Preparar() {
     const pedido: Pedido = { archivo, destino, proyecto, crs: crsPropuesto, columnas: Object.fromEntries(Object.entries(columnas).filter(([, v]) => v)) }
     vistaPrevia.mutate(pedido, {
       onSuccess: (vista) => {
-        enCurso.estado = { pedido, vista }
+        guardarEnCurso(user?.id, { pedido, vista })
         navegar(`/territory/imports/${vista.importBatchId}`)
       }
     })
@@ -100,7 +112,18 @@ function Preparar() {
         {paso === 0 ? (
           <section className="space-y-3" aria-label={pasos[0]}>
             <Campo etiqueta={t('importacion.archivo')}>
-              {(p) => <Input {...p} type="file" accept=".xlsx,.csv,.geojson,.json" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="file"
+                  accept=".xlsx,.csv,.geojson,.json"
+                  onChange={(e) => {
+                    setArchivo(e.target.files?.[0] ?? null)
+                    // el CRS confirmado era el de otro archivo
+                    setConfirmado(false)
+                  }}
+                />
+              )}
             </Campo>
             <Campo etiqueta={t('importacion.destino')}>
               {(p) => (
@@ -200,12 +223,16 @@ function Preparar() {
 
 function Revisar({ id }: { id: string }) {
   const { t } = useTranslation(NS)
+  const { user } = useAuth()
   const navegar = useNavigate()
-  const estado = enCurso.estado?.vista.importBatchId === id ? enCurso.estado : null
+  const guardado = enCursoDe(user?.id)
+  const estado = guardado?.vista.importBatchId === id ? guardado : null
   const [decisiones, setDecisiones] = useState<Record<number, Decision['action']>>({})
   const [clave, setClave] = useState(nuevaClave)
   const [resultado, setResultado] = useState<{ escrito: Resultado; previsto: Conteos; vista: VistaPrevia; pedido: Pedido } | null>(null)
-  const confirmacion = useConfirmacion()
+  // ya está escrito: volver a la dirección de la vista previa pide empezar de nuevo, no confirmar otra vez (también si la
+  // respuesta llega con la pantalla desmontada)
+  const confirmacion = useConfirmacion(reiniciarImportacion)
   const reporte = useReporte()
   const otraVistaPrevia = useVistaPrevia()
   const mensaje = useMensajeDeError()
@@ -233,8 +260,6 @@ function Revisar({ id }: { id: string }) {
       { vista, pedido, clave, decisiones: enviadas },
       {
         onSuccess: (r) => {
-          // ya está escrito: volver a esta dirección pide empezar de nuevo, no confirmar otra vez
-          enCurso.estado = null
           setResultado({ escrito: r, previsto: conteosPrevistos(vista, enviadas), vista, pedido })
         }
       }
@@ -244,7 +269,7 @@ function Revisar({ id }: { id: string }) {
   const previsualizarOtraVez = () =>
     otraVistaPrevia.mutate(pedido, {
       onSuccess: (nueva) => {
-        enCurso.estado = { pedido, vista: nueva }
+        guardarEnCurso(user?.id, { pedido, vista: nueva })
         setDecisiones({})
         setClave(nuevaClave())
         confirmacion.reset()
@@ -287,7 +312,7 @@ function Revisar({ id }: { id: string }) {
               {vista.invalid.map((f) => (
                 <li key={`${f.row}-${f.field ?? ''}`}>
                   {t('importacion.fila', { n: f.row })}
-                  {f.field ? ` · ${f.field}` : ''}: {f.message}
+                  {columnaDeCampo(f.field) ? ` · ${t(`importacion.columna.${columnaDeCampo(f.field)}`)}` : ''}: {f.message}
                 </li>
               ))}
             </ul>
@@ -306,10 +331,24 @@ function Revisar({ id }: { id: string }) {
             </thead>
             <tbody>
               {filas.map((f) => (
-                <tr key={`${f.caso}-${f.row}`}>
+                <tr
+                  key={`${f.caso}-${f.row}`}
+                  data-fuera-de-zona={f.caso === 'OUT_OF_ZONE' ? 'true' : undefined}
+                  className={cn(f.caso === 'OUT_OF_ZONE' && 'bg-sg-warning-soft')}
+                >
                   <Td>{f.row}</Td>
                   <Td className="font-sg-mono text-sg-caption">{f.code}</Td>
-                  <Td>{t(`importacion.casos.${f.caso}`)}</Td>
+                  <Td>
+                    {f.caso === 'OUT_OF_ZONE' ? (
+                      <span className="inline-flex items-center gap-1 font-medium text-sg-warning">
+                        <TriangleAlert aria-hidden className="size-3.5" />
+                        {t(`importacion.casos.${f.caso}`)}
+                      </span>
+                    ) : (
+                      t(`importacion.casos.${f.caso}`)
+                    )}
+                    {f.mensaje ? <p className="text-sg-caption text-sg-text-secondary">{f.mensaje}</p> : null}
+                  </Td>
                   <Td>{f.distanceM === null || f.distanceM === undefined ? '—' : numeroPe(f.distanceM)}</Td>
                   <Td>
                     <select
@@ -334,7 +373,7 @@ function Revisar({ id }: { id: string }) {
               crear: numeroPe(aplicadas('CREATE')),
               versiones: numeroPe(aplicadas('NEW_VERSION')),
               actualizar: numeroPe(aplicadas('UPDATE')),
-              descartar: numeroPe(filas.filter((f) => accion(f.row) === 'DISCARD').length)
+              count: filas.filter((f) => accion(f.row) === 'DISCARD').length
             })}
           </p>
         </section>
@@ -403,7 +442,8 @@ function Confirmada({ escrito, previsto, vista, pedido }: { escrito: Resultado; 
   )
 }
 
-// para las pruebas: deja la pestaña sin importación en curso
+// deja la pestaña sin importación en curso: al confirmar, al empezar de nuevo y en las pruebas
 export const reiniciarImportacion = () => {
   enCurso.estado = null
+  enCurso.usuario = null
 }

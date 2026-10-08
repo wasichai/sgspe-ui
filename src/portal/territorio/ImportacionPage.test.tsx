@@ -1,10 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
-import { permisos, RELACIONISTA } from '../../test/portal'
+import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { archivoXlsx, espiarRed, problema, type Red } from '../../test/red'
 import { reiniciarImportacion } from './ImportacionPage'
 
@@ -26,7 +26,8 @@ afterEach(() => {
   red = fetch = null
 })
 
-const GAN = permisos({ project: ['READ'], locality: ['READ'], project_component: ['READ', 'CREATE', 'UPDATE'] })
+const GAN_OBJETOS = { project: ['READ'], locality: ['READ'], project_component: ['READ', 'CREATE', 'UPDATE'] }
+const GAN = permisos(GAN_OBJETOS)
 const VISTA = {
   importBatchId: 'b-1',
   sha256: 'abc123',
@@ -80,8 +81,8 @@ async function prepararHastaLaVistaPrevia() {
   return archivo
 }
 
-// el encabezado del portal también tiene un selector de proyecto: el del formulario es el último
-const selectorDeProyecto = () => screen.getAllByRole('combobox', { name: 'Proyecto' }).at(-1)!
+// el encabezado del portal también tiene un selector «Proyecto»; el del formulario se llama distinto
+const selectorDeProyecto = () => screen.getByRole('combobox', { name: 'Proyecto de la importación' })
 
 describe('S15 · importación geoespacial', () => {
   it('sin confirmar el CRS de origen no se avanza; la vista previa manda el archivo, el destino, el proyecto, el CRS y las columnas', async () => {
@@ -139,7 +140,10 @@ describe('S15 · importación geoespacial', () => {
     // la fila fuera de zona nadie la tocó: se muestra y se manda APPLY
     expect(screen.getByRole('combobox', { name: 'Decisión Fila 5' })).toHaveValue('APPLY')
     expect(screen.getByText('Fuera de la zona esperada')).toBeInTheDocument()
-    expect(screen.getByText('2 nuevos, 0 versiones nuevas, 0 actualizaciones; 1 filas descartadas')).toBeInTheDocument()
+    expect(screen.getByText('2 nuevos, 0 versiones nuevas, 0 actualizaciones; 1 fila descartada')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Decisión Fila 5' }), 'DISCARD')
+    expect(screen.getByText('1 nuevos, 0 versiones nuevas, 0 actualizaciones; 2 filas descartadas')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Decisión Fila 5' }), 'APPLY')
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar importación' }))
     expect(await screen.findByRole('heading', { name: 'Importación confirmada' })).toBeInTheDocument()
     const [confirmacion] = red.a('POST', '/sgspe/territory/imports/b-1/confirm')
@@ -322,9 +326,138 @@ describe('S15 · importación geoespacial', () => {
     await hastaRevisar()
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar importación' }))
     await screen.findByRole('heading', { name: 'Importación confirmada' })
+    // atrás sale de la vista previa y adelante vuelve a /territory/imports/b-1, ya sin el archivo en la pestaña
     window.history.back()
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Importación confirmada' })).not.toBeInTheDocument())
+    await waitFor(() => expect(rutaActual()).toBe('/territory/imports/new?project=p1'))
+    window.history.forward()
+    await waitFor(() => expect(rutaActual()).toBe('/territory/imports/b-1'))
+    expect(await screen.findByRole('link', { name: 'Empezar de nuevo' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Confirmar importación' })).not.toBeInTheDocument()
     expect(red.a('POST', '/sgspe/territory/imports/b-1/confirm')).toHaveLength(1)
+  })
+
+  it('cambiar el archivo pide confirmar el CRS otra vez', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    await prepararHastaLaVistaPrevia()
+    const casilla = screen.getByRole('checkbox', { name: /Confirmo/ })
+    await userEvent.click(casilla)
+    expect(casilla).toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: 'Anterior' }))
+    await userEvent.upload(screen.getByLabelText('Archivo (XLSX, CSV o GeoJSON)'), new File(['otro'], 'otro.csv', { type: 'text/csv' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('checkbox', { name: /Confirmo/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Ver la vista previa' })).toBeDisabled()
+  })
+
+  it('cambiar el objeto destino pide confirmar el CRS otra vez', async () => {
+    const dos = [
+      ...rutas(),
+      { path: '/metadata/objects/land_parcel', body: definicion('land_parcel', [['source_crs', { type: 'ENUM', enumOptions: ['EPSG 32717', 'EPSG 32718'] }]]) }
+    ]
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, permisos({ ...GAN_OBJETOS, land_parcel: ['READ', 'CREATE', 'UPDATE'] }), dos)
+    await prepararHastaLaVistaPrevia()
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Anterior' }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Objeto destino' }), 'land_parcel')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('checkbox', { name: /Confirmo/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Ver la vista previa' })).toBeDisabled()
+  })
+
+  it('«Probar con otro CRS» vuelve al paso del CRS con el archivo y las columnas, sin la confirmación', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    red = espiarRed()
+    await hastaRevisar()
+    await userEvent.click(screen.getByRole('button', { name: 'Probar con otro CRS' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory/imports/new'))
+    expect(await screen.findByRole('combobox', { name: 'CRS de origen' })).toHaveValue('EPSG 32717')
+    expect(screen.getByRole('textbox', { name: 'Código' })).toHaveValue('Hole ID')
+    expect(screen.getByRole('checkbox', { name: /Confirmo/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Ver la vista previa' })).toBeDisabled()
+    expect(red.a('POST', '/sgspe/territory/imports/b-1/confirm')).toHaveLength(0)
+  })
+
+  it('si el reporte de diferencias falla, dice el texto del código del error', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: (l) =>
+          l.cabeceras.get('Accept')?.includes('spreadsheetml')
+            ? problema(400, 'detalle', [{ field: 'file', message: 'FILE_TOO_LARGE' }])
+            : new Response(JSON.stringify(VISTA))
+      }
+    ])
+    await hastaRevisar()
+    await userEvent.click(screen.getByRole('button', { name: 'Descargar el reporte de diferencias' }))
+    expect(await screen.findByText('El archivo pasa del tamaño máximo permitido: pártalo en varias importaciones.')).toBeInTheDocument()
+    expect(screen.queryByText('FILE_TOO_LARGE')).not.toBeInTheDocument()
+  })
+
+  it('una fila fuera de zona se resalta y muestra el motivo del servidor; las demás no', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    await hastaRevisar()
+    const fuera = screen.getByText('A 3 km del área del proyecto').closest('tr')!
+    expect(fuera).toHaveAttribute('data-fuera-de-zona', 'true')
+    expect(within(fuera).getByText('Fuera de la zona esperada')).toBeInTheDocument()
+    expect(within(fuera).getByRole('combobox', { name: 'Decisión Fila 5' })).toHaveValue('APPLY')
+    const otra = screen.getByRole('combobox', { name: 'Decisión Fila 3' }).closest('tr')!
+    expect(otra).not.toHaveAttribute('data-fuera-de-zona')
+  })
+
+  it('una fila inválida nombra la columna del archivo, no el campo interno del modelo', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    const vista = {
+      ...VISTA,
+      invalid: [
+        { row: 7, field: 'source_northing', message: 'fuera de la zona UTM esperada' },
+        { row: 8, field: 'footprint', message: 'geometría inválida' }
+      ]
+    }
+    red = espiarRed([{ method: 'POST', path: '/sgspe/territory/imports', responder: () => new Response(JSON.stringify(vista)) }])
+    await hastaRevisar()
+    const seccion = screen.getByRole('region', { name: 'Filas inválidas' })
+    expect(within(seccion).getByText('Fila 7 · Norte: fuera de la zona UTM esperada')).toBeInTheDocument()
+    expect(within(seccion).getByText('Fila 8: geometría inválida')).toBeInTheDocument()
+    expect(screen.queryByText(/source_northing|footprint/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/CON-024/)).not.toBeInTheDocument()
+  })
+
+  it('si la respuesta de la confirmación llega con la pantalla ya cerrada, la importación en curso se limpia igual', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    let responder: (r: Response) => void = () => {}
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports/b-1/confirm',
+        responder: () => new Promise<Response>((resolver) => (responder = resolver))
+      }
+    ])
+    const irA = (ruta: string) => {
+      window.history.pushState({}, '', ruta)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    }
+    await hastaRevisar()
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar importación' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/territory/imports/b-1/confirm')).toHaveLength(1))
+    act(() => irA('/territory/imports/new'))
+    await screen.findByRole('combobox', { name: 'CRS de origen' })
+    await act(async () => responder(new Response(JSON.stringify({ created: 2, newVersions: 0, updated: 0, unchanged: 1, rejected: 2, evidenceId: null }))))
+    act(() => irA('/territory/imports/b-1'))
+    expect(await screen.findByText(/ya no está en esta pestaña/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Confirmar importación' })).not.toBeInTheDocument()
+  })
+
+  it('la importación en curso es de la cuenta que la abrió: otra cuenta en la misma pestaña no la ve', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    await hastaRevisar()
+    // otra cuenta abre la misma dirección en la pestaña
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/territory/imports/b-1', GERENCIA_SOCIAL, GAN, rutas())
+    expect(await screen.findByText(/ya no está en esta pestaña/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Confirmar importación' })).not.toBeInTheDocument()
   })
 
   it('cambiar de proyecto pide confirmar el CRS otra vez', async () => {

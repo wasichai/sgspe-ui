@@ -98,10 +98,12 @@ export function useReporte() {
   })
 }
 
-// confirmar: el pedido completo de la vista previa otra vez, más el SHA-256, las decisiones y la clave de idempotencia
-export function useConfirmacion() {
+// confirmar: el pedido completo de la vista previa otra vez, más el SHA-256, las decisiones y la clave de idempotencia.
+// alConfirmar corre en la propia mutación: se dispara aunque la pantalla ya se haya desmontado cuando llega la respuesta
+export function useConfirmacion(alConfirmar?: () => void) {
   const pedir = usePedir()
   return useMutation({
+    onSuccess: alConfirmar,
     mutationFn: ({ vista, pedido, decisiones, clave }: { vista: VistaPrevia; pedido: Pedido; decisiones: Decision[]; clave: string }) => {
       const f = formulario(pedido)
       f.append('sha256', vista.sha256)
@@ -116,6 +118,8 @@ export interface FilaConDecision {
   code: string
   caso: Caso | 'OUT_OF_ZONE'
   distanceM?: number | null
+  // el motivo que dio el servidor para una fila fuera de zona
+  mensaje?: string
 }
 
 // las filas que piden decisión, una por fila: versión nueva, actualización y fuera de zona (gis.md §4.3 y §4.4). una fila
@@ -129,7 +133,7 @@ export function filasConDecision(vista: VistaPrevia): FilaConDecision[] {
     .map((d) => ({ row: d.row, code: d.code, caso: d.outcome, distanceM: d.distanceM }))
   const fueraDeZona = [...fuera.values()].map((o) => {
     const diferencia = vista.differences.find((d) => d.row === o.row)
-    return { row: o.row, code: o.code ?? diferencia?.code ?? '', caso: 'OUT_OF_ZONE' as const, distanceM: diferencia?.distanceM }
+    return { row: o.row, code: o.code ?? diferencia?.code ?? '', caso: 'OUT_OF_ZONE' as const, distanceM: diferencia?.distanceM, mensaje: o.message }
   })
   return [...diferencias, ...fueraDeZona].sort((a, b) => a.row - b.row)
 }
@@ -138,6 +142,23 @@ export function filasConDecision(vista: VistaPrevia): FilaConDecision[] {
 // (APPLY por defecto). así una fila fuera de zona sin tocar entra con su APPLY explícito, como se ve en pantalla
 export const decisionesDe = (filas: FilaConDecision[], elegidas: Record<number, Decision['action']>): Decision[] =>
   filas.map((f) => ({ row: f.row, action: elegidas[f.row] ?? 'APPLY' }))
+
+// la columna del archivo que corresponde al campo que el servidor nombra en una fila inválida; los campos del modelo que
+// no son una columna (una geometría, por ejemplo) no se nombran en pantalla
+const COLUMNA_DE_CAMPO: Record<string, keyof Columnas> = {
+  code: 'code',
+  source_easting: 'easting',
+  source_northing: 'northing',
+  source_elevation: 'elevation',
+  elevation: 'elevation',
+  azimuth: 'azimuth',
+  dip: 'dip',
+  depth: 'depth',
+  drill_type: 'drillType',
+  latitude: 'latitude',
+  longitude: 'longitude'
+}
+export const columnaDeCampo = (campo: string | undefined): keyof Columnas | null => (campo ? (COLUMNA_DE_CAMPO[campo] ?? null) : null)
 
 export type Conteos = Omit<Resultado, 'evidenceId'>
 
