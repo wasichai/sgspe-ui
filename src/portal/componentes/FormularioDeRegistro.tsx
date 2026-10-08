@@ -68,7 +68,7 @@ export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, camp
       definition={preparada}
       record={base}
       submitting={crear.isPending || actualizar.isPending}
-      error={error ? (deCampo.length > 0 ? deCampo.join('\n') : mensaje(error)) : null}
+      error={error ? (deCampo.length > 0 ? deCampo.join('; ') : mensaje(error)) : null}
       onSubmit={enviar}
       onCancel={alCancelar}
     />

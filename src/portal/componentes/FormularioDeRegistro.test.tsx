@@ -82,6 +82,9 @@ describe('FormularioDeRegistro', () => {
     // dos violaciones del mismo campo se unen en lugar de pisarse
     expect(aviso).toHaveTextContent(`Área calculada: ${derivado}`)
     expect(aviso).toHaveTextContent(/Nombre: Indique exactamente uno/)
+    // los campos se separan con «; » (un salto de línea lo colapsa el HTML) y el aviso es un solo texto
+    expect(aviso.textContent).not.toContain('\n')
+    expect(aviso.textContent).toMatch(/número\.; Área calculada: /)
     expect(screen.queryByText(/DERIVED_FIELD|EXACTLY_ONE/)).not.toBeInTheDocument()
   })
 
