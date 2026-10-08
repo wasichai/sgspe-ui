@@ -150,7 +150,10 @@ export function EvaluacionDrawer({
     if (desajuste) void cliente.invalidateQueries({ queryKey: ['record', 'stakeholder', grupo.id] })
   }, [desajuste])
   // cancelar o cerrar descarta lo escrito, el error y la fecha del primer montaje (que pasada la medianoche de Lima sería la de ayer)
+  // mientras se guarda no se cierra: guardar.reset() desengancha la mutación en curso y su onSuccess ya no correría (la clave
+  // no se renovaría ni se reiniciaría el formulario si el servidor guardó)
   const cerrar = () => {
+    if (guardar.isPending) return
     reset(valoresIniciales())
     guardar.reset()
     alCerrar()
@@ -169,7 +172,7 @@ export function EvaluacionDrawer({
       alCerrar={cerrar}
       pie={
         <>
-          <Button variant="secondary" onClick={cerrar}>
+          <Button variant="secondary" onClick={cerrar} disabled={guardar.isPending}>
             {t('comun.cancelar')}
           </Button>
           <Button onClick={() => void enviar()} disabled={guardar.isPending || !definicion.data || grupo.state === 'retired'}>

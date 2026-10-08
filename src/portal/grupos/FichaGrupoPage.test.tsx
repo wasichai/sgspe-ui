@@ -206,6 +206,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
     expect(within(drawer).getByText(/la vista previa del cálculo no está disponible/)).toBeInTheDocument()
     // el reloj avanza solo, pero el plazo de la espera (300 ms) se salta de golpe: sin READ no se pide nada
+    // (comprobada por mutación: con conVistaPrevia = true en el drawer, esta prueba falla)
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
     try {
       const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
@@ -450,6 +451,44 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(within(drawer).getByLabelText('Motivo (obligatorio)')).toHaveValue('')
     expect(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' })).toHaveValue('')
     expect(within(drawer).queryByText(/es un paso que su rol no puede dar/)).not.toBeInTheDocument()
+  })
+
+  it('mientras guarda no se puede cancelar ni cerrar: la respuesta renueva la clave y reinicia el formulario', async () => {
+    let soltar: () => void = () => {}
+    const retenida = new Promise<void>((r) => (soltar = r))
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholders/s1/assessments',
+        responder: async () => {
+          await retenida
+          return new Response(JSON.stringify({ assessment: registro('ev3', {}), stakeholder: S1, warnings: [] }), { status: 201 })
+        }
+      },
+      { method: 'POST', path: '/sgspe/stakeholders/s1/assessments/preview', responder: () => new Response(PREVIA) }
+    ])
+    const abrir = async () => {
+      await userEvent.click(await screen.findByRole('button', { name: 'Nueva evaluación' }))
+      return screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    }
+    let drawer = await abrir()
+    await llenar(drawer, '4', 'Primera')
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(1))
+    expect(within(drawer).getByRole('button', { name: 'Cancelar' })).toBeDisabled()
+    // Escape y la X piden cerrar: se ignoran hasta que llegue la respuesta
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('dialog', { name: 'Nueva evaluación' })).toBeInTheDocument()
+    expect(within(drawer).getByLabelText('Motivo (obligatorio)')).toHaveValue('Primera')
+    soltar()
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s1'))
+    // la clave se renovó y el formulario quedó limpio: la siguiente evaluación es otra
+    drawer = await abrir()
+    expect(within(drawer).getByLabelText('Motivo (obligatorio)')).toHaveValue('')
+    await llenar(drawer, '2', 'Segunda')
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(2))
+    const [primera, segunda] = red.a('POST', '/sgspe/stakeholders/s1/assessments')
+    expect(segunda.cabeceras.get('Idempotency-Key')).not.toBe(primera.cabeceras.get('Idempotency-Key'))
   })
 
   it('una interacción sin fecha no deja un separador suelto', async () => {
