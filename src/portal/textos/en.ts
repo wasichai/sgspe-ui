@@ -1,9 +1,11 @@
 import { EN_COMUN } from './comun'
+import { EN_TRANSICIONES } from './transiciones'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
 export const EN: Textos = {
   comun: EN_COMUN,
+  transiciones: EN_TRANSICIONES,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',
