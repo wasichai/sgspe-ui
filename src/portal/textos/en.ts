@@ -4,6 +4,7 @@ import { EN_CONTEXTO } from './contexto'
 import { EN_MAPA } from './mapa'
 import { EN_P360 } from './p360'
 import { EN_PROYECTOS } from './proyectos'
+import { EN_TERRITORIO } from './territorio'
 import { EN_TRANSICIONES } from './transiciones'
 import type { Textos } from './es'
 
@@ -15,6 +16,7 @@ export const EN: Textos = {
   mapa: EN_MAPA,
   p360: EN_P360,
   proyectos: EN_PROYECTOS,
+  territorio: EN_TERRITORIO,
   transiciones: EN_TRANSICIONES,
   app: { lema: 'Social management for extractive projects' },
   login: {

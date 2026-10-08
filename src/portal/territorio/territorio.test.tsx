@@ -1,0 +1,374 @@
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { FetchMock } from '@wasichai/testing'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { definicion, pagina, registro } from '../../test/montar'
+import { abrirPortal, rutaActual } from '../../test/pantalla'
+import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
+import { espiarRed, type Red } from '../../test/red'
+
+vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
+
+let fetch: FetchMock | null = null
+let red: Red | null = null
+beforeEach(() => {
+  localStorage.clear()
+  sessionStorage.clear()
+})
+afterEach(() => {
+  red?.restaurar()
+  fetch?.restore()
+  red = fetch = null
+})
+
+// una lectura que nunca responde (la carga) y una que falla, para ver qué dice la pantalla en medio
+const nunca = (path: string | RegExp) => ({ path, responder: () => new Promise<Response>(() => {}) })
+const falla = (path: string, status = 500) => ({ path, status, body: { title: 'Error', status, detail: 'Falló' } })
+// las rutas sin las de un camino, para reemplazarlo
+const sin = <T extends { path: string | RegExp }>(rutas: T[], ...caminos: string[]) => rutas.filter((r) => !caminos.includes(String(r.path)))
+
+const coleccion = (elementos: [string, string, string][]) => ({
+  type: 'FeatureCollection',
+  features: elementos.map(([id, objeto, name]) => ({
+    type: 'Feature',
+    id: `${id}:g`,
+    geometry: { type: 'Point', coordinates: [-78, -8] },
+    properties: { __id: id, __object: objeto, name }
+  }))
+})
+const LEE_TERRITORIO = permisos({
+  locality: ['READ'],
+  community: ['READ', 'UPDATE'],
+  community_sector: ['READ', 'CREATE'],
+  organization: ['READ'],
+  position: ['READ'],
+  stakeholder: ['READ'],
+  area_of_influence: ['READ'],
+  area_of_influence_member: ['READ'],
+  locality_profile: ['READ', 'CREATE'],
+  project: ['READ']
+})
+const base = [
+  { path: '/objects/project/records', body: pagina([registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' })]) },
+  { path: '/objects/project_assignment/records', body: pagina([registro('a1', { project: 'p1', active: true })]) }
+]
+
+describe('S12 · mapa territorial', () => {
+  it('lista los lugares visibles y elegir uno abre su ficha con el rastro', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
+      ...base,
+      { path: '/sgspe/territory/layers/LYR-02', body: coleccion([['l1', 'locality', 'Tunas']]) },
+      { path: '/sgspe/territory/layers/LYR-05', body: coleccion([['c1', 'community', 'CC Tunas Pampa']]) },
+      { path: '/objects/community/records/c1', body: registro('c1', { name: 'CC Tunas Pampa' }) },
+      { path: '/objects/organization/records', body: pagina([]) },
+      { path: '/objects/community_sector/records', body: pagina([]) },
+      { path: '/objects/area_of_influence_member/records', body: pagina([]) }
+    ])
+    const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    expect(await within(lugares).findByRole('link', { name: 'Tunas' })).toHaveAttribute('href', '/territory/localities/l1')
+    await userEvent.click(within(screen.getByRole('list', { name: 'Mapa territorial' })).getByRole('button', { name: 'CC Tunas Pampa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory/communities/c1'))
+    expect(await screen.findByRole('link', { name: 'Mapa territorial' })).toHaveAttribute('href', '/territory')
+  })
+
+  it('"Nueva comunidad" solo con CREATE sobre community', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [...base, { path: /^\/sgspe\/territory\/layers\//, body: coleccion([]) }])
+    await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    expect(screen.queryByRole('button', { name: 'Nueva comunidad' })).not.toBeInTheDocument()
+  })
+
+  it('mientras las capas cargan la lista dice "Cargando", no que no hay lugares', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [...base, { path: '/sgspe/territory/layers/LYR-05', body: coleccion([]) }])
+    red = espiarRed([nunca('/sgspe/territory/layers/LYR-02')])
+    const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    expect(await within(lugares).findByText('Cargando…')).toBeInTheDocument()
+    expect(within(lugares).queryByText(/Acerque el mapa/)).not.toBeInTheDocument()
+  })
+
+  it('si una capa falla la lista lo dice y no afirma que no hay lugares', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
+      ...base,
+      falla('/sgspe/territory/layers/LYR-02'),
+      { path: '/sgspe/territory/layers/LYR-05', body: coleccion([['c1', 'community', 'CC Tunas Pampa']]) }
+    ])
+    const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    expect(await within(lugares).findByRole('alert')).toHaveTextContent('No se pudo leer la capa')
+    expect(within(lugares).getByRole('link', { name: 'CC Tunas Pampa' })).toBeInTheDocument()
+    expect(within(lugares).queryByText(/Acerque el mapa/)).not.toBeInTheDocument()
+  })
+
+  it('con todas las capas leídas y vacías dice que no hay lugares en la vista, y un lugar en dos capas sale una vez', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [...base, { path: /^\/sgspe\/territory\/layers\//, body: coleccion([]) }])
+    const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    expect(await within(lugares).findByText(/Acerque el mapa a una zona/)).toBeInTheDocument()
+    expect(await screen.findByText(/No hay elementos de las capas encendidas en esta vista/)).toBeInTheDocument()
+    fetch.restore()
+    document.body.innerHTML = ''
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
+      ...base,
+      { path: '/sgspe/territory/layers/LYR-02', body: coleccion([['l1', 'locality', 'Tunas']]) },
+      { path: '/sgspe/territory/layers/LYR-05', body: coleccion([['l1', 'locality', 'Tunas']]) }
+    ])
+    const otros = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    expect(await within(otros).findAllByRole('link', { name: 'Tunas' })).toHaveLength(1)
+  })
+})
+
+describe('Trabajar en el proyecto con este lugar', () => {
+  const ficha = [
+    ...base,
+    { path: '/objects/community/records/c1', body: registro('c1', { name: 'CC Tunas Pampa' }) },
+    { path: /^\/objects\/(organization|community_sector|area_of_influence_member|position|stakeholder)\/records$/, body: pagina([]) }
+  ]
+
+  it('sin ?project= se elige entre los proyectos de la persona y se abre la lista con el chip de territorio', async () => {
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, ficha)
+    const selector = await screen.findByRole('combobox', { name: 'Trabajar en el proyecto con este lugar' })
+    await waitFor(() => expect(within(selector).getByRole('option', { name: 'PRJ-01 · Pukaqaqa' })).toBeInTheDocument())
+    await userEvent.selectOptions(selector, 'p1')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders?territory=community%3Ac1'))
+  })
+
+  it('sin READ sobre los grupos de interés no se ofrece, y si los proyectos no cargan lo dice', async () => {
+    fetch = abrirPortal('/territory/communities/c1?project=p1', RELACIONISTA, permisos({ ...LEE_TERRITORIO.objects, stakeholder: [] }), ficha)
+    await screen.findByRole('heading', { name: 'CC Tunas Pampa' })
+    expect(screen.queryByRole('link', { name: 'Trabajar en el proyecto con este lugar' })).not.toBeInTheDocument()
+    fetch.restore()
+    document.body.innerHTML = ''
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, [
+      falla('/objects/project/records'),
+      ...sin(ficha, '/objects/project/records')
+    ])
+    const cabecera = (await screen.findByRole('heading', { name: 'CC Tunas Pampa' })).closest('header')!
+    expect(await within(cabecera).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Trabajar en el proyecto con este lugar' })).not.toBeInTheDocument()
+  })
+})
+
+describe('S13 · ficha de comunidad', () => {
+  const rutas = [
+    ...base,
+    {
+      path: '/objects/community/records/c1',
+      body: registro('c1', {
+        name: 'CC Tunas Pampa',
+        community_type: 'COMUNIDAD CAMPESINA',
+        registry_records_unverified: true,
+        registered_area_ha: 1200,
+        calculated_area_ha: 1187.4
+      })
+    },
+    { path: '/objects/organization/records', body: pagina([registro('o1', { name: 'Junta directiva comunal' })]) },
+    { path: '/objects/position/records', body: pagina([registro('po1', { position_title: 'Presidente', position_status: 'VACANTE' })]) },
+    { path: '/objects/community_sector/records', body: pagina([registro('cs1', { name: 'Sector alto', delegates_count: 3 })]) },
+    { path: '/objects/stakeholder/records', body: pagina([registro('s1', { organization: 'o1', project: 'p1', influence_group: 'ESTRATEGICO' })]) },
+    { path: '/objects/organization/records/o1', body: registro('o1', { name: 'Junta directiva comunal' }) },
+    {
+      path: '/objects/area_of_influence_member/records',
+      body: pagina([
+        registro('m1', { area_of_influence: 'a1', member_condition: 'INCLUIDO' }),
+        registro('m2', { area_of_influence: 'a9', member_condition: 'INCLUIDO' })
+      ])
+    },
+    { path: '/objects/area_of_influence/records/a1', body: registro('a1', { project: 'p1', area_type: 'AIDS', version_number: 2 }) },
+    { path: '/objects/area_of_influence/records/a9', status: 404, body: { title: 'Not Found' } }
+  ]
+
+  it('marca las partidas por verificar y muestra el área inscrita junto a la calculada', async () => {
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, rutas)
+    expect(await screen.findByText('PARTIDAS POR VERIFICAR')).toBeInTheDocument()
+    expect(screen.getByText('1,200 ha')).toBeInTheDocument()
+    expect(screen.getByText('1,187.4 ha')).toBeInTheDocument()
+  })
+
+  it('muestra la organización que la representa con sus cargos, sus sectores, sus grupos y solo las áreas legibles', async () => {
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, rutas)
+    expect(await screen.findByRole('link', { name: 'Junta directiva comunal' })).toHaveAttribute('href', '/actors/o1')
+    expect(await screen.findByText('Presidente · VACANTE')).toBeInTheDocument()
+    expect(screen.getByText('Sector alto · 3 delegados')).toBeInTheDocument()
+    const areas = screen.getByRole('complementary', { name: 'Áreas de influencia que la incluyen' })
+    expect(await within(areas).findByRole('link', { name: 'AIDS · v2' })).toBeInTheDocument()
+    expect(within(areas).getAllByRole('listitem')).toHaveLength(1)
+    const grupos = screen.getByRole('region', { name: 'Grupos de interés del lugar' })
+    expect(await within(grupos).findByRole('link', { name: 'Junta directiva comunal' })).toHaveAttribute('href', '/projects/p1/stakeholders/s1')
+  })
+
+  it('"Trabajar en el proyecto con este lugar" fija el chip de territorio', async () => {
+    fetch = abrirPortal('/territory/communities/c1?project=p1', RELACIONISTA, LEE_TERRITORIO, rutas)
+    expect(await screen.findByRole('link', { name: 'Trabajar en el proyecto con este lugar' })).toHaveAttribute(
+      'href',
+      '/projects/p1/stakeholders?territory=community%3Ac1'
+    )
+  })
+
+  it('los sectores, los cargos y los grupos dicen "Cargando" y, si fallan, el error: nunca una lista vacía', async () => {
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, rutas)
+    red = espiarRed([nunca('/objects/community_sector/records'), nunca('/objects/position/records'), nunca('/objects/stakeholder/records')])
+    const sectores = await screen.findByRole('region', { name: 'Sectores comunales' })
+    expect(await within(sectores).findByText('Cargando…')).toBeInTheDocument()
+    expect(within(sectores).queryByText('Aún no hay registros')).not.toBeInTheDocument()
+    const grupos = screen.getByRole('region', { name: 'Grupos de interés del lugar' })
+    expect(within(grupos).getByText('Cargando…')).toBeInTheDocument()
+    expect(within(grupos).queryByText(/Ningún grupo/)).not.toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Junta directiva comunal' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Cargos')).not.toBeInTheDocument()
+  })
+
+  it('si fallan los sectores, los grupos o las áreas, cada sección dice el error y no que está vacía', async () => {
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, [
+      falla('/objects/community_sector/records'),
+      falla('/objects/stakeholder/records'),
+      falla('/objects/area_of_influence_member/records'),
+      ...sin(rutas, '/objects/community_sector/records', '/objects/stakeholder/records', '/objects/area_of_influence_member/records')
+    ])
+    for (const nombre of ['Sectores comunales', 'Grupos de interés del lugar']) {
+      const seccion = await screen.findByRole('region', { name: nombre })
+      expect(await within(seccion).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+      expect(within(seccion).queryByText('Aún no hay registros')).not.toBeInTheDocument()
+      expect(within(seccion).queryByText(/Ningún grupo/)).not.toBeInTheDocument()
+    }
+    const areas = screen.getByRole('complementary', { name: 'Áreas de influencia que la incluyen' })
+    expect(await within(areas).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(within(areas).queryByText(/Ningún área/)).not.toBeInTheDocument()
+  })
+
+  it('"Ningún área legible la incluye" solo cuando las áreas llegaron y ninguna se puede leer; "Ninguna organización" si no hay representante', async () => {
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, [
+      { path: '/objects/area_of_influence_member/records', body: pagina([registro('m2', { area_of_influence: 'a9', member_condition: 'INCLUIDO' })]) },
+      { path: '/objects/organization/records', body: pagina([]) },
+      ...sin(rutas, '/objects/area_of_influence_member/records', '/objects/organization/records')
+    ])
+    const areas = await screen.findByRole('complementary', { name: 'Áreas de influencia que la incluyen' })
+    expect(await within(areas).findByText('Ningún área legible la incluye')).toBeInTheDocument()
+    expect(await screen.findByText('Ninguna organización la representa todavía.')).toBeInTheDocument()
+    expect(await screen.findByText('Ningún grupo de interés está vinculado a este lugar.')).toBeInTheDocument()
+  })
+})
+
+describe('S14 · ficha de localidad y línea base', () => {
+  const perfil = (id: string, fecha: string, valores: Record<string, unknown>) =>
+    registro(id, { data_date: fecha, data_source: 'Censo comunal', reliability: 'REFERENCIAL', ...valores })
+  const rutas = (definicionPerfil: unknown) => [
+    ...base,
+    { path: '/objects/locality/records/l1', body: registro('l1', { name: 'Tunas', locality_type: 'CASERIO' }) },
+    {
+      path: '/objects/locality_profile/records',
+      body: pagina([
+        perfil('lp2', '2026-05-10', { population_count: 340, families_count: 80, religion: 'Católica' }),
+        perfil('lp1', '2024-03-01', { population_count: 310 })
+      ])
+    },
+    { path: '/metadata/objects/locality_profile', body: definicionPerfil },
+    { path: '/objects/school/records', body: pagina([registro('sc', { name: 'IE 80123', education_level: 'PRIMARIA' })]) },
+    { path: '/objects/health_facility/records', body: pagina([]) },
+    { path: '/objects/road_access/records', body: pagina([]) },
+    { path: '/objects/festivity/records', body: pagina([registro('f1', { name: 'Fiesta patronal', month: 8, date_text: '15 de agosto' })]) },
+    { path: '/objects/locality/records/l1/related/state_program_locality', body: pagina([registro('sp', { name: 'Pensión 65' })]) },
+    { path: '/objects/locality/records/l1/related/local_conflict_locality', body: pagina([]) }
+  ]
+
+  it('compara el perfil con el anterior y una cifra ausente antes dice "no disponible en <fecha>"', async () => {
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, rutas(definicion('locality_profile', ['population_count', 'families_count'])))
+    const poblacion = await screen.findByRole('listitem', { name: 'Población' })
+    expect(within(poblacion).getByText('340')).toBeInTheDocument()
+    expect(within(poblacion).getByText('+30 frente al 2024-03-01')).toBeInTheDocument()
+    expect(within(screen.getByRole('listitem', { name: 'Familias' })).getByText('no disponible en 2024-03-01')).toBeInTheDocument()
+  })
+
+  it('religión y proceso electoral salen restringidos para quien no los lee', async () => {
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, rutas(definicion('locality_profile', ['population_count'])))
+    expect(await screen.findByText('Religión y proceso electoral son datos sensibles: su rol no los lee.')).toBeInTheDocument()
+    expect(screen.getAllByText('Restringido')).toHaveLength(2)
+    expect(screen.queryByText('Católica')).not.toBeInTheDocument()
+  })
+
+  it('con acceso, la gerencia social los lee; y la localidad muestra servicios y festividades', async () => {
+    fetch = abrirPortal(
+      '/territory/localities/l1',
+      GERENCIA_SOCIAL,
+      LEE_TERRITORIO,
+      rutas(definicion('locality_profile', ['population_count', ['religion', { label: 'Religión' }], ['electoral_process', { label: 'Proceso electoral' }]]))
+    )
+    expect(await screen.findByText('Católica')).toBeInTheDocument()
+    expect(screen.getByText('IE 80123 · PRIMARIA')).toBeInTheDocument()
+    expect(await screen.findByText(/Fiesta patronal/)).toBeInTheDocument()
+    expect(await screen.findByText('Pensión 65')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nuevo perfil' })).toBeInTheDocument()
+  })
+
+  it('el perfil dice "Cargando" y, si falla, el error: "Esta localidad aún no tiene perfil" solo con la lista vacía', async () => {
+    const def = definicion('locality_profile', ['population_count'])
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, rutas(def))
+    red = espiarRed([nunca('/objects/locality_profile/records')])
+    expect(await screen.findByRole('heading', { name: 'Tunas' })).toBeInTheDocument()
+    expect(await screen.findByText('Cargando…')).toBeInTheDocument()
+    expect(screen.queryByText('Esta localidad aún no tiene perfil de línea base.')).not.toBeInTheDocument()
+    red.restaurar()
+    fetch.restore()
+    document.body.innerHTML = ''
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, [
+      falla('/objects/locality_profile/records'),
+      ...sin(rutas(def), '/objects/locality_profile/records')
+    ])
+    expect(await screen.findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(screen.queryByText('Esta localidad aún no tiene perfil de línea base.')).not.toBeInTheDocument()
+    fetch.restore()
+    document.body.innerHTML = ''
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, [
+      { path: '/objects/locality_profile/records', body: pagina([]) },
+      ...sin(rutas(def), '/objects/locality_profile/records')
+    ])
+    expect(await screen.findByText('Esta localidad aún no tiene perfil de línea base.')).toBeInTheDocument()
+  })
+
+  it('mientras llega la definición religión y proceso electoral no dicen "Restringido"; si no llega, "No disponible"', async () => {
+    const def = definicion('locality_profile', ['population_count'])
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, rutas(def))
+    red = espiarRed([nunca('/metadata/objects/locality_profile')])
+    expect(await screen.findByRole('listitem', { name: 'Población' })).toBeInTheDocument()
+    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+    expect(screen.queryByText('Religión y proceso electoral son datos sensibles: su rol no los lee.')).not.toBeInTheDocument()
+    red.restaurar()
+    fetch.restore()
+    document.body.innerHTML = ''
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, [
+      falla('/metadata/objects/locality_profile'),
+      ...sin(rutas(def), '/metadata/objects/locality_profile')
+    ])
+    expect(await screen.findByRole('listitem', { name: 'Población' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('No disponible')).toHaveLength(2))
+    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+  })
+
+  it('cada lista de servicios dice su carga, su error o que no se puede leer, y "Aún no hay registros" solo si llegó vacía', async () => {
+    const def = definicion('locality_profile', ['population_count'])
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, [
+      falla('/objects/school/records', 403),
+      falla('/objects/health_facility/records'),
+      falla('/objects/festivity/records'),
+      ...sin(rutas(def), '/objects/school/records', '/objects/health_facility/records', '/objects/festivity/records')
+    ])
+    const escuelas = await screen.findByRole('region', { name: 'Instituciones educativas' })
+    expect(await within(escuelas).findByText('Restringido')).toBeInTheDocument()
+    expect(within(escuelas).queryByText('Aún no hay registros')).not.toBeInTheDocument()
+    for (const nombre of ['Establecimientos de salud', 'Calendario de festividades']) {
+      const seccion = screen.getByRole('region', { name: nombre })
+      expect(await within(seccion).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+      expect(within(seccion).queryByText('Aún no hay registros')).not.toBeInTheDocument()
+    }
+    expect(await within(screen.getByRole('region', { name: 'Vías de acceso' })).findByText('Aún no hay registros')).toBeInTheDocument()
+  })
+
+  it('el distrito y la localidad de la que es sector dicen "…" y luego su nombre, o por qué no se leen; sin ellos, un guion', async () => {
+    const def = definicion('locality_profile', ['population_count'])
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, LEE_TERRITORIO, [
+      { path: '/objects/locality/records/l1', body: registro('l1', { name: 'Tunas', administrative_unit: 'd1', parent_locality: 'l0' }) },
+      { path: '/objects/administrative_unit/records/d1', body: registro('d1', { name: 'Distrito de Prueba' }) },
+      falla('/objects/locality/records/l0', 403),
+      ...sin(rutas(def), '/objects/locality/records/l1')
+    ])
+    expect(await screen.findByText('Distrito de Prueba')).toBeInTheDocument()
+    const padre = screen.getByText('Caserío del que es sector').nextElementSibling as HTMLElement
+    expect(await within(padre).findByText('Restringido')).toBeInTheDocument()
+  })
+})

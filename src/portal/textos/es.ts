@@ -4,6 +4,7 @@ import { ES_CONTEXTO } from './contexto'
 import { ES_MAPA } from './mapa'
 import { ES_P360 } from './p360'
 import { ES_PROYECTOS } from './proyectos'
+import { ES_TERRITORIO } from './territorio'
 import { ES_TRANSICIONES } from './transiciones'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
@@ -15,6 +16,7 @@ export const ES = {
   mapa: ES_MAPA,
   p360: ES_P360,
   proyectos: ES_PROYECTOS,
+  territorio: ES_TERRITORIO,
   transiciones: ES_TRANSICIONES,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
