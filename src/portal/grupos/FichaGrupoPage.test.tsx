@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,7 +7,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { base, LEE, S1, STK_DEF } from '../../test/grupos'
+import { ASSESS_DEF, base, LEE, S1, STK_DEF } from '../../test/grupos'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -23,6 +23,16 @@ afterEach(() => {
   fetch?.restore()
   red = fetch = null
 })
+
+// completa una evaluación (base, los 15 indicadores y el motivo) y la guarda
+async function llenar(drawer: HTMLElement, valor = '4', motivo = 'x') {
+  await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' }), 'ENTREVISTA')
+  for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: valor }))
+  await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), motivo)
+  await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
+}
+
+const PREVIA = '{"computed":{"interest_index":3,"power_index":3,"influence_score":6,"influence_group":"ESTRATEGICO"},"warnings":[]}'
 
 describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
   it('sin acceso a la postura muestra candados y no ofrece evaluar', async () => {
@@ -135,6 +145,30 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(await within(drawer).findByText('El grupo de interés está retirado: reincorpórelo antes de evaluarlo.')).toBeInTheDocument()
   })
 
+  it('un 409 STATE_MISMATCH relee el grupo de interés: la ficha ya no ofrece evaluar y el aviso sigue a la vista', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    let retirado = false
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholders/s1/assessments',
+        responder: () => {
+          retirado = true
+          return problema(409, 'retirado', [{ field: 'state', message: 'STATE_MISMATCH' }])
+        }
+      },
+      { path: '/objects/stakeholder/records/s1', responder: () => new Response(JSON.stringify({ ...S1, state: retirado ? 'retired' : 'assessed' })) }
+    ])
+    const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    const lecturas = () => red!.a('GET', '/objects/stakeholder/records/s1').length
+    const antes = lecturas()
+    await llenar(drawer)
+    await waitFor(() => expect(lecturas()).toBeGreaterThan(antes))
+    expect(await within(drawer).findByText(/está retirado/)).toBeInTheDocument()
+    expect(within(drawer).getByRole('button', { name: 'Guardar evaluación' })).toBeDisabled()
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Nueva evaluación', hidden: true })).not.toBeInTheDocument())
+  })
+
   // api.md §4.3: además de STANCE_DIVERGENCE, la vista previa avisa una evaluación atrasada y una prioridad que queda vacía
   it('las advertencias BACKDATED_ASSESSMENT y NO_PRIORITY_RULE se dicen con su texto, nunca con el código', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, [
@@ -171,13 +205,25 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     red = espiarRed()
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
     expect(within(drawer).getByText(/la vista previa del cálculo no está disponible/)).toBeInTheDocument()
-    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '2' }))
-    await new Promise((r) => setTimeout(r, 400))
+    // el reloj avanza solo, pero el plazo de la espera (300 ms) se salta de golpe: sin READ no se pide nada
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      for (const grupo of within(drawer).getAllByRole('radiogroup')) await usuario.click(within(grupo).getByRole('radio', { name: '2' }))
+      await waitFor(() => expect(within(drawer).getAllByRole('radio', { checked: true })).toHaveLength(15))
+      await vi.advanceTimersByTimeAsync(1000)
+    } finally {
+      vi.useRealTimers()
+    }
     expect(red.a('POST', '/sgspe/stakeholders/s1/assessments/preview')).toHaveLength(0)
   })
 
-  it('403 FIELD_NOT_WRITABLE dice que la postura no la puede escribir', async () => {
-    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+  it('403 FIELD_NOT_WRITABLE nombra el campo que dice el servidor, con su etiqueta de la metadata', async () => {
+    const definicion = { ...ASSESS_DEF(true), fields: ASSESS_DEF(true).fields.map((f) => (f.name === 'stance' ? { ...f, label: 'Postura' } : f)) }
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, [
+      { path: '/metadata/objects/stakeholder_assessment', body: definicion },
+      ...base(GERENCIA_SOCIAL, true)
+    ])
     red = espiarRed([
       {
         method: 'POST',
@@ -195,8 +241,23 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '4' }))
     await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'x')
     await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
-    expect(await within(drawer).findByText('Evaluar escribe la postura del grupo de interés, un dato que su rol no puede escribir.')).toBeInTheDocument()
+    expect(await within(drawer).findByText('Evaluar escribe «Postura», un dato que su rol no puede escribir.')).toBeInTheDocument()
     expect(within(drawer).queryByText('FIELD_NOT_WRITABLE')).not.toBeInTheDocument()
+  })
+
+  it('403 FIELD_NOT_WRITABLE de un campo que la metadata no trae (restringido) no inventa su nombre', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholders/s1/assessments',
+        responder: () => problema(403, 'No puede escribir', [{ field: 'campo_restringido', message: 'FIELD_NOT_WRITABLE' }])
+      }
+    ])
+    const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    await llenar(drawer)
+    expect(await within(drawer).findByText('Evaluar escribe un dato que su rol no puede escribir.')).toBeInTheDocument()
+    expect(within(drawer).queryByText(/campo_restringido/)).not.toBeInTheDocument()
   })
 
   // la fecha de la evaluación es el día de Lima: a las 21:00 de Lima ya es el día siguiente en UTC
@@ -285,5 +346,119 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
     expect(await within(drawer).findByText(/es un paso que su rol no puede dar/)).toBeInTheDocument()
     expect(within(drawer).queryByText('ROLE_REQUIRED')).not.toBeInTheDocument()
+  })
+
+  it('dos evaluaciones seguidas: la segunda lleva otra clave de idempotencia y arranca con el formulario vacío y la fecha de hoy', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholders/s1/assessments',
+        responder: () => new Response(JSON.stringify({ assessment: registro('ev3', {}), stakeholder: S1, warnings: [] }), { status: 201 })
+      },
+      { method: 'POST', path: '/sgspe/stakeholders/s1/assessments/preview', responder: () => new Response(PREVIA) }
+    ])
+    const abrir = async () => {
+      await userEvent.click(await screen.findByRole('button', { name: 'Nueva evaluación' }))
+      return screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    }
+    let drawer = await abrir()
+    // la fecha la cambia la persona: la siguiente evaluación vuelve a hoy
+    fireEvent.change(within(drawer).getByLabelText('Fecha de la evaluación'), { target: { value: '2026-01-15' } })
+    await llenar(drawer, '4', 'Primera')
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(1))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s1'))
+    drawer = await abrir()
+    expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue(hoyEnLima())
+    expect(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' })).toHaveValue('')
+    expect(within(drawer).getByLabelText('Motivo (obligatorio)')).toHaveValue('')
+    expect(within(drawer).queryAllByRole('radio', { checked: true })).toHaveLength(0)
+    await llenar(drawer, '2', 'Segunda')
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(2))
+    const [primera, segunda] = red.a('POST', '/sgspe/stakeholders/s1/assessments')
+    expect(primera.cabeceras.get('Idempotency-Key')).toBeTruthy()
+    expect(segunda.cabeceras.get('Idempotency-Key')).toBeTruthy()
+    expect(segunda.cabeceras.get('Idempotency-Key')).not.toBe(primera.cabeceras.get('Idempotency-Key'))
+    expect(primera.cuerpo).toMatchObject({ attributes: { assessment_date: '2026-01-15', affect_environment: 4 } })
+    expect(segunda.cuerpo).toMatchObject({ attributes: { assessment_date: hoyEnLima(), affect_environment: 2 } })
+    expect(segunda.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Segunda")
+  })
+
+  it('"Recargar" tras un 412 espera la versión nueva: el siguiente guardado lleva su If-Match', async () => {
+    const NUEVA = '2026-10-05T09:30:00.75Z'
+    let cambiado = false
+    let intentos = 0
+    // la relectura del grupo queda retenida hasta que la prueba la suelta
+    let soltar: () => void = () => {}
+    const retenida = new Promise<void>((r) => (soltar = r))
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholders/s1/assessments',
+        responder: () => {
+          intentos += 1
+          if (intentos > 1) return new Response(JSON.stringify({ assessment: registro('ev3', {}), stakeholder: S1, warnings: [] }), { status: 201 })
+          cambiado = true
+          return problema(412, 'Versión vieja')
+        }
+      },
+      {
+        path: '/objects/stakeholder/records/s1',
+        responder: async () => {
+          if (cambiado) await retenida
+          return new Response(JSON.stringify(cambiado ? { ...S1, updatedAt: NUEVA } : S1))
+        }
+      },
+      { method: 'POST', path: '/sgspe/stakeholders/s1/assessments/preview', responder: () => new Response(PREVIA) }
+    ])
+    const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    await llenar(drawer, '4', 'Entrevista con la junta')
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Recargar' }))
+    // mientras la versión nueva no llega, el aviso sigue y no se puede guardar sobre la vieja sin verlo
+    await waitFor(() => expect(red!.a('GET', '/objects/stakeholder/records/s1').length).toBeGreaterThan(1))
+    expect(within(drawer).getByText(/Otra persona cambió este registro/)).toBeInTheDocument()
+    soltar()
+    await waitFor(() => expect(within(drawer).queryByText(/Otra persona cambió este registro/)).not.toBeInTheDocument())
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(2))
+    const [primero, segundo] = red.a('POST', '/sgspe/stakeholders/s1/assessments')
+    expect(primero.cabeceras.get('If-Match')).toBe('"2026-10-04T10:00:00.25Z"')
+    expect(segundo.cabeceras.get('If-Match')).toBe(`"${NUEVA}"`)
+  })
+
+  it('cancelar descarta lo escrito, el error y la fecha', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholders/s1/assessments',
+        responder: () => problema(403, 'Rol', [{ field: 'record', message: 'ROLE_REQUIRED' }])
+      },
+      { method: 'POST', path: '/sgspe/stakeholders/s1/assessments/preview', responder: () => new Response(PREVIA) }
+    ])
+    await userEvent.click(await screen.findByRole('button', { name: 'Nueva evaluación' }))
+    let drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    fireEvent.change(within(drawer).getByLabelText('Fecha de la evaluación'), { target: { value: '2026-01-15' } })
+    await llenar(drawer, '4', 'Borrador')
+    expect(await within(drawer).findByText(/es un paso que su rol no puede dar/)).toBeInTheDocument()
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await userEvent.click(await screen.findByRole('button', { name: 'Nueva evaluación' }))
+    drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue(hoyEnLima())
+    expect(within(drawer).getByLabelText('Motivo (obligatorio)')).toHaveValue('')
+    expect(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' })).toHaveValue('')
+    expect(within(drawer).queryByText(/es un paso que su rol no puede dar/)).not.toBeInTheDocument()
+  })
+
+  it('una interacción sin fecha no deja un separador suelto', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, [
+      { path: '/objects/stakeholder/records/s1/related/engagement_stakeholder', body: pagina([registro('e1', { title: 'Asamblea de agosto' })]) },
+      ...base(GERENCIA_SOCIAL, true)
+    ])
+    const cola = await screen.findByRole('complementary', { name: 'Qué generó' })
+    const fila = (await within(cola).findByRole('link', { name: 'Asamblea de agosto' })).closest('li')
+    expect(fila).toHaveTextContent(/^Asamblea de agosto$/)
   })
 })

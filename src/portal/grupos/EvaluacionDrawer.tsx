@@ -11,19 +11,12 @@ import { Drawer } from '../componentes/Drawer'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { Cargando, ErrorDeCarga } from '../componentes/Estados'
 import { hoyEnLima } from '../datos/fechas'
-import { codigoDelError, nuevaClave } from '../datos/http'
-import { useDefinicion, type Registro } from '../datos/registros'
+import { campoDelError, codigoDelError, nuevaClave } from '../datos/http'
+import { campoDe, useDefinicion, type Registro } from '../datos/registros'
 import { MiniMatriz } from '../graficos/MiniMatriz'
 import { NS, numeroPe } from '../i18n'
-import {
-  INDICADORES,
-  INDICADORES_DE_INTERES,
-  INDICADORES_DE_PODER,
-  useGuardarEvaluacion,
-  useVistaPreviaDeEvaluacion,
-  type Advertencia,
-  type EvaluacionGuardada
-} from './api'
+import { INDICADORES, INDICADORES_DE_INTERES, INDICADORES_DE_PODER, useGuardarEvaluacion, useVistaPreviaDeEvaluacion, type EvaluacionGuardada } from './api'
+import { Advertencias } from './Advertencias'
 
 // S20 · nueva evaluación (screens.md §5, flujo 3): fecha, base, los 15 indicadores de 1 a 5 con su valor anterior, postura
 // (restringida), apertura, confianza, razones, preocupaciones y expectativas, y el motivo obligatorio. la vista previa se
@@ -66,28 +59,6 @@ const valoresIniciales = (): Valores => ({
   override_reason: '',
   motivo: ''
 })
-
-// las advertencias de la vista previa y del alta con su texto (api.md §4.3); una que el portal no conoce, con su mensaje
-const ADVERTENCIAS: Record<string, string> = {
-  STANCE_DIVERGENCE: 'grupos.ficha.divergencia',
-  BACKDATED_ASSESSMENT: 'grupos.evaluacion.atrasada',
-  NO_PRIORITY_RULE: 'grupos.evaluacion.sinRegla'
-}
-
-export function Advertencias({ advertencias }: { advertencias: Advertencia[] }) {
-  const { t } = useTranslation(NS)
-  return (
-    <>
-      {advertencias.map((w, i) =>
-        ADVERTENCIAS[w.code] || w.message ? (
-          <Alert key={`${w.code}-${i}`} tone="warning">
-            {ADVERTENCIAS[w.code] ? t(ADVERTENCIAS[w.code]) : w.message}
-          </Alert>
-        ) : null
-      )}
-    </>
-  )
-}
 
 export function atributosDeEvaluacion(v: Valores, leePostura: boolean): Record<string, unknown> {
   return {
@@ -165,22 +136,40 @@ export function EvaluacionDrawer({
       }
     )
   )
-  const recargar = () => {
-    // otra persona cambió el grupo de interés: se relee su versión y se conserva lo escrito
-    void cliente.invalidateQueries({ queryKey: ['record', 'stakeholder', grupo.id] })
+  const recargar = async () => {
+    // otra persona cambió el grupo de interés: se relee su versión y se conserva lo escrito. el aviso se quita cuando ya
+    // llegó el updatedAt nuevo, para que el siguiente guardado no vuelva a mandar la versión vieja (otro 412)
+    await cliente.invalidateQueries({ queryKey: ['record', 'stakeholder', grupo.id] })
     guardar.reset()
   }
-  const retirado = grupo.state === 'retired' || codigoDelError(guardar.error) === 'STATE_MISMATCH'
+  const desajuste = codigoDelError(guardar.error) === 'STATE_MISMATCH'
+  const retirado = grupo.state === 'retired' || desajuste
+  // el servidor dice que el grupo de interés ya no está en el estado de partida: se relee para que la ficha muestre su
+  // estado actual y deje de ofrecer evaluarlo
+  useEffect(() => {
+    if (desajuste) void cliente.invalidateQueries({ queryKey: ['record', 'stakeholder', grupo.id] })
+  }, [desajuste])
+  // cancelar o cerrar descarta lo escrito, el error y la fecha del primer montaje (que pasada la medianoche de Lima sería la de ayer)
+  const cerrar = () => {
+    reset(valoresIniciales())
+    guardar.reset()
+    alCerrar()
+  }
+  // el campo que el servidor dice que no se puede escribir, con su etiqueta de la metadata (un campo restringido no está en ella)
+  const campoNoEscribible = (() => {
+    const campo = campoDelError(guardar.error)
+    return campo ? campoDe(definicion.data, campo)?.label : undefined
+  })()
 
   return (
     <Drawer
       titulo={t('grupos.evaluacion.titulo')}
       descripcion={t('grupos.evaluacion.descripcion')}
       abierto={abierto}
-      alCerrar={alCerrar}
+      alCerrar={cerrar}
       pie={
         <>
-          <Button variant="secondary" onClick={alCerrar}>
+          <Button variant="secondary" onClick={cerrar}>
             {t('comun.cancelar')}
           </Button>
           <Button onClick={() => void enviar()} disabled={guardar.isPending || !definicion.data || grupo.state === 'retired'}>
@@ -312,11 +301,13 @@ export function EvaluacionDrawer({
         {guardar.isError && !retirado ? (
           <Alert tone="danger">
             {mensaje(guardar.error, {
-              FIELD_NOT_WRITABLE: t('grupos.evaluacion.errores.FIELD_NOT_WRITABLE'),
+              FIELD_NOT_WRITABLE: campoNoEscribible
+                ? t('grupos.evaluacion.errores.FIELD_NOT_WRITABLE', { campo: campoNoEscribible })
+                : t('grupos.evaluacion.errores.FIELD_NOT_WRITABLE_SIN_CAMPO'),
               ROLE_REQUIRED: t('grupos.evaluacion.errores.ROLE_REQUIRED')
             })}
             {esConflictoDeVersion(guardar.error) ? (
-              <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={recargar}>
+              <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={() => void recargar()}>
                 {t('comun.recargar')}
               </Button>
             ) : null}

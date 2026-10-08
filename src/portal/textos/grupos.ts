@@ -154,7 +154,8 @@ export const ES_GRUPOS = {
     sinRegla: 'Ninguna fila de la matriz de priorización coincide: la prioridad informativa queda vacía.',
     sinVistaPrevia: 'Su rol no lee el historial de evaluaciones: la vista previa del cálculo no está disponible, el cálculo se hace al guardar.',
     errores: {
-      FIELD_NOT_WRITABLE: 'Evaluar escribe la postura del grupo de interés, un dato que su rol no puede escribir.',
+      FIELD_NOT_WRITABLE: 'Evaluar escribe «{{campo}}», un dato que su rol no puede escribir.',
+      FIELD_NOT_WRITABLE_SIN_CAMPO: 'Evaluar escribe un dato que su rol no puede escribir.',
       ROLE_REQUIRED: 'Evaluar a un grupo de interés es un paso que su rol no puede dar: pídalo a quien coordina la relación.'
     }
   },
@@ -322,7 +323,8 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     sinRegla: 'No row of the prioritization matrix matches: the information priority stays empty.',
     sinVistaPrevia: 'Your role does not read the assessment history: the calculation preview is not available, it is calculated on saving.',
     errores: {
-      FIELD_NOT_WRITABLE: 'Assessing writes the stakeholder stance, a value your role cannot write.',
+      FIELD_NOT_WRITABLE: 'Assessing writes “{{campo}}”, a value your role cannot write.',
+      FIELD_NOT_WRITABLE_SIN_CAMPO: 'Assessing writes a value your role cannot write.',
       ROLE_REQUIRED: 'Assessing a stakeholder is a step your role cannot take: ask whoever coordinates the relationship.'
     }
   },

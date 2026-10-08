@@ -26,7 +26,8 @@ import {
 import { NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import type { Advertencia } from './api'
-import { Advertencias, EvaluacionDrawer } from './EvaluacionDrawer'
+import { Advertencias } from './Advertencias'
+import { EvaluacionDrawer } from './EvaluacionDrawer'
 
 // S17 · ficha de grupo de interés (screens.md §5): para decidir cómo relacionarse, su peso, su postura (restringida), su
 // historia de evaluaciones hasta la línea base y lo que generó. la postura y la confianza del grupo de interés son las
@@ -87,7 +88,9 @@ function Ficha({ grupo }: { grupo: Registro }) {
   const leePosturaDeEvaluacion = puedeLeer(definicionDeEvaluacion.data, 'stance')
   // el grupo de interés está evaluado si pasó por la evaluación o si ya tiene grupo de influencia (como la lista, S16)
   const evaluado = grupo.state === 'assessed' || Boolean(atributo(grupo, 'influence_group'))
-  const evalua = asignado && can('stakeholder_assessment', 'CREATE') && puedeEscribir(definicionDeEvaluacion.data, 'stance') && grupo.state !== 'retired'
+  const puedeEvaluar = asignado && can('stakeholder_assessment', 'CREATE') && puedeEscribir(definicionDeEvaluacion.data, 'stance')
+  // un grupo retirado no se ofrece a evaluar; el drawer abierto sigue a la vista (con su aviso) si el servidor lo retiró mientras tanto
+  const evalua = puedeEvaluar && grupo.state !== 'retired'
   const drawer = (abrir: boolean) => {
     const siguiente = new URLSearchParams(busqueda)
     if (abrir) siguiente.set('drawer', 'assessment')
@@ -236,7 +239,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
       <EvaluacionDrawer
         grupo={grupo}
         anterior={ultima}
-        abierto={busqueda.get('drawer') === 'assessment' && evalua}
+        abierto={busqueda.get('drawer') === 'assessment' && puedeEvaluar}
         alCerrar={() => drawer(false)}
         alGuardar={(r) => {
           setAdvertencias(r.warnings)
@@ -273,6 +276,7 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
   const { t } = useTranslation(NS)
   const interacciones = useRelacionados('stakeholder', grupo.id, 'engagement_stakeholder')
   const proyecto = String(atributo(grupo, 'project'))
+  const dia = (e: Registro) => diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))
   return (
     <aside aria-label={t('grupos.ficha.trazabilidad')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('grupos.ficha.trazabilidad')}</h2>
@@ -285,8 +289,8 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
           <li key={e.id}>
             <Link to={`/projects/${proyecto}/engagements/${e.id}`} className="text-sg-primary-text underline">
               {texto(e, 'title')}
-            </Link>{' '}
-            · {diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))}
+            </Link>
+            {dia(e) ? <> · {dia(e)}</> : null}
           </li>
         ))}
       </ul>
