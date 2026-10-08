@@ -117,8 +117,9 @@ export function atributosDeEscritura(objeto: string, definicion: ObjectDefinitio
     if (!campo.editable || esGeometria(campo) || esDerivado(objeto, campo.name)) continue
     if (base) {
       if (!(campo.name in base.attributes)) continue
-      salida[campo.name] = campo.name in cambios ? vacioANulo(cambios[campo.name]) : base.attributes[campo.name]
-    } else if (campo.name in cambios) salida[campo.name] = vacioANulo(cambios[campo.name])
+      // un valor undefined (un opcional que el formulario no registró) no es un cambio: sale lo leído
+      salida[campo.name] = cambios[campo.name] !== undefined ? vacioANulo(cambios[campo.name]) : base.attributes[campo.name]
+    } else if (cambios[campo.name] !== undefined) salida[campo.name] = vacioANulo(cambios[campo.name])
   }
   return salida
 }
@@ -154,11 +155,13 @@ async function definicionDe(cliente: QueryClient, pedir: Pedido, objeto: string)
   return cliente.ensureQueryData({ queryKey: ['objects', objeto], queryFn: () => pedir<ObjectDefinition>(`/metadata/objects/${objeto}`) })
 }
 
-function invalidar(cliente: QueryClient, objeto: string, id?: string) {
+// refresca las listas y los vínculos; con id, también lo de ese registro. conRegistro=false deja quieto ['record', …]
+// cuando quien llama ya lo puso con setQueryData (la relectura de una actualización)
+function invalidar(cliente: QueryClient, objeto: string, id?: string, conRegistro = true) {
   void cliente.invalidateQueries({ queryKey: ['records', objeto] })
   void cliente.invalidateQueries({ queryKey: ['related'] })
   if (id) {
-    void cliente.invalidateQueries({ queryKey: ['record', objeto, id] })
+    if (conRegistro) void cliente.invalidateQueries({ queryKey: ['record', objeto, id] })
     void cliente.invalidateQueries({ queryKey: ['transitions', objeto, id] })
     void cliente.invalidateQueries({ queryKey: ['history', objeto, id] })
   }
@@ -202,8 +205,15 @@ export async function guardarCambio(
 ): Promise<Registro> {
   const geometries = geometriasDeEscritura(definicion, geometrias)
   const cuerpo = { attributes: atributosDeEscritura(objeto, definicion, cambios, registro), ...(geometries ? { geometries } : {}) }
-  await pedir<Registro>(`/objects/${objeto}/records/${registro.id}`, { metodo: 'PUT', json: cuerpo, version: registro.updatedAt, motivo })
-  return pedir<Registro>(`/objects/${objeto}/records/${registro.id}`)
+  const ruta = `/objects/${objeto}/records/${registro.id}`
+  const guardado = await pedir<Registro>(ruta, { metodo: 'PUT', json: cuerpo, version: registro.updatedAt, motivo })
+  try {
+    return await pedir<Registro>(ruta)
+  } catch {
+    // el cambio ya se guardó: si la relectura falla, no se reporta un error que invitaría a reintentar con la versión vieja
+    // (412). vale la respuesta del PUT; los derivados vendrán bien en la próxima lectura, que la invalidación provoca
+    return guardado
+  }
 }
 
 export function useActualizar(objeto: string) {
@@ -213,9 +223,7 @@ export function useActualizar(objeto: string) {
     mutationFn: async (cambio: Cambio) => guardarCambio(pedir, await definicionDe(cliente, pedir, objeto), objeto, cambio),
     onSuccess: (releido, { registro }) => {
       cliente.setQueryData(['record', objeto, registro.id], releido)
-      invalidar(cliente, objeto)
-      void cliente.invalidateQueries({ queryKey: ['transitions', objeto, registro.id] })
-      void cliente.invalidateQueries({ queryKey: ['history', objeto, registro.id] })
+      invalidar(cliente, objeto, registro.id, false)
     }
   })
 }
@@ -226,7 +234,11 @@ export function useBorrar(objeto: string) {
   return useMutation({
     mutationFn: ({ registro, motivo }: { registro: Registro; motivo?: string | null }) =>
       pedir<void>(`/objects/${objeto}/records/${registro.id}`, { metodo: 'DELETE', version: registro.updatedAt, motivo }),
-    onSuccess: (_r, { registro }) => invalidar(cliente, objeto, registro.id)
+    onSuccess: (_r, { registro }) => {
+      // el registro borrado no se relee (sería un 404 con un observador activo): se quita de la caché
+      invalidar(cliente, objeto)
+      for (const clave of ['record', 'transitions', 'history']) cliente.removeQueries({ queryKey: [clave, objeto, registro.id] })
+    }
   })
 }
 

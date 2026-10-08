@@ -1,7 +1,7 @@
 import { createApiClient, type ObjectDefinition } from '@wasichai/core'
 import { mockFetch } from '@wasichai/testing'
 import { describe, expect, it, vi } from 'vitest'
-import { espiarRed } from '../../test/red'
+import { espiarRed, problema } from '../../test/red'
 import { crearPedido } from './http'
 import { atributosDeEscritura, consulta, escribeAlgunCampo, geometriasDeEscritura, guardarCambio, type Registro } from './registros'
 
@@ -94,6 +94,13 @@ describe('atributosDeEscritura', () => {
     expect(escribeAlgunCampo('stakeholder', STAKEHOLDER)).toBe(true)
   })
 
+  it('un cambio con valor undefined no es un cambio: sale lo leído y no se vacía el campo', () => {
+    expect(atributosDeEscritura('stakeholder', STAKEHOLDER, { inclusion_reason: undefined }, registro).inclusion_reason).toBe('Teniente gobernador')
+    expect(atributosDeEscritura('stakeholder', STAKEHOLDER, { inclusion_reason: undefined, stakeholder_type: 'IGLESIA' })).toEqual({
+      stakeholder_type: 'IGLESIA'
+    })
+  })
+
   it('un texto vacío se manda como null', () => {
     expect(atributosDeEscritura('stakeholder', STAKEHOLDER, { inclusion_reason: '' }, registro).inclusion_reason).toBeNull()
   })
@@ -122,6 +129,24 @@ describe('guardarCambio', () => {
       expect(red.llamadas[0].cabeceras.get('If-Match')).toBe('"2026-10-02T10:00:00Z"')
       expect(releido.attributes.last_contact_date).toBe('2026-09-30')
       expect(releido.updatedAt).toBe('2026-10-03T10:00:00Z')
+    } finally {
+      red.restaurar()
+      fetch.restore()
+    }
+  })
+})
+
+describe('guardarCambio con la relectura caída', () => {
+  it('si el GET falla tras un PUT exitoso, devuelve el registro de la respuesta del PUT en lugar de lanzar', async () => {
+    const guardado = { ...registro, updatedAt: '2026-10-03T10:00:00Z', attributes: { ...registro.attributes, inclusion_reason: 'Alcalde' } }
+    const fetch = mockFetch([{ method: 'PUT', path: '/objects/stakeholder/records/s1', body: guardado }])
+    const red = espiarRed([{ path: '/objects/stakeholder/records/s1', responder: () => problema(503, 'Servicio no disponible') }])
+    try {
+      const cliente = createApiClient({ baseUrl: '/api', storagePrefix: 'sgspe' })
+      const devuelto = await guardarCambio(crearPedido(cliente, vi.fn()), STAKEHOLDER, 'stakeholder', { registro, cambios: { inclusion_reason: 'Alcalde' } })
+      expect(red.llamadas.map((l) => l.metodo)).toEqual(['PUT', 'GET'])
+      expect(devuelto.updatedAt).toBe('2026-10-03T10:00:00Z')
+      expect(devuelto.attributes.inclusion_reason).toBe('Alcalde')
     } finally {
       red.restaurar()
       fetch.restore()
