@@ -1,5 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Alert, Button } from '@wasichai/ui'
+import { Alert, Button, cn } from '@wasichai/ui'
 import { Info, Lock } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -9,10 +9,11 @@ import { correlacionDe, useMensajeDeError } from './errores'
 // los estados comunes de design-system.md §6.5: carga, error con su código de correlación y reintento, vacío, campo
 // restringido y cifra no disponible (nunca vacío ni cero, RQ-DSH-032)
 
-export function Cargando({ etiqueta }: { etiqueta?: string }) {
+// compacto: sin el relleno vertical, para usarlo dentro de una tarjeta pequeña; el texto accesible es el mismo
+export function Cargando({ etiqueta, compacto }: { etiqueta?: string; compacto?: boolean }) {
   const { t } = useTranslation(NS)
   return (
-    <p role="status" aria-busy="true" className="py-6 text-sm text-sg-text-muted">
+    <p role="status" aria-busy="true" className={cn('text-sm text-sg-text-muted', !compacto && 'py-6')}>
       {etiqueta ?? t('comun.cargando')}
     </p>
   )

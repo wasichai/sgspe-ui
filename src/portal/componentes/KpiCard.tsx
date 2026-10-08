@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { Indicador } from '../datos/indicadores'
 import { NS, numeroPe } from '../i18n'
-import { ErrorDeCarga, NoDisponible } from './Estados'
+import { Cargando, ErrorDeCarga, NoDisponible } from './Estados'
 
 // una cifra con su contexto (design-system.md §5, dashboards.md §9.2): el valor, su unidad y, si es un porcentaje, el
 // "n de N" que deja ver la base. sin permiso dice "no disponible" y por qué; un módulo que no llegó dice en qué fase llega
@@ -23,7 +23,7 @@ export function KpiCard({
   let cuerpo
   if (llegaEn) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.llegaEn', { fase: llegaEn })}</p>
   else if (error && !indicador) cuerpo = <ErrorDeCarga error={error} />
-  else if (cargando || !indicador) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.cargando')}</p>
+  else if (cargando || !indicador) cuerpo = <Cargando compacto />
   else if (!indicador.available) cuerpo = <NoDisponible motivo={indicador.unavailableReason} />
   else
     cuerpo = (

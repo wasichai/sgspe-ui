@@ -7,7 +7,7 @@ import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
 import { EstadoChip } from './EstadoChip'
-import { ErrorDeCarga, NoDisponible, Restringido } from './Estados'
+import { Cargando, ErrorDeCarga, NoDisponible, Restringido } from './Estados'
 import { KpiCard } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
@@ -128,6 +128,20 @@ describe('KpiCard', () => {
     montar(<KpiCard titulo="Cifra" cargando={false} error={new ErrorDeSgspe(500, 'Falló', [], 'corr-9')} />)
     expect(await screen.findByText(/corr-9/)).toBeInTheDocument()
     expect(screen.queryByText('Cargando…')).not.toBeInTheDocument()
+  })
+
+  it('mientras carga usa el "Cargando…" compacto: el mismo texto accesible, sin el relleno vertical de la página', async () => {
+    montar(
+      <>
+        <KpiCard titulo="Cifra" cargando />
+        <Cargando />
+      </>
+    )
+    const [enTarjeta, enPagina] = await screen.findAllByRole('status')
+    expect(enTarjeta).toHaveTextContent('Cargando…')
+    expect(enTarjeta).toHaveAttribute('aria-busy', 'true')
+    expect(enTarjeta).not.toHaveClass('py-6')
+    expect(enPagina).toHaveClass('py-6')
   })
 
   it('un módulo que no llegó dice en qué fase llega', async () => {
