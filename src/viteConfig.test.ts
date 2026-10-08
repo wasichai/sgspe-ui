@@ -26,4 +26,18 @@ describe('vite.config', () => {
     expect(config.server?.proxy).toEqual({ '/api': 'http://otro-backend.test:9000' })
     expect(config.preview?.proxy).toEqual({ '/api': 'http://otro-backend.test:9000' })
   })
+
+  // ASM-080 y gis.md §6.4: la jefatura y el mapa base son configuración del despliegue, no literales de src/
+  it('define el rol de la jefatura y el mapa base, con sus valores por defecto', async () => {
+    const config = await cargar(undefined)
+    expect(config.define).toEqual({ __SGSPE_ROL_JEFATURA__: JSON.stringify('PROJECT_MANAGER'), __SGSPE_MAPA_BASE__: JSON.stringify('') })
+  })
+
+  it('SGSPE_ROL_JEFATURA y SGSPE_MAPA_BASE los cambian', async () => {
+    vi.stubEnv('SGSPE_ROL_JEFATURA', 'OTRO_ROL')
+    vi.stubEnv('SGSPE_MAPA_BASE', 'https://mapas.example/estilo.json')
+    const config = await cargar(undefined)
+    expect(config.define?.__SGSPE_ROL_JEFATURA__).toBe('"OTRO_ROL"')
+    expect(config.server?.headers?.['Content-Security-Policy-Report-Only']).toContain('https://mapas.example')
+  })
 })
