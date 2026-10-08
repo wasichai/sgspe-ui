@@ -4,6 +4,7 @@ import { ES_CONTEXTO } from './contexto'
 import { ES_MAPA } from './mapa'
 import { ES_P360 } from './p360'
 import { ES_PROYECTOS } from './proyectos'
+import { ES_TABLEROS } from './tableros'
 import { ES_TERRITORIO } from './territorio'
 import { ES_TRANSICIONES } from './transiciones'
 
@@ -16,6 +17,7 @@ export const ES = {
   mapa: ES_MAPA,
   p360: ES_P360,
   proyectos: ES_PROYECTOS,
+  tableros: ES_TABLEROS,
   territorio: ES_TERRITORIO,
   transiciones: ES_TRANSICIONES,
   app: { lema: 'Gestión social de proyectos extractivos' },
