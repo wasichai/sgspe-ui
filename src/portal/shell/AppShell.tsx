@@ -18,7 +18,7 @@ const ROTULO = 'sr-only xl:not-sr-only xl:truncate'
 // el shell del portal (docs/ux/ux-architecture.md §7.1): barra superior de 56 px con la marca, el botón Preguntar del
 // asistente, el tema, la cuenta con sus roles y la salida; a la izquierda, la navegación principal con las secciones que se
 // le ofrecen a la cuenta (useArbol), en su orden; a la derecha, el contenido. Administración es un enlace a /admin, fuera
-// del portal. el selector de proyecto llega en F2; la búsqueda con ⌘K (S03) y los avisos (S04), después
+// del portal. la búsqueda con ⌘K (S03) y los avisos (S04) llegan después
 export function AppShell() {
   const { t } = useTranslation(NS)
   const { appName } = useWasichaiConfig()

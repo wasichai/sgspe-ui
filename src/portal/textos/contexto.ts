@@ -8,6 +8,7 @@ export const ES_CONTEXTO = {
   quitarTerritorio: 'Quitar el filtro de territorio',
   rastro: 'Recorrido',
   soloLectura: 'No está asignado a este proyecto: puede leerlo, pero no cambiarlo.',
+  irAProyectos: 'Ir a todos los proyectos',
   subnav: 'Secciones del proyecto',
   pestanas: {
     overview: 'Resumen',
@@ -34,6 +35,7 @@ export const EN_CONTEXTO: typeof ES_CONTEXTO = {
   quitarTerritorio: 'Remove the territory filter',
   rastro: 'Trail',
   soloLectura: 'You are not assigned to this project: you can read it, but not change it.',
+  irAProyectos: 'Go to all projects',
   subnav: 'Project sections',
   pestanas: {
     overview: 'Overview',

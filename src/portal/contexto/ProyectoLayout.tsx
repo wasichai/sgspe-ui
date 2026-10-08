@@ -1,6 +1,7 @@
+import { useAuth } from '@wasichai/core'
 import { Alert, cn } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet, useParams } from 'react-router'
+import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { ErrorDeCarga } from '../componentes/Estados'
 import { NS } from '../i18n'
 import { BarraDeContexto } from './BarraDeContexto'
@@ -8,16 +9,26 @@ import { useMisAsignaciones, useProyecto } from './proyectos'
 import { Rastro } from './Rastro'
 
 // el ProjectLayout de screens.md §2: dentro de un proyecto, la barra de contexto y la sub-navegación de Project 360; por
-// debajo de lg pasa a una fila desplazable. quien no está asignado lee en solo lectura (alcance A, design-system.md §6.5)
+// debajo de lg pasa a una fila desplazable. quien no está asignado lee en solo lectura (alcance A, design-system.md §6.5), salvo ADMIN, que no necesita asignación
 const PESTANAS = ['overview', 'map', 'stakeholders', 'engagements', 'settings', 'reports'] as const
 
 export function ProyectoLayout() {
   const { t } = useTranslation(NS)
   const { projectId } = useParams()
   const proyecto = useProyecto(projectId)
+  const { isAdmin } = useAuth()
   const asignaciones = useMisAsignaciones()
-  const asignado = (asignaciones.data ?? []).some((a) => a.attributes.project === projectId)
-  if (proyecto.isError) return <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />
+  const asignado = useAsignadoAlProyecto(projectId)
+  // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
+  if (proyecto.isError && !proyecto.data)
+    return (
+      <div className="mx-auto max-w-[1440px] space-y-3">
+        <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />
+        <Link to="/projects" className="inline-block text-sm font-medium text-sg-primary-text">
+          {t('contexto.irAProyectos')}
+        </Link>
+      </div>
+    )
   return (
     <div className="mx-auto max-w-[1440px] space-y-4">
       <BarraDeContexto />
@@ -38,7 +49,7 @@ export function ProyectoLayout() {
           </NavLink>
         ))}
       </nav>
-      {asignaciones.isSuccess && !asignado ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
+      {asignaciones.isSuccess && !asignado && !isAdmin ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
       <Outlet />
     </div>
   )
