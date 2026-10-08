@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
@@ -182,7 +183,7 @@ describe('S08 · Project 360, resumen', () => {
     expect(await screen.findByText(/cambio de etapa/)).toBeInTheDocument()
   })
 
-  it('la jefatura dice "No disponible" ante un 403 o un error, nunca "Sin jefatura"; con datos vacíos, sí', async () => {
+  it('la jefatura dice "No disponible" ante un 403 y ofrece reintentar ante un error, nunca "Sin jefatura"; con datos vacíos, sí', async () => {
     const asignaciones = /^\/objects\/project_assignment\/records\?.*role_name/
     abrir(rutas(SIN_STANCE), [falla(asignaciones, 403)])
     const cabecera = (await screen.findByRole('heading', { level: 1 })).closest('header')!
@@ -190,7 +191,9 @@ describe('S08 · Project 360, resumen', () => {
     expect(screen.queryByText('Sin jefatura asignada')).not.toBeInTheDocument()
     cerrar()
     abrir(rutas(SIN_STANCE), [falla(asignaciones)])
-    expect(await within((await screen.findByRole('heading', { level: 1 })).closest('header')!).findByText('No disponible')).toBeInTheDocument()
+    const conError = (await screen.findByRole('heading', { level: 1 })).closest('header')!
+    expect(await within(conError).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(within(conError).queryByText('No disponible')).not.toBeInTheDocument()
     expect(screen.queryByText('Sin jefatura asignada')).not.toBeInTheDocument()
     cerrar()
     abrir([{ path: asignaciones, body: pagina([]) }, ...rutas(SIN_STANCE)])
@@ -220,9 +223,23 @@ describe('S08 · Project 360, resumen', () => {
   })
 
   it('un grupo que nunca tuvo contacto entra en "sin contacto" con su propio texto', async () => {
-    abrir([{ path: '/objects/stakeholder/records', body: pagina([registro('s9', { organization: 'o1' }, { state: 'identified' })]) }, ...rutas(SIN_STANCE)])
+    abrir([
+      { path: '/objects/stakeholder/records', body: pagina([registro('s9', { organization: 'o1', last_contact_date: null }, { state: 'identified' })]) },
+      ...rutas(SIN_STANCE)
+    ])
     const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
     expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas: sin contacto registrado' })).toBeInTheDocument()
+  })
+
+  it('una cuenta que no lee last_contact_date no marca a nadie como "sin contacto registrado"', async () => {
+    abrir([
+      { path: '/objects/engagement/records', body: pagina([]) },
+      { path: '/objects/stakeholder/records', body: pagina([registro('s9', { organization: 'o1' }, { state: 'identified' })]) },
+      ...rutas(SIN_STANCE)
+    ])
+    const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
+    expect(await within(atencion).findByText(/Nada pide atención hoy/)).toBeInTheDocument()
+    expect(within(atencion).queryByText(/sin contacto/)).not.toBeInTheDocument()
   })
 
   describe('con el reloj cerca de la medianoche de Lima', () => {
@@ -301,6 +318,41 @@ describe('S08 · Project 360, resumen', () => {
     cerrar()
     abrir([indicador('KPI-ENG-02', { value: 0, series: [] }), ...rutas(SIN_STANCE)])
     expect(await screen.findByText('Aún no hay meses con reuniones que comparar con la meta.')).toBeInTheDocument()
+  })
+
+  it('un 403 en la actividad, las reuniones, las áreas, la matriz y las posturas sale como "No disponible", no como un error rojo', async () => {
+    abrir(rutas(SIN_STANCE), [
+      falla(/^\/objects\/project\/records\/p1\/history/, 403),
+      falla('/sgspe/dashboards/indicators/KPI-ENG-02', 403),
+      falla('/sgspe/dashboards/indicators/KPI-STK-03', 403),
+      falla('/sgspe/dashboards/indicators/KPI-STK-02', 403),
+      falla('/objects/area_of_influence/records', 403)
+    ])
+    for (const region of ['Actividad reciente', 'Reuniones al mes frente a la meta', 'Paisaje de grupos de interés', 'Áreas de influencia vigentes']) {
+      const seccion = await screen.findByRole('region', { name: region })
+      await waitFor(() => expect(within(seccion).getAllByText('No disponible').length).toBeGreaterThan(0))
+    }
+    expect(within(screen.getByRole('region', { name: 'Paisaje de grupos de interés' })).getAllByText('No disponible')).toHaveLength(2)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('un error al leer la jefatura ofrece reintentar, y al reintentar muestra a la jefa', async () => {
+    let llamadas = 0
+    abrir(rutas(SIN_STANCE), [
+      {
+        path: /^\/objects\/project_assignment\/records\?.*role_name/,
+        responder: () =>
+          ++llamadas === 1
+            ? problema(400, 'Falló', [], 'corr-601')
+            : new Response(JSON.stringify(pagina([registro('a1', { member_user_email: 'jefa@sgspe.test' })])), {
+                headers: { 'Content-Type': 'application/json' }
+              })
+      }
+    ])
+    const cabecera = (await screen.findByRole('heading', { level: 1 })).closest('header')!
+    await userEvent.click(await within(cabecera).findByRole('button', { name: 'Reintentar' }))
+    expect(await within(cabecera).findByText(/jefa@sgspe\.test/)).toBeInTheDocument()
+    expect(within(cabecera).queryByText('Sin jefatura asignada')).not.toBeInTheDocument()
   })
 
   it('el mini mapa dice por qué está en blanco: bloqueado, con error o sin geometrías', async () => {

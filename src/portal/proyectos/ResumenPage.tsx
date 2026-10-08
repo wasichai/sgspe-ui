@@ -33,6 +33,11 @@ const TIPOS_FORMALES = ['REUNION', 'REUNION INFORMATIVA', 'TALLER', 'ASAMBLEA', 
 
 const sinPermiso = (error: unknown): boolean => error instanceof ApiError && error.status === 403
 
+// un 403 es "no disponible" (como la jefatura y Atención); cualquier otro error, la alerta con su correlación y reintento
+function FalloDeLectura({ error, alReintentar }: { error: unknown; alReintentar: () => void }) {
+  return sinPermiso(error) ? <NoDisponible /> : <ErrorDeCarga error={error} alReintentar={alReintentar} />
+}
+
 export function ResumenPage() {
   const { projectId = '' } = useParams()
   const proyecto = useProyecto(projectId)
@@ -74,7 +79,16 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {jefatura.isPending ? (
                 t('comun.cargando')
               ) : jefatura.isError ? (
-                <NoDisponible />
+                sinPermiso(jefatura.error) ? (
+                  <NoDisponible />
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="text-sg-danger">{t('p360.resumen.jefaturaConError')}</span>
+                    <Button variant="secondary" size="sm" onClick={() => void jefatura.refetch()}>
+                      {t('comun.reintentar')}
+                    </Button>
+                  </span>
+                )
               ) : jefatura.data.length ? (
                 jefatura.data.map((j) => texto(j, 'member_user_email')).join(', ')
               ) : (
@@ -130,7 +144,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {stk03.isPending ? (
                 <Cargando />
               ) : stk03.isError ? (
-                <ErrorDeCarga error={stk03.error} alReintentar={() => void stk03.refetch()} />
+                <FalloDeLectura error={stk03.error} alReintentar={() => void stk03.refetch()} />
               ) : (
                 <MiniMatriz
                   etiqueta={t('p360.resumen.matriz')}
@@ -154,7 +168,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {stk02.isPending ? (
                 <Cargando />
               ) : stk02.isError ? (
-                <ErrorDeCarga error={stk02.error} alReintentar={() => void stk02.refetch()} />
+                <FalloDeLectura error={stk02.error} alReintentar={() => void stk02.refetch()} />
               ) : (
                 <BarraDePosturas indicador={stk02.data} titulo={t('p360.resumen.posturas')} />
               )}
@@ -166,7 +180,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
           {eng02.isPending ? (
             <Cargando />
           ) : eng02.isError ? (
-            <ErrorDeCarga error={eng02.error} alReintentar={() => void eng02.refetch()} />
+            <FalloDeLectura error={eng02.error} alReintentar={() => void eng02.refetch()} />
           ) : !eng02.data.available ? (
             <NoDisponible motivo={eng02.data.unavailableReason} />
           ) : !eng02.data.series?.length ? (
@@ -201,7 +215,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
         <section aria-label={t('p360.resumen.areas')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
           <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.areas')}</h2>
           {areas.isPending ? <Cargando /> : null}
-          {areas.isError ? <ErrorDeCarga error={areas.error} alReintentar={() => void areas.refetch()} /> : null}
+          {areas.isError ? <FalloDeLectura error={areas.error} alReintentar={() => void areas.refetch()} /> : null}
           <ul className="space-y-1 text-sm">
             {(areas.data ?? [])
               .filter((a) => a.state === 'approved')
@@ -252,7 +266,8 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
       .filter((e) => e.state === 'held' && TIPOS_FORMALES.includes(texto(e, 'engagement_type')))
       .map((e) => ({ id: e.id, texto: t('p360.resumen.actaPendiente', { titulo: texto(e, 'title') }), ruta: `/projects/${proyecto.id}/engagements/${e.id}` })),
     ...(grupos.data ?? [])
-      .filter((g) => g.state !== 'retired')
+      // una cuenta que no lee last_contact_date (la clave no viene en el registro) no puede decir si hubo contacto
+      .filter((g) => g.state !== 'retired' && 'last_contact_date' in g.attributes)
       .flatMap((g) => {
         const dias = diasEntre(atributo(g, 'last_contact_date'), hoy)
         if (dias !== null && dias <= inactividad) return []
@@ -300,7 +315,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
       {fallidas.map((f) => (
         <div key={f.clave} className="space-y-1 text-sm">
           <p className="font-medium">{t(`p360.resumen.fuentes.${f.clave}`)}</p>
-          {sinPermiso(f.consulta.error) ? <NoDisponible /> : <ErrorDeCarga error={f.consulta.error} alReintentar={() => void f.consulta.refetch()} />}
+          <FalloDeLectura error={f.consulta.error} alReintentar={() => void f.consulta.refetch()} />
         </div>
       ))}
       {items.length === 0 && !cargando && fallidas.length === 0 ? <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinAtencion')}</p> : null}
@@ -335,7 +350,7 @@ function Actividad({ proyecto }: { proyecto: string }) {
       {historia.isPending ? (
         <Cargando />
       ) : historia.isError ? (
-        <ErrorDeCarga error={historia.error} alReintentar={() => void historia.refetch()} />
+        <FalloDeLectura error={historia.error} alReintentar={() => void historia.refetch()} />
       ) : historia.data.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinActividad')}</p>
       ) : (
