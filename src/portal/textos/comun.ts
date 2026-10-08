@@ -9,7 +9,7 @@ export const ES_COMUN = {
   restringidoAyuda: 'Su rol no puede leer este dato',
   porQue: 'Por qué no se muestra',
   noDisponible: 'No disponible',
-  noDisponibleAyuda: 'Su cuenta no puede leer los datos de esta cifra',
+  noDisponibleAyuda: 'Su cuenta no puede leer estos datos',
   // unavailableReason de un indicador (plan 2.2): por qué una cifra no se muestra
   noDisponiblePorMotivo: {
     FIELD_NOT_READABLE: 'Su rol no puede leer un dato de esta cifra',
@@ -136,7 +136,7 @@ export const EN_COMUN: typeof ES_COMUN = {
   restringidoAyuda: 'Your role cannot read this data',
   porQue: 'Why it is not shown',
   noDisponible: 'Not available',
-  noDisponibleAyuda: 'Your account cannot read the data behind this figure',
+  noDisponibleAyuda: 'Your account cannot read this data',
   noDisponiblePorMotivo: {
     FIELD_NOT_READABLE: 'Your role cannot read a field behind this figure',
     OBJECT_NOT_READABLE: 'Your role cannot read the records behind this figure',

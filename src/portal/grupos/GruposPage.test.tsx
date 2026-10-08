@@ -40,6 +40,25 @@ describe('S16 · lista de grupos de interés', () => {
     expect(await within(filas()[1]).findByText('Persona registrada')).toBeInTheDocument()
   })
 
+  it('la postura restringida se explica una vez, en el encabezado: las celdas no llevan botón de ayuda', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    const tabla = screen.getByRole('table', { name: 'Grupos de interés' })
+    const encabezado = within(tabla).getByRole('columnheader', { name: /Postura/ })
+    // un solo botón de ayuda para toda la columna, en el encabezado
+    const ayuda = within(encabezado).getByRole('button', { name: 'Por qué no se muestra' })
+    expect(within(tabla).getAllByRole('button', { name: 'Por qué no se muestra' })).toEqual([ayuda])
+    // la celda sigue diciendo Restringido y su motivo (sr-only, en el encabezado) la describe
+    const celda = within(filas()[0]).getByText('Restringido')
+    const motivo = document.getElementById(celda.getAttribute('aria-describedby')!)!
+    expect(encabezado).toContainElement(motivo)
+    expect(motivo).toHaveTextContent('Su rol no puede leer este dato')
+    expect(motivo).toHaveClass('sr-only')
+    expect(celda).toHaveAccessibleDescription('Su rol no puede leer este dato')
+    await userEvent.click(ayuda)
+    expect(motivo).not.toHaveClass('sr-only')
+  })
+
   it('el nombre de una persona sale solo de lo que la API devuelve: sin las claves (ANALYST, READ_ONLY), Persona registrada', async () => {
     // quien lee given_names y surnames los recibe; a quien no, wasichai no le manda las claves (security.md §7.9)
     fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, [
@@ -210,7 +229,7 @@ describe('S16 · lista de grupos de interés', () => {
 
   it('en el límite, el día es el de Lima y no el del reloj: 60 días de calendario con un umbral de 60 no se marcan', async () => {
     // 2026-10-02T03:00Z es el 1 de octubre a las 22:00 en Lima. desde el 2026-08-02 son 60 días de calendario (no pasa el
-    // umbral de 60), pero por reloj son 60 días y 3 horas, que sí lo pasarían. el 2026-08-01 son 61 y sí se marca
+    // umbral de 60), pero por reloj son 61 días y 3 horas, que sí lo pasarían. el 2026-08-01 son 61 y sí se marca
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-02T03:00:00Z'))
     try {

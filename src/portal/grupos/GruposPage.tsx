@@ -1,11 +1,11 @@
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible, Restringido } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { useProyecto } from '../contexto/proyectos'
@@ -20,7 +20,7 @@ import { NuevoGrupo } from './NuevoGrupo'
 
 // S16 · lista de grupos de interés (screens.md §5): la misma página con alcance global (agrega la columna Proyecto) o de un
 // proyecto (ASM-076). vistas del sistema, filtros en la URL, selección para registrar una interacción con varios y el chip
-// de territorio. sin permiso para leer stance la columna dice "Restringida" y no se filtra por ella (security.md §7.9)
+// de territorio. sin permiso para leer stance la columna dice "Restringido" y no se filtra por ella (security.md §7.9)
 const VISTAS = ['prioridad', 'mios', 'sinEvaluar', 'sinContacto', 'todos', 'retirados'] as const
 const FILTROS = ['influence_group', 'stance', 'stakeholder_scope', 'relationship_status', 'stakeholder_type'] as const
 const POR_PAGINA = 25
@@ -40,6 +40,8 @@ export function GruposPage() {
   const grupos = useTodos('stakeholder', { project: proyecto, ...(territorio ?? {}) })
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
   const [creando, setCreando] = useState(false)
+  // la explicación única de la columna Postura cuando sus celdas están restringidas
+  const idDeLaPostura = useId()
   const conTablero = useTableroDisponible('stakeholders')
   // ni la postura ni la tolerancia de inactividad se deciden antes de que lleguen la definición y el proyecto: sin ellas, una
   // cuenta con acceso vería "Restringido" un instante y la vista "Sin contacto" usaría 90 días. en el alcance global no hay
@@ -199,6 +201,7 @@ export function GruposPage() {
                       ).map((c) => (
                         <Th key={c} scope="col">
                           {t(`grupos.columnas.${c}`)}
+                          {c === 'postura' && !leePostura ? <ExplicacionDeColumna id={idDeLaPostura} tipo="restringido" /> : null}
                         </Th>
                       ))}
                     </tr>
@@ -210,6 +213,7 @@ export function GruposPage() {
                         grupo={g}
                         global={!proyecto}
                         leePostura={leePostura}
+                        idDeLaPostura={idDeLaPostura}
                         seleccionado={seleccion.has(g.id)}
                         alSeleccionar={
                           proyecto
@@ -247,12 +251,14 @@ function Fila({
   grupo,
   global,
   leePostura,
+  idDeLaPostura,
   seleccionado,
   alSeleccionar
 }: {
   grupo: Registro
   global: boolean
   leePostura: boolean
+  idDeLaPostura: string
   seleccionado: boolean
   alSeleccionar?: (si: boolean) => void
 }) {
@@ -282,7 +288,7 @@ function Fila({
       {global ? <Td className="font-sg-mono text-sg-caption">{texto(del.data, 'code')}</Td> : null}
       <Td className="text-sm">{texto(localidad.data, 'name') || '—'}</Td>
       <Td className="text-sm">{evaluado ? texto(grupo, 'influence_group') || '—' : t('grupos.sinEvaluarValor')}</Td>
-      <Td className="text-sm">{leePostura ? texto(grupo, 'stance') || '—' : <Restringido />}</Td>
+      <Td className="text-sm">{leePostura ? texto(grupo, 'stance') || '—' : <Restringido describedPor={idDeLaPostura} />}</Td>
       <Td className="text-sm">{evaluado ? texto(grupo, 'information_priority') || '—' : t('grupos.sinEvaluarValor')}</Td>
       <Td>
         <EstadoChip objeto="stakeholder" estado={grupo.state} />

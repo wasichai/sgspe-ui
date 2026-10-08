@@ -7,7 +7,7 @@ import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
 import { EstadoChip } from './EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible, Restringido } from './Estados'
+import { Cargando, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido } from './Estados'
 import { KpiCard } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
@@ -129,6 +129,50 @@ describe('estados comunes', () => {
   })
 })
 
+describe('celdas de tabla restringidas', () => {
+  it('con describedPor no hay botón por celda: el motivo es el de la explicación única de la columna', async () => {
+    montar(
+      <table>
+        <thead>
+          <tr>
+            <th>
+              Columna <ExplicacionDeColumna id="explica" tipo="noDisponible" />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <Restringido describedPor="explica" />
+            </td>
+            <td>
+              <NoDisponible describedPor="explica" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    )
+    expect(await screen.findAllByRole('button', { name: 'Por qué no se muestra' })).toHaveLength(1)
+    for (const celda of [screen.getByText('Restringido'), screen.getByText('No disponible')]) {
+      expect(celda).toHaveAttribute('aria-describedby', 'explica')
+      expect(celda).toHaveAccessibleDescription('Su cuenta no puede leer estos datos')
+    }
+    expect(document.getElementById('explica')).toHaveClass('sr-only')
+  })
+
+  it('el botón de ayuda aislado mide al menos 24 px y tiene su foco visible', async () => {
+    montar(<Restringido />)
+    const boton = await screen.findByRole('button', { name: 'Por qué no se muestra' })
+    expect(boton).toHaveClass('size-6')
+    expect(boton.className).toMatch(/focus-visible:outline-/)
+  })
+
+  it('sin motivo, la ayuda de No disponible no habla de cifras: sirve para una lista', async () => {
+    montar(<NoDisponible />)
+    expect(await screen.findByText('No disponible')).toHaveAttribute('title', 'Su cuenta no puede leer estos datos')
+  })
+})
+
 describe('KpiCard', () => {
   it.each([
     [{ code: 'KPI-STK-05', label: 'x', available: true, value: 40, numerator: 4, denominator: 10, unit: '%' }, ['40', '4 / 10 · %']],
@@ -154,6 +198,13 @@ describe('KpiCard', () => {
     montar(<KpiCard titulo="Cifra" cargando={false} error={new ErrorDeSgspe(500, 'Falló', [], 'corr-9')} />)
     expect(await screen.findByText(/corr-9/)).toBeInTheDocument()
     expect(screen.queryByText('Cargando…')).not.toBeInTheDocument()
+  })
+
+  it('un 403 del indicador dice "No disponible", no un error rojo; otro error sí es un error', async () => {
+    montar(<KpiCard titulo="Cifra" cargando={false} error={new ErrorDeSgspe(403, 'Prohibido', [], 'corr-403')} />)
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText(/corr-403/)).not.toBeInTheDocument()
   })
 
   it('mientras carga usa el "Cargando…" compacto: el mismo texto accesible, sin el relleno vertical de la página', async () => {

@@ -52,24 +52,19 @@ export function Consulta<T>({ consulta, children }: { consulta: UseQueryResult<T
   return <>{children(consulta.data)}</>
 }
 
-// el motivo de un dato que no se muestra: el atributo title no lo lee un teclado ni un teléfono. el motivo está siempre en el
-// DOM (oculto a la vista) y enlazado con aria-describedby, y un botón de ayuda lo despliega a la vista
-function ConMotivo({ icono, etiqueta, motivo }: { icono: ReactNode; etiqueta: string; motivo: string }) {
+// el botón de ayuda y el motivo que despliega: el motivo está siempre en el DOM (oculto a la vista) con el id que otros
+// elementos referencian por aria-describedby. el botón mide al menos 24 px (WCAG 2.5.8) y tiene su propio foco visible
+function AyudaDelMotivo({ id, motivo }: { id: string; motivo: string }) {
   const { t } = useTranslation(NS)
-  const id = useId()
   const [abierto, setAbierto] = useState(false)
   return (
-    <span className="inline-flex flex-wrap items-center gap-1 text-sg-text-muted">
-      {icono}
-      <span title={motivo} aria-describedby={id}>
-        {etiqueta}
-      </span>
+    <>
       <button
         type="button"
         aria-label={t('comun.porQue')}
         aria-expanded={abierto}
         aria-describedby={id}
-        className="rounded-sg-sm p-0.5 hover:text-sg-text"
+        className="inline-flex size-6 items-center justify-center rounded-sg-sm hover:text-sg-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sg-focus"
         onClick={() => setAbierto(!abierto)}
       >
         <CircleHelp aria-hidden className="size-3.5" />
@@ -77,18 +72,64 @@ function ConMotivo({ icono, etiqueta, motivo }: { icono: ReactNode; etiqueta: st
       <span id={id} className={abierto ? 'text-sg-caption' : 'sr-only'}>
         {motivo}
       </span>
+    </>
+  )
+}
+
+// el motivo de un dato que no se muestra: el atributo title no lo lee un teclado ni un teléfono. el motivo está siempre en el
+// DOM (oculto a la vista) y enlazado con aria-describedby, y un botón de ayuda lo despliega a la vista.
+// en una celda de tabla, describedPor es el id de la explicación única del encabezado de la columna (ExplicacionDeColumna):
+// la celda no lleva botón (una parada de tabulador por fila) y el motivo se lee una sola vez
+function ConMotivo({ icono, etiqueta, motivo, describedPor }: { icono: ReactNode; etiqueta: string; motivo: string; describedPor?: string }) {
+  const id = useId()
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1 text-sg-text-muted">
+      {icono}
+      <span title={motivo} aria-describedby={describedPor ?? id}>
+        {etiqueta}
+      </span>
+      {describedPor ? null : <AyudaDelMotivo id={id} motivo={motivo} />}
     </span>
   )
 }
 
-export function Restringido() {
+export function Restringido({ describedPor }: { describedPor?: string }) {
   const { t } = useTranslation(NS)
-  return <ConMotivo icono={<Lock aria-hidden className="size-3.5" />} etiqueta={t('comun.restringido')} motivo={t('comun.restringidoAyuda')} />
+  return (
+    <ConMotivo
+      icono={<Lock aria-hidden className="size-3.5" />}
+      etiqueta={t('comun.restringido')}
+      motivo={t('comun.restringidoAyuda')}
+      describedPor={describedPor}
+    />
+  )
 }
 
-// una cifra que no se muestra dice por qué (unavailableReason, plan 2.2): sin permiso sobre un campo o un objeto, candado
-// y "No disponible"; si el indicador se calcula para un solo proyecto, pide elegirlo
-export function NoDisponible({ motivo }: { motivo?: string | null }) {
+// la explicación única de una columna con celdas restringidas o no disponibles: va en el encabezado, con el id que las celdas
+// (Restringido o NoDisponible con describedPor) referencian. con soloLectores no lleva botón: el motivo queda en el DOM para
+// los lectores de pantalla y la vista se queda con el candado y la etiqueta de cada celda (cuando no se sabe de antemano si
+// alguna celda se restringirá)
+export function ExplicacionDeColumna({ id, tipo, soloLectores }: { id: string; tipo: 'restringido' | 'noDisponible'; soloLectores?: boolean }) {
+  const { t } = useTranslation(NS)
+  const motivo = t(tipo === 'restringido' ? 'comun.restringidoAyuda' : 'comun.noDisponibleAyuda')
+  if (soloLectores) {
+    return (
+      <span id={id} className="sr-only">
+        {motivo}
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 font-normal text-sg-text-muted">
+      <AyudaDelMotivo id={id} motivo={motivo} />
+    </span>
+  )
+}
+
+// un dato que no se muestra dice por qué (unavailableReason, plan 2.2): sin permiso sobre un campo o un objeto, candado
+// y "No disponible"; si el indicador se calcula para un solo proyecto, pide elegirlo. sin motivo, el texto es neutro: sirve
+// igual para una cifra que para una lista
+export function NoDisponible({ motivo, describedPor }: { motivo?: string | null; describedPor?: string }) {
   const { t } = useTranslation(NS)
   const ayuda = motivo ? t(`comun.noDisponiblePorMotivo.${motivo}`, { defaultValue: t('comun.noDisponibleAyuda') }) : t('comun.noDisponibleAyuda')
   const unProyecto = motivo === 'SINGLE_PROJECT_REQUIRED'
@@ -97,6 +138,7 @@ export function NoDisponible({ motivo }: { motivo?: string | null }) {
       icono={unProyecto ? <Info aria-hidden className="size-3.5" /> : <Lock aria-hidden className="size-3.5" />}
       etiqueta={unProyecto ? t('comun.eligeUnProyecto') : t('comun.noDisponible')}
       motivo={ayuda}
+      describedPor={describedPor}
     />
   )
 }

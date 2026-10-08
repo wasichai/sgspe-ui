@@ -253,6 +253,10 @@ describe('S10 · área de influencia', () => {
       await waitFor(() => expect(filas()).toHaveLength(3))
       await waitFor(() => expect(filas()[2].textContent).toContain('No disponible'))
       expect(filas()[2].textContent).not.toContain('l9')
+      // sin un botón de ayuda por fila: el motivo es el de la columna y los lectores de pantalla lo reciben una sola vez
+      const celda = within(filas()[2]).getByText('No disponible')
+      expect(within(filas()[2]).queryByRole('button', { name: 'Por qué no se muestra' })).not.toBeInTheDocument()
+      expect(celda).toHaveAccessibleDescription('Su cuenta no puede leer estos datos')
     })
   })
 

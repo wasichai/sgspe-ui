@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
-import { Cargando, Consulta, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
+import { Cargando, Consulta, ErrorDeCarga, ExplicacionDeColumna, NoDisponible } from '../componentes/Estados'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError, usePedir } from '../datos/http'
 import { atributo, leerTodos, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
@@ -33,6 +33,8 @@ export function AreaDeInfluenciaPage() {
 
 function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
   const { t } = useTranslation(NS)
+  // la explicación única de los lugares ilegibles, en el encabezado de la columna
+  const idDelLugar = useId()
   const { can } = useAuth()
   const proyecto = String(atributo(area, 'project'))
   const asignado = useAsignadoAlProyecto(proyecto)
@@ -130,6 +132,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
             {(['lugar', 'tipo', 'condicion', 'criterio', 'justificacion', 'estudiado'] as const).map((c) => (
               <Th key={c} scope="col">
                 {t(`areas.columnas.${c}`)}
+                {c === 'lugar' ? <ExplicacionDeColumna id={idDelLugar} tipo="noDisponible" soloLectores /> : null}
               </Th>
             ))}
             {vigente ? <Th scope="col">{t('areas.columnas.comparacion')}</Th> : null}
@@ -137,10 +140,10 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
         </thead>
         <tbody>
           {(miembros.data ?? []).map((m) => (
-            <FilaDeMiembro key={m.id} miembro={m} comparacion={comparacion(m)} />
+            <FilaDeMiembro key={m.id} miembro={m} comparacion={comparacion(m)} idDelLugar={idDelLugar} />
           ))}
           {salen.map((m) => (
-            <FilaDeMiembro key={`sale-${m.id}`} miembro={m} comparacion="sale" />
+            <FilaDeMiembro key={`sale-${m.id}`} miembro={m} comparacion="sale" idDelLugar={idDelLugar} />
           ))}
         </tbody>
       </Table>
@@ -161,13 +164,13 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
 
 type ComparacionDeMiembro = 'igual' | 'nuevo' | 'sale' | 'cargando' | 'sinDato' | null
 
-function FilaDeMiembro({ miembro, comparacion }: { miembro: Registro; comparacion: ComparacionDeMiembro }) {
+function FilaDeMiembro({ miembro, comparacion, idDelLugar }: { miembro: Registro; comparacion: ComparacionDeMiembro; idDelLugar: string }) {
   const { t } = useTranslation(NS)
   const tipo = tipoDe(miembro)
   const lugar = useRegistro(tipo, String(atributo(miembro, tipo)))
   return (
     <tr className={comparacion === 'sale' ? 'text-sg-text-muted line-through' : undefined}>
-      <Td>{lugar.isError ? <NoDisponible /> : lugar.isPending ? '…' : texto(lugar.data, 'name') || '—'}</Td>
+      <Td>{lugar.isError ? <NoDisponible describedPor={idDelLugar} /> : lugar.isPending ? '…' : texto(lugar.data, 'name') || '—'}</Td>
       <Td className="text-sm">{t(`areas.tiposDeMiembro.${tipo}`)}</Td>
       <Td className="text-sm">{texto(miembro, 'member_condition')}</Td>
       <Td className="text-sm">{texto(miembro, 'applied_criteria')}</Td>
