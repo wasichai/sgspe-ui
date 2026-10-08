@@ -180,6 +180,14 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
 function Campanas({ proyecto, editable }: { proyecto: string; editable: boolean }) {
   const { t } = useTranslation(NS)
   const campanas = useTodos('exploration_campaign', { project: proyecto })
+  const definicion = useDefinicion('exploration_campaign')
+  // los valores ENUM se guardan en español MAYÚSCULAS (ASM-025) y la metadata no trae etiquetas por valor: cada uno sale con la
+  // etiqueta de su campo, y sin ella (mientras llega la metadata) solo el valor
+  const conEtiqueta = (c: Registro, campo: string) => {
+    const valor = texto(c, campo)
+    const etiqueta = campoDe(definicion.data, campo)?.label
+    return valor && etiqueta ? `${etiqueta}: ${valor}` : valor
+  }
   return (
     <div className="space-y-3 pt-3">
       <Consulta consulta={campanas}>
@@ -193,7 +201,7 @@ function Campanas({ proyecto, editable }: { proyecto: string; editable: boolean 
                 <li key={c.id} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
                   <p className="font-medium">{texto(c, 'name')}</p>
                   <p className="text-sg-caption text-sg-text-muted">
-                    {texto(c, 'campaign_status')} · {texto(c, 'activity_type')}
+                    {[conEtiqueta(c, 'campaign_status'), conEtiqueta(c, 'activity_type')].filter(Boolean).join(' · ')}
                   </p>
                   {tope ? (
                     <div
@@ -273,8 +281,13 @@ function FormularioDeParametros({ proyecto, editable, recargar }: { proyecto: Re
   )
   const hayCambios = Object.keys(cambios).length > 0
   const invalido = Object.values(cambios).some((v) => typeof v === 'number' && Number.isNaN(v))
-  const cambiar = (campo: string, valor: number | boolean) => {
-    setTecleados((v) => ({ ...v, [campo]: valor }))
+  // devolver un parámetro a su valor original lo saca de lo tecleado: no se envía ni pisa el cambio de otra persona
+  const cambiar = (p: (typeof PARAMETROS_F2)[number], valor: number | boolean) => {
+    const original = vigente(proyecto.attributes, p)
+    setTecleados((v) => {
+      const resto = Object.fromEntries(Object.entries(v).filter(([campo]) => campo !== p.campo))
+      return Object.is(valor, original) ? resto : { ...resto, [p.campo]: valor }
+    })
     if (actualizar.isSuccess || actualizar.isError) actualizar.reset()
   }
   return (
@@ -310,7 +323,7 @@ function FormularioDeParametros({ proyecto, editable, recargar }: { proyecto: Re
                   {t(`p360.parametros.${p.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
                 </label>
                 {p.tipo === 'politica' ? (
-                  <input id={id} type="checkbox" disabled={bloqueado} checked={Boolean(valor)} onChange={(e) => cambiar(p.campo, e.target.checked)} />
+                  <input id={id} type="checkbox" disabled={bloqueado} checked={Boolean(valor)} onChange={(e) => cambiar(p, e.target.checked)} />
                 ) : (
                   // el campo se vuelve a pintar cuando el registro cambia su valor (lo no tocado se actualiza, lo tecleado
                   // recupera su texto)
@@ -324,7 +337,7 @@ function FormularioDeParametros({ proyecto, editable, recargar }: { proyecto: Re
                     entero={campoDe(definicion.data, p.campo)?.type === 'INTEGER'}
                     intentoDeGuardar={intento}
                     disabled={bloqueado}
-                    alCambiar={(n) => cambiar(p.campo, n)}
+                    alCambiar={(n) => cambiar(p, n)}
                   />
                 )}
               </div>

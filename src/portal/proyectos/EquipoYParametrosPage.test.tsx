@@ -1,17 +1,23 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { FetchMock } from '@wasichai/testing'
+import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { definicion, pagina, registro, workflow } from '../../test/montar'
+import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
+import { useDefinicion } from '../datos/registros'
+import { EquipoYParametrosPage } from './EquipoYParametrosPage'
 
 let fetch: FetchMock | null = null
 let red: Red | null = null
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  // ninguna prueba depende del reloj real: el instante es 03:00Z del 2 de octubre, cuando en Lima (UTC-5) todavía es el 1, que
+  // es la fecha que cuenta. solo se finge Date: los temporizadores siguen reales
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-02T03:00:00Z'))
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -49,12 +55,6 @@ const PROGRAMADA = registro('a3', {
   end_date: null
 })
 
-// el reloj en 03:00Z del 2 de octubre: en Lima todavía es el 1 (UTC-5), y es la fecha que cuenta
-const enLima = () => {
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date('2026-10-02T03:00:00Z'))
-}
-
 const rutas = () => [
   { path: '/objects/project/records/p1', body: P1 },
   { method: 'PUT', path: '/objects/project/records/p1', body: P1 },
@@ -72,9 +72,25 @@ const rutas = () => [
   { method: 'PUT', path: '/objects/project_assignment/records/a1', body: VIGENTE },
   { method: 'PUT', path: '/objects/project_assignment/records/a3', body: PROGRAMADA },
   {
+    path: '/metadata/objects/exploration_campaign',
+    body: definicion('exploration_campaign', [
+      ['campaign_status', { type: 'ENUM', label: 'Estado de la campaña', enumOptions: ['EN EJECUCION'] }],
+      ['activity_type', { type: 'ENUM', label: 'Tipo de actividad', enumOptions: ['PERFORACION'] }],
+      'name'
+    ])
+  },
+  {
     path: '/objects/exploration_campaign/records',
     body: pagina([
-      registro('c1', { name: 'Perforación 2026', social_support_cap: 100000, executed_social_amount: 25000, currency: 'PEN', other_currency_items_count: 2 })
+      registro('c1', {
+        name: 'Perforación 2026',
+        campaign_status: 'EN EJECUCION',
+        activity_type: 'PERFORACION',
+        social_support_cap: 100000,
+        executed_social_amount: 25000,
+        currency: 'PEN',
+        other_currency_items_count: 2
+      })
     ])
   },
   { path: '/objects/project_party/records', body: pagina([]) },
@@ -90,7 +106,6 @@ const PAD = permisos({
 
 describe('S11 · equipo y parámetros', () => {
   it('marca las asignaciones vencidas y programadas; termina una vigente con la fecha de Lima, tras confirmar', async () => {
-    enLima()
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed()
     const tabla = await screen.findByRole('table', { name: 'Equipo' })
@@ -108,7 +123,6 @@ describe('S11 · equipo y parámetros', () => {
   })
 
   it('cancelar la confirmación no escribe, y terminar una programada no deja el fin antes del inicio', async () => {
-    enLima()
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed()
     const tabla = await screen.findByRole('table', { name: 'Equipo' })
@@ -177,6 +191,12 @@ describe('S11 · equipo y parámetros', () => {
     expect(await screen.findByRole('progressbar', { name: 'Perforación 2026' })).toHaveAttribute('aria-valuenow', '25000')
     expect(screen.getAllByText('25,000 de 100,000 PEN').length).toBeGreaterThan(0)
     expect(screen.getByText('2 registros en otra moneda no se suman (ASM-063)')).toBeInTheDocument()
+  })
+
+  it('el estado y el tipo de actividad de una campaña salen con la etiqueta de su campo en la metadata, no solos', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    await userEvent.click(await screen.findByRole('tab', { name: 'Campañas' }))
+    expect(await screen.findByText('Estado de la campaña: EN EJECUCION · Tipo de actividad: PERFORACION')).toBeInTheDocument()
   })
 
   it('los parámetros dicen si son por defecto o cambiados y se guardan con la versión leída', async () => {
@@ -293,6 +313,7 @@ describe('S11 · equipo y parámetros', () => {
     await userEvent.type(poder, '2.5')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
     const recargar = await screen.findByRole('button', { name: 'Recargar' })
+    expect(screen.getByText(/Otra persona cambió este registro/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Umbral de poder/)).toHaveValue('2.5')
     await userEvent.click(recargar)
     await waitFor(() => expect(screen.getByLabelText(/Umbral de interés/)).toHaveValue('5'))
@@ -302,6 +323,46 @@ describe('S11 · equipo y parámetros', () => {
     const segundo = red.a('PUT', '/objects/project/records/p1')[1]
     expect(segundo.cabeceras.get('If-Match')).toBe(`"${deOtra.updatedAt}"`)
     expect(segundo.cuerpo).toMatchObject({ attributes: { interest_threshold: 5, power_threshold: 2.5 } })
+  })
+
+  it('un parámetro devuelto a su valor original deja de contar como tecleado: no se envía y no pisa el cambio de otra persona', async () => {
+    // mientras tanto otra persona subió el umbral de interés a 6
+    const deOtra = { ...P1, updatedAt: '2026-10-06T10:00:00Z', attributes: { ...P1.attributes, interest_threshold: 6 } }
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    let conflicto = false
+    red = espiarRed([
+      {
+        method: 'PUT',
+        path: '/objects/project/records/p1',
+        responder: () => {
+          conflicto = true
+          return problema(412, 'Precondition Failed')
+        }
+      },
+      {
+        path: '/objects/project/records/p1',
+        responder: () => new Response(JSON.stringify(conflicto ? deOtra : P1), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const interes = await screen.findByLabelText(/Umbral de interés/)
+    const poder = screen.getByLabelText(/Umbral de poder/)
+    await userEvent.clear(interes)
+    await userEvent.type(interes, '5')
+    await userEvent.clear(interes)
+    await userEvent.type(interes, '4')
+    // de vuelta en su valor original (4): sin cambios, «Guardar» sigue deshabilitado
+    expect(screen.getByRole('button', { name: 'Guardar parámetros' })).toBeDisabled()
+    await userEvent.clear(poder)
+    await userEvent.type(poder, '2.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
+    // lo devuelto a su valor original toma la versión nueva; lo que sí se tecleó se conserva
+    await waitFor(() => expect(screen.getByLabelText(/Umbral de interés/)).toHaveValue('6'))
+    expect(screen.getByLabelText(/Umbral de poder/)).toHaveValue('2.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project/records/p1')).toHaveLength(2))
+    expect(red.a('PUT', '/objects/project/records/p1')[1].cuerpo).toMatchObject({ attributes: { interest_threshold: 6, power_threshold: 2.5 } })
   })
 
   it('con permiso para escribir solo algunos campos, solo esos se habilitan (la definición ya llegó)', async () => {
@@ -318,10 +379,21 @@ describe('S11 · equipo y parámetros', () => {
       ['power_threshold', { type: 'DECIMAL', editable: false }],
       ['name', { editable: false }]
     ])
-    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [{ path: '/metadata/objects/project', body: soloLectura }, ...rutas()])
-    red = espiarRed()
+    // la sonda lee la misma consulta que la pantalla (misma clave, misma caché): cuando dice que la definición llegó, la
+    // pantalla ya la vio, y la ausencia de «Guardar parámetros» es por la definición y no porque aún carga
+    function Sonda() {
+      return useDefinicion('project').isSuccess ? <span>definición llegó</span> : null
+    }
+    fetch = mockFetch([{ path: '/metadata/objects/project', body: soloLectura }, ...rutas()])
+    montar(
+      <>
+        <EquipoYParametrosPage />
+        <Sonda />
+      </>,
+      { ruta: '/projects/p1/settings', camino: '/projects/:projectId/settings', usuario: ADMINISTRACION_DE_PROYECTO, permisos: PAD }
+    )
     await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
-    await waitFor(() => expect(red!.a('GET', '/metadata/objects/project').length).toBeGreaterThan(0))
+    await screen.findByText('definición llegó')
     expect(await screen.findByLabelText(/Umbral de poder/)).toBeDisabled()
     expect(screen.getByLabelText(/Umbral de interés/)).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Guardar parámetros' })).not.toBeInTheDocument()
