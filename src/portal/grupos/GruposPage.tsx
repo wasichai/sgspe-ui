@@ -117,7 +117,11 @@ export function GruposPage() {
       </div>
       {territorio === null ? <Alert tone="notice">{t('contexto.noAplica')}</Alert> : null}
       {definicion.isError && !definicion.data ? (
-        <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} />
+        sinPermiso(definicion.error) ? (
+          <NoDisponible />
+        ) : (
+          <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} />
+        )
       ) : preparando ? (
         <Cargando />
       ) : (

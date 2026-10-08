@@ -170,6 +170,15 @@ describe('S16 · lista de grupos de interés', () => {
     expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
   })
 
+  it('un 403 al leer la definición dice "No disponible", no un error con reintento', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    red = espiarRed([{ path: '/metadata/objects/stakeholder', responder: () => problema(403, 'Prohibido') }])
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
+  })
+
   it('la vista "Sin contacto" espera al proyecto: mientras carga no usa 90 días, y con él usa los suyos', async () => {
     let entregar: () => void = () => {}
     const llegada = new Promise<void>((resolver) => (entregar = resolver))
