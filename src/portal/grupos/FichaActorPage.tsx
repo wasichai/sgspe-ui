@@ -1,4 +1,4 @@
-import type { UseQueryResult } from '@tanstack/react-query'
+import { useQueries, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
@@ -9,6 +9,7 @@ import { Cargando, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { nombreDe } from '../componentes/NombreDeActor'
 import { Rastro } from '../contexto/Rastro'
+import { usePedir } from '../datos/http'
 import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
@@ -104,7 +105,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
           <section aria-label={t('grupos.actor.cargos')} className="space-y-2">
-            <Table aria-label={t('grupos.actor.cargos')}>
+            <Table aria-label={t('grupos.actor.tablaCargos')}>
               <thead>
                 <tr>
                   {(['cargo', 'persona', 'estado', 'periodo'] as const).map((c) => (
@@ -123,7 +124,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
             <EstadoDeLista consultas={[cargos]} vacio={t('grupos.actor.sinCargos')} />
           </section>
           <section aria-label={t('grupos.actor.relaciones')} className="space-y-2">
-            <Table aria-label={t('grupos.actor.relaciones')}>
+            <Table aria-label={t('grupos.actor.tablaRelaciones')}>
               <thead>
                 <tr>
                   {(['tipo', 'con', 'desde'] as const).map((c) => (
@@ -147,11 +148,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
         <aside className="space-y-4 text-sm">
           <section aria-label={t('grupos.actor.proyectos')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
             <h2 className="font-medium">{t('grupos.actor.proyectos')}</h2>
-            <ul>
-              {(grupos.data ?? []).map((g) => (
-                <ProyectoDelGrupo key={g.id} grupo={g} />
-              ))}
-            </ul>
+            <ProyectosDelActor grupos={grupos.data ?? []} />
             <EstadoDeLista consultas={[grupos]} vacio={t('grupos.actor.sinProyectos')} />
           </section>
           <section aria-label={t('grupos.actor.contactos')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
@@ -187,14 +184,16 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
 }
 
 // el otro lado de un cargo o una relación: mientras se lee, "…"; una persona que no se pudo leer o sin nombres, "Persona
-// registrada" (el nombre sale solo de lo que la API devuelve); una organización que no se pudo leer, "No disponible"
+// registrada" (el nombre sale solo de lo que la API devuelve); una organización que no se pudo leer o sin nombre legible,
+// "No disponible" (nunca "Persona registrada": no es una persona)
 function ActorVinculado({ objeto, id, enlazar }: { objeto: Tipo; id: string | undefined; enlazar: boolean }) {
   const { t } = useTranslation(NS)
   const actor = useRegistro(objeto, id)
   if (!id) return <>—</>
   if (actor.isPending) return <>…</>
-  if (actor.isError && objeto === 'organization') return <NoDisponible />
-  const nombre = nombreDe(actor.data, objeto, t('comun.personaRegistrada')) || t('comun.personaRegistrada')
+  const nombre =
+    objeto === 'person' ? nombreDe(actor.data, objeto, t('comun.personaRegistrada')) || t('comun.personaRegistrada') : nombreDe(actor.data, objeto, '')
+  if (!nombre) return <NoDisponible />
   return enlazar ? (
     <Link to={`/actors/${id}`} className="text-sg-primary-text underline">
       {nombre}
@@ -233,23 +232,39 @@ function FilaDeRelacion({ relacion, otro }: { relacion: Registro; otro: 'to' | '
   )
 }
 
-function ProyectoDelGrupo({ grupo }: { grupo: Registro }) {
-  const proyecto = useRegistro('project', String(atributo(grupo, 'project')))
-  // un proyecto que la cuenta no puede leer (403 o 404) no se lista (screens.md S18); cualquier otro error se dice
-  if (proyecto.isPending) return <li>…</li>
-  if (proyecto.isError && !proyecto.data) {
-    return [403, 404].includes(estadoHttp(proyecto.error) ?? 0) ? null : (
-      <li>
-        <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />
-      </li>
-    )
-  }
-  if (!proyecto.data) return null
+// los proyectos del actor se leen juntos: mientras alguno carga hay un solo estado de carga (una fila pendiente por proyecto
+// diría cuántos grupos tiene el actor fuera del alcance de la cuenta). un proyecto que la cuenta no puede leer (403 o 404) no
+// se lista (screens.md S18); cualquier otro error se dice una vez, con su reintento. mismas claves que useRegistro: comparten caché
+function ProyectosDelActor({ grupos }: { grupos: Registro[] }) {
+  const { t } = useTranslation(NS)
+  const pedir = usePedir()
+  // un grupo sin proyecto (la clave ausente) no tiene nada que leer: no se pide /records/undefined
+  const conProyecto = grupos.flatMap((g) => {
+    const proyecto = atributo<string>(g, 'project')
+    return proyecto ? [{ grupo: g, proyecto }] : []
+  })
+  const consultas = useQueries({
+    queries: conProyecto.map(({ proyecto }) => ({
+      queryKey: ['record', 'project', proyecto],
+      queryFn: () => pedir<Registro>(`/objects/project/records/${proyecto}`)
+    }))
+  })
+  if (conProyecto.length === 0) return null
+  if (consultas.some((c) => c.isPending)) return <Cargando compacto />
+  const fallida = consultas.find((c) => c.isError && !c.data && ![403, 404].includes(estadoHttp(c.error) ?? 0))
+  if (fallida) return <FalloDeLectura error={fallida.error} alReintentar={() => consultas.forEach((c) => void c.refetch())} />
+  const legibles = conProyecto.flatMap(({ grupo }, i) => (consultas[i].data ? [{ grupo, proyecto: consultas[i].data }] : []))
+  // todos ilegibles: se dice con honestidad, sin decir cuántos son
+  if (legibles.length === 0) return <p className="text-sm text-sg-text-muted">{t('grupos.actor.proyectosIlegibles')}</p>
   return (
-    <li>
-      <Link to={`/projects/${proyecto.data.id}/stakeholders/${grupo.id}`} className="text-sg-primary-text underline">
-        {texto(proyecto.data, 'code')} · {texto(proyecto.data, 'name')}
-      </Link>
-    </li>
+    <ul>
+      {legibles.map(({ grupo, proyecto }) => (
+        <li key={grupo.id}>
+          <Link to={`/projects/${proyecto!.id}/stakeholders/${grupo.id}`} className="text-sg-primary-text underline">
+            {texto(proyecto, 'code')} · {texto(proyecto, 'name')}
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }

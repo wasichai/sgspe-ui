@@ -80,8 +80,11 @@ export const ES_GRUPOS = {
     organizacion: 'Organización',
     persona: 'Persona',
     cargos: 'Cargos',
+    // la tabla no repite el nombre de su región
+    tablaCargos: 'Lista de cargos',
     columnasCargo: { cargo: 'Cargo', persona: 'Persona', estado: 'Estado', periodo: 'Periodo' },
     relaciones: 'Red de relaciones',
+    tablaRelaciones: 'Lista de relaciones',
     columnasRelacion: { tipo: 'Relación', con: 'Con', desde: 'Desde' },
     proyectos: 'Es grupo de interés en',
     contactos: 'Medios de contacto',
@@ -91,7 +94,8 @@ export const ES_GRUPOS = {
     afiliada: 'Afiliada a',
     sinCargos: 'Sin cargos registrados',
     sinRelaciones: 'Sin relaciones registradas',
-    sinProyectos: 'Aún no es grupo de interés en ningún proyecto',
+    sinProyectos: 'Sin grupos de interés en los proyectos que su cuenta puede ver',
+    proyectosIlegibles: 'Los proyectos donde es grupo de interés no están disponibles para su cuenta',
     sinContactos: 'Sin medios de contacto registrados'
   },
   matriz: {
@@ -253,8 +257,10 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     organizacion: 'Organization',
     persona: 'Person',
     cargos: 'Positions',
+    tablaCargos: 'Positions list',
     columnasCargo: { cargo: 'Position', persona: 'Person', estado: 'Status', periodo: 'Term' },
     relaciones: 'Relationship network',
+    tablaRelaciones: 'Relationships list',
     columnasRelacion: { tipo: 'Relationship', con: 'With', desde: 'Since' },
     proyectos: 'Stakeholder in',
     contactos: 'Contact methods',
@@ -264,7 +270,8 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     afiliada: 'Affiliated to',
     sinCargos: 'No positions registered',
     sinRelaciones: 'No relationships registered',
-    sinProyectos: 'Not yet a stakeholder in any project',
+    sinProyectos: 'No stakeholders in the projects your account can see',
+    proyectosIlegibles: 'The projects where it is a stakeholder are not available to your account',
     sinContactos: 'No contact methods registered'
   },
   matriz: {
