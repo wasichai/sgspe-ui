@@ -89,7 +89,11 @@ export const ES_GRUPOS = {
     sinConsentimiento: 'sin consentimiento: no se usa para avisos',
     agregarCargo: 'Agregar cargo',
     representa: 'Comunidad que representa',
-    afiliada: 'Afiliada a'
+    afiliada: 'Afiliada a',
+    sinCargos: 'Sin cargos registrados',
+    sinRelaciones: 'Sin relaciones registradas',
+    sinProyectos: 'Aún no es grupo de interés en ningún proyecto',
+    sinContactos: 'Sin medios de contacto registrados'
   },
   matriz: {
     titulo: 'Matriz interés × poder',
@@ -256,7 +260,11 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     sinConsentimiento: 'no consent: not used for notices',
     agregarCargo: 'Add position',
     representa: 'Community it represents',
-    afiliada: 'Affiliated to'
+    afiliada: 'Affiliated to',
+    sinCargos: 'No positions registered',
+    sinRelaciones: 'No relationships registered',
+    sinProyectos: 'Not yet a stakeholder in any project',
+    sinContactos: 'No contact methods registered'
   },
   matriz: {
     titulo: 'Interest × power matrix',

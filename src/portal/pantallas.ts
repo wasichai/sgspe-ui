@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { FichaActorPage } from './grupos/FichaActorPage'
 import { GruposRutas } from './grupos/GruposRutas'
 import { ProyectosRutas } from './proyectos/ProyectosRutas'
 import type { ClaveDeSeccion } from './shell/navTree'
@@ -17,4 +18,4 @@ export interface RutaAdicional {
   Pantalla: ComponentType
 }
 
-export const RUTAS_ADICIONALES: RutaAdicional[] = []
+export const RUTAS_ADICIONALES: RutaAdicional[] = [{ ruta: '/actors/:actorId', seccion: 'stakeholders', Pantalla: FichaActorPage }]
