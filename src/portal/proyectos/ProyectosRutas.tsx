@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router'
+import { parametrosDe, PorRuta } from '../componentes/PorRuta'
 import { ProyectoLayout } from '../contexto/ProyectoLayout'
 import { GuardaDeSeccion } from '../shell/GuardaDeSeccion'
 import { NAV_TREE } from '../shell/navTree'
@@ -18,21 +19,9 @@ export function ProyectosRutas() {
         <Route index element={<Navigate to="overview" replace />} />
         {RUTAS_EN_PROYECTO.map(({ ruta, Pantalla, seccion }) => {
           const guarda = seccion ? NAV_TREE.find((s) => s.clave === seccion) : undefined
-          return (
-            <Route
-              key={ruta}
-              path={ruta}
-              element={
-                guarda ? (
-                  <GuardaDeSeccion seccion={guarda}>
-                    <Pantalla />
-                  </GuardaDeSeccion>
-                ) : (
-                  <Pantalla />
-                )
-              }
-            />
-          )
+          // cada pantalla se monta de nuevo por su proyecto y su registro: nada de lo abierto o escrito pasa a otro
+          const pantalla = <PorRuta parametros={['projectId', ...parametrosDe(ruta)]} Pantalla={Pantalla} />
+          return <Route key={ruta} path={ruta} element={guarda ? <GuardaDeSeccion seccion={guarda}>{pantalla}</GuardaDeSeccion> : pantalla} />
         })}
       </Route>
     </Routes>

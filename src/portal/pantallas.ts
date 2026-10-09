@@ -1,9 +1,13 @@
 import type { ComponentType } from 'react'
+import { AcuerdosPage } from './acuerdos/AcuerdosPage'
+import { CompromisosRutas } from './compromisos/CompromisosRutas'
+import { DocumentosRutas } from './documentos/DocumentosRutas'
 import { FichaActorPage } from './grupos/FichaActorPage'
 import { GruposRutas } from './grupos/GruposRutas'
 import { ProyectosRutas } from './proyectos/ProyectosRutas'
 import { RelacionamientoRutas } from './relacionamiento/RelacionamientoRutas'
 import { ReportesRutas } from './reportes/ReportesRutas'
+import { TareasRutas } from './tareas/TareasRutas'
 import { VisitasPage } from './relacionamiento/VisitaDeCampoPage'
 import type { ClaveDeSeccion } from './shell/navTree'
 import { TerritorioRutas } from './territorio/TerritorioRutas'
@@ -16,11 +20,14 @@ export const PANTALLAS: Partial<Record<ClaveDeSeccion, ComponentType>> = {
   territory: TerritorioRutas,
   stakeholders: GruposRutas,
   engagements: RelacionamientoRutas,
+  commitments: CompromisosRutas,
+  documents: DocumentosRutas,
+  tasks: TareasRutas,
   reports: ReportesRutas
 }
 
 // rutas del portal que no son una sección pero viven bajo los permisos de una (ux-architecture.md §6.2): la ficha de actor
-// es de Grupos de interés y las visitas de campo globales, de Relacionamiento
+// es de Grupos de interés, las visitas de campo globales de Relacionamiento y los acuerdos de todos los proyectos de Compromisos
 export interface RutaAdicional {
   ruta: string
   seccion: ClaveDeSeccion
@@ -29,5 +36,6 @@ export interface RutaAdicional {
 
 export const RUTAS_ADICIONALES: RutaAdicional[] = [
   { ruta: '/actors/:actorId', seccion: 'stakeholders', Pantalla: FichaActorPage },
-  { ruta: '/field-visits', seccion: 'engagements', Pantalla: VisitasPage }
+  { ruta: '/field-visits', seccion: 'engagements', Pantalla: VisitasPage },
+  { ruta: '/agreements', seccion: 'commitments', Pantalla: AcuerdosPage }
 ]
