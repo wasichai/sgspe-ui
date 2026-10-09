@@ -57,3 +57,7 @@ export function semanaDe(dia: string): string[] {
 // los tipos formales de RN-ENG-004: cierran con acta aprobada
 export const TIPOS_FORMALES = ['REUNION', 'REUNION INFORMATIVA', 'TALLER', 'ASAMBLEA', 'MESA DE DIALOGO']
 export const esFormal = (i: Registro) => TIPOS_FORMALES.includes(String(atributo(i, 'engagement_type') ?? ''))
+
+// los estados de WF-C en que el acta se redacta: realizada y acta en borrador (una devolución la deja en borrador). en revisión,
+// aprobada o cerrada ya no se edita
+export const ESTADOS_DE_ACTA_EDITABLE = ['held', 'minutes_drafted']

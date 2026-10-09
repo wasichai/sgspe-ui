@@ -1,0 +1,415 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@wasichai/core'
+import { Alert, Button, Table, Tabs, Td, Textarea, Th } from '@wasichai/ui'
+import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useParams } from 'react-router'
+import { Drawer } from '../componentes/Drawer'
+import { EstadoChip } from '../componentes/EstadoChip'
+import { Cargando, Consulta, ExplicacionDeColumna, Restringido } from '../componentes/Estados'
+import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
+import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { Rastro } from '../contexto/Rastro'
+import {
+  atributo,
+  puedeEscribir,
+  puedeLeer,
+  texto,
+  useActualizar,
+  useDefinicion,
+  useRegistro,
+  useRelacionados,
+  useTodosConTope,
+  type Registro
+} from '../datos/registros'
+import { fechaPe, NS, numeroPe } from '../i18n'
+import { Barras } from '../tableros/comunes'
+import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
+import { Historia } from './Historia'
+import { VistaMarkdown } from './markdown'
+
+// S23 · ficha de interacción (screens.md §6, flujo 5): qué pasó, con quién, qué se preguntó y qué se acordó. la siguiente
+// transición de WF-C es la acción primaria; "Cerrar" sale deshabilitado con la razón mientras haya preguntas sin respuesta
+// ni derivación (RN-ENG-005, transition-checks). los conteos de asistentes los calcula el servidor y nunca se teclean
+const CAMPOS_DEL_PARTICIPANTE = [
+  'participant_name',
+  'represented_group',
+  'sex',
+  'participant_scope',
+  'represented_people_count',
+  'attended',
+  'stakeholder'
+] as const
+
+// lo que una escritura sobre los participantes o las preguntas mueve en la interacción: sus conteos derivados y las reglas de
+// sus transiciones (PENDING_QUESTIONS), que ya no valen lo que dijeron
+function useRefrescarInteraccion(id: string) {
+  const cliente = useQueryClient()
+  return () => {
+    for (const clave of ['record', 'transitions', 'transition-check', 'history']) void cliente.invalidateQueries({ queryKey: [clave, 'engagement', id] })
+  }
+}
+
+export function FichaInteraccionPage() {
+  const { engagementId = '' } = useParams()
+  const interaccion = useRegistro('engagement', engagementId)
+  return <Consulta consulta={interaccion}>{(i) => <Ficha interaccion={i} />}</Consulta>
+}
+
+function Ficha({ interaccion }: { interaccion: Registro }) {
+  const { t } = useTranslation(NS)
+  const proyecto = String(atributo(interaccion, 'project'))
+  const convocante = useRegistro('stakeholder', atributo<string>(interaccion, 'convener'))
+  const instante = atributo<string>(interaccion, 'held_at') ?? atributo<string>(interaccion, 'scheduled_at')
+  return (
+    <article className="space-y-4">
+      <Rastro />
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{texto(interaccion, 'engagement_type')}</p>
+          <h1 className="text-sg-h1 font-semibold">{texto(interaccion, 'title')}</h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
+            <EstadoChip objeto="engagement" estado={interaccion.state} />
+            {instante ? <span>{fechaPe(new Date(instante))}</span> : null}
+            {texto(interaccion, 'place') ? <span>{texto(interaccion, 'place')}</span> : null}
+            {convocante.data ? (
+              <span>
+                {t('relacionamiento.ficha.convocante')}:{' '}
+                <Link to={`/projects/${proyecto}/stakeholders/${convocante.data.id}`} className="text-sg-primary-text underline">
+                  <NombreDelGrupo grupo={convocante.data} />
+                </Link>
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} />
+      </header>
+      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+        <Tabs
+          label={texto(interaccion, 'title')}
+          tabs={[
+            { id: 'resumen', label: t('relacionamiento.ficha.pestanas.resumen'), render: () => <Resumen interaccion={interaccion} /> },
+            { id: 'participantes', label: t('relacionamiento.ficha.pestanas.participantes'), render: () => <Participantes interaccion={interaccion} /> },
+            { id: 'preguntas', label: t('relacionamiento.ficha.pestanas.preguntas'), render: () => <Preguntas interaccion={interaccion} /> },
+            { id: 'acta', label: t('relacionamiento.ficha.pestanas.acta'), render: () => <Acta interaccion={interaccion} /> },
+            {
+              id: 'acuerdos',
+              label: t('relacionamiento.ficha.pestanas.acuerdos'),
+              render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('relacionamiento.ficha.acuerdosLlegan')}</p>
+            },
+            {
+              id: 'evidencias',
+              label: t('relacionamiento.ficha.pestanas.evidencias'),
+              render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('relacionamiento.ficha.evidenciasLlegan')}</p>
+            },
+            { id: 'actividad', label: t('relacionamiento.ficha.pestanas.actividad'), render: () => <Historia objeto="engagement" id={interaccion.id} /> }
+          ]}
+        />
+        <DeDondeViene interaccion={interaccion} />
+      </div>
+    </article>
+  )
+}
+
+function Resumen({ interaccion }: { interaccion: Registro }) {
+  const { t } = useTranslation(NS)
+  // un conteo que no llegó (el servidor aún no lo calculó, o la cuenta no lo lee) es un guion, nunca un cero
+  const n = (c: string): number | null => {
+    const valor = atributo(interaccion, c)
+    return valor === undefined || valor === null ? null : Number(valor)
+  }
+  const total = n('attendees_total_count')
+  return (
+    <div className="space-y-3 pt-3">
+      <p className="text-sg-kpi-sm font-semibold">
+        {t('relacionamiento.ficha.asistentes')}: {total === null ? '—' : numeroPe(total)}
+      </p>
+      <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.ficha.conteosCalculados')}</p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Barras
+          titulo={t('relacionamiento.ficha.porSexo')}
+          filas={[
+            { nombre: t('relacionamiento.ficha.femenino'), valor: n('attendees_female_count') },
+            { nombre: t('relacionamiento.ficha.masculino'), valor: n('attendees_male_count') }
+          ]}
+        />
+        <Barras
+          titulo={t('relacionamiento.ficha.porAmbito')}
+          filas={[
+            { nombre: t('relacionamiento.ficha.aids'), valor: n('attendees_direct_area_count') },
+            { nombre: t('relacionamiento.ficha.aiis'), valor: n('attendees_indirect_area_count') },
+            { nombre: t('relacionamiento.ficha.regional'), valor: n('attendees_regional_count') },
+            { nombre: t('relacionamiento.ficha.nacional'), valor: n('attendees_national_count') }
+          ]}
+        />
+      </div>
+      <p className="whitespace-pre-wrap text-sm">{texto(interaccion, 'results') || texto(interaccion, 'description')}</p>
+    </div>
+  )
+}
+
+// el acta como la guarda el servidor, dibujada sin HTML. el GET trae como clave cada campo legible: sin la clave, la cuenta no
+// lee el acta. se redacta en los estados en que WF-C la deja editable, a quien puede escribirla
+function Acta({ interaccion }: { interaccion: Registro }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const definicion = useDefinicion('engagement')
+  const proyecto = String(atributo(interaccion, 'project'))
+  if (!('minutes' in interaccion.attributes))
+    return (
+      <div className="pt-3">
+        <Restringido />
+      </div>
+    )
+  const redacta = ESTADOS_DE_ACTA_EDITABLE.includes(interaccion.state ?? '') && can('engagement', 'UPDATE') && puedeEscribir(definicion.data, 'minutes')
+  const acta = texto(interaccion, 'minutes')
+  return (
+    <div className="space-y-2 pt-3 text-sm">
+      {acta ? <VistaMarkdown texto={acta} /> : <p className="text-sg-text-muted">{t('relacionamiento.ficha.sinActa')}</p>}
+      <Link to={`/projects/${proyecto}/engagements/${interaccion.id}/minutes`} className="text-sg-primary-text underline">
+        {redacta ? t('relacionamiento.ficha.editarActa') : t('relacionamiento.ficha.verActa')}
+      </Link>
+    </div>
+  )
+}
+
+// los asistentes: personas y grupos sin nombres. agregar participantes no exige EDIT_ANY (ASM-069): quien puede leer la
+// interacción y crear participantes los agrega, y AttendanceCountsListener recalcula los conteos. quien no lee los nombres
+// ve «Restringido» en la fila de una persona: nunca el identificador
+function Participantes({ interaccion }: { interaccion: Registro }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const participantes = useTodosConTope('engagement_participant', { engagement: interaccion.id })
+  const definicion = useDefinicion('engagement_participant')
+  const refrescar = useRefrescarInteraccion(interaccion.id)
+  const [agregando, setAgregando] = useState(false)
+  const idDeNombres = useId()
+  const leeNombres = puedeLeer(definicion.data, 'participant_name')
+  const lectura = participantes.isError && !participantes.data ? participantes : definicion.isError && !definicion.data ? definicion : null
+  return (
+    <div className="space-y-3 pt-3">
+      {lectura ? (
+        <FalloDeLectura error={lectura.error} alReintentar={() => void lectura.refetch()} />
+      ) : participantes.isPending || definicion.isPending ? (
+        <Cargando compacto />
+      ) : (
+        <>
+          {participantes.truncado ? (
+            <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.ficha.truncado', { n: numeroPe(participantes.data?.length ?? 0) })}</p>
+          ) : null}
+          {participantes.data?.length === 0 ? <p className="text-sm text-sg-text-muted">{t('relacionamiento.ficha.sinParticipantes')}</p> : null}
+          {participantes.data?.length ? (
+            <Table aria-label={t('relacionamiento.ficha.pestanas.participantes')}>
+              <thead>
+                <tr>
+                  <Th scope="col">
+                    {t('relacionamiento.ficha.participante')}
+                    {leeNombres ? null : <ExplicacionDeColumna id={idDeNombres} tipo="restringido" />}
+                  </Th>
+                  <Th scope="col">{t('relacionamiento.ficha.representa')}</Th>
+                  <Th scope="col">{t('relacionamiento.registro.sexo')}</Th>
+                  <Th scope="col">{t('relacionamiento.registro.ambito')}</Th>
+                  <Th scope="col">{t('relacionamiento.ficha.asistio')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {participantes.data.map((p) => {
+                  const personas = Number(atributo(p, 'represented_people_count') ?? 1)
+                  const asistio = atributo(p, 'attended')
+                  return (
+                    <tr key={p.id}>
+                      <Td>
+                        {personas > 1 ? (
+                          t('relacionamiento.ficha.grupoSinNombres', { n: personas })
+                        ) : leeNombres ? (
+                          texto(p, 'participant_name') || '—'
+                        ) : (
+                          <Restringido describedPor={idDeNombres} />
+                        )}
+                      </Td>
+                      <Td className="text-sm">{texto(p, 'represented_group') || '—'}</Td>
+                      <Td className="text-sm">{texto(p, 'sex') || '—'}</Td>
+                      <Td className="text-sm">{texto(p, 'participant_scope') || '—'}</Td>
+                      <Td className="text-sm">{asistio === undefined || asistio === null ? '—' : asistio ? t('comun.si') : t('comun.no')}</Td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </Table>
+          ) : null}
+        </>
+      )}
+      {can('engagement_participant', 'CREATE') ? (
+        <Button size="sm" variant="secondary" onClick={() => setAgregando(true)}>
+          {t('relacionamiento.ficha.agregarParticipante')}
+        </Button>
+      ) : null}
+      <Drawer titulo={t('relacionamiento.ficha.agregarParticipante')} abierto={agregando} alCerrar={() => setAgregando(false)}>
+        <FormularioDeRegistro
+          objeto="engagement_participant"
+          fijos={{ engagement: interaccion.id }}
+          campos={CAMPOS_DEL_PARTICIPANTE}
+          alGuardar={() => {
+            setAgregando(false)
+            refrescar()
+          }}
+          alCancelar={() => setAgregando(false)}
+        />
+      </Drawer>
+    </div>
+  )
+}
+
+// una pregunta cuenta como atendida si se respondió en el lugar o tiene answered_at (EngagementWriteGuard.answered): sin
+// answered_at, la respuesta no la atiende y "Cerrar" sigue bloqueado por PENDING_QUESTIONS. por eso responder se ofrece
+// solo a quien puede escribir answer y answered_at
+function Preguntas({ interaccion }: { interaccion: Registro }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const preguntas = useTodosConTope('engagement_question', { engagement: interaccion.id })
+  const definicion = useDefinicion('engagement_question')
+  const responde = can('engagement_question', 'UPDATE') && puedeEscribir(definicion.data, 'answer') && puedeEscribir(definicion.data, 'answered_at')
+  if (preguntas.isPending) return <Cargando compacto />
+  if (preguntas.isError && !preguntas.data) return <FalloDeLectura error={preguntas.error} alReintentar={() => void preguntas.refetch()} />
+  return (
+    <ul className="space-y-3 pt-3 text-sm">
+      {preguntas.truncado ? (
+        <li className="text-sg-caption text-sg-text-muted">{t('relacionamiento.ficha.truncado', { n: numeroPe(preguntas.data?.length ?? 0) })}</li>
+      ) : null}
+      {preguntas.data?.length === 0 ? <li className="text-sg-text-muted">{t('relacionamiento.ficha.sinPreguntas')}</li> : null}
+      {(preguntas.data ?? []).map((p) => (
+        <FilaDePregunta key={p.id} pregunta={p} interaccionId={interaccion.id} responde={responde} />
+      ))}
+      <li className="text-sg-caption text-sg-text-muted">{t('relacionamiento.ficha.derivarLlega')}</li>
+    </ul>
+  )
+}
+
+function FilaDePregunta({ pregunta, interaccionId, responde }: { pregunta: Registro; interaccionId: string; responde: boolean }) {
+  const { t } = useTranslation(NS)
+  const cliente = useQueryClient()
+  const actualizar = useActualizar('engagement_question')
+  const refrescar = useRefrescarInteraccion(interaccionId)
+  const mensaje = useMensajeDeError()
+  const [abierta, setAbierta] = useState(false)
+  const [respuesta, setRespuesta] = useState('')
+  const enElLugar = atributo(pregunta, 'answered_on_site') === true
+  const respondida = atributo<string>(pregunta, 'answered_at')
+  const estado = enElLugar
+    ? t('relacionamiento.ficha.respondidaEnElLugar')
+    : respondida
+      ? t('relacionamiento.ficha.respondida', { fecha: fechaPe(new Date(respondida)) })
+      : t('relacionamiento.ficha.pendiente')
+  const cerrar = () => {
+    actualizar.reset()
+    setAbierta(false)
+  }
+  const guardar = () =>
+    actualizar.mutate(
+      { registro: pregunta, cambios: { answer: respuesta, answered_at: new Date().toISOString() } },
+      {
+        onSuccess: () => {
+          setRespuesta('')
+          setAbierta(false)
+          // la pregunta atendida cambia lo que dicen las reglas de "Cerrar"
+          refrescar()
+        }
+      }
+    )
+  return (
+    <li className="space-y-1 rounded-sg-md border border-sg-border p-3">
+      <p className="font-medium">{texto(pregunta, 'question_text')}</p>
+      <p className="text-sg-caption text-sg-text-muted">
+        {texto(pregunta, 'raised_by_role')} · <span data-estado={enElLugar || respondida ? 'respondida' : 'pendiente'}>{estado}</span>
+      </p>
+      {texto(pregunta, 'answer') ? <p className="text-sg-text-secondary">{texto(pregunta, 'answer')}</p> : null}
+      {!enElLugar && !respondida && responde ? (
+        abierta ? (
+          <div className="space-y-2">
+            <label className="block text-sg-label" htmlFor={`r-${pregunta.id}`}>
+              {t('relacionamiento.ficha.respuesta')}
+            </label>
+            <Textarea id={`r-${pregunta.id}`} value={respuesta} onChange={(e) => setRespuesta(e.target.value)} />
+            <div className="flex gap-2">
+              <Button size="sm" disabled={!respuesta.trim() || actualizar.isPending} aria-busy={actualizar.isPending} onClick={guardar}>
+                {t('relacionamiento.ficha.guardarRespuesta')}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={cerrar}>
+                {t('comun.cancelar')}
+              </Button>
+            </div>
+            {actualizar.isError ? (
+              <Alert tone="danger">
+                {mensaje(actualizar.error)}
+                {esConflictoDeVersion(actualizar.error) ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="ml-2"
+                    onClick={() => {
+                      // la pregunta se relee con su versión nueva; lo escrito queda en el cuadro
+                      for (const clave of ['records', 'record']) void cliente.invalidateQueries({ queryKey: [clave, 'engagement_question'] })
+                      actualizar.reset()
+                    }}
+                  >
+                    {t('comun.recargar')}
+                  </Button>
+                ) : null}
+              </Alert>
+            ) : null}
+          </div>
+        ) : (
+          <Button size="sm" variant="secondary" onClick={() => setAbierta(true)}>
+            {t('relacionamiento.ficha.responder')}
+          </Button>
+        )
+      ) : null}
+    </li>
+  )
+}
+
+function DeDondeViene({ interaccion }: { interaccion: Registro }) {
+  const { t } = useTranslation(NS)
+  const proyecto = String(atributo(interaccion, 'project'))
+  const visita = useRegistro('field_visit', atributo<string>(interaccion, 'field_visit'))
+  const grupos = useRelacionados('engagement', interaccion.id, 'engagement_stakeholder')
+  const temas = useRelacionados('engagement', interaccion.id, 'engagement_topic')
+  return (
+    <aside aria-label={t('relacionamiento.ficha.deDondeViene')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+      <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('relacionamiento.ficha.deDondeViene')}</h2>
+      {visita.isError ? (
+        <FalloDeLectura error={visita.error} alReintentar={() => void visita.refetch()} />
+      ) : visita.data ? (
+        <p>
+          {t('relacionamiento.ficha.visita')}:{' '}
+          <Link to={`/projects/${proyecto}/field-visits/${visita.data.id}`} className="text-sg-primary-text underline">
+            {texto(visita.data, 'title')}
+          </Link>
+        </p>
+      ) : null}
+      <div>
+        <h3 className="font-medium">{t('relacionamiento.ficha.grupos')}</h3>
+        {grupos.isPending ? <Cargando compacto /> : null}
+        {grupos.isError ? <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} /> : null}
+        <ul>
+          {(grupos.data?.content ?? []).map((g) => (
+            <li key={g.id}>
+              <Link to={`/projects/${proyecto}/stakeholders/${g.id}`} className="text-sg-primary-text underline">
+                <NombreDelGrupo grupo={g} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h3 className="font-medium">{t('relacionamiento.ficha.temas')}</h3>
+        {temas.isPending ? <Cargando compacto /> : null}
+        {temas.isError ? <FalloDeLectura error={temas.error} alReintentar={() => void temas.refetch()} /> : null}
+        {temas.data ? <p>{temas.data.content.map((x) => texto(x, 'name')).join(', ') || '—'}</p> : null}
+      </div>
+    </aside>
+  )
+}

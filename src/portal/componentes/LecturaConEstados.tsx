@@ -1,12 +1,18 @@
 // lo que una pantalla dibuja mientras una lectura carga, falla o llega: nunca un vacío ni un cero por una consulta que no terminó
 import type { UseQueryResult } from '@tanstack/react-query'
 import { ApiError, type ObjectDefinition } from '@wasichai/core'
+import { codigoDelError } from '../datos/http'
 import { Cargando, ErrorDeCarga, NoDisponible } from './Estados'
 
 // un 403 es «no disponible» (la cuenta no lee eso); cualquier otro error, la alerta con su correlación y reintento. nunca
 // un vacío: una consulta que carga o falla no se dibuja como una lista sin elementos
 export function FalloDeLectura({ error, alReintentar }: { error: unknown; alReintentar: () => void }) {
-  return error instanceof ApiError && error.status === 403 ? <NoDisponible /> : <ErrorDeCarga error={error} alReintentar={alReintentar} />
+  // un 403 con código (NOT_ASSIGNED…) dice su motivo; sin código, el texto neutro
+  return error instanceof ApiError && error.status === 403 ? (
+    <NoDisponible motivo={codigoDelError(error)} />
+  ) : (
+    <ErrorDeCarga error={error} alReintentar={alReintentar} />
+  )
 }
 
 // el contenido de una consulta de lista: carga, fallo o los datos
