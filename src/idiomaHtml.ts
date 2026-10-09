@@ -6,8 +6,8 @@ import type { WasichaiModule } from '@wasichai/core'
 // sus textos y en sgspe.lang); el atributo lleva la variante del design system (docs/ux/design-system.md §7): es-PE
 export const langHtml = (idioma: string | undefined): string => (!idioma || idioma === 'es' ? 'es-PE' : idioma)
 
-// core no toca <html lang>: /admin lo sigue con este módulo, que solo aporta un proveedor dentro del i18n de WasichaiApp
-// (el portal lo hace en ajustarI18n, sobre su propia instancia)
+// desde 0.5.1 core escribe <html lang> con el código de i18n (`es`); este módulo solo aporta un proveedor, por fuera de
+// el, que lo deja en la variante es-PE. lo usan /admin y el portal (el portal además lo fija al arrancar en ajustarI18n)
 function SeguirIdioma({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation()
   const idioma = i18n.resolvedLanguage ?? i18n.language

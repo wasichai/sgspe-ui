@@ -6,6 +6,7 @@ import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } 
 import { client } from './api'
 import { LoginPage } from './auth/LoginPage'
 import { RequireSession } from './auth/RequireSession'
+import { idiomaHtmlModule } from '../idiomaHtml'
 import { crearI18n, IDIOMAS, NS } from './i18n'
 import { InicioPage } from './pages/InicioPage'
 import { PANTALLAS, RUTAS_ADICIONALES } from './pantallas'
@@ -80,12 +81,13 @@ const rutas = () =>
     </>
   )
 
-// el portal: los proveedores de core, como /admin, así que la sesión, el tema y el idioma son los mismos. sin módulos:
-// el portal dibuja sus propias pantallas
+// el portal: los proveedores de core, como /admin, así que la sesión, el tema y el idioma son los mismos. sin módulos de starters:
+// el portal dibuja sus propias pantallas. el único módulo es idiomaHtmlModule: core 0.5.1 ya escribe <html lang> con el
+// código de i18n (`es`), y el módulo lo vuelve a es-PE después de él (WCAG 3.1.1)
 export function PortalApp() {
   const [app] = useState(() => {
     const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS })
-    const registry = createRegistry([])
+    const registry = createRegistry([idiomaHtmlModule()])
     const i18n = crearI18n(registry.modules)
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry, refetchOnWindowFocus: false } } })
     return { config, registry, i18n, queryClient, router: createBrowserRouter(rutas()) }
