@@ -9,3 +9,7 @@ dist/
 
 # local secrets (tokens): never in the repo
 .local/
+
+# playwright (yarn e2e)
+test-results/
+playwright-report/

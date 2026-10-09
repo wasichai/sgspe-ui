@@ -36,3 +36,8 @@ jobs:
       - run: yarn typecheck
       - run: yarn test
       - run: yarn build
+      # las pruebas extremo a extremo de F2 (ASM-066): chromium de Playwright sobre vite preview, con la API simulada
+      - run: npx playwright install --with-deps chromium
+      - run: yarn e2e
+        env:
+          CI: 'true'
