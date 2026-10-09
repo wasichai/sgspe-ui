@@ -1,8 +1,10 @@
 import type { UseQueryResult } from '@tanstack/react-query'
+import { ApiError } from '@wasichai/core'
 import { Alert, Button, cn, Th } from '@wasichai/ui'
 import { CircleHelp, Info, Lock } from 'lucide-react'
 import { type ReactNode, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { codigoDelError } from '../datos/http'
 import { NS } from '../i18n'
 import { correlacionDe, useMensajeDeError } from './errores'
 
@@ -45,12 +47,23 @@ export function Vacio({ titulo, children }: { titulo: string; children?: ReactNo
   )
 }
 
-// la carga, el error y los datos de una consulta de TanStack Query
+// la carga, el error y los datos de una consulta de TanStack Query. el error se dibuja solo sin datos: una relectura fallida
+// (un «Recargar» tras un 412, la invalidación tras una transición) conserva los datos y no desmonta lo que está debajo,
+// donde puede haber texto sin guardar; quien relee dice su propio fallo. un 403 es «no disponible», nunca un error
 export function Consulta<T>({ consulta, children }: { consulta: UseQueryResult<T>; children: (datos: T) => ReactNode }) {
   if (consulta.isPending) return <Cargando />
-  if (consulta.isError) return <ErrorDeCarga error={consulta.error} alReintentar={() => void consulta.refetch()} />
-  return <>{children(consulta.data)}</>
+  if (consulta.isError && consulta.data === undefined) {
+    return esProhibido(consulta.error) ? (
+      <NoDisponible motivo={codigoDelError(consulta.error)} />
+    ) : (
+      <ErrorDeCarga error={consulta.error} alReintentar={() => void consulta.refetch()} />
+    )
+  }
+  return <>{children(consulta.data as T)}</>
 }
+
+// un 403: la cuenta no lee eso (security.md §7.9), así que se dice «no disponible» y no un error que invite a reintentar
+export const esProhibido = (error: unknown): boolean => error instanceof ApiError && error.status === 403
 
 // el botón de ayuda y el motivo que despliega: el motivo está siempre en el DOM (oculto a la vista) con el id que otros
 // elementos referencian por aria-describedby. el botón mide al menos 24 px (WCAG 2.5.8) y tiene su propio foco visible

@@ -196,6 +196,22 @@ describe('S25 · editor de acta', () => {
     expect(red.a('PUT', PUT)[1].cabeceras.get('If-Match')).toBe('"2026-10-06T13:00:00Z"')
   })
 
+  it('si la relectura de «Recargar» falla, el editor sigue con lo escrito y dice el fallo (revisión final, I1)', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    let lecturasDeE1 = 0
+    red = espiarRed([
+      { ...GET_E1, responder: () => (++lecturasDeE1 === 1 ? jsonResponse(conActa('held')) : problema(404, 'No se encontró')) },
+      rechazaLaPrimera()
+    ])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
+    expect(await screen.findByText('El registro no existe o no es de su organización.')).toBeInTheDocument()
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta mío')
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recargar' })).toBeInTheDocument()
+  })
+
   it('si la otra persona cambió el acta, la muestra y deja elegir: aplicar el texto propio es explícito', async () => {
     const usuario = conTemporizadores()
     fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))

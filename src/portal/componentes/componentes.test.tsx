@@ -7,7 +7,7 @@ import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
 import { EstadoChip } from './EstadoChip'
-import { Cargando, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido, ThConExplicacion } from './Estados'
+import { Cargando, Consulta, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido, ThConExplicacion } from './Estados'
 import { KpiCard } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
@@ -126,6 +126,30 @@ describe('estados comunes', () => {
     expect(document.getElementById(restringido.getAttribute('aria-describedby')!)).not.toHaveClass('sr-only')
     expect(document.getElementById(noDisponible.getAttribute('aria-describedby')!)).toHaveClass('sr-only')
     expect(ayudaDeNoDisponible).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+describe('Consulta (revisión final, I1)', () => {
+  // lo que importa de una consulta de TanStack Query para Consulta: sus datos, su error y su refetch
+  const consulta = (data: string | undefined, error: unknown) =>
+    ({ isPending: false, isError: true, data, error, refetch: vi.fn() }) as unknown as UseQueryResult<string>
+
+  it('una relectura fallida con datos no desmonta el contenido: lo escrito debajo se conserva', async () => {
+    montar(<Consulta consulta={consulta('acta', new ErrorDeSgspe(500, 'x', [], null))}>{(d) => <p>contenido {d}</p>}</Consulta>)
+    expect(await screen.findByText('contenido acta')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+  })
+
+  it('sin datos, un 403 es «No disponible» con su motivo y otro error, la alerta con reintento', async () => {
+    montar(
+      <>
+        <Consulta consulta={consulta(undefined, new ErrorDeSgspe(403, 'x', [{ field: 'record', message: 'NOT_ASSIGNED' }], null))}>{() => null}</Consulta>
+        <Consulta consulta={consulta(undefined, new ErrorDeSgspe(500, 'x', [], null))}>{() => null}</Consulta>
+      </>
+    )
+    const noDisponible = await screen.findByText('No disponible')
+    expect(document.getElementById(noDisponible.getAttribute('aria-describedby')!)).toHaveTextContent(/No tiene una asignación vigente/)
+    expect(screen.getAllByRole('button', { name: 'Reintentar' })).toHaveLength(1)
   })
 })
 

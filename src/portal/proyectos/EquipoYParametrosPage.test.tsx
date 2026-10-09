@@ -215,14 +215,14 @@ describe('S11 · equipo y parámetros', () => {
     expect(guardado.cuerpo).toMatchObject({ attributes: { interest_threshold: 4, power_threshold: 2.5, name: 'Pukaqaqa' } })
   })
 
-  it('las campañas y las concesiones dicen su error de carga, no una lista vacía', async () => {
+  it('las campañas y las concesiones dicen su error de carga, no una lista vacía; un 403 es «No disponible»', async () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
       { path: '/objects/exploration_campaign/records', status: 403, body: { title: 'Forbidden', status: 403 } },
       { path: '/objects/project/records/p1/related/project_concession', status: 500, body: { title: 'Error', status: 500 } },
       ...rutas()
     ])
     await userEvent.click(await screen.findByRole('tab', { name: 'Campañas' }))
-    expect((await screen.findAllByText(/No se pudo cargar/)).length).toBeGreaterThan(0)
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Partes y concesiones' }))
     expect((await screen.findAllByText(/No se pudo cargar/)).length).toBeGreaterThan(0)
   })
@@ -323,6 +323,36 @@ describe('S11 · equipo y parámetros', () => {
     const segundo = red.a('PUT', '/objects/project/records/p1')[1]
     expect(segundo.cabeceras.get('If-Match')).toBe(`"${deOtra.updatedAt}"`)
     expect(segundo.cuerpo).toMatchObject({ attributes: { interest_threshold: 5, power_threshold: 2.5 } })
+  })
+
+  it('si la relectura de «Recargar» falla, el formulario sigue con lo tecleado (revisión final, I1)', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    let conflicto = false
+    red = espiarRed([
+      {
+        method: 'PUT',
+        path: '/objects/project/records/p1',
+        responder: () => {
+          conflicto = true
+          return problema(412, 'Precondition Failed')
+        }
+      },
+      {
+        path: '/objects/project/records/p1',
+        responder: () =>
+          conflicto ? problema(404, 'No se encontró') : new Response(JSON.stringify(P1), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const poder = await screen.findByLabelText(/Umbral de poder/)
+    await userEvent.clear(poder)
+    await userEvent.type(poder, '2.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    const antes = red.a('GET', '/objects/project/records/p1').length
+    await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
+    await waitFor(() => expect(red!.a('GET', '/objects/project/records/p1').length).toBeGreaterThan(antes))
+    expect(screen.getByLabelText(/Umbral de poder/)).toHaveValue('2.5')
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 
   it('un parámetro devuelto a su valor original deja de contar como tecleado: no se envía y no pisa el cambio de otra persona', async () => {
