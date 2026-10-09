@@ -103,6 +103,8 @@ function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, a
   const elegir = async (elegido: File | null) => {
     setArchivo(elegido)
     setFaltaArchivo(false)
+    // el error de la subida anterior (FILE_TOO_LARGE, EVIDENCE_FILE_IN_USE) era de otro archivo
+    alta.limpiarError()
     setCaptura(elegido ? await leerExif(elegido) : {})
   }
 
