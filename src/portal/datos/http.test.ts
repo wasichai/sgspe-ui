@@ -2,7 +2,7 @@ import { createApiClient } from '@wasichai/core'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { campoDelError, codigoDelError, crearPedido, ErrorDeSgspe, guardarArchivo, motivoEnCabecera, nombreDeArchivo } from './http'
+import { campoDelError, codigoDelError, crearPedido, ErrorDeSgspe, ESPERA_PARA_REVOCAR, guardarArchivo, motivoEnCabecera, nombreDeArchivo } from './http'
 
 // api.md §3.5 a §3.8: el portal manda If-Match con el updatedAt leído, el motivo en la forma RFC 8187 y una clave de
 // idempotencia por acción; los errores traen su detail, sus campos y el X-Correlation-Id
@@ -165,7 +165,10 @@ describe('guardarArchivo (revisión final, M10)', () => {
     guardarArchivo({ blob: new Blob(['PK']), nombre: null }, 'reporte.xlsx')
     expect(clic).toHaveBeenCalledOnce()
     expect(revocar).not.toHaveBeenCalled()
-    vi.runAllTimers()
+    // unos segundos después, no en el siguiente tick (re-revisión, menor 5)
+    vi.advanceTimersByTime(1000)
+    expect(revocar).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(ESPERA_PARA_REVOCAR)
     expect(revocar).toHaveBeenCalledWith('blob:prueba')
     expect(document.querySelector('a[download]')).toBeNull()
   })

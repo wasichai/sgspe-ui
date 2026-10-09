@@ -149,7 +149,10 @@ export function usePedir(): Pedido {
 
 // guarda un archivo descargado con su nombre (las exportaciones y el reporte de diferencias)
 // el enlace va al documento durante el clic (Firefox no descarga desde un enlace suelto) y la URL se revoca después, no en el
-// mismo tick: Firefox y Safari pueden cortar una descarga cuya URL ya no existe
+// mismo tick: Firefox y Safari pueden cortar una descarga cuya URL ya no existe. FileSaver espera 40 s; unos segundos no
+// cuestan nada (re-revisión, menor 5)
+export const ESPERA_PARA_REVOCAR = 10_000
+
 export function guardarArchivo({ blob, nombre }: Archivo, porDefecto: string): void {
   const url = URL.createObjectURL(blob)
   const enlace = document.createElement('a')
@@ -159,5 +162,5 @@ export function guardarArchivo({ blob, nombre }: Archivo, porDefecto: string): v
   document.body.append(enlace)
   enlace.click()
   enlace.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 0)
+  setTimeout(() => URL.revokeObjectURL(url), ESPERA_PARA_REVOCAR)
 }
