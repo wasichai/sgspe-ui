@@ -9,7 +9,8 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
-import { Cargando, Consulta, ErrorDeCarga, NoDisponible, ThConExplicacion } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { Cargando, Consulta, NoDisponible, ThConExplicacion } from '../componentes/Estados'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError, usePedir } from '../datos/http'
 import { atributo, leerTodos, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
@@ -124,9 +125,9 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
         </p>
       </section>
       {!borrador ? <Alert tone="notice">{t('areas.congelada', { estado: (etiquetas[area.state ?? ''] ?? area.state ?? '').toLowerCase() })}</Alert> : null}
-      {versiones.isError ? <ErrorDeCarga error={versiones.error} alReintentar={() => void versiones.refetch()} /> : null}
-      {miembros.isError ? <ErrorDeCarga error={miembros.error} alReintentar={() => void miembros.refetch()} /> : null}
-      {deLaVigente.isError ? <ErrorDeCarga error={deLaVigente.error} alReintentar={() => void deLaVigente.refetch()} /> : null}
+      {versiones.isError && !versiones.data ? <FalloDeLectura error={versiones.error} alReintentar={() => void versiones.refetch()} /> : null}
+      {miembros.isError && !miembros.data ? <FalloDeLectura error={miembros.error} alReintentar={() => void miembros.refetch()} /> : null}
+      {deLaVigente.isError && !deLaVigente.data ? <FalloDeLectura error={deLaVigente.error} alReintentar={() => void deLaVigente.refetch()} /> : null}
       <Table aria-label={t('areas.miembros')}>
         <thead>
           <tr>

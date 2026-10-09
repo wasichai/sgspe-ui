@@ -9,6 +9,7 @@ import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Restringido, ThConExplicacion } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
+import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { Rastro } from '../contexto/Rastro'
@@ -28,7 +29,6 @@ import { fechaPe, NS, numeroPe } from '../i18n'
 import { Barras } from '../tableros/comunes'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
-import { Historia } from './Historia'
 import { VistaMarkdown } from './markdown'
 
 // S23 · ficha de interacción (screens.md §6, flujo 5): qué pasó, con quién, qué se preguntó y qué se acordó. la siguiente
@@ -105,7 +105,15 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
               label: t('relacionamiento.ficha.pestanas.evidencias'),
               render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('relacionamiento.ficha.evidenciasLlegan')}</p>
             },
-            { id: 'actividad', label: t('relacionamiento.ficha.pestanas.actividad'), render: () => <Historia objeto="engagement" id={interaccion.id} /> }
+            {
+              id: 'actividad',
+              label: t('relacionamiento.ficha.pestanas.actividad'),
+              render: () => (
+                <div className="pt-3">
+                  <Historia objeto="engagement" id={interaccion.id} vacio={t('relacionamiento.ficha.sinActividad')} />
+                </div>
+              )
+            }
           ]}
         />
         <DeDondeViene interaccion={interaccion} />

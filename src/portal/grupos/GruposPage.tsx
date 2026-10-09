@@ -1,11 +1,11 @@
-import { ApiError, useAuth } from '@wasichai/core'
+import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible, Restringido, ThConExplicacion } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, NoDisponible, Restringido, ThConExplicacion, esProhibido } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { useProyecto } from '../contexto/proyectos'
@@ -24,7 +24,6 @@ import { NuevoGrupo } from './NuevoGrupo'
 const VISTAS = ['prioridad', 'mios', 'sinEvaluar', 'sinContacto', 'todos', 'retirados'] as const
 const FILTROS = ['influence_group', 'stance', 'stakeholder_scope', 'relationship_status', 'stakeholder_type'] as const
 const POR_PAGINA = 25
-const sinPermiso = (error: unknown): boolean => error instanceof ApiError && error.status === 403
 
 export function GruposPage() {
   const { t } = useTranslation(NS)
@@ -117,7 +116,7 @@ export function GruposPage() {
       </div>
       {territorio === null ? <Alert tone="notice">{t('contexto.noAplica')}</Alert> : null}
       {definicion.isError && !definicion.data ? (
-        sinPermiso(definicion.error) ? (
+        esProhibido(definicion.error) ? (
           <NoDisponible />
         ) : (
           <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} />
@@ -165,7 +164,7 @@ export function GruposPage() {
           {grupos.isPending ? (
             <Cargando />
           ) : grupos.isError && !grupos.data ? (
-            sinPermiso(grupos.error) ? (
+            esProhibido(grupos.error) ? (
               <NoDisponible />
             ) : (
               <ErrorDeCarga error={grupos.error} alReintentar={() => void grupos.refetch()} />

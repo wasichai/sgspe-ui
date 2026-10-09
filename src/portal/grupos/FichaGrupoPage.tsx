@@ -1,11 +1,12 @@
-import { ApiError, useAuth } from '@wasichai/core'
+import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Consulta, ErrorDeCarga, NoDisponible, Restringido } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { Cargando, Consulta, NoDisponible, Restringido } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useActorDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -45,12 +46,6 @@ const CAMPOS_DEL_PERFIL = [
   'locality',
   'area_of_influence'
 ] as const
-
-// un 403 es "no disponible" (la cuenta no lee eso); cualquier otro error, la alerta con su correlación y reintento. solo sin
-// datos: un refetch fallido deja a la vista lo que ya se leyó
-function FalloDeLectura({ error, alReintentar }: { error: unknown; alReintentar: () => void }) {
-  return error instanceof ApiError && error.status === 403 ? <NoDisponible /> : <ErrorDeCarga error={error} alReintentar={alReintentar} />
-}
 
 // el día de Lima de una marca de tiempo (una interacción de las 22:00 de Lima es del día siguiente en UTC)
 const diaEnLima = (marca: string): string => {

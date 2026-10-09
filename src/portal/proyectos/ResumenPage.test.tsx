@@ -183,6 +183,18 @@ describe('S08 · Project 360, resumen', () => {
     expect(await screen.findByText(/cambio de etapa/)).toBeInTheDocument()
   })
 
+  it('la actividad es la misma pieza que la de una interacción: dice los campos cambiados (revisión final, M3)', async () => {
+    fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, [
+      {
+        path: '/objects/project/records/p1/history',
+        body: [{ id: 'h1', userEmail: 'pad@sgspe.test', operation: 'UPDATE', occurredAt: '2026-10-05T15:00:00Z', reason: null, changes: [{ field: 'state' }] }]
+      },
+      ...rutas(SIN_STANCE)
+    ])
+    const actividad = await screen.findByRole('region', { name: 'Actividad reciente' })
+    expect(await within(actividad).findByText('(Estado)')).toBeInTheDocument()
+  })
+
   it('la jefatura dice "No disponible" ante un 403 y ofrece reintentar ante un error, nunca "Sin jefatura"; con datos vacíos, sí', async () => {
     const asignaciones = /^\/objects\/project_assignment\/records\?.*role_name/
     abrir(rutas(SIN_STANCE), [falla(asignaciones, 403)])

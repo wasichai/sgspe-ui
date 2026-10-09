@@ -1,11 +1,12 @@
 import type { UseQueryResult } from '@tanstack/react-query'
-import { ApiError, useAuth } from '@wasichai/core'
+import { useAuth } from '@wasichai/core'
 import { Alert, Button, Tabs } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
-import { Cargando, Consulta, ErrorDeCarga, NoDisponible, Restringido } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { Cargando, Consulta, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Rastro } from '../contexto/Rastro'
 import {
@@ -30,14 +31,11 @@ import { Dato, TrabajarEnProyecto } from './comunes'
 const CIFRAS = ['population_count', 'families_count', 'members_per_family', 'communal_labor_members_count'] as const
 const CAMPOS = ['economic_activities', 'crops', 'livestock', 'water_source', 'electricity', 'sanitation', 'phone_coverage', 'migration'] as const
 
-const sinPermiso = (error: unknown) => error instanceof ApiError && error.status === 403
-
-// el estado de una consulta auxiliar cuando todavía no hay datos: carga, restringido (403) o error con reintento
+// el estado de una consulta auxiliar cuando todavía no hay datos: carga, no disponible (403) o error con reintento
 function SinDatos({ consulta }: { consulta: Pick<UseQueryResult, 'isPending' | 'isError' | 'error' | 'refetch'> }) {
   if (consulta.isPending) return <Cargando />
   if (!consulta.isError) return null
-  if (sinPermiso(consulta.error)) return <Restringido />
-  return <ErrorDeCarga error={consulta.error} alReintentar={() => void consulta.refetch()} />
+  return <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
 }
 
 // el nombre de un registro al que apunta la localidad (el distrito, la localidad de la que es sector): sin referencia, un
@@ -45,7 +43,7 @@ function SinDatos({ consulta }: { consulta: Pick<UseQueryResult, 'isPending' | '
 function Referencia({ consulta, tiene, children }: { consulta: UseQueryResult<Registro>; tiene: boolean; children: (r: Registro) => ReactNode }) {
   if (!tiene) return <>—</>
   if (consulta.data) return <>{children(consulta.data)}</>
-  if (consulta.isError) return sinPermiso(consulta.error) ? <Restringido /> : <NoDisponible />
+  if (consulta.isError) return esProhibido(consulta.error) ? <Restringido /> : <NoDisponible />
   return <>…</>
 }
 

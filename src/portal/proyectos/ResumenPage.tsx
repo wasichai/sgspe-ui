@@ -1,23 +1,23 @@
-import { useQuery } from '@tanstack/react-query'
-import { ApiError, useAuth } from '@wasichai/core'
+import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { useNombreDelGrupo } from '../componentes/NombreDeActor'
-import { Cargando, Consulta, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { Historia } from '../componentes/Historia'
+import { Cargando, Consulta, NoDisponible, esProhibido } from '../componentes/Estados'
 import { KpiCard } from '../componentes/KpiCard'
 import { ROL_DE_JEFATURA } from '../config'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto } from '../contexto/proyectos'
-import { usePedir } from '../datos/http'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { useIndicador } from '../datos/indicadores'
 import { atributo, texto, usePuedeEditar, useTodos, type Registro } from '../datos/registros'
 import { BarraDePosturas } from '../graficos/BarraDePosturas'
 import { MiniMatriz, puntosDeMatriz } from '../graficos/MiniMatriz'
-import { fechaPe, NS, numeroPe } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { useCapas } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { capa } from '../mapa/capas'
@@ -30,13 +30,6 @@ import { vigente, PARAMETROS_F2 } from './parametros'
 // el bloque de posturas siempre se dibuja: sin permiso sobre stance (security.md §7.9) dice "no disponible" y por qué. una
 // consulta auxiliar que carga, falla o no se puede leer lo dice; nunca se lee como "sin datos" ni como "sin nada que atender"
 const TIPOS_FORMALES = ['REUNION', 'REUNION INFORMATIVA', 'TALLER', 'ASAMBLEA', 'MESA DE DIALOGO']
-
-const sinPermiso = (error: unknown): boolean => error instanceof ApiError && error.status === 403
-
-// un 403 es "no disponible" (como la jefatura y Atención); cualquier otro error, la alerta con su correlación y reintento
-function FalloDeLectura({ error, alReintentar }: { error: unknown; alReintentar: () => void }) {
-  return sinPermiso(error) ? <NoDisponible /> : <ErrorDeCarga error={error} alReintentar={alReintentar} />
-}
 
 export function ResumenPage() {
   const { projectId = '' } = useParams()
@@ -79,7 +72,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {jefatura.isPending ? (
                 t('comun.cargando')
               ) : jefatura.isError ? (
-                sinPermiso(jefatura.error) ? (
+                esProhibido(jefatura.error) ? (
                   <NoDisponible />
                 ) : (
                   <span className="inline-flex items-center gap-2">
@@ -329,41 +322,12 @@ function AvisoDeGrupo({ grupo, clave, dias }: { grupo: Registro; clave: string; 
   return <>{t(clave, { nombre, dias })}</>
 }
 
-interface Entrada {
-  id: string
-  userEmail: string
-  operation: string
-  occurredAt: string
-  reason: string | null
-}
-
 function Actividad({ proyecto }: { proyecto: string }) {
   const { t } = useTranslation(NS)
-  const pedir = usePedir()
-  const historia = useQuery({
-    queryKey: ['history', 'project', proyecto],
-    queryFn: () => pedir<Entrada[]>(`/objects/project/records/${proyecto}/history?limit=10`)
-  })
   return (
     <section aria-label={t('p360.resumen.actividad')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.actividad')}</h2>
-      {historia.isPending ? (
-        <Cargando />
-      ) : historia.isError ? (
-        <FalloDeLectura error={historia.error} alReintentar={() => void historia.refetch()} />
-      ) : historia.data.length === 0 ? (
-        <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinActividad')}</p>
-      ) : (
-        <ol className="space-y-1 text-sm">
-          {historia.data.map((e) => (
-            <li key={e.id}>
-              <span className="text-sg-text-muted">{fechaPe(new Date(e.occurredAt))}</span> · {e.userEmail} ·{' '}
-              {t(`p360.resumen.operaciones.${e.operation}`, { defaultValue: e.operation })}
-              {e.reason ? <span className="text-sg-text-secondary"> — {e.reason}</span> : null}
-            </li>
-          ))}
-        </ol>
-      )}
+      <Historia objeto="project" id={proyecto} limite={10} vacio={t('p360.resumen.sinActividad')} />
     </section>
   )
 }

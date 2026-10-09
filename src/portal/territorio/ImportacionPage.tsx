@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
-import { Cargando, ErrorDeCarga } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { Cargando } from '../componentes/Estados'
 import { Pasos } from '../componentes/Pasos'
 import { useMisProyectos, useProyectos } from '../contexto/proyectos'
 import { codigoDelError, guardarArchivo } from '../datos/http'
@@ -158,7 +159,7 @@ function Preparar() {
               )}
             </Campo>
             {proyectos.isPending ? <Cargando /> : null}
-            {proyectos.isError ? <ErrorDeCarga error={proyectos.error} alReintentar={() => void proyectos.refetch()} /> : null}
+            {proyectos.isError && !proyectos.data ? <FalloDeLectura error={proyectos.error} alReintentar={() => void proyectos.refetch()} /> : null}
             <Button disabled={!archivo || !destino || !proyecto} onClick={() => setPaso(1)}>
               {t('comun.siguiente')}
             </Button>
@@ -166,8 +167,10 @@ function Preparar() {
         ) : (
           <section className="space-y-3" aria-label={pasos[1]}>
             {definicion.isPending ? <Cargando /> : null}
-            {definicion.isError ? <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
-            {registroDelProyecto.isError ? <ErrorDeCarga error={registroDelProyecto.error} alReintentar={() => void registroDelProyecto.refetch()} /> : null}
+            {definicion.isError && !definicion.data ? <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
+            {registroDelProyecto.isError && !registroDelProyecto.data ? (
+              <FalloDeLectura error={registroDelProyecto.error} alReintentar={() => void registroDelProyecto.refetch()} />
+            ) : null}
             <Campo etiqueta={t('importacion.crs')} ayuda={t('importacion.crsAyuda')}>
               {(p) => (
                 <SelectNativo

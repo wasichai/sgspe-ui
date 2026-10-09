@@ -37,8 +37,7 @@ export const ES_P360 = {
     sinAreas: 'Aún no hay un área aprobada',
     verMapa: 'Ver en el mapa',
     actividad: 'Actividad reciente',
-    sinActividad: 'Este proyecto aún no tiene actividad registrada.',
-    operaciones: { CREATE: 'Creó', UPDATE: 'Cambió', DELETE: 'Borró', ISSUE: 'Emitió' }
+    sinActividad: 'Este proyecto aún no tiene actividad registrada.'
   },
   asignacion: {
     titulo: 'Asignar persona',
@@ -130,8 +129,7 @@ export const EN_P360: typeof ES_P360 = {
     sinAreas: 'No approved area yet',
     verMapa: 'View on the map',
     actividad: 'Recent activity',
-    sinActividad: 'This project has no recorded activity yet.',
-    operaciones: { CREATE: 'Created', UPDATE: 'Changed', DELETE: 'Deleted', ISSUE: 'Issued' }
+    sinActividad: 'This project has no recorded activity yet.'
   },
   asignacion: {
     titulo: 'Assign person',

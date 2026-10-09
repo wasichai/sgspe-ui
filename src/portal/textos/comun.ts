@@ -36,6 +36,8 @@ export const ES_COMUN = {
   abrir: 'Abrir',
   recargar: 'Recargar',
   recargaFallida: 'No se pudo recargar; lo escrito se conserva.',
+  // la actividad de un registro (componentes/Historia)
+  actividad: { estado: 'Estado', operaciones: { CREATE: 'Creó', UPDATE: 'Cambió', DELETE: 'Borró', ISSUE: 'Emitió' } },
   limpiarFiltros: 'Limpiar filtros',
   sinResultados: 'Nada coincide con los filtros',
   vacio: 'Aún no hay registros',
@@ -166,6 +168,7 @@ export const EN_COMUN: typeof ES_COMUN = {
   abrir: 'Open',
   recargar: 'Reload',
   recargaFallida: 'Could not reload; what you typed is kept.',
+  actividad: { estado: 'Status', operaciones: { CREATE: 'Created', UPDATE: 'Changed', DELETE: 'Deleted', ISSUE: 'Issued' } },
   limpiarFiltros: 'Clear filters',
   sinResultados: 'Nothing matches the filters',
   vacio: 'No records yet',

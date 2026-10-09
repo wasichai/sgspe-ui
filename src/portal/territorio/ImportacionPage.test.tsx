@@ -491,12 +491,17 @@ describe('S15 · importación geoespacial', () => {
     expect(screen.getByRole('button', { name: 'Ver la vista previa' })).toBeDisabled()
   })
 
-  it('si los proyectos no cargan, lo dice y no ofrece una lista vacía', async () => {
-    const sinProyectos = rutas().map((r) =>
-      r.path === '/objects/project/records' ? { path: r.path, status: 403, body: { title: 'Error', status: 403, detail: 'No' } } : r
-    )
-    fetch = abrirPortal('/territory/imports/new', RELACIONISTA, GAN, sinProyectos)
+  it('si los proyectos no cargan, lo dice y no ofrece una lista vacía; un 403 es «No disponible» (revisión final, M2)', async () => {
+    const conProyectos = (status: number) =>
+      rutas().map((r) => (r.path === '/objects/project/records' ? { path: r.path, status, body: { title: 'Error', status, detail: 'No' } } : r))
+    fetch = abrirPortal('/territory/imports/new', RELACIONISTA, GAN, conProyectos(400))
     expect(await screen.findByText(/No se pudo cargar esta información/)).toBeInTheDocument()
+    expect(selectorDeProyecto()).toBeDisabled()
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/territory/imports/new', RELACIONISTA, GAN, conProyectos(403))
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByText(/No se pudo cargar esta información/)).not.toBeInTheDocument()
     expect(selectorDeProyecto()).toBeDisabled()
   })
 })

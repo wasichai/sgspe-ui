@@ -481,7 +481,8 @@ describe('S14 · ficha de localidad y línea base', () => {
       ...sin(rutas(def), '/objects/school/records', '/objects/health_facility/records', '/objects/festivity/records')
     ])
     const escuelas = await screen.findByRole('region', { name: 'Instituciones educativas' })
-    expect(await within(escuelas).findByText('Restringido')).toBeInTheDocument()
+    // un 403 es «No disponible», como en FalloDeLectura (revisión final, M2)
+    expect(await within(escuelas).findByText('No disponible')).toBeInTheDocument()
     expect(within(escuelas).queryByText('Aún no hay registros')).not.toBeInTheDocument()
     for (const nombre of ['Establecimientos de salud', 'Calendario de festividades']) {
       const seccion = screen.getByRole('region', { name: nombre })

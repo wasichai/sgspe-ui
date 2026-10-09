@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
-import { Cargando, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { Cargando, NoDisponible } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { nombreDe } from '../componentes/NombreDeActor'
 import { Rastro } from '../contexto/Rastro'
@@ -19,11 +20,6 @@ import { NS } from '../i18n'
 type Tipo = 'organization' | 'person'
 
 const estadoHttp = (error: unknown): number | undefined => (error instanceof ApiError ? error.status : undefined)
-
-// un 403 es "no disponible" (la cuenta no lee eso); cualquier otro error, la alerta con su correlación y reintento
-function FalloDeLectura({ error, alReintentar }: { error: unknown; alReintentar: () => void }) {
-  return estadoHttp(error) === 403 ? <NoDisponible /> : <ErrorDeCarga error={error} alReintentar={alReintentar} />
-}
 
 // lo que una lista dice mientras no hay filas que mostrar: la carga, el fallo (solo sin datos: un refetch fallido deja a la
 // vista lo leído) o el vacío de verdad, nunca un vacío que en realidad es una lectura pendiente o fallida

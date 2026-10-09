@@ -1,11 +1,11 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { ApiError, useAuth } from '@wasichai/core'
+import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th, cn } from '@wasichai/ui'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible, ThConExplicacion } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, NoDisponible, ThConExplicacion, esProhibido } from '../componentes/Estados'
 import { VacioDeLista } from '../componentes/Lista'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { filtroDeTerritorio } from '../contexto/rutas'
@@ -25,7 +25,6 @@ import { diaDe, esDia, esFormal, esMes, mesActual, semanaDe, semanasDelMes, suma
 type Vista = 'mes' | 'semana' | 'lista'
 const VISTAS: readonly Vista[] = ['mes', 'semana', 'lista']
 const CINCO_MINUTOS = 300_000
-const sinPermiso = (error: unknown): boolean => error instanceof ApiError && error.status === 403
 
 export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const { t } = useTranslation(NS)
@@ -133,7 +132,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
           {interacciones.isPending ? (
             <Cargando />
           ) : interacciones.isError && !interacciones.data ? (
-            sinPermiso(interacciones.error) ? (
+            esProhibido(interacciones.error) ? (
               <NoDisponible />
             ) : (
               <ErrorDeCarga error={interacciones.error} alReintentar={() => void interacciones.refetch()} />
@@ -330,7 +329,7 @@ export function CodigoDeProyecto({ id, describedPor }: { id: string; describedPo
   const proyecto = useRegistro('project', id)
   if (proyecto.isPending) return <Cargando compacto etiqueta="…" />
   if (proyecto.isError && !proyecto.data)
-    return sinPermiso(proyecto.error) ? <NoDisponible describedPor={describedPor} /> : <span>{t('comun.errorDeCarga')}</span>
+    return esProhibido(proyecto.error) ? <NoDisponible describedPor={describedPor} /> : <span>{t('comun.errorDeCarga')}</span>
   return <>{texto(proyecto.data, 'code') || '—'}</>
 }
 
@@ -387,7 +386,7 @@ function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes
         {eng02.isPending ? (
           <Cargando compacto />
         ) : eng02.isError && !eng02.data ? (
-          sinPermiso(eng02.error) ? (
+          esProhibido(eng02.error) ? (
             <NoDisponible />
           ) : (
             <ErrorDeCarga error={eng02.error} alReintentar={() => void eng02.refetch()} />
@@ -409,7 +408,7 @@ function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes
         {interacciones.isPending ? (
           <Cargando compacto />
         ) : interacciones.isError && !interacciones.data ? (
-          sinPermiso(interacciones.error) ? (
+          esProhibido(interacciones.error) ? (
             <NoDisponible />
           ) : (
             <p className="text-sg-text-muted">{t('comun.errorDeCarga')}</p>
@@ -436,7 +435,7 @@ function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes
         {festividades.pendiente ? (
           <Cargando compacto />
         ) : festividades.error ? (
-          sinPermiso(festividades.error) ? (
+          esProhibido(festividades.error) ? (
             <NoDisponible />
           ) : (
             <ErrorDeCarga error={festividades.error} alReintentar={festividades.reintentar} />
