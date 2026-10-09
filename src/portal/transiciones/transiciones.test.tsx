@@ -1,7 +1,7 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, registro, workflow } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useRegistro } from '../datos/registros'
@@ -13,6 +13,7 @@ let fetch: FetchMock | null = null
 let red: Red | null = null
 beforeEach(() => localStorage.clear())
 afterEach(() => {
+  vi.useRealTimers()
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
@@ -99,6 +100,23 @@ describe('transiciones', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Suspender' })).not.toBeInTheDocument())
     expect(screen.getByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
+  })
+
+  it('la confirmación se va sola a los pocos segundos (re-revisión, menor 3)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
+    const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    start([{ method: 'POST', path: '/objects/project/records/p1/transitions/suspend', body: { ...PROYECTO, state: 'suspended' } }])
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    await usuario.click(await screen.findByRole('button', { name: 'Suspender' }))
+    const dialogo = await screen.findByRole('dialog')
+    await within(dialogo).findByText('Se cumplen las reglas para este paso.')
+    await usuario.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    expect(await screen.findByText('Listo: el registro está en «Suspendido».')).toBeInTheDocument()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8000)
+    })
+    expect(screen.queryByText('Listo: el registro está en «Suspendido».')).not.toBeInTheDocument()
   })
 
   it('una regla que bloquea no deja confirmar y dice qué falta y en qué campo', async () => {

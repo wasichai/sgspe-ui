@@ -1,6 +1,6 @@
 import { Button } from '@wasichai/ui'
 import { useAvailableTransitions, type AvailableTransition } from '@wasichai/workflow'
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
@@ -11,6 +11,8 @@ import { esDeComando } from './reglas'
 // las transiciones del estado actual para quien mira (GET …/transitions, de @wasichai/workflow). las que su rol no tiene
 // no aparecen (design-system.md §6.2); las de comando tampoco: tienen su propia pantalla. la primera es la primaria. las
 // de comprobarAntes consultan transition-checks al dibujarse y, si una regla las bloquea, salen deshabilitadas con la razón
+const DURACION_DE_LA_CONFIRMACION = 6000
+
 export function BotonesDeTransicion({
   objeto,
   registro,
@@ -27,6 +29,12 @@ export function BotonesDeTransicion({
   const [abierta, setAbierta] = useState<AvailableTransition | null>(null)
   // el estado al que llevó la última transición aplicada: se confirma aunque el estado nuevo ya no ofrezca botones
   const [hecha, setHecha] = useState<string | null>(null)
+  // la confirmación se va sola a los pocos segundos, o al abrir otra transición (re-revisión, menor 3)
+  useEffect(() => {
+    if (!hecha) return
+    const plazo = setTimeout(() => setHecha(null), DURACION_DE_LA_CONFIRMACION)
+    return () => clearTimeout(plazo)
+  }, [hecha])
   const visibles = (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name))
   if (visibles.length === 0 && !hecha) return null
   return (
