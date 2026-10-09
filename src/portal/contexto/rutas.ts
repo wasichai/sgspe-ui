@@ -11,6 +11,11 @@ const GLOBAL_A_PROYECTO: [RegExp, string][] = [
   [/^\/engagements\/dashboard/, 'engagements/dashboard'],
   [/^\/(engagements|field-visits)/, 'engagements'],
   [/^\/territory/, 'map'],
+  [/^\/commitments\/dashboard/, 'commitments/dashboard'],
+  [/^\/commitments/, 'commitments'],
+  [/^\/agreements/, 'agreements'],
+  [/^\/documents/, 'documents'],
+  [/^\/tasks/, 'tasks'],
   [/^\/reports/, 'reports']
 ]
 
@@ -21,10 +26,15 @@ const PROYECTO_A_GLOBAL: [RegExp, string][] = [
   [/^engagements\/dashboard/, '/engagements/dashboard'],
   [/^(engagements|field-visits)/, '/engagements'],
   [/^(map|areas)/, '/territory'],
+  [/^commitments\/dashboard/, '/commitments/dashboard'],
+  [/^commitments/, '/commitments'],
+  [/^agreements/, '/agreements'],
+  [/^documents/, '/documents'],
+  [/^tasks/, '/tasks'],
   [/^reports/, '/reports']
 ]
 
-const SECCIONES_DE_PROYECTO = ['overview', 'map', 'settings', 'reports']
+const SECCIONES_DE_PROYECTO = ['overview', 'map', 'settings', 'reports', 'commitments', 'agreements', 'documents', 'tasks']
 
 export function rutaEquivalente(pathname: string, proyecto: string | null): string {
   const enProyecto = /^\/projects\/([^/]+)\/?(.*)$/.exec(pathname)
@@ -38,6 +48,7 @@ export function rutaEquivalente(pathname: string, proyecto: string | null): stri
     const [primera, segunda] = resto.split('/')
     if (primera === 'stakeholders' && (segunda === 'matrix' || segunda === 'dashboard')) return `${base}/stakeholders/${segunda}`
     if (primera === 'engagements' && (segunda === 'calendar' || segunda === 'dashboard')) return `${base}/engagements/${segunda}`
+    if (primera === 'commitments' && segunda === 'dashboard') return `${base}/commitments/dashboard`
     if (primera === 'field-visits') return `${base}/engagements`
     if (primera === 'areas') return `${base}/map`
     return `${base}/${primera && (SECCIONES_DE_PROYECTO.includes(primera) || ['stakeholders', 'engagements'].includes(primera)) ? primera : 'overview'}`

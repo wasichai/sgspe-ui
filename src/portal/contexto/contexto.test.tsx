@@ -44,7 +44,18 @@ describe('rutaEquivalente', () => {
     ['/projects/p1/field-visits/v1', null, '/engagements'],
     ['/projects/p1/map', null, '/territory'],
     ['/projects/p1/overview', null, '/projects'],
-    ['/stakeholders', null, '/stakeholders']
+    ['/stakeholders', null, '/stakeholders'],
+    // F3: compromisos, acuerdos, documentos y tareas; los ids de registro se sueltan al cambiar de proyecto
+    ['/commitments', 'p1', '/projects/p1/commitments'],
+    ['/commitments/dashboard', 'p1', '/projects/p1/commitments/dashboard'],
+    ['/agreements', 'p1', '/projects/p1/agreements'],
+    ['/documents/ev1', 'p1', '/projects/p1/documents'],
+    ['/tasks/approvals', 'p1', '/projects/p1/tasks'],
+    ['/projects/p1/commitments/c1', 'p2', '/projects/p2/commitments'],
+    ['/projects/p1/commitments/dashboard', 'p2', '/projects/p2/commitments/dashboard'],
+    ['/projects/p1/agreements/ag1', null, '/agreements'],
+    ['/projects/p1/documents/ev1', null, '/documents'],
+    ['/projects/p1/tasks', null, '/tasks']
   ])('%s con %s va a %s', (desde, proyecto, hacia) => {
     expect(rutaEquivalente(desde.split('?')[0], proyecto)).toBe(hacia)
   })
