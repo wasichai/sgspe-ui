@@ -2,6 +2,16 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-09 — `@wasichai/*` 0.5.1
+
+- Los ocho paquetes pasan de 0.5.0 a 0.5.1 (`maplibre-gl` sigue en 6.10.0). Solo trae correcciones: `DATETIME` conserva
+  segundos e instante, los fallos de guardar, borrar e ingresar se anuncian, el registro y la lista se manejan con el
+  teclado, una página que falla muestra un error y core escribe `<html lang>`.
+- core 0.5.1 escribe `<html lang>` con el código de i18n (`es`) y pisaba el `es-PE` del portal; `idiomaHtmlModule` entra
+  también en el registro del portal para dejarlo en `es-PE` (WCAG 3.1.1).
+- UPS-08, UPS-13 y UPS-19 siguen abiertas: 0.5.1 no trae el motivo en la edición, el mapa base configurable ni los temas
+  de «Según el sistema».
+
 ## 2026-10-09 — Fase 2: portal de proyectos, territorio, grupos de interés y relacionamiento
 
 - Dependencias fijadas de F2: `@wasichai/gis` y `@wasichai/workflow` 0.5.0, `maplibre-gl` 6.10.0, `echarts` 6.1.0,
