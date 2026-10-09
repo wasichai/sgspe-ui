@@ -63,6 +63,45 @@ describe('rutas de F3', () => {
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Compromisos' })).not.toBeInTheDocument()
   })
 
+  // los acuerdos viven bajo Compromisos, pero se leen con su propio permiso: la pestaña y las dos rutas piden READ sobre
+  // agreement, no sobre commitment
+  const sinAcuerdos = permisos({ project: ['READ'], project_assignment: ['READ'], commitment: ['READ'] })
+  const soloAcuerdos = permisos({ project: ['READ'], project_assignment: ['READ'], agreement: ['READ'] })
+
+  it('sin READ sobre acuerdos, la pestaña Acuerdos no se ofrece', async () => {
+    fetch = abrirPortal('/projects/p1/commitments', GESTORA, sinAcuerdos, rutas())
+    const pestanas = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(await within(pestanas).findByRole('link', { name: 'Compromisos' })).toBeInTheDocument()
+    expect(within(pestanas).queryByRole('link', { name: 'Acuerdos' })).not.toBeInTheDocument()
+  })
+
+  it.each(['/projects/p1/agreements', '/agreements'])('sin READ sobre acuerdos, %s lo dice y no los lee', async (ruta) => {
+    fetch = abrirPortal(ruta, GESTORA, sinAcuerdos, rutas())
+    expect(await screen.findByText('Su cuenta no puede abrir «Compromisos».')).toBeInTheDocument()
+    expect(fetch.calls.some((c) => c.url.includes('/objects/agreement/records'))).toBe(false)
+  })
+
+  it('con READ sobre acuerdos y sin READ sobre compromisos, la pestaña Acuerdos se ofrece', async () => {
+    fetch = abrirPortal('/projects/p1/overview', GESTORA, soloAcuerdos, rutas())
+    const pestanas = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(await within(pestanas).findByRole('link', { name: 'Acuerdos' })).toHaveAttribute('href', '/projects/p1/agreements')
+    expect(within(pestanas).queryByRole('link', { name: 'Compromisos' })).not.toBeInTheDocument()
+  })
+
+  it('con READ sobre acuerdos y sin READ sobre compromisos, /agreements se abre', async () => {
+    fetch = abrirPortal('/agreements', GESTORA, soloAcuerdos, rutas())
+    expect(await screen.findByRole('link', { name: 'Convenio de agua' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
+  })
+
+  it.each([
+    ['/documents', 'Documentos'],
+    ['/tasks', 'Tareas']
+  ])('sin READ, %s lo dice y no se ofrece', async (ruta, seccion) => {
+    fetch = abrirPortal(ruta, GESTORA, permisos({ project: ['READ'], project_assignment: ['READ'], commitment: ['READ'] }), rutas())
+    expect(await screen.findByText(`Su cuenta no puede abrir «${seccion}».`)).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: seccion })).not.toBeInTheDocument()
+  })
+
   it('las aprobaciones y la decisión de un compromiso viven bajo Tareas', async () => {
     fetch = abrirPortal(
       '/tasks/approvals/commitment/c1',

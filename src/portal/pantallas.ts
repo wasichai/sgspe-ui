@@ -9,7 +9,8 @@ import { RelacionamientoRutas } from './relacionamiento/RelacionamientoRutas'
 import { ReportesRutas } from './reportes/ReportesRutas'
 import { TareasRutas } from './tareas/TareasRutas'
 import { VisitasPage } from './relacionamiento/VisitaDeCampoPage'
-import type { ClaveDeSeccion } from './shell/navTree'
+import { LEE_ACUERDOS } from './shell/leeAcuerdos'
+import type { ClaveDeSeccion, Par } from './shell/navTree'
 import { TerritorioRutas } from './territorio/TerritorioRutas'
 
 // la pantalla de cada sección, por su clave (como PANTALLAS de caja-ui@a45b224). una sección sin pantalla no se dibuja:
@@ -31,11 +32,13 @@ export const PANTALLAS: Partial<Record<ClaveDeSeccion, ComponentType>> = {
 export interface RutaAdicional {
   ruta: string
   seccion: ClaveDeSeccion
+  // los permisos que la ofrecen, si no son los de su sección: los acuerdos piden READ sobre agreement
+  seOfreceCon?: Par[][]
   Pantalla: ComponentType
 }
 
 export const RUTAS_ADICIONALES: RutaAdicional[] = [
   { ruta: '/actors/:actorId', seccion: 'stakeholders', Pantalla: FichaActorPage },
   { ruta: '/field-visits', seccion: 'engagements', Pantalla: VisitasPage },
-  { ruta: '/agreements', seccion: 'commitments', Pantalla: AcuerdosPage }
+  { ruta: '/agreements', seccion: 'commitments', seOfreceCon: LEE_ACUERDOS, Pantalla: AcuerdosPage }
 ]
