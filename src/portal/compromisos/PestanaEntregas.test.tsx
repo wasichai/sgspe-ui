@@ -121,6 +121,125 @@ describe('S32 · entregas', () => {
     expect(alta.cabeceras.get('Idempotency-Key')).toBeTruthy()
     expect(alta.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Entrega%20en%20obra")
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('status')).toHaveTextContent('Entrega guardada.')
+  })
+
+  it('sin la definición de la entrega no ofrece guardar ni campos: dice el fallo y, al releerla, el formulario', async () => {
+    fetch = mockFetch(rutas())
+    let falla = true
+    red = espiarRed([{ path: '/metadata/objects/delivery', responder: () => (falla ? problema(503, 'caída') : jsonResponse(DEF_ENTREGA)) }])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar entrega' }))
+    const panel = await screen.findByRole('dialog')
+    expect(await within(panel).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    // nada que escribir y perder: ni campos, ni subida de evidencias, ni «Guardar entrega»
+    expect(within(panel).queryByLabelText('Monto entregado')).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('group', { name: 'Subir una evidencia' })).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('button', { name: 'Guardar entrega' })).not.toBeInTheDocument()
+    falla = false
+    await userEvent.click(within(panel).getByRole('button', { name: 'Reintentar' }))
+    expect(await within(panel).findByLabelText('Monto entregado')).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'Guardar entrega' })).toBeInTheDocument()
+    expect(red.a('POST', '/sgspe/commitments/c1/deliveries')).toHaveLength(0)
+  })
+
+  it('dibuja solo los campos que envía: ni los de solo lectura ni los restringidos', async () => {
+    fetch = mockFetch(
+      rutas([
+        {
+          path: '/metadata/objects/delivery',
+          body: definicion('delivery', [
+            ['delivery_date', { type: 'DATE' }],
+            ['place', { editable: false }],
+            'delivered_items',
+            ['delivered_amount', { type: 'DECIMAL' }],
+            ['conformity_given', { type: 'BOOLEAN' }]
+          ])
+        }
+      ])
+    )
+    red = espiarRed([
+      { method: 'POST', path: '/sgspe/commitments/c1/deliveries', responder: () => jsonResponse({ delivery: registro('dl2', {}), commitment: C1 }, 201) }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar entrega' }))
+    const panel = await screen.findByRole('dialog')
+    await userEvent.type(await within(panel).findByLabelText('Monto entregado'), '300')
+    expect(within(panel).queryByLabelText('Lugar')).not.toBeInTheDocument()
+    expect(within(panel).queryByLabelText('Receptores')).not.toBeInTheDocument()
+    await userEvent.click(within(panel).getByLabelText('El grupo de interés dio conformidad'))
+    expect(within(panel).queryByLabelText('Quiénes dieron la conformidad')).not.toBeInTheDocument()
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Entrega en obra')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar entrega' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/commitments/c1/deliveries')).toHaveLength(1))
+    const atributos = (red.a('POST', '/sgspe/commitments/c1/deliveries')[0].cuerpo as { attributes: Record<string, unknown> }).attributes
+    expect(Object.keys(atributos).sort()).toEqual(['conformity_given', 'delivered_amount', 'delivery_date'])
+    expect(atributos).toMatchObject({ delivered_amount: '300', conformity_given: true })
+  })
+
+  it('sin conformidad el alta no manda quiénes la dieron, aunque se haya escrito antes de desmarcarla', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      { method: 'POST', path: '/sgspe/commitments/c1/deliveries', responder: () => jsonResponse({ delivery: registro('dl2', {}), commitment: C1 }, 201) }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar entrega' }))
+    const panel = await screen.findByRole('dialog')
+    await userEvent.click(await within(panel).findByLabelText('El grupo de interés dio conformidad'))
+    await userEvent.type(within(panel).getByLabelText('Quiénes dieron la conformidad'), 'Junta directiva')
+    await userEvent.click(within(panel).getByLabelText('El grupo de interés dio conformidad'))
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Entrega parcial')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar entrega' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/commitments/c1/deliveries')).toHaveLength(1))
+    const atributos = (red.a('POST', '/sgspe/commitments/c1/deliveries')[0].cuerpo as { attributes: Record<string, unknown> }).attributes
+    expect(atributos.conformity_given).toBe(false)
+    expect(atributos).not.toHaveProperty('conformity_by')
+  })
+
+  it('quien lee los restringidos los ve en la tarjeta y los corrige; desmarcar la conformidad borra quiénes la dieron', async () => {
+    const leida = registro(
+      'dl1',
+      { ...ENTREGA.attributes, recipients: 'Familias del anexo', conformity_by: 'Junta directiva' },
+      { updatedAt: '2026-10-02T15:00:00Z' }
+    )
+    fetch = mockFetch(rutas([{ path: '/objects/delivery/records', body: pagina([leida]) }]))
+    red = espiarRed([{ method: 'PATCH', path: '/sgspe/deliveries/dl1', responder: () => jsonResponse({ delivery: leida, commitment: C1 }) }])
+    abrir()
+    const tarjeta = (await screen.findByRole('heading', { name: /Entrega del/ })).closest('li') as HTMLElement
+    expect(within(tarjeta).getByText('Familias del anexo')).toBeInTheDocument()
+    expect(within(tarjeta).getByText('Junta directiva')).toBeInTheDocument()
+    expect(within(tarjeta).queryByText('Restringido')).not.toBeInTheDocument()
+    await userEvent.click(within(tarjeta).getByRole('button', { name: 'Corregir' }))
+    const panel = await screen.findByRole('dialog')
+    expect(await within(panel).findByLabelText('Receptores')).toHaveValue('Familias del anexo')
+    expect(within(panel).getByLabelText('Quiénes dieron la conformidad')).toHaveValue('Junta directiva')
+    await userEvent.click(within(panel).getByLabelText('El grupo de interés dio conformidad'))
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'No hubo conformidad')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar entrega' }))
+    await waitFor(() => expect(red!.a('PATCH', '/sgspe/deliveries/dl1')).toHaveLength(1))
+    expect(red.a('PATCH', '/sgspe/deliveries/dl1')[0].cuerpo).toEqual({ attributes: { conformity_given: false, conformity_by: null } })
+  })
+
+  it('corregir una entrega sin conformidad no manda conformity_given si no cambió', async () => {
+    const sinConformidad = registro('dl1', { ...ENTREGA.attributes, conformity_given: false }, { updatedAt: '2026-10-02T15:00:00Z' })
+    fetch = mockFetch(rutas([{ path: '/objects/delivery/records', body: pagina([sinConformidad]) }]))
+    red = espiarRed([{ method: 'PATCH', path: '/sgspe/deliveries/dl1', responder: () => jsonResponse({ delivery: sinConformidad, commitment: C1 }) }])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Corregir' }))
+    const panel = await screen.findByRole('dialog')
+    await userEvent.type(await within(panel).findByLabelText('Lugar'), ' Alto')
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Lugar incompleto')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar entrega' }))
+    await waitFor(() => expect(red!.a('PATCH', '/sgspe/deliveries/dl1')).toHaveLength(1))
+    expect(red.a('PATCH', '/sgspe/deliveries/dl1')[0].cuerpo).toEqual({ attributes: { place: 'Tunas Pampa Alto' } })
+  })
+
+  it('la lista de entregas que no se lee dice el fallo con «Reintentar»', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([{ path: '/objects/delivery/records', responder: () => problema(500, 'caída') }])
+    abrir()
+    const seccion = await screen.findByRole('region', { name: 'Entregas' })
+    expect(await within(seccion).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
   })
 
   it('corregir manda solo lo cambiado con If-Match; DELIVERY_FROZEN dice su texto', async () => {
@@ -137,7 +256,7 @@ describe('S32 · entregas', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar entrega' }))
     expect(
       await within(panel).findByText(
-        'El compromiso ya está cumplido o cancelado: sus entregas no cambian. Si está cumplido, devuélvalo a ejecución para corregirlas.'
+        'El compromiso ya está cumplido o cancelado: sus entregas no cambian. Si está cumplido (no verificado ni cerrado), devuélvalo a ejecución para corregirlas.'
       )
     ).toBeInTheDocument()
     const [llamada] = red.a('PATCH', '/sgspe/deliveries/dl1')
@@ -166,12 +285,17 @@ describe('S32 · entregas', () => {
 describe('S32 · verificación', () => {
   it('ofrece solo verificar y devolver a ejecución, y avisa al responsable de la segregación', async () => {
     fetch = mockFetch(rutas())
+    red = espiarRed()
     montar(<Verificacion compromiso={{ ...C1, state: 'fulfilled' }} />, { usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
-    expect(await screen.findByText('Usted es responsable de este compromiso: otra persona lo verifica (D11).')).toBeInTheDocument()
+    expect(await screen.findByText('Usted es responsable de este compromiso: otra persona lo verifica.')).toBeInTheDocument()
     expect(await screen.findByText('Entregas con conformidad: 1 de 1')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Verificar' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Devolver a ejecución' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cerrar' })).not.toBeInTheDocument()
+    // «Verificar» se comprueba en seco antes de ofrecerse (D11)
+    await waitFor(() =>
+      expect(red!.a('POST', '/sgspe/transition-checks').map((l) => l.cuerpo)).toContainEqual({ object: 'commitment', recordId: 'c1', transition: 'verify' })
+    )
   })
 
   it('otra persona no ve el aviso de segregación', async () => {

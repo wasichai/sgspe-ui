@@ -9,11 +9,11 @@ export const ES_ENTREGAS = {
   corregirTitulo: 'Corregir la entrega',
   congelada: 'El compromiso está cumplido: sus entregas no cambian. Para corregir una, devuélvalo a ejecución.',
   congeladaCancelado: 'El compromiso está cancelado: sus entregas ya no cambian.',
-  sinActa: 'El «Acta de entrega» como documento emitido llega cuando se resuelva UPS-23: por ahora, súbala como evidencia.',
+  sinActa: 'El «Acta de entrega» todavía no se emite desde el sistema: por ahora, súbala como evidencia.',
   ayuda: 'Guardar la entrega no cambia el estado: después se registra el cumplimiento.',
   minima: {
-    MATERIAL: 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un ACTA DE ENTREGA y una FOTO (D9).',
-    'NO MATERIAL': 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un ACTA, una CARTA u OTRO (D9).'
+    MATERIAL: 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un ACTA DE ENTREGA y una FOTO.',
+    'NO MATERIAL': 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un ACTA, una CARTA u OTRO.'
   },
   campos: {
     delivery_date: 'Fecha de la entrega',
@@ -49,8 +49,8 @@ export const ES_ENTREGAS = {
     ayuda: 'Revise el acta, las fotos y lo entregado frente a lo comprometido antes de verificar.',
     ejecutado: 'Entregado frente a comprometido',
     conConformidad: 'Entregas con conformidad: {{n}} de {{total}}',
-    revisar: 'El acta y las fotos están en cada entrega; las restringidas se descargan con DOWNLOAD_RESTRICTED.',
-    segregacion: 'Usted es responsable de este compromiso: otra persona lo verifica (D11).'
+    revisar: 'El acta y las fotos están en cada entrega; las restringidas solo las descarga quien tiene permiso para descargar lo restringido.',
+    segregacion: 'Usted es responsable de este compromiso: otra persona lo verifica.'
   }
 }
 
@@ -64,11 +64,11 @@ export const EN_ENTREGAS: typeof ES_ENTREGAS = {
   corregirTitulo: 'Correct the delivery',
   congelada: 'The commitment is fulfilled: its deliveries do not change. To correct one, return it to execution.',
   congeladaCancelado: 'The commitment is cancelled: its deliveries no longer change.',
-  sinActa: 'The “Acta de entrega” as an issued document arrives when UPS-23 is solved: for now, upload it as evidence.',
+  sinActa: 'The system does not issue the “Acta de entrega” yet: for now, upload it as evidence.',
   ayuda: 'Saving the delivery does not change the status: fulfillment is recorded afterwards.',
   minima: {
-    MATERIAL: 'To record fulfillment, the delivery with conformity needs at least one ACTA DE ENTREGA and one FOTO (D9).',
-    'NO MATERIAL': 'To record fulfillment, the delivery with conformity needs at least one ACTA, CARTA or OTRO (D9).'
+    MATERIAL: 'To record fulfillment, the delivery with conformity needs at least one ACTA DE ENTREGA and one FOTO.',
+    'NO MATERIAL': 'To record fulfillment, the delivery with conformity needs at least one ACTA, CARTA or OTRO.'
   },
   campos: {
     delivery_date: 'Delivery date',
@@ -104,7 +104,7 @@ export const EN_ENTREGAS: typeof ES_ENTREGAS = {
     ayuda: 'Check the minutes, the photos and what was delivered against what was committed before verifying.',
     ejecutado: 'Delivered against committed',
     conConformidad: 'Deliveries with conformity: {{n}} of {{total}}',
-    revisar: 'The minutes and photos are in each delivery; restricted ones are downloaded with DOWNLOAD_RESTRICTED.',
+    revisar: 'The minutes and photos are in each delivery; restricted ones are downloaded only by whoever may download restricted files.',
     segregacion: 'You own this commitment: someone else verifies it (D11).'
   }
 }

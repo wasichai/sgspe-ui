@@ -30,17 +30,25 @@ export function PestanaEntregas({ compromiso, escribe }: { compromiso: Registro;
   const { can } = useAuth()
   const entregas = useTodos('delivery', { commitment: compromiso.id, sort: 'delivery_date', dir: 'desc' })
   const [editando, setEditando] = useState<Registro | 'nueva' | null>(null)
+  // la confirmación de la última entrega guardada: se va al abrir otro drawer
+  const [guardada, setGuardada] = useState(false)
   const estado = compromiso.state ?? ''
   const congelada = ESTADOS_CONGELADOS.includes(estado)
   const registra = escribe && ESTADOS_DE_EJECUCION.includes(estado) && can('delivery', 'CREATE') && can('commitment', 'UPDATE')
   const corrige = escribe && !congelada && can('delivery', 'UPDATE') && can('commitment', 'UPDATE')
+  // vincular evidencias en el alta exige además UPDATE sobre evidence y delivery (Deliveries.kt, create); subirlas, CREATE
+  const subeEvidencias = can('evidence', 'CREATE') && can('evidence', 'UPDATE') && can('delivery', 'UPDATE')
+  const abrir = (cual: Registro | 'nueva') => {
+    setGuardada(false)
+    setEditando(cual)
+  }
   const recurso = texto(compromiso, 'resource_type')
   return (
     <section aria-label={t('entregas.titulo')} className="space-y-3 pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sg-h3 font-semibold">{t('entregas.titulo')}</h2>
         {registra ? (
-          <Button size="sm" onClick={() => setEditando('nueva')}>
+          <Button size="sm" onClick={() => abrir('nueva')}>
             {t('entregas.registrar')}
           </Button>
         ) : null}
@@ -63,12 +71,28 @@ export function PestanaEntregas({ compromiso, escribe }: { compromiso: Registro;
               entrega={e}
               compromiso={compromiso}
               escribe={escribe && !congelada}
-              alCorregir={corrige ? () => setEditando(e) : undefined}
+              alCorregir={corrige ? () => abrir(e) : undefined}
             />
           ))}
         </ul>
       )}
-      {editando ? <EntregaDrawer compromiso={compromiso} entrega={editando === 'nueva' ? undefined : editando} alCerrar={() => setEditando(null)} /> : null}
+      {guardada ? (
+        <p role="status" className="text-sm text-sg-success">
+          {t('entregas.guardada')}
+        </p>
+      ) : null}
+      {editando ? (
+        <EntregaDrawer
+          compromiso={compromiso}
+          entrega={editando === 'nueva' ? undefined : editando}
+          subeEvidencias={subeEvidencias}
+          alCerrar={() => setEditando(null)}
+          alGuardar={() => {
+            setEditando(null)
+            setGuardada(true)
+          }}
+        />
+      ) : null}
     </section>
   )
 }
@@ -153,6 +177,8 @@ const esquema = z.object({
 type Valores = z.infer<typeof esquema>
 const CAMPOS = ['delivery_date', 'place', 'delivered_items', 'delivered_amount', 'recipients', 'conformity_given', 'conformity_by'] as const
 
+type Campo = (typeof CAMPOS)[number]
+
 const iniciales = (e?: Registro): Valores => ({
   delivery_date: e ? texto(e, 'delivery_date') : hoyEnLima(),
   place: texto(e, 'place'),
@@ -164,9 +190,35 @@ const iniciales = (e?: Registro): Valores => ({
   motivo: ''
 })
 
+// lo que viaja de cada campo, igual para lo tecleado y para lo leído (así se compara al corregir): el monto sin separadores,
+// el texto vacío como null y quiénes dieron la conformidad solo si se dio (desmarcarla lo borra: react-hook-form conserva el
+// valor del campo que ya no se dibuja)
+const normalizados = (v: Valores): Record<Campo, unknown> => {
+  const valor = (campo: Campo): unknown => {
+    if (campo === 'conformity_by' && !v.conformity_given) return null
+    const x = campo === 'delivered_amount' ? normalizarMonto(v.delivered_amount) : v[campo]
+    return typeof x === 'string' ? x.trim() || null : x
+  }
+  return Object.fromEntries(CAMPOS.map((c) => [c, valor(c)])) as Record<Campo, unknown>
+}
+
 // el drawer de S32 (?drawer=delivery): alta o corrección. las evidencias se suben fuera del <form> de la entrega (un formulario
-// dentro de otro se enviaría con el de afuera, revisión del plan 2.3) y viajan por id al guardar
-function EntregaDrawer({ compromiso, entrega, alCerrar }: { compromiso: Registro; entrega?: Registro; alCerrar: () => void }) {
+// dentro de otro se enviaría con el de afuera, revisión del plan 2.3) y viajan por id al guardar. cada campo se dibuja y se
+// envía con la misma condición, la definición de delivery de quien mira: sin ella no hay formulario ni «Guardar entrega»,
+// porque se enviaría sin los campos que no sabe escribibles (revisión de la Tarea 11)
+function EntregaDrawer({
+  compromiso,
+  entrega,
+  subeEvidencias,
+  alCerrar,
+  alGuardar
+}: {
+  compromiso: Registro
+  entrega?: Registro
+  subeEvidencias: boolean
+  alCerrar: () => void
+  alGuardar: () => void
+}) {
   const { t } = useTranslation(NS)
   const nombreDeEvidencia = useNombreDeEvidencia()
   const definicion = useDefinicion('delivery')
@@ -177,7 +229,8 @@ function EntregaDrawer({ compromiso, entrega, alCerrar }: { compromiso: Registro
   const [subidas, setSubidas] = useState<Registro[]>([])
   const { register, handleSubmit, formState, control } = useForm<Valores>({ resolver: zodResolver(esquema), defaultValues: iniciales(entrega) })
   const conformidad = useWatch({ control, name: 'conformity_given' })
-  const escribible = (campo: string) => puedeEscribir(definicion.data, campo)
+  const lista = definicion.data !== undefined
+  const escribible = (campo: Campo) => puedeEscribir(definicion.data, campo)
   const comando = entrega ? corregir : registrar
   const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(comando.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
   const recurso = texto(compromiso, 'resource_type')
@@ -191,19 +244,16 @@ function EntregaDrawer({ compromiso, entrega, alCerrar }: { compromiso: Registro
     return undefined
   }
   const guardar = handleSubmit((v) => {
-    const valores: Record<string, unknown> = {}
-    for (const campo of CAMPOS) {
-      if (campo !== 'delivery_date' && campo !== 'conformity_given' && !escribible(campo)) continue
-      const valor = campo === 'delivered_amount' ? normalizarMonto(v.delivered_amount) : v[campo]
-      valores[campo] = typeof valor === 'string' ? valor.trim() || null : valor
-    }
+    if (!lista) return
+    const ahora = normalizados(v)
+    const enviados = CAMPOS.filter(escribible)
     if (entrega) {
-      const antes = iniciales(entrega)
-      const cambios = Object.fromEntries(Object.entries(valores).filter(([c, x]) => (antes[c as keyof Valores] || null) !== x))
-      corregir.mutate({ entrega, cambios, motivo: v.motivo.trim() }, { onSuccess: alCerrar })
+      const antes = normalizados(iniciales(entrega))
+      const cambios = Object.fromEntries(enviados.filter((c) => antes[c] !== ahora[c]).map((c) => [c, ahora[c]]))
+      corregir.mutate({ entrega, cambios, motivo: v.motivo.trim() }, { onSuccess: alGuardar })
     } else {
-      const atributos = Object.fromEntries(Object.entries(valores).filter(([, x]) => x !== null))
-      registrar.mutate({ atributos, evidencias: subidas.map((e) => e.id), motivo: v.motivo.trim() }, { onSuccess: alCerrar })
+      const atributos = Object.fromEntries(enviados.filter((c) => ahora[c] !== null).map((c) => [c, ahora[c]]))
+      registrar.mutate({ atributos, evidencias: subidas.map((e) => e.id), motivo: v.motivo.trim() }, { onSuccess: alGuardar })
     }
   })
   const delFormulario = ['delivery_date', 'place', 'delivered_items', 'delivered_amount', 'recipients', 'conformity_by', 'reason']
@@ -218,52 +268,68 @@ function EntregaDrawer({ compromiso, entrega, alCerrar }: { compromiso: Registro
           <Button variant="secondary" onClick={alCerrar} disabled={comando.isPending}>
             {t('comun.cancelar')}
           </Button>
-          <Button type="submit" form="entrega" disabled={comando.isPending} aria-busy={comando.isPending}>
-            {comando.isPending ? t('entregas.guardando') : t('entregas.guardar')}
-          </Button>
+          {lista ? (
+            <Button type="submit" form="entrega" disabled={comando.isPending} aria-busy={comando.isPending}>
+              {comando.isPending ? t('entregas.guardando') : t('entregas.guardar')}
+            </Button>
+          ) : null}
         </>
       }
     >
-      <form id="entrega" className="space-y-3" onSubmit={(e) => void guardar(e)}>
-        <Campo etiqueta={t('entregas.campos.delivery_date')} error={error('delivery_date')}>
-          {(p) => <Input {...p} type="date" {...register('delivery_date')} />}
-        </Campo>
-        <Campo etiqueta={t('entregas.campos.place')} error={error('place')}>
-          {(p) => <Input {...p} {...register('place')} maxLength={300} />}
-        </Campo>
-        <Campo etiqueta={t('entregas.campos.delivered_items')} error={error('delivered_items')}>
-          {(p) => <Textarea {...p} {...register('delivered_items')} maxLength={4000} />}
-        </Campo>
-        <Campo etiqueta={t('entregas.campos.delivered_amount')} error={error('delivered_amount')}>
-          {(p) => <Input {...p} inputMode="decimal" {...register('delivered_amount')} />}
-        </Campo>
-        {escribible('recipients') ? (
-          <Campo etiqueta={t('entregas.campos.recipients')} error={error('recipients')}>
-            {(p) => <Textarea {...p} {...register('recipients')} maxLength={4000} />}
+      {definicion.isPending ? <Cargando /> : null}
+      {!lista && definicion.isError ? <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
+      {lista ? (
+        <form id="entrega" className="space-y-3" onSubmit={(e) => void guardar(e)}>
+          {escribible('delivery_date') ? (
+            <Campo etiqueta={t('entregas.campos.delivery_date')} error={error('delivery_date')}>
+              {(p) => <Input {...p} type="date" {...register('delivery_date')} />}
+            </Campo>
+          ) : null}
+          {escribible('place') ? (
+            <Campo etiqueta={t('entregas.campos.place')} error={error('place')}>
+              {(p) => <Input {...p} {...register('place')} maxLength={300} />}
+            </Campo>
+          ) : null}
+          {escribible('delivered_items') ? (
+            <Campo etiqueta={t('entregas.campos.delivered_items')} error={error('delivered_items')}>
+              {(p) => <Textarea {...p} {...register('delivered_items')} maxLength={4000} />}
+            </Campo>
+          ) : null}
+          {escribible('delivered_amount') ? (
+            <Campo etiqueta={t('entregas.campos.delivered_amount')} error={error('delivered_amount')}>
+              {(p) => <Input {...p} inputMode="decimal" {...register('delivered_amount')} />}
+            </Campo>
+          ) : null}
+          {escribible('recipients') ? (
+            <Campo etiqueta={t('entregas.campos.recipients')} error={error('recipients')}>
+              {(p) => <Textarea {...p} {...register('recipients')} maxLength={4000} />}
+            </Campo>
+          ) : null}
+          {escribible('conformity_given') ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" {...register('conformity_given')} />
+              {t('entregas.campos.conformity_given')}
+            </label>
+          ) : null}
+          {conformidad && escribible('conformity_by') ? (
+            <Campo etiqueta={t('entregas.campos.conformity_by')} error={error('conformity_by')}>
+              {(p) => <Textarea {...p} {...register('conformity_by')} maxLength={4000} />}
+            </Campo>
+          ) : null}
+          <Campo etiqueta={t('comun.motivoObligatorio')} error={error('motivo') ?? delServidor.reason}>
+            {(p) => <Textarea {...p} {...register('motivo')} maxLength={500} />}
           </Campo>
-        ) : null}
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" {...register('conformity_given')} />
-          {t('entregas.campos.conformity_given')}
-        </label>
-        {conformidad && escribible('conformity_by') ? (
-          <Campo etiqueta={t('entregas.campos.conformity_by')} error={error('conformity_by')}>
-            {(p) => <Textarea {...p} {...register('conformity_by')} maxLength={4000} />}
-          </Campo>
-        ) : null}
-        <Campo etiqueta={t('comun.motivoObligatorio')} error={error('motivo') ?? delServidor.reason}>
-          {(p) => <Textarea {...p} {...register('motivo')} maxLength={500} />}
-        </Campo>
-        {comando.isError && !Object.keys(delServidor).some((c) => delFormulario.includes(c)) ? (
-          <AvisoDeConflicto
-            error={comando.error}
-            propios={{ STATE_MISMATCH: t('entregas.errores.estado') }}
-            releer={() => releer(['records', 'delivery'], ['record', 'commitment', compromiso.id])}
-            alRecargar={() => comando.reset()}
-          />
-        ) : null}
-      </form>
-      {entrega ? null : (
+          {comando.isError && !Object.keys(delServidor).some((c) => delFormulario.includes(c)) ? (
+            <AvisoDeConflicto
+              error={comando.error}
+              propios={{ STATE_MISMATCH: t('entregas.errores.estado') }}
+              releer={() => releer(['records', 'delivery'], ['record', 'commitment', compromiso.id])}
+              alRecargar={() => comando.reset()}
+            />
+          ) : null}
+        </form>
+      ) : null}
+      {entrega || !lista || !subeEvidencias ? null : (
         <section aria-label={t('entregas.evidencias')} className="space-y-3 border-t border-sg-border pt-3">
           <h3 className="font-medium">{t('entregas.evidencias')}</h3>
           <p className="text-sg-caption text-sg-text-muted">{t('entregas.evidenciasAyuda')}</p>
