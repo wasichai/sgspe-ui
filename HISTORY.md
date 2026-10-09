@@ -2,6 +2,46 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-09 — Fase 2: portal de proyectos, territorio, grupos de interés y relacionamiento
+
+- Dependencias fijadas de F2: `@wasichai/gis` y `@wasichai/workflow` 0.5.0, `maplibre-gl` 6.10.0, `echarts` 6.1.0,
+  `react-hook-form` 7.89.0, `zod` 4.6.5 y Playwright 1.63.0. `/admin` registra gis y workflow; `AdminApp` y `PortalApp`
+  bajan en chunks propios (el pendiente de F1). MapLibre y ECharts no entran en la entrada: `partirEnChunks` excluye los
+  ids con `?` y Playwright lo comprueba (P33).
+- Capa de datos con `If-Match`, motivo RFC 8187, `Idempotency-Key`, multipart y correlación; las escrituras salen de la
+  forma del GET y de los permisos de quien llama, sin derivados ni campos restringidos, y releen el registro. Los códigos
+  de error del backend (ruling P15) se dicen con su texto, cada `403` con el suyo.
+- Hilo de contexto: selector de proyecto, barra de contexto con chip de territorio, rastro y Project 360.
+- Pantallas S06 a S26 en lo que dicen de F2, los tableros `stakeholders` y `engagement` con ECharts, el detalle de
+  KPI-STK-04, KPI-STK-05 y KPI-STK-07 y la exportación del registro de grupos de interés.
+- `SGSPE_MAPA_BASE` del portal y `sgspe.map.base-style-url` del backend llevan el mismo valor (notas de despliegue del
+  README).
+- Primeras pruebas extremo a extremo con Playwright (ASM-066).
+- Decisiones de la ejecución: `RUTAS_EN_PROYECTO` lleva `seccion` solo para las pantallas de otra sección (P36); `EDIT_ANY`
+  no exime de la asignación, y solo ADMIN la salta en la opción A (P38); la fila fuera de zona de una importación se
+  resalta con su mensaje y lleva `APPLY` por defecto (P39); las lecturas con tope (`useTodosConTope`, `leerConTope`) avisan
+  del recorte, y el calendario y las interacciones leen en orden descendente.
+- Piezas compartidas que dejó la ejecución: `LimiteDeError` (mapa y gráficos), `LecturaConEstados` y `FalloDeLectura`,
+  `ThConExplicacion` y celdas con `describedPor` para los datos restringidos en tablas, y `hoyEnLima`, `diaEnLima` y
+  `diasEntre` en `datos/fechas.ts`.
+- Defectos del plan corregidos al ejecutarlo: clave de idempotencia repetida en las evaluaciones, autoguardado del acta en
+  bucle tras un error, `NEUTRAL` de la barra de posturas con una sola serie, umbral 3 supuesto en la matriz, formulario de
+  asignación anidado en el asistente y conversión numérica por tecla en los parámetros.
+- Pruebas: 748 unitarias en 47 archivos (614 más que las 134 de F1) y 7 extremo a extremo.
+- Pendiente (no bloquea F2):
+  - Del alcance: búsqueda ⌘K (S03), inicios por rol (ASM-078), acción masiva «Reasignar responsable», mapa de vista previa
+    de la importación (el contrato no trae geometrías), directorio de usuarios y roles para `PROJECT_ADMIN`.
+  - El `POST` genérico ignora `Idempotency-Key` hasta UPS-18: un reintento tras una caída de red puede duplicar una
+    interacción o una visita.
+  - Una cuenta sin asignaciones vigentes que exporta con «mis proyectos» recibe un XLSX vacío sin mensaje (contrato de 2.2).
+  - Editor de acta: si el guardado al salir falla y la persona no vuelve a esa acta, no se le avisa; «Recuperar mi texto»
+    tras un `412` no compara con la versión ajena.
+  - Quitar la ubicación ya guardada de un proyecto no tiene contrato (`location: null`).
+  - «Nueva versión» de un área se ofrece también desde una versión reemplazada (viene del brief; confirmar con diseño).
+  - Los valores ENUM se muestran como se guardan (ASM-025) y el rol del líder de visita sale crudo.
+  - `MatrizPage` espera al proyecto aunque solo lo use como respaldo de los umbrales.
+  - Las pruebas con tiempo usan reloj falso: procesos ajenos en la máquina de desarrollo las volvieron lentas.
+
 ## 2026-10-07 — Cierre de la revisión final de la Fase 1
 
 - El idioma se comparte de verdad con `/admin`: `LanguageMenu` usa `useSetLocale` de core, que además de `sgspe.lang` guarda
