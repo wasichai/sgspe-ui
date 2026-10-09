@@ -30,11 +30,14 @@ La entrada más reciente va primero. El diseño y los ADR están en el repositor
   `AvisoDeConflicto`, `BotonRecargar` y `useReleer` son la salida común de un `412` (también en `FormularioDeRegistro` y
   S07); `useEscribeEnProyecto` deja escribir a ADMIN sin asignación y el equipo de S11 no la exige; `Historia` en
   `componentes/`; `useUbicacionDelTelefono` para S26 y el modo rápido; `importaA`; Reportes y las pestañas de Project 360
-  según permisos; zod sin JIT (`src/zodSinJit.ts`); `instanteDeLima`, `diaPe` y `fechaYHoraPe` para las fechas.
+  según permisos; zod sin JIT (`src/zodSinJit.ts`); `instanteDeLima`, `diaPe` y `fechaYHoraPe` para las fechas. En la
+  re-revisión: tras «Recargar», `FormularioDeRegistro` manda solo lo cambiado (`cambiosRespectoDe`) y S07 hace `reset` con
+  `keepDirtyValues`, así un guardado no pisa el cambio de otra persona; las transiciones de un registro de proyecto piden
+  `useEscribeEnProyecto`.
 - Defectos del plan corregidos al ejecutarlo: clave de idempotencia repetida en las evaluaciones, autoguardado del acta en
   bucle tras un error, `NEUTRAL` de la barra de posturas con una sola serie, umbral 3 supuesto en la matriz, formulario de
   asignación anidado en el asistente y conversión numérica por tecla en los parámetros.
-- Pruebas: 794 unitarias en 47 archivos (660 más que las 134 de F1) y 8 extremo a extremo.
+- Pruebas: 804 unitarias en 47 archivos (670 más que las 134 de F1) y 8 extremo a extremo.
 - Pendiente (no bloquea F2):
   - Del alcance: búsqueda ⌘K (S03), inicios por rol (ASM-078), acción masiva «Reasignar responsable», mapa de vista previa
     de la importación (el contrato no trae geometrías), directorio de usuarios y roles para `PROJECT_ADMIN`.
