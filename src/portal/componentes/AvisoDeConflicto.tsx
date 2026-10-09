@@ -9,12 +9,15 @@ import { esConflictoDeVersion, useMensajeDeError, type MensajesPropios } from '.
 // solo cuando la relectura llegó (alRecargar, que suele ser el reset de la mutación): antes, un segundo clic mandaría la
 // versión vieja y volvería el 412. si la relectura falla, lo dice junto al botón y lo escrito sigue donde estaba
 
-// relee las consultas de esas claves y espera a que lleguen; si una falla, lanza (la consulta conserva sus datos, así que
-// Consulta no desmonta lo que hay debajo)
-export function useReleer(): (...claves: QueryKey[]) => Promise<void> {
+// relee lo que escribió el 412 (la primera clave: el registro, o la lista de donde sale) y espera a que llegue; si falla,
+// lanza (la consulta conserva sus datos, así que Consulta no desmonta lo que hay debajo). las demás claves (listas, botones,
+// reglas) se releen sin esperar: su fallo no hace fallar «Recargar», porque el registro con su versión nueva ya llegó, y cada
+// una dice su propio error donde se muestra (re-revisión, menor 1)
+export function useReleer(): (principal: QueryKey, ...secundarias: QueryKey[]) => Promise<void> {
   const cliente = useQueryClient()
-  return async (...claves) => {
-    await Promise.all(claves.map((queryKey) => cliente.invalidateQueries({ queryKey }, { throwOnError: true })))
+  return async (principal, ...secundarias) => {
+    for (const queryKey of secundarias) void cliente.invalidateQueries({ queryKey })
+    await cliente.invalidateQueries({ queryKey: principal }, { throwOnError: true })
   }
 }
 

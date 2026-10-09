@@ -112,7 +112,7 @@ export function DialogoDeTransicion({
             // demás quedó viejo y confirmar sobre reglas obsoletas daría un STATE_MISMATCH
             <AvisoDeConflicto
               error={aplicar.error}
-              releer={() => releer(...['record', 'transitions', 'transition-check'].map((clave) => [clave, objeto, registro.id]))}
+              releer={() => releer(['record', objeto, registro.id], ['transitions', objeto, registro.id], ['transition-check', objeto, registro.id])}
               alRecargar={() => aplicar.reset()}
             />
           ) : null}

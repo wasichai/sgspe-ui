@@ -188,6 +188,33 @@ describe('transiciones', () => {
     expect(screen.getByLabelText('Motivo (obligatorio)')).toHaveValue('Paralización')
   })
 
+  it('«Recargar» se da por hecho cuando llega el registro, aunque falle la relectura de la lista de botones (re-revisión, menor 1)', async () => {
+    start([{ path: '/objects/project/records/p1', body: PROYECTO }])
+    let lecturasDeBotones = 0
+    red = espiarRed([
+      { method: 'POST', path: '/objects/project/records/p1/transitions/suspend', responder: () => problema(412, 'El proyecto cambió') },
+      {
+        path: '/objects/project/records/p1/transitions',
+        responder: () => (++lecturasDeBotones === 1 ? jsonResponse(transiciones) : problema(503, 'No disponible'))
+      }
+    ])
+    montar(
+      <>
+        <LectorDelRegistro />
+        <BotonesDeTransicion objeto="project" registro={PROYECTO} />
+      </>
+    )
+    await screen.findByText('registro leído')
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    await screen.findByText('Se cumplen las reglas para este paso.')
+    await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
+    await waitFor(() => expect(screen.queryByText(/Otra persona cambió este registro/)).not.toBeInTheDocument())
+    expect(screen.queryByText(/No se pudo recargar/)).not.toBeInTheDocument()
+    expect(lecturasDeBotones).toBe(2)
+  })
+
   it('si las reglas no se pudieron comprobar, Confirmar queda deshabilitado y se puede reintentar', async () => {
     start()
     let intentos = 0
