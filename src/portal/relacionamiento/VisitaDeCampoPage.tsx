@@ -249,7 +249,7 @@ function Visita({ visita }: { visita: Registro }) {
               <Link to={`/projects/${proyecto}/engagements/new?field_visit=${visita.id}`}>{t('relacionamiento.visita.registrarInteraccion')}</Link>
             </Button>
           ) : null}
-          <BotonesDeTransicion objeto="field_visit" registro={visita} />
+          <BotonesDeTransicion objeto="field_visit" registro={visita} proyecto={proyecto} />
         </div>
       </header>
       {enCurso ? <Alert tone="notice">{t('relacionamiento.visita.concluirAviso')}</Alert> : null}

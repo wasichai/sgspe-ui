@@ -205,6 +205,7 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
             <BotonesDeTransicion
               objeto="engagement"
               registro={interaccion}
+              proyecto={proyecto}
               ocultar={[
                 'close',
                 'close_light',

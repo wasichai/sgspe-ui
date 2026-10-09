@@ -107,7 +107,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               <Link to={`/projects/new?draft=${proyecto.id}`}>{t('p360.resumen.completar')}</Link>
             </Button>
           ) : null}
-          <BotonesDeTransicion objeto="project" registro={proyecto} />
+          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} />
           <button
             type="button"
             aria-disabled="true"

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -181,6 +181,23 @@ describe('S08 · Project 360, resumen', () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
     expect(await screen.findByText('2026-10: 3 de 2')).toBeInTheDocument()
     expect(await screen.findByText(/cambio de etapa/)).toBeInTheDocument()
+  })
+
+  it('sin asignación no ofrece las transiciones del proyecto; con ella, sí (re-revisión, menor 4)', async () => {
+    const enviar = { name: 'submit_for_review', label: 'Enviar a revisión', to: 'in_review', toLabel: 'En revisión', allowed: true, reason: null }
+    const transiciones = { path: '/objects/project/records/p1/transitions', body: [enviar] }
+    const mia = {
+      path: /^\/objects\/project_assignment\/records\?.*member_user_id/,
+      body: pagina([registro('as', { project: 'p1', member_user_id: RELACIONISTA.id, active: true })])
+    }
+    fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, [transiciones, ...rutas(SIN_STANCE)])
+    // el aviso de solo lectura sale cuando las asignaciones llegaron: los botones ya las vieron
+    await screen.findByText(/No está asignado a este proyecto/)
+    expect(screen.queryByRole('button', { name: 'Enviar a revisión' })).not.toBeInTheDocument()
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, [transiciones, mia, ...rutas(SIN_STANCE)])
+    expect(await screen.findByRole('button', { name: 'Enviar a revisión' })).toBeInTheDocument()
   })
 
   it('la actividad es la misma pieza que la de una interacción: dice los campos cambiados (revisión final, M3)', async () => {

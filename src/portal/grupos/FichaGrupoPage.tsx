@@ -122,7 +122,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
               {t('grupos.ficha.evaluar')}
             </Button>
           ) : null}
-          <BotonesDeTransicion objeto="stakeholder" registro={grupo} />
+          <BotonesDeTransicion objeto="stakeholder" registro={grupo} proyecto={proyecto} />
         </div>
       </header>
       <Advertencias advertencias={advertencias} />

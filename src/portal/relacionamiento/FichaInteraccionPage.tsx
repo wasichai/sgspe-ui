@@ -85,7 +85,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             ) : null}
           </div>
         </div>
-        <BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} />
+        <BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />
       </header>
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
         <Tabs

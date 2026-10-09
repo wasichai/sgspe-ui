@@ -2,7 +2,10 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { definicion, montar, registro, workflow } from '../../test/montar'
+import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
+import { ADMIN_PERMISOS, ADMINISTRACION, permisos, RELACIONISTA } from '../../test/portal'
+import { useAvailableTransitions } from '@wasichai/workflow'
+import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useRegistro } from '../datos/registros'
 import { BotonesDeTransicion } from './BotonesDeTransicion'
@@ -297,5 +300,43 @@ describe('transiciones', () => {
     const boton = await screen.findByRole('button', { name: 'Suspender' })
     await waitFor(() => expect(boton).toBeDisabled())
     expect(boton).not.toHaveAttribute('aria-describedby')
+  })
+
+  describe('con alcance de proyecto (re-revisión, menor 4)', () => {
+    // la sonda lee las mismas asignaciones y transiciones (mismas claves, misma caché): cuando las dos llegaron, los botones
+    // ya las vieron, así que su ausencia no es una carga pendiente
+    function Sonda() {
+      const asignaciones = useMisAsignaciones()
+      const disponibles = useAvailableTransitions('project', 'p1')
+      return asignaciones.isSuccess && disponibles.isSuccess ? <span>asignaciones llegaron</span> : null
+    }
+    const PROPIA = registro('a1', { project: 'p1', member_user_id: RELACIONISTA.id, active: true })
+    const conAsignaciones = (lista: unknown[]) => start([{ path: '/objects/project_assignment/records', body: pagina(lista) }])
+    const ESCRIBE = permisos({ project: ['READ', 'UPDATE'], project_assignment: ['READ'] })
+
+    it('sin asignación vigente ni ADMIN no ofrece transiciones que el servidor rechazaría con NOT_ASSIGNED', async () => {
+      conAsignaciones([])
+      montar(
+        <>
+          <BotonesDeTransicion objeto="project" registro={PROYECTO} proyecto="p1" />
+          <Sonda />
+        </>,
+        { permisos: ESCRIBE }
+      )
+      await screen.findByText('asignaciones llegaron')
+      expect(screen.queryByRole('button', { name: 'Suspender' })).not.toBeInTheDocument()
+    })
+
+    it('con asignación vigente, sí', async () => {
+      conAsignaciones([PROPIA])
+      montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} proyecto="p1" />, { permisos: ESCRIBE })
+      expect(await screen.findByRole('button', { name: 'Suspender' })).toBeInTheDocument()
+    })
+
+    it('ADMIN no necesita asignación', async () => {
+      conAsignaciones([])
+      montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} proyecto="p1" />, { usuario: ADMINISTRACION, permisos: ADMIN_PERMISOS })
+      expect(await screen.findByRole('button', { name: 'Suspender' })).toBeInTheDocument()
+    })
   })
 })

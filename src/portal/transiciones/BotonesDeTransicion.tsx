@@ -2,6 +2,7 @@ import { Button } from '@wasichai/ui'
 import { useAvailableTransitions, type AvailableTransition } from '@wasichai/workflow'
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useComprobacion } from './api'
@@ -17,15 +18,20 @@ export function BotonesDeTransicion({
   objeto,
   registro,
   ocultar = [],
-  comprobarAntes = []
+  comprobarAntes = [],
+  proyecto
 }: {
   objeto: string
   registro: Registro
   ocultar?: readonly string[]
   comprobarAntes?: readonly string[]
+  // el proyecto del registro, si su objeto tiene alcance de proyecto: ProjectScopeGuard rechaza la transición de quien no
+  // está asignado (salvo ADMIN), así que no se le ofrece (re-revisión, menor 4)
+  proyecto?: string
 }) {
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, registro.id)
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
   const [abierta, setAbierta] = useState<AvailableTransition | null>(null)
   // el estado al que llevó la última transición aplicada: se confirma aunque el estado nuevo ya no ofrezca botones
   const [hecha, setHecha] = useState<string | null>(null)
@@ -35,7 +41,8 @@ export function BotonesDeTransicion({
     const plazo = setTimeout(() => setHecha(null), DURACION_DE_LA_CONFIRMACION)
     return () => clearTimeout(plazo)
   }, [hecha])
-  const visibles = (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name))
+  const ofrece = proyecto === undefined || escribeEnElProyecto
+  const visibles = ofrece ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name)) : []
   if (visibles.length === 0 && !hecha) return null
   return (
     <div className="space-y-2">
