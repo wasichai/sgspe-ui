@@ -12,8 +12,10 @@ import { ACEPTAR_REPORTE, guardarArchivo, nuevaClave, usePedir } from '../datos/
 import { atributo, texto, useDefinicion, useRegistros } from '../datos/registros'
 import { fechaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { MatrizDeCompromisos } from './MatrizDeCompromisos'
 
-// S49 en F2 · reportes y exportaciones: el registro de grupos de interés en XLSX (api.md §4.13) con el nivel de divulgación
+// S49 en F2 y F3 · reportes y exportaciones: el registro de grupos de interés y, desde F3, la matriz de compromisos
+// (MatrizDeCompromisos, con EXPORT sobre commitment) en XLSX (api.md §4.13) con el nivel de divulgación
 // elegido; una salida fuera de la organización exige confirmar la lista de verificación (checklistConfirmed, RQ-REP-033).
 // EXTERNO cita a las personas por cargo o por código GI- (un seudónimo, deliverables.md §9.1); PUBLICO marca «reservado»
 // todo conteo menor que 5 y advierte no publicar dos salidas que difieran en pocas personas (ASM-088). con un solo proyecto
@@ -159,6 +161,7 @@ export function ReportesPage() {
           <Alert tone="notice">{t('reportes.sinPermiso')}</Alert>
         )}
       </section>
+      {can('commitment', 'EXPORT') ? <MatrizDeCompromisos /> : null}
       {verHistorial ? (
         <section aria-label={t('reportes.historial')} className="space-y-2">
           <h2 className="text-sg-h3 font-semibold">{t('reportes.historial')}</h2>

@@ -256,4 +256,71 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     expect(await screen.findByText('Su cuenta no puede abrir «Reportes».')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Reportes' })).not.toBeInTheDocument()
   })
+
+  describe('F3 · matriz de compromisos', () => {
+    const conMatriz = permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], commitment: ['READ', 'EXPORT'], export_log: ['READ'] })
+    const rutasDeLaMatriz = [
+      ...rutas,
+      {
+        path: '/objects/commitment/workflow',
+        body: workflow('commitment', [
+          ['in_progress', 'En ejecución'],
+          ['blocked', 'Bloqueado']
+        ])
+      },
+      { path: '/objects/exploration_campaign/records', body: pagina([registro('camp1', { project: 'p1', name: 'Campaña 2026' })]) }
+    ]
+
+    it('exporta con el proyecto, la campaña, los estados y el nivel, con su propia clave', async () => {
+      fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conMatriz, rutasDeLaMatriz)
+      red = espiarRed([{ method: 'POST', path: '/sgspe/exports/commitment-matrix', responder: () => archivoXlsx('matriz.xlsx') }])
+      const seccion = await screen.findByRole('region', { name: 'Matriz de compromisos' })
+      await waitFor(() => expect(within(seccion).getByRole('option', { name: 'Campaña 2026' })).toBeInTheDocument())
+      await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Campaña de exploración' }), 'camp1')
+      await userEvent.click(await within(seccion).findByRole('checkbox', { name: 'Bloqueado' }))
+      // la matriz imprime deadline_status solo en los pendientes (plan 3.2): la pantalla lo dice junto a los estados
+      expect(within(seccion).getByText(/solo se imprime en los compromisos pendientes/)).toBeInTheDocument()
+      await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Nivel de divulgación' }), 'EXTERNO')
+      await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar la matriz' }))
+      expect(await within(seccion).findByText('Confirme la lista de verificación para una salida fuera de la organización')).toBeInTheDocument()
+      await userEvent.click(within(seccion).getByRole('checkbox', { name: /Revisé que el archivo puede salir/ }))
+      await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar la matriz' }))
+      await waitFor(() => expect(red!.a('POST', '/sgspe/exports/commitment-matrix')).toHaveLength(1))
+      const [llamada] = red.a('POST', '/sgspe/exports/commitment-matrix')
+      expect(llamada.cuerpo).toEqual({
+        filters: { project: ['p1'], explorationCampaign: 'camp1', state: ['blocked'] },
+        disclosureLevel: 'EXTERNO',
+        checklistConfirmed: true
+      })
+      expect(llamada.cabeceras.get('Idempotency-Key')).toBeTruthy()
+      expect(llamada.cabeceras.get('Accept')).toContain('application/problem+json')
+      expect(URL.createObjectURL).toHaveBeenCalled()
+    })
+
+    it('INVALID_FILTER sobre los estados dice su texto propio', async () => {
+      fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conMatriz, rutasDeLaMatriz)
+      red = espiarRed([
+        {
+          method: 'POST',
+          path: '/sgspe/exports/commitment-matrix',
+          responder: () => problema(400, 'x', [{ field: 'filters.state', message: 'INVALID_FILTER' }])
+        }
+      ])
+      const seccion = await screen.findByRole('region', { name: 'Matriz de compromisos' })
+      await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar la matriz' }))
+      expect(await within(seccion).findByText('Uno de los estados elegidos no es de WF-D: recargue la página.')).toBeInTheDocument()
+      expect(within(seccion).queryByText('INVALID_FILTER')).not.toBeInTheDocument()
+    })
+
+    it('sin EXPORT sobre compromisos no se ofrece la matriz', async () => {
+      fetch = abrirPortal(
+        '/projects/p1/reports',
+        GERENCIA_SOCIAL,
+        permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], commitment: ['READ'], export_log: ['READ'] }),
+        rutasDeLaMatriz
+      )
+      expect(await screen.findByRole('region', { name: 'Registro de grupos de interés' })).toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Matriz de compromisos' })).not.toBeInTheDocument()
+    })
+  })
 })

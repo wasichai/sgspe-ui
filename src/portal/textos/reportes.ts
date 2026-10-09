@@ -36,7 +36,24 @@ export const ES_REPORTES = {
   historialAyuda: 'Las últimas exportaciones de la organización (o del proyecto elegido), con quién las hizo.',
   historialVacio: 'Todavía no hay exportaciones registradas.',
   columnas: { fecha: 'Fecha', quien: 'Exportó', objeto: 'Objeto', nivel: 'Nivel', filas: 'Filas' },
-  otrasLlegan: 'La matriz de compromisos llega en F3, el registro de QCS y de riesgos en F4 y los entregables en F8.'
+  otrasLlegan: 'El registro de QCS y de riesgos llega en F4 y los entregables en F8.',
+  // F3: la matriz de compromisos (api.md §4.13, deliverables.md §10)
+  matriz: {
+    titulo: 'Matriz de compromisos',
+    ayuda:
+      'XLSX con la matriz de DOC-01: en INTERNO, las hojas «Matriz» y «Entregas»; en EXTERNO, sin responsable ni datos restringidos, con los solicitantes por código GI-; en PUBLICO, solo los conteos por estado y tema y por tipo de recurso. Nunca el documento de identidad de los solicitantes.',
+    campana: 'Campaña de exploración',
+    todas: 'Todas las campañas',
+    estados: 'Estados',
+    estadosAyuda: 'Sin ninguno marcado, todos los estados.',
+    plazo: 'La situación de plazo (AL DIA, POR VENCER, VENCIDO) solo se imprime en los compromisos pendientes: aprobados, en ejecución o bloqueados.',
+    exportar: 'Exportar la matriz',
+    sinPermiso: 'Su cuenta no tiene la acción EXPORT sobre compromisos.',
+    errores: {
+      INVALID_FILTER: 'Uno de los estados elegidos no es de WF-D: recargue la página.',
+      TOO_MANY_RECORDS: 'Hay demasiados compromisos para un solo archivo: elija un proyecto, una campaña o menos estados.'
+    }
+  }
 }
 
 export const EN_REPORTES: typeof ES_REPORTES = {
@@ -73,5 +90,21 @@ export const EN_REPORTES: typeof ES_REPORTES = {
   historialAyuda: 'The latest exports of the organization (or of the chosen project), with who made them.',
   historialVacio: 'No exports have been recorded yet.',
   columnas: { fecha: 'Date', quien: 'Exported by', objeto: 'Object', nivel: 'Level', filas: 'Rows' },
-  otrasLlegan: 'The commitment matrix arrives in F3, the grievance and risk registers in F4 and the deliverables in F8.'
+  otrasLlegan: 'The grievance and risk registers arrive in F4 and the deliverables in F8.',
+  matriz: {
+    titulo: 'Commitment matrix',
+    ayuda:
+      'XLSX with the DOC-01 matrix: in INTERNO, the «Matriz» and «Entregas» sheets; in EXTERNO, without owner or restricted data and with requesters by GI- code; in PUBLICO, only counts by status and theme and by resource type. Never the requesters’ identity document.',
+    campana: 'Exploration campaign',
+    todas: 'All campaigns',
+    estados: 'Statuses',
+    estadosAyuda: 'With none checked, every status.',
+    plazo: 'The deadline situation (AL DIA, POR VENCER, VENCIDO) is only printed for pending commitments: approved, in progress or blocked.',
+    exportar: 'Export the matrix',
+    sinPermiso: 'Your account does not hold the EXPORT action on commitments.',
+    errores: {
+      INVALID_FILTER: 'One of the chosen statuses is not a WF-D status: reload the page.',
+      TOO_MANY_RECORDS: 'There are too many commitments for one file: pick a project, a campaign or fewer statuses.'
+    }
+  }
 }
