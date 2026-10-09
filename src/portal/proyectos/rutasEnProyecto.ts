@@ -10,7 +10,7 @@ import { EditorDeActaPage } from '../relacionamiento/EditorDeActaPage'
 import { FichaInteraccionPage } from '../relacionamiento/FichaInteraccionPage'
 import { RegistrarInteraccionPage } from '../relacionamiento/RegistrarInteraccionPage'
 import { TableroRelacionamientoPage } from '../relacionamiento/TableroRelacionamientoPage'
-import { VisitaDeCampoPage } from '../relacionamiento/VisitaDeCampoPage'
+import { VisitaDeCampoPage, VisitasPage } from '../relacionamiento/VisitaDeCampoPage'
 import { ReportesPage } from '../reportes/ReportesPage'
 import { AreaDeInfluenciaPage } from './AreaDeInfluenciaPage'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
@@ -41,6 +41,7 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'engagements/new', seccion: 'engagements', Pantalla: RegistrarInteraccionPage },
   { ruta: 'engagements/:engagementId', seccion: 'engagements', Pantalla: FichaInteraccionPage },
   { ruta: 'engagements/:engagementId/minutes', seccion: 'engagements', Pantalla: EditorDeActaPage },
+  { ruta: 'field-visits', seccion: 'engagements', Pantalla: VisitasPage },
   { ruta: 'field-visits/:visitId', seccion: 'engagements', Pantalla: VisitaDeCampoPage },
   { ruta: 'reports', seccion: 'reports', Pantalla: ReportesPage }
 ]

@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Table, Td, Textarea, Th, cn } from '@wasichai/ui'
-import { useRef, useState, type ReactNode } from 'react'
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Campo } from '../componentes/Campo'
+import { Campo, CONTROL } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, NoDisponible } from '../componentes/Estados'
+import { Cargando, NoDisponible, ThConExplicacion } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -40,13 +40,13 @@ import { CodigoDeProyecto } from './InteraccionesPage'
 // tecleadas (un punto no se dibuja, decisión 14). concluir no cambia las interacciones pendientes: cada una se posterga o
 // cancela con su motivo
 const CAMINO = ['planned', 'in_progress', 'completed'] as const
+// el líder (leader_user_id y leader_user_email) no es un campo del formulario: se elige del equipo del proyecto y se manda con
+// los fijos, el identificador y el correo juntos (LiderDeLaVisita)
 const CAMPOS_DE_LA_VISITA = [
   'title',
   'objective',
   'itinerary',
   'team_note',
-  'leader_user_id',
-  'leader_user_email',
   'planned_start_date',
   'planned_end_date',
   'actual_start_date',
@@ -78,6 +78,12 @@ function NuevaVisita() {
   const navegar = useNavigate()
   const asignaciones = useMisAsignaciones()
   const asignado = useAsignadoAlProyecto(projectId)
+  const [lider, setLider] = useState({ id: '', email: '' })
+  // el alta manda el proyecto y, si se eligió o se tecleó, el líder; sin valor no viaja la clave
+  const fijos = useMemo(
+    () => ({ project: projectId, ...(lider.id ? { leader_user_id: lider.id } : {}), ...(lider.email ? { leader_user_email: lider.email } : {}) }),
+    [projectId, lider]
+  )
   // sin permiso para crear, o sin asignación vigente (el servidor rechazaría el alta), no hay formulario que llenar en vano
   if (!can('field_visit', 'CREATE')) return <NoDisponible />
   if (!isAdmin) {
@@ -88,13 +94,70 @@ function NuevaVisita() {
   return (
     <section className="max-w-2xl space-y-3">
       <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.visita.nueva')}</h1>
+      <LiderDeLaVisita proyecto={projectId} alElegir={setLider} />
       <FormularioDeRegistro
         objeto="field_visit"
-        fijos={{ project: projectId }}
+        fijos={fijos}
         campos={CAMPOS_DE_LA_VISITA}
         alGuardar={(v) => navegar(`/projects/${projectId}/field-visits/${v.id}`)}
       />
     </section>
+  )
+}
+
+// el líder de la visita: se elige del equipo del proyecto (project_assignment, que quien está asignado sí lee) y llena el
+// identificador y el correo juntos, sin dejarlos incoherentes. si el equipo no se lee o está vacío, el identificador y el correo
+// se tecleaban a mano (decisión 3), como alternativa y no como camino
+function LiderDeLaVisita({ proyecto, alElegir }: { proyecto: string; alElegir: (lider: { id: string; email: string }) => void }) {
+  const { t } = useTranslation(NS)
+  const equipo = useTodosConTope('project_assignment', { project: proyecto, active: true })
+  const [elegido, setElegido] = useState('')
+  const [manual, setManual] = useState({ id: '', email: '' })
+  if (equipo.isPending) return <Cargando compacto />
+  // una persona con varias asignaciones se lista una vez
+  const miembros = [...new Map((equipo.data ?? []).map((a) => [texto(a, 'member_user_id'), a])).values()].filter((a) => texto(a, 'member_user_id'))
+  if (miembros.length === 0) {
+    const poner = (siguiente: { id: string; email: string }) => {
+      setManual(siguiente)
+      alElegir({ id: siguiente.id.trim(), email: siguiente.email.trim() })
+    }
+    return (
+      <fieldset className="space-y-2">
+        <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.visita.liderManual')}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Campo etiqueta={t('relacionamiento.visita.liderId')}>
+            {(p) => <Input {...p} value={manual.id} onChange={(e) => poner({ ...manual, id: e.target.value })} />}
+          </Campo>
+          <Campo etiqueta={t('relacionamiento.visita.liderCorreo')}>
+            {(p) => <Input {...p} type="email" value={manual.email} onChange={(e) => poner({ ...manual, email: e.target.value })} />}
+          </Campo>
+        </div>
+      </fieldset>
+    )
+  }
+  return (
+    <Campo etiqueta={t('relacionamiento.visita.lider')}>
+      {(p) => (
+        <select
+          {...p}
+          className={CONTROL}
+          value={elegido}
+          onChange={(e) => {
+            const miembro = miembros.find((a) => texto(a, 'member_user_id') === e.target.value)
+            setElegido(e.target.value)
+            alElegir({ id: miembro ? texto(miembro, 'member_user_id') : '', email: miembro ? texto(miembro, 'member_user_email') : '' })
+          }}
+        >
+          <option value="">{t('comun.ninguno')}</option>
+          {miembros.map((a) => (
+            <option key={texto(a, 'member_user_id')} value={texto(a, 'member_user_id')}>
+              {texto(a, 'member_user_email') || texto(a, 'member_user_id')}
+              {texto(a, 'role_name') ? ` (${texto(a, 'role_name')})` : ''}
+            </option>
+          ))}
+        </select>
+      )}
+    </Campo>
   )
 }
 
@@ -136,6 +199,9 @@ function Visita({ visita }: { visita: Registro }) {
   const proyecto = String(atributo(visita, 'project'))
   const escribe = usePuedeEscribirEn(proyecto)
   const puedeEditar = usePuedeEditar('field_visit')
+  // «Editar el resultado» guarda outcome_summary: sin poder escribirlo, el PUT "tendría éxito" sin guardar el texto
+  const definicion = useDefinicion('field_visit')
+  const puedeEscribirResultado = puedeEditar && puedeEscribir(definicion.data, 'outcome_summary')
   const interacciones = useTodosConTope('engagement', { field_visit: visita.id })
   const observaciones = useTodosConTope('field_observation', { field_visit: visita.id, sort: 'observed_at', dir: 'asc' })
   const [observando, setObservando] = useState(false)
@@ -256,7 +322,7 @@ function Visita({ visita }: { visita: Registro }) {
           <p>{[texto(visita, 'leader_user_email'), texto(visita, 'team_note')].filter(Boolean).join(' · ') || '—'}</p>
           <h2 className="font-medium">{t('relacionamiento.visita.resultado')}</h2>
           <p className="whitespace-pre-wrap">{texto(visita, 'outcome_summary') || '—'}</p>
-          {escribe && enCurso && puedeEditar ? (
+          {escribe && enCurso && puedeEscribirResultado ? (
             <Button size="sm" variant="secondary" onClick={() => setResumiendo(true)}>
               {t('relacionamiento.visita.editarResultado')}
             </Button>
@@ -321,6 +387,10 @@ function ResultadoDeLaVisita({ visita, alGuardar, alCancelar }: { visita: Regist
 
 type Punto = [number, number]
 
+// la lectura de la ubicación del teléfono: a los 15 s sin respuesta se da por fallida, y una posición de hace menos de 30 s sirve
+const PLAZO_DE_UBICACION = 15_000
+const EDAD_MAXIMA_DE_UBICACION = 30_000
+
 // el punto de las coordenadas tecleadas: ambas o ninguna, en grados decimales (la coma decimal se acepta). null es «sin
 // punto»; undefined, un valor que no es una coordenada
 function puntoDe(longitud: string, latitud: string): Punto | null | undefined {
@@ -347,6 +417,9 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
   const [longitud, setLongitud] = useState('')
   const [latitud, setLatitud] = useState('')
   const [sinUbicacion, setSinUbicacion] = useState(false)
+  // la lectura de la ubicación en curso: un resultado tardío no pisa las coordenadas que la persona escribió después
+  const [ubicando, setUbicando] = useState(false)
+  const lecturaDeUbicacion = useRef(0)
   const [faltas, setFaltas] = useState<{ observacion?: string; punto?: string }>({})
   const crear = useMutation({
     mutationFn: (punto: Punto | null) => {
@@ -378,22 +451,42 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
   if (definicion.isPending) return <Cargando />
   if (definicion.isError || !definicion.data) return <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
   const conPunto = puedeEscribir(definicion.data, 'location')
-  // lo escrito cambió: lo que se reintente ya no es la misma acción
+  // lo escrito cambió: lo que se reintente ya no es la misma acción, y el aviso de validación y el error del guardado anterior ya
+  // no hablan de lo que se ve
   const editar = (poner: () => void) => {
     accion.current = null
+    setFaltas({})
+    if (crear.isError) crear.reset()
     poner()
+  }
+  // teclear una coordenada deja sin efecto la lectura de ubicación que todavía no respondió
+  const escribirCoordenada = (poner: () => void) => {
+    lecturaDeUbicacion.current += 1
+    setUbicando(false)
+    editar(poner)
   }
 
   const leerUbicacion = () => {
     setSinUbicacion(false)
     if (!navigator.geolocation) return setSinUbicacion(true)
+    const mia = ++lecturaDeUbicacion.current
+    setUbicando(true)
     navigator.geolocation.getCurrentPosition(
-      (p) =>
+      (p) => {
+        if (lecturaDeUbicacion.current !== mia) return
+        setUbicando(false)
         editar(() => {
           setLongitud(String(Number(p.coords.longitude.toFixed(6))))
           setLatitud(String(Number(p.coords.latitude.toFixed(6))))
-        }),
-      () => setSinUbicacion(true)
+        })
+      },
+      () => {
+        if (lecturaDeUbicacion.current !== mia) return
+        setUbicando(false)
+        setSinUbicacion(true)
+      },
+      // sin plazo la espera sería infinita (permiso sin responder, GPS lento); una posición reciente basta para «aquí»
+      { timeout: PLAZO_DE_UBICACION, maximumAge: EDAD_MAXIMA_DE_UBICACION, enableHighAccuracy: true }
     )
   }
 
@@ -415,9 +508,14 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
       </Campo>
       {conPunto ? (
         <fieldset className="space-y-2">
-          <Button type="button" variant="secondary" className="h-11 w-full" onClick={leerUbicacion}>
+          <Button type="button" variant="secondary" className="h-11 w-full" disabled={ubicando} aria-busy={ubicando} onClick={leerUbicacion}>
             {t('relacionamiento.registro.usarUbicacion')}
           </Button>
+          {ubicando ? (
+            <p role="status" className="text-sg-caption text-sg-text-muted">
+              {t('relacionamiento.visita.obteniendoUbicacion')}
+            </p>
+          ) : null}
           {sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
           <div className="grid grid-cols-2 gap-2">
             <Campo etiqueta={t('relacionamiento.visita.longitud')}>
@@ -427,7 +525,7 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
                   inputMode="decimal"
                   aria-invalid={faltas.punto ? true : undefined}
                   value={longitud}
-                  onChange={(e) => editar(() => setLongitud(e.target.value))}
+                  onChange={(e) => escribirCoordenada(() => setLongitud(e.target.value))}
                 />
               )}
             </Campo>
@@ -438,7 +536,7 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
                   inputMode="decimal"
                   aria-invalid={faltas.punto ? true : undefined}
                   value={latitud}
-                  onChange={(e) => editar(() => setLatitud(e.target.value))}
+                  onChange={(e) => escribirCoordenada(() => setLatitud(e.target.value))}
                 />
               )}
             </Campo>
@@ -459,10 +557,13 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
   )
 }
 
-// las visitas de campo con alcance global (/field-visits): las de todos los proyectos legibles, con su proyecto
+// las visitas de campo: con alcance global (/field-visits) las de todos los proyectos legibles, con su proyecto; bajo un proyecto
+// (/projects/:projectId/field-visits) solo las de ese proyecto
 export function VisitasPage() {
   const { t } = useTranslation(NS)
-  const visitas = useTodosConTope('field_visit', { sort: 'planned_start_date', dir: 'desc' })
+  const { projectId } = useParams()
+  const idDeProyecto = useId()
+  const visitas = useTodosConTope('field_visit', { ...(projectId ? { project: projectId } : {}), sort: 'planned_start_date', dir: 'desc' })
   return (
     <section className="mx-auto max-w-[1440px] space-y-3">
       <h1 className="text-sg-h1 font-semibold">{t('relacionamiento.visitas')}</h1>
@@ -473,7 +574,11 @@ export function VisitasPage() {
               <thead>
                 <tr>
                   <Th scope="col">{t('relacionamiento.visita.columnas.titulo')}</Th>
-                  <Th scope="col">{t('relacionamiento.columnas.proyecto')}</Th>
+                  {projectId ? null : (
+                    <ThConExplicacion explicacion={idDeProyecto} tipo="noDisponible" soloLectores>
+                      {t('relacionamiento.columnas.proyecto')}
+                    </ThConExplicacion>
+                  )}
                   <Th scope="col">{t('relacionamiento.columnas.estado')}</Th>
                   <Th scope="col">{t('relacionamiento.visita.columnas.inicio')}</Th>
                 </tr>
@@ -486,9 +591,11 @@ export function VisitasPage() {
                         {texto(v, 'title')}
                       </Link>
                     </Td>
-                    <Td className="font-sg-mono text-sg-caption">
-                      <CodigoDeProyecto id={texto(v, 'project')} />
-                    </Td>
+                    {projectId ? null : (
+                      <Td className="font-sg-mono text-sg-caption">
+                        <CodigoDeProyecto id={texto(v, 'project')} describedPor={idDeProyecto} />
+                      </Td>
+                    )}
                     <Td>
                       <EstadoChip objeto="field_visit" estado={v.state} />
                     </Td>

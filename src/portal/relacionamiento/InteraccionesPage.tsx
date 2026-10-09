@@ -72,9 +72,11 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
               <Link to={`${base}/engagements/dashboard`}>{t('relacionamiento.tablero')}</Link>
             </Button>
           ) : null}
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/field-visits">{t('relacionamiento.visitas')}</Link>
-          </Button>
+          {can('field_visit', 'READ') ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`${base}/field-visits`}>{t('relacionamiento.visitas')}</Link>
+            </Button>
+          ) : null}
           {proyecto && asignado && can('field_visit', 'CREATE') ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`${base}/field-visits/new`}>{t('relacionamiento.nuevaVisita')}</Link>

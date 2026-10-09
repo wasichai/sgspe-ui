@@ -1,8 +1,8 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { definicion, pagina, registro } from '../../test/montar'
+import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -42,6 +42,7 @@ const DEFINICION_VISITA = definicion('field_visit', [
   'objective',
   'itinerary',
   'outcome_summary',
+  'leader_user_id',
   'leader_user_email',
   ['planned_start_date', { type: 'DATE' }],
   ['route', { type: 'GEOMETRY' }]
@@ -191,6 +192,84 @@ describe('S26 · visita de campo', () => {
     expect(await screen.findByText('No se pudo leer la ubicación')).toBeInTheDocument()
   })
 
+  // un teléfono que responde cuando la prueba lo decide: guarda las funciones y las opciones de la lectura
+  const telefonoLento = () => {
+    const lectura: { ok?: (p: unknown) => void; mal?: (e: unknown) => void; opciones?: PositionOptions; llamadas: number } = { llamadas: 0 }
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      geolocation: {
+        getCurrentPosition: (ok: (p: unknown) => void, mal: (e: unknown) => void, opciones?: PositionOptions) => {
+          lectura.llamadas += 1
+          Object.assign(lectura, { ok, mal, opciones })
+        }
+      }
+    })
+    return lectura
+  }
+
+  it('la lectura de la ubicación lleva plazo y edad máxima, dice que espera y no se puede repetir mientras tanto', async () => {
+    const telefono = telefonoLento()
+    fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, rutas())
+    await abrirObservacion()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' }))
+    expect(telefono.opciones).toEqual({ timeout: 15000, maximumAge: 30000, enableHighAccuracy: true })
+    expect(screen.getByText('Obteniendo ubicación…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' }))
+    expect(telefono.llamadas).toBe(1)
+    act(() => telefono.ok?.({ coords: { longitude: -78.2, latitude: -8.3 } }))
+    expect(screen.queryByText('Obteniendo ubicación…')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Longitud')).toHaveValue('-78.2')
+    expect(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' })).toBeEnabled()
+  })
+
+  it('si la ubicación vence (timeout) lo dice, deja de esperar y permite reintentar', async () => {
+    const telefono = telefonoLento()
+    fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, rutas())
+    await abrirObservacion()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' }))
+    act(() => telefono.mal?.({ code: 3, message: 'Timeout expired' }))
+    expect(await screen.findByText('No se pudo leer la ubicación')).toBeInTheDocument()
+    expect(screen.queryByText('Obteniendo ubicación…')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' }))
+    expect(telefono.llamadas).toBe(2)
+  })
+
+  it('una ubicación que llega tarde no pisa las coordenadas que la persona escribió mientras esperaba', async () => {
+    const telefono = telefonoLento()
+    fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, rutas())
+    await abrirObservacion()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar la ubicación del teléfono' }))
+    await userEvent.type(screen.getByLabelText('Longitud'), '-77,5')
+    await userEvent.type(screen.getByLabelText('Latitud'), '-9')
+    expect(screen.queryByText('Obteniendo ubicación…')).not.toBeInTheDocument()
+    act(() => telefono.ok?.({ coords: { longitude: -78.2, latitude: -8.3 } }))
+    expect(screen.getByLabelText('Longitud')).toHaveValue('-77,5')
+    expect(screen.getByLabelText('Latitud')).toHaveValue('-9')
+  })
+
+  it('el aviso de validación y el error de guardado se van al corregir lo escrito', async () => {
+    fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed([{ method: 'POST', path: '/objects/field_observation/records', responder: () => problema(400, 'La observación no es válida') }])
+    await abrirObservacion()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Escriba la observación')).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Observaciones' }), 'Derrumbe')
+    expect(screen.queryByText('Escriba la observación')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Longitud'), '-200')
+    await userEvent.type(screen.getByLabelText('Latitud'), '-8')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText(/Indique la longitud/)).toBeInTheDocument()
+    await userEvent.clear(screen.getByLabelText('Longitud'))
+    expect(screen.queryByText(/Indique la longitud/)).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Longitud'), '-78')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('La observación no es válida')).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Observaciones' }), '!')
+    expect(screen.queryByText('La observación no es válida')).not.toBeInTheDocument()
+  })
+
   it('la ruta, las interacciones y las observaciones se dibujan en el mapa y las observaciones se listan', async () => {
     fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, [
       {
@@ -241,30 +320,36 @@ describe('S26 · visita de campo', () => {
     expect(await screen.findByText('No disponible')).toBeInTheDocument()
   })
 
-  it('el resumen del resultado se guarda con la versión leída; un 412 ofrece recargar y conserva lo escrito', async () => {
+  it('el resumen del resultado se guarda con la versión leída; un 412 ofrece recargar, conserva lo escrito y guarda con la versión nueva', async () => {
     fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, rutas())
     let intentos = 0
+    let lecturas = 0
     red = espiarRed([
       {
         method: 'PUT',
         path: '/objects/field_visit/records/v1',
         responder: () => (++intentos === 1 ? problema(412, 'La visita cambió') : jsonResponse(VISITA))
+      },
+      {
+        // la primera lectura es la carga de la pantalla; las siguientes traen la visita que otra persona cambió
+        path: '/objects/field_visit/records/v1',
+        responder: () => jsonResponse(++lecturas === 1 ? VISITA : { ...VISITA, updatedAt: '2026-10-06T09:30:00Z' })
       }
     ])
     await userEvent.click(await screen.findByRole('button', { name: 'Editar el resultado' }))
     await userEvent.type(await screen.findByRole('textbox', { name: 'Resumen del resultado' }), 'Se acordó la asamblea')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
+    expect(red.a('PUT', '/objects/field_visit/records/v1')[0].cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00Z"')
     expect(screen.getByRole('textbox', { name: 'Resumen del resultado' })).toHaveValue('Se acordó la asamblea')
-    const lecturas = () => red!.a('GET', '/objects/field_visit/records/v1').length
-    const antes = lecturas()
     await userEvent.click(screen.getByRole('button', { name: 'Recargar' }))
-    await waitFor(() => expect(lecturas()).toBeGreaterThan(antes))
+    await waitFor(() => expect(lecturas).toBeGreaterThan(1))
     expect(screen.queryByText(/Otra persona cambió este registro/)).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/field_visit/records/v1')).toHaveLength(2))
     const [, segundo] = red.a('PUT', '/objects/field_visit/records/v1')
-    expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00Z"')
+    // la versión que otra persona dejó, no la que se leyó al abrir
+    expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-06T09:30:00Z"')
     expect(segundo.cuerpo).toMatchObject({ attributes: { outcome_summary: 'Se acordó la asamblea', title: 'Salida a Tunas' } })
     // lo que el GET no trajo y las geometrías no viajan
     expect(Object.keys((segundo.cuerpo as { attributes: object }).attributes)).not.toContain('itinerary')
@@ -285,6 +370,40 @@ describe('S26 · visita de campo', () => {
     ])
     await screen.findByRole('button', { name: 'Concluir' })
     expect(screen.queryByRole('button', { name: 'Editar el resultado' })).not.toBeInTheDocument()
+  })
+
+  it('«Editar el resultado» exige poder escribir el resumen: con otros campos escribibles pero no ese, no se ofrece', async () => {
+    fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, [
+      {
+        path: '/metadata/objects/field_visit',
+        body: definicion('field_visit', ['project', 'title', 'objective', ['outcome_summary', { editable: false }]])
+      },
+      ...rutas()
+    ])
+    await screen.findByRole('button', { name: 'Concluir' })
+    // la definición llega después que la visita: se espera a que haya dejado de ser desconocida
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path.includes('/metadata/objects/field_visit'))).toBe(true))
+    expect(screen.queryByRole('button', { name: 'Editar el resultado' })).not.toBeInTheDocument()
+  })
+
+  it('una visita cancelada no resalta ningún paso del camino y lo dice con su estado', async () => {
+    fetch = abrirPortal('/projects/p1/field-visits/v1', RELACIONISTA, EQUIPO, [
+      { path: '/objects/field_visit/records/v1', body: { ...VISITA, state: 'cancelled' } },
+      {
+        path: '/objects/field_visit/workflow',
+        body: workflow('field_visit', [
+          ['planned', 'Planificada'],
+          ['in_progress', 'En curso'],
+          ['cancelled', 'Cancelada']
+        ])
+      },
+      ...rutas()
+    ])
+    const pasos = await screen.findByRole('list', { name: 'Pasos' })
+    expect(within(pasos).getAllByRole('listitem')).toHaveLength(3)
+    for (const paso of within(pasos).getAllByRole('listitem')) expect(paso).not.toHaveAttribute('aria-current')
+    expect(await screen.findByText('Cancelada')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agregar observación aquí' })).not.toBeInTheDocument()
   })
 
   it('sin asignación vigente al proyecto no se ofrece escribir, pero la visita se lee', async () => {
@@ -325,6 +444,78 @@ describe('S26 · nueva visita', () => {
     expect(await screen.findByRole('heading', { name: 'Nueva' })).toBeInTheDocument()
   })
 
+  const EQUIPO_DEL_PROYECTO = (miembros: [string, string, string][]): MockRoute => ({
+    path: /^\/objects\/project_assignment\/records\?.*project=p1/,
+    body: pagina(
+      miembros.map(([id, email, rol]) => registro(`as-${id}`, { project: 'p1', member_user_id: id, member_user_email: email, role_name: rol, active: true }))
+    )
+  })
+
+  it('el líder se elige del equipo del proyecto y viajan su identificador y su correo juntos', async () => {
+    fetch = abrirPortal(
+      '/projects/p1/field-visits/new',
+      RELACIONISTA,
+      EQUIPO,
+      nueva([
+        EQUIPO_DEL_PROYECTO([
+          ['u1', 'pad@sgspe.test', 'PROJECT_ADMIN'],
+          ['u2', 'smg@sgspe.test', 'SOCIAL_MANAGER']
+        ])
+      ])
+    )
+    red = espiarRed()
+    await userEvent.type(await screen.findByRole('textbox', { name: /title/ }), 'Nueva')
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Líder de la visita' }), 'u2')
+    expect(screen.queryByLabelText('Correo del líder')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
+    await waitFor(() => expect(red!.a('POST', '/objects/field_visit/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/field_visit/records')[0].cuerpo).toMatchObject({
+      attributes: { project: 'p1', title: 'Nueva', leader_user_id: 'u2', leader_user_email: 'smg@sgspe.test' }
+    })
+  })
+
+  it('sin elegir líder no viaja ninguno de sus dos datos', async () => {
+    fetch = abrirPortal('/projects/p1/field-visits/new', RELACIONISTA, EQUIPO, nueva([EQUIPO_DEL_PROYECTO([['u1', 'pad@sgspe.test', 'PROJECT_ADMIN']])]))
+    red = espiarRed()
+    await userEvent.type(await screen.findByRole('textbox', { name: /title/ }), 'Nueva')
+    await screen.findByRole('combobox', { name: 'Líder de la visita' })
+    await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
+    await waitFor(() => expect(red!.a('POST', '/objects/field_visit/records')).toHaveLength(1))
+    const atributos = (red.a('POST', '/objects/field_visit/records')[0].cuerpo as { attributes: object }).attributes
+    // el formulario manda vacíos (null) los campos que no se llenan; el líder no se inventa
+    expect((atributos as Record<string, unknown>).leader_user_id ?? null).toBeNull()
+    expect((atributos as Record<string, unknown>).leader_user_email ?? null).toBeNull()
+  })
+
+  it('si el equipo no se lee, el líder se escribe a mano como alternativa', async () => {
+    fetch = abrirPortal(
+      '/projects/p1/field-visits/new',
+      RELACIONISTA,
+      EQUIPO,
+      nueva([{ path: /^\/objects\/project_assignment\/records\?.*project=p1/, status: 403, body: ERROR(403) }])
+    )
+    red = espiarRed()
+    await userEvent.type(await screen.findByRole('textbox', { name: /title/ }), 'Nueva')
+    await userEvent.type(await screen.findByLabelText('Identificador del usuario líder'), 'u7')
+    await userEvent.type(screen.getByLabelText('Correo del líder'), 'lider@sgspe.test')
+    expect(screen.queryByRole('combobox', { name: 'Líder de la visita' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Guardar/ }))
+    await waitFor(() => expect(red!.a('POST', '/objects/field_visit/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/field_visit/records')[0].cuerpo).toMatchObject({
+      attributes: { leader_user_id: 'u7', leader_user_email: 'lider@sgspe.test' }
+    })
+  })
+
+  it('sin asignación vigente al proyecto dice por qué y no ofrece el formulario', async () => {
+    fetch = abrirPortal('/projects/p1/field-visits/new', RELACIONISTA, EQUIPO, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...nueva()
+    ])
+    expect(await screen.findByText(/No tiene una asignación vigente a este proyecto/)).toBeInTheDocument()
+    expect(screen.getByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /title/ })).not.toBeInTheDocument()
+  })
+
   it('sin permiso para crear dice no disponible', async () => {
     fetch = abrirPortal('/projects/p1/field-visits/new', RELACIONISTA, permisos({ ...EQUIPO.objects, field_visit: ['READ'] }), nueva())
     expect(await screen.findByText('No disponible')).toBeInTheDocument()
@@ -359,6 +550,27 @@ describe('S26 · visitas de campo del tenant', () => {
   it('una lista sin visitas lo dice', async () => {
     fetch = abrirPortal('/field-visits', RELACIONISTA, EQUIPO, [{ path: '/objects/field_visit/records', body: pagina([]) }, ...lista()])
     expect(await screen.findByText('Aún no hay visitas de campo.')).toBeInTheDocument()
+  })
+
+  it('dentro de un proyecto lista solo las visitas de ese proyecto, sin la columna Proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/field-visits', RELACIONISTA, EQUIPO, lista())
+    red = espiarRed()
+    const tabla = await screen.findByRole('table', { name: 'Visitas de campo' })
+    expect(within(tabla).getByRole('link', { name: 'Segunda salida' })).toHaveAttribute('href', '/projects/p1/field-visits/v2')
+    expect(within(tabla).queryByRole('columnheader', { name: 'Proyecto' })).not.toBeInTheDocument()
+    expect(red.a('GET', '/objects/field_visit/records')[0].ruta).toContain('project=p1')
+  })
+
+  it('el enlace de Relacionamiento dentro de un proyecto lleva a las visitas de ese proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/engagements', RELACIONISTA, EQUIPO, lista())
+    expect(await screen.findByRole('link', { name: 'Visitas de campo' })).toHaveAttribute('href', '/projects/p1/field-visits')
+  })
+
+  it('sin permiso de lectura sobre las visitas de campo, Relacionamiento no ofrece el enlace', async () => {
+    const { field_visit: _sin, ...sinVisitas } = EQUIPO.objects
+    fetch = abrirPortal('/engagements', RELACIONISTA, permisos(sinVisitas), lista())
+    await screen.findByRole('heading', { name: 'Relacionamiento' })
+    expect(screen.queryByRole('link', { name: 'Visitas de campo' })).not.toBeInTheDocument()
   })
 
   it('Relacionamiento enlaza a las visitas de campo', async () => {
