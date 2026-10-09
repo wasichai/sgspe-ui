@@ -1,13 +1,13 @@
 // S49 · reportes y exportaciones en F2 (screens.md, ux-architecture.md §9; api.md §4.13)
 export const ES_REPORTES = {
   titulo: 'Reportes',
-  exportaciones: 'Exportaciones',
   registroDeGrupos: 'Registro de grupos de interés',
   registroAyuda:
     'XLSX con la evaluación vigente de cada grupo de interés, con el nivel de divulgación aplicado antes de escribir el archivo. Queda en el registro de exportaciones.',
   proyecto: 'Proyecto',
   todosMisProyectos: 'Todos mis proyectos',
   proyectosCargando: 'Leyendo los proyectos…',
+  proyectoDeLaPagina: 'Proyecto de la página',
   nivel: 'Nivel de divulgación',
   niveles: {
     INTERNO: 'Uso interno: todos los campos que su cuenta lee',
@@ -41,13 +41,13 @@ export const ES_REPORTES = {
 
 export const EN_REPORTES: typeof ES_REPORTES = {
   titulo: 'Reports',
-  exportaciones: 'Exports',
   registroDeGrupos: 'Stakeholder register',
   registroAyuda:
     'XLSX with the current assessment of each stakeholder, with the disclosure level applied before the file is written. It is recorded in the export log.',
   proyecto: 'Project',
   todosMisProyectos: 'All my projects',
   proyectosCargando: 'Reading the projects…',
+  proyectoDeLaPagina: 'Project of this page',
   nivel: 'Disclosure level',
   niveles: {
     INTERNO: 'Internal: every field your account reads',

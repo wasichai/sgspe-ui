@@ -14,16 +14,23 @@ beforeEach(() => {
   sessionStorage.clear()
   URL.createObjectURL = vi.fn(() => 'blob:x')
   URL.revokeObjectURL = vi.fn()
+  // guardar el archivo hace clic en un enlace blob:, y jsdom no navega («Not implemented: navigation»)
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 })
 afterEach(() => {
+  vi.restoreAllMocks()
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
 })
 
 const rutas = [
-  { path: '/objects/project/records', body: pagina([registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' })]) },
+  {
+    path: '/objects/project/records',
+    body: pagina([registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }), registro('p2', { code: 'PRJ-02', name: 'Antamina Norte' })])
+  },
   { path: '/objects/project/records/p1', body: registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }, { state: 'active' }) },
+  { path: '/objects/project/records/p2', body: registro('p2', { code: 'PRJ-02', name: 'Antamina Norte' }, { state: 'active' }) },
   { path: '/objects/project/workflow', body: workflow('project', [['active', 'Activo']]) },
   { path: '/objects/project_assignment/records', body: pagina([registro('a', { project: 'p1', active: true, member_user_id: 'u-smg' })]) },
   {
@@ -50,8 +57,12 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     expect(await screen.findByText('Confirme la lista de verificación para una salida fuera de la organización')).toBeInTheDocument()
     expect(red.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(0)
     await userEvent.click(screen.getByRole('checkbox', { name: /Revisé que el archivo puede salir/ }))
+    // el registro de exportaciones ya se leyó una vez; tras exportar se vuelve a leer para mostrar la nueva fila
+    await screen.findByRole('cell', { name: '42' })
+    const lecturas = red.a('GET', '/objects/export_log/records').length
     await userEvent.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
+    await waitFor(() => expect(red!.a('GET', '/objects/export_log/records').length).toBeGreaterThan(lecturas))
     expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toEqual({
       filters: { project: ['p1'] },
       disclosureLevel: 'EXTERNO',
@@ -72,6 +83,8 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     expect(URL.createObjectURL).toHaveBeenCalled()
     expect(screen.queryByRole('region', { name: 'Registro de exportaciones' })).not.toBeInTheDocument()
     expect(red.a('GET', '/objects/export_log/records')).toHaveLength(0)
+    // ni su definición: export_log es un objeto reservado que esta cuenta no lee
+    expect(red.a('GET', '/metadata/objects/export_log')).toHaveLength(0)
   })
 
   it('PUBLICO dice la marca «reservado» y advierte no publicar dos salidas que difieran en pocas personas (ASM-088)', async () => {
@@ -176,8 +189,60 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
     red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => problema(403, 'Forbidden', [], 'corr-77') }])
     await userEvent.click(await screen.findByRole('button', { name: 'Exportar XLSX' }))
-    expect(await screen.findByText(/corr-77/)).toBeInTheDocument()
+    expect(await screen.findByText('Su cuenta no tiene permiso para esta acción. Pídalo a la administración del proyecto.')).toBeInTheDocument()
+    expect(screen.getByText(/corr-77/)).toBeInTheDocument()
     expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+
+  it('elegir un proyecto en el selector manda ese id, y volver a «Todos mis proyectos» manda la lista vacía aun en la URL de un proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
+    red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
+    const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
+    const selector = within(seccion).getByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() => expect(within(selector).getByRole('option', { name: 'PRJ-02 · Antamina Norte' })).toBeInTheDocument())
+    await userEvent.selectOptions(selector, 'p2')
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toMatchObject({ filters: { project: ['p2'] } })
+    // el registro de exportaciones sigue al proyecto elegido
+    await waitFor(() => expect(red!.a('GET', '/objects/export_log/records').at(-1)?.ruta).toContain('project=p2'))
+    await userEvent.selectOptions(selector, '')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Exportar XLSX' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(2))
+    expect(red.a('POST', '/sgspe/exports/stakeholder-register')[1].cuerpo).toMatchObject({ filters: { project: [] } })
+  })
+
+  it('lo elegido en el selector no pisa el proyecto de la URL cuando el shell cambia de proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
+    red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
+    const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
+    const delaPagina = within(seccion).getByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() => expect(within(delaPagina).getByRole('option', { name: 'PRJ-02 · Antamina Norte' })).toBeInTheDocument())
+    await userEvent.selectOptions(delaPagina, '')
+    expect(delaPagina).toHaveValue('')
+    // el conmutador del shell (el primer combobox «Proyecto») cambia el proyecto de la URL
+    await userEvent.selectOptions(screen.getAllByRole('combobox', { name: 'Proyecto' })[0], 'p2')
+    await waitFor(() => expect(window.location.pathname).toBe('/projects/p2/reports'))
+    await waitFor(() =>
+      expect(within(screen.getByRole('region', { name: 'Registro de grupos de interés' })).getByRole('combobox', { name: 'Proyecto' })).toHaveValue('p2')
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toMatchObject({ filters: { project: ['p2'] } })
+  })
+
+  it('si la lista de proyectos falla, el selector rotula el proyecto de la URL sin mostrar su identificador', async () => {
+    const id = '0b6f1c3e-5d2a-4c1e-9a77-3f8e2d1b4a90'
+    fetch = abrirPortal(`/projects/${id}/reports`, GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), [
+      ...rutas,
+      { path: `/objects/project/records/${id}`, body: registro(id, { code: 'PRJ-09', name: 'Sin lista' }, { state: 'active' }) }
+    ])
+    red = espiarRed([{ path: '/objects/project/records', responder: () => problema(422, 'Consulta no válida') }])
+    const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
+    expect(await within(seccion).findByRole('option', { name: 'Proyecto de la página' })).toBeInTheDocument()
+    expect(within(seccion).getByRole('combobox', { name: 'Proyecto' })).toHaveValue(id)
+    expect(within(seccion).queryByRole('option', { name: id })).not.toBeInTheDocument()
   })
 
   it('sin la acción EXPORT lo dice y no ofrece exportar', async () => {

@@ -56,6 +56,11 @@ export interface Archivo {
 // RFC 8187: el motivo viaja siempre como UTF-8'' más el texto codificado, así un acento o un % significan lo que dicen
 export const motivoEnCabecera = (motivo: string): string => `UTF-8''${encodeURIComponent(motivo.trim())}`
 
+// el reporte o la exportación se pide como XLSX o problem+json: sin el segundo, un error llega con su estado y el cuerpo
+// vacío (api.md §3.3 y §4.2)
+export const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+export const ACEPTAR_REPORTE = `${XLSX}, application/problem+json`
+
 // una clave por acción del usuario, de 1 a 64 caracteres (§3.5)
 export const nuevaClave = (): string => crypto.randomUUID()
 

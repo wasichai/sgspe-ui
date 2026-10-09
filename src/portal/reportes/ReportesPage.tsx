@@ -8,11 +8,10 @@ import { correlacionDe, useMensajeDeError } from '../componentes/errores'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useProyectos } from '../contexto/proyectos'
-import { guardarArchivo, nuevaClave, usePedir } from '../datos/http'
+import { ACEPTAR_REPORTE, guardarArchivo, nuevaClave, usePedir } from '../datos/http'
 import { atributo, texto, useDefinicion, useRegistros } from '../datos/registros'
 import { fechaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { ACEPTAR_REPORTE } from '../territorio/importacion'
 
 // S49 en F2 · reportes y exportaciones: el registro de grupos de interés en XLSX (api.md §4.13) con el nivel de divulgación
 // elegido; una salida fuera de la organización exige confirmar la lista de verificación (checklistConfirmed, RQ-REP-033).
@@ -34,11 +33,14 @@ export function ReportesPage() {
   const cliente = useQueryClient()
   const mensaje = useMensajeDeError()
   const proyectos = useProyectos()
-  const definicion = useDefinicion('export_log')
-  // el proyecto de la URL, salvo que la persona elija otro; '' es «todos mis proyectos»
-  const [elegido, setElegido] = useState<string | null>(null)
-  const proyecto = elegido ?? (scope.kind === 'project' ? scope.projectId : '')
   const verHistorial = can('export_log', 'READ')
+  // export_log es un objeto reservado: quien no lo lee no pide su definición (los niveles tienen respaldo en NIVELES)
+  const definicion = useDefinicion(verHistorial ? 'export_log' : undefined)
+  // el proyecto de la URL, salvo que la persona elija otro; '' es «todos mis proyectos». lo elegido vale solo para el
+  // proyecto de la URL con el que se eligió: si el conmutador del shell cambia de proyecto, manda la URL otra vez
+  const delaUrl = scope.kind === 'project' ? scope.projectId : ''
+  const [elegido, setElegido] = useState<{ valor: string; desde: string } | null>(null)
+  const proyecto = elegido && elegido.desde === delaUrl ? elegido.valor : delaUrl
   const historial = useRegistros(
     'export_log',
     { project: proyecto || undefined, sort: 'exported_at', dir: 'desc', size: EXPORTACIONES_A_LA_VISTA, count: false },
@@ -69,7 +71,7 @@ export function ReportesPage() {
   }
   // un pedido nuevo no arrastra el error del anterior
   const cambiarProyecto = (id: string) => {
-    setElegido(id)
+    setElegido({ valor: id, desde: delaUrl })
     exportar.reset()
   }
   const cambiarNivel = (valor: string) => {
@@ -101,7 +103,9 @@ export function ReportesPage() {
                     onChange={(e) => cambiarProyecto(e.target.value)}
                   >
                     <option value="">{t('reportes.todosMisProyectos')}</option>
-                    {faltaEnLista ? <option value={proyecto}>{proyectos.isPending ? t('reportes.proyectosCargando') : proyecto}</option> : null}
+                    {faltaEnLista ? (
+                      <option value={proyecto}>{proyectos.isPending ? t('reportes.proyectosCargando') : t('reportes.proyectoDeLaPagina')}</option>
+                    ) : null}
                     {lista.map((x) => (
                       <option key={x.id} value={x.id}>
                         {texto(x, 'code')} · {texto(x, 'name')}

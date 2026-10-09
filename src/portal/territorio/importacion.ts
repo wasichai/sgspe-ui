@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { usePedir, nuevaClave } from '../datos/http'
+import { ACEPTAR_REPORTE, usePedir, nuevaClave } from '../datos/http'
 
 // la importación geoespacial de api.md §4.2 (gis.md §4.2): la vista previa no deja estado en el servidor, así que la
 // confirmación vuelve a mandar lo mismo que la vista previa (archivo, destino, proyecto, CRS de origen y columnas) con el
@@ -70,10 +70,6 @@ export interface Pedido {
   crs: string
   columnas: Columnas
 }
-
-export const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-// el reporte se pide como XLSX o problem+json: sin el segundo, un error llega con su estado y el cuerpo vacío (api.md §4.2)
-export const ACEPTAR_REPORTE = `${XLSX}, application/problem+json`
 
 const formulario = ({ archivo, destino, proyecto, crs, columnas }: Pedido) => {
   const f = new FormData()

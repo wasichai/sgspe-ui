@@ -114,7 +114,8 @@ export function useRegistro(objeto: string, id: string | undefined) {
 
 // la definición del objeto para quien llama: wasichai quita los campos que no puede leer y marca editable: false los que
 // no puede escribir (WAS-ADR-0020). un campo que falta es un campo restringido
-export const useDefinicion = (objeto: string) => useObjectDefinition(objeto)
+// sin objeto (undefined) no pide nada: para lo que solo se necesita si la persona puede leerlo
+export const useDefinicion = (objeto: string | undefined) => useObjectDefinition(objeto)
 
 export const campoDe = (definicion: ObjectDefinition | undefined, campo: string): FieldMeta | undefined => definicion?.fields.find((f) => f.name === campo)
 
