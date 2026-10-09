@@ -1,3 +1,16 @@
+import { ES_ACUERDOS } from './acuerdos'
+import { ES_APROBACIONES } from './aprobaciones'
+import { ES_AVISOS } from './avisos'
+import { ES_COMPROMISOS } from './compromisos'
+import { ES_DOCUMENTOS } from './documentos'
+import { ES_ENTREGAS } from './entregas'
+import { ES_EVIDENCIAS } from './evidencias'
+import { ES_FICHA_COMPROMISO } from './fichaCompromiso'
+import { ES_NUEVO_COMPROMISO } from './nuevoCompromiso'
+import { ES_REPROGRAMACIONES } from './reprogramaciones'
+import { ES_SEGUIMIENTO } from './seguimiento'
+import { ES_TABLERO_COMPROMISOS } from './tableroCompromisos'
+import { ES_TAREAS } from './tareas'
 import { ES_AREAS } from './areas'
 import { ES_COMUN } from './comun'
 import { ES_CONTEXTO } from './contexto'
@@ -28,6 +41,20 @@ export const ES = {
   tableros: ES_TABLEROS,
   territorio: ES_TERRITORIO,
   transiciones: ES_TRANSICIONES,
+  // F3: compromisos, acuerdos, evidencias, tareas y avisos
+  evidencias: ES_EVIDENCIAS,
+  documentos: ES_DOCUMENTOS,
+  compromisos: ES_COMPROMISOS,
+  nuevoCompromiso: ES_NUEVO_COMPROMISO,
+  fichaCompromiso: ES_FICHA_COMPROMISO,
+  seguimiento: ES_SEGUIMIENTO,
+  reprogramaciones: ES_REPROGRAMACIONES,
+  entregas: ES_ENTREGAS,
+  avisos: ES_AVISOS,
+  tareas: ES_TAREAS,
+  aprobaciones: ES_APROBACIONES,
+  acuerdos: ES_ACUERDOS,
+  tableroCompromisos: ES_TABLERO_COMPROMISOS,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',

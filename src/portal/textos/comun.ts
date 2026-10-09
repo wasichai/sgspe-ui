@@ -53,6 +53,17 @@ export const ES_COMUN = {
   vistas: 'Vistas',
   seleccionados: '{{n}} seleccionados',
   personaRegistrada: 'Persona registrada',
+  // F3: la situación de plazo o de vigencia (derivada por JOB-01, nunca un estado) y la elección de una persona usuaria
+  situacionDePlazo: 'Situación de plazo',
+  situacionDeVigencia: 'Situación de vigencia',
+  usuario: {
+    deLaLista: 'Elija a la persona',
+    correo: '{{etiqueta}} · correo',
+    identificador: '{{etiqueta}} · identificador de usuario',
+    aMano:
+      'Su cuenta no lista los usuarios de la organización: escriba el correo y el identificador; el servidor comprueba que nombren a alguien de su organización.',
+    noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.'
+  },
   dependientesSinCampo: 'No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.',
   // los códigos de las guardas y los comandos de SGSPE (api.md §3.3 y §4, ruling P15): errors[0].message trae el código y
   // la interfaz dice su texto; uno que no está aquí muestra el detail del servidor. {{campo}} es errors[0].field
@@ -214,6 +225,15 @@ export const EN_COMUN: typeof ES_COMUN = {
   vistas: 'Views',
   seleccionados: '{{n}} selected',
   personaRegistrada: 'Registered person',
+  situacionDePlazo: 'Deadline situation',
+  situacionDeVigencia: 'Validity situation',
+  usuario: {
+    deLaLista: 'Pick the person',
+    correo: '{{etiqueta}} · email',
+    identificador: '{{etiqueta}} · user identifier',
+    aMano: 'Your account does not list the organization’s users: type the email and the identifier; the server checks they name someone in your organization.',
+    noLeido: 'The user list could not be read; type the email and the identifier.'
+  },
   dependientesSinCampo: 'It cannot be deleted: other records depend on it. Delete or change them first.',
   codigos: {
     DERIVED_FIELD: 'The system calculates this value: it is not typed in.',
