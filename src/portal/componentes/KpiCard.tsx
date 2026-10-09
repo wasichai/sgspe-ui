@@ -1,4 +1,5 @@
 import { ApiError } from '@wasichai/core'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Indicador } from '../datos/indicadores'
 import { NS, numeroPe } from '../i18n'
@@ -7,19 +8,22 @@ import { Cargando, ErrorDeCarga, NoDisponible } from './Estados'
 // una cifra con su contexto (design-system.md §5, dashboards.md §9.2): el valor, su unidad y, si es un porcentaje, el
 // "n de N" que deja ver la base. sin permiso dice "no disponible" y por qué; un módulo que no llegó dice en qué fase llega
 // si la consulta del indicador falló, error lo dice (con su correlación) en lugar de dejar "Cargando…" para siempre; un 403
-// dice "No disponible", como el resto de las cifras sin permiso
+// dice "No disponible", como el resto de las cifras sin permiso. notas va dentro de la tarjeta, bajo la cifra: lo que un
+// tablero dice de ella (los filtros que no aplica, sus avisos)
 export function KpiCard({
   titulo,
   indicador,
   llegaEn,
   cargando,
-  error
+  error,
+  notas
 }: {
   titulo: string
   indicador?: Indicador
   llegaEn?: string
   cargando?: boolean
   error?: unknown
+  notas?: ReactNode
 }) {
   const { t } = useTranslation(NS)
   let cuerpo
@@ -46,6 +50,7 @@ export function KpiCard({
     <section aria-label={titulo} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
       {cuerpo}
+      {notas}
     </section>
   )
 }
