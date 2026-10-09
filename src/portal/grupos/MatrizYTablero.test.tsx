@@ -1,11 +1,13 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
+import { registro } from '../../test/montar'
 import { RELACIONISTA } from '../../test/portal'
 import { espiarRed, type Red } from '../../test/red'
 import { base, LEE } from '../../test/grupos'
+import { opcionesRecibidas } from '../../test/graficoFalso'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -17,6 +19,8 @@ beforeEach(() => {
   sessionStorage.clear()
 })
 afterEach(() => {
+  document.documentElement.removeAttribute('data-theme')
+  for (const variable of ['--sg-text', '--sg-stance-favor']) document.documentElement.style.removeProperty(variable)
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
@@ -249,6 +253,9 @@ describe('S19 · estados y límites', () => {
     expect(await screen.findByText('Acote los filtros')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Filtros del tablero' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Posturas' })).not.toBeInTheDocument()
+    // los indicadores sin zona no dependen del tablero: siguen a la vista y abren su detalle
+    const mas = await screen.findByRole('region', { name: 'Más indicadores' })
+    expect(within(mas).getByRole('link', { name: 'Grupos de interés contactados' })).toBeInTheDocument()
   })
 
   it('un 403 del tablero dice "No disponible" con su motivo, y otro error ofrece reintentar', async () => {
@@ -261,6 +268,26 @@ describe('S19 · estados y límites', () => {
     expect(screen.getByText(/No tiene una asignación vigente a este proyecto/)).toBeInTheDocument()
     expect(screen.queryByText('NOT_ASSIGNED')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Más indicadores' })).toBeInTheDocument()
+  })
+
+  it('una zona de una cifra que pide un solo proyecto dice "Elija un proyecto"', async () => {
+    fetch = abrirPortal('/stakeholders/dashboard', RELACIONISTA, LEE, [
+      ...base(),
+      { path: '/sgspe/dashboards/indicators', body: CATALOGO },
+      {
+        path: '/sgspe/dashboards/stakeholders',
+        body: {
+          dashboard: 'stakeholders',
+          computedAt: '2026-10-07T15:04:05Z',
+          filters: {},
+          indicators: [{ code: 'KPI-STK-03', label: 'Matriz', available: false, unavailableReason: 'SINGLE_PROJECT_REQUIRED' }]
+        }
+      }
+    ])
+    const matriz = await screen.findByRole('region', { name: 'Matriz interés × poder' })
+    expect(within(matriz).getByText('Elija un proyecto')).toBeInTheDocument()
+    expect(within(matriz).getByText(/Esta cifra se calcula para un solo proyecto/)).toBeInTheDocument()
   })
 
   it('un error del tablero que no es de permiso ofrece reintentar', async () => {
@@ -328,7 +355,7 @@ describe('S19 · estados y límites', () => {
     expect(posturas.getByRole('cell', { name: 'A FAVOR' }).closest('tr')).toHaveTextContent('3')
   })
 
-  it('la matriz con un solo sin evaluar usa el singular y sin acceso a la postura no la lista', async () => {
+  it('la matriz con un solo sin evaluar usa el singular y sin etiqueta dice "Persona registrada"', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [
       ...base(),
       {
@@ -340,7 +367,6 @@ describe('S19 · estados y límites', () => {
     const puntos = screen.getByRole('navigation', { name: 'Puntos de la matriz' })
     // sin etiqueta de la API no se muestra el identificador
     expect(within(puntos).getByRole('link', { name: 'Persona registrada' })).toBeInTheDocument()
-    expect(within(puntos).queryByText(/EN CONTRA|A FAVOR/)).not.toBeInTheDocument()
     expect(screen.queryByText('s1')).not.toBeInTheDocument()
   })
 
@@ -391,7 +417,7 @@ describe('S19 · estados y límites', () => {
     expect(screen.getAllByRole('table')).toHaveLength(1)
   })
 
-  it('el detalle con demasiados registros dice "Acote los filtros" con los filtros a la vista, y un 403 "No disponible"', async () => {
+  it('el detalle con demasiados registros dice "Acote los filtros" con los filtros a la vista', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders/indicators/KPI-STK-04', RELACIONISTA, LEE, [
       ...base(),
       { path: '/sgspe/dashboards/indicators/KPI-STK-04', status: 400, body: problema(400, 'TOO_MANY_RECORDS') }
@@ -399,6 +425,31 @@ describe('S19 · estados y límites', () => {
     expect(await screen.findByText('Acote los filtros')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Filtros del tablero' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Indicador' })).toBeInTheDocument()
+  })
+
+  it('el detalle con un 403 dice "No disponible" con su motivo, sin código ni reintento y con los filtros a la vista', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/indicators/KPI-STK-04', RELACIONISTA, LEE, [
+      ...base(),
+      { path: '/sgspe/dashboards/indicators/KPI-STK-04', status: 403, body: problema(403, 'NOT_ASSIGNED') }
+    ])
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.getByText(/No tiene una asignación vigente a este proyecto/)).toBeInTheDocument()
+    expect(screen.queryByText('NOT_ASSIGNED')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Filtros del tablero' })).toBeInTheDocument()
+  })
+
+  it('el detalle de una cifra que pide un solo proyecto dice "Elija un proyecto"', async () => {
+    fetch = abrirPortal('/stakeholders/indicators/KPI-STK-04', RELACIONISTA, LEE, [
+      ...base(),
+      {
+        path: '/sgspe/dashboards/indicators/KPI-STK-04',
+        body: { code: 'KPI-STK-04', label: 'Grupos de interés contactados', available: false, unavailableReason: 'SINGLE_PROJECT_REQUIRED' }
+      }
+    ])
+    expect(await screen.findByText('Elija un proyecto')).toBeInTheDocument()
+    expect(screen.getByText(/Esta cifra se calcula para un solo proyecto/)).toBeInTheDocument()
+    expect(screen.queryAllByRole('table')).toHaveLength(0)
   })
 
   it('el detalle de un indicador sin permiso dice "No disponible" con su motivo', async () => {
@@ -413,5 +464,185 @@ describe('S19 · estados y límites', () => {
     expect(screen.getByText('No disponible')).toBeInTheDocument()
     expect(screen.getByText('Su rol no puede leer un dato de esta cifra')).toBeInTheDocument()
     expect(screen.queryAllByRole('table')).toHaveLength(0)
+  })
+})
+
+// lo que ECharts ejecutaría y el doble de Grafico no dibuja: el formatter del tooltip y los colores de las opciones
+type Opciones = {
+  tooltip: { formatter: (p: unknown) => string }
+  series: { itemStyle?: { color?: string }; data?: { itemStyle?: { borderColor?: string } }[] }[]
+}
+const opcionesDe = (etiqueta: string) => opcionesRecibidas.get(etiqueta) as unknown as Opciones
+
+const TABLERO_DE_POSTURAS = (filas: { key: string; value: number | null }[]) => ({
+  dashboard: 'stakeholders',
+  computedAt: '2026-10-07T15:04:05Z',
+  filters: {},
+  indicators: [{ code: 'KPI-STK-02', label: 'Posturas', available: true, value: 8, breakdowns: [{ by: 'stance', rows: filas }] }]
+})
+
+describe('S19 · tooltips y colores del gráfico', () => {
+  it('el tooltip de la matriz escapa el nombre del grupo: una etiqueta con HTML no llega al tooltip como etiqueta', async () => {
+    const maligno = '<img src=x onerror=alert(1)>'
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [
+      ...base(),
+      {
+        path: '/sgspe/dashboards/indicators/KPI-STK-03',
+        body: { ...STK03, breakdowns: [{ by: 'stakeholder', rows: [{ ...STK03.breakdowns[0].rows[0], label: maligno, influenceGroup: 'A&B' }] }] }
+      }
+    ])
+    await screen.findByRole('button', { name: 'punto s1' })
+    const punto = (opcionesDe('Matriz interés × poder').series[0].data as unknown as { value: unknown[] }[])[0]
+    const html = opcionesDe('Matriz interés × poder').tooltip.formatter({ data: punto })
+    expect(html).not.toContain('<')
+    expect(html).not.toContain('>')
+    expect(html).toContain('&#60;img')
+    expect(html).toContain('A&#38;B')
+  })
+
+  it('el tooltip de posturas dice el conteo real: NEUTRAL completo, A FAVOR en positivo y el nombre escapado', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/dashboard', RELACIONISTA, LEE, [
+      ...base(),
+      { path: '/sgspe/dashboards/indicators', body: CATALOGO },
+      {
+        path: '/sgspe/dashboards/stakeholders',
+        body: TABLERO_DE_POSTURAS([
+          { key: 'A FAVOR', value: 3 },
+          { key: 'NEUTRAL', value: 5 },
+          { key: 'EN CONTRA', value: null },
+          { key: '<b>raro</b>', value: 1234 }
+        ])
+      }
+    ])
+    await screen.findByRole('region', { name: 'Posturas' })
+    const { tooltip } = opcionesDe('Posturas')
+    expect(tooltip.formatter({ seriesName: 'NEUTRAL' })).toBe('NEUTRAL: 5')
+    expect(tooltip.formatter({ seriesName: 'A FAVOR' })).toBe('A FAVOR: 3')
+    expect(tooltip.formatter({ seriesName: 'EN CONTRA' })).toBe('EN CONTRA: —')
+    expect(tooltip.formatter({ seriesName: '<b>raro</b>' })).toBe('&#60;b&#62;raro&#60;/b&#62;: 1,234')
+  })
+
+  it('los colores de la matriz y de posturas se recalculan al cambiar el tema', async () => {
+    const raiz = document.documentElement
+    raiz.style.setProperty('--sg-text', '#111111')
+    raiz.style.setProperty('--sg-stance-favor', '#228833')
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [...base(), { path: '/sgspe/dashboards/indicators/KPI-STK-03', body: STK03 }])
+    await screen.findByRole('button', { name: 'punto s4' })
+    const anillo = () => opcionesDe('Matriz interés × poder').series[0].data!.find((d) => d.itemStyle)?.itemStyle?.borderColor
+    expect(anillo()).toBe('#111111')
+    await act(async () => {
+      raiz.style.setProperty('--sg-text', '#eeeeee')
+      raiz.setAttribute('data-theme', 'dark')
+    })
+    await waitFor(() => expect(anillo()).toBe('#eeeeee'))
+    await act(async () => raiz.removeAttribute('data-theme'))
+  })
+
+  it('los colores de las posturas se recalculan al cambiar el tema', async () => {
+    const raiz = document.documentElement
+    raiz.style.setProperty('--sg-stance-favor', '#228833')
+    fetch = abrirPortal('/projects/p1/stakeholders/dashboard', RELACIONISTA, LEE, [
+      ...base(),
+      { path: '/sgspe/dashboards/indicators', body: CATALOGO },
+      { path: '/sgspe/dashboards/stakeholders', body: TABLERO_DE_POSTURAS([{ key: 'A FAVOR', value: 3 }]) }
+    ])
+    await screen.findByRole('region', { name: 'Posturas' })
+    const color = () => opcionesDe('Posturas').series.find((s) => s.itemStyle?.color !== undefined && s.itemStyle.color !== 'gray')?.itemStyle?.color
+    expect(color()).toBe('#228833')
+    await act(async () => {
+      raiz.style.setProperty('--sg-stance-favor', '#66dd77')
+      raiz.setAttribute('data-theme', 'dark')
+    })
+    await waitFor(() => expect(color()).toBe('#66dd77'))
+    await act(async () => raiz.removeAttribute('data-theme'))
+  })
+})
+
+describe('S19 · matriz: umbrales, filtros y postura', () => {
+  const conUmbrales = (interes: number, poder: number) => ({
+    ...STK03,
+    breakdowns: [
+      ...STK03.breakdowns,
+      {
+        by: 'thresholds',
+        rows: [
+          { key: 'interest', value: interes },
+          { key: 'power', value: poder }
+        ]
+      }
+    ]
+  })
+
+  it('los umbrales salen del desglose thresholds de la cifra, no del proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [
+      ...base(),
+      { path: '/sgspe/dashboards/indicators/KPI-STK-03', body: conUmbrales(2.5, 4) }
+    ])
+    expect(await screen.findByText('Umbrales: interés 2.5 · poder 4')).toBeInTheDocument()
+    const linea = (opcionesRecibidas.get('Matriz interés × poder') as unknown as { series: { markLine: { data: unknown[] } }[] }).series[0].markLine.data
+    expect(linea).toEqual([{ xAxis: 2.5 }, { yAxis: 4 }])
+  })
+
+  it('sin desglose ni atributos del proyecto no supone umbrales: ni texto ni líneas', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [
+      { path: '/objects/project/records/p1', body: registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }, { state: 'active' }) },
+      ...base(),
+      { path: '/sgspe/dashboards/indicators/KPI-STK-03', body: STK03 }
+    ])
+    await screen.findByRole('button', { name: 'punto s1' })
+    expect(screen.queryByText(/Umbrales/)).not.toBeInTheDocument()
+    expect((opcionesRecibidas.get('Matriz interés × poder') as unknown as { series: { markLine?: unknown }[] }).series[0].markLine).toBeUndefined()
+  })
+
+  it('la matriz muestra los filtros del tablero y los pide a la cifra', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix?periodStart=2026-09-01', RELACIONISTA, LEE, [
+      ...base(),
+      { path: '/sgspe/dashboards/indicators/KPI-STK-03', body: STK03 }
+    ])
+    red = espiarRed()
+    expect(await screen.findByRole('group', { name: 'Filtros del tablero' })).toBeInTheDocument()
+    await screen.findByRole('button', { name: 'punto s1' })
+    expect(red.a('GET', '/sgspe/dashboards/indicators/KPI-STK-03')[0].ruta).toBe('/sgspe/dashboards/indicators/KPI-STK-03?project=p1&periodStart=2026-09-01')
+  })
+
+  it('con demasiados registros la matriz dice "Acote los filtros" y deja los filtros a la vista', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [
+      ...base(),
+      {
+        path: '/sgspe/dashboards/indicators/KPI-STK-03',
+        status: 400,
+        body: { title: 'x', status: 400, detail: 'No se pudo', errors: [{ field: 'project', message: 'TOO_MANY_RECORDS' }] }
+      }
+    ])
+    expect(await screen.findByText('Acote los filtros')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Filtros del tablero' })).toBeInTheDocument()
+  })
+
+  it('la postura se lista solo en quien la API la devuelve, y nunca como filtro', async () => {
+    const [con, sin] = STK03.breakdowns[0].rows
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [
+      ...base(),
+      {
+        path: '/sgspe/dashboards/indicators/KPI-STK-03',
+        body: { ...STK03, breakdowns: [{ by: 'stakeholder', rows: [{ ...con, stance: 'A FAVOR' }, sin] }] }
+      }
+    ])
+    const puntos = await screen.findByRole('navigation', { name: 'Puntos de la matriz' })
+    const [primero, segundo] = within(puntos).getAllByRole('listitem')
+    expect(primero).toHaveTextContent('A FAVOR')
+    expect(segundo).not.toHaveTextContent(/A FAVOR|EN CONTRA|NEUTRAL/)
+    expect(screen.queryByLabelText(/postura/i)).not.toBeInTheDocument()
+  })
+
+  it('una cifra que pide un solo proyecto dice "Elija un proyecto" en la matriz', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [
+      ...base(),
+      {
+        path: '/sgspe/dashboards/indicators/KPI-STK-03',
+        body: { code: 'KPI-STK-03', label: 'Matriz', available: false, unavailableReason: 'SINGLE_PROJECT_REQUIRED' }
+      }
+    ])
+    expect(await screen.findByText('Elija un proyecto')).toBeInTheDocument()
+    expect(screen.getByText(/Esta cifra se calcula para un solo proyecto/)).toBeInTheDocument()
   })
 })

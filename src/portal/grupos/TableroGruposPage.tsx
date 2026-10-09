@@ -8,6 +8,7 @@ import { codigoDelError } from '../datos/http'
 import { desglose, useCatalogoDeIndicadores, useTablero } from '../datos/indicadores'
 import { COLOR_DE_POSTURA, ORDEN_DE_POSTURAS } from '../graficos/BarraDePosturas'
 import { Grafico } from '../graficos/Grafico'
+import { escapar, useVersionDeTema } from '../graficos/tema'
 import { NS, numeroPe } from '../i18n'
 import { colorDe } from '../mapa/colores'
 import { useContextFilters } from '../shell/context'
@@ -17,8 +18,8 @@ import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, indicadorDe, S
 // clasificación (KPI-STK-01), las posturas (KPI-STK-02, divergente centrada en NEUTRAL), la matriz (KPI-STK-03, un solo
 // proyecto), el cambio de postura de la oposición (KPI-STK-06) y la confianza (KPI-STK-08). los KPI-STK sin zona en F2
 // (el catálogo los trae con dashboard null: KPI-STK-04, KPI-STK-05 y KPI-STK-07, dashboards.md §11) se listan al final y
-// cada uno abre su detalle. una zona dice los filtros que su indicador no aplica (ignoredFilters: community en los KPI-STK) y
-// 400 TOO_MANY_RECORDS deja el tablero en "acote los filtros"
+// cada uno abre su detalle, también fuera de la consulta del tablero: no dependen de ella. una zona dice los filtros que su
+// indicador no aplica (ignoredFilters: community en los KPI-STK) y 400 TOO_MANY_RECORDS deja el tablero en "acote los filtros"
 export function TableroGruposPage() {
   const { t } = useTranslation(NS)
   const filtros = useFiltrosDeTablero()
@@ -67,11 +68,11 @@ export function TableroGruposPage() {
               <Zona titulo={t('grupos.zonas.confianza')} indicador={ind('KPI-STK-08')}>
                 {(i) => <SerieConMeta titulo={t('grupos.zonas.confianza')} serie={i.series ?? []} tipo="line" />}
               </Zona>
-              <MasIndicadores />
             </div>
           )
         }}
       </ConsultaDeTablero>
+      <MasIndicadores />
     </section>
   )
 }
@@ -117,7 +118,7 @@ function MasIndicadores() {
       </ul>
     )
   return (
-    <section aria-label={t('tableros.masIndicadores')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 lg:col-span-2">
+    <section aria-label={t('tableros.masIndicadores')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="text-sg-h3 font-semibold">{t('tableros.masIndicadores')}</h2>
       <p className="text-sm text-sg-text-muted">{t('tableros.masIndicadoresAyuda')}</p>
       {cuerpo}
@@ -126,10 +127,12 @@ function MasIndicadores() {
 }
 
 // la barra apilada divergente de posturas: el orden del catálogo y sus colores de tokens.css (dashboards.md §9.2 y §9.3). se
-// centra en NEUTRAL: su mitad va a cada lado del centro, lo favorable a la izquierda y lo opuesto a la derecha. una postura
-// sin cifra (null) no dibuja barra y la tabla dice "—"; una ausente del desglose es un conteo de cero
+// centra en NEUTRAL: su mitad va a cada lado del centro, lo favorable a la izquierda y lo opuesto a la derecha. el tooltip
+// dice el conteo real de la postura (no la mitad de NEUTRAL ni el valor negativo del truco divergente). una postura sin cifra
+// (null) no dibuja barra y la tabla dice "—"; una ausente del desglose es un conteo de cero. los colores salen del tema activo
 function Posturas({ filas }: { filas: { key: string; value: number | null }[] }) {
   const { t } = useTranslation(NS)
+  const tema = useVersionDeTema()
   const cifras = new Map(filas.map((f) => [f.key, f.value]))
   const orden = [...ORDEN_DE_POSTURAS, ...filas.map((f) => f.key).filter((k) => !(ORDEN_DE_POSTURAS as readonly string[]).includes(k))]
   const valor = (k: string) => cifras.get(k) ?? 0
@@ -142,7 +145,13 @@ function Posturas({ filas }: { filas: { key: string; value: number | null }[] })
       legend: { top: 0, data: orden },
       xAxis: { type: 'value', show: false },
       yAxis: { type: 'category', data: [''], show: false },
-      tooltip: {},
+      // el nombre de la postura viene de la API y el tooltip arma HTML
+      tooltip: {
+        formatter: (p: { seriesName?: string }) => {
+          const nombre = p.seriesName ?? ''
+          return `${escapar(nombre)}: ${cifras.get(nombre) === null ? '—' : numeroPe(valor(nombre))}`
+        }
+      },
       // del centro hacia la izquierda: la mitad de NEUTRAL y A FAVOR; hacia la derecha: la otra mitad y lo demás
       series: [
         barra('NEUTRAL', -mitad),
@@ -151,7 +160,7 @@ function Posturas({ filas }: { filas: { key: string; value: number | null }[] })
         ...orden.filter((k) => k !== 'A FAVOR' && k !== 'NEUTRAL').map((k) => barra(k, valor(k)))
       ]
     }
-  }, [JSON.stringify(filas)])
+  }, [JSON.stringify(filas), tema])
   return (
     <Grafico
       etiqueta={t('grupos.zonas.posturas')}
