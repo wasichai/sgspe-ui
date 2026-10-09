@@ -4,7 +4,7 @@ import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
-import { ADMINISTRACION, ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos } from '../../test/portal'
+import { ADMINISTRACION, ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos, permisosConCapacidades } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useDefinicion } from '../datos/registros'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
@@ -133,6 +133,31 @@ describe('S11 · equipo y parámetros', () => {
     expect(within(vigente).getByText('1 ene. 2026 – …')).toBeInTheDocument()
     // un rol que la lista no trae sale con su nombre
     expect(within(vencida).getByText('FIELD_AGENT')).toBeInTheDocument()
+  })
+
+  // WAS-ADR-0053: con capabilities sin MANAGE_ORGANIZATION no se pide GET /api/roles para que responda 403; con ella, sí
+  const OBJETOS_PAD = {
+    project: ['READ', 'UPDATE'],
+    project_assignment: ['READ', 'CREATE', 'UPDATE'],
+    exploration_campaign: ['READ', 'CREATE'],
+    project_party: ['READ', 'CREATE']
+  }
+  const ROLES = { path: '/roles', body: [{ name: 'PROJECT_ADMIN', label: 'Administración de proyectos' }] }
+
+  it('sin MANAGE_ORGANIZATION en capabilities no pide los roles: el rol sale con su nombre', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, permisosConCapacidades(OBJETOS_PAD, ['MANAGE_METADATA']), [ROLES, ...rutas()])
+    red = espiarRed()
+    const tabla = await screen.findByRole('table', { name: 'Equipo' })
+    expect(await within(tabla).findByText('PROJECT_ADMIN')).toBeInTheDocument()
+    expect(red.a('GET', '/roles')).toHaveLength(0)
+  })
+
+  it('con MANAGE_ORGANIZATION en capabilities pide los roles y los dice con su etiqueta', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, permisosConCapacidades(OBJETOS_PAD, ['MANAGE_ORGANIZATION']), [ROLES, ...rutas()])
+    red = espiarRed()
+    const tabla = await screen.findByRole('table', { name: 'Equipo' })
+    expect(await within(tabla).findByText('Administración de proyectos')).toBeInTheDocument()
+    expect(red.a('GET', '/roles')).toHaveLength(1)
   })
 
   it('cancelar la confirmación no escribe, y terminar una programada no deja el fin antes del inicio', async () => {

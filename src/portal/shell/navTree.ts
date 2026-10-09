@@ -15,12 +15,14 @@ import {
   Users
 } from 'lucide-react'
 import { useMemo } from 'react'
+import { useCapacidades } from '../datos/capacidades'
 import { PANTALLAS } from '../pantallas'
 
 // la navegación principal del portal (docs/ux/ux-architecture.md §6.2 y §7): las 13 secciones de RNF-USA-001 en su orden,
 // el mismo para todos los roles, con ícono, la ruta global en inglés y kebab-case (ASM-075) y sus fases (architecture.md
 // §9.2). una sección se dibuja solo si tiene pantalla y la cuenta tiene los permisos que pide (RF-IAM-002); los permisos
-// son los de GET /api/auth/me/permissions mientras falte UPS-06. Administración, solo para quien administra (ADR-0024). el
+// son los de GET /api/auth/me/permissions. Administración, solo para quien administra (ADR-0024): admin o MANAGE_METADATA o
+// MANAGE_ORGANIZATION en capabilities (UPS-06). el
 // asistente de IA no es una sección (ASM-073): es el botón Preguntar de la barra superior. sin nombres de rol: decide
 // isAdmin de core y los pares objeto/acción (RQ-SEC-005)
 
@@ -110,6 +112,8 @@ export const NAV_TREE: SeccionNav[] = [
 // lo que el árbol pregunta de la cuenta (useAuth de core: can es siempre true para el admin) y de las pantallas
 export interface Oferta {
   isAdmin: boolean
+  // las capacidades de tenant que responde GET /api/auth/me/permissions (capabilities, UPS-06)
+  capacidades?: string[]
   can: (objeto: string, accion: string) => boolean
   conPantalla: (clave: ClaveDeSeccion) => boolean
 }
@@ -123,9 +127,12 @@ export const ofrece = (alternativas: Par[][], can: Oferta['can']) =>
 // el Dashboard es la ruta índice del portal y Administración un enlace a /admin: existen sin registrarse en PANTALLAS
 export const conPantalla = (clave: ClaveDeSeccion) => clave === 'dashboard' || PANTALLAS[clave] !== undefined
 
+// administra quien es admin o la plataforma dice que tiene MANAGE_METADATA o MANAGE_ORGANIZATION (WAS-ADR-0053)
+const administra = ({ isAdmin, capacidades = [] }: Oferta) => isAdmin || capacidades.includes('MANAGE_METADATA') || capacidades.includes('MANAGE_ORGANIZATION')
+
 // por qué una sección se dibuja o no para esta cuenta
 export function estadoDe(seccion: SeccionNav, oferta: Oferta): Estado {
-  if (seccion.soloAdmin && !oferta.isAdmin) return 'solo-admin'
+  if (seccion.soloAdmin && !administra(oferta)) return 'solo-admin'
   if (!seccion.external && !oferta.conPantalla(seccion.clave)) return 'por-llegar'
   return !seccion.seOfreceCon || ofrece(seccion.seOfreceCon, oferta.can) ? 'disponible' : 'sin-acceso'
 }
@@ -139,7 +146,8 @@ export function arbolPara(secciones: SeccionNav[], oferta: Oferta): SeccionNav[]
 // pasa, y Administración no se dibuja
 export function useOferta(): Oferta {
   const { isAdmin, can } = useAuth()
-  return useMemo(() => ({ isAdmin, can, conPantalla }), [isAdmin, can])
+  const { capacidades } = useCapacidades()
+  return useMemo(() => ({ isAdmin, capacidades, can, conPantalla }), [isAdmin, capacidades, can])
 }
 
 export function useArbol(): SeccionNav[] {

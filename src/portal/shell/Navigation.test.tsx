@@ -3,7 +3,7 @@ import type { AuthUser } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import type { ComponentType } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { abrirSesion, ADMIN_PERMISOS, ADMINISTRACION, AUDITORA, RELACIONISTA, rutasDeSesion, SIN_PERMISOS, yo } from '../../test/portal'
+import { abrirSesion, ADMIN_PERMISOS, ADMINISTRACION, AUDITORA, permisosConCapacidades, RELACIONISTA, rutasDeSesion, SIN_PERMISOS, yo } from '../../test/portal'
 import { PortalApp } from '../PortalApp'
 import { ES } from '../textos/es'
 import { scopeFromPath, territoryFromSearch } from './context'
@@ -45,8 +45,9 @@ const enlaces = () =>
     .map((link) => link.textContent)
 
 // una cuenta que puede exactamente estos pares "objeto ACCION", con todas las pantallas registradas
-const cuenta = (pares: string[], isAdmin = false) => ({
+const cuenta = (pares: string[], isAdmin = false, capacidades: string[] = []) => ({
   isAdmin,
+  capacidades,
   can: (objeto: string, accion: string) => isAdmin || pares.includes(`${objeto} ${accion}`),
   conPantalla: () => true
 })
@@ -107,6 +108,9 @@ describe('NAV_TREE', () => {
       )
     expect([de('dashboard'), de('projects'), de('admin')]).toEqual(['disponible', 'por-llegar', 'solo-admin'])
     expect(estadoDe(NAV_TREE[1], cuenta([]))).toBe('sin-acceso')
+    const admin = NAV_TREE.find((s) => s.clave === 'admin')!
+    expect(estadoDe(admin, cuenta([], false, ['MANAGE_METADATA']))).toBe('disponible')
+    expect(estadoDe(admin, cuenta([], false, []))).toBe('solo-admin')
   })
 })
 
@@ -116,6 +120,19 @@ describe('navegación del portal', () => {
     await screen.findByRole('navigation', { name: 'Secciones' })
     await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
     expect(within(lateral()).getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '/admin')
+  })
+
+  // WAS-ADR-0053: la plataforma dice que la cuenta tiene MANAGE_METADATA o MANAGE_ORGANIZATION aunque no sea admin: el portal lo lee
+  it.each([['MANAGE_METADATA'], ['MANAGE_ORGANIZATION']])('una cuenta con %s en capabilities ve Administración sin ser admin', async (capacidad) => {
+    start(AUDITORA, rutasDeSesion(AUDITORA, permisosConCapacidades({ project: ['READ'] }, [capacidad])))
+    await screen.findByRole('navigation', { name: 'Secciones' })
+    await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
+  })
+
+  it('con capabilities vacío, Administración no se ofrece', async () => {
+    start(AUDITORA, rutasDeSesion(AUDITORA, permisosConCapacidades({ project: ['READ'] }, [])))
+    await screen.findByRole('navigation', { name: 'Secciones' })
+    expect(enlaces()).toEqual(['Dashboard'])
   })
 
   it('AUDITOR no ve Administración', async () => {

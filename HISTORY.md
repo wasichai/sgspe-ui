@@ -2,6 +2,15 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-09 — Capacidades de tenant desde `/me/permissions` (UPS-06)
+
+- El portal lee `capabilities` de `GET /api/auth/me/permissions` (WAS-ADR-0053) en lugar de deducirlas: Administración se
+  ofrece al admin y a quien tenga `MANAGE_METADATA` o `MANAGE_ORGANIZATION`, y `GET /api/users` y `GET /api/roles` no se
+  piden si la cuenta no tiene `MANAGE_ORGANIZATION`. core 0.5.1 no tipa la clave; se lee en `src/portal/datos/capacidades.ts`.
+  Una respuesta sin la clave (un backend anterior) se trata como «no se sabe»: se intenta y el 403 sigue siendo la red.
+- UPS-16 no necesitó cambios: ninguna pantalla lee una autorrelación filtrando la lista por el campo. `actor_relationship`
+  une dos objetos distintos (`from_*`, `to_*`) y `parent_locality` se lee como atributo del propio registro.
+
 ## 2026-10-09 — `@wasichai/*` 0.5.1
 
 - Los ocho paquetes pasan de 0.5.0 a 0.5.1 (`maplibre-gl` sigue en 6.10.0). Solo trae correcciones: `DATETIME` conserva
