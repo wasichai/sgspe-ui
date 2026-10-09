@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { useEffect } from 'react'
@@ -351,5 +351,15 @@ describe('S09 · mapa del proyecto', () => {
     expect(await screen.findByText(/^E \d+ · N \d+ \(EPSG 32717\)$/)).toBeInTheDocument()
     act(() => doble.moverCursor!(null))
     await waitFor(() => expect(screen.queryByText(/^E \d+ · N/)).not.toBeInTheDocument())
+  })
+
+  it('«Importar» solo con CREATE y UPDATE sobre los componentes, como la guarda de la importación (revisión final, M8)', async () => {
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ', 'CREATE'] }), rutas())
+    await screen.findByRole('heading', { name: 'Mapa del proyecto' })
+    expect(screen.queryByRole('link', { name: 'Importar' })).not.toBeInTheDocument()
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ', 'CREATE', 'UPDATE'] }), rutas())
+    expect(await screen.findByRole('link', { name: 'Importar' })).toHaveAttribute('href', '/territory/imports/new?project=p1')
   })
 })

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -75,6 +75,17 @@ describe('S12 · mapa territorial', () => {
     fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [...base, { path: /^\/sgspe\/territory\/layers\//, body: coleccion([]) }])
     await screen.findByRole('navigation', { name: 'Lugares visibles' })
     expect(screen.queryByRole('button', { name: 'Nueva comunidad' })).not.toBeInTheDocument()
+  })
+
+  it('«Importar» solo con CREATE y UPDATE sobre algún destino, como la guarda de la importación (revisión final, M8)', async () => {
+    const capas = { path: /^\/sgspe\/territory\/layers\//, body: coleccion([]) }
+    fetch = abrirPortal('/territory', RELACIONISTA, permisos({ ...LEE_TERRITORIO.objects, land_parcel: ['READ', 'CREATE'] }), [...base, capas])
+    await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    expect(screen.queryByRole('link', { name: 'Importar' })).not.toBeInTheDocument()
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/territory', RELACIONISTA, permisos({ ...LEE_TERRITORIO.objects, land_parcel: ['READ', 'CREATE', 'UPDATE'] }), [...base, capas])
+    expect(await screen.findByRole('link', { name: 'Importar' })).toHaveAttribute('href', '/territory/imports/new')
   })
 
   it('mientras las capas cargan la lista dice "Cargando", no que no hay lugares', async () => {

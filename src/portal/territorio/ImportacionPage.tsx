@@ -18,6 +18,7 @@ import {
   conteosPrevistos,
   decisionesDe,
   DESTINOS,
+  importaA,
   filasConDecision,
   nuevaClave,
   useConfirmacion,
@@ -72,7 +73,7 @@ function Preparar() {
   const previo = enCursoDe(user?.id)?.pedido
   const [paso, setPaso] = useState(previo ? 1 : 0)
   const [archivo, setArchivo] = useState<File | null>(previo?.archivo ?? null)
-  const destinos = DESTINOS.filter((d) => can(d, 'CREATE') && can(d, 'UPDATE'))
+  const destinos = DESTINOS.filter((d) => importaA(can, d))
   const [destino, setDestino] = useState<Destino | ''>(previo?.destino ?? destinos[0] ?? '')
   const [proyecto, setProyecto] = useState(previo?.proyecto ?? busqueda.get('project') ?? '')
   const registroDelProyecto = useRegistro('project', proyecto || undefined)

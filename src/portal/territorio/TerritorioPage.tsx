@@ -12,6 +12,7 @@ import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS_TERRITORIALES, capa } from '../mapa/capas'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
 import { Mapa } from '../mapa/Mapa'
+import { DESTINOS, importaA } from './importacion'
 
 // S12 · mapa territorial en F2 (screens.md §4): las capas públicas de lugares por API, la lista de lugares visibles como
 // alternativa de teclado y la selección que abre directamente la ficha de la comunidad (S13) o de la localidad (S14); la
@@ -60,7 +61,7 @@ export function TerritorioPage() {
               {t('mapa.nuevaComunidad')}
             </Button>
           ) : null}
-          {can('project_component', 'CREATE') || can('land_parcel', 'CREATE') || can('mining_concession', 'CREATE') ? (
+          {DESTINOS.some((d) => importaA(can, d)) ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/territory/imports/new${sufijo}`}>{t('mapa.importar')}</Link>
             </Button>

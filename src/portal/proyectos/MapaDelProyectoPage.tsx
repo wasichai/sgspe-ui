@@ -13,6 +13,7 @@ import { CAPAS, capa } from '../mapa/capas'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
 import { Mapa } from '../mapa/Mapa'
 import { aUtm, zonaDe } from '../mapa/utm'
+import { importaA } from '../territorio/importacion'
 
 // S09 · mapa del proyecto (screens.md §3, flujo 16): las dieciséis capas básicas por grupo, capturar PNG, importar, la
 // barra de coordenadas en el CRS de trabajo y la tabla sincronizada: elegir en el mapa o en la tabla fija ?selected=. un
@@ -93,7 +94,7 @@ export function MapaDelProyectoPage() {
           <Button variant="secondary" size="sm" onClick={descargar}>
             {t('mapa.capturar')}
           </Button>
-          {can('project_component', 'CREATE') ? (
+          {importaA(can, 'project_component') ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/territory/imports/new?project=${encodeURIComponent(projectId)}`}>{t('mapa.importar')}</Link>
             </Button>

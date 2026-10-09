@@ -9,6 +9,10 @@ import { ACEPTAR_REPORTE, usePedir, nuevaClave } from '../datos/http'
 export type Destino = 'project_component' | 'land_parcel' | 'mining_concession'
 export const DESTINOS: readonly Destino[] = ['project_component', 'land_parcel', 'mining_concession']
 
+// importar a un destino crea y actualiza (nuevas versiones y cambios): la pantalla lo ofrece con CREATE y UPDATE sobre él, y
+// los enlaces a la importación piden lo mismo, para no llevar a «sin destinos»
+export const importaA = (can: (objeto: string, accion: string) => boolean, destino: Destino): boolean => can(destino, 'CREATE') && can(destino, 'UPDATE')
+
 // el caso de cada fila válida frente a lo registrado (gis.md §4.4): constantes de la API en inglés (api.md §3.2)
 export type Caso = 'CREATE' | 'UNCHANGED' | 'NEW_VERSION' | 'UPDATE'
 
