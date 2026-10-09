@@ -12,7 +12,6 @@ export const ES_MAPA = {
   bloqueada: 'Su cuenta no puede ver esta capa',
   sensible: 'Capa sensible',
   truncada: 'Hay más elementos de los que se muestran: acerque el mapa',
-  miembro: 'Miembro de un área de influencia aprobada',
   seleccion: 'Selección',
   abrirFicha: 'Abrir la ficha',
   capturar: 'Capturar PNG',
@@ -36,7 +35,7 @@ export const ES_MAPA = {
     conErrorConDatos: 'No se pudo actualizar la capa «{{capa}}»: la tabla muestra los predios de la vista anterior.',
     sinPredios: 'La capa «{{capa}}» no tiene predios en esta vista.'
   },
-  tabla: { componentes: 'Componentes', miembros: 'Miembros del área vigente', predios: 'Predios', areas: 'Áreas de influencia' },
+  tabla: { componentes: 'Componentes', predios: 'Predios', areas: 'Áreas de influencia' },
   columnas: {
     codigo: 'Código',
     tipo: 'Tipo',
@@ -84,7 +83,6 @@ export const EN_MAPA: typeof ES_MAPA = {
   bloqueada: 'Your account cannot see this layer',
   sensible: 'Sensitive layer',
   truncada: 'There are more features than shown: zoom in',
-  miembro: 'Member of an approved area of influence',
   seleccion: 'Selection',
   abrirFicha: 'Open the record',
   capturar: 'Capture PNG',
@@ -108,7 +106,7 @@ export const EN_MAPA: typeof ES_MAPA = {
     conErrorConDatos: 'The “{{capa}}” layer could not be updated: the table shows the parcels from the previous view.',
     sinPredios: 'The “{{capa}}” layer has no parcels in this view.'
   },
-  tabla: { componentes: 'Components', miembros: 'Members of the current area', predios: 'Parcels', areas: 'Areas of influence' },
+  tabla: { componentes: 'Components', predios: 'Parcels', areas: 'Areas of influence' },
   columnas: {
     codigo: 'Code',
     tipo: 'Type',

@@ -21,12 +21,15 @@ export function DialogoDeTransicion({
   objeto,
   registro,
   transicion,
-  alCerrar
+  alCerrar,
+  alAplicar
 }: {
   objeto: string
   registro: Registro
   transicion: AvailableTransition
   alCerrar: () => void
+  // la transición se aplicó: quien abrió el diálogo lo confirma (transiciones.hecho)
+  alAplicar?: () => void
 }) {
   const { t } = useTranslation(NS)
   const etiquetas = useEtiquetasDeEstado(objeto)
@@ -52,7 +55,15 @@ export function DialogoDeTransicion({
   const confirmar = () => {
     setIntentado(true)
     if (!puede) return
-    aplicar.mutate({ registro, transicion: transicion.name, motivo: motivo.trim() || undefined }, { onSuccess: alCerrar })
+    aplicar.mutate(
+      { registro, transicion: transicion.name, motivo: motivo.trim() || undefined },
+      {
+        onSuccess: () => {
+          alAplicar?.()
+          alCerrar()
+        }
+      }
+    )
   }
 
   return (

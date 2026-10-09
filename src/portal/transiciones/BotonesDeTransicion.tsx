@@ -25,22 +25,44 @@ export function BotonesDeTransicion({
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, registro.id)
   const [abierta, setAbierta] = useState<AvailableTransition | null>(null)
+  // el estado al que llevó la última transición aplicada: se confirma aunque el estado nuevo ya no ofrezca botones
+  const [hecha, setHecha] = useState<string | null>(null)
   const visibles = (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name))
-  if (visibles.length === 0) return null
+  if (visibles.length === 0 && !hecha) return null
   return (
-    <div role="group" aria-label={t('transiciones.acciones')} className="flex flex-wrap gap-2">
-      {visibles.map((tr, i) => (
-        <BotonDeTransicion
-          key={tr.name}
+    <div className="space-y-2">
+      {visibles.length > 0 ? (
+        <div role="group" aria-label={t('transiciones.acciones')} className="flex flex-wrap gap-2">
+          {visibles.map((tr, i) => (
+            <BotonDeTransicion
+              key={tr.name}
+              objeto={objeto}
+              registro={registro}
+              transicion={tr}
+              primaria={i === 0}
+              comprobar={comprobarAntes.includes(tr.name)}
+              alAbrir={() => {
+                setHecha(null)
+                setAbierta(tr)
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+      {hecha ? (
+        <p role="status" className="text-sm text-sg-success">
+          {t('transiciones.hecho', { a: hecha })}
+        </p>
+      ) : null}
+      {abierta ? (
+        <DialogoDeTransicion
           objeto={objeto}
           registro={registro}
-          transicion={tr}
-          primaria={i === 0}
-          comprobar={comprobarAntes.includes(tr.name)}
-          alAbrir={() => setAbierta(tr)}
+          transicion={abierta}
+          alCerrar={() => setAbierta(null)}
+          alAplicar={() => setHecha(abierta.toLabel)}
         />
-      ))}
-      {abierta ? <DialogoDeTransicion objeto={objeto} registro={registro} transicion={abierta} alCerrar={() => setAbierta(null)} /> : null}
+      ) : null}
     </div>
   )
 }

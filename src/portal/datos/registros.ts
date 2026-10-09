@@ -253,20 +253,6 @@ export function useActualizar(objeto: string) {
   })
 }
 
-export function useBorrar(objeto: string) {
-  const pedir = usePedir()
-  const cliente = useQueryClient()
-  return useMutation({
-    mutationFn: ({ registro, motivo }: { registro: Registro; motivo?: string | null }) =>
-      pedir<void>(`/objects/${objeto}/records/${registro.id}`, { metodo: 'DELETE', version: registro.updatedAt, motivo }),
-    onSuccess: (_r, { registro }) => {
-      // el registro borrado no se relee (sería un 404 con un observador activo): se quita de la caché
-      invalidar(cliente, objeto)
-      for (const clave of ['record', 'transitions', 'history']) cliente.removeQueries({ queryKey: [clave, objeto, registro.id] })
-    }
-  })
-}
-
 // los vínculos MANY_TO_MANY de la API genérica (engagement_stakeholder, engagement_topic, project_concession…)
 export function useRelacionados(objeto: string, id: string | undefined, relacion: string) {
   const pedir = usePedir()
@@ -274,17 +260,5 @@ export function useRelacionados(objeto: string, id: string | undefined, relacion
     queryKey: ['related', objeto, id, relacion],
     queryFn: () => pedir<Pagina>(`/objects/${objeto}/records/${id}/related/${relacion}?size=200`),
     enabled: Boolean(id)
-  })
-}
-
-export function useVincular(objeto: string, relacion: string) {
-  const pedir = usePedir()
-  const cliente = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, otro, quitar }: { id: string; otro: string; quitar?: boolean }) =>
-      quitar
-        ? pedir<void>(`/objects/${objeto}/records/${id}/related/${relacion}/${otro}`, { metodo: 'DELETE' })
-        : pedir<void>(`/objects/${objeto}/records/${id}/related/${relacion}`, { json: { otherId: otro } }),
-    onSuccess: (_r, { id }) => void cliente.invalidateQueries({ queryKey: ['related', objeto, id, relacion] })
   })
 }

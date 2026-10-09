@@ -1,7 +1,6 @@
 // Project 360: equipo y parámetros (S11), resumen (S08) y lo que comparten con el asistente de proyecto (S07)
 export const ES_P360 = {
   resumen: {
-    titulo: 'Resumen del proyecto',
     jefatura: 'Jefatura',
     jefaturaConError: 'No se pudo leer',
     etapa: 'Etapa',
@@ -93,7 +92,6 @@ export const ES_P360 = {
 
 export const EN_P360: typeof ES_P360 = {
   resumen: {
-    titulo: 'Project overview',
     jefatura: 'Project lead',
     jefaturaConError: 'Could not be read',
     etapa: 'Stage',

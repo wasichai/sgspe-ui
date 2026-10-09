@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { definicion, montar, registro, workflow } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -71,6 +71,34 @@ describe('transiciones', () => {
     expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00.123456Z"')
     expect(llamada.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Paralizaci%C3%B3n%20por%20lluvias")
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('una transición aplicada lo confirma, aunque ya no queden botones (revisión final, M6)', async () => {
+    let aplicada = false
+    fetch = mockFetch([
+      { path: '/objects/project/workflow', body: WF },
+      { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } }
+    ])
+    red = espiarRed([
+      { path: '/objects/project/records/p1/transitions', responder: () => jsonResponse(aplicada ? [] : transiciones) },
+      {
+        method: 'POST',
+        path: '/objects/project/records/p1/transitions/suspend',
+        responder: () => {
+          aplicada = true
+          return jsonResponse({ ...PROYECTO, state: 'suspended' })
+        }
+      }
+    ])
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    const dialogo = await screen.findByRole('dialog')
+    await within(dialogo).findByText('Se cumplen las reglas para este paso.')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Suspender' })).not.toBeInTheDocument())
+    expect(screen.getByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
   })
 
   it('una regla que bloquea no deja confirmar y dice qué falta y en qué campo', async () => {
