@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { Cargando, NoDisponible } from '../componentes/Estados'
+import { Cargando, NoDisponible, Restringido } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { nombreDe } from '../componentes/NombreDeActor'
 import { Rastro } from '../contexto/Rastro'
@@ -153,7 +153,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
               {(contactos.data ?? []).map((c) => (
                 <li key={c.id}>
                   {/* una clave ausente del GET es un campo restringido (security.md §7.9): se dice, no se deja vacío */}
-                  {texto(c, 'channel')}: {'contact_value' in c.attributes ? texto(c, 'contact_value') : t('comun.restringido')}
+                  {texto(c, 'channel')}: {'contact_value' in c.attributes ? texto(c, 'contact_value') : <Restringido />}
                   {'consent_given' in c.attributes && c.attributes.consent_given !== true ? (
                     <span className="ml-1 text-sg-caption text-sg-warning">({t('grupos.actor.sinConsentimiento')})</span>
                   ) : null}

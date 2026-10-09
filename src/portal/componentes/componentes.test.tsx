@@ -1,11 +1,13 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
+import { Campo } from './Campo'
 import { EstadoChip } from './EstadoChip'
 import { Cargando, Consulta, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido, ThConExplicacion } from './Estados'
 import { KpiCard } from './KpiCard'
@@ -126,6 +128,29 @@ describe('estados comunes', () => {
     expect(document.getElementById(restringido.getAttribute('aria-describedby')!)).not.toHaveClass('sr-only')
     expect(document.getElementById(noDisponible.getAttribute('aria-describedby')!)).toHaveClass('sr-only')
     expect(ayudaDeNoDisponible).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+describe('Campo (revisión final, M11)', () => {
+  it('el error aparece en una región que se anuncia, ya presente antes del error, y queda enlazado al control', async () => {
+    function ConError() {
+      const [error, setError] = useState<string>()
+      return (
+        <>
+          <Campo etiqueta="Nombre" error={error}>
+            {(p) => <input {...p} />}
+          </Campo>
+          <button onClick={() => setError('Obligatorio')}>Validar</button>
+        </>
+      )
+    }
+    montar(<ConError />)
+    const region = (await screen.findByLabelText('Nombre')).parentElement!.querySelector('[aria-live="polite"]')
+    expect(region).not.toBeNull()
+    expect(region).toBeEmptyDOMElement()
+    await userEvent.click(screen.getByRole('button', { name: 'Validar' }))
+    expect(region).toHaveTextContent('Obligatorio')
+    expect(screen.getByLabelText('Nombre')).toHaveAccessibleDescription('Obligatorio')
   })
 })
 

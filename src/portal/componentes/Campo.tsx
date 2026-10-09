@@ -23,15 +23,19 @@ export function Campo({
         {etiqueta}
       </label>
       {children({ id, 'aria-describedby': descripcion, 'aria-invalid': error ? true : undefined })}
-      {error ? (
-        <p id={`${id}-error`} className="text-sg-caption text-sg-danger">
-          {error}
-        </p>
-      ) : ayuda ? (
+      {!error && ayuda ? (
         <p id={`${id}-ayuda`} className="text-sg-caption text-sg-text-muted">
           {ayuda}
         </p>
       ) : null}
+      {/* la región existe antes del error: un lector de pantalla anuncia el error al aparecer (WCAG 4.1.3) */}
+      <div aria-live="polite">
+        {error ? (
+          <p id={`${id}-error`} className="text-sg-caption text-sg-danger">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }
