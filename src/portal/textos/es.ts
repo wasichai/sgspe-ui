@@ -7,6 +7,7 @@ import { ES_MAPA } from './mapa'
 import { ES_P360 } from './p360'
 import { ES_PROYECTOS } from './proyectos'
 import { ES_RELACIONAMIENTO } from './relacionamiento'
+import { ES_REPORTES } from './reportes'
 import { ES_TABLEROS } from './tableros'
 import { ES_TERRITORIO } from './territorio'
 import { ES_TRANSICIONES } from './transiciones'
@@ -23,6 +24,7 @@ export const ES = {
   p360: ES_P360,
   proyectos: ES_PROYECTOS,
   relacionamiento: ES_RELACIONAMIENTO,
+  reportes: ES_REPORTES,
   tableros: ES_TABLEROS,
   territorio: ES_TERRITORIO,
   transiciones: ES_TRANSICIONES,

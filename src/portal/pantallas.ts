@@ -3,6 +3,7 @@ import { FichaActorPage } from './grupos/FichaActorPage'
 import { GruposRutas } from './grupos/GruposRutas'
 import { ProyectosRutas } from './proyectos/ProyectosRutas'
 import { RelacionamientoRutas } from './relacionamiento/RelacionamientoRutas'
+import { ReportesRutas } from './reportes/ReportesRutas'
 import { VisitasPage } from './relacionamiento/VisitaDeCampoPage'
 import type { ClaveDeSeccion } from './shell/navTree'
 import { TerritorioRutas } from './territorio/TerritorioRutas'
@@ -14,7 +15,8 @@ export const PANTALLAS: Partial<Record<ClaveDeSeccion, ComponentType>> = {
   projects: ProyectosRutas,
   territory: TerritorioRutas,
   stakeholders: GruposRutas,
-  engagements: RelacionamientoRutas
+  engagements: RelacionamientoRutas,
+  reports: ReportesRutas
 }
 
 // rutas del portal que no son una sección pero viven bajo los permisos de una (ux-architecture.md §6.2): la ficha de actor
