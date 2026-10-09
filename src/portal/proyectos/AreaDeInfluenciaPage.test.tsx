@@ -322,7 +322,7 @@ describe('S10 · área de influencia', () => {
 
   describe('los códigos de la aprobación y de las escrituras', () => {
     it.each([
-      ['ACTION_REQUIRED', 403, 'Su cuenta no tiene la acción que este paso exige (aprobar, verificar o descargar lo restringido).'],
+      ['ACTION_REQUIRED', 403, 'Su cuenta no tiene la acción que este paso exige (aprobar, verificar, emitir un documento o descargar lo restringido).'],
       ['NOT_ASSIGNED', 403, 'No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.']
     ])('%s dice su texto, no el código', async (codigo, estado, esperado) => {
       fetch = abrirPortal('/projects/p1/areas/a2', GERENCIA_SOCIAL, SMG, rutas())
