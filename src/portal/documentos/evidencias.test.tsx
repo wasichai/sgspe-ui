@@ -297,7 +297,7 @@ describe('evidencias de un registro', () => {
     expect(within(fila('Lista de beneficiarios')).getByText('Restringida')).toBeInTheDocument()
     expect(within(fila('Foto')).getByText('Restringido')).toBeInTheDocument()
     expect(within(fila('Foto')).queryByRole('button', { name: /Descargar/ })).not.toBeInTheDocument()
-    expect(within(fila('Lista de beneficiarios')).getByText(/hace falta la acción DOWNLOAD_RESTRICTED/)).toBeInTheDocument()
+    expect(within(fila('Lista de beneficiarios')).getByText(/hace falta permiso para descargar archivos restringidos/)).toBeInTheDocument()
     // sin leer la clasificación, la ayuda no insinúa cuál es
     expect(within(fila('Foto')).getByText(/Su rol no lee la clasificación de esta evidencia/)).toBeInTheDocument()
     expect(within(fila('Foto')).queryByText(/CONFIDENCIAL/)).not.toBeInTheDocument()

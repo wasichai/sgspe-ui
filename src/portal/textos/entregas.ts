@@ -105,6 +105,6 @@ export const EN_ENTREGAS: typeof ES_ENTREGAS = {
     ejecutado: 'Delivered against committed',
     conConformidad: 'Deliveries with conformity: {{n}} of {{total}}',
     revisar: 'The minutes and photos are in each delivery; restricted ones are downloaded only by whoever may download restricted files.',
-    segregacion: 'You own this commitment: someone else verifies it (D11).'
+    segregacion: 'You own this commitment: someone else verifies it.'
   }
 }

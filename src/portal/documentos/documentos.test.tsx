@@ -238,7 +238,7 @@ describe('S46 · ficha de evidencia', () => {
     await userEvent.selectOptions(within(panel).getByLabelText('Clasificación'), 'INTERNA')
     // el motivo se dice una vez; bajar una restringida añade su propio aviso
     expect(within(panel).getAllByText(/Cambiar la clasificación exige un motivo/)).toHaveLength(1)
-    expect(within(panel).getByText(/Bajar una clasificación restringida exige además DOWNLOAD_RESTRICTED/)).toBeInTheDocument()
+    expect(within(panel).getByText(/Bajar una clasificación restringida exige además permiso para descargar archivos restringidos/)).toBeInTheDocument()
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
     expect(await within(panel).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
     expect(red.a('PATCH', '/sgspe/evidence/ev1')).toHaveLength(0)

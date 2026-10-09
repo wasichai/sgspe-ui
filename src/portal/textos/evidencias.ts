@@ -27,7 +27,7 @@ export const ES_EVIDENCIAS = {
   descargarBoton: 'Descargar',
   descargando: 'Descargando…',
   restringida: 'Restringida',
-  restringidaAyuda: 'Su rol no descarga evidencias CONFIDENCIAL ni de DATOS PERSONALES: hace falta la acción DOWNLOAD_RESTRICTED.',
+  restringidaAyuda: 'Su rol no descarga evidencias CONFIDENCIAL ni de DATOS PERSONALES: hace falta permiso para descargar archivos restringidos.',
   restringidaSinClasificacion: 'Su rol no lee la clasificación de esta evidencia, así que no descarga su archivo.',
   sinConsentimiento: 'Personas sin consentimiento: no sale en una salida EXTERNO',
   desvincular: 'Desvincular {{nombre}}',
@@ -52,7 +52,7 @@ export const ES_EVIDENCIAS = {
     emitir: 'Emitir',
     emitiendo: 'Emitiendo…',
     emitidoListo: 'Documento {{numero}} emitido.',
-    restringidos: 'Los documentos emitidos no imprimen datos restringidos (ASM-090).',
+    restringidos: 'Los documentos emitidos no imprimen datos restringidos.',
     // emitir a mano es editar el registro (P62): UPDATE, la asignación vigente al proyecto y, sin EDIT_ANY, haberlo creado
     errores: {
       ACTION_REQUIRED: 'Emitir un documento exige poder editar este registro: su rol no lo tiene.',
@@ -90,7 +90,7 @@ export const EN_EVIDENCIAS: typeof ES_EVIDENCIAS = {
   descargarBoton: 'Download',
   descargando: 'Downloading…',
   restringida: 'Restricted',
-  restringidaAyuda: 'Your role does not download CONFIDENCIAL or DATOS PERSONALES evidence: it needs the DOWNLOAD_RESTRICTED action.',
+  restringidaAyuda: 'Your role does not download CONFIDENCIAL or DATOS PERSONALES evidence: it needs permission to download restricted files.',
   restringidaSinClasificacion: 'Your role cannot read this evidence’s classification, so it cannot download its file.',
   sinConsentimiento: 'People without consent: it does not go out in an EXTERNO output',
   desvincular: 'Unlink {{nombre}}',
@@ -114,7 +114,7 @@ export const EN_EVIDENCIAS: typeof ES_EVIDENCIAS = {
     emitir: 'Issue',
     emitiendo: 'Issuing…',
     emitidoListo: 'Document {{numero}} issued.',
-    restringidos: 'Issued documents do not print restricted data (ASM-090).',
+    restringidos: 'Issued documents do not print restricted data.',
     errores: {
       ACTION_REQUIRED: 'Issuing a document requires editing this record: your role cannot.',
       NOT_ASSIGNED: 'Only the project team issues its documents: you have no current assignment to this project.',

@@ -329,7 +329,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     GENERATOR_KEY_PLATFORM_ONLY: 'Only the system writes a task’s origin key: it does not change.',
     SAME_DUE_DATE: 'The new date is the current one.',
     LAND_PARCEL_REQUIRED: 'A land use permit or an easement needs at least one parcel.',
-    ASSEMBLY_REQUIRED: 'An assembly authorization needs the ASAMBLEA engagement that authorizes it.',
+    ASSEMBLY_REQUIRED: 'An assembly authorization needs the engagement of type ASAMBLEA that authorizes it.',
     EVIDENCE_IMMUTABLE: 'The file of an evidence, what it replaces and its import batch do not change: upload a new version that replaces it.',
     EVIDENCE_NOT_DELETABLE: 'An evidence is not deleted: it is replaced by a new version.',
     INVALID_LINK: 'An evidence is not linked to that kind of record.',

@@ -247,7 +247,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
 
   it('sin la acción EXPORT, quien lee el historial lo ve y lee que no puede exportar', async () => {
     fetch = abrirPortal('/reports', RELACIONISTA, permisos({ project: ['READ'], stakeholder: ['READ'], export_log: ['READ'] }), rutas)
-    expect(await screen.findByText('Su cuenta no tiene la acción EXPORT sobre grupos de interés.')).toBeInTheDocument()
+    expect(await screen.findByText('Su cuenta no tiene permiso para exportar grupos de interés.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exportar XLSX' })).not.toBeInTheDocument()
   })
 

@@ -290,7 +290,7 @@ describe('S11 · equipo y parámetros', () => {
     await userEvent.click(await screen.findByRole('tab', { name: 'Campañas' }))
     expect(await screen.findByRole('progressbar', { name: 'Perforación 2026' })).toHaveAttribute('aria-valuenow', '25000')
     expect(screen.getAllByText('25,000 de 100,000 PEN').length).toBeGreaterThan(0)
-    expect(screen.getByText('2 registros en otra moneda no se suman (ASM-063)')).toBeInTheDocument()
+    expect(screen.getByText('2 registros en otra moneda no se suman')).toBeInTheDocument()
   })
 
   it('el estado y el tipo de actividad de una campaña salen con la etiqueta de su campo en la metadata, no solos', async () => {

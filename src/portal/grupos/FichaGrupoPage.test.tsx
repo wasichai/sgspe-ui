@@ -42,7 +42,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(within(decidir).getByText('ESTRATEGICO')).toBeInTheDocument()
     expect(await within(decidir).findByText('Restringido')).toBeInTheDocument()
     // la postura y la confianza del grupo de interés son el último valor informado (ASM-087)
-    expect(within(decidir).getByText('Postura vigente')).toHaveAttribute('title', 'El último valor informado en una evaluación (ASM-087)')
+    expect(within(decidir).getByText('Postura vigente')).toHaveAttribute('title', 'El último valor informado en una evaluación')
     expect(within(decidir).getByText('Confianza vigente')).toBeInTheDocument()
     expect(within(decidir).getByText('2 de 5')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nueva evaluación' })).not.toBeInTheDocument()

@@ -25,7 +25,7 @@ export const ES_AREAS = {
   aprobar: 'Aprobar versión {{version}}',
   sinMiembros: 'Agregue al menos un miembro antes de aprobar',
   aprobarTitulo: 'Aprobar la versión {{version}}',
-  reglas: 'Para aprobar: la versión está en borrador, tiene miembros y su cuenta tiene la acción APPROVE.',
+  reglas: 'Para aprobar: la versión está en borrador, tiene miembros y su cuenta tiene permiso para aprobar áreas de influencia.',
   quePasara:
     'La versión {{version}} pasa a Aprobada y la aprobada anterior de este tipo pasa a Reemplazada, en un solo paso. El filtro de territorio y los tableros usan la aprobada.',
   aprobando: 'Aprobando…',
@@ -70,7 +70,7 @@ export const EN_AREAS: typeof ES_AREAS = {
   aprobar: 'Approve version {{version}}',
   sinMiembros: 'Add at least one member before approving',
   aprobarTitulo: 'Approve version {{version}}',
-  reglas: 'To approve: the version is a draft, has members and your account holds the APPROVE action.',
+  reglas: 'To approve: the version is a draft, has members and your account may approve areas of influence.',
   quePasara:
     'Version {{version}} becomes Approved and the previous approved one of this type becomes Superseded, in one step. The territory filter and the dashboards use the approved one.',
   aprobando: 'Approving…',
