@@ -38,6 +38,54 @@ const esRestringida = (clasificacion: unknown): boolean => typeof clasificacion 
 // P59: el descriptor del archivo lo lee todo quien lee la evidencia y el servidor no puede ocultar su nombre, así que una
 // evidencia CONFIDENCIAL o de DATOS PERSONALES se sube con un nombre neutro: evidencia-<aaaammdd-hhmmss>.<extensión>, con la
 // hora de Lima y la extensión del original. el nombre original no sale del navegador
+//
+// lo que sigue al último punto no siempre es una extensión ("Lista Sra. Mamani", "DNI 12345678.Quispe"): se conserva solo si
+// tiene la forma de una (/^\.[a-z0-9]{1,8}$/) y es una de los tipos de evidence.file; si no, sale del tipo MIME del archivo, y
+// sin un tipo conocido el nombre va sin extensión. la forma sola no basta: ".quispe" la tiene
+const EXTENSIONES_CONOCIDAS: ReadonlySet<string> = new Set([
+  '.pdf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.heic',
+  '.heif',
+  '.tif',
+  '.tiff',
+  '.bmp',
+  '.csv',
+  '.txt',
+  '.docx',
+  '.xlsx',
+  '.odt',
+  '.ods'
+])
+const EXTENSION_DEL_TIPO: Readonly<Record<string, string>> = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
+  'image/tiff': '.tif',
+  'image/bmp': '.bmp',
+  'text/csv': '.csv',
+  'text/plain': '.txt',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'application/vnd.oasis.opendocument.text': '.odt',
+  'application/vnd.oasis.opendocument.spreadsheet': '.ods'
+}
+
+function extensionSegura(archivo: File): string {
+  const punto = archivo.name.lastIndexOf('.')
+  const delNombre = punto > 0 ? archivo.name.slice(punto).toLowerCase() : ''
+  if (/^\.[a-z0-9]{1,8}$/.test(delNombre) && EXTENSIONES_CONOCIDAS.has(delNombre)) return delNombre
+  return EXTENSION_DEL_TIPO[archivo.type.toLowerCase()] ?? ''
+}
+
 export function nombreNeutro(archivo: File, ahora: Date = new Date()): string {
   const partes = Object.fromEntries(
     new Intl.DateTimeFormat('en-CA', {
@@ -53,9 +101,7 @@ export function nombreNeutro(archivo: File, ahora: Date = new Date()): string {
       .formatToParts(ahora)
       .map((p) => [p.type, p.value])
   )
-  const punto = archivo.name.lastIndexOf('.')
-  const extension = punto > 0 && punto < archivo.name.length - 1 ? archivo.name.slice(punto).toLowerCase() : ''
-  return `evidencia-${partes.year}${partes.month}${partes.day}-${partes.hour}${partes.minute}${partes.second}${extension}`
+  return `evidencia-${partes.year}${partes.month}${partes.day}-${partes.hour}${partes.minute}${partes.second}${extensionSegura(archivo)}`
 }
 
 // el archivo que viaja: el mismo, o una copia con el nombre neutro si la clasificación es restringida
@@ -126,8 +172,10 @@ export function cuerpoDeEvidencia(alta: AltaDeEvidencia, descriptor: DescriptorD
 // registrar una evidencia en dos pasos: el archivo una sola vez por elección (un reintento no lo vuelve a subir) y el registro
 // con Idempotency-Key (un reintento repite la misma clave y el mismo id de archivo, api.md §4.9). registrar devuelve el
 // registro o null; el error queda en `error` para que la pantalla lo diga. lo subido vale para el mismo archivo con el mismo
-// nombre: pasar a una clasificación restringida lo vuelve a subir con el nombre neutro (P59). un archivo ya usado por otra
-// evidencia (409 EVIDENCE_FILE_IN_USE) se olvida: el siguiente intento lo sube de nuevo
+// nombre: pasar a una clasificación restringida lo vuelve a subir con el nombre neutro (P59). la primera subida, con el nombre
+// original, queda huérfana en wasichai-files y se acepta: ningún registro la cita, así que nadie lee su descriptor; quien la
+// subió ya conoce el nombre, y StoredFileCleanup la borra pasadas 24 h. un archivo ya usado por otra evidencia (409
+// EVIDENCE_FILE_IN_USE) se olvida: el siguiente intento lo sube de nuevo
 export function useRegistrarEvidencia() {
   const pedir = usePedir()
   const subido = useRef<{ archivo: File; restringida: boolean; descriptor: DescriptorDeArchivo } | null>(null)
@@ -174,6 +222,11 @@ export function useRegistrarEvidencia() {
       renovar.current = false
       subir.reset()
       comando.nuevaAccion()
+    },
+    // quita el error que se dice sin tocar la clave ni lo subido: un reintento sigue siendo la misma acción
+    limpiarError: () => {
+      subir.reset()
+      comando.reset()
     }
   }
 }
