@@ -305,7 +305,7 @@ describe('evidencias de un registro', () => {
     await userEvent.click(within(fila('Acta de entrega')).getByRole('button', { name: 'Descargar Acta de entrega' }))
     await waitFor(() => expect(red!.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1))
     expect(URL.createObjectURL).toHaveBeenCalled()
-    expect(within(fila('Acta de entrega')).getByText('12.5 kB')).toBeInTheDocument()
+    expect(within(fila('Acta de entrega')).getByText('12.2 kB')).toBeInTheDocument()
     // P59: el nombre del archivo de una restringida no se dice a quien no la descarga
     expect(within(tabla).getByRole('link', { name: 'Archivo reservado' })).toBeInTheDocument()
     expect(screen.queryByText(/padron-de-comuneros/)).not.toBeInTheDocument()

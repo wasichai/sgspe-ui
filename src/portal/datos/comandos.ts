@@ -60,10 +60,17 @@ export function useComando<T, V>(armar: (variables: V) => Comando, { invalidar, 
   const pedir = usePedir()
   const cliente = useQueryClient()
   const clave = useRef<string>(nuevaClave())
+  // P63: una clave nunca cruza acciones. otra ruta (otro registro, otro comando) no es un reintento de la anterior
+  const ultimaRuta = useRef<string | null>(null)
   // la renovación va en las opciones de useMutation, no en las de mutate: vale aunque la pantalla se haya cerrado mientras
   // el comando viajaba (revisión de la Tarea 17 de F2)
   const mutacion = useMutation({
-    mutationFn: (variables: V) => enviarComando<T>(pedir, armar(variables), conClave ? clave.current : null, esperar),
+    mutationFn: (variables: V) => {
+      const comando = armar(variables)
+      if (ultimaRuta.current !== null && ultimaRuta.current !== comando.ruta) clave.current = nuevaClave()
+      ultimaRuta.current = comando.ruta
+      return enviarComando<T>(pedir, comando, conClave ? clave.current : null, esperar)
+    },
     onSuccess: (resultado, variables) => {
       clave.current = nuevaClave()
       for (const queryKey of invalidar?.(resultado, variables) ?? []) void cliente.invalidateQueries({ queryKey })
@@ -78,7 +85,6 @@ export function useComando<T, V>(armar: (variables: V) => Comando, { invalidar, 
     nuevaAccion: () => {
       clave.current = nuevaClave()
       mutacion.reset()
-    },
-    claveActual: () => clave.current
+    }
   }
 }
