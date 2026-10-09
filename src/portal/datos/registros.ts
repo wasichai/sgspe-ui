@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useAuth, useObjectDefinition, type FieldMeta, type ObjectDefinition, type RecordItem } from '@wasichai/core'
 import { useRef } from 'react'
-import { enviarComando, esClaveReusada } from './comandos'
+import { enviarComando, esClaveReusada, type Esperar } from './comandos'
 import { esDerivado } from './derivados'
 import { nuevaClave, usePedir, type Pedido } from './http'
 
@@ -204,7 +204,7 @@ export interface Alta {
 // por alta, repetida si el mismo pedido se reintenta (un corte de red ya no duplica una interacción o una visita) y renovada al
 // terminar bien o si el servidor dice que ya se usó con otro cuerpo. una pantalla que empieza otra alta sin que la anterior
 // terminara bien llama a nuevaAccion
-export function useCrear(objeto: string) {
+export function useCrear(objeto: string, { esperar }: { esperar?: Esperar } = {}) {
   const pedir = usePedir()
   const cliente = useQueryClient()
   const clave = useRef<string>(nuevaClave())
@@ -213,7 +213,7 @@ export function useCrear(objeto: string) {
       const definicion = await definicionDe(cliente, pedir, objeto)
       const geometries = geometriasDeEscritura(definicion, geometrias)
       const cuerpo = { attributes: atributosDeEscritura(objeto, definicion, atributos), ...(geometries ? { geometries } : {}) }
-      return enviarComando<Registro>(pedir, { ruta: `/objects/${objeto}/records`, json: cuerpo, motivo }, clave.current)
+      return enviarComando<Registro>(pedir, { ruta: `/objects/${objeto}/records`, json: cuerpo, motivo }, clave.current, esperar)
     },
     onSuccess: () => {
       clave.current = nuevaClave()

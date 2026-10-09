@@ -3,6 +3,7 @@ import { cn } from '@wasichai/ui'
 import { ExternalLink, LayoutDashboard, LogOut, Mountain, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet } from 'react-router'
+import { Campana } from '../avisos/Campana'
 import { SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
 import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
@@ -16,9 +17,9 @@ const REPOSO = 'text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-t
 const ROTULO = 'sr-only xl:not-sr-only xl:truncate'
 
 // el shell del portal (docs/ux/ux-architecture.md §7.1): barra superior de 56 px con la marca, el botón Preguntar del
-// asistente, el tema, la cuenta con sus roles y la salida; a la izquierda, la navegación principal con las secciones que se
-// le ofrecen a la cuenta (useArbol), en su orden; a la derecha, el contenido. Administración es un enlace a /admin, fuera
-// del portal. la búsqueda con ⌘K (S03) y los avisos (S04) llegan después
+// asistente, la campana de avisos (S04, desde F3), el tema, la cuenta con sus roles y la salida; a la izquierda, la
+// navegación principal con las secciones que se le ofrecen a la cuenta (useArbol), en su orden; a la derecha, el contenido.
+// Administración es un enlace a /admin, fuera del portal. la búsqueda con ⌘K (S03) llega después
 export function AppShell() {
   const { t } = useTranslation(NS)
   const { appName } = useWasichaiConfig()
@@ -52,6 +53,7 @@ export function AppShell() {
         <span id="asistente-por-llegar" className="sr-only">
           {t('shell.asistentePorLlegar')}
         </span>
+        <Campana />
         <LanguageMenu />
         <ThemeMenu />
         <span className="hidden max-w-56 flex-col text-right leading-tight sm:flex" title={user?.email}>

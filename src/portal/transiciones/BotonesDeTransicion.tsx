@@ -18,12 +18,15 @@ export function BotonesDeTransicion({
   objeto,
   registro,
   ocultar = [],
+  solo,
   comprobarAntes = [],
   proyecto
 }: {
   objeto: string
   registro: Registro
   ocultar?: readonly string[]
+  // solo estas, si se dan: la verificación de un compromiso (S32) ofrece verify y reopen_execution y nada más
+  solo?: readonly string[]
   comprobarAntes?: readonly string[]
   // el proyecto del registro, si su objeto tiene alcance de proyecto: ProjectScopeGuard rechaza la transición de quien no
   // está asignado (salvo ADMIN), así que no se le ofrece (re-revisión, menor 4)
@@ -42,7 +45,9 @@ export function BotonesDeTransicion({
     return () => clearTimeout(plazo)
   }, [hecha])
   const ofrece = proyecto === undefined || escribeEnElProyecto
-  const visibles = ofrece ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name)) : []
+  const visibles = ofrece
+    ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name) && (!solo || solo.includes(tr.name)))
+    : []
   if (visibles.length === 0 && !hecha) return null
   return (
     <div className="space-y-2">
