@@ -9,21 +9,43 @@ import { KpiCard } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
-import { desglose, useTablero, type Indicador } from '../datos/indicadores'
+import { desglose, useTablero, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { atributo, texto, useRegistros } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, indicadorDe, SerieConMeta, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import {
+  Barras,
+  ConsultaDeTablero,
+  diezYOtros,
+  FiltrosDeTablero,
+  indicadorDe,
+  NotasDeIndicador,
+  SerieConMeta,
+  useFiltrosDeTablero,
+  Zona
+} from '../tableros/comunes'
 
 // S27 · tablero de compromisos (dashboards.md §5.6, screens.md §12): GET /api/sgspe/dashboards/commitments en una llamada, con
 // los filtros de periodo, territorio, campaña y responsable (owner, que aplican KPI-COM-03, 04, 06 y 09; los demás lo declaran
-// en ignoredFilters y la zona lo dice). zonas: estado (KPI-COM-01 a 06, los vencidos por días de atraso), desgloses (KPI-COM-07),
-// cumplimiento a tiempo frente al plazo vigente y al original (KPI-COM-09), montos por moneda (KPI-COM-10), formales por tema
-// (KPI-COM-08), la serie de vencidos (KPI-COM-11) y la tabla de pendientes. un indicador que la cuenta no lee dice «no
-// disponible», nunca cero; 400 TOO_MANY_RECORDS es «Acote los filtros»
+// en ignoredFilters y la tarjeta o la zona lo dice, con los avisos del servidor). zonas: estado (KPI-COM-01 a 06, los vencidos
+// por días de atraso), desgloses (KPI-COM-07), cumplimiento a tiempo frente al plazo vigente y al original (KPI-COM-09),
+// montos por moneda (KPI-COM-10), formales por tema (KPI-COM-08), la serie de vencidos (KPI-COM-11) y la tabla de
+// pendientes. un indicador que la cuenta no lee dice «no disponible», nunca cero; 400 TOO_MANY_RECORDS es «Acote los filtros»
 const DIMENSIONES = ['owner', 'project', 'territory', 'topic'] as const
 const PENDIENTES = 20
+// las tarjetas de estado, con su nombre si el servidor no devolvió el indicador
+const TARJETAS = [
+  ['KPI-COM-01', 'registrados'],
+  ['KPI-COM-02', 'abiertos'],
+  ['KPI-COM-03', 'vencidos'],
+  ['KPI-COM-04', 'porVencer'],
+  ['KPI-COM-05', 'cumplidos'],
+  ['KPI-COM-06', 'bloqueados']
+] as const
+// los filtros del tablero que la tabla de pendientes no aplica: el periodo (los pendientes son los de hoy), el territorio y el
+// ámbito (el servidor los resuelve a localidades con sus sectores y comunidades, que una lectura por igualdad no reproduce)
+const NO_APLICA_EN_PENDIENTES = ['periodStart', 'periodEnd', 'administrativeUnit', 'locality', 'community', 'areaOfInfluence', 'scope'] as const
 
 export function TableroCompromisosPage() {
   const { t } = useTranslation(NS)
@@ -48,9 +70,11 @@ export function TableroCompromisosPage() {
               <section aria-label={t('tableroCompromisos.zonas.estado')} className="space-y-2">
                 <h2 className="text-sg-h3 font-semibold">{t('tableroCompromisos.zonas.estado')}</h2>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {['KPI-COM-01', 'KPI-COM-02', 'KPI-COM-03', 'KPI-COM-04', 'KPI-COM-05', 'KPI-COM-06'].map((code) => (
-                    <KpiCard key={code} titulo={ind(code)?.label ?? code} indicador={ind(code) ?? { code, label: code, available: false }} />
-                  ))}
+                  {TARJETAS.map(([code, nombre]) => {
+                    const titulo = ind(code)?.label || t(`tableroCompromisos.tarjetas.${nombre}`)
+                    const i = ind(code) ?? { code, label: titulo, available: false }
+                    return <KpiCard key={code} titulo={titulo} indicador={i} notas={i.available ? <NotasDeIndicador indicador={i} /> : null} />
+                  })}
                 </div>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <Zona titulo={t('tableroCompromisos.porEstado')} indicador={ind('KPI-COM-01')}>
@@ -60,7 +84,10 @@ export function TableroCompromisosPage() {
                     {(i) => (
                       <Barras
                         titulo={t('tableroCompromisos.diasDeAtraso')}
-                        filas={desglose(i, 'daysOverdue').map((f) => ({ nombre: f.label ?? f.key, valor: f.value }))}
+                        filas={desglose(i, 'daysOverdue').map((f) => ({
+                          nombre: f.label || t(`tableroCompromisos.tramos.${f.key}`, { defaultValue: t('tableroCompromisos.tramos.otro') }),
+                          valor: f.value
+                        }))}
                       />
                     )}
                   </Zona>
@@ -92,7 +119,7 @@ export function TableroCompromisosPage() {
           )
         }}
       </ConsultaDeTablero>
-      <Pendientes proyecto={scope.kind === 'project' ? scope.projectId : undefined} />
+      <Pendientes proyecto={scope.kind === 'project' ? scope.projectId : undefined} filtros={filtros} />
     </section>
   )
 }
@@ -156,8 +183,10 @@ function ATiempo({ indicador }: { indicador: Indicador }) {
           <div key={f.key} className="rounded-sg-md border border-sg-border p-2 text-sm">
             <dt className="text-sg-text-muted">{t(`tableroCompromisos.contraPlazo.${f.key}`, { defaultValue: f.key })}</dt>
             <dd className="tabular-nums">
-              {f.value === null ? '—' : `${numeroPe(f.value)} %`} ·{' '}
-              {t('tableroCompromisos.nDeN', { n: numeroPe(Number(f.numerator ?? 0)), total: numeroPe(Number(f.denominator ?? 0)) })}
+              {f.value === null || f.value === undefined ? '—' : `${numeroPe(f.value)} %`}
+              {typeof f.numerator === 'number' && typeof f.denominator === 'number'
+                ? ` · ${t('tableroCompromisos.nDeN', { n: numeroPe(f.numerator), total: numeroPe(f.denominator) })}`
+                : null}
             </dd>
           </div>
         ))}
@@ -166,7 +195,12 @@ function ATiempo({ indicador }: { indicador: Indicador }) {
   )
 }
 
-// KPI-COM-10: por moneda, el monto comprometido frente al ejecutado (ASM-063); dos barras por moneda y su tabla
+// KPI-COM-10: por moneda, el monto comprometido frente al ejecutado (ASM-063); dos barras por moneda y su tabla. un monto que
+// no vino no se dibuja como cero; sin filas lo dice, y sin cifra en la moneda principal (value null, P45) dice que no hay base
+const cifra = (valor: unknown): number | null => {
+  const n = typeof valor === 'number' ? valor : typeof valor === 'string' && valor.trim() !== '' ? Number(valor) : NaN
+  return Number.isFinite(n) ? n : null
+}
 function Montos({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const filas = desglose(indicador, 'currency')
@@ -178,39 +212,62 @@ function Montos({ indicador }: { indicador: Indicador }) {
       xAxis: { type: 'category', data: filas.map((f) => f.key) },
       yAxis: { type: 'value' },
       series: [
-        { type: 'bar', name: t('tableroCompromisos.comprometido'), data: filas.map((f) => Number(f.committed ?? f.value ?? 0)) },
-        { type: 'bar', name: t('tableroCompromisos.ejecutado'), data: filas.map((f) => Number(f.executed ?? 0)) }
+        { type: 'bar', name: t('tableroCompromisos.comprometido'), data: filas.map((f) => cifra(f.committed ?? f.value)) },
+        { type: 'bar', name: t('tableroCompromisos.ejecutado'), data: filas.map((f) => cifra(f.executed)) }
       ]
     }),
     [JSON.stringify(filas), t]
   )
+  if (filas.length === 0) return <p className="text-sm text-sg-text-muted">{t('tableroCompromisos.sinMontos')}</p>
   return (
-    <Grafico
-      etiqueta={t('tableroCompromisos.zonas.montos')}
-      opciones={opciones}
-      datos={{
-        columnas: [t('tableroCompromisos.moneda'), t('tableroCompromisos.comprometido'), t('tableroCompromisos.ejecutado')],
-        filas: filas.map((f) => [f.key, montoPe(f.committed ?? f.value, f.key), montoPe(f.executed, f.key)])
-      }}
-    />
+    <div className="space-y-2">
+      {indicador.value === null || indicador.value === undefined ? (
+        <p className="text-sg-caption text-sg-text-muted">{t('tableroCompromisos.sinBase')}</p>
+      ) : null}
+      <Grafico
+        etiqueta={t('tableroCompromisos.zonas.montos')}
+        opciones={opciones}
+        datos={{
+          columnas: [t('tableroCompromisos.moneda'), t('tableroCompromisos.comprometido'), t('tableroCompromisos.ejecutado')],
+          filas: filas.map((f) => [f.key, montoPe(f.committed ?? f.value, f.key), montoPe(f.executed, f.key)])
+        }}
+      />
+    </div>
   )
 }
 
-// los compromisos vencidos y por vencer del alcance, con enlace a su ficha: dos lecturas por igualdad sobre deadline_status
-function Pendientes({ proyecto }: { proyecto?: string }) {
+// los compromisos vencidos y por vencer del alcance, con enlace a su ficha: dos lecturas por igualdad sobre deadline_status,
+// con la campaña y el responsable del tablero como los aplican KPI-COM-03 y 04 (exploration_campaign, owner_user_id). los
+// filtros que no aplica se dicen, para que la tabla no se lea como filtrada por ellos. una lectura fallida se dice aunque la
+// otra siga cargando
+function Pendientes({ proyecto, filtros }: { proyecto?: string; filtros: FiltrosDeIndicador }) {
   const { t } = useTranslation(NS)
-  const vencidos = useRegistros('commitment', { project: proyecto, deadline_status: 'VENCIDO', sort: 'due_date', dir: 'asc', size: PENDIENTES })
-  const porVencer = useRegistros('commitment', { project: proyecto, deadline_status: 'POR VENCER', sort: 'due_date', dir: 'asc', size: PENDIENTES })
+  const comunes = {
+    project: proyecto,
+    exploration_campaign: filtros.explorationCampaign,
+    owner_user_id: filtros.owner,
+    sort: 'due_date',
+    dir: 'asc',
+    size: PENDIENTES
+  }
+  const vencidos = useRegistros('commitment', { ...comunes, deadline_status: 'VENCIDO' })
+  const porVencer = useRegistros('commitment', { ...comunes, deadline_status: 'POR VENCER' })
+  const noAplicados = NO_APLICA_EN_PENDIENTES.filter((f) => filtros[f] !== undefined)
   const fallida = [vencidos, porVencer].find((c) => c.isError && !c.data)
   const filas = [...(vencidos.data?.content ?? []), ...(porVencer.data?.content ?? [])]
   const truncado = (vencidos.data?.totalPages ?? 1) > 1 || (porVencer.data?.totalPages ?? 1) > 1
   return (
     <section aria-label={t('tableroCompromisos.zonas.pendientes')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="text-sg-h3 font-semibold">{t('tableroCompromisos.zonas.pendientes')}</h2>
-      {vencidos.isPending || porVencer.isPending ? (
-        <Cargando compacto />
-      ) : fallida ? (
+      {noAplicados.length > 0 ? (
+        <p role="note" className="text-sg-caption text-sg-text-muted">
+          {t('tableroCompromisos.pendientesNoAplica', { filtros: noAplicados.map((f) => t(`tableros.nombresDeFiltro.${f}`)).join(', ') })}
+        </p>
+      ) : null}
+      {fallida ? (
         <FalloDeLectura error={fallida.error} alReintentar={() => void fallida.refetch()} />
+      ) : vencidos.isPending || porVencer.isPending ? (
+        <Cargando compacto />
       ) : filas.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{t('tableroCompromisos.sinPendientes')}</p>
       ) : (

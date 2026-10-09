@@ -149,6 +149,33 @@ export function FiltrosIgnorados({ indicador }: { indicador: Indicador | undefin
   )
 }
 
+// los avisos de un indicador (warnings, api.md §4.11): textos del servidor que dicen que la cifra está incompleta o que algo no
+// se sumó (una moneda distinta de la de la campaña, reprogramaciones excluidas). se dicen como texto, nunca como marcado, y
+// nunca se callan. sin avisos no dibuja nada
+export function AvisosDeIndicador({ indicador }: { indicador: Indicador | undefined }) {
+  const { t } = useTranslation(NS)
+  const avisos = indicador?.warnings ?? []
+  if (avisos.length === 0) return null
+  return (
+    <ul aria-label={t('tableros.avisos')} className="space-y-1 text-sg-caption text-sg-warning">
+      {avisos.map((aviso, n) => (
+        <li key={n}>{aviso}</li>
+      ))}
+    </ul>
+  )
+}
+
+// lo que acompaña a una cifra para que no se lea de más: los filtros que no aplica y sus avisos. lo usan las zonas y las
+// tarjetas de un tablero
+export function NotasDeIndicador({ indicador }: { indicador: Indicador | undefined }) {
+  return (
+    <>
+      <FiltrosIgnorados indicador={indicador} />
+      <AvisosDeIndicador indicador={indicador} />
+    </>
+  )
+}
+
 // la consulta de un tablero o un indicador: 400 TOO_MANY_RECORDS no es un error de carga sino un estado propio, "acote los
 // filtros", con los filtros a la vista (dashboards.md §6.2); un 403 es "no disponible" con su motivo (el código de la guarda,
 // como NOT_ASSIGNED); lo demás, como Consulta (alerta con su correlación y reintento)
@@ -165,14 +192,14 @@ export function ConsultaDeTablero<T>({ consulta, children }: { consulta: UseQuer
 }
 
 // una zona de un tablero: el título, "no disponible" si la cuenta no puede leer el indicador (RQ-DSH-032) o su contenido,
-// con los filtros que el indicador no aplica. un indicador ausente de la respuesta tampoco se lee como vacío
+// con los filtros que el indicador no aplica y sus avisos. un indicador ausente de la respuesta tampoco se lee como vacío
 export function Zona({ titulo, indicador, children }: { titulo: string; indicador: Indicador | undefined; children: (i: Indicador) => ReactNode }) {
   return (
     <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
       {indicador?.available ? (
         <>
-          <FiltrosIgnorados indicador={indicador} />
+          <NotasDeIndicador indicador={indicador} />
           {children(indicador)}
         </>
       ) : (

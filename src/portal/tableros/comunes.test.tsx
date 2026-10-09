@@ -3,7 +3,17 @@ import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 import { useIndicador, type Indicador } from '../datos/indicadores'
-import { Barras, ConsultaDeTablero, diezYOtros, FiltrosIgnorados, SerieConMeta, useFiltrosDeTablero, useTableroDisponible, Zona } from './comunes'
+import {
+  AvisosDeIndicador,
+  Barras,
+  ConsultaDeTablero,
+  diezYOtros,
+  FiltrosIgnorados,
+  SerieConMeta,
+  useFiltrosDeTablero,
+  useTableroDisponible,
+  Zona
+} from './comunes'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 
@@ -77,6 +87,26 @@ describe('Zona y filtros ignorados', () => {
   it('un filtro desconocido se dice con su clave', () => {
     montar(<FiltrosIgnorados indicador={indicador({ ignoredFilters: ['nuevo'] })} />)
     expect(screen.getByRole('note')).toHaveTextContent('filtro de nuevo')
+  })
+})
+
+describe('AvisosDeIndicador', () => {
+  it('los avisos del servidor se dicen como texto, sin interpretarlo, y la zona los muestra junto a la cifra', () => {
+    montar(
+      <Zona titulo="Montos" indicador={indicador({ warnings: ['2 compromisos en otra moneda no se suman', '<b>sin marcado</b>'] })}>
+        {(i) => <p>{`valor ${String(i.value)}`}</p>}
+      </Zona>
+    )
+    const avisos = screen.getByRole('list', { name: 'Avisos sobre esta cifra' })
+    expect(avisos).toHaveTextContent('2 compromisos en otra moneda no se suman')
+    expect(screen.getByText('<b>sin marcado</b>')).toBeInTheDocument()
+    expect(avisos.querySelector('b')).toBeNull()
+    expect(screen.getByText('valor 4')).toBeInTheDocument()
+  })
+
+  it('sin avisos no dibuja nada', () => {
+    montar(<AvisosDeIndicador indicador={indicador({ warnings: [] })} />)
+    expect(screen.queryByRole('list')).toBeNull()
   })
 })
 
