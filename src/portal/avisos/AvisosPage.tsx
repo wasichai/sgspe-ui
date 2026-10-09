@@ -1,0 +1,158 @@
+import { Alert, Button, cn, Pagination } from '@wasichai/ui'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
+import { SelectNativo } from '../componentes/Campo'
+import { useMensajeDeError } from '../componentes/errores'
+import { Cargando, Vacio } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import {
+  CLASE_DE_TIPO,
+  FUENTE_DE_APROBACIONES,
+  FUENTE_DE_PLAZOS,
+  sinBandeja,
+  TIPOS_DE_AVISO,
+  useAccionDeAviso,
+  useAvisos,
+  useLeerTodos,
+  type Aviso,
+  type EstadoDeBandeja,
+  type TipoDeAviso
+} from '../datos/avisos'
+import { hoyEnLima } from '../datos/fechas'
+import { destinoDeAviso } from '../datos/fichas'
+import { fechaYHoraPe, NS } from '../i18n'
+import { PreferenciasDeAvisos } from './PreferenciasDeAvisos'
+
+// S04 · avisos (/notifications, screens.md §14): la bandeja de wasichai-notifications de la persona, con «Solo sin leer» y los
+// pospuestos, por tipo; abrir un aviso lo marca leído y lleva a su registro; posponer lo esconde hasta mañana a las 8:00 de Lima;
+// un ACTION de una fuente no se descarta (se va cuando el trabajo se hace). debajo, las preferencias de correo
+const VISTAS: { id: string; estado: EstadoDeBandeja }[] = [
+  { id: 'todos', estado: 'active' },
+  { id: 'sinLeer', estado: 'unread' },
+  { id: 'pospuestos', estado: 'snoozed' }
+]
+const POR_PAGINA = 25
+
+// mañana a las 8:00 en Lima (UTC-5, sin horario de verano), como instante UTC
+export function mananaALas8(ahora: Date = new Date()): string {
+  const manana = new Date(`${hoyEnLima(ahora)}T12:00:00-05:00`)
+  manana.setUTCDate(manana.getUTCDate() + 1)
+  return new Date(`${manana.toISOString().slice(0, 10)}T08:00:00-05:00`).toISOString()
+}
+
+export function AvisosPage() {
+  const { t } = useTranslation(NS)
+  const lista = useParametrosDeLista('todos')
+  const estado = VISTAS.find((v) => v.id === lista.vista)?.estado ?? 'active'
+  const tipo = (lista.filtro('kind') || undefined) as TipoDeAviso | undefined
+  const avisos = useAvisos({ state: estado, kind: tipo, page: lista.pagina, size: POR_PAGINA })
+  const leerTodos = useLeerTodos()
+  const mensaje = useMensajeDeError()
+  return (
+    <section className="mx-auto max-w-[900px] space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-sg-h1 font-semibold">{t('avisos.titulo')}</h1>
+        <Button size="sm" variant="secondary" disabled={leerTodos.isPending} aria-busy={leerTodos.isPending} onClick={() => leerTodos.mutate(tipo)}>
+          {t('avisos.leerTodos')}
+        </Button>
+      </div>
+      {leerTodos.isError ? <Alert tone="danger">{mensaje(leerTodos.error)}</Alert> : null}
+      <VistasGuardadas
+        vistas={VISTAS.map((v) => ({ id: v.id, etiqueta: t(`avisos.filtros.${v.id}`) }))}
+        actual={lista.vista}
+        alCambiar={(vista) => lista.cambiar({ view: vista })}
+      />
+      <label className="flex items-center gap-2 text-sm">
+        {t('avisos.tipo')}
+        <SelectNativo
+          value={tipo ?? ''}
+          onChange={(e) => lista.cambiar({ kind: e.target.value })}
+          opciones={TIPOS_DE_AVISO.map((k) => ({ valor: k, etiqueta: t(`avisos.tipos.${k}`) }))}
+        />
+      </label>
+      {avisos.isPending ? (
+        <Cargando />
+      ) : avisos.isError && !avisos.data ? (
+        sinBandeja(avisos.error) ? (
+          <Vacio titulo={t('avisos.vacio')} />
+        ) : (
+          <FalloDeLectura error={avisos.error} alReintentar={() => void avisos.refetch()} />
+        )
+      ) : avisos.data.content.length === 0 ? (
+        <Vacio titulo={lista.vista === 'todos' && !tipo ? t('avisos.vacio') : t('avisos.vacioFiltrado')} />
+      ) : (
+        <>
+          <ul className="space-y-2">
+            {avisos.data.content.map((a) => (
+              <AvisoDeLaBandeja key={a.id} aviso={a} />
+            ))}
+          </ul>
+          {avisos.data.totalPages && avisos.data.totalPages > 1 ? (
+            <Pagination
+              page={avisos.data.page}
+              totalPages={avisos.data.totalPages}
+              totalElements={avisos.data.totalElements ?? 0}
+              onPage={(p) => lista.cambiar({ page: String(p) })}
+            />
+          ) : null}
+        </>
+      )}
+      <PreferenciasDeAvisos />
+    </section>
+  )
+}
+
+const fuenteDe = (aviso: Aviso) => (aviso.source === FUENTE_DE_APROBACIONES || aviso.source === FUENTE_DE_PLAZOS ? aviso.source : 'otra')
+
+function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
+  const { t } = useTranslation(NS)
+  const accion = useAccionDeAviso()
+  const mensaje = useMensajeDeError()
+  const destino = destinoDeAviso(aviso.link)
+  return (
+    <li className={cn('space-y-1 rounded-sg-lg border border-l-4 border-sg-border bg-sg-surface p-3 text-sm', CLASE_DE_TIPO[aviso.kind])}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className={cn('text-sm', !aviso.read && 'font-semibold')}>{aviso.title}</h2>
+        <span className="text-sg-caption text-sg-text-muted">
+          {t(`avisos.tipos.${aviso.kind}`)} · {t(`avisos.fuentes.${fuenteDe(aviso)}`)}
+          {!aviso.read ? ` · ${t('avisos.sinLeer')}` : ''}
+        </span>
+      </div>
+      {aviso.body ? <p className="whitespace-pre-line">{aviso.body}</p> : null}
+      <p className="text-sg-caption text-sg-text-muted">
+        {t('avisos.publicado', { fecha: fechaYHoraPe(new Date(aviso.publishAt)) })}
+        {aviso.dueAt ? ` · ${t('avisos.vence', { fecha: fechaYHoraPe(new Date(aviso.dueAt)) })}` : ''}
+        {aviso.overdue ? ` · ${t('avisos.vencido')}` : ''}
+        {aviso.snoozedUntil ? ` · ${t('avisos.pospuesto', { fecha: fechaYHoraPe(new Date(aviso.snoozedUntil)) })}` : ''}
+      </p>
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {destino ? (
+          <Link to={destino} onClick={() => !aviso.read && accion.mutate({ aviso, accion: 'read' })} className="text-sg-primary-text underline">
+            {t('avisos.abrir')}
+          </Link>
+        ) : (
+          <span className="text-sg-caption text-sg-text-muted">{t('avisos.sinEnlace')}</span>
+        )}
+        {!aviso.read ? (
+          <Button size="sm" variant="secondary" disabled={accion.isPending} onClick={() => accion.mutate({ aviso, accion: 'read' })}>
+            {t('avisos.leer')}
+          </Button>
+        ) : null}
+        {!aviso.snoozedUntil ? (
+          <Button size="sm" variant="secondary" disabled={accion.isPending} onClick={() => accion.mutate({ aviso, accion: 'snooze', hasta: mananaALas8() })}>
+            {t('avisos.posponer')}
+          </Button>
+        ) : null}
+        {aviso.dismissible ? (
+          <Button size="sm" variant="secondary" disabled={accion.isPending} onClick={() => accion.mutate({ aviso, accion: 'dismiss' })}>
+            {t('avisos.descartar')}
+          </Button>
+        ) : (
+          <span className="text-sg-caption text-sg-text-muted">{t('avisos.noDescartable')}</span>
+        )}
+      </div>
+      {accion.isError ? <Alert tone="danger">{mensaje(accion.error)}</Alert> : null}
+    </li>
+  )
+}
