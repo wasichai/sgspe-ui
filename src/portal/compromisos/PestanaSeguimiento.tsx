@@ -204,7 +204,8 @@ export function PestanaDependencias({ compromiso, escribe }: { compromiso: Regis
           </tbody>
         </Table>
       )}
-      {escribe && can('commitment_dependency', 'CREATE') ? <NuevaDependencia compromiso={compromiso} /> : null}
+      {/* key: otro compromiso en la misma pantalla empieza el alta de cero, con su propia clave (P63) */}
+      {escribe && can('commitment_dependency', 'CREATE') ? <NuevaDependencia key={compromiso.id} compromiso={compromiso} /> : null}
     </section>
   )
 }
@@ -269,7 +270,14 @@ function NuevaDependencia({ compromiso }: { compromiso: Registro }) {
         {elegido ? (
           <p className="text-sm">
             {texto(elegido, 'code')} · {texto(elegido, 'title')}{' '}
-            <button type="button" className="text-sg-caption text-sg-primary-text underline" onClick={() => setElegido(null)}>
+            <button
+              type="button"
+              className="text-sg-caption text-sg-primary-text underline"
+              onClick={() => {
+                setElegido(null)
+                crear.nuevaAccion()
+              }}
+            >
               {t('comun.quitar')}
             </button>
           </p>
@@ -280,8 +288,9 @@ function NuevaDependencia({ compromiso }: { compromiso: Registro }) {
             filtros={{ project: texto(compromiso, 'project') }}
             rotulo={(r) => `${texto(r, 'code')} · ${texto(r, 'title')}`}
             alElegir={(r) => {
+              // P63: otra dependencia no es un reintento de la anterior; lleva otra clave y no arrastra su error
               setElegido(r)
-              crear.reset()
+              crear.nuevaAccion()
             }}
           />
         )}

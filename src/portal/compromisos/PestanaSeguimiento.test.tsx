@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
 import { definicion, montar, pagina, registro } from '../../test/montar'
@@ -31,6 +32,7 @@ const HITO = registro(
   { updatedAt: '2026-10-02T16:00:00Z' }
 )
 const OTRO = registro('c2', { project: 'p1', code: 'C-002', title: 'Acceso vehicular' }, { state: 'in_progress' })
+const TERCERO = registro('c3', { project: 'p1', code: 'C-003', title: 'Canal de riego' }, { state: 'in_progress' })
 const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   ...extra,
   ...baseDeCompromisos(),
@@ -128,5 +130,63 @@ describe('S29 · dependencias', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Agregar la dependencia' }))
     expect(await screen.findByText('Esa dependencia cerraría un ciclo entre compromisos.')).toBeInTheDocument()
     expect(red.a('POST', '/objects/commitment_dependency/records')[0].cuerpo).toEqual({ attributes: { commitment: 'c1', depends_on: 'c2', blocking: true } })
+  })
+  // P63: una clave nunca cruza acciones. otra dependencia no es un reintento de la que se rechazó
+  it('otro compromiso elegido tras un rechazo lleva otra clave', async () => {
+    fetch = mockFetch(rutas([{ path: '/objects/commitment/records', body: pagina([OTRO, TERCERO]) }]))
+    const respuestas = [() => problema(409, 'ciclo', [{ field: 'depends_on', message: 'DEPENDENCY_CYCLE' }]), () => problema(500, 'cayó')]
+    let i = 0
+    red = espiarRed([{ method: 'POST', path: '/objects/commitment_dependency/records', responder: () => respuestas[i++]() }])
+    montar(<PestanaDependencias compromiso={C1} escribe />, { usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await userEvent.click(await screen.findByText('+ Dependencia'))
+    await userEvent.type(screen.getByLabelText('Buscar el compromiso del que depende'), 'C-')
+    await userEvent.click(await screen.findByRole('button', { name: 'C-002 · Acceso vehicular' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar la dependencia' }))
+    expect(await screen.findByText('Esa dependencia cerraría un ciclo entre compromisos.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar' }))
+    expect(screen.queryByText('Esa dependencia cerraría un ciclo entre compromisos.')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Buscar el compromiso del que depende'), 'C-')
+    await userEvent.click(await screen.findByRole('button', { name: 'C-003 · Canal de riego' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar la dependencia' }))
+    await waitFor(() => expect(i).toBe(2))
+    const [a, b] = red.a('POST', '/objects/commitment_dependency/records')
+    expect(b.cuerpo).toMatchObject({ attributes: { depends_on: 'c3' } })
+    expect(a.cabeceras.get('Idempotency-Key')).toBeTruthy()
+    expect(b.cabeceras.get('Idempotency-Key')).not.toBe(a.cabeceras.get('Idempotency-Key'))
+  })
+
+  it('otro compromiso en la misma pantalla empieza el alta de cero, con otra clave', async () => {
+    const C9 = registro('c9', { project: 'p1', code: 'C-009', title: 'Posta médica' }, { state: 'in_progress' })
+    function Cambiante() {
+      const [compromiso, setCompromiso] = useState(C1)
+      return (
+        <>
+          <button type="button" onClick={() => setCompromiso(C9)}>
+            Ir a C-009
+          </button>
+          <PestanaDependencias compromiso={compromiso} escribe />
+        </>
+      )
+    }
+    fetch = mockFetch(rutas())
+    let i = 0
+    red = espiarRed([{ method: 'POST', path: '/objects/commitment_dependency/records', responder: () => (i++, problema(500, 'cayó')) }])
+    montar(<Cambiante />, { usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await userEvent.click(await screen.findByText('+ Dependencia'))
+    await userEvent.type(screen.getByLabelText('Buscar el compromiso del que depende'), 'Ac')
+    await userEvent.click(await screen.findByRole('button', { name: 'C-002 · Acceso vehicular' }))
+    await userEvent.type(screen.getByLabelText('Notas'), 'Solo para C-001')
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar la dependencia' }))
+    await waitFor(() => expect(i).toBe(1))
+    await userEvent.click(screen.getByRole('button', { name: 'Ir a C-009' }))
+    await userEvent.click(await screen.findByText('+ Dependencia'))
+    expect(screen.getByLabelText('Notas')).toHaveValue('')
+    await userEvent.type(screen.getByLabelText('Buscar el compromiso del que depende'), 'Ac')
+    await userEvent.click(await screen.findByRole('button', { name: 'C-002 · Acceso vehicular' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar la dependencia' }))
+    await waitFor(() => expect(i).toBe(2))
+    const [a, b] = red.a('POST', '/objects/commitment_dependency/records')
+    expect(b.cuerpo).toEqual({ attributes: { commitment: 'c9', depends_on: 'c2', blocking: true } })
+    expect(b.cabeceras.get('Idempotency-Key')).not.toBe(a.cabeceras.get('Idempotency-Key'))
   })
 })
