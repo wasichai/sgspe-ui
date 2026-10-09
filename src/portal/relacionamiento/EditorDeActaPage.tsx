@@ -3,7 +3,7 @@ import { useAuth, type ObjectDefinition } from '@wasichai/core'
 import { Alert, Button, Textarea } from '@wasichai/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router'
+import { Link, useBlocker, useParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta } from '../componentes/Estados'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
@@ -31,6 +31,13 @@ import { VistaMarkdown } from './markdown'
 // return_minutes y approve_minutes, las que el rol tenga). una devolución muestra su motivo arriba. mientras hay cambios
 // sin guardar no se transiciona: el acta enviada es la guardada
 const ESPERA = 1500
+
+// lo que el vaciado al salir no pudo guardar: el texto y el error, a la espera de que se vuelva a esta acta
+interface SalidaFallida {
+  texto: string
+  error: unknown
+}
+const claveDeSalidaFallida = (id: string) => ['acta-sin-guardar', id]
 
 export function EditorDeActaPage() {
   const { engagementId = '' } = useParams()
@@ -69,9 +76,20 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
   const [ajena, setAjena] = useState<string | null>(null)
   const [recargando, setRecargando] = useState(false)
   const [falloDeRecarga, setFalloDeRecarga] = useState<unknown>(null)
-  const [copiado, setCopiado] = useState(false)
+  const [copiado, setCopiado] = useState<'si' | 'no' | null>(null)
+  // lo que el vaciado al salir de esta misma acta no pudo guardar (la persona ya no estaba aquí para enterarse): el texto y el
+  // error esperan en la caché de consultas, que sobrevive a la navegación, hasta que se recupere o se descarte
+  const [pendiente, setPendiente] = useState(() => cliente.getQueryData<SalidaFallida>(claveDeSalidaFallida(interaccion.id)) ?? null)
+  const olvidarPendiente = () => {
+    cliente.removeQueries({ queryKey: claveDeSalidaFallida(interaccion.id) })
+    setPendiente(null)
+  }
   const guardar = () => actualizar.mutate({ registro: interaccion, cambios: { minutes: texto_ } }, { onSuccess: () => setGuardado(texto_) })
-  const enPausa = actualizar.isPending || actualizar.isError || ajena !== null || recargando
+  const pausaPorFallo = actualizar.isError || ajena !== null || recargando
+  const enPausa = actualizar.isPending || pausaPorFallo
+  // con texto sin guardar y el guardado en pausa por un fallo, un conflicto, una relectura o una versión ajena por elegir, salir
+  // por un enlace del portal lo descartaría sin que la persona lo sepa: se confirma antes
+  const bloqueo = useBlocker(sucio && pausaPorFallo)
 
   // lo último que hay en pantalla, para vaciarlo al salir: el desmontaje no ve el estado de su render
   const ultimo = useRef({ texto: texto_, guardado, interaccion, definicion, editable, enPausa })
@@ -83,10 +101,15 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
       // salir (el enlace a la ficha, el menú, atrás) con lo tecleado en el último momento: se guarda sin esperar el plazo
       void guardarCambio(pedir, u.definicion, 'engagement', { registro: u.interaccion, cambios: { minutes: u.texto } })
         .then((releido) => {
+          cliente.removeQueries({ queryKey: claveDeSalidaFallida(u.interaccion.id) })
           cliente.setQueryData(['record', 'engagement', u.interaccion.id], releido)
           for (const clave of ['records', 'history']) void cliente.invalidateQueries({ queryKey: [clave, 'engagement'] })
         })
-        .catch(() => undefined)
+        .catch((error: unknown) => {
+          // no se calla: el texto y el error esperan a que la persona vuelva a esta acta (ver «pendiente»)
+          cliente.setQueryDefaults(claveDeSalidaFallida(u.interaccion.id), { gcTime: Infinity })
+          cliente.setQueryData<SalidaFallida>(claveDeSalidaFallida(u.interaccion.id), { texto: u.texto, error })
+        })
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
@@ -123,9 +146,9 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(texto_)
-      setCopiado(true)
+      setCopiado('si')
     } catch {
-      setCopiado(false)
+      setCopiado('no')
     }
   }
 
@@ -190,7 +213,18 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
             <BotonesDeTransicion
               objeto="engagement"
               registro={interaccion}
-              ocultar={['close', 'close_light', 'cancel_planned', 'cancel_scheduled', 'cancel_postponed', 'postpone', 'reschedule', 'schedule']}
+              ocultar={[
+                'close',
+                'close_light',
+                'cancel_planned',
+                'cancel_scheduled',
+                'cancel_postponed',
+                'postpone',
+                'reschedule',
+                'schedule',
+                'register_held',
+                'register_held_unplanned'
+              ]}
             />
           )}
         </div>
@@ -205,7 +239,51 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
           <Button variant="secondary" size="sm" className="ml-2" onClick={() => void copiar()}>
             {t('relacionamiento.acta.copiar')}
           </Button>
-          {copiado ? <span className="ml-2 text-sg-caption">{t('relacionamiento.acta.copiado')}</span> : null}
+          {copiado === 'si' ? <span className="ml-2 text-sg-caption">{t('relacionamiento.acta.copiado')}</span> : null}
+          {copiado === 'no' ? (
+            <span role="alert" className="ml-2 text-sg-caption">
+              {t('relacionamiento.acta.copiarFallo')}
+            </span>
+          ) : null}
+        </Alert>
+      ) : null}
+      {bloqueo.state === 'blocked' ? (
+        <Alert tone="warning">
+          {t('relacionamiento.acta.salirSinGuardar')}
+          <Button variant="secondary" size="sm" className="ml-2" onClick={() => void copiar()}>
+            {t('relacionamiento.acta.copiar')}
+          </Button>
+          <Button variant="secondary" size="sm" className="ml-2" onClick={() => bloqueo.proceed()}>
+            {t('relacionamiento.acta.salir')}
+          </Button>
+          <Button size="sm" className="ml-2" onClick={() => bloqueo.reset()}>
+            {t('relacionamiento.acta.seguirEditando')}
+          </Button>
+          {copiado === 'si' ? <span className="ml-2 text-sg-caption">{t('relacionamiento.acta.copiado')}</span> : null}
+          {copiado === 'no' ? (
+            <span role="alert" className="ml-2 text-sg-caption">
+              {t('relacionamiento.acta.copiarFallo')}
+            </span>
+          ) : null}
+        </Alert>
+      ) : null}
+      {pendiente ? (
+        <Alert tone="danger">
+          {t('relacionamiento.acta.salidaFallida', { motivo: mensaje(pendiente.error) })}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ml-2"
+            onClick={() => {
+              cambiar(pendiente.texto)
+              olvidarPendiente()
+            }}
+          >
+            {t('relacionamiento.acta.recuperar')}
+          </Button>
+          <Button variant="secondary" size="sm" className="ml-2" onClick={olvidarPendiente}>
+            {t('relacionamiento.acta.descartar')}
+          </Button>
         </Alert>
       ) : null}
       {falloDeRecarga ? <Alert tone="danger">{mensaje(falloDeRecarga)}</Alert> : null}
@@ -313,7 +391,7 @@ function useMotivoDeDevolucion(interaccion: Registro): { motivo: string | null; 
   const pedir = usePedir()
   const enBorrador = interaccion.state === 'minutes_drafted'
   const historia = useQuery({
-    queryKey: ['history', 'engagement', interaccion.id],
+    queryKey: ['history', 'engagement', interaccion.id, LIMITE_DE_HISTORIA],
     queryFn: () =>
       pedir<{ occurredAt: string; reason: string | null; changes?: { field?: string; before: unknown; after: unknown }[] }[]>(
         `/objects/engagement/records/${interaccion.id}/history?limit=${LIMITE_DE_HISTORIA}`

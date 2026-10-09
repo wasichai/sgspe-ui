@@ -159,7 +159,14 @@ export const ES_RELACIONAMIENTO = {
     aplicarMia: 'Aplicar mi texto sobre la versión actual',
     yaNoEditable: 'El acta cambió de estado y ya no se edita: su texto no se guardó. Cópielo antes de salir.',
     copiar: 'Copiar mi texto',
-    copiado: 'Texto copiado'
+    copiado: 'Texto copiado',
+    copiarFallo: 'No se pudo copiar al portapapeles: seleccione el texto del acta y cópielo con el teclado.',
+    salirSinGuardar: 'Hay texto sin guardar y el guardado automático está en pausa. Si sale ahora, lo pierde.',
+    salir: 'Salir sin guardar',
+    seguirEditando: 'Seguir editando',
+    salidaFallida: 'Al salir, el texto que tecleó no se pudo guardar: {{motivo}}',
+    recuperar: 'Recuperar mi texto',
+    descartar: 'Descartar'
   },
   visita: {
     objetivo: 'Objetivo',
@@ -357,7 +364,14 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     aplicarMia: 'Apply my text over the current version',
     yaNoEditable: 'The minutes changed state and are no longer edited: your text was not saved. Copy it before leaving.',
     copiar: 'Copy my text',
-    copiado: 'Text copied'
+    copiado: 'Text copied',
+    copiarFallo: 'The text could not be copied to the clipboard: select the minutes text and copy it with the keyboard.',
+    salirSinGuardar: 'There is unsaved text and autosave is paused. If you leave now, you lose it.',
+    salir: 'Leave without saving',
+    seguirEditando: 'Keep editing',
+    salidaFallida: 'When you left, the text you typed could not be saved: {{motivo}}',
+    recuperar: 'Recover my text',
+    descartar: 'Discard'
   },
   visita: {
     objetivo: 'Objective',

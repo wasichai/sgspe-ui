@@ -257,6 +257,133 @@ describe('S25 · editor de acta', () => {
     expect(await screen.findByRole('tab', { name: 'Resumen' })).toBeInTheDocument()
   })
 
+  it('con texto sin guardar y el guardado en pausa, salir por un enlace pide confirmar y deja seguir editando', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([lecturas(V1, V2), rechazaLaPrimera()])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    expect(await screen.findByText(/Si sale ahora, lo pierde/)).toBeInTheDocument()
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta mío')
+    expect(window.location.pathname).toBe('/projects/p1/engagements/e1/minutes')
+    await usuario.click(screen.getByRole('button', { name: 'Seguir editando' }))
+    expect(screen.queryByText(/Si sale ahora, lo pierde/)).not.toBeInTheDocument()
+    expect(window.location.pathname).toBe('/projects/p1/engagements/e1/minutes')
+    // elegir salir deja ir, sin escribir nada más
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    await usuario.click(await screen.findByRole('button', { name: 'Salir sin guardar' }))
+    expect(await screen.findByRole('tab', { name: 'Resumen' })).toBeInTheDocument()
+    expect(red.a('PUT', PUT)).toHaveLength(1)
+  })
+
+  it('un guardado fallido también bloquea la salida; sin texto sin guardar o con el guardado en curso normal, no', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([{ method: 'PUT', path: PUT, responder: () => problema(400, 'El acta no es válida') }])
+    await usuario.type(await screen.findByLabelText(EDITOR), ' más')
+    await pasar(ESPERA_DEL_GUARDADO)
+    expect(await screen.findByText('El acta no es válida')).toBeInTheDocument()
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    expect(await screen.findByText(/Si sale ahora, lo pierde/)).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Resumen' })).not.toBeInTheDocument()
+  })
+
+  it('si el guardado al salir falla, el texto y el error esperan al volver al acta y se recuperan', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([{ method: 'PUT', path: PUT, responder: () => problema(400, 'El acta no es válida') }])
+    await usuario.type(await screen.findByLabelText(EDITOR), ' al salir')
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(1))
+    expect(await screen.findByRole('tab', { name: 'Resumen' })).toBeInTheDocument()
+    await act(async () => window.history.back())
+    expect(await screen.findByText(/el texto que tecleó no se pudo guardar: El acta no es válida/)).toBeInTheDocument()
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta')
+    await usuario.click(screen.getByRole('button', { name: 'Recuperar mi texto' }))
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta al salir')
+    expect(screen.queryByText(/no se pudo guardar: /)).not.toBeInTheDocument()
+  })
+
+  it('«Descartar» olvida el texto que no se guardó al salir', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([{ method: 'PUT', path: PUT, responder: () => problema(400, 'El acta no es válida') }])
+    await usuario.type(await screen.findByLabelText(EDITOR), ' al salir')
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    expect(await screen.findByRole('tab', { name: 'Resumen' })).toBeInTheDocument()
+    await act(async () => window.history.back())
+    await usuario.click(await screen.findByRole('button', { name: 'Descartar' }))
+    expect(screen.queryByText(/no se pudo guardar: /)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta')
+  })
+
+  it('el vaciado al salir que sí se guarda no deja ningún aviso al volver', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed()
+    await usuario.type(await screen.findByLabelText(EDITOR), ' al salir')
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    expect(await screen.findByRole('tab', { name: 'Resumen' })).toBeInTheDocument()
+    await act(async () => window.history.back())
+    await screen.findByLabelText(EDITOR)
+    expect(screen.queryByText(/no se pudo guardar: /)).not.toBeInTheDocument()
+  })
+
+  it('el editor y la pestaña Actividad piden la historia con límites distintos y no comparten la caché', async () => {
+    const usuario = conTemporizadores()
+    let suelta!: () => void
+    const espera = new Promise<void>((r) => (suelta = r))
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, [
+      { path: `${PUT}/history`, body: [...guardados(120), devolucion] },
+      ...rutas('minutes_drafted')
+    ])
+    red = espiarRed([
+      {
+        path: `${PUT}/history`,
+        responder: async (llamada) => {
+          if (llamada.ruta.endsWith('limit=50')) await espera
+          return jsonResponse([...guardados(120), devolucion])
+        }
+      }
+    ])
+    await screen.findByText('Devuelta con este motivo: Faltan los acuerdos')
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    await usuario.click(await screen.findByRole('tab', { name: 'Actividad' }))
+    // mientras llega la de 50, la ficha no pinta las 121 entradas que el editor dejó en la caché
+    await waitFor(() => expect(red!.a('GET', `${PUT}/history`).some((l) => l.ruta.endsWith('limit=50'))).toBe(true))
+    expect(screen.queryAllByRole('listitem').length).toBeLessThan(50)
+    suelta()
+    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(50))
+  })
+
+  it('«Copiar mi texto» avisa cuando el portapapeles falla', async () => {
+    const usuario = conTemporizadores()
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: () => Promise.reject(new Error('denegado')) } })
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([lecturas(V1, { ...V2, state: 'minutes_in_review' }), rechazaLaPrimera()])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
+    await usuario.click(await screen.findByRole('button', { name: 'Copiar mi texto' }))
+    expect(await screen.findByText(/No se pudo copiar al portapapeles/)).toBeInTheDocument()
+    expect(screen.queryByText('Texto copiado')).not.toBeInTheDocument()
+  })
+
+  it('en un acta por registrar la realización no se ofrece desde el editor', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, [
+      {
+        path: '/objects/engagement/records/e1/transitions',
+        body: [
+          { name: 'register_held', label: 'Registrar realizada', to: 'held', toLabel: 'Realizada', allowed: true, reason: null },
+          { name: 'register_held_unplanned', label: 'Registrar realizada sin planificar', to: 'held', toLabel: 'Realizada', allowed: true, reason: null },
+          { name: 'submit_minutes', label: 'Enviar acta', to: 'minutes_in_review', toLabel: 'Acta en revisión', allowed: true, reason: null }
+        ]
+      },
+      ...rutas('minutes_drafted')
+    ])
+    expect(await screen.findByRole('button', { name: 'Enviar acta' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Registrar realizada/ })).not.toBeInTheDocument()
+  })
+
   it('salir sin cambios no escribe', async () => {
     const usuario = conTemporizadores()
     fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))

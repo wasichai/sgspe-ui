@@ -17,11 +17,17 @@ interface Entrada {
   changes?: { field: string }[]
 }
 
+// la clave lleva el límite: el editor de actas pide la misma historia con otro (500) y no deben compartir la caché
+const LIMITE = 50
+
 export function Historia({ objeto, id }: { objeto: string; id: string }) {
   const { t } = useTranslation(NS)
   const pedir = usePedir()
   const definicion = useDefinicion(objeto)
-  const historia = useQuery({ queryKey: ['history', objeto, id], queryFn: () => pedir<Entrada[]>(`/objects/${objeto}/records/${id}/history?limit=50`) })
+  const historia = useQuery({
+    queryKey: ['history', objeto, id, LIMITE],
+    queryFn: () => pedir<Entrada[]>(`/objects/${objeto}/records/${id}/history?limit=${LIMITE}`)
+  })
   // el campo con la etiqueta de la metadata; el estado, con la suya; uno que la metadata no nombra, tal cual
   const campo = (nombre: string) => (nombre === 'state' ? t('relacionamiento.columnas.estado') : (campoDe(definicion.data, nombre)?.label ?? nombre))
   if (historia.isPending) return <Cargando compacto />
