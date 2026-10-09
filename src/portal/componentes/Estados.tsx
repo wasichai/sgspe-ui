@@ -120,6 +120,20 @@ export function Restringido({ describedPor }: { describedPor?: string }) {
   )
 }
 
+// el vínculo a una QCS confidencial que quien mira no lee (ASM-095, screens.md §8): wasichai responde 404 por ella (security.md
+// §9.6), así que se dice «Registro reservado», sin enlace ni datos, con el motivo a mano
+export function Reservado({ describedPor }: { describedPor?: string }) {
+  const { t } = useTranslation(NS)
+  return (
+    <ConMotivo
+      icono={<Lock aria-hidden className="size-3.5" />}
+      etiqueta={t('comun.registroReservado')}
+      motivo={t('comun.registroReservadoAyuda')}
+      describedPor={describedPor}
+    />
+  )
+}
+
 // la explicación única de una columna con celdas restringidas o no disponibles: va en el encabezado (ThConExplicacion, que la
 // deja fuera del nombre de la columna), con el id que las celdas
 // (Restringido o NoDisponible con describedPor) referencian. con soloLectores no lleva botón: el motivo queda en el DOM para
