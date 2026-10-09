@@ -63,6 +63,8 @@ export interface FormularioDeEvidenciaProps {
   conMotivo?: boolean
   // el proyecto de la evidencia, si es de un proyecto
   proyecto?: string
+  // la evidencia a la que esta reemplaza: una versión nueva (RF-DOC-001)
+  reemplaza?: string
   alRegistrar: (evidencia: Registro) => void
   alCancelar?: () => void
 }
@@ -72,7 +74,7 @@ export function FormularioDeEvidencia(props: FormularioDeEvidenciaProps) {
   return <ConDefiniciones definiciones={[definicion]}>{() => <Formulario {...props} />}</ConDefiniciones>
 }
 
-function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, alRegistrar, alCancelar }: FormularioDeEvidenciaProps) {
+function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, reemplaza, alRegistrar, alCancelar }: FormularioDeEvidenciaProps) {
   const { t } = useTranslation(NS)
   const definicion = useDefinicion('evidence')
   const alta = useRegistrarEvidencia()
@@ -103,6 +105,8 @@ function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, a
   const elegir = async (elegido: File | null) => {
     setArchivo(elegido)
     setFaltaArchivo(false)
+    // el error de la subida anterior (FILE_TOO_LARGE, EVIDENCE_FILE_IN_USE) era de otro archivo
+    alta.limpiarError()
     setCaptura(elegido ? await leerExif(elegido) : {})
   }
 
@@ -124,7 +128,8 @@ function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, a
           people_identifiable: v.people_identifiable,
           photo_consent_given: v.people_identifiable ? v.photo_consent_given : null,
           captured_at: captura.capturadoEn,
-          project: proyecto
+          project: proyecto,
+          replaces: reemplaza
         },
         ubicacion: captura.ubicacion,
         vinculos,
