@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { useMensajeDeError } from '../componentes/errores'
+import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { enviarComando, REENVIOS_EN_CURSO, useComando } from './comandos'
 import { crearPedido } from './http'
 import { useCrear } from './registros'
@@ -127,14 +127,54 @@ describe('useComando', () => {
   })
 })
 
+// P63: un mismo hook para varios registros: la clave nunca cruza de uno a otro
+function PorRegistro() {
+  const comando = useComando<unknown, string>((id) => ({ ruta: `/sgspe/commitment-candidates/${id}/accept`, json: {} }))
+  return (
+    <>
+      <button type="button" onClick={() => comando.mutate('A')}>
+        Aceptar A
+      </button>
+      <button type="button" onClick={() => comando.mutate('B')}>
+        Aceptar B
+      </button>
+    </>
+  )
+}
+
+describe('useComando entre registros', () => {
+  it('un fallo de resultado desconocido en A no presta su clave a la acción sobre B', async () => {
+    fetch = mockFetch([])
+    const respuestas = [() => problema(500, 'cayó', []), () => jsonResponse({}, 201), () => problema(500, 'cayó', []), () => jsonResponse({}, 201)]
+    let i = 0
+    red = espiarRed([{ method: 'POST', path: /\/sgspe\/commitment-candidates\/.+\/accept/, responder: () => respuestas[i++]() }])
+    montar(<PorRegistro />)
+    await userEvent.click(screen.getByRole('button', { name: 'Aceptar A' }))
+    await waitFor(() => expect(i).toBe(1))
+    await userEvent.click(screen.getByRole('button', { name: 'Aceptar B' }))
+    await waitFor(() => expect(i).toBe(2))
+    const claves = red.a('POST', /accept/).map((l) => l.cabeceras.get('Idempotency-Key'))
+    expect(claves[0]).toBeTruthy()
+    expect(claves[1]).not.toBe(claves[0])
+  })
+})
+
 // el alta genérica con la cabecera nativa de wasichai (WAS-ADR-0058): sus errores traen texto libre sobre el campo de la cabecera
+const esperasDelAlta: number[] = []
 function Alta() {
-  const crear = useCrear('commitment_action')
+  const crear = useCrear('commitment_action', {
+    esperar: async (ms) => {
+      esperasDelAlta.push(ms)
+    }
+  })
   const mensaje = useMensajeDeError()
   return (
     <>
       <button type="button" onClick={() => crear.mutate({ atributos: { description: 'Visitar la obra' } })}>
         Crear
+      </button>
+      <button type="button" onClick={crear.nuevaAccion}>
+        Otra alta
       </button>
       <p>{crear.isError ? mensaje(crear.error) : crear.isSuccess ? 'creada' : 'quieta'}</p>
     </>
@@ -146,7 +186,7 @@ describe('alta genérica con Idempotency-Key nativa', () => {
     fetch = mockFetch([{ path: '/metadata/objects/commitment_action', body: definicion('commitment_action', ['description']) }])
     const nativo = (status: number) => {
       const r = problema(status, 'x', [{ field: 'Idempotency-Key', message: 'a request with this key is in flight; send it again later' }])
-      r.headers.set('Retry-After', '0')
+      r.headers.set('Retry-After', '1')
       return r
     }
     const respuestas = [() => nativo(409), () => jsonResponse({ id: 'a1', attributes: {} }, 201), () => nativo(422)]
@@ -155,11 +195,74 @@ describe('alta genérica con Idempotency-Key nativa', () => {
     montar(<Alta />)
     await userEvent.click(screen.getByRole('button', { name: 'Crear' }))
     expect(await screen.findByText('creada')).toBeInTheDocument()
+    expect(esperasDelAlta).toEqual([1000])
     const [enCurso, reenvio] = red.a('POST', '/objects/commitment_action/records')
     expect(enCurso.cabeceras.get('Idempotency-Key')).toBeTruthy()
     expect(reenvio.cabeceras.get('Idempotency-Key')).toBe(enCurso.cabeceras.get('Idempotency-Key'))
     await userEvent.click(screen.getByRole('button', { name: 'Crear' }))
     expect(await screen.findByText('Esta acción ya se registró con otros datos: recargue para ver lo registrado.')).toBeInTheDocument()
     expect(red.a('POST', '/objects/commitment_action/records')[2].cabeceras.get('Idempotency-Key')).not.toBe(enCurso.cabeceras.get('Idempotency-Key'))
+  })
+
+  it('nuevaAccion renueva la clave de un alta que falló', async () => {
+    fetch = mockFetch([{ path: '/metadata/objects/commitment_action', body: definicion('commitment_action', ['description']) }])
+    const respuestas = [() => problema(500, 'cayó', []), () => problema(500, 'cayó', []), () => problema(500, 'cayó', [])]
+    let i = 0
+    red = espiarRed([{ method: 'POST', path: '/objects/commitment_action/records', responder: () => respuestas[i++]() }])
+    montar(<Alta />)
+    await userEvent.click(screen.getByRole('button', { name: 'Crear' }))
+    await waitFor(() => expect(i).toBe(1))
+    await userEvent.click(screen.getByRole('button', { name: 'Crear' }))
+    await waitFor(() => expect(i).toBe(2))
+    await userEvent.click(screen.getByRole('button', { name: 'Otra alta' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Crear' }))
+    await waitFor(() => expect(i).toBe(3))
+    const [a, b, c] = red.a('POST', '/objects/commitment_action/records').map((l) => l.cabeceras.get('Idempotency-Key'))
+    expect(b).toBe(a)
+    expect(c).not.toBe(b)
+  })
+})
+
+function ComandoEnCurso() {
+  const comando = useComando<unknown, number>(() => ({ ruta: '/sgspe/evidence', json: {} }), { esperar: async () => {} })
+  const mensaje = useMensajeDeError()
+  return (
+    <>
+      <button type="button" onClick={() => comando.mutate(1)}>
+        Registrar
+      </button>
+      <p>{comando.isError ? mensaje(comando.error) : 'quieto'}</p>
+    </>
+  )
+}
+
+function CampoDeArchivo() {
+  const comando = useComando<unknown, number>(() => ({ ruta: '/sgspe/evidence', json: {} }))
+  const deCampo = useErroresDeCampo()
+  return (
+    <>
+      <button type="button" onClick={() => comando.mutate(1)}>
+        Registrar
+      </button>
+      <p>{comando.isError ? `file: ${deCampo(comando.error).file}` : 'quieto'}</p>
+    </>
+  )
+}
+
+describe('textos de los errores de los comandos', () => {
+  it('con la clave en curso tras agotar los reenvíos dice que la acción se está registrando', async () => {
+    fetch = mockFetch([])
+    red = espiarRed([{ method: 'POST', path: '/sgspe/evidence', responder: () => enCurso() }])
+    montar(<ComandoEnCurso />)
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }))
+    expect(await screen.findByText('La misma acción todavía se está registrando: espere un momento y vuelva a intentar.')).toBeInTheDocument()
+  })
+
+  it('EVIDENCE_FILE_IN_USE (409) cae sobre el campo file con su texto', async () => {
+    fetch = mockFetch([])
+    red = espiarRed([{ method: 'POST', path: '/sgspe/evidence', responder: () => problema(409, 'x', [{ field: 'file', message: 'EVIDENCE_FILE_IN_USE' }]) }])
+    montar(<CampoDeArchivo />)
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }))
+    expect(await screen.findByText(/^file: Ese archivo ya es de otra evidencia/)).toBeInTheDocument()
   })
 })
