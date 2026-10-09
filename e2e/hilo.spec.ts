@@ -46,12 +46,16 @@ test('el selector de proyecto monta la misma sección con el otro alcance (ASM-0
   await expect(page).toHaveURL(/\/stakeholders$/)
 })
 
-test('el mapa territorial dibuja con MapLibre sin pedir teselas externas', async ({ page }) => {
+test('el mapa territorial dibuja con MapLibre sin pedir teselas externas', async ({ page, baseURL }) => {
   const externas: string[] = []
   page.on('request', (r) => {
-    if (!r.url().startsWith('http://localhost:5182')) externas.push(r.url())
+    if (!r.url().startsWith(baseURL!)) externas.push(r.url())
   })
   await page.goto('/territory')
   await expect(page.getByRole('region', { name: 'Mapa territorial' }).locator('canvas')).toBeVisible()
+  // MapLibre pide teselas y fuentes después del primer dibujo: se espera a que la red quede en reposo y a que el mapa
+  // asiente (no expone un evento al exterior) antes de afirmar
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(1000)
   expect(externas).toEqual([])
 })

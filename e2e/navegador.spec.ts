@@ -39,7 +39,7 @@ test('la barra de posturas dibuja NEUTRAL en dos series, una a cada lado del cen
   expect(aFavor.ancho / unidad).toBeCloseTo(3, 1)
   // la tabla "Ver datos" dice el conteo real de NEUTRAL, no su mitad
   await figura.getByText('Ver datos').click()
-  await expect(figura.getByRole('row', { name: /NEUTRAL/ })).toContainText('4')
+  await expect(figura.getByRole('row', { name: /NEUTRAL/ }).getByRole('cell', { name: '4', exact: true })).toBeVisible()
 })
 
 test('el motivo de una interacción cancelada aparece al enfocar su enlace con el teclado', async ({ page }) => {
@@ -68,8 +68,12 @@ test('MapLibre y ECharts no están en index.html ni bajan en una pantalla sin ma
   await page.goto('/stakeholders')
   await expect(page.getByRole('table', { name: 'Grupos de interés' })).toBeVisible()
   expect(pesados).toEqual([])
-  // y bajan con el primer mapa: el chunk existe y se pide cuando hace falta
+  // controles positivos: el chunk existe y se pide cuando hace falta. el de MapLibre es el del código (maplibre-<hash>.js),
+  // no el de su trabajador (maplibre-gl-worker-<hash>.js), que también empieza por maplibre
+  await page.goto('/stakeholders/dashboard')
+  await expect(page.locator('figure').filter({ has: page.locator('caption', { hasText: 'Posturas' }) })).toBeVisible()
+  await expect.poll(() => pesados.some((u) => /\/assets\/echarts-[^/]*\.js/i.test(u))).toBe(true)
   await page.goto('/territory')
   await expect(page.getByRole('region', { name: 'Mapa territorial' }).locator('canvas')).toBeVisible()
-  expect(pesados.some((u) => /maplibre/i.test(u))).toBe(true)
+  await expect.poll(() => pesados.some((u) => /\/assets\/maplibre-(?!gl-worker)[^/]*\.js/i.test(u))).toBe(true)
 })
