@@ -51,3 +51,22 @@ export function abrirSesion(user: AuthUser) {
   localStorage.setItem('sgspe.token', 't')
   localStorage.setItem('sgspe.user', JSON.stringify(user))
 }
+
+// los permisos de una cuenta como los contesta GET /api/auth/me/permissions: objeto → acciones
+export const permisos = (objetos: Record<string, string[]>): CallerPermissions => ({ admin: false, objects: objetos })
+
+// la administración de proyectos (PAD) y la gerencia social (SMG) de prueba
+export const ADMINISTRACION_DE_PROYECTO: AuthUser = {
+  id: 'u-pad',
+  email: 'pad@sgspe.test',
+  displayName: 'Administración de proyecto de prueba',
+  organizationId: 'o1',
+  roles: ['PROJECT_ADMIN']
+}
+export const GERENCIA_SOCIAL: AuthUser = {
+  id: 'u-smg',
+  email: 'smg@sgspe.test',
+  displayName: 'Gerencia social de prueba',
+  organizationId: 'o1',
+  roles: ['SOCIAL_MANAGER']
+}

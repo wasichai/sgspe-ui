@@ -1,0 +1,333 @@
+import { useAuth } from '@wasichai/core'
+import { Button } from '@wasichai/ui'
+import { Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Link, useParams } from 'react-router'
+import { EstadoChip } from '../componentes/EstadoChip'
+import { useNombreDelGrupo } from '../componentes/NombreDeActor'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { Historia } from '../componentes/Historia'
+import { Cargando, Consulta, NoDisponible, esProhibido } from '../componentes/Estados'
+import { KpiCard } from '../componentes/KpiCard'
+import { ROL_DE_JEFATURA } from '../config'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
+import { useProyecto } from '../contexto/proyectos'
+import { diasEntre, hoyEnLima } from '../datos/fechas'
+import { useIndicador } from '../datos/indicadores'
+import { atributo, texto, usePuedeEditar, useTodos, type Registro } from '../datos/registros'
+import { BarraDePosturas } from '../graficos/BarraDePosturas'
+import { MiniMatriz, puntosDeMatriz } from '../graficos/MiniMatriz'
+import { NS, numeroPe } from '../i18n'
+import { useCapas } from '../mapa/api'
+import { avisoDelMapa } from '../mapa/avisos'
+import { capa } from '../mapa/capas'
+import { Mapa } from '../mapa/Mapa'
+import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { vigente, PARAMETROS_F2 } from './parametros'
+
+// S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. de F2 a F7 una llamada por
+// indicador con ?project= (KPI-STK-01 a 03, KPI-ENG-01 y 02); los de compromisos, QCS y riesgos dicen en qué fase llegan.
+// el bloque de posturas siempre se dibuja: sin permiso sobre stance (security.md §7.9) dice "no disponible" y por qué. una
+// consulta auxiliar que carga, falla o no se puede leer lo dice; nunca se lee como "sin datos" ni como "sin nada que atender"
+const TIPOS_FORMALES = ['REUNION', 'REUNION INFORMATIVA', 'TALLER', 'ASAMBLEA', 'MESA DE DIALOGO']
+
+export function ResumenPage() {
+  const { projectId = '' } = useParams()
+  const proyecto = useProyecto(projectId)
+  return <Consulta consulta={proyecto}>{(p) => <Resumen proyecto={p} />}</Consulta>
+}
+
+function Resumen({ proyecto }: { proyecto: Registro }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto.id)
+  // un rol con "u" sobre project (el analista SIG, que solo vincula concesiones) no completa el borrador
+  const editaProyecto = usePuedeEditar('project')
+  const filtros = { project: [proyecto.id] }
+  const stk01 = useIndicador('KPI-STK-01', filtros)
+  const stk02 = useIndicador('KPI-STK-02', filtros)
+  const stk03 = useIndicador('KPI-STK-03', filtros)
+  const eng01 = useIndicador('KPI-ENG-01', filtros)
+  const eng02 = useIndicador('KPI-ENG-02', filtros)
+  const jefatura = useTodos('project_assignment', { project: proyecto.id, role_name: ROL_DE_JEFATURA, active: true })
+  const areas = useTodos('area_of_influence', { project: proyecto.id })
+  const capas = useCapas(['LYR-09', 'LYR-13'], { project: proyecto.id })
+  // las capas son fijas y la consulta cubre todo el proyecto: un mapa en blanco dice si está bloqueado, falló o no tiene geometrías
+  const avisoMapa = avisoDelMapa(capas, false)
+  const parametro = (campo: string) =>
+    vigente(
+      proyecto.attributes,
+      PARAMETROS_F2.find((p) => p.campo === campo)!
+    ) as number
+
+  return (
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-sg-h1 font-semibold">{texto(proyecto, 'name')}</h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
+            <EstadoChip objeto="project" estado={proyecto.state} />
+            <span>
+              {t('p360.resumen.jefatura')}:{' '}
+              {jefatura.isPending ? (
+                t('comun.cargando')
+              ) : jefatura.isError ? (
+                esProhibido(jefatura.error) ? (
+                  <NoDisponible />
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="text-sg-danger">{t('p360.resumen.jefaturaConError')}</span>
+                    <Button variant="secondary" size="sm" onClick={() => void jefatura.refetch()}>
+                      {t('comun.reintentar')}
+                    </Button>
+                  </span>
+                )
+              ) : jefatura.data.length ? (
+                jefatura.data.map((j) => texto(j, 'member_user_email')).join(', ')
+              ) : (
+                <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>
+              )}
+            </span>
+            <span>
+              {t('p360.resumen.etapa')}: {texto(proyecto, 'stage') || '—'}
+            </span>
+            <span>
+              {t('p360.resumen.fase')}: {texto(proyecto, 'exploration_phase') || '—'}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
+            <Button asChild size="sm">
+              <Link to={`/projects/${proyecto.id}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
+            </Button>
+          ) : null}
+          {proyecto.state === 'draft' && editaProyecto ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/projects/new?draft=${proyecto.id}`}>{t('p360.resumen.completar')}</Link>
+            </Button>
+          ) : null}
+          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} />
+          <button
+            type="button"
+            aria-disabled="true"
+            title={t('p360.resumen.iaLlega')}
+            className="flex h-8 cursor-not-allowed items-center gap-1.5 rounded-sg-md border border-dashed border-sg-ai-border px-2.5 text-sg-body-sm text-sg-ai opacity-60"
+          >
+            <Sparkles aria-hidden className="size-4" />
+            {t('p360.resumen.resumenIa')}
+          </button>
+        </div>
+      </header>
+      <Atencion proyecto={proyecto} inactividad={parametro('inactivity_days')} revision={parametro('stakeholder_review_days')} />
+      <section aria-label={t('p360.resumen.salud')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <h2 className="sr-only">{t('p360.resumen.salud')}</h2>
+        <KpiCard titulo={t('p360.resumen.kpis.gruposVigentes')} indicador={stk01.data} cargando={stk01.isPending} error={stk01.error} />
+        <KpiCard titulo={t('p360.resumen.kpis.interacciones')} indicador={eng01.data} cargando={eng01.isPending} error={eng01.error} />
+        <KpiCard titulo={t('p360.resumen.kpis.compromisos')} llegaEn="F3" />
+        <KpiCard titulo={t('p360.resumen.kpis.qcs')} llegaEn="F4" />
+        <KpiCard titulo={t('p360.resumen.kpis.riesgos')} llegaEn="F4" />
+      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section aria-label={t('p360.resumen.paisaje')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.paisaje')}</h2>
+          <div className="flex flex-wrap gap-6">
+            <div className="space-y-1">
+              <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('p360.resumen.matriz')}</h3>
+              {stk03.isPending ? (
+                <Cargando />
+              ) : stk03.isError ? (
+                <FalloDeLectura error={stk03.error} alReintentar={() => void stk03.refetch()} />
+              ) : (
+                <MiniMatriz
+                  etiqueta={t('p360.resumen.matriz')}
+                  noDisponible={stk03.data.available ? undefined : { motivo: stk03.data.unavailableReason }}
+                  puntos={puntosDeMatriz(stk03.data)}
+                  umbralInteres={parametro('interest_threshold')}
+                  umbralPoder={parametro('power_threshold')}
+                />
+              )}
+              {stk03.data?.available && stk03.data.denominator !== undefined && stk03.data.denominator !== null ? (
+                <p className="text-sg-caption text-sg-text-muted">
+                  {t('p360.resumen.sinEvaluar', { n: numeroPe((stk03.data.denominator ?? 0) - (stk03.data.numerator ?? 0)) })}
+                </p>
+              ) : null}
+              <Link to={`/projects/${proyecto.id}/stakeholders/matrix`} className="text-sg-caption text-sg-primary-text underline">
+                {t('p360.resumen.verMatriz')}
+              </Link>
+            </div>
+            <div className="min-w-56 flex-1 space-y-1">
+              <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('p360.resumen.posturas')}</h3>
+              {stk02.isPending ? (
+                <Cargando />
+              ) : stk02.isError ? (
+                <FalloDeLectura error={stk02.error} alReintentar={() => void stk02.refetch()} />
+              ) : (
+                <BarraDePosturas indicador={stk02.data} titulo={t('p360.resumen.posturas')} />
+              )}
+            </div>
+          </div>
+        </section>
+        <section aria-label={t('p360.resumen.reuniones')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.reuniones')}</h2>
+          {eng02.isPending ? (
+            <Cargando />
+          ) : eng02.isError ? (
+            <FalloDeLectura error={eng02.error} alReintentar={() => void eng02.refetch()} />
+          ) : !eng02.data.available ? (
+            <NoDisponible motivo={eng02.data.unavailableReason} />
+          ) : !eng02.data.series?.length ? (
+            <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinReuniones')}</p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {eng02.data.series.slice(-6).map((s) => {
+                const meta = s.target ?? parametro('meetings_per_month_target')
+                return (
+                  <li key={s.period} className="flex items-center gap-2">
+                    <span className="w-48">
+                      {t('p360.resumen.reunionesMes', {
+                        mes: s.period,
+                        valor: s.value === null || s.value === undefined ? '—' : numeroPe(s.value),
+                        meta: numeroPe(meta)
+                      })}
+                    </span>
+                    <span className="h-2 flex-1 rounded-full bg-sg-surface-sunken" aria-hidden>
+                      <span
+                        className="block h-2 rounded-full bg-sg-primary"
+                        style={{ width: `${Math.min(100, ((s.value ?? 0) / Math.max(1, meta)) * 100)}%` }}
+                      />
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section aria-label={t('p360.resumen.areas')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.areas')}</h2>
+          {areas.isPending ? <Cargando /> : null}
+          {areas.isError ? <FalloDeLectura error={areas.error} alReintentar={() => void areas.refetch()} /> : null}
+          <ul className="space-y-1 text-sm">
+            {(areas.data ?? [])
+              .filter((a) => a.state === 'approved')
+              .map((a) => (
+                <li key={a.id}>
+                  <Link to={`/projects/${proyecto.id}/areas/${a.id}`} className="text-sg-primary-text underline">
+                    {texto(a, 'area_type')} · v{texto(a, 'version_number')}
+                  </Link>
+                </li>
+              ))}
+          </ul>
+          {areas.isSuccess && !areas.data.some((a) => a.state === 'approved') ? (
+            <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinAreas')}</p>
+          ) : null}
+          <Mapa
+            etiqueta={t('mapa.mapaDelProyecto')}
+            className="relative h-48 w-full overflow-hidden rounded-sg-md border border-sg-border"
+            capas={capas
+              .filter((c) => c.datos)
+              .map((c) => ({ id: c.id, datos: c.datos!, color: '--sg-primary', seleccionable: false, miembros: capa(c.id)?.miembros }))}
+          />
+          {avisoMapa ? (
+            <p role="status" className="text-sm text-sg-text-muted">
+              {t(`mapa.avisos.${avisoMapa}`)}
+            </p>
+          ) : null}
+          <Link to={`/projects/${proyecto.id}/map`} className="text-sg-caption text-sg-primary-text underline">
+            {t('p360.resumen.verMapa')}
+          </Link>
+        </section>
+        <Actividad proyecto={proyecto.id} />
+      </div>
+    </div>
+  )
+}
+
+// "Atención requerida" en F2 (screens.md S08): actas por redactar de reuniones formales realizadas, grupos de interés sin
+// contacto pasado inactivity_days (o sin ningún contacto) y evaluaciones más viejas que stakeholder_review_days. vencidos y
+// bloqueados llegan en F3. las fechas son de calendario: los días se cuentan contra hoy en Lima, no contra la hora UTC.
+// «Nada pide atención» solo se dice cuando las dos lecturas respondieron
+function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; inactividad: number; revision: number }) {
+  const { t } = useTranslation(NS)
+  const interacciones = useTodos('engagement', { project: proyecto.id })
+  const grupos = useTodos('stakeholder', { project: proyecto.id })
+  const hoy = hoyEnLima()
+  const items = [
+    ...(interacciones.data ?? [])
+      .filter((e) => e.state === 'held' && TIPOS_FORMALES.includes(texto(e, 'engagement_type')))
+      .map((e) => ({ id: e.id, texto: t('p360.resumen.actaPendiente', { titulo: texto(e, 'title') }), ruta: `/projects/${proyecto.id}/engagements/${e.id}` })),
+    ...(grupos.data ?? [])
+      // una cuenta que no lee last_contact_date (la clave no viene en el registro) no puede decir si hubo contacto
+      .filter((g) => g.state !== 'retired' && 'last_contact_date' in g.attributes)
+      .flatMap((g) => {
+        const dias = diasEntre(atributo(g, 'last_contact_date'), hoy)
+        if (dias !== null && dias <= inactividad) return []
+        return [
+          {
+            id: `c-${g.id}`,
+            grupo: g,
+            clave: dias === null ? 'p360.resumen.nuncaContactado' : 'p360.resumen.sinContacto',
+            dias: inactividad,
+            ruta: `/projects/${proyecto.id}/stakeholders/${g.id}`
+          }
+        ]
+      }),
+    ...(grupos.data ?? [])
+      .filter((g) => g.state === 'assessed' && (diasEntre(atributo(g, 'last_assessment_date'), hoy) ?? 0) > revision)
+      .map((g) => ({
+        id: `e-${g.id}`,
+        grupo: g,
+        clave: 'p360.resumen.evaluacionVencida',
+        dias: revision,
+        ruta: `/projects/${proyecto.id}/stakeholders/${g.id}`
+      }))
+  ]
+  const fuentes = [
+    { clave: 'interacciones', consulta: interacciones },
+    { clave: 'grupos', consulta: grupos }
+  ]
+  const cargando = fuentes.some((f) => f.consulta.isPending)
+  const fallidas = fuentes.filter((f) => f.consulta.isError)
+  return (
+    <section aria-label={t('p360.resumen.atencion')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+      <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.atencion')}</h2>
+      {items.length > 0 ? (
+        <ul className="space-y-1 text-sm">
+          {items.map((i) => (
+            <li key={i.id}>
+              <Link to={i.ruta} className="text-sg-primary-text underline">
+                {'grupo' in i ? <AvisoDeGrupo grupo={i.grupo} clave={i.clave} dias={i.dias} /> : i.texto}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {cargando ? <Cargando /> : null}
+      {fallidas.map((f) => (
+        <div key={f.clave} className="space-y-1 text-sm">
+          <p className="font-medium">{t(`p360.resumen.fuentes.${f.clave}`)}</p>
+          <FalloDeLectura error={f.consulta.error} alReintentar={() => void f.consulta.refetch()} />
+        </div>
+      ))}
+      {items.length === 0 && !cargando && fallidas.length === 0 ? <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinAtencion')}</p> : null}
+    </section>
+  )
+}
+
+function AvisoDeGrupo({ grupo, clave, dias }: { grupo: Registro; clave: string; dias: number }) {
+  const { t } = useTranslation(NS)
+  const nombre = useNombreDelGrupo(grupo)
+  return <>{t(clave, { nombre, dias })}</>
+}
+
+function Actividad({ proyecto }: { proyecto: string }) {
+  const { t } = useTranslation(NS)
+  return (
+    <section aria-label={t('p360.resumen.actividad')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+      <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.actividad')}</h2>
+      <Historia objeto="project" id={proyecto} limite={10} vacio={t('p360.resumen.sinActividad')} />
+    </section>
+  )
+}

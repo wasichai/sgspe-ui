@@ -1,5 +1,33 @@
-// los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves
+import { ES_AREAS } from './areas'
+import { ES_COMUN } from './comun'
+import { ES_CONTEXTO } from './contexto'
+import { ES_GRUPOS } from './grupos'
+import { ES_IMPORTACION } from './importacion'
+import { ES_MAPA } from './mapa'
+import { ES_P360 } from './p360'
+import { ES_PROYECTOS } from './proyectos'
+import { ES_RELACIONAMIENTO } from './relacionamiento'
+import { ES_REPORTES } from './reportes'
+import { ES_TABLEROS } from './tableros'
+import { ES_TERRITORIO } from './territorio'
+import { ES_TRANSICIONES } from './transiciones'
+
+// los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
+// F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
 export const ES = {
+  areas: ES_AREAS,
+  comun: ES_COMUN,
+  contexto: ES_CONTEXTO,
+  grupos: ES_GRUPOS,
+  importacion: ES_IMPORTACION,
+  mapa: ES_MAPA,
+  p360: ES_P360,
+  proyectos: ES_PROYECTOS,
+  relacionamiento: ES_RELACIONAMIENTO,
+  reportes: ES_REPORTES,
+  tableros: ES_TABLEROS,
+  territorio: ES_TERRITORIO,
+  transiciones: ES_TRANSICIONES,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',

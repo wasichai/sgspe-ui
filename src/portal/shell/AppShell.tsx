@@ -3,6 +3,7 @@ import { cn } from '@wasichai/ui'
 import { ExternalLink, LayoutDashboard, LogOut, Mountain, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet } from 'react-router'
+import { SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
 import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
@@ -17,7 +18,7 @@ const ROTULO = 'sr-only xl:not-sr-only xl:truncate'
 // el shell del portal (docs/ux/ux-architecture.md §7.1): barra superior de 56 px con la marca, el botón Preguntar del
 // asistente, el tema, la cuenta con sus roles y la salida; a la izquierda, la navegación principal con las secciones que se
 // le ofrecen a la cuenta (useArbol), en su orden; a la derecha, el contenido. Administración es un enlace a /admin, fuera
-// del portal. el selector de proyecto, la búsqueda con ⌘K (S03) y los avisos (S04) llegan con sus fases (F2 y F3)
+// del portal. la búsqueda con ⌘K (S03) y los avisos (S04) llegan después
 export function AppShell() {
   const { t } = useTranslation(NS)
   const { appName } = useWasichaiConfig()
@@ -31,8 +32,9 @@ export function AppShell() {
           {appName}
         </Link>
         <span className="hidden truncate text-sg-body-sm text-sg-text-muted lg:inline">{t('app.lema')}</span>
-        {/* F2: aquí van el selector de proyecto ("Todos mis proyectos" o uno) y la búsqueda con ⌘K; el contexto se lee
-            de la URL con useContextFilters (./context.ts) */}
+        {/* el selector de proyecto ("Todos mis proyectos" o uno) lee y escribe el alcance de la URL (./context.ts); la
+            búsqueda con ⌘K (S03) queda para después de F2 */}
+        <SelectorDeProyecto />
         <div className="flex-1" />
         {/* el asistente no es una sección (ASM-073): su botón vive aquí y llega en F7. hasta entonces está deshabilitado
             y dice por qué (design-system.md §3.8) */}

@@ -42,7 +42,7 @@ export type ClaveDeSeccion =
 export type Fase = 'F1' | 'F2' | 'F3' | 'F4' | 'F5' | 'F6' | 'F7' | 'F8'
 
 // lo que una cuenta puede hacer sobre un objeto del modelo, como lo lista GET /api/auth/me/permissions (WAS-ADR-0020)
-export type Accion = 'READ' | 'CREATE' | 'UPDATE' | 'DELETE'
+export type Accion = 'READ' | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
 
 export interface Par {
   objeto: string
@@ -95,7 +95,15 @@ export const NAV_TREE: SeccionNav[] = [
   },
   { clave: 'documents', label: 'Documentos', to: '/documents', icon: FileText, fases: ['F3'], seOfreceCon: [[lee('evidence')]] },
   { clave: 'tasks', label: 'Tareas', to: '/tasks', icon: ListChecks, fases: ['F3'], seOfreceCon: [[lee('task')]] },
-  { clave: 'reports', label: 'Reportes', to: '/reports', icon: ChartColumn, fases: ['F2', 'F8'] },
+  // en F2, Reportes es la exportación del registro de grupos de interés y su historial (export_log)
+  {
+    clave: 'reports',
+    label: 'Reportes',
+    to: '/reports',
+    icon: ChartColumn,
+    fases: ['F2', 'F8'],
+    seOfreceCon: [[{ objeto: 'stakeholder', accion: 'EXPORT' }], [lee('export_log')]]
+  },
   { clave: 'admin', label: 'Administración', to: '/admin', icon: Settings, external: true, soloAdmin: true, fases: ['F1'] }
 ]
 

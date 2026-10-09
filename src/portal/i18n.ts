@@ -13,6 +13,11 @@ export const IDIOMAS = ['es', 'en']
 // números y fechas es-PE en los dos idiomas: 12,345.5, y la fecha en la hora de Lima
 export const numeroPe = (valor: number): string => new Intl.NumberFormat('es-PE').format(valor)
 export const fechaPe = (valor: Date): string => new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeZone: 'America/Lima' }).format(valor)
+export const fechaYHoraPe = (valor: Date): string =>
+  new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Lima' }).format(valor)
+// un día AAAA-MM-DD (assessment_date, start_date…) se dice como fecha es-PE sin correrse de día: se toma su mediodía de Lima.
+// lo que no es un día se devuelve tal cual
+export const diaPe = (dia: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(dia) ? fechaPe(new Date(`${dia}T12:00:00-05:00`)) : dia)
 
 // los textos del portal y los formateadores es-PE sobre los de i18next (como ajustarI18n de caja-ui@a45b224,
 // src/portal/i18n.ts)

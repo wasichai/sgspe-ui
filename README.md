@@ -5,16 +5,16 @@ Interfaz web de **SGSPE** (Sistema de Gestión Social para Proyectos Extractivos
 sola app Vite + React con dos partes que comparten el login (el mismo token en `localStorage['sgspe.token']`), el tema y
 el idioma:
 
-| Ruta | Para quién | Qué es |
-|---|---|---|
-| `/` | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F1, la bienvenida |
-| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages |
+| Ruta     | Para quién       | Qué es                                                                                                                                                         |
+| -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`      | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F2 trae Proyectos, Territorio, Grupos de interés, Relacionamiento y Reportes |
+| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages                                                                                                       |
 
-| | |
-|---|---|
-| Puerto | 5182 (`yarn dev` y `yarn preview`) |
-| API | proxy de `/api` a `http://localhost:8094` (`WASICHAI_API_URL` lo cambia) |
-| Login de desarrollo | `admin@wasichai.local` / `admin` (semilla de `sgspe`) |
+|                     |                                                                          |
+| ------------------- | ------------------------------------------------------------------------ |
+| Puerto              | 5182 (`yarn dev` y `yarn preview`)                                       |
+| API                 | proxy de `/api` a `http://localhost:8094` (`WASICHAI_API_URL` lo cambia) |
+| Login de desarrollo | `admin@wasichai.local` / `admin` (semilla de `sgspe`)                    |
 
 ## Portal (`src/portal`)
 
@@ -27,9 +27,25 @@ el idioma:
   tiene los permisos que pide (`GET /api/auth/me/permissions`); Administración, solo para quien administra. El asistente
   no es una sección: es el botón «Preguntar» de la barra superior, deshabilitado hasta F7.
 - **Contexto:** `src/portal/shell/context.ts` lee de la URL el alcance (global o `/projects/:projectId`) y el chip de
-  territorio (`?territory=`); el selector de proyecto y la `ContextBar` lo usan desde F2.
+  territorio (`?territory=`). El selector de proyecto de la barra superior monta la misma página con el otro alcance
+  (`contexto/rutas.ts`, ASM-076); `ProyectoLayout` agrega la barra de contexto, el rastro (en el historial, no en la URL)
+  y la sub-navegación de Project 360.
 - **Inicio:** en F1, la bienvenida con cuenta, organización, roles y mapa de módulos por fase, sin indicadores. El inicio
   por rol se registra en `src/portal/inicios.ts` con los permisos que lo ofrecen, nunca con nombres de rol.
+- **Pantallas de F2:** cada sección registra en `pantallas.ts` su raíz, montada en `<ruta>/*`; las pantallas de un
+  proyecto se agregan a `proyectos/rutasEnProyecto.ts` con la guarda de su sección. Proyectos (S06 a S11), Territorio
+  (S12 a S15), Grupos de interés (S16 a S20 y el tablero `stakeholders`), Relacionamiento (S21 a S26 y el tablero
+  `engagement`) y Reportes (exportación del registro de grupos de interés).
+- **Datos:** `src/portal/datos` usa el token de core y agrega `If-Match`, `X-Change-Reason`, `Idempotency-Key`, multipart y
+  descargas; un error trae el `X-Correlation-Id`. Una escritura sale de la forma del GET y de los permisos de quien
+  llama, nunca del modelo: un `PUT` manda las claves leídas que la cuenta puede escribir, nunca un campo restringido
+  (ausente del GET) ni un derivado (`datos/derivados.ts`; el backend conserva los omitidos), y un rol con `u` no edita
+  campos (`usePuedeEditar`). Después de un `PUT` el registro se relee: su respuesta trae los derivados en `null`.
+- **Errores:** una guarda o un comando del backend responde con su código en `errors[0].message` (ruling P15);
+  `componentes/errores.ts` lo dice con el texto de `comun.codigos` (o el de la pantalla, o el `detail` si el código es
+  nuevo), también junto al campo de un formulario. Nunca se muestra el código crudo.
+- **Mapa y gráficos:** MapLibre 6.10.0 (`src/portal/mapa`) y ECharts 6 (`src/portal/graficos`) bajan con el primer mapa o
+  gráfico; los dos pintan con los tokens del tema.
 - **Idioma:** español por defecto e inglés (`src/portal/textos/`), con números y fechas es-PE. La elección se comparte con
   `/admin`: se guarda en `sgspe.lang` y en las preferencias del usuario (`useSetLocale` de core), y `<html lang>` la sigue
   en las dos apps (`es-PE` para el español).
@@ -47,6 +63,16 @@ el idioma:
   (`//npm.pkg.github.com/:_authToken=…`, con `read:packages`); con eso basta `yarn install`. El `.npmrc` del proyecto no
   lee ninguna variable de entorno, a propósito: Yarn 1 falla si falta la variable que nombra. La CI no lo necesita:
   `setup-node` escribe su propio `.npmrc` con `${NODE_AUTH_TOKEN}`, el secreto `PACKAGES_TOKEN`.
+- Configuración del despliegue, leída por `vite.config.ts` al compilar: `SGSPE_ROL_JEFATURA` (el rol cuyas asignaciones
+  activas son la jefatura del proyecto, ASM-080; por defecto `PROJECT_MANAGER`) y `SGSPE_MAPA_BASE` (la URL de un estilo
+  MapLibre para el mapa base; vacío es el fondo apagado sin teselas externas). `yarn csp` incluye el origen del mapa
+  base.
+- Notas de despliegue: `SGSPE_MAPA_BASE` lleva el mismo valor que `sgspe.map.base-style-url` del `application.yml` del
+  backend en ese despliegue (gis.md §6.4). El mapa base no pasa por el backend en F2, así que nada los sincroniza: quien
+  despliega cambia los dos a la vez, y el proxy de producción permite ese origen en su CSP. La CSP abre solo el origen
+  del estilo: si sus teselas, glifos o sprites vienen de otro origen, la CSP los bloquea y hay que sumarlo a mano.
+- zod corre sin JIT (`src/zodSinJit.ts`, que `main.tsx` importa antes que todo): así no prueba `Function('')`, que la
+  CSP sin `unsafe-eval` reportaría en cada pantalla (`e2e/csp.spec.ts`).
 
 ## Comandos
 
@@ -56,6 +82,7 @@ yarn test            # vitest
 yarn typecheck
 yarn lint            # prettier --check (yarn format lo corrige)
 yarn build           # dist/, luego yarn preview
+yarn e2e             # Playwright sobre vite preview (npx playwright install chromium la primera vez)
 yarn -s csp          # la Content-Security-Policy para el proxy
 ```
 

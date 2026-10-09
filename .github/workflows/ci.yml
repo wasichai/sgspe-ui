@@ -36,3 +36,18 @@ jobs:
       - run: yarn typecheck
       - run: yarn test
       - run: yarn build
+      # las pruebas extremo a extremo de F2 (ASM-066): chromium de Playwright sobre vite preview, con la API simulada
+      - run: npx playwright install --with-deps chromium
+      - run: yarn e2e
+        env:
+          CI: 'true'
+      # si una prueba falla, el reporte y las trazas (test-results/, trace: retain-on-failure) quedan para abrirlos
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14

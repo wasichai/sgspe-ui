@@ -41,13 +41,14 @@ describe('admin', () => {
     expect(localStorage.getItem('sgspe.token')).toBe('t')
   })
 
-  // los starters de F1: views, forms y pages; ningún módulo que el backend no corre, ni el asistente
-  it('agrega las pantallas de los starters de F1 y solo esas', async () => {
+  // los starters de F1 (views, forms y pages) y los de F2 (gis y workflow); ningún módulo que el backend no corre (documents
+  // y automation llegan en F3), ni el asistente
+  it('agrega las pantallas de los starters de F1 y F2 y solo esas', async () => {
     await signIn()
-    for (const label of ['Vistas', 'Formularios', 'Páginas']) {
+    for (const label of ['Vistas', 'Formularios', 'Páginas', 'Workflows', 'Mapas', 'Capas']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
-    for (const label of ['Workflows', 'Documentos', 'Mapas', 'Capas', 'Reglas', 'Asistente']) {
+    for (const label of ['Documentos', 'Reglas', 'Asistente']) {
       expect(screen.queryByRole('link', { name: label })).not.toBeInTheDocument()
     }
   })
