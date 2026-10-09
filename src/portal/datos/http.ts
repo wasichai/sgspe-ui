@@ -6,13 +6,16 @@ import { useMemo } from 'react'
 // errores (§3.8). usa el mismo token (sgspe.token) y, ante un 401, cierra la sesión de core como lo haría su cliente
 
 // un error de la API con lo que la interfaz muestra: el detail en el idioma del dominio, los campos de errors[] y el
-// identificador de correlación que la persona puede citar al pedir ayuda (design-system.md §6.5)
+// identificador de correlación que la persona puede citar al pedir ayuda (design-system.md §6.5). reintentarEn son los segundos
+// de Retry-After: un comando con la misma Idempotency-Key en curso responde 409 IDEMPOTENCY_IN_FLIGHT con Retry-After: 1
+// (api.md §3.5), y el portal espera y reenvía
 export class ErrorDeSgspe extends ApiError {
   constructor(
     status: number,
     message: string,
     violations: FieldViolation[],
-    readonly correlationId: string | null
+    readonly correlationId: string | null,
+    readonly reintentarEn: number | null = null
   ) {
     super(status, message, violations)
   }
@@ -61,7 +64,8 @@ export const motivoEnCabecera = (motivo: string): string => `UTF-8''${encodeURIC
 export const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 export const ACEPTAR_REPORTE = `${XLSX}, application/problem+json`
 
-// una clave por acción del usuario, de 1 a 64 caracteres (§3.5)
+// una clave por acción del usuario: un UUID (36 caracteres), dentro de los 1 a 128 ASCII imprimibles del contrato nativo que
+// SGSPE sigue desde F3 (§3.5, decisión D3)
 export const nuevaClave = (): string => crypto.randomUUID()
 
 // el nombre del archivo de Content-Disposition: filename*=UTF-8''… gana sobre filename="…"
@@ -91,6 +95,9 @@ function cabeceras(cliente: ApiClient, opciones: OpcionesDePedido): Headers {
   return h
 }
 
+// Retry-After en segundos; una fecha HTTP o un valor ilegible no cuentan (el portal espera lo que fija comandos.ts)
+export const segundosDeEspera = (valor: string | null): number | null => (valor && /^\d+$/.test(valor.trim()) ? Number(valor.trim()) : null)
+
 async function fallo(respuesta: Response): Promise<ErrorDeSgspe> {
   const texto = await respuesta.text()
   let cuerpo: { detail?: string; title?: string; errors?: FieldViolation[] } | null = null
@@ -103,7 +110,8 @@ async function fallo(respuesta: Response): Promise<ErrorDeSgspe> {
     respuesta.status,
     cuerpo?.detail ?? cuerpo?.title ?? respuesta.statusText,
     cuerpo?.errors ?? [],
-    respuesta.headers.get('X-Correlation-Id')
+    respuesta.headers.get('X-Correlation-Id'),
+    segundosDeEspera(respuesta.headers.get('Retry-After'))
   )
 }
 
