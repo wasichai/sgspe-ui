@@ -129,9 +129,12 @@ export function ExplicacionDeColumna({ id, tipo, soloLectores }: { id: string; t
 // un dato que no se muestra dice por qué (unavailableReason, plan 2.2): sin permiso sobre un campo o un objeto, candado
 // y "No disponible"; si el indicador se calcula para un solo proyecto, pide elegirlo. sin motivo, el texto es neutro: sirve
 // igual para una cifra que para una lista
-export function NoDisponible({ motivo, describedPor }: { motivo?: string | null; describedPor?: string }) {
+export function NoDisponible({ motivo, describedPor, enLista }: { motivo?: string | null; describedPor?: string; enLista?: boolean }) {
   const { t } = useTranslation(NS)
-  const ayuda = motivo ? t(`comun.noDisponiblePorMotivo.${motivo}`, { defaultValue: t('comun.noDisponibleAyuda') }) : t('comun.noDisponibleAyuda')
+  // en una lista o un registro, el motivo no habla de «cifra»: comun.noDisponibleEnLista lo dice sin esa palabra y, si no
+  // tiene variante, vale el de la cifra
+  const claves = motivo ? [...(enLista ? [`comun.noDisponibleEnLista.${motivo}`] : []), `comun.noDisponiblePorMotivo.${motivo}`] : []
+  const ayuda = motivo ? t(claves, { defaultValue: t('comun.noDisponibleAyuda') }) : t('comun.noDisponibleAyuda')
   const unProyecto = motivo === 'SINGLE_PROJECT_REQUIRED'
   return (
     <ConMotivo

@@ -9,7 +9,7 @@ import { Cargando, ErrorDeCarga, NoDisponible } from './Estados'
 export function FalloDeLectura({ error, alReintentar }: { error: unknown; alReintentar: () => void }) {
   // un 403 con código (NOT_ASSIGNED…) dice su motivo; sin código, el texto neutro
   return error instanceof ApiError && error.status === 403 ? (
-    <NoDisponible motivo={codigoDelError(error)} />
+    <NoDisponible motivo={codigoDelError(error)} enLista />
   ) : (
     <ErrorDeCarga error={error} alReintentar={alReintentar} />
   )

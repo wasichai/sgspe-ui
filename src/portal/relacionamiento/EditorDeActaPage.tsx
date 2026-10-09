@@ -9,7 +9,18 @@ import { Cargando, Consulta } from '../componentes/Estados'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { usePedir } from '../datos/http'
-import { atributo, puedeEscribir, puedeLeer, texto, useActualizar, useDefinicion, useRegistro, useTodosConTope, type Registro } from '../datos/registros'
+import {
+  atributo,
+  guardarCambio,
+  puedeEscribir,
+  puedeLeer,
+  texto,
+  useActualizar,
+  useDefinicion,
+  useRegistro,
+  useTodosConTope,
+  type Registro
+} from '../datos/registros'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
@@ -53,16 +64,79 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
   const definicionDeParticipante = useDefinicion('engagement_participant')
   const proyecto = String(atributo(interaccion, 'project'))
 
+  const pedir = usePedir()
+  // otra persona cambió el acta: su versión, a la vista hasta que se elija (M1); mientras tanto no se guarda nada
+  const [ajena, setAjena] = useState<string | null>(null)
+  const [recargando, setRecargando] = useState(false)
+  const [falloDeRecarga, setFalloDeRecarga] = useState<unknown>(null)
+  const [copiado, setCopiado] = useState(false)
   const guardar = () => actualizar.mutate({ registro: interaccion, cambios: { minutes: texto_ } }, { onSuccess: () => setGuardado(texto_) })
+  const enPausa = actualizar.isPending || actualizar.isError || ajena !== null || recargando
+
+  // lo último que hay en pantalla, para vaciarlo al salir: el desmontaje no ve el estado de su render
+  const ultimo = useRef({ texto: texto_, guardado, interaccion, definicion, editable, enPausa })
+  ultimo.current = { texto: texto_, guardado, interaccion, definicion, editable, enPausa }
+  useEffect(
+    () => () => {
+      const u = ultimo.current
+      if (u.texto === u.guardado || !u.editable || u.enPausa) return
+      // salir (el enlace a la ficha, el menú, atrás) con lo tecleado en el último momento: se guarda sin esperar el plazo
+      void guardarCambio(pedir, u.definicion, 'engagement', { registro: u.interaccion, cambios: { minutes: u.texto } })
+        .then((releido) => {
+          cliente.setQueryData(['record', 'engagement', u.interaccion.id], releido)
+          for (const clave of ['records', 'history']) void cliente.invalidateQueries({ queryKey: [clave, 'engagement'] })
+        })
+        .catch(() => undefined)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
+  // cerrar la pestaña o recargar con cambios sin guardar pide confirmar
+  useEffect(() => {
+    if (!sucio) return
+    const avisar = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', avisar)
+    return () => window.removeEventListener('beforeunload', avisar)
+  }, [sucio])
+
+  // «Recargar» espera la relectura antes de reanudar el guardado, y si el acta de la otra persona difiere de lo que esta
+  // pantalla leyó, la muestra para que se elija en lugar de pisarla
+  const recargar = async () => {
+    setRecargando(true)
+    setFalloDeRecarga(null)
+    try {
+      const nuevo = await cliente.fetchQuery({
+        queryKey: ['record', 'engagement', interaccion.id],
+        queryFn: () => pedir<Registro>(`/objects/engagement/records/${interaccion.id}`),
+        staleTime: 0
+      })
+      const delOtro = texto(nuevo, 'minutes')
+      if (delOtro === texto_) setGuardado(delOtro)
+      else if (delOtro !== guardado) setAjena(delOtro)
+      actualizar.reset()
+    } catch (error) {
+      setFalloDeRecarga(error)
+    } finally {
+      setRecargando(false)
+    }
+  }
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(texto_)
+      setCopiado(true)
+    } catch {
+      setCopiado(false)
+    }
+  }
 
   // guardado automático: un momento después de la última tecla, con la versión leída. un guardado fallido no se repite solo
   // (sería un bucle contra el mismo error): se reanuda al teclear de nuevo o con «Guardar el acta»; un 412 espera «Recargar»,
   // porque la versión leída ya no sirve
   useEffect(() => {
-    if (!sucio || !editable || actualizar.isPending || actualizar.isError) return
+    if (!sucio || !editable || enPausa) return
     const espera = setTimeout(guardar, ESPERA)
     return () => clearTimeout(espera)
-  }, [texto_, sucio, editable, actualizar.isPending, actualizar.isError, interaccion.updatedAt])
+  }, [texto_, sucio, editable, enPausa, interaccion.updatedAt])
 
   const cambiar = (nuevo: string) => {
     setTexto(nuevo)
@@ -125,20 +199,46 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
       {devolucion.noLeido ? <Alert tone="notice">{t('relacionamiento.acta.motivoNoLeido')}</Alert> : null}
       {!leeActa ? <Alert tone="notice">{t('relacionamiento.acta.restringida')}</Alert> : null}
       {leeActa && !editable ? <Alert tone="notice">{t('relacionamiento.acta.soloLectura')}</Alert> : null}
+      {leeActa && sucio && !editable ? (
+        <Alert tone="warning">
+          {t('relacionamiento.acta.yaNoEditable')}
+          <Button variant="secondary" size="sm" className="ml-2" onClick={() => void copiar()}>
+            {t('relacionamiento.acta.copiar')}
+          </Button>
+          {copiado ? <span className="ml-2 text-sg-caption">{t('relacionamiento.acta.copiado')}</span> : null}
+        </Alert>
+      ) : null}
+      {falloDeRecarga ? <Alert tone="danger">{mensaje(falloDeRecarga)}</Alert> : null}
+      {ajena !== null ? (
+        <Alert tone="warning" title={t('relacionamiento.acta.otraPersona')}>
+          <p>{t('relacionamiento.acta.otraVersion')}</p>
+          <div className="my-2 max-h-64 overflow-y-auto rounded-sg-md border border-sg-border bg-sg-surface p-3">
+            <VistaMarkdown texto={ajena} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                // se descarta lo local a favor de lo que ya está guardado
+                setTexto(ajena)
+                setGuardado(ajena)
+                setAjena(null)
+              }}
+            >
+              {t('relacionamiento.acta.conservarAjena')}
+            </Button>
+            <Button size="sm" onClick={() => setAjena(null)}>
+              {t('relacionamiento.acta.aplicarMia')}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
       {actualizar.isError ? (
         <Alert tone="danger">
           {mensaje(actualizar.error)}
           {conflicto ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="ml-2"
-              onClick={() => {
-                // se relee el acta con su versión nueva; lo escrito queda en el editor y el guardado se reanuda
-                void cliente.invalidateQueries({ queryKey: ['record', 'engagement', interaccion.id] })
-                actualizar.reset()
-              }}
-            >
+            <Button variant="secondary" size="sm" className="ml-2" disabled={recargando} aria-busy={recargando} onClick={() => void recargar()}>
               {t('comun.recargar')}
             </Button>
           ) : (
@@ -202,8 +302,13 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
   )
 }
 
+// cada autoguardado es un PUT y agrega una entrada a la historia, así que la devolución puede quedar lejos: se pide el máximo que
+// admite la API (limit hasta 500, coerceIn(1, 500))
+const LIMITE_DE_HISTORIA = 500
+
 // el motivo de la última devolución del acta (return_minutes), leído de la historia del registro: el cambio de estado
-// minutes_in_review → minutes_drafted más reciente. si la historia no se pudo leer, se dice (noLeido) en lugar de callar
+// minutes_in_review → minutes_drafted más reciente. si la historia no se pudo leer, o llegó llena (500) sin la devolución y
+// podría estar más atrás, se dice (noLeido) en lugar de callar; una historia completa sin devolución es un borrador nuevo
 function useMotivoDeDevolucion(interaccion: Registro): { motivo: string | null; noLeido: boolean } {
   const pedir = usePedir()
   const enBorrador = interaccion.state === 'minutes_drafted'
@@ -211,7 +316,7 @@ function useMotivoDeDevolucion(interaccion: Registro): { motivo: string | null; 
     queryKey: ['history', 'engagement', interaccion.id],
     queryFn: () =>
       pedir<{ occurredAt: string; reason: string | null; changes?: { field?: string; before: unknown; after: unknown }[] }[]>(
-        `/objects/engagement/records/${interaccion.id}/history?limit=50`
+        `/objects/engagement/records/${interaccion.id}/history?limit=${LIMITE_DE_HISTORIA}`
       ),
     enabled: enBorrador
   })
@@ -219,5 +324,6 @@ function useMotivoDeDevolucion(interaccion: Registro): { motivo: string | null; 
   const devoluciones = (historia.data ?? [])
     .filter((e) => e.changes?.some((c) => c.before === 'minutes_in_review' && c.after === 'minutes_drafted'))
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
-  return { motivo: devoluciones[0]?.reason ?? null, noLeido: historia.isError && !historia.data }
+  const sinAlcance = historia.data !== undefined && historia.data.length >= LIMITE_DE_HISTORIA && devoluciones.length === 0
+  return { motivo: devoluciones[0]?.reason ?? null, noLeido: (historia.isError && !historia.data) || sinAlcance }
 }

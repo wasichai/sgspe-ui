@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -18,11 +18,27 @@ beforeEach(() => {
   sessionStorage.clear()
 })
 afterEach(() => {
+  vi.useRealTimers()
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
   vi.unstubAllGlobals()
 })
+
+// el autoguardado espera 1,5 s: el reloj falso avanza solo y se adelanta de golpe, así que ninguna prueba depende del tiempo real
+// ni de la carga de la máquina
+const conTemporizadores = () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+}
+const pasar = (ms: number) =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(ms)
+  })
+const ESPERA_DEL_GUARDADO = 1600
+const EDITOR = 'Texto del acta (Markdown, sin HTML)'
+const PUT = '/objects/engagement/records/e1'
+const GET_E1 = { method: 'GET', path: PUT } as const
 
 describe('S25 · editor de acta', () => {
   const conActa = (estado: string) =>
@@ -58,14 +74,16 @@ describe('S25 · editor de acta', () => {
   ]
 
   it('inserta los asistentes y guarda solo, con la versión leída', async () => {
+    const usuario = conTemporizadores()
     fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
     red = espiarRed()
-    await userEvent.click(await screen.findByRole('button', { name: 'Insertar asistentes' }))
-    const editor = screen.getByLabelText('Texto del acta (Markdown, sin HTML)')
+    await usuario.click(await screen.findByRole('button', { name: 'Insertar asistentes' }))
+    const editor = screen.getByLabelText(EDITOR)
     await waitFor(() => expect((editor as HTMLTextAreaElement).value).toContain('- Grupo sin nombres (8 personas)'))
     expect(screen.getByRole('status')).toHaveTextContent('Cambios sin guardar')
-    await waitFor(() => expect(red!.a('PUT', '/objects/engagement/records/e1')).toHaveLength(1), { timeout: 10000 })
-    const [cambio] = red.a('PUT', '/objects/engagement/records/e1')
+    await pasar(ESPERA_DEL_GUARDADO)
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(1))
+    const [cambio] = red.a('PUT', PUT)
     expect(cambio.cabeceras.get('If-Match')).toBe('"2026-10-06T12:00:00Z"')
     expect((cambio.cuerpo as { attributes: { minutes: string } }).attributes.minutes).toContain('## Asistentes')
   })
@@ -82,9 +100,10 @@ describe('S25 · editor de acta', () => {
   })
 
   it('el PUT manda solo las claves escribibles del GET, nunca un derivado ni lo que la definición no deja escribir', async () => {
+    const usuario = conTemporizadores()
     fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, [
       {
-        path: '/objects/engagement/records/e1',
+        path: PUT,
         body: registro(
           'e1',
           { project: 'p1', title: 'Asamblea comunal', minutes: '# Acta', attendees_total_count: 9, place: 'Plaza' },
@@ -98,64 +117,154 @@ describe('S25 · editor de acta', () => {
       ...rutas('held')
     ])
     red = espiarRed()
-    const editor = await screen.findByLabelText('Texto del acta (Markdown, sin HTML)')
-    await userEvent.type(editor, ' más')
-    await waitFor(() => expect(red!.a('PUT', '/objects/engagement/records/e1')).toHaveLength(1), { timeout: 10000 })
-    const [cambio] = red.a('PUT', '/objects/engagement/records/e1')
+    await usuario.type(await screen.findByLabelText(EDITOR), ' más')
+    await pasar(ESPERA_DEL_GUARDADO)
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(1))
+    const [cambio] = red.a('PUT', PUT)
     expect(Object.keys((cambio.cuerpo as { attributes: object }).attributes).sort()).toEqual(['minutes', 'title'])
-  }, 40000)
+  })
 
   it('un fallo de guardado no se reintenta en bucle: dice su texto y ofrece guardar a mano', async () => {
+    const usuario = conTemporizadores()
     fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
     let intentos = 0
-    red = espiarRed([
-      {
-        method: 'PUT',
-        path: '/objects/engagement/records/e1',
-        responder: () => (++intentos === 1 ? problema(400, 'El acta no es válida') : jsonResponse(conActa('held')))
-      }
-    ])
-    await userEvent.type(await screen.findByLabelText('Texto del acta (Markdown, sin HTML)'), ' más')
-    expect(await screen.findByText('El acta no es válida', {}, { timeout: 10000 })).toBeInTheDocument()
-    await new Promise((r) => setTimeout(r, 2200))
-    expect(red.a('PUT', '/objects/engagement/records/e1')).toHaveLength(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Guardar el acta' }))
-    await waitFor(() => expect(red!.a('PUT', '/objects/engagement/records/e1')).toHaveLength(2))
-  }, 40000)
+    red = espiarRed([{ method: 'PUT', path: PUT, responder: () => (++intentos === 1 ? problema(400, 'El acta no es válida') : jsonResponse(conActa('held'))) }])
+    await usuario.type(await screen.findByLabelText(EDITOR), ' más')
+    await pasar(ESPERA_DEL_GUARDADO)
+    expect(await screen.findByText('El acta no es válida')).toBeInTheDocument()
+    await pasar(10_000)
+    expect(red.a('PUT', PUT)).toHaveLength(1)
+    await usuario.click(screen.getByRole('button', { name: 'Guardar el acta' }))
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(2))
+  })
 
-  it('un 412 dice que otra persona cambió el registro, ofrece recargar y conserva el texto; al recargar guarda con la versión nueva', async () => {
-    let lecturas = 0
-    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
-    let intentos = 0
-    red = espiarRed([
-      {
-        method: 'GET',
-        path: '/objects/engagement/records/e1',
-        responder: () =>
-          jsonResponse(
-            registro(
-              'e1',
-              { project: 'p1', title: 'Asamblea comunal', minutes: '# Acta' },
-              { state: 'held', updatedAt: ++lecturas === 1 ? '2026-10-06T12:00:00Z' : '2026-10-06T13:00:00Z' }
-            )
-          )
-      },
-      {
-        method: 'PUT',
-        path: '/objects/engagement/records/e1',
-        responder: () => (++intentos === 1 ? problema(412, 'El acta cambió') : jsonResponse(conActa('held')))
+  // el registro que el servidor devuelve en cada relectura, en orden: la primera es la carga de la pantalla
+  const lecturas = (...versiones: { minutes?: string; state?: string; updatedAt: string; espera?: Promise<void> }[]) => {
+    let n = 0
+    return {
+      ...GET_E1,
+      responder: async () => {
+        const v = versiones[Math.min(n++, versiones.length - 1)]
+        await v.espera
+        return jsonResponse(
+          registro('e1', { project: 'p1', title: 'Asamblea comunal', minutes: v.minutes ?? '# Acta' }, { state: v.state ?? 'held', updatedAt: v.updatedAt })
+        )
       }
-    ])
-    await userEvent.type(await screen.findByLabelText('Texto del acta (Markdown, sin HTML)'), ' mío')
-    expect(await screen.findByText(/Otra persona cambió este registro/, {}, { timeout: 10000 })).toBeInTheDocument()
-    expect(screen.getByLabelText('Texto del acta (Markdown, sin HTML)')).toHaveValue('# Acta mío')
-    await new Promise((r) => setTimeout(r, 2200))
-    expect(red.a('PUT', '/objects/engagement/records/e1')).toHaveLength(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Recargar' }))
-    await waitFor(() => expect(red!.a('PUT', '/objects/engagement/records/e1')).toHaveLength(2), { timeout: 10000 })
-    expect(red.a('PUT', '/objects/engagement/records/e1')[1].cabeceras.get('If-Match')).toBe('"2026-10-06T13:00:00Z"')
-    expect(screen.getByLabelText('Texto del acta (Markdown, sin HTML)')).toHaveValue('# Acta mío')
-  }, 40000)
+    }
+  }
+  const V1 = { updatedAt: '2026-10-06T12:00:00Z' }
+  const V2 = { updatedAt: '2026-10-06T13:00:00Z' }
+  const rechazaLaPrimera = () => {
+    let intentos = 0
+    return { method: 'PUT', path: PUT, responder: () => (++intentos === 1 ? problema(412, 'El acta cambió') : jsonResponse(conActa('held'))) }
+  }
+  // llega a un 412 con el texto «# Acta mío» sin guardar
+  const hastaElConflicto = async (usuario: ReturnType<typeof conTemporizadores>) => {
+    await usuario.type(await screen.findByLabelText(EDITOR), ' mío')
+    await pasar(ESPERA_DEL_GUARDADO)
+    expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta mío')
+    await pasar(10_000)
+    expect(red!.a('PUT', PUT)).toHaveLength(1)
+  }
+
+  it('un 412 dice que otra persona cambió el registro y ofrece recargar; si el acta no cambió, guarda con la versión nueva', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([lecturas(V1, V2), rechazaLaPrimera()])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
+    await pasar(ESPERA_DEL_GUARDADO)
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(2))
+    expect(red.a('PUT', PUT)[1].cabeceras.get('If-Match')).toBe('"2026-10-06T13:00:00Z"')
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta mío')
+  })
+
+  it('recargar espera la relectura: no guarda con la versión vieja mientras llega', async () => {
+    const usuario = conTemporizadores()
+    let llega!: () => void
+    const espera = new Promise<void>((r) => (llega = r))
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([lecturas(V1, { ...V2, espera }), rechazaLaPrimera()])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
+    await pasar(10_000)
+    expect(red.a('PUT', PUT)).toHaveLength(1)
+    llega()
+    await pasar(ESPERA_DEL_GUARDADO)
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(2))
+    expect(red.a('PUT', PUT)[1].cabeceras.get('If-Match')).toBe('"2026-10-06T13:00:00Z"')
+  })
+
+  it('si la otra persona cambió el acta, la muestra y deja elegir: aplicar el texto propio es explícito', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([lecturas(V1, { ...V2, minutes: '# Acta ajena' }), rechazaLaPrimera()])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
+    expect(await screen.findByRole('heading', { name: 'Acta ajena' })).toBeInTheDocument()
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta mío')
+    await pasar(10_000)
+    expect(red.a('PUT', PUT)).toHaveLength(1)
+    await usuario.click(screen.getByRole('button', { name: 'Aplicar mi texto sobre la versión actual' }))
+    await pasar(ESPERA_DEL_GUARDADO)
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(2))
+    const [, segundo] = red.a('PUT', PUT)
+    expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-06T13:00:00Z"')
+    expect((segundo.cuerpo as { attributes: { minutes: string } }).attributes.minutes).toBe('# Acta mío')
+  })
+
+  it('conservar la versión de la otra persona reemplaza el texto local y no escribe', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([lecturas(V1, { ...V2, minutes: '# Acta ajena' }), rechazaLaPrimera()])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
+    await usuario.click(await screen.findByRole('button', { name: 'Conservar la versión actual' }))
+    expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta ajena')
+    await pasar(10_000)
+    expect(red.a('PUT', PUT)).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('Guardado')
+  })
+
+  it('si al recargar el acta ya no se edita, lo dice y ofrece copiar el texto local', async () => {
+    const usuario = conTemporizadores()
+    const copiar = vi.fn(() => Promise.resolve())
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: copiar } })
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed([lecturas(V1, { ...V2, state: 'minutes_in_review' }), rechazaLaPrimera()])
+    await hastaElConflicto(usuario)
+    await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
+    expect(await screen.findByText(/ya no se edita: su texto no se guardó/)).toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: 'Copiar mi texto' }))
+    expect(copiar).toHaveBeenCalledWith('# Acta mío')
+    expect(await screen.findByText('Texto copiado')).toBeInTheDocument()
+    await pasar(10_000)
+    expect(red.a('PUT', PUT)).toHaveLength(1)
+  })
+
+  it('salir con lo tecleado en el último momento lo guarda: el PUT sale sin esperar el plazo', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed()
+    await usuario.type(await screen.findByLabelText(EDITOR), ' al salir')
+    expect(red.a('PUT', PUT)).toHaveLength(0)
+    await usuario.click(screen.getByRole('link', { name: 'Asamblea comunal' }))
+    await waitFor(() => expect(red!.a('PUT', PUT)).toHaveLength(1))
+    const [cambio] = red.a('PUT', PUT)
+    expect(cambio.cabeceras.get('If-Match')).toBe('"2026-10-06T12:00:00Z"')
+    expect((cambio.cuerpo as { attributes: { minutes: string } }).attributes.minutes).toBe('# Acta al salir')
+    expect(await screen.findByRole('tab', { name: 'Resumen' })).toBeInTheDocument()
+  })
+
+  it('salir sin cambios no escribe', async () => {
+    const usuario = conTemporizadores()
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, rutas('held'))
+    red = espiarRed()
+    await usuario.click(await screen.findByRole('link', { name: 'Asamblea comunal' }))
+    expect(await screen.findByRole('tab', { name: 'Resumen' })).toBeInTheDocument()
+    expect(red.a('PUT', PUT)).toHaveLength(0)
+  })
 
   it('sin poder escribir el acta, el editor es de solo lectura y no guarda', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, [
@@ -193,6 +302,53 @@ describe('S25 · editor de acta', () => {
       ...rutas('minutes_drafted')
     ])
     expect(await screen.findByText('No se pudo leer el motivo de la devolución.')).toBeInTheDocument()
+  })
+
+  const guardados = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `u${i}`,
+      userEmail: 'relacionista@sgspe.test',
+      operation: 'UPDATE',
+      occurredAt: `2026-10-06T${String(12 + Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00Z`,
+      reason: null,
+      changes: [{ field: 'minutes', before: 'a', after: 'b' }]
+    }))
+  const devolucion = {
+    id: 'dev',
+    userEmail: 'smg@sgspe.test',
+    operation: 'UPDATE',
+    occurredAt: '2026-10-06T11:00:00Z',
+    reason: 'Faltan los acuerdos',
+    changes: [{ field: 'state', before: 'minutes_in_review', after: 'minutes_drafted' }]
+  }
+
+  it('el motivo de la devolución se halla aunque haya más de 50 autoguardados después: pide hasta 500 entradas', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, [
+      { path: `${PUT}/history`, body: [...guardados(120), devolucion] },
+      ...rutas('minutes_drafted')
+    ])
+    red = espiarRed()
+    expect(await screen.findByText('Devuelta con este motivo: Faltan los acuerdos')).toBeInTheDocument()
+    expect(red.a('GET', `${PUT}/history`)[0].ruta).toContain('limit=500')
+  })
+
+  it('si la historia llega llena sin la devolución, dice que no pudo leer el motivo; completa y sin devolución es un borrador nuevo', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, [
+      { path: `${PUT}/history`, body: guardados(500) },
+      ...rutas('minutes_drafted')
+    ])
+    expect(await screen.findByText('No se pudo leer el motivo de la devolución.')).toBeInTheDocument()
+  })
+
+  it('una historia completa sin devolución es un borrador nuevo: ni motivo ni aviso', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, EQUIPO, [
+      { path: `${PUT}/history`, body: guardados(3) },
+      ...rutas('minutes_drafted')
+    ])
+    await screen.findByLabelText(EDITOR)
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path.includes('/history'))).toBe(true))
+    expect(screen.queryByText('No se pudo leer el motivo de la devolución.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Devuelta con este motivo/)).not.toBeInTheDocument()
   })
 
   it('en revisión, devolver exige el motivo y viaja con la versión leída', async () => {

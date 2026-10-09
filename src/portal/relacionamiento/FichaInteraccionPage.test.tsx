@@ -208,7 +208,7 @@ describe('S23 · ficha de interacción', () => {
     expect(screen.getByLabelText('Respuesta')).toHaveValue('Sí, con rotación')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar respuesta' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/engagement_question/records/q1')).toHaveLength(2))
-  }, 40000)
+  })
 
   it('un error al responder dice su texto, nunca su código', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())

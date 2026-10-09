@@ -151,7 +151,14 @@ export const ES_RELACIONAMIENTO = {
     firmada: 'El acta firmada se sube como evidencia ACTA (F3): no es un estado.',
     motivoNoLeido: 'No se pudo leer el motivo de la devolución.',
     sinListas: 'Los asistentes o las preguntas no se leyeron completos: no se pueden insertar en el acta.',
-    restringida: 'Su cuenta no puede leer el acta.'
+    restringida: 'Su cuenta no puede leer el acta.',
+    otraPersona: 'Otra persona cambió el acta',
+    otraVersion: 'Esta es la versión actual del acta. Su texto sigue en el editor y no se ha guardado.',
+    conservarAjena: 'Conservar la versión actual',
+    aplicarMia: 'Aplicar mi texto sobre la versión actual',
+    yaNoEditable: 'El acta cambió de estado y ya no se edita: su texto no se guardó. Cópielo antes de salir.',
+    copiar: 'Copiar mi texto',
+    copiado: 'Texto copiado'
   },
   visita: {
     objetivo: 'Objetivo',
@@ -331,7 +338,14 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     firmada: 'The signed minutes are uploaded as MINUTES evidence (F3): it is not a state.',
     motivoNoLeido: 'The reason for the return could not be read.',
     sinListas: 'The attendees or the questions were not read completely: they cannot be inserted into the minutes.',
-    restringida: 'Your account cannot read the minutes.'
+    restringida: 'Your account cannot read the minutes.',
+    otraPersona: 'Someone else changed the minutes',
+    otraVersion: 'This is the current version of the minutes. Your text is still in the editor and has not been saved.',
+    conservarAjena: 'Keep the current version',
+    aplicarMia: 'Apply my text over the current version',
+    yaNoEditable: 'The minutes changed state and are no longer edited: your text was not saved. Copy it before leaving.',
+    copiar: 'Copy my text',
+    copiado: 'Text copied'
   },
   visita: {
     objetivo: 'Objective',
