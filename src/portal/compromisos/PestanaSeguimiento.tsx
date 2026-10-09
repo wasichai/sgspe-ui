@@ -222,7 +222,7 @@ function FilaDeDependencia({ dependencia, proyecto }: { dependencia: Registro; p
         {otro.isPending ? (
           <Cargando compacto />
         ) : otro.data ? (
-          <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${otro.data.id}`} className="text-sg-primary-text underline">
+          <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(otro.data.id)}`} className="text-sg-primary-text underline">
             {texto(otro.data, 'code')} · {texto(otro.data, 'title')}
           </Link>
         ) : (

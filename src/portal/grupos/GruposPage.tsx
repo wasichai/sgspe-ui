@@ -82,7 +82,7 @@ export function GruposPage() {
   const elegidos = pagina.filter((g) => seleccion.has(g.id)).map((g) => g.id)
   const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${lista.filtro(f)}` }))
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
-  const base = proyecto ? `/projects/${proyecto}` : ''
+  const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
 
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
@@ -288,7 +288,7 @@ function Fila({
         </Td>
       ) : null}
       <Td>
-        <Link to={`/projects/${proyecto}/stakeholders/${grupo.id}`} className="font-medium text-sg-primary-text">
+        <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(grupo.id)}`} className="font-medium text-sg-primary-text">
           <NombreDelGrupo grupo={grupo} />
         </Link>
         <p className="text-sg-caption text-sg-text-muted">{texto(grupo, 'stakeholder_type')}</p>

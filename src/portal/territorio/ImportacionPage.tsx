@@ -98,7 +98,7 @@ function Preparar() {
     vistaPrevia.mutate(pedido, {
       onSuccess: (vista) => {
         guardarEnCurso(user?.id, { pedido, vista })
-        navegar(`/territory/imports/${vista.importBatchId}`)
+        navegar(`/territory/imports/${encodeURIComponent(vista.importBatchId)}`)
       }
     })
   }
@@ -277,7 +277,7 @@ function Revisar({ id }: { id: string }) {
         setDecisiones({})
         setClave(nuevaClave())
         confirmacion.reset()
-        navegar(`/territory/imports/${nueva.importBatchId}`)
+        navegar(`/territory/imports/${encodeURIComponent(nueva.importBatchId)}`)
       }
     })
   const codigo = codigoDelError(confirmacion.error)
@@ -440,7 +440,7 @@ function Confirmada({ escrito, previsto, vista, pedido }: { escrito: Resultado; 
         ))}
       </ul>
       <Button asChild>
-        <Link to={`/projects/${pedido.proyecto}/map`}>{t('importacion.volverAlMapa')}</Link>
+        <Link to={`/projects/${encodeURIComponent(pedido.proyecto)}/map`}>{t('importacion.volverAlMapa')}</Link>
       </Button>
     </section>
   )

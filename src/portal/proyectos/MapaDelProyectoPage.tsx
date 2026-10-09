@@ -137,7 +137,10 @@ export function MapaDelProyectoPage() {
           {seleccion && objetoElegido && FICHA[objetoElegido] ? (
             <p className="text-sm">
               {t('mapa.seleccion')}:{' '}
-              <Link to={`/territory/${FICHA[objetoElegido]}/${seleccion}?project=${encodeURIComponent(projectId)}`} className="text-sg-primary-text underline">
+              <Link
+                to={`/territory/${FICHA[objetoElegido]}/${encodeURIComponent(seleccion)}?project=${encodeURIComponent(projectId)}`}
+                className="text-sg-primary-text underline"
+              >
                 {t('mapa.abrirFicha')}
               </Link>
             </p>
@@ -242,7 +245,7 @@ function Areas({ proyecto, seleccion, alElegir }: { proyecto: string; seleccion:
           aria-current={a.id === seleccion ? 'true' : undefined}
           className={cn('flex items-center gap-2', a.id === seleccion && 'bg-sg-primary-soft')}
         >
-          <Link to={`/projects/${proyecto}/areas/${a.id}`} className="text-sg-primary-text underline">
+          <Link to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
             {texto(a, 'area_type')} · v{texto(a, 'version_number')}
           </Link>
           <EstadoChip objeto="area_of_influence" estado={a.state} />

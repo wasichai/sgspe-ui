@@ -83,7 +83,10 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             {convocante.data ? (
               <span>
                 {t('relacionamiento.ficha.convocante')}:{' '}
-                <Link to={`/projects/${proyecto}/stakeholders/${convocante.data.id}`} className="text-sg-primary-text underline">
+                <Link
+                  to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(convocante.data.id)}`}
+                  className="text-sg-primary-text underline"
+                >
                   <NombreDelGrupo grupo={convocante.data} />
                 </Link>
               </span>
@@ -190,7 +193,10 @@ function Acta({ interaccion }: { interaccion: Registro }) {
   return (
     <div className="space-y-2 pt-3 text-sm">
       {acta ? <VistaMarkdown texto={acta} /> : <p className="text-sg-text-muted">{t('relacionamiento.ficha.sinActa')}</p>}
-      <Link to={`/projects/${proyecto}/engagements/${interaccion.id}/minutes`} className="text-sg-primary-text underline">
+      <Link
+        to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(interaccion.id)}/minutes`}
+        className="text-sg-primary-text underline"
+      >
         {redacta ? t('relacionamiento.ficha.editarActa') : t('relacionamiento.ficha.verActa')}
       </Link>
     </div>
@@ -393,7 +399,7 @@ function DeDondeViene({ interaccion }: { interaccion: Registro }) {
       ) : visita.data ? (
         <p>
           {t('relacionamiento.ficha.visita')}:{' '}
-          <Link to={`/projects/${proyecto}/field-visits/${visita.data.id}`} className="text-sg-primary-text underline">
+          <Link to={`/projects/${encodeURIComponent(proyecto)}/field-visits/${encodeURIComponent(visita.data.id)}`} className="text-sg-primary-text underline">
             {texto(visita.data, 'title')}
           </Link>
         </p>
@@ -405,7 +411,7 @@ function DeDondeViene({ interaccion }: { interaccion: Registro }) {
         <ul>
           {(grupos.data?.content ?? []).map((g) => (
             <li key={g.id}>
-              <Link to={`/projects/${proyecto}/stakeholders/${g.id}`} className="text-sg-primary-text underline">
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
                 <NombreDelGrupo grupo={g} />
               </Link>
             </li>

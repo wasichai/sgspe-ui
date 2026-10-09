@@ -289,7 +289,7 @@ function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alC
         ),
         motivo: v.motivo.trim()
       },
-      { onSuccess: ({ commitment }) => navegar(`/projects/${proyecto}/commitments/${commitment.id}`) }
+      { onSuccess: ({ commitment }) => navegar(`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(commitment.id)}`) }
     )
   )
   const confirmarDuplicado = () => {

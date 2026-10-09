@@ -70,7 +70,7 @@ export function NuevoGrupo({ proyecto, abierto, alCerrar }: { proyecto: string; 
             campos={CAMPOS_DEL_GRUPO}
             alGuardar={(g) => {
               cerrar()
-              navegar(`/projects/${proyecto}/stakeholders/${g.id}`)
+              navegar(`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`)
             }}
             alCancelar={cerrar}
           />

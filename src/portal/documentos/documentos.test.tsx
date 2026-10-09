@@ -156,7 +156,9 @@ describe('S46 · ficha de evidencia', () => {
     expect(within(sustenta).queryByText(/Acuerdo/)).not.toBeInTheDocument()
     expect(within(sustenta).getByRole('link', { name: 'Interacción: Registro sin nombre' })).toBeInTheDocument()
     expect(within(sustenta).queryByText(/en1/)).not.toBeInTheDocument()
-    expect(screen.getByText('a1b2')).toBeInTheDocument()
+    // sgspe#14: la huella SHA-256 tampoco, porque deja confirmar si alguien tiene un archivo concreto
+    expect(screen.queryByText('a1b2')).not.toBeInTheDocument()
+    expect(screen.getByText('Reservada')).toBeInTheDocument()
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })
 
@@ -166,6 +168,7 @@ describe('S46 · ficha de evidencia', () => {
     abrirFicha()
     await userEvent.click(await screen.findByRole('button', { name: 'Descargar' }))
     expect(screen.getByText('lista.pdf')).toBeInTheDocument()
+    expect(screen.getByText('a1b2')).toBeInTheDocument()
     await waitFor(() => expect(red!.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1))
     expect(URL.createObjectURL).toHaveBeenCalled()
   })
@@ -229,6 +232,7 @@ describe('S46 · ficha de evidencia', () => {
     expect(screen.getByText('Restringido')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Descargar' })).not.toBeInTheDocument()
     expect(screen.queryByText(/asamblea\.jpg/)).not.toBeInTheDocument()
+    expect(screen.queryByText('c3d4')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Vista previa' })).not.toBeInTheDocument()
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })

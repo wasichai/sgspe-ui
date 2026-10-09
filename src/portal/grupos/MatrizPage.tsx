@@ -47,7 +47,7 @@ export function MatrizPage() {
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h2 font-semibold">{t('grupos.matriz.titulo')}</h1>
-        <Link to={`/projects/${projectId}/stakeholders`} className="text-sm text-sg-primary-text underline">
+        <Link to={`/projects/${encodeURIComponent(projectId)}/stakeholders`} className="text-sm text-sg-primary-text underline">
           {t('grupos.matriz.verTabla')}
         </Link>
       </div>
@@ -152,7 +152,7 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
           etiqueta={t('grupos.matriz.titulo')}
           alto={420}
           opciones={opciones}
-          alElegir={(id) => navegar(`/projects/${proyecto}/stakeholders/${id}`)}
+          alElegir={(id) => navegar(`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(id)}`)}
           datos={{
             columnas: [t('grupos.columnas.grupo'), t('grupos.matriz.interes'), t('grupos.matriz.poder'), t('grupos.columnas.influencia')],
             filas: puntos.map((p) => [nombre(p), numeroPe(p.interest!), numeroPe(p.power!), p.influenceGroup ?? ''])
@@ -164,7 +164,7 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
         <ul className="max-h-[420px] overflow-y-auto">
           {puntos.map((p) => (
             <li key={p.key}>
-              <Link to={`/projects/${proyecto}/stakeholders/${p.key}`} className="text-sg-primary-text underline">
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(p.key)}`} className="text-sg-primary-text underline">
                 {nombre(p)}
               </Link>{' '}
               · {p.influenceGroup} ({numeroPe(p.interest!)}, {numeroPe(p.power!)})
