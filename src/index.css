@@ -3,6 +3,9 @@
 /* "Pino y piedra" (ASM-077): los tokens de docs/ux/tokens.css y, después, los de wasichai leídos de ellos */
 @import './theme/tokens.css';
 @import './theme/wasichai.css';
+/* la hoja A4 de la página imprimible de un documento emitido (/admin/documents/:id/print, @wasichai/documents): css sin capa,
+   para ganarle al preflight de tailwind sin !important; se importa una sola vez, aquí y no por un archivo interno en un .tsx */
+@import '@wasichai/documents/print.css';
 /* IBM Plex Sans (400, 500, 600) e IBM Plex Mono (400, 500), latín y latín extendido, servidas desde el mismo origen:
    vite copia los woff2 a dist/assets (CSP font-src 'self', ADR-0026) */
 @import '@fontsource/ibm-plex-sans/latin-400.css';
