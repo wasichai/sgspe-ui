@@ -1,5 +1,5 @@
 import { cn } from '@wasichai/ui'
-import { AlarmClock, CircleAlert, CircleCheck, type LucideIcon } from 'lucide-react'
+import { AlarmClock, CircleAlert, CircleCheck, CircleDashed, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
 import { CLASE_DE_TONO, type Tono } from './apariencias'
@@ -17,7 +17,7 @@ const APARIENCIA: Record<string, { tono: Tono; Icono: LucideIcon }> = {
 export function SituacionDePlazo({ valor, vigencia = false }: { valor: unknown; vigencia?: boolean }) {
   const { t } = useTranslation(NS)
   if (typeof valor !== 'string' || valor === '') return null
-  const { tono, Icono } = APARIENCIA[valor] ?? { tono: 'neutral' as Tono, Icono: CircleCheck }
+  const { tono, Icono } = APARIENCIA[valor] ?? { tono: 'neutral' as Tono, Icono: CircleDashed }
   return (
     <span
       data-situacion={valor}
