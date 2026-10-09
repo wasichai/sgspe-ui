@@ -1,3 +1,5 @@
+// antes que todo: zod sin JIT, para que su prueba de Function('') no viole la CSP (zodSinJit.ts)
+import './zodSinJit'
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 // ?worker&url empaqueta el worker de MapLibre con su parte compartida en un solo archivo y deja aquí solo su URL:

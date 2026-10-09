@@ -5,16 +5,16 @@ Interfaz web de **SGSPE** (Sistema de Gestión Social para Proyectos Extractivos
 sola app Vite + React con dos partes que comparten el login (el mismo token en `localStorage['sgspe.token']`), el tema y
 el idioma:
 
-| Ruta | Para quién | Qué es |
-|---|---|---|
-| `/` | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F2 trae Proyectos, Territorio, Grupos de interés, Relacionamiento y Reportes |
-| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages |
+| Ruta     | Para quién       | Qué es                                                                                                                                                         |
+| -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`      | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F2 trae Proyectos, Territorio, Grupos de interés, Relacionamiento y Reportes |
+| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages                                                                                                       |
 
-| | |
-|---|---|
-| Puerto | 5182 (`yarn dev` y `yarn preview`) |
-| API | proxy de `/api` a `http://localhost:8094` (`WASICHAI_API_URL` lo cambia) |
-| Login de desarrollo | `admin@wasichai.local` / `admin` (semilla de `sgspe`) |
+|                     |                                                                          |
+| ------------------- | ------------------------------------------------------------------------ |
+| Puerto              | 5182 (`yarn dev` y `yarn preview`)                                       |
+| API                 | proxy de `/api` a `http://localhost:8094` (`WASICHAI_API_URL` lo cambia) |
+| Login de desarrollo | `admin@wasichai.local` / `admin` (semilla de `sgspe`)                    |
 
 ## Portal (`src/portal`)
 
@@ -69,7 +69,10 @@ el idioma:
   base.
 - Notas de despliegue: `SGSPE_MAPA_BASE` lleva el mismo valor que `sgspe.map.base-style-url` del `application.yml` del
   backend en ese despliegue (gis.md §6.4). El mapa base no pasa por el backend en F2, así que nada los sincroniza: quien
-  despliega cambia los dos a la vez, y el proxy de producción permite ese origen en su CSP.
+  despliega cambia los dos a la vez, y el proxy de producción permite ese origen en su CSP. La CSP abre solo el origen
+  del estilo: si sus teselas, glifos o sprites vienen de otro origen, la CSP los bloquea y hay que sumarlo a mano.
+- zod corre sin JIT (`src/zodSinJit.ts`, que `main.tsx` importa antes que todo): así no prueba `Function('')`, que la
+  CSP sin `unsafe-eval` reportaría en cada pantalla (`e2e/csp.spec.ts`).
 
 ## Comandos
 
