@@ -89,6 +89,64 @@ describe('flujo SSE', () => {
     expect(programar).not.toHaveBeenCalled()
   })
 
+  it('una cuenta de servicio (403) no reintenta; un 401 cierra la sesión y tampoco', async () => {
+    localStorage.setItem('sgspe.token', 't')
+    fetch = mockFetch([{ path: '/auth/me/notifications/summary', body: resumen(1) }])
+    const respuestas = [() => problema(403, 'no'), () => problema(401, 'vencido')]
+    red = espiarRed([{ path: '/auth/me/notifications/stream', responder: () => respuestas.shift()!() }])
+    const programar = vi.fn<Programar>(() => () => {})
+    const vista = montar(<Contador programar={programar} />)
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications/stream')).toHaveLength(1))
+    vista.unmount()
+    localStorage.setItem('sgspe.token', 't')
+    montar(<Contador programar={programar} />)
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications/stream')).toHaveLength(2))
+    await waitFor(() => expect(localStorage.getItem('sgspe.token')).toBeNull())
+    expect(programar).not.toHaveBeenCalled()
+  })
+
+  it('reconectar vuelve a abrir el flujo, y si falla la espera crece', async () => {
+    fetch = mockFetch([{ path: '/auth/me/notifications/summary', body: resumen(1) }])
+    const respuestas = [
+      () => new Response(flujo(`event: summary\ndata: ${JSON.stringify(resumen(2))}\n\n`), { headers: { 'Content-Type': 'text/event-stream' } }),
+      () => problema(500, 'caído')
+    ]
+    red = espiarRed([{ path: '/auth/me/notifications/stream', responder: () => respuestas.shift()!() }])
+    const tareas: (() => void)[] = []
+    const programar = vi.fn<Programar>((tarea) => {
+      tareas.push(tarea)
+      return () => {}
+    })
+    montar(<Contador programar={programar} />)
+    await waitFor(() => expect(programar).toHaveBeenCalledTimes(1))
+    expect(programar).toHaveBeenLastCalledWith(expect.any(Function), 5000)
+    tareas[0]()
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications/stream')).toHaveLength(2))
+    await waitFor(() => expect(programar).toHaveBeenCalledTimes(2))
+    expect(programar).toHaveBeenLastCalledWith(expect.any(Function), 10000)
+  })
+
+  // la lectura inicial del resumen llega después del primer evento del flujo: sin cancelarla, pisaría el resumen más nuevo
+  it('una lectura inicial lenta no pisa el resumen que ya trajo el flujo', async () => {
+    let responderLectura: () => void = () => {}
+    const lectura = new Promise<Response>((resolver) => {
+      responderLectura = () => resolver(new Response(JSON.stringify(resumen(1)), { headers: { 'Content-Type': 'application/json' } }))
+    })
+    fetch = mockFetch([])
+    red = espiarRed([
+      { path: '/auth/me/notifications/summary', responder: () => lectura },
+      {
+        path: '/auth/me/notifications/stream',
+        responder: () => new Response(flujo(`event: summary\ndata: ${JSON.stringify(resumen(3, 1))}\n\n`), { headers: { 'Content-Type': 'text/event-stream' } })
+      }
+    ])
+    montar(<Contador programar={() => () => {}} />)
+    expect(await screen.findByText('sin leer: 4')).toBeInTheDocument()
+    responderLectura()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.getByText('sin leer: 4')).toBeInTheDocument()
+  })
+
   it('la espera de reconexión crece hasta un minuto', () => {
     expect([0, 1, 2, 3, 9].map(esperaDeReconexion)).toEqual([5000, 10000, 20000, 40000, 60000])
   })

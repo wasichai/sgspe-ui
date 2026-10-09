@@ -1,6 +1,6 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeCompromisos, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
@@ -135,6 +135,34 @@ describe('S47 · mis tareas', () => {
     expect(llamada.cuerpo).toMatchObject({
       attributes: { assignee_user_id: 'u-cmm', assignee_user_email: 'cmm@sgspe.test', generator_key: 'escalation:commitment:c2:1' }
     })
+  })
+
+  it('tomar una tarea dice que es suya y, tras releer, ya no ofrece tomarla', async () => {
+    let tomada = false
+    const ASIGNADA = { ...ESCALAMIENTO, attributes: { ...ESCALAMIENTO.attributes, assignee_user_id: 'u-cmm', assignee_user_email: 'cmm@sgspe.test' } }
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      { path: /^\/objects\/task\/records\?/, responder: () => jsonResponse(pagina([T1, T2, T3, tomada ? ASIGNADA : ESCALAMIENTO])) },
+      {
+        method: 'PUT',
+        path: '/objects/task/records/t4',
+        responder: () => {
+          tomada = true
+          return jsonResponse(ASIGNADA)
+        }
+      }
+    ])
+    montar(<MisTareasPage />, {
+      ruta: '/projects/p1/tasks?view=paraTomar',
+      camino: '/projects/:projectId/tasks',
+      usuario: GESTORA,
+      permisos: EQUIPO_DE_COMPROMISOS
+    })
+    await userEvent.click(await screen.findByRole('button', { name: 'Abrir Escalamiento C-002 nivel 1' }))
+    const drawer = await screen.findByRole('dialog')
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Tomar la tarea' }))
+    expect(await within(drawer).findByText('La tarea es suya.')).toBeInTheDocument()
+    await waitFor(() => expect(within(drawer).queryByRole('button', { name: 'Tomar la tarea' })).not.toBeInTheDocument())
   })
 
   it('mientras carga no dice que no hay tareas, y si falla lo dice con reintento', async () => {
