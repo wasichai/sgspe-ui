@@ -122,6 +122,19 @@ describe('S11 · equipo y parámetros', () => {
     expect(red.a('PUT', '/objects/project_assignment/records/a1')[0].cuerpo).toMatchObject({ attributes: { active: false, end_date: '2026-10-01' } })
   })
 
+  it('el rol sale con su etiqueta si la cuenta lee los roles, y el período en es-PE (revisión final, M12)', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: '/roles', body: [{ name: 'PROJECT_ADMIN', label: 'Administración de proyectos' }] },
+      ...rutas()
+    ])
+    const tabla = await screen.findByRole('table', { name: 'Equipo' })
+    const [, vigente, vencida] = within(tabla).getAllByRole('row')
+    expect(await within(vigente).findByText('Administración de proyectos')).toBeInTheDocument()
+    expect(within(vigente).getByText('1 ene. 2026 – …')).toBeInTheDocument()
+    // un rol que la lista no trae sale con su nombre
+    expect(within(vencida).getByText('FIELD_AGENT')).toBeInTheDocument()
+  })
+
   it('cancelar la confirmación no escribe, y terminar una programada no deja el fin antes del inicio', async () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed()

@@ -87,6 +87,12 @@ describe('S23 · ficha de interacción', () => {
     expect(screen.getByRole('button', { name: 'Redactar acta' })).toBeEnabled()
   })
 
+  it('la cabecera dice la fecha con su hora de Lima, no solo el día (revisión final, M12)', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
+    // held_at 03:00Z del 2 de octubre son las 22:00 del 1 en Lima
+    expect(await screen.findByText(/^1 oct\. 2026, 10:00/)).toBeInTheDocument()
+  })
+
   it('sin acceso a los nombres de los asistentes, la fila dice Restringido; un grupo dice cuántos representa', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', GERENCIA_SOCIAL, EQUIPO, rutas())
     await userEvent.click(await screen.findByRole('tab', { name: 'Participantes' }))

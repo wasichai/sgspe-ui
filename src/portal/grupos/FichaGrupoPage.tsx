@@ -24,7 +24,7 @@ import {
   useTodos,
   type Registro
 } from '../datos/registros'
-import { NS, numeroPe } from '../i18n'
+import { diaPe, NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import type { Advertencia } from './api'
 import { Advertencias } from './Advertencias'
@@ -194,7 +194,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
               {(evaluaciones.data ?? []).map((e, i, todas) => (
                 <li key={e.id} className="border-l-2 border-sg-border pl-3">
                   <p className="font-medium">
-                    {texto(e, 'assessment_date')} · {texto(e, 'basis')}
+                    {diaPe(texto(e, 'assessment_date'))} · {texto(e, 'basis')}
                     {i === todas.length - 1 ? <span className="ml-1 text-sg-caption text-sg-text-muted">({t('grupos.ficha.lineaBase')})</span> : null}
                   </p>
                   <p>

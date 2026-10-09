@@ -10,3 +10,17 @@ export const diasEntre = (desde: unknown, hasta: string): number | null => {
   if (typeof desde !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(desde)) return null
   return Math.round((dia(hasta) - dia(desde)) / 86_400_000)
 }
+
+// lo que se teclea en un datetime-local (AAAA-MM-DDTHH:mm[:ss]) es la hora de Lima, no la del reloj del navegador: una laptop
+// con otro huso registraría mal la hora. Lima no tiene horario de verano (UTC-5). viaja como instante UTC; lo que no es una
+// fecha, vacío
+export const instanteDeLima = (local: string): string => {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(local)
+  if (!partes) return ''
+  const [, a, m, d, h, min, s = '00'] = partes
+  const fecha = new Date(`${a}-${m}-${d}T${h}:${min}:${s}-05:00`)
+  if (Number.isNaN(fecha.getTime())) return ''
+  // Date puede aceptar un 31 de febrero corriéndolo: solo vale si el día y la hora siguen siendo los tecleados
+  const enLima = new Date(fecha.getTime() - 5 * 3_600_000).toISOString()
+  return enLima.startsWith(`${a}-${m}-${d}T${h}:${min}:${s}`) ? fecha.toISOString() : ''
+}

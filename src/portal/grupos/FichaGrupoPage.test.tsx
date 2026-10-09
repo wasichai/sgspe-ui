@@ -66,7 +66,9 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
   it('la historia de evaluaciones llega hasta la línea base y marca el ajuste manual', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
     const historia = await screen.findByRole('region', { name: 'Evaluaciones' })
-    expect(await within(historia).findByText(/2026-03-01 · INFERIDA/)).toHaveTextContent('(línea base)')
+    // la fecha de cada evaluación se dice en es-PE, como el resto (revisión final, M12)
+    expect(await within(historia).findByText(/^1 mar\. 2026 · INFERIDA/)).toHaveTextContent('(línea base)')
+    expect(within(historia).queryByText(/2026-03-01/)).not.toBeInTheDocument()
     expect(within(historia).getByText(/ajustado a mano/)).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Para decidir' })).getByText('Cambió frente a la línea base')).toBeInTheDocument()
   })

@@ -17,7 +17,8 @@ import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { nuevaClave } from '../datos/http'
 import { puedeLeer, texto, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
-import { NS, numeroPe } from '../i18n'
+import { instanteDeLima } from '../datos/fechas'
+import { fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { conModo } from './modos'
@@ -64,11 +65,10 @@ const esquema = z
   .refine((v) => !v.realizada || v.held_at !== '', { path: ['held_at'] })
 type Valores = z.infer<typeof esquema>
 
-// lo que se teclea es la hora del reloj de quien teclea (datetime-local) y viaja como instante UTC; uno que no es una fecha no viaja
-const instante = (local: string) => {
-  const fecha = new Date(local)
-  return local && !Number.isNaN(fecha.getTime()) ? fecha.toISOString() : ''
-}
+// lo que se teclea (datetime-local) es la hora de Lima y viaja como instante UTC (instanteDeLima); uno que no es fecha no viaja
+const instante = instanteDeLima
+// en la revisión, lo tecleado se dice como fecha y hora es-PE
+const instanteDicho = (local: string) => (instanteDeLima(local) ? fechaYHoraPe(new Date(instanteDeLima(local))) : local || '—')
 
 export function RegistrarInteraccionPage() {
   const [busqueda] = useSearchParams()
@@ -469,8 +469,8 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             </p>
             <p>
               {v.realizada
-                ? `${t('relacionamiento.registro.realizadaEl')}: ${v.held_at}`
-                : `${t('relacionamiento.registro.programada')}: ${v.scheduled_at || '—'}`}
+                ? `${t('relacionamiento.registro.realizadaEl')}: ${instanteDicho(v.held_at)}`
+                : `${t('relacionamiento.registro.programada')}: ${instanteDicho(v.scheduled_at)}`}
             </p>
             <p>{t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) })}</p>
             <p>

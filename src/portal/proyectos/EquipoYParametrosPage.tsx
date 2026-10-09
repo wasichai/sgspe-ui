@@ -21,9 +21,10 @@ import {
   useTodos,
   type Registro
 } from '../datos/registros'
-import { NS, numeroPe } from '../i18n'
+import { diaPe, NS, numeroPe } from '../i18n'
 import { CampanaDelProyecto, PartesDelProyecto } from './EquipoYPartes'
 import { FormularioDeAsignacion } from './FormularioDeAsignacion'
+import { useNombresDeRol } from './usuarios'
 import { ParametroNumerico } from './ParametroNumerico'
 import { PARAMETROS_F2, vigente } from './parametros'
 
@@ -77,6 +78,9 @@ export function EquipoYParametrosPage() {
 function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: boolean; cambia: boolean }) {
   const { t } = useTranslation(NS)
   const asignaciones = useTodos('project_assignment', { project: proyecto })
+  // el rol con su etiqueta si la cuenta lee los roles (GET /api/roles); si no, su nombre
+  const roles = useNombresDeRol()
+  const rolDicho = (nombre: string) => roles.data?.find((r) => r.name === nombre)?.label ?? nombre
   const actualizar = useActualizar('project_assignment')
   const releer = useReleer()
   const [abierto, setAbierto] = useState(false)
@@ -114,9 +118,11 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
                 return (
                   <tr key={a.id}>
                     <Td>{correo}</Td>
-                    <Td className="font-sg-mono text-sg-caption">{texto(a, 'role_name')}</Td>
+                    <Td className={roles.data?.some((r) => r.name === texto(a, 'role_name')) ? 'text-sm' : 'font-sg-mono text-sg-caption'}>
+                      {rolDicho(texto(a, 'role_name'))}
+                    </Td>
                     <Td className="text-sm">
-                      {texto(a, 'start_date') || '…'} – {texto(a, 'end_date') || '…'}
+                      {diaPe(texto(a, 'start_date')) || '…'} – {diaPe(texto(a, 'end_date')) || '…'}
                     </Td>
                     <Td className="text-sm">
                       {vigencia === 'vigente' ? (

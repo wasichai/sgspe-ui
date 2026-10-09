@@ -314,6 +314,9 @@ describe('S24 · registrar interacción', () => {
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    // la revisión dice la fecha tecleada en es-PE, no el valor crudo del control (revisión final, M12)
+    expect(await screen.findByText(/: 6 oct\. 2026, 11:30/)).toBeInTheDocument()
+    expect(screen.queryByText(/2026-10-06T23:30/)).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
     const { attributes } = red.a('POST', '/objects/engagement/records')[0].cuerpo as { attributes: Record<string, string> }

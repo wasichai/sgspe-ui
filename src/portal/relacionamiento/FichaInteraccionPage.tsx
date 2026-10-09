@@ -25,7 +25,7 @@ import {
   useTodosConTope,
   type Registro
 } from '../datos/registros'
-import { fechaPe, NS, numeroPe } from '../i18n'
+import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { Barras } from '../tableros/comunes'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
@@ -73,7 +73,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
           <h1 className="text-sg-h1 font-semibold">{texto(interaccion, 'title')}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
             <EstadoChip objeto="engagement" estado={interaccion.state} />
-            {instante ? <span>{fechaPe(new Date(instante))}</span> : null}
+            {instante ? <span>{fechaYHoraPe(new Date(instante))}</span> : null}
             {texto(interaccion, 'place') ? <span>{texto(interaccion, 'place')}</span> : null}
             {convocante.data ? (
               <span>
