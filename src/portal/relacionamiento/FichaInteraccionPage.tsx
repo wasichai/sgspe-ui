@@ -12,6 +12,7 @@ import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { AcuerdosDeLaInteraccion } from '../acuerdos/AcuerdosDeLaInteraccion'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { Rastro } from '../contexto/Rastro'
 import { DocumentosEmitidos } from '../documentos/DocumentosEmitidos'
@@ -100,9 +101,10 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             { id: 'preguntas', label: t('relacionamiento.ficha.pestanas.preguntas'), render: () => <Preguntas interaccion={interaccion} /> },
             { id: 'acta', label: t('relacionamiento.ficha.pestanas.acta'), render: () => <Acta interaccion={interaccion} /> },
             {
+              // F3: los acuerdos que autoriza esta asamblea y los compromisos que nacen de ella
               id: 'acuerdos',
               label: t('relacionamiento.ficha.pestanas.acuerdos'),
-              render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('relacionamiento.ficha.acuerdosLlegan')}</p>
+              render: () => <AcuerdosDeLaInteraccion interaccion={interaccion} />
             },
             {
               // F3: el acta firmada, las fotos y la lista de asistentes como evidencias; la «Minuta de reunión» y la «Lista de

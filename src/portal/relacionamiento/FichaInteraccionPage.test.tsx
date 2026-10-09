@@ -127,6 +127,24 @@ describe('S23 · ficha de interacción', () => {
     expect(await screen.findByRole('button', { name: 'Abrir MIN-2026-004' })).toBeInTheDocument()
   })
 
+  // F3: los acuerdos que autoriza la asamblea y los compromisos que nacen de ella
+  it('la pestaña Acuerdos lista los acuerdos de esta asamblea y los compromisos que nacen de ella', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, [
+      ...rutas(),
+      {
+        path: '/objects/agreement/records',
+        body: pagina([registro('ag1', { project: 'p1', code: 'A-001', title: 'Autorización de la asamblea', assembly_engagement: 'e1' }, { state: 'active' })])
+      },
+      {
+        path: '/objects/commitment/records',
+        body: pagina([registro('c1', { project: 'p1', code: 'C-001', title: 'Reservorio', origin_engagement: 'e1' }, { state: 'draft' })])
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Acuerdos' }))
+    expect(await screen.findByRole('link', { name: 'A-001 · Autorización de la asamblea' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
+    expect(await screen.findByRole('link', { name: 'C-001 · Reservorio' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
+  })
+
   it('la cabecera dice la fecha con su hora de Lima, no solo el día (revisión final, M12)', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
     // held_at 03:00Z del 2 de octubre son las 22:00 del 1 en Lima
