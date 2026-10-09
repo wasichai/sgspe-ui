@@ -11,6 +11,30 @@ La entrada más reciente va primero. El diseño y los ADR están en el repositor
 - UPS-16 no necesitó cambios: ninguna pantalla lee una autorrelación filtrando la lista por el campo. `actor_relationship`
   une dos objetos distintos (`from_*`, `to_*`) y `parent_locality` se lee como atributo del propio registro.
 
+## 2026-10-09 — Fase 3: portal de compromisos, documentos, tareas y avisos
+
+- Dependencias fijadas de F3: `@wasichai/documents` y `@wasichai/automation` 0.5.1. `/admin` registra `documentsModule()` y
+  `automationModule()`; la hoja de impresión de `@wasichai/documents` entra por `index.css`.
+- Capa de datos: `useComando` con `Idempotency-Key` por acción y por ruta, `Retry-After` y la clave reusada; el alta genérica
+  manda la cabecera nativa (UPS-18 resuelta); `subirArchivo` y el descriptor de un campo `FILE`; la bandeja, el resumen SSE
+  y las preferencias de wasichai-notifications; `rutaDeFicha` y `/r/:object/:recordId`.
+- Pantallas S27 a S33, S45 a S48 y S04, la matriz de compromisos en Reportes, las evidencias, los documentos emitidos y los
+  acuerdos en la ficha de interacción, y las pestañas de F3 en Project 360.
+- Decisiones del plan 3.3: «Por aprobar» sale de los avisos `sgspe.approvals` de la persona (la API genérica no filtra por
+  estado); S31 vive en `/tasks/approvals/commitment/:recordId` (una aprobación no es una tarea); S30 escribe todo en el último
+  paso, porque el alta exige monto y motivo; las vistas de S28 y S47 se arman sobre una lectura con tope que avisa del
+  recorte; la emisión manual de un documento se ofrece con UPDATE sobre el objeto.
+- Lo que el plan 3.2 fijó al implementarse: una evidencia restringida se sube con un nombre neutro y el nombre de su archivo
+  se reserva a quien la descarga; la descarga pide `DOWNLOAD_RESTRICTED`; el tope de 20 MB se dice antes de subir; las
+  entregas de un compromiso cancelado también quedan congeladas; la reprogramación devuelve el plazo recalculado.
+- Resultados de la ejecución: toda pantalla de un registro se vuelve a montar al cambiar el parámetro de la ruta
+  (`PorRuta`); hay una clave de idempotencia por acción y por ruta; una prueba de guarda (`textosSinCodigos.test.ts`)
+  mantiene los códigos y los identificadores de requisitos fuera de los textos de interfaz; emitir un documento no manda
+  `Idempotency-Key`, porque ese es el contrato de wasichai-documents.
+- Pruebas: 1070 unitarias en 71 archivos (257 más que las 813 de la adopción de las capacidades) y 10 extremo a extremo.
+- Pendiente: el «Acta de entrega» como documento emitido espera a UPS-23 (plan 3.1); la acción masiva de S28, la vista
+  «Decididas por mí» de S48 y «Para tomar» fuera de un proyecto esperan un contrato del backend.
+
 ## 2026-10-09 — `@wasichai/*` 0.5.1
 
 - Los ocho paquetes pasan de 0.5.0 a 0.5.1 (`maplibre-gl` sigue en 6.10.0). Solo trae correcciones: `DATETIME` conserva
