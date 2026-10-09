@@ -215,7 +215,7 @@ describe('S30 · crear compromiso', () => {
 
   it.each([
     ['WORKSHOP_COMMITMENT_BLOCKED', 'El proyecto no admite compromisos que nazcan de un taller o de una reunión informativa.'],
-    ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un compromiso o un candidato solo se vincula con lo de su proyecto.']
+    ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un registro solo se vincula con lo de su proyecto.']
   ])('%s sobre la interacción de origen vuelve al paso del origen con su texto junto al buscador', async (codigo, textoEsperado) => {
     fetch = mockFetch(rutas())
     red = espiarRed([

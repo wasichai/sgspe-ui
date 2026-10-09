@@ -70,7 +70,7 @@ describe('estados comunes', () => {
     ['ACTION_REQUIRED', 'Su cuenta no tiene la acción que este paso exige (aprobar, verificar, emitir un documento o descargar lo restringido).'],
     ['SEGREGATION_OF_DUTIES', 'Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.'],
     ['PERSON_REQUIRED', 'Esta decisión la toma una persona, no una cuenta de servicio.'],
-    ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un compromiso o un candidato solo se vincula con lo de su proyecto.'],
+    ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un registro solo se vincula con lo de su proyecto.'],
     ['EVIDENCE_FILE_IN_USE', 'Ese archivo ya es de otra evidencia: elíjalo de nuevo para subirlo otra vez, o reemplace esa evidencia con una versión nueva.'],
     ['GENERATOR_KEY_PLATFORM_ONLY', 'La clave de origen de una tarea la escribe solo el sistema: no se cambia.'],
     ['ROLE_REQUIRED', 'Su rol no puede dar este paso del flujo.'],

@@ -56,6 +56,18 @@ export const ES_COMUN = {
   // F3: la situación de plazo o de vigencia (derivada por JOB-01, nunca un estado) y la elección de una persona usuaria
   situacionDePlazo: 'Situación de plazo',
   situacionDeVigencia: 'Situación de vigencia',
+  // F4: la situación de revisión de un riesgo (review_status), los nombres de las QCS, el vínculo a una QCS confidencial que quien
+  // mira no lee (ASM-095) y la nota de una cifra que no cuenta las confidenciales (confidentialHidden)
+  situacionDeRevision: 'Situación de revisión',
+  qcs: {
+    grievance: 'Queja',
+    inquiry: 'Consulta',
+    stakeholder_request: 'Solicitud',
+    plural: { grievance: 'Quejas', inquiry: 'Consultas', stakeholder_request: 'Solicitudes' }
+  },
+  registroReservado: 'Registro reservado',
+  registroReservadoAyuda: 'Es una QCS confidencial: solo la leen la gestión de quejas, su responsable y quien la recibió.',
+  confidencialesOcultas: 'Esta cifra no incluye las QCS confidenciales que su cuenta no puede leer. Para el total, pídala a la gestión de quejas.',
   usuario: {
     deLaLista: 'Elija a la persona',
     correo: '{{etiqueta}} · correo',
@@ -141,7 +153,8 @@ export const ES_COMUN = {
     DEPENDENCY_GRAPH_TOO_LARGE: 'Hay demasiadas dependencias encadenadas para comprobar esta: simplifique la cadena.',
     STAKEHOLDER_REQUIRED: 'Falta al menos un grupo de interés solicitante.',
     SEGREGATION_OF_DUTIES: 'Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.',
-    SENIOR_APPROVAL_REQUIRED: 'Este compromiso nace de una mesa de diálogo o de solicitantes que exigen la aprobación de nivel superior.',
+    SENIOR_APPROVAL_REQUIRED:
+      'Este paso lo decide un nivel superior: el compromiso nace de una mesa de diálogo o de solicitantes que lo exigen, o la queja es ALTA o CRITICA y la resuelve quien aprueba.',
     INTERNAL_APPROVAL_REQUIRED: 'El proyecto exige la aprobación interna: envíe el compromiso a aprobación.',
     SUPPORT_CAP_EXCEEDED: 'Aprobar este compromiso supera el tope de apoyo social de la campaña.',
     CAP_OTHER_CURRENCY: 'La campaña tiene montos en otra moneda que no se suman a su tope.',
@@ -152,7 +165,7 @@ export const ES_COMUN = {
     DELIVERY_FROZEN:
       'El compromiso ya está cumplido o cancelado: sus entregas no cambian. Si está cumplido (no verificado ni cerrado), devuélvalo a ejecución para corregirlas.',
     // P54: un compromiso solo referencia campañas, interacciones, acuerdos y cláusulas de su proyecto
-    PROJECT_MISMATCH: 'El registro elegido es de otro proyecto: un compromiso o un candidato solo se vincula con lo de su proyecto.',
+    PROJECT_MISMATCH: 'El registro elegido es de otro proyecto: un registro solo se vincula con lo de su proyecto.',
     CAP_DATA_INVALID: 'Un monto guardado de la campaña o de sus compromisos no es válido: el tope no se pudo verificar. Avise a quien administra los datos.',
     EVIDENCE_FILE_IN_USE: 'Ese archivo ya es de otra evidencia: elíjalo de nuevo para subirlo otra vez, o reemplace esa evidencia con una versión nueva.',
     GENERATOR_KEY_PLATFORM_ONLY: 'La clave de origen de una tarea la escribe solo el sistema: no se cambia.',
@@ -161,12 +174,25 @@ export const ES_COMUN = {
     ASSEMBLY_REQUIRED: 'Una autorización de asamblea necesita la interacción de tipo ASAMBLEA que la autoriza.',
     EVIDENCE_IMMUTABLE: 'El archivo de una evidencia, lo que reemplaza y su lote de importación no cambian: suba una versión nueva que la reemplace.',
     EVIDENCE_NOT_DELETABLE: 'Una evidencia no se borra: se reemplaza con una versión nueva.',
-    INVALID_LINK: 'Una evidencia no se vincula con ese tipo de registro.',
+    INVALID_LINK: 'Ese vínculo no es válido: una evidencia no se vincula con ese tipo de registro y una queja no es duplicado de sí misma.',
     PERSON_REQUIRED: 'Esta decisión la toma una persona, no una cuenta de servicio.',
     DUPLICATE_NOT_FOUND: 'El compromiso elegido no existe o su cuenta no lo lee.',
     DUPLICATE_OTHER_PROJECT: 'El compromiso elegido es de otro proyecto.',
     IDEMPOTENCY_IN_FLIGHT: 'La misma acción todavía se está registrando: espere un momento y vuelva a intentar.',
-    IDEMPOTENCY_KEY_REUSED: 'Esta acción ya se registró con otros datos: recargue para ver lo registrado.'
+    IDEMPOTENCY_KEY_REUSED: 'Esta acción ya se registró con otros datos: recargue para ver lo registrado.',
+    // F4: QCS, riesgos y alertas (api.md §3.3, §4.4, §4.6 y §4.7)
+    ANONYMOUS_WITH_IDENTITY: 'Una QCS anónima no lleva persona ni grupo de interés: quítelos o desmarque «Anónima».',
+    CONFIDENTIAL_RECEIVER_REQUIRED: 'Una QCS confidencial la recibe quien la registra: vuelva a registrarla desde su cuenta.',
+    CONFORMITY_GIVEN: 'El reclamante ya dio su conformidad: la queja no se reabre.',
+    INVALID_TARGET: 'Ese destino no es válido: elija otro tipo de QCS o, al aceptar una solicitud, un compromiso.',
+    ALREADY_REFERRED: 'Esta pregunta ya se derivó a una QCS.',
+    ASSESSMENT_OUT_OF_ORDER: 'La fecha de la revisión es anterior a la última revisión del mismo tipo: elija una fecha igual o posterior.',
+    FIRST_ASSESSMENT_NOT_RESIDUAL: 'La primera revisión de un riesgo no puede ser residual.',
+    RISK_THRESHOLDS_INVALID: 'Los umbrales de nivel de riesgo del proyecto no son válidos: corríjalos en los parámetros del proyecto.',
+    MEASURE_OWNER_REQUIRED: 'Para mitigar hace falta al menos una medida con responsable.',
+    RESIDUAL_ASSESSMENT_REQUIRED: 'Para monitorear hace falta al menos una revisión residual.',
+    HUMAN_DECISION_REQUIRED: 'Confirmar o descartar una alerta lo decide una persona, nunca una cuenta de servicio.',
+    EVIDENCE_NOT_RESTRICTED: 'A una QCS confidencial solo se vinculan evidencias CONFIDENCIAL o de DATOS PERSONALES.'
   },
   errores: {
     '400': 'Revise los datos marcados.',
@@ -231,6 +257,17 @@ export const EN_COMUN: typeof ES_COMUN = {
   personaRegistrada: 'Registered person',
   situacionDePlazo: 'Deadline situation',
   situacionDeVigencia: 'Validity situation',
+  situacionDeRevision: 'Review situation',
+  qcs: {
+    grievance: 'Grievance',
+    inquiry: 'Inquiry',
+    stakeholder_request: 'Request',
+    plural: { grievance: 'Grievances', inquiry: 'Inquiries', stakeholder_request: 'Requests' }
+  },
+  registroReservado: 'Reserved record',
+  registroReservadoAyuda: 'It is a confidential grievance, inquiry or request: only grievance management, its owner and whoever received it read it.',
+  confidencialesOcultas:
+    'This figure does not include the confidential grievances, inquiries and requests your account cannot read. Ask grievance management for the total.',
   usuario: {
     deLaLista: 'Pick the person',
     correo: '{{etiqueta}} · email',
@@ -312,7 +349,8 @@ export const EN_COMUN: typeof ES_COMUN = {
     DEPENDENCY_GRAPH_TOO_LARGE: 'Too many chained dependencies to check this one: simplify the chain.',
     STAKEHOLDER_REQUIRED: 'At least one requesting stakeholder is missing.',
     SEGREGATION_OF_DUTIES: 'By segregation of duties, whoever recorded the commitment does not approve it and its owner does not verify it.',
-    SENIOR_APPROVAL_REQUIRED: 'This commitment comes from a dialogue table or from requesters that need senior approval.',
+    SENIOR_APPROVAL_REQUIRED:
+      'A higher level decides this step: the commitment comes from a dialogue table or from requesters that need it, or the grievance is ALTA or CRITICA and the approver resolves it.',
     INTERNAL_APPROVAL_REQUIRED: 'The project requires internal approval: submit the commitment for approval.',
     SUPPORT_CAP_EXCEEDED: 'Approving this commitment exceeds the campaign’s social support cap.',
     CAP_OTHER_CURRENCY: 'The campaign has amounts in another currency that are not added to its cap.',
@@ -322,7 +360,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     BLOCKING_DEPENDENCY: 'A blocking dependency is still open.',
     DELIVERY_FROZEN:
       'The commitment is already fulfilled or cancelled: its deliveries do not change. If it is fulfilled (not verified or closed), return it to execution to correct them.',
-    PROJECT_MISMATCH: 'The chosen record belongs to another project: a commitment or a candidate only links to records of its own project.',
+    PROJECT_MISMATCH: 'The chosen record belongs to another project: a record only links to records of its own project.',
     CAP_DATA_INVALID: 'A stored amount of the campaign or its commitments is invalid: the cap could not be checked. Tell whoever manages the data.',
     EVIDENCE_FILE_IN_USE:
       'That file already belongs to another piece of evidence: pick it again to upload it anew, or replace that evidence with a new version.',
@@ -332,12 +370,24 @@ export const EN_COMUN: typeof ES_COMUN = {
     ASSEMBLY_REQUIRED: 'An assembly authorization needs the engagement of type ASAMBLEA that authorizes it.',
     EVIDENCE_IMMUTABLE: 'The file of an evidence, what it replaces and its import batch do not change: upload a new version that replaces it.',
     EVIDENCE_NOT_DELETABLE: 'An evidence is not deleted: it is replaced by a new version.',
-    INVALID_LINK: 'An evidence is not linked to that kind of record.',
+    INVALID_LINK: 'That link is not valid: an evidence is not linked to that kind of record and a grievance is not a duplicate of itself.',
     PERSON_REQUIRED: 'A person takes this decision, not a service account.',
     DUPLICATE_NOT_FOUND: 'The chosen commitment does not exist or your account cannot read it.',
     DUPLICATE_OTHER_PROJECT: 'The chosen commitment belongs to another project.',
     IDEMPOTENCY_IN_FLIGHT: 'The same action is still being recorded: wait a moment and try again.',
-    IDEMPOTENCY_KEY_REUSED: 'This action was already recorded with other data: reload to see what was recorded.'
+    IDEMPOTENCY_KEY_REUSED: 'This action was already recorded with other data: reload to see what was recorded.',
+    ANONYMOUS_WITH_IDENTITY: 'An anonymous grievance, inquiry or request carries no person or stakeholder: remove them or untick «Anonymous».',
+    CONFIDENTIAL_RECEIVER_REQUIRED: 'Whoever records a confidential grievance, inquiry or request receives it: record it again from your account.',
+    CONFORMITY_GIVEN: 'The complainant already gave conformity: the grievance is not reopened.',
+    INVALID_TARGET: 'That target is not valid: pick another type or, when accepting a request, a commitment.',
+    ALREADY_REFERRED: 'This question was already referred.',
+    ASSESSMENT_OUT_OF_ORDER: 'The review date is earlier than the last review of the same kind: pick the same date or a later one.',
+    FIRST_ASSESSMENT_NOT_RESIDUAL: 'The first review of a risk cannot be residual.',
+    RISK_THRESHOLDS_INVALID: 'The project’s risk level thresholds are not valid: fix them in the project parameters.',
+    MEASURE_OWNER_REQUIRED: 'Mitigating needs at least one measure with an owner.',
+    RESIDUAL_ASSESSMENT_REQUIRED: 'Monitoring needs at least one residual review.',
+    HUMAN_DECISION_REQUIRED: 'A person confirms or dismisses an alert, never a service account.',
+    EVIDENCE_NOT_RESTRICTED: 'Only CONFIDENCIAL or DATOS PERSONALES evidence is linked to a confidential grievance, inquiry or request.'
   },
   errores: {
     '400': 'Check the highlighted data.',

@@ -15,7 +15,8 @@ import { NS } from '../i18n'
 // la descarga de estas clasificaciones exige DOWNLOAD_RESTRICTED, también a quien la subió (RF-DOC-003, security.md §7.5)
 export const CLASIFICACIONES_RESTRINGIDAS: readonly string[] = ['CONFIDENCIAL', 'DATOS PERSONALES']
 
-// los objetos con un vínculo evidence_<objeto> en F3 (database-model.md §16): el destino de «Vincular a un registro…»
+// los objetos con un vínculo evidence_<objeto> (database-model.md §16): el destino de «Vincular a un registro…». F3 y, desde F4,
+// las tres QCS, el riesgo, el incidente y la mención (api.md §4.9)
 export const DESTINOS_DE_EVIDENCIA: readonly string[] = [
   'commitment',
   'delivery',
@@ -26,7 +27,13 @@ export const DESTINOS_DE_EVIDENCIA: readonly string[] = [
   'land_parcel',
   'field_visit',
   'field_observation',
-  'study'
+  'study',
+  'grievance',
+  'inquiry',
+  'stakeholder_request',
+  'social_risk',
+  'incident',
+  'media_mention'
 ]
 
 // el tope de un archivo de evidencia: 20 MB de 1024 × 1024 bytes, el mismo de wasichai.files.max-bytes (P52). más grande, el

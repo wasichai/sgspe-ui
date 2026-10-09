@@ -57,7 +57,13 @@ export const ES_DOCUMENTOS = {
       land_parcel: 'Predio',
       field_visit: 'Visita de campo',
       field_observation: 'Observación de campo',
-      study: 'Estudio'
+      study: 'Estudio',
+      grievance: 'Queja',
+      inquiry: 'Consulta',
+      stakeholder_request: 'Solicitud',
+      social_risk: 'Riesgo',
+      incident: 'Incidente',
+      media_mention: 'Mención en medios'
     }
   }
 }
@@ -119,7 +125,13 @@ export const EN_DOCUMENTOS: typeof ES_DOCUMENTOS = {
       land_parcel: 'Parcel',
       field_visit: 'Field visit',
       field_observation: 'Field observation',
-      study: 'Study'
+      study: 'Study',
+      grievance: 'Grievance',
+      inquiry: 'Inquiry',
+      stakeholder_request: 'Request',
+      social_risk: 'Risk',
+      incident: 'Incident',
+      media_mention: 'Media mention'
     }
   }
 }
