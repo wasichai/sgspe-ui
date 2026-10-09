@@ -2,14 +2,17 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 // roadmap F2, «Starters y capacidades»: @wasichai/gis con maplibre-gl 6.10.0 y @wasichai/workflow; React Hook Form y Zod;
-// ECharts 6 en los tableros de módulo; Playwright desde F2 (ASM-066). toda versión va fijada, sin rangos, como en F1
+// ECharts 6 en los tableros de módulo; Playwright desde F2 (ASM-066). F3 suma @wasichai/documents y @wasichai/automation, los
+// paquetes de interfaz de los starters de documentos y automatizaciones. toda versión va fijada, sin rangos, como en F1
 const leer = (ruta: string) => JSON.parse(readFileSync(ruta, 'utf8')) as Record<string, Record<string, string>>
 const paquete = leer('package.json')
 
-describe('dependencias de F2', () => {
+describe('dependencias de F2 y F3', () => {
   it.each([
     ['@wasichai/gis', '0.5.1'],
     ['@wasichai/workflow', '0.5.1'],
+    ['@wasichai/documents', '0.5.1'],
+    ['@wasichai/automation', '0.5.1'],
     ['maplibre-gl', '6.10.0'],
     ['echarts', '6.1.0'],
     ['react-hook-form', '7.89.0'],

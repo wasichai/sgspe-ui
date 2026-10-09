@@ -1,4 +1,6 @@
+import { automationModule } from '@wasichai/automation'
 import { WasichaiApp } from '@wasichai/core'
+import { documentsModule } from '@wasichai/documents'
 import { formsModule } from '@wasichai/forms'
 import { gisModule } from '@wasichai/gis'
 import { pagesModule } from '@wasichai/pages'
@@ -7,7 +9,8 @@ import { workflowModule } from '@wasichai/workflow'
 import { idiomaHtmlModule } from '../idiomaHtml'
 
 // /admin: core más los módulos de los starters que corre sgspe (views, forms y pages desde F1; gis y workflow desde
-// F2); nunca un módulo sin su starter ni agentModule() (ADR-0024). gis recibe el worker de MapLibre que fija main.tsx.
+// F2; documents y automation desde F3, con la página imprimible de un documento emitido en /admin/documents/:id/print);
+// nunca un módulo sin su starter ni agentModule() (ADR-0024). gis recibe el worker de MapLibre que fija main.tsx.
 // storagePrefix 'sgspe' es el del portal: un solo login, el mismo tema y el mismo idioma, y <html lang> sigue al idioma
 // (idiomaHtmlModule: core 0.5.1 lo escribe como `es`). el administrador sembrado se propone solo en desarrollo
 export function AdminApp({ trabajadorDelMapa }: { trabajadorDelMapa?: string } = {}) {
@@ -22,7 +25,16 @@ export function AdminApp({ trabajadorDelMapa }: { trabajadorDelMapa?: string } =
         languages: ['es', 'en'],
         defaultLoginEmail: import.meta.env.DEV ? 'admin@wasichai.local' : ''
       }}
-      modules={[viewsModule(), formsModule(), pagesModule(), workflowModule(), gisModule({ workerUrl: trabajadorDelMapa }), idiomaHtmlModule()]}
+      modules={[
+        viewsModule(),
+        formsModule(),
+        pagesModule(),
+        workflowModule(),
+        gisModule({ workerUrl: trabajadorDelMapa }),
+        documentsModule(),
+        automationModule(),
+        idiomaHtmlModule()
+      ]}
     />
   )
 }
