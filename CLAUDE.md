@@ -27,7 +27,11 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
 - Toda escritura del portal pasa por `src/portal/datos` (`useCrear`, `useActualizar`, `usePedir`): manda `If-Match` con la
   versión leída, se arma con la forma del GET y los permisos de quien llama (`atributosDeEscritura`), nunca con el modelo,
   y nunca lleva un campo derivado ni uno restringido; «Editar» se ofrece con `usePuedeEditar` (un rol con `u` no edita).
-  Las transiciones, por `transiciones/` (motivo y `transition-checks`).
+  Las transiciones, por `transiciones/` (motivo y `transition-checks`). Un `412` se ofrece con `AvisoDeConflicto` o
+  `BotonRecargar` (`componentes/AvisoDeConflicto.tsx`): relee y quita el aviso solo cuando la relectura llegó.
+- La guarda de UI de una escritura con alcance de proyecto es `useEscribeEnProyecto` (`contexto/ProyectoLayout.tsx`): ADMIN
+  la salta y los demás necesitan una asignación vigente. Las escrituras de `project_assignment` están exentas
+  (security.md §9.2, ítem 5) y dependen solo de `can(...)`.
 - Un error de la API se muestra con `useMensajeDeError` o `useErroresDeCampo`, nunca con su `message`: el de una guarda
   es un código. Un código nuevo del backend suma su texto a `comun.codigos` en los dos idiomas.
 - Una pantalla de proyecto se registra en `proyectos/rutasEnProyecto.ts` con la `seccion` cuya guarda le corresponde.
