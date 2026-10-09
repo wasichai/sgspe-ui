@@ -1,3 +1,16 @@
+import { EN_ACUERDOS } from './acuerdos'
+import { EN_APROBACIONES } from './aprobaciones'
+import { EN_AVISOS } from './avisos'
+import { EN_COMPROMISOS } from './compromisos'
+import { EN_DOCUMENTOS } from './documentos'
+import { EN_ENTREGAS } from './entregas'
+import { EN_EVIDENCIAS } from './evidencias'
+import { EN_FICHA_COMPROMISO } from './fichaCompromiso'
+import { EN_NUEVO_COMPROMISO } from './nuevoCompromiso'
+import { EN_REPROGRAMACIONES } from './reprogramaciones'
+import { EN_SEGUIMIENTO } from './seguimiento'
+import { EN_TABLERO_COMPROMISOS } from './tableroCompromisos'
+import { EN_TAREAS } from './tareas'
 import { EN_AREAS } from './areas'
 import { EN_COMUN } from './comun'
 import { EN_CONTEXTO } from './contexto'
@@ -28,6 +41,20 @@ export const EN: Textos = {
   tableros: EN_TABLEROS,
   territorio: EN_TERRITORIO,
   transiciones: EN_TRANSICIONES,
+  // F3: compromisos, acuerdos, evidencias, tareas y avisos
+  evidencias: EN_EVIDENCIAS,
+  documentos: EN_DOCUMENTOS,
+  compromisos: EN_COMPROMISOS,
+  nuevoCompromiso: EN_NUEVO_COMPROMISO,
+  fichaCompromiso: EN_FICHA_COMPROMISO,
+  seguimiento: EN_SEGUIMIENTO,
+  reprogramaciones: EN_REPROGRAMACIONES,
+  entregas: EN_ENTREGAS,
+  avisos: EN_AVISOS,
+  tareas: EN_TAREAS,
+  aprobaciones: EN_APROBACIONES,
+  acuerdos: EN_ACUERDOS,
+  tableroCompromisos: EN_TABLERO_COMPROMISOS,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',
