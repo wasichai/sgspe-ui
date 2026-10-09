@@ -176,5 +176,36 @@ describe('S29 · reprogramaciones', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Reprogramar' }))
     expect(await within(dialogo).findByText('La fecha nueva es la misma que la vigente.')).toBeInTheDocument()
     expect(within(dialogo).queryByText('SAME_DUE_DATE')).not.toBeInTheDocument()
+    // el error del servidor era de la fecha enviada: cambiarla lo quita
+    await userEvent.clear(within(dialogo).getByLabelText('Fecha nueva'))
+    await userEvent.type(within(dialogo).getByLabelText('Fecha nueva'), '2027-02-01')
+    expect(within(dialogo).queryByText('La fecha nueva es la misma que la vigente.')).not.toBeInTheDocument()
+  })
+
+  it('el motivo se corta en 500 caracteres, el límite de X-Change-Reason', async () => {
+    fetch = mockFetch(rutas())
+    montar(<PestanaReprogramaciones compromiso={C1} escribe />, { usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await userEvent.click(await screen.findByRole('button', { name: 'Reprogramar' }))
+    expect(within(await screen.findByRole('dialog')).getByLabelText('Motivo de la reprogramación')).toHaveAttribute('maxLength', '500')
+  })
+
+  it('STATE_MISMATCH dice su texto propio y el diálogo conserva lo escrito', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/commitments/c1/reschedules',
+        responder: () => problema(409, 'x', [{ field: 'state', message: 'STATE_MISMATCH' }])
+      }
+    ])
+    montar(<PestanaReprogramaciones compromiso={C1} escribe />, { usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await userEvent.click(await screen.findByRole('button', { name: 'Reprogramar' }))
+    const dialogo = await screen.findByRole('dialog')
+    await userEvent.type(within(dialogo).getByLabelText('Fecha nueva'), '2027-01-15')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo de la reprogramación'), 'Paro regional')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Reprogramar' }))
+    expect(await within(dialogo).findByText(/Solo se reprograma un compromiso aprobado, en ejecución o bloqueado/)).toBeInTheDocument()
+    expect(within(dialogo).getByLabelText('Fecha nueva')).toHaveValue('2027-01-15')
+    expect(within(dialogo).getByLabelText('Motivo de la reprogramación')).toHaveValue('Paro regional')
   })
 })
