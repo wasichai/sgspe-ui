@@ -87,6 +87,46 @@ describe('S23 · ficha de interacción', () => {
     expect(screen.getByRole('button', { name: 'Redactar acta' })).toBeEnabled()
   })
 
+  // F3: las evidencias de la interacción (acta firmada, fotos) y los documentos que emite AUT-05 al aprobar el acta
+  it('las pestañas Evidencias y Documentos emitidos muestran lo vinculado y la minuta emitida', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, [
+      ...rutas(),
+      {
+        path: '/objects/engagement/records/e1/related/evidence_engagement',
+        body: pagina([registro('ev1', { project: 'p1', title: 'Acta firmada', evidence_type: 'ACTA', classification: 'INTERNA' })])
+      },
+      {
+        path: '/objects/engagement/records/e1/documents',
+        body: [
+          {
+            id: 'd1',
+            number: 'MIN-2026-004',
+            year: 2026,
+            sequence: 4,
+            status: 'VALID',
+            recordId: 'e1',
+            objectName: 'engagement',
+            issuedAt: '2026-10-07T15:00:00Z',
+            snapshot: {
+              template: { type: 'doc', content: [] },
+              values: {},
+              platform: {},
+              related: {},
+              objectName: 'engagement',
+              objectLabel: 'Interacción',
+              number: 'MIN-2026-004',
+              issuedAt: '2026-10-07T15:00:00Z'
+            }
+          }
+        ]
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Evidencias' }))
+    expect(await screen.findByRole('link', { name: 'Acta firmada' })).toHaveAttribute('href', '/projects/p1/documents/ev1')
+    await userEvent.click(screen.getByRole('tab', { name: 'Documentos emitidos' }))
+    expect(await screen.findByRole('button', { name: 'Abrir MIN-2026-004' })).toBeInTheDocument()
+  })
+
   it('la cabecera dice la fecha con su hora de Lima, no solo el día (revisión final, M12)', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
     // held_at 03:00Z del 2 de octubre son las 22:00 del 1 en Lima
