@@ -52,6 +52,13 @@ describe('piezas comunes de F3', () => {
     expect(montoPe(12, 'XYZ1')).toBe('XYZ1 12.00')
     expect(montoPe(null, 'PEN')).toBe('—')
     expect(montoPe('', 'PEN')).toBe('—')
+    // sin pasar por Number: la precisión pasados 2^53 se conserva y lo que no es decimal plano no es un monto
+    expect(montoPe('9007199254740993.10', 'PEN')).toBe('S/ 9,007,199,254,740,993.10')
+    for (const invalido of ['0x10', '1e3', 'Infinity', 'NaN', '1,5', '--1']) expect(montoPe(invalido, 'PEN')).toBe('—')
+    expect(montoPe(Number.NaN, 'PEN')).toBe('—')
+    // cuatro decimales no se redondean a dos, con o sin moneda conocida
+    expect(montoPe('1.2345', 'PEN')).toBe('S/ 1.2345')
+    expect(montoPe('1.2345', 'XYZ1')).toBe('XYZ1 1.2345')
     // lo tecleado: separadores de miles fuera, dentro de las cotas del servidor (15 enteros, 4 decimales, no negativo)
     expect(normalizarMonto(' 1,250.50 ')).toBe('1250.50')
     expect(esMontoValido('1,250.50')).toBe(true)
