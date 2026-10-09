@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro } from '../../test/montar'
 import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
-import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
+import { ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { ASSESS_DEF, base, LEE, S1, STK_DEF } from '../../test/grupos'
 
@@ -499,5 +499,17 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     const cola = await screen.findByRole('complementary', { name: 'Qué generó' })
     const fila = (await within(cola).findByRole('link', { name: 'Asamblea de agosto' })).closest('li')
     expect(fila).toHaveTextContent(/^Asamblea de agosto$/)
+  })
+})
+
+// P38: solo ADMIN escribe sin asignación (revisión final, I3)
+describe('S17 · escritura sin asignación', () => {
+  it('ADMIN sin asignación edita la caracterización y evalúa', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', ADMINISTRACION, { admin: true, objects: LEE.objects }, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...base(ADMINISTRACION, true)
+    ])
+    expect(await screen.findByRole('button', { name: 'Editar la caracterización' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Nueva evaluación' })).toBeInTheDocument()
   })
 })

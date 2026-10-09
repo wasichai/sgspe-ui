@@ -12,7 +12,7 @@ import { Cargando, NoDisponible, ThConExplicacion } from '../componentes/Estados
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { useAsignadoAlProyecto, useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { Rastro } from '../contexto/Rastro'
 import { nuevaClave, usePedir } from '../datos/http'
@@ -53,12 +53,6 @@ const CAMPOS_DE_LA_VISITA = [
   'actual_start_date',
   'actual_end_date'
 ] as const
-
-// quien escribe en el proyecto: tiene una asignación vigente o es administración (que no la necesita)
-function usePuedeEscribirEn(proyecto: string): boolean {
-  const { isAdmin } = useAuth()
-  return useAsignadoAlProyecto(proyecto) || isAdmin
-}
 
 export function VisitaDeCampoPage() {
   const { visitId = '' } = useParams()
@@ -198,7 +192,7 @@ function Visita({ visita }: { visita: Registro }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const proyecto = String(atributo(visita, 'project'))
-  const escribe = usePuedeEscribirEn(proyecto)
+  const escribe = useEscribeEnProyecto(proyecto)
   const puedeEditar = usePuedeEditar('field_visit')
   // «Editar el resultado» guarda outcome_summary: sin poder escribirlo, el PUT "tendría éxito" sin guardar el texto
   const definicion = useDefinicion('field_visit')

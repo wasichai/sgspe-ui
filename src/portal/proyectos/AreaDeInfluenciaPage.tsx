@@ -10,7 +10,7 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { Cargando, Consulta, ErrorDeCarga, NoDisponible, ThConExplicacion } from '../componentes/Estados'
-import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError, usePedir } from '../datos/http'
 import { atributo, leerTodos, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
@@ -38,7 +38,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
   const idDelLugar = useId()
   const { can } = useAuth()
   const proyecto = String(atributo(area, 'project'))
-  const asignado = useAsignadoAlProyecto(proyecto)
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
   const etiquetas = useEtiquetasDeEstado('area_of_influence')
   const versiones = useTodos('area_of_influence', { project: proyecto, area_type: texto(area, 'area_type'), sort: 'version_number', dir: 'desc' })
   const vigente = (versiones.data ?? []).find((v) => v.state === 'approved' && v.id !== area.id)
@@ -82,7 +82,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
           <EstadoChip objeto="area_of_influence" estado={area.state} />
         </div>
         <div className="flex gap-2">
-          {borrador && asignado && can('area_of_influence', 'APPROVE') ? (
+          {borrador && escribeEnElProyecto && can('area_of_influence', 'APPROVE') ? (
             <Button
               onClick={() => setAprobando(true)}
               disabled={!miembros.isSuccess || sinMiembros}
@@ -91,7 +91,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
               {t('areas.aprobar', { version })}
             </Button>
           ) : null}
-          {!borrador && asignado && can('area_of_influence', 'CREATE') && can('area_of_influence_member', 'CREATE') ? (
+          {!borrador && escribeEnElProyecto && can('area_of_influence', 'CREATE') && can('area_of_influence_member', 'CREATE') ? (
             <NuevaVersion area={area} miembros={miembros.data ?? []} versionesListas={versiones.isSuccess} />
           ) : null}
         </div>
@@ -154,13 +154,13 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
         </tbody>
       </Table>
       {miembros.isPending ? <Cargando /> : null}
-      {borrador && asignado && can('area_of_influence_member', 'CREATE') ? <AgregarMiembro area={area.id} /> : null}
+      {borrador && escribeEnElProyecto && can('area_of_influence_member', 'CREATE') ? <AgregarMiembro area={area.id} /> : null}
       <Mapa etiqueta={t('areas.mapa')} className="relative h-72 w-full overflow-hidden rounded-sg-lg border border-sg-border" capas={capasDelMapa} />
       {aprobando && borrador ? (
         <DialogoDeAprobacion
           area={area}
           refrescando={refrescando}
-          puedeAgregarMiembros={asignado && can('area_of_influence_member', 'CREATE')}
+          puedeAgregarMiembros={escribeEnElProyecto && can('area_of_influence_member', 'CREATE')}
           alCerrar={() => setAprobando(false)}
         />
       ) : null}

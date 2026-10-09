@@ -3,7 +3,7 @@ import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
-import { RELACIONISTA } from '../../test/portal'
+import { ADMINISTRACION, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { E1, E2, E3, EQUIPO, base } from '../../test/relacionamiento'
 
@@ -356,5 +356,18 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
       'Reunión con la junta',
       expect.stringContaining('Asamblea comunal')
     ])
+  })
+})
+
+// P38: solo ADMIN escribe sin asignación (revisión final, I3)
+describe('S21 · escritura sin asignación', () => {
+  it('ADMIN sin asignación registra interacciones y visitas', async () => {
+    fetch = abrirPortal('/projects/p1/engagements', ADMINISTRACION, { admin: true, objects: EQUIPO.objects }, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...base(ADMINISTRACION),
+      { path: '/objects/engagement/records', body: pagina([]) }
+    ])
+    expect(await screen.findByRole('link', { name: 'Registrar interacción' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Nueva visita de campo' })).toBeInTheDocument()
   })
 })

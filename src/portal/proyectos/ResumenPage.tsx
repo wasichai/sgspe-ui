@@ -9,7 +9,7 @@ import { useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { Cargando, Consulta, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
 import { KpiCard } from '../componentes/KpiCard'
 import { ROL_DE_JEFATURA } from '../config'
-import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
@@ -47,7 +47,7 @@ export function ResumenPage() {
 function Resumen({ proyecto }: { proyecto: Registro }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
-  const asignado = useAsignadoAlProyecto(proyecto.id)
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto.id)
   // un rol con "u" sobre project (el analista SIG, que solo vincula concesiones) no completa el borrador
   const editaProyecto = usePuedeEditar('project')
   const filtros = { project: [proyecto.id] }
@@ -104,7 +104,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {asignado && can('engagement', 'CREATE') ? (
+          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
             <Button asChild size="sm">
               <Link to={`/projects/${proyecto.id}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
             </Button>

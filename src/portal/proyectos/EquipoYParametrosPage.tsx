@@ -6,7 +6,7 @@ import { useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Drawer } from '../componentes/Drawer'
 import { Consulta } from '../componentes/Estados'
-import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { hoyEnLima } from '../datos/fechas'
 import {
@@ -34,11 +34,14 @@ export function EquipoYParametrosPage() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
   const { can } = useAuth()
-  const asignado = useAsignadoAlProyecto(projectId)
-  const escribe = (objeto: string, accion = 'CREATE') => asignado && can(objeto, accion)
+  const escribeEnElProyecto = useEscribeEnProyecto(projectId)
+  const escribe = (objeto: string, accion = 'CREATE') => escribeEnElProyecto && can(objeto, accion)
+  // el equipo no pide asignación: las escrituras de project_assignment están exentas de ProjectScopeGuard (security.md §9.2,
+  // ítem 5), así quien administra proyectos forma equipos de proyectos a los que no está asignado
+  const formaEquipo = (accion: string) => can('project_assignment', accion)
   // los parámetros se editan con UPDATE y algún campo escribible: un rol con "u" sobre project los ve en solo lectura
   const puedeEditar = usePuedeEditar('project')
-  const editaProyecto = asignado && puedeEditar
+  const editaProyecto = escribeEnElProyecto && puedeEditar
   return (
     <section className="space-y-4">
       <h1 className="text-sg-h2 font-semibold">{t('p360.equipo.titulo')}</h1>
@@ -48,7 +51,7 @@ export function EquipoYParametrosPage() {
           {
             id: 'equipo',
             label: t('p360.equipo.pestanas.equipo'),
-            render: () => <Equipo proyecto={projectId} editable={escribe('project_assignment')} cambia={escribe('project_assignment', 'UPDATE')} />
+            render: () => <Equipo proyecto={projectId} editable={formaEquipo('CREATE')} cambia={formaEquipo('UPDATE')} />
           },
           {
             id: 'campanas',

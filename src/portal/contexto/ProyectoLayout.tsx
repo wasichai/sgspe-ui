@@ -16,9 +16,8 @@ export function ProyectoLayout() {
   const { t } = useTranslation(NS)
   const { projectId } = useParams()
   const proyecto = useProyecto(projectId)
-  const { isAdmin } = useAuth()
   const asignaciones = useMisAsignaciones()
-  const asignado = useAsignadoAlProyecto(projectId)
+  const escribe = useEscribeEnProyecto(projectId)
   // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
   if (proyecto.isError && !proyecto.data)
     return (
@@ -49,7 +48,7 @@ export function ProyectoLayout() {
           </NavLink>
         ))}
       </nav>
-      {asignaciones.isSuccess && !asignado && !isAdmin ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
+      {asignaciones.isSuccess && !escribe ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
       <Outlet />
     </div>
   )
@@ -60,4 +59,13 @@ export function ProyectoLayout() {
 export function useAsignadoAlProyecto(projectId: string | undefined): boolean {
   const asignaciones = useMisAsignaciones()
   return (asignaciones.data ?? []).some((a) => a.attributes.project === projectId && vigenciaDeAsignacion(a) === 'vigente')
+}
+
+// si la cuenta escribe en el proyecto como lo decide ProjectScopeGuard: ADMIN sin asignación (P38) y los demás con una asignación
+// vigente. es la guarda de UI de toda escritura con alcance de proyecto, junto con can(objeto, acción). las escrituras de
+// project_assignment están exentas (security.md §9.2, ítem 5: así se forman los equipos) y dependen solo de can(...)
+export function useEscribeEnProyecto(projectId: string | undefined): boolean {
+  const { isAdmin } = useAuth()
+  const asignado = useAsignadoAlProyecto(projectId)
+  return isAdmin || asignado
 }

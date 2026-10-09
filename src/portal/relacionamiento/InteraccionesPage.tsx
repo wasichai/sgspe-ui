@@ -7,7 +7,7 @@ import { Link, useLocation, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, ThConExplicacion } from '../componentes/Estados'
 import { VacioDeLista } from '../componentes/Lista'
-import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { hoyEnLima } from '../datos/fechas'
 import { usePedir } from '../datos/http'
@@ -34,7 +34,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const { scope, territory } = useContextFilters()
   const [busqueda, fijar] = useSearchParams()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
-  const asignado = useAsignadoAlProyecto(proyecto)
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
   const conTablero = useTableroDisponible('engagement')
   const pedida = busqueda.get('view')
   const vista = VISTAS.find((v) => v === pedida) ?? porDefecto ?? (pathname.endsWith('/calendar') ? 'mes' : 'lista')
@@ -77,12 +77,12 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
               <Link to={`${base}/field-visits`}>{t('relacionamiento.visitas')}</Link>
             </Button>
           ) : null}
-          {proyecto && asignado && can('field_visit', 'CREATE') ? (
+          {proyecto && escribeEnElProyecto && can('field_visit', 'CREATE') ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`${base}/field-visits/new`}>{t('relacionamiento.nuevaVisita')}</Link>
             </Button>
           ) : null}
-          {proyecto && asignado && can('engagement', 'CREATE') ? (
+          {proyecto && escribeEnElProyecto && can('engagement', 'CREATE') ? (
             <Button asChild size="sm">
               <Link to={`${base}/engagements/new`}>{t('relacionamiento.registrar')}</Link>
             </Button>

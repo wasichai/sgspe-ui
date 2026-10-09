@@ -8,7 +8,7 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, ErrorDeCarga, NoDisponible, Restringido } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useActorDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
-import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { Rastro, useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
 import {
@@ -68,13 +68,13 @@ function Ficha({ grupo }: { grupo: Registro }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const proyecto = String(atributo(grupo, 'project'))
-  const asignado = useAsignadoAlProyecto(proyecto)
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
   const nombre = useNombreDelGrupo(grupo)
   const actor = useActorDelGrupo(grupo)
   const definicion = useDefinicion('stakeholder')
   // el agente de campo tiene "u" sobre stakeholder: vincula su captura, pero no edita el perfil
   const puedeEditar = usePuedeEditar('stakeholder')
-  const editaPerfil = asignado && puedeEditar
+  const editaPerfil = escribeEnElProyecto && puedeEditar
   const definicionDeEvaluacion = useDefinicion('stakeholder_assessment')
   // el historial exige READ sobre stakeholder_assessment: sin él no se pide y la sección dice que no está disponible
   const leeEvaluaciones = can('stakeholder_assessment', 'READ')
@@ -88,7 +88,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
   const leePosturaDeEvaluacion = puedeLeer(definicionDeEvaluacion.data, 'stance')
   // el grupo de interés está evaluado si pasó por la evaluación o si ya tiene grupo de influencia (como la lista, S16)
   const evaluado = grupo.state === 'assessed' || Boolean(atributo(grupo, 'influence_group'))
-  const puedeEvaluar = asignado && can('stakeholder_assessment', 'CREATE') && puedeEscribir(definicionDeEvaluacion.data, 'stance')
+  const puedeEvaluar = escribeEnElProyecto && can('stakeholder_assessment', 'CREATE') && puedeEscribir(definicionDeEvaluacion.data, 'stance')
   // un grupo retirado no se ofrece a evaluar; el drawer abierto sigue a la vista (con su aviso) si el servidor lo retiró mientras tanto
   const evalua = puedeEvaluar && grupo.state !== 'retired'
   const drawer = (abrir: boolean) => {
@@ -117,7 +117,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {asignado && can('engagement', 'CREATE') ? (
+          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
             <Button asChild size="sm">
               <Link to={`/projects/${proyecto}/engagements/new?stakeholders=${grupo.id}`}>{t('grupos.ficha.registrar')}</Link>
             </Button>

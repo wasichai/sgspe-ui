@@ -4,7 +4,7 @@ import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
-import { ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos } from '../../test/portal'
+import { ADMINISTRACION, ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useDefinicion } from '../datos/registros'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
@@ -136,7 +136,7 @@ describe('S11 · equipo y parámetros', () => {
     expect(red.a('PUT', '/objects/project_assignment/records/a3')[0].cuerpo).toMatchObject({ attributes: { active: false, end_date: '2026-12-01' } })
   })
 
-  it('una asignación propia vencida por fecha, aunque siga activa, no ofrece escribir', async () => {
+  it('una asignación propia vencida por fecha, aunque siga activa, no ofrece escribir en el proyecto; el equipo sí (exento)', async () => {
     const propiaVencida = { ...VIGENTE, attributes: { ...VIGENTE.attributes, end_date: '2026-01-31' } }
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
       { path: /^\/objects\/project_assignment\/records\?.*member_user_id=u-pad/, body: pagina([propiaVencida]) },
@@ -144,7 +144,48 @@ describe('S11 · equipo y parámetros', () => {
     ])
     await screen.findByRole('table', { name: 'Equipo' })
     expect(screen.getByText(/No está asignado a este proyecto/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Asignar persona' })).not.toBeInTheDocument()
+    // revisión final, I3: las escrituras de project_assignment no pasan por ProjectScopeGuard (security.md §9.2, ítem 5)
+    expect(screen.getByRole('button', { name: 'Asignar persona' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Terminar asignación de pad@sgspe.test' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Campañas' }))
+    await screen.findByText('Perforación 2026')
+    expect(screen.queryByRole('region', { name: 'Campaña de exploración' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByLabelText(/Umbral de poder/)).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Guardar parámetros' })).not.toBeInTheDocument()
+  })
+
+  it('un PAD sin ninguna asignación forma el equipo: «Asignar persona» escribe la asignación (revisión final, I3)', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id=u-pad/, body: pagina([]) },
+      { path: '/users', status: 403, body: { title: 'Forbidden', status: 403 } },
+      { path: '/roles', status: 403, body: { title: 'Forbidden', status: 403 } },
+      { method: 'POST', path: '/objects/project_assignment/records', body: registro('a9', {}) },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('button', { name: 'Asignar persona' }))
+    await userEvent.type(await screen.findByLabelText('Correo del usuario'), 'nueva@sgspe.test')
+    await userEvent.type(screen.getByLabelText('Identificador del usuario'), '6f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f')
+    await userEvent.type(screen.getByLabelText('Rol en el proyecto'), 'ROL_DE_PRUEBA')
+    await userEvent.click(screen.getByRole('button', { name: 'Asignar' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/project_assignment/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/project_assignment/records')[0].cuerpo).toMatchObject({
+      attributes: { project: 'p1', member_user_email: 'nueva@sgspe.test' }
+    })
+  })
+
+  it('ADMIN sin asignación escribe en todo S11 (P38: solo ADMIN salta la asignación)', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION, { admin: true, objects: PAD.objects }, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id=u-admin/, body: pagina([]) },
+      ...rutas()
+    ])
+    expect(await screen.findByRole('button', { name: 'Asignar persona' })).toBeInTheDocument()
+    expect(screen.queryByText(/No está asignado a este proyecto/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Campañas' }))
+    expect(await screen.findByRole('region', { name: 'Campaña de exploración' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByRole('button', { name: 'Guardar parámetros' })).toBeInTheDocument()
   })
 
   it('un 412 al terminar una asignación dice que otra persona la cambió y «Recargar» relee la lista', async () => {

@@ -4,7 +4,7 @@ import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
-import { GERENCIA_SOCIAL, permisos } from '../../test/portal'
+import { ADMINISTRACION, GERENCIA_SOCIAL, permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -393,5 +393,26 @@ describe('S10 · área de influencia', () => {
       expect(await screen.findByText(/El proyecto, el tipo y el número de una versión aprobada o reemplazada no cambian/)).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Continuar en la versión creada' })).not.toBeInTheDocument()
     })
+  })
+})
+
+// P38: solo ADMIN escribe sin asignación (revisión final, I3)
+describe('S13 · escritura sin asignación', () => {
+  it('ADMIN sin asignación aprueba la versión en borrador', async () => {
+    fetch = abrirPortal('/projects/p1/areas/a2', ADMINISTRACION, { admin: true, objects: SMG.objects }, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...rutas()
+    ])
+    expect(await screen.findByRole('button', { name: 'Aprobar versión 2' })).toBeInTheDocument()
+  })
+
+  it('otra cuenta sin asignación no lo ve', async () => {
+    fetch = abrirPortal('/projects/p1/areas/a2', GERENCIA_SOCIAL, SMG, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...rutas()
+    ])
+    await screen.findByText(/No está asignado a este proyecto/)
+    await screen.findByRole('table', { name: 'Miembros' })
+    expect(screen.queryByRole('button', { name: 'Aprobar versión 2' })).not.toBeInTheDocument()
   })
 })

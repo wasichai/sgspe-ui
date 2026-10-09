@@ -13,7 +13,7 @@ import { filtroDeTerritorio } from '../contexto/rutas'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { atributo, puedeLeer, texto, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
-import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { NuevoGrupo } from './NuevoGrupo'
@@ -33,7 +33,7 @@ export function GruposPage() {
   const { scope, territory } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const registroDelProyecto = useProyecto(proyecto)
-  const asignado = useAsignadoAlProyecto(proyecto)
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
   const lista = useParametrosDeLista('todos')
   const definicion = useDefinicion('stakeholder')
   const territorio = filtroDeTerritorio(territory, { locality: 'locality', area: 'area_of_influence' })
@@ -108,7 +108,7 @@ export function GruposPage() {
               <Link to={`${base}/reports`}>{t('grupos.exportar')}</Link>
             </Button>
           ) : null}
-          {proyecto && asignado && can('stakeholder', 'CREATE') ? (
+          {proyecto && escribeEnElProyecto && can('stakeholder', 'CREATE') ? (
             <Button size="sm" onClick={() => setCreando(true)}>
               {t('grupos.nuevo')}
             </Button>
@@ -155,7 +155,7 @@ export function GruposPage() {
               className="flex items-center gap-3 rounded-sg-md bg-sg-primary-soft px-3 py-2 text-sm"
             >
               <span aria-live="polite">{t('comun.seleccionados', { n: elegidos.length })}</span>
-              {can('engagement', 'CREATE') && asignado ? (
+              {can('engagement', 'CREATE') && escribeEnElProyecto ? (
                 <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.join(',')}`)}>
                   {t('grupos.registrarConEllos')}
                 </Button>

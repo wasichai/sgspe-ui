@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro } from '../../test/montar'
 import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
-import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
+import { ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { base, LEE, P1 } from '../../test/grupos'
 
@@ -404,5 +404,25 @@ describe('la ruta de los grupos de interés', () => {
     expect(await screen.findByText('Su cuenta no puede abrir «Grupos de interés».')).toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
     expect(red.a('GET', '/objects/stakeholder/records')).toHaveLength(0)
+  })
+})
+
+// P38: solo ADMIN escribe sin asignación (revisión final, I3)
+describe('S16 · escritura sin asignación', () => {
+  it('ADMIN sin asignación ve «Nuevo grupo de interés»', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', ADMINISTRACION, { admin: true, objects: LEE.objects }, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...base(ADMINISTRACION)
+    ])
+    expect(await screen.findByText('Nuevo grupo de interés')).toBeInTheDocument()
+  })
+
+  it('otra cuenta sin asignación no lo ve', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
+      { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
+      ...base()
+    ])
+    await screen.findByText(/No está asignado a este proyecto/)
+    expect(screen.queryByText('Nuevo grupo de interés')).not.toBeInTheDocument()
   })
 })
