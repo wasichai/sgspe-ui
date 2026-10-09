@@ -1,14 +1,14 @@
 # sgspe-ui
 
 Interfaz web de **SGSPE** (Sistema de Gestión Social para Proyectos Extractivos) sobre **wasichai-ui** (`@wasichai/*`
-0.5.0), para el backend [`sgspe`](https://github.com/wasichai/sgspe), donde viven el diseño y la documentación. Es una
+0.5.1), para el backend [`sgspe`](https://github.com/wasichai/sgspe), donde viven el diseño y la documentación. Es una
 sola app Vite + React con dos partes que comparten el login (el mismo token en `localStorage['sgspe.token']`), el tema y
 el idioma:
 
-| Ruta     | Para quién       | Qué es                                                                                                                                                         |
-| -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`      | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F2 trae Proyectos, Territorio, Grupos de interés, Relacionamiento y Reportes |
-| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages                                                                                                       |
+| Ruta     | Para quién       | Qué es                                                                                                                                        |
+| -------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`      | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F3 suma Compromisos, Documentos, Tareas y Avisos a lo de F2 |
+| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages                                                                                      |
 
 |                     |                                                                          |
 | ------------------- | ------------------------------------------------------------------------ |
@@ -36,6 +36,11 @@ el idioma:
   proyecto se agregan a `proyectos/rutasEnProyecto.ts` con la guarda de su sección. Proyectos (S06 a S11), Territorio
   (S12 a S15), Grupos de interés (S16 a S20 y el tablero `stakeholders`), Relacionamiento (S21 a S26 y el tablero
   `engagement`) y Reportes (exportación del registro de grupos de interés).
+- **Pantallas de F3:** compromisos y sus entregas (S27 a S33), evidencias y documentos emitidos, tareas y aprobaciones, la
+  bandeja de avisos (wasichai-notifications), la matriz de compromisos en Reportes y los acuerdos en la ficha de
+  interacción. Un comando del backend se manda con `useComando` (una `Idempotency-Key` por acción y por ruta); la emisión de
+  un documento no la manda, como pide wasichai-documents. Una evidencia restringida se sube con un nombre neutro y su
+  descarga pide `DOWNLOAD_RESTRICTED`. Cada pantalla de un registro se vuelve a montar al cambiar su ruta (`PorRuta`).
 - **Datos:** `src/portal/datos` usa el token de core y agrega `If-Match`, `X-Change-Reason`, `Idempotency-Key`, multipart y
   descargas; un error trae el `X-Correlation-Id`. Una escritura sale de la forma del GET y de los permisos de quien
   llama, nunca del modelo: un `PUT` manda las claves leídas que la cuenta puede escribir, nunca un campo restringido
@@ -92,6 +97,6 @@ yarn -s csp          # la Content-Security-Policy para el proxy
   consola como infracciones de la CSP en modo de solo informe. Es ruido del desarrollo: la compilación de producción no
   tiene ninguna (comprobado con `vite preview`).
 
-- `@wasichai/*` va en 0.5.0, igual en todos los paquetes, y se actualiza junto con wasichai del backend (ADR-0010 de
+- `@wasichai/*` va en 0.5.1, igual en todos los paquetes, y se actualiza junto con wasichai del backend (ADR-0010 de
   `sgspe`); Dependabot los agrupa.
 - La CI instala `@wasichai/*` con el secreto `PACKAGES_TOKEN` (un PAT con `read:packages`), en Actions y en Dependabot.
