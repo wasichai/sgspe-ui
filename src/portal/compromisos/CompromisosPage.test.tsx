@@ -6,7 +6,7 @@ import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA, P1 } from '../..
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { CompromisosPage } from './CompromisosPage'
+import { CompromisosPage, enVista } from './CompromisosPage'
 
 // S28 (screens.md §7, flujo 7): las vistas de lo vencido, por vencer y bloqueado, el alta solo con asignación, y los candidatos
 // decididos por una persona con IK, IM y CR; un código de error se dice con su texto
@@ -76,6 +76,13 @@ describe('S28 · lista de compromisos', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Por vencer' }))
     expect(screen.getByText('Becas escolares')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Nuevo compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new')
+  })
+
+  it('«Míos» lista los abiertos de quien mira; «Cerrados y cancelados», los cerrados', () => {
+    expect([C1, C2, C3, C4].filter((c) => enVista('mios', c, 'u-cmm')).map((c) => c.id)).toEqual(['c1', 'c3'])
+    expect([C1, C2, C3, C4].filter((c) => enVista('cerrados', c, 'u-cmm')).map((c) => c.id)).toEqual(['c4'])
+    expect(enVista('cerrados', { ...C1, state: 'cancelled' }, 'u-cmm')).toBe(true)
+    expect(enVista('mios', { ...C1, state: 'cancelled' }, 'u-cmm')).toBe(false)
   })
 
   it('sin asignación vigente no se ofrece el alta; mientras carga no dice que no hay compromisos', async () => {
