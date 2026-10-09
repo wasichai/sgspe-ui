@@ -95,7 +95,7 @@ function NuevaVisita() {
         objeto="field_visit"
         fijos={fijos}
         campos={CAMPOS_DE_LA_VISITA}
-        alGuardar={(v) => navegar(`/projects/${projectId}/field-visits/${v.id}`)}
+        alGuardar={(v) => navegar(`/projects/${encodeURIComponent(projectId)}/field-visits/${encodeURIComponent(v.id)}`)}
       />
     </section>
   )
@@ -246,7 +246,9 @@ function Visita({ visita }: { visita: Registro }) {
           ) : null}
           {escribe && can('engagement', 'CREATE') && (enCurso || visita.state === 'planned') ? (
             <Button asChild size="sm" variant="secondary">
-              <Link to={`/projects/${proyecto}/engagements/new?field_visit=${visita.id}`}>{t('relacionamiento.visita.registrarInteraccion')}</Link>
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?field_visit=${encodeURIComponent(visita.id)}`}>
+                {t('relacionamiento.visita.registrarInteraccion')}
+              </Link>
             </Button>
           ) : null}
           <BotonesDeTransicion objeto="field_visit" registro={visita} proyecto={proyecto} />
@@ -275,7 +277,10 @@ function Visita({ visita }: { visita: Registro }) {
                     {lista.map((i) => (
                       <tr key={i.id}>
                         <Td>
-                          <Link to={`/projects/${proyecto}/engagements/${i.id}`} className="text-sg-primary-text underline">
+                          <Link
+                            to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(i.id)}`}
+                            className="text-sg-primary-text underline"
+                          >
                             {texto(i, 'title')}
                           </Link>
                         </Td>
@@ -542,7 +547,10 @@ export function VisitasPage() {
                 {lista.map((v) => (
                   <tr key={v.id}>
                     <Td>
-                      <Link to={`/projects/${String(atributo(v, 'project'))}/field-visits/${v.id}`} className="text-sg-primary-text underline">
+                      <Link
+                        to={`/projects/${encodeURIComponent(String(atributo(v, 'project')))}/field-visits/${encodeURIComponent(v.id)}`}
+                        className="text-sg-primary-text underline"
+                      >
                         {texto(v, 'title')}
                       </Link>
                     </Td>

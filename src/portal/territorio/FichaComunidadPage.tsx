@@ -165,7 +165,7 @@ function Representante({ organizacion }: { organizacion: Registro }) {
     <div className="mt-3 space-y-1 text-sm">
       <p>
         {t('territorio.comunidad.representa')}:{' '}
-        <Link to={`/actors/${organizacion.id}`} className="text-sg-primary-text underline">
+        <Link to={`/actors/${encodeURIComponent(organizacion.id)}`} className="text-sg-primary-text underline">
           {texto(organizacion, 'name')}
         </Link>
       </p>
@@ -226,7 +226,10 @@ function FilaDeGrupo({ grupo }: { grupo: Registro }) {
   const nombre = useNombreDelGrupo(grupo)
   return (
     <li>
-      <Link to={`/projects/${String(atributo(grupo, 'project'))}/stakeholders/${grupo.id}`} className="text-sg-primary-text underline">
+      <Link
+        to={`/projects/${encodeURIComponent(String(atributo(grupo, 'project')))}/stakeholders/${encodeURIComponent(grupo.id)}`}
+        className="text-sg-primary-text underline"
+      >
         {nombre}
       </Link>{' '}
       · {texto(grupo, 'influence_group') || '—'}
@@ -264,7 +267,10 @@ function AreasDeMiembros({ miembros }: { miembros: Registro[] }) {
       <ul>
         {areas.registros.map((a) => (
           <li key={a.id}>
-            <Link to={`/projects/${String(atributo(a, 'project'))}/areas/${a.id}`} className="text-sg-primary-text underline">
+            <Link
+              to={`/projects/${encodeURIComponent(String(atributo(a, 'project')))}/areas/${encodeURIComponent(a.id)}`}
+              className="text-sg-primary-text underline"
+            >
               {texto(a, 'area_type')} · v{texto(a, 'version_number')}
             </Link>{' '}
             · {condicionDe(a.id)}

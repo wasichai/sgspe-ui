@@ -135,10 +135,14 @@ export function ProyectosPage() {
             </thead>
             <tbody>
               {filtrados.map((p) => (
-                <tr key={p.id} className="cursor-pointer hover:bg-sg-surface-hover" onClick={() => navegar(`/projects/${p.id}/overview`)}>
+                <tr key={p.id} className="cursor-pointer hover:bg-sg-surface-hover" onClick={() => navegar(`/projects/${encodeURIComponent(p.id)}/overview`)}>
                   <Td className="font-sg-mono text-sg-caption">{texto(p, 'code')}</Td>
                   <Td>
-                    <Link to={`/projects/${p.id}/overview`} className="font-medium text-sg-primary-text" onClick={(e) => e.stopPropagation()}>
+                    <Link
+                      to={`/projects/${encodeURIComponent(p.id)}/overview`}
+                      className="font-medium text-sg-primary-text"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {texto(p, 'name')}
                     </Link>
                   </Td>

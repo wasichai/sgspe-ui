@@ -9,39 +9,39 @@ import { atributo, type Registro } from './registros'
 // medida o una revisión no traen proyecto: se ven en la ficha de su riesgo y no tienen ruta propia
 export function rutaDeFicha(objeto: string, registro: Registro): string | null {
   const proyecto = atributo<string>(registro, 'project')
-  const id = encodeURIComponent(registro.id)
+  const idEnRuta = encodeURIComponent(registro.id)
   const enProyecto = (resto: string) => (proyecto ? `/projects/${encodeURIComponent(proyecto)}/${resto}` : null)
-  if (esQcs(objeto)) return enProyecto(`${RUTA_DE_QCS[objeto]}/${id}`)
+  if (esQcs(objeto)) return enProyecto(`${RUTA_DE_QCS[objeto]}/${idEnRuta}`)
   switch (objeto) {
     case 'project':
-      return `/projects/${id}/overview`
+      return `/projects/${idEnRuta}/overview`
     case 'commitment':
-      return enProyecto(`commitments/${id}`)
+      return enProyecto(`commitments/${idEnRuta}`)
     case 'agreement':
-      return enProyecto(`agreements/${id}`)
+      return enProyecto(`agreements/${idEnRuta}`)
     case 'engagement':
-      return enProyecto(`engagements/${id}`)
+      return enProyecto(`engagements/${idEnRuta}`)
     case 'stakeholder':
-      return enProyecto(`stakeholders/${id}`)
+      return enProyecto(`stakeholders/${idEnRuta}`)
     case 'area_of_influence':
-      return enProyecto(`areas/${id}`)
+      return enProyecto(`areas/${idEnRuta}`)
     case 'field_visit':
-      return enProyecto(`field-visits/${id}`)
+      return enProyecto(`field-visits/${idEnRuta}`)
     case 'task':
-      return enProyecto(`tasks?task=${id}`)
+      return enProyecto(`tasks?task=${idEnRuta}`)
     case 'evidence':
       // una evidencia del tenant (sin proyecto) tiene su ficha en la biblioteca global
-      return proyecto ? `/projects/${encodeURIComponent(proyecto)}/documents/${id}` : `/documents/${id}`
+      return proyecto ? `/projects/${encodeURIComponent(proyecto)}/documents/${idEnRuta}` : `/documents/${idEnRuta}`
     case 'social_risk':
-      return enProyecto(`risks/${id}`)
+      return enProyecto(`risks/${idEnRuta}`)
     case 'early_warning':
-      return enProyecto(`risks/warnings/${id}`)
+      return enProyecto(`risks/warnings/${idEnRuta}`)
     case 'incident':
-      return enProyecto(`incidents/${id}`)
+      return enProyecto(`incidents/${idEnRuta}`)
     case 'media_mention':
-      return enProyecto(`risks/mentions/${id}`)
+      return enProyecto(`risks/mentions/${idEnRuta}`)
     case 'early_warning_signal':
-      return enProyecto(`risks/signals/${id}`)
+      return enProyecto(`risks/signals/${idEnRuta}`)
     case 'potential_impact':
       return enProyecto('risks/impacts')
     case 'early_warning_rule':

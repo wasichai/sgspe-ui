@@ -306,7 +306,7 @@ function Asistente() {
             }
           }
           void cliente.invalidateQueries({ queryKey: ['records', 'commitment'] })
-          navegar(`/projects/${encodeURIComponent(projectId)}/commitments/${compromiso.id}`)
+          navegar(`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(compromiso.id)}`)
         } catch (e) {
           setFallo(e)
         } finally {
@@ -541,7 +541,7 @@ function Asistente() {
                   {creado ? <p>{t('nuevoCompromiso.revision.parcial')}</p> : null}
                   <p>{mensaje(fallo)}</p>
                   {creado ? (
-                    <Link to={`/projects/${encodeURIComponent(projectId)}/commitments/${creado.id}`} className="underline">
+                    <Link to={`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(creado.id)}`} className="underline">
                       {t('nuevoCompromiso.revision.abrirFicha')}
                     </Link>
                   ) : null}

@@ -75,7 +75,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
       {
         onSuccess: (i) => {
           setClave(nuevaClave())
-          navegar(`/projects/${projectId}/engagements/${i.id}`)
+          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
         }
       }
     )

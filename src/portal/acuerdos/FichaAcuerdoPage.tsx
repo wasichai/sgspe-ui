@@ -180,7 +180,10 @@ function Clausulas({ acuerdo, escribe }: { acuerdo: Registro; escribe: boolean }
                       <ul>
                         {deLaClausula.map((x) => (
                           <li key={x.id}>
-                            <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${x.id}`} className="text-sg-primary-text underline">
+                            <Link
+                              to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(x.id)}`}
+                              className="text-sg-primary-text underline"
+                            >
                               {texto(x, 'code')} · {texto(x, 'title')}
                             </Link>
                           </li>
@@ -284,7 +287,10 @@ function Titulares({ acuerdo }: { acuerdo: Registro }) {
     <section className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
       <h2 className="font-semibold">{t('acuerdos.ficha.comunidad')}</h2>
       {comunidad.data ? (
-        <Link to={`/territory/communities/${comunidad.data.id}?project=${encodeURIComponent(proyecto)}`} className="text-sg-primary-text underline">
+        <Link
+          to={`/territory/communities/${encodeURIComponent(comunidad.data.id)}?project=${encodeURIComponent(proyecto)}`}
+          className="text-sg-primary-text underline"
+        >
           {texto(comunidad.data, 'name')}
         </Link>
       ) : atributo(acuerdo, 'community') ? (
@@ -298,7 +304,7 @@ function Titulares({ acuerdo }: { acuerdo: Registro }) {
       )}
       <h2 className="font-semibold">{t('acuerdos.ficha.asamblea')}</h2>
       {asamblea.data ? (
-        <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${asamblea.data.id}`} className="text-sg-primary-text underline">
+        <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(asamblea.data.id)}`} className="text-sg-primary-text underline">
           {texto(asamblea.data, 'title')} · {texto(asamblea.data, 'engagement_type')}
         </Link>
       ) : atributo(acuerdo, 'assembly_engagement') ? (

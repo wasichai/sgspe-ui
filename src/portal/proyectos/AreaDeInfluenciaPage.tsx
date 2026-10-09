@@ -113,7 +113,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
           {(versiones.data ?? []).map((v) => (
             <li key={v.id}>
               <Link
-                to={`/projects/${proyecto}/areas/${v.id}`}
+                to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(v.id)}`}
                 aria-current={v.id === area.id ? 'page' : undefined}
                 className="rounded-sg-sm border border-sg-border px-2 py-0.5"
               >
@@ -409,7 +409,7 @@ function NuevaVersion({ area, miembros, versionesListas }: { area: Registro; mie
       void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence'] })
       void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence_member'] })
     },
-    onSuccess: (nueva) => navegar(`/projects/${proyecto}/areas/${nueva.id}`)
+    onSuccess: (nueva) => navegar(`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(nueva.id)}`)
   })
   return (
     <div className="flex flex-col items-end gap-2">
@@ -422,7 +422,10 @@ function NuevaVersion({ area, miembros, versionesListas }: { area: Registro; mie
           {creada ? (
             <p className="mt-1">
               {t('areas.versionCreada', { version: texto(creada, 'version_number') })}{' '}
-              <Link to={`/projects/${proyecto}/areas/${creada.id}`} className="font-medium text-sg-primary-text underline">
+              <Link
+                to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(creada.id)}`}
+                className="font-medium text-sg-primary-text underline"
+              >
                 {t('areas.continuarEnLaCreada')}
               </Link>
             </p>

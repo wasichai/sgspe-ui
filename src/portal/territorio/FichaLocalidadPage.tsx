@@ -79,7 +79,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
               <Dato etiqueta={t('territorio.localidad.padre')}>
                 <Referencia consulta={padre} tiene>
                   {(p) => (
-                    <Link to={`/territory/localities/${p.id}`} className="text-sg-primary-text underline">
+                    <Link to={`/territory/localities/${encodeURIComponent(p.id)}`} className="text-sg-primary-text underline">
                       {texto(p, 'name')}
                     </Link>
                   )}

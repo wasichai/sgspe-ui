@@ -15,7 +15,7 @@ export function ErrorDeGuardado({ error, proyecto }: { error: unknown; proyecto:
       <Alert tone="danger">
         <p>{t('relacionamiento.registro.parcial')}</p>
         <p>{mensaje(error.causa)}</p>
-        <Link to={`/projects/${proyecto}/engagements/${error.interaccion.id}`} className="underline">
+        <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(error.interaccion.id)}`} className="underline">
           {t('relacionamiento.registro.abrirCreada', { titulo: texto(error.interaccion, 'title') })}
         </Link>
       </Alert>

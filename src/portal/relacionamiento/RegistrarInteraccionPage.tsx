@@ -217,7 +217,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       guardar.mutate(nueva, {
         onSuccess: (i) => {
           setClave(nuevaClave())
-          navegar(`/projects/${projectId}/engagements/${i.id}`)
+          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
         }
       })
     }, alFallar)

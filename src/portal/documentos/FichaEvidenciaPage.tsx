@@ -117,7 +117,20 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
             <Dato termino={t('documentos.ficha.archivo')} valor={nombreDeArchivo ?? '—'} />
             <Dato termino={t('documentos.ficha.tipoDeArchivo')} valor={descriptor?.contentType ?? '—'} />
             <Dato termino={t('documentos.ficha.tamano')} valor={descriptor ? tamanoPe(descriptor.size) : '—'} />
-            <Dato termino={t('documentos.ficha.huella')} valor={<span className="break-all font-sg-mono text-sg-caption">{descriptor?.sha256 ?? '—'}</span>} />
+            {/* sgspe#14: la huella deja confirmar si alguien tiene un archivo concreto; se reserva como el nombre (P59) a quien no lo
+                descarga. el servidor todavía la entrega en el descriptor (UPS-24): se oculta solo en el portal */}
+            <Dato
+              termino={t('documentos.ficha.huella')}
+              valor={
+                !descriptor ? (
+                  '—'
+                ) : puedeDescargar ? (
+                  <span className="break-all font-sg-mono text-sg-caption">{descriptor.sha256}</span>
+                ) : (
+                  t('documentos.ficha.huellaReservada')
+                )
+              }
+            />
             <Dato termino={t('documentos.ficha.capturada')} valor={capturada ? fechaYHoraPe(new Date(capturada)) : '—'} />
             {ubicacion?.type === 'Point' && Array.isArray(ubicacion.coordinates) ? (
               <Dato

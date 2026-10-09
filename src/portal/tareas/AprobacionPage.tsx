@@ -108,7 +108,10 @@ function Decision({ compromiso }: { compromiso: Registro }) {
           <div>
             {t('aprobaciones.decision.origen')}:{' '}
             {origen.data ? (
-              <Link to={`/projects/${proyecto}/engagements/${origen.data.id}`} className="text-sg-primary-text underline">
+              <Link
+                to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(origen.data.id)}`}
+                className="text-sg-primary-text underline"
+              >
                 {texto(origen.data, 'title')} · {texto(origen.data, 'engagement_type')}
               </Link>
             ) : !atributo(compromiso, 'origin_engagement') ? (
@@ -119,7 +122,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
               '…'
             )}
           </div>
-          <Link to={`/projects/${proyecto}/commitments/${compromiso.id}`} className="text-sg-primary-text underline">
+          <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(compromiso.id)}`} className="text-sg-primary-text underline">
             {t('aprobaciones.decision.abrirFicha')}
           </Link>
         </section>

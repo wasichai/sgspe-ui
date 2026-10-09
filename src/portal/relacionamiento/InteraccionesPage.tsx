@@ -44,7 +44,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   // descendente por fecha programada: si el tope de lectura corta la lista, lo que queda fuera son, en general, las más antiguas.
   // una interacción solo con held_at (sin scheduled_at) queda donde el servidor ordene los nulos, así que no se promete más
   const interacciones = useTodosConTope('engagement', { project: proyecto, ...(territorio ?? {}), sort: 'scheduled_at', dir: 'desc' })
-  const base = proyecto ? `/projects/${proyecto}` : ''
+  const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const cambiar = (cambios: Record<string, string>) => {
     const siguiente = new URLSearchParams(busqueda)
     for (const [k, v] of Object.entries(cambios)) siguiente.set(k, v)
@@ -164,7 +164,7 @@ function Evento({ interaccion, motivoVisible }: { interaccion: Registro; motivoV
   return (
     <span className="group block">
       <Link
-        to={`/projects/${texto(interaccion, 'project')}/engagements/${interaccion.id}`}
+        to={`/projects/${encodeURIComponent(texto(interaccion, 'project'))}/engagements/${encodeURIComponent(interaccion.id)}`}
         title={motivo}
         aria-describedby={motivo ? idMotivo : undefined}
         className={cn('block truncate rounded-sg-sm bg-sg-surface-sunken px-1 text-sg-caption', cancelada && 'line-through')}
@@ -418,7 +418,7 @@ function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes
             {pendientes.map((i) => (
               <li key={i.id}>
                 <Link
-                  to={`/projects/${texto(i, 'project')}/engagements/${i.id}${i.state === 'held' ? '/minutes' : ''}`}
+                  to={`/projects/${encodeURIComponent(texto(i, 'project'))}/engagements/${encodeURIComponent(i.id)}${i.state === 'held' ? '/minutes' : ''}`}
                   className="text-sg-primary-text underline"
                 >
                   {i.state === 'held'

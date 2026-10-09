@@ -105,7 +105,11 @@ function Ficha({ grupo }: { grupo: Registro }) {
             <span>{texto(grupo, 'stakeholder_scope')}</span>
             <span>{texto(grupo, 'owner_user_email')}</span>
             {actor.id ? (
-              <Link to={`/actors/${actor.id}?project=${proyecto}`} state={paso(nombre)} className="text-sg-primary-text underline">
+              <Link
+                to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
+                state={paso(nombre)}
+                className="text-sg-primary-text underline"
+              >
                 {t('grupos.ficha.actor')}
               </Link>
             ) : null}
@@ -114,7 +118,9 @@ function Ficha({ grupo }: { grupo: Registro }) {
         <div className="flex flex-wrap gap-2">
           {escribeEnElProyecto && can('engagement', 'CREATE') ? (
             <Button asChild size="sm">
-              <Link to={`/projects/${proyecto}/engagements/new?stakeholders=${grupo.id}`}>{t('grupos.ficha.registrar')}</Link>
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
+                {t('grupos.ficha.registrar')}
+              </Link>
             </Button>
           ) : null}
           {evalua ? (
@@ -282,7 +288,7 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
       <ul>
         {(interacciones.data?.content ?? []).map((e) => (
           <li key={e.id}>
-            <Link to={`/projects/${proyecto}/engagements/${e.id}`} className="text-sg-primary-text underline">
+            <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`} className="text-sg-primary-text underline">
               {texto(e, 'title')}
             </Link>
             {dia(e) ? <> · {dia(e)}</> : null}

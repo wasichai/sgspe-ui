@@ -11,7 +11,7 @@ import { NS } from '../i18n'
 // dice «no disponible», nunca una lista vacía
 export function AcuerdosDeLaInteraccion({ interaccion }: { interaccion: Registro }) {
   const { t } = useTranslation(NS)
-  const proyecto = encodeURIComponent(texto(interaccion, 'project'))
+  const proyecto = texto(interaccion, 'project')
   const acuerdos = useTodos('agreement', { assembly_engagement: interaccion.id })
   const compromisos = useTodos('commitment', { origin_engagement: interaccion.id })
   return (
@@ -27,7 +27,7 @@ export function AcuerdosDeLaInteraccion({ interaccion }: { interaccion: Registro
         <ul className="space-y-1">
           {acuerdos.data.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center gap-2">
-              <Link to={`/projects/${proyecto}/agreements/${a.id}`} className="text-sg-primary-text underline">
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
                 {texto(a, 'code')} · {texto(a, 'title')}
               </Link>
               <EstadoChip objeto="agreement" estado={a.state} />
@@ -46,7 +46,7 @@ export function AcuerdosDeLaInteraccion({ interaccion }: { interaccion: Registro
         <ul className="space-y-1">
           {compromisos.data.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-2">
-              <Link to={`/projects/${proyecto}/commitments/${c.id}`} className="text-sg-primary-text underline">
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`} className="text-sg-primary-text underline">
                 {texto(c, 'code')} · {texto(c, 'title')}
               </Link>
               <EstadoChip objeto="commitment" estado={c.state} />

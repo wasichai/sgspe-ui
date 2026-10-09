@@ -255,14 +255,17 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   const guardarYSalir = handleSubmit(async (v) => {
     // sin la asignación propia (P40) se sale sin escribir: el borrador ya existe y se completa al volver
     const guardado = faltaAsignarse ? proyecto : !proyecto || sucio ? await persistir(v) : proyecto
-    if (guardado) navegar(`/projects/${guardado.id}/overview`)
+    if (guardado) navegar(`/projects/${encodeURIComponent(guardado.id)}/overview`)
   }, alInvalidar)
 
   const siguiente = (e?: React.BaseSyntheticEvent) => void moverA(Math.min(paso + 1, PASO_REVISION))(e)
 
   const enviar = () => {
     if (!proyecto) return
-    enviarARevision.mutate({ registro: proyecto, transicion: 'submit_for_review' }, { onSuccess: () => navegar(`/projects/${proyecto.id}/overview`) })
+    enviarARevision.mutate(
+      { registro: proyecto, transicion: 'submit_for_review' },
+      { onSuccess: () => navegar(`/projects/${encodeURIComponent(proyecto.id)}/overview`) }
+    )
   }
 
   // el mensaje de un error del servidor (setError) o, el de Zod, en el idioma del portal

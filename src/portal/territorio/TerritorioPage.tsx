@@ -31,7 +31,7 @@ export function TerritorioPage() {
   const [creando, setCreando] = useState(false)
   const estados = useCapas([...encendidas], { project: proyecto, bbox: encuadre })
   const sufijo = proyecto ? `?project=${encodeURIComponent(proyecto)}` : ''
-  const rutaDe = (objeto: string, id: string) => (FICHA[objeto] ? `/territory/${FICHA[objeto]}/${id}${sufijo}` : null)
+  const rutaDe = (objeto: string, id: string) => (FICHA[objeto] ? `/territory/${FICHA[objeto]}/${encodeURIComponent(id)}${sufijo}` : null)
   // los lugares con ficha, sin repetir (una localidad puede estar en dos capas); elegir un elemento lleva a su lugar
   const lugares = new Map<string, { id: string; objeto: string; nombre: string }>()
   for (const estado of estados)
@@ -126,7 +126,11 @@ export function TerritorioPage() {
         </nav>
       </div>
       <Drawer titulo={t('mapa.nuevaComunidad')} abierto={creando} alCerrar={() => setCreando(false)}>
-        <FormularioDeRegistro objeto="community" alGuardar={(c) => navegar(`/territory/communities/${c.id}${sufijo}`)} alCancelar={() => setCreando(false)} />
+        <FormularioDeRegistro
+          objeto="community"
+          alGuardar={(c) => navegar(`/territory/communities/${encodeURIComponent(c.id)}${sufijo}`)}
+          alCancelar={() => setCreando(false)}
+        />
       </Drawer>
     </section>
   )

@@ -288,7 +288,10 @@ function Pendientes({ proyecto, filtros }: { proyecto?: string; filtros: Filtros
                 <tr key={c.id}>
                   <Td className="font-sg-mono text-sm">{texto(c, 'code')}</Td>
                   <Td className="text-sm">
-                    <Link to={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${c.id}`} className="text-sg-primary-text underline">
+                    <Link
+                      to={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
+                      className="text-sg-primary-text underline"
+                    >
                       {texto(c, 'title')}
                     </Link>
                   </Td>

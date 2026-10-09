@@ -81,7 +81,10 @@ export function AcuerdosPage() {
                   <tr key={a.id}>
                     <Td className="font-sg-mono text-sm">{texto(a, 'code')}</Td>
                     <Td className="text-sm">
-                      <Link to={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${a.id}`} className="text-sg-primary-text underline">
+                      <Link
+                        to={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
+                        className="text-sg-primary-text underline"
+                      >
                         {texto(a, 'title')}
                       </Link>
                     </Td>
@@ -114,7 +117,7 @@ export function AcuerdosPage() {
             alGuardar={(a) => {
               setCreando(false)
               setMotivo('')
-              navegar(`/projects/${encodeURIComponent(proyecto)}/agreements/${a.id}`)
+              navegar(`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`)
             }}
             alCancelar={() => setCreando(false)}
           />

@@ -40,7 +40,7 @@ export function DetalleDeIndicadorPage() {
   const { scope } = useContextFilters()
   const filtros = useFiltrosDeTablero()
   const indicador = useIndicador(code, filtros)
-  const tablero = scope.kind === 'project' ? `/projects/${scope.projectId}/stakeholders/dashboard` : '/stakeholders/dashboard'
+  const tablero = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}/stakeholders/dashboard` : '/stakeholders/dashboard'
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
       <Link to={`${tablero}${search}`} className="text-sm text-sg-primary-text underline">
