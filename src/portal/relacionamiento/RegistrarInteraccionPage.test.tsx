@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, useQueryClient } from '@tanstack/react-query'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
@@ -192,6 +192,38 @@ describe('S24 · registrar interacción', () => {
     expect(red.a('POST', '/objects/engagement_participant/records')[0].cuerpo).toMatchObject({
       attributes: { sex: 'FEMENINO', participant_scope: 'AIDS', represented_people_count: 2, attended: true }
     })
+  })
+
+  it('en el modo rápido la ubicación lleva plazo y edad máxima, dice que espera y descarta una respuesta tardía (revisión final, M4)', async () => {
+    const lectura: { ok?: (p: unknown) => void; mal?: (e: unknown) => void; opciones?: PositionOptions; llamadas: number } = { llamadas: 0 }
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      geolocation: {
+        getCurrentPosition: (ok: (p: unknown) => void, mal: (e: unknown) => void, opciones?: PositionOptions) => {
+          lectura.llamadas += 1
+          Object.assign(lectura, { ok, mal, opciones })
+        }
+      }
+    })
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick', RELACIONISTA, EQUIPO, rutas())
+    const boton = await screen.findByRole('button', { name: 'Usar la ubicación del teléfono' })
+    await userEvent.click(boton)
+    expect(lectura.opciones).toEqual({ timeout: 15000, maximumAge: 30000, enableHighAccuracy: true })
+    expect(screen.getByText('Obteniendo ubicación…')).toBeInTheDocument()
+    expect(boton).toBeDisabled()
+    // vence: lo dice y deja reintentar
+    const primeraOk = lectura.ok
+    act(() => lectura.mal?.({ code: 3, message: 'Timeout expired' }))
+    expect(await screen.findByText('No se pudo leer la ubicación')).toBeInTheDocument()
+    expect(boton).toBeEnabled()
+    await userEvent.click(boton)
+    expect(lectura.llamadas).toBe(2)
+    // la respuesta tardía de la primera lectura no cuenta; la de la segunda, sí
+    act(() => primeraOk?.({ coords: { longitude: -70, latitude: -10 } }))
+    expect(screen.queryByText(/-10\.00000/)).not.toBeInTheDocument()
+    act(() => lectura.ok?.({ coords: { longitude: -78.1, latitude: -8.2 } }))
+    expect(await screen.findByText(/-8\.20000/)).toBeInTheDocument()
+    expect(screen.queryByText('Obteniendo ubicación…')).not.toBeInTheDocument()
   })
 
   const TRANSICION = '/objects/engagement/records/e9/transitions/register_held_unplanned'

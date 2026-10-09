@@ -35,6 +35,7 @@ import { Mapa } from '../mapa/Mapa'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { diaDe } from './fechas'
 import { CodigoDeProyecto } from './InteraccionesPage'
+import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 
 // S26 · visita de campo (screens.md §6, WF-L): el camino Planificada → En curso → Concluida o Parcial, el mapa con la ruta,
 // las interacciones y las observaciones, y "Agregar observación aquí" con la ubicación del teléfono o con coordenadas
@@ -364,12 +365,6 @@ function ResultadoDeLaVisita({ visita, alGuardar, alCancelar }: { visita: Regist
   )
 }
 
-type Punto = [number, number]
-
-// la lectura de la ubicación del teléfono: a los 15 s sin respuesta se da por fallida, y una posición de hace menos de 30 s sirve
-const PLAZO_DE_UBICACION = 15_000
-const EDAD_MAXIMA_DE_UBICACION = 30_000
-
 // el punto de las coordenadas tecleadas: ambas o ninguna, en grados decimales (la coma decimal se acepta). null es «sin
 // punto»; undefined, un valor que no es una coordenada
 function puntoDe(longitud: string, latitud: string): Punto | null | undefined {
@@ -395,10 +390,8 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
   const [observacion, setObservacion] = useState('')
   const [longitud, setLongitud] = useState('')
   const [latitud, setLatitud] = useState('')
-  const [sinUbicacion, setSinUbicacion] = useState(false)
   // la lectura de la ubicación en curso: un resultado tardío no pisa las coordenadas que la persona escribió después
-  const [ubicando, setUbicando] = useState(false)
-  const lecturaDeUbicacion = useRef(0)
+  const telefono = useUbicacionDelTelefono()
   const [faltas, setFaltas] = useState<{ observacion?: string; punto?: string }>({})
   const crear = useMutation({
     mutationFn: (punto: Punto | null) => {
@@ -440,34 +433,17 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
   }
   // teclear una coordenada deja sin efecto la lectura de ubicación que todavía no respondió
   const escribirCoordenada = (poner: () => void) => {
-    lecturaDeUbicacion.current += 1
-    setUbicando(false)
+    telefono.descartar()
     editar(poner)
   }
 
-  const leerUbicacion = () => {
-    setSinUbicacion(false)
-    if (!navigator.geolocation) return setSinUbicacion(true)
-    const mia = ++lecturaDeUbicacion.current
-    setUbicando(true)
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        if (lecturaDeUbicacion.current !== mia) return
-        setUbicando(false)
-        editar(() => {
-          setLongitud(String(Number(p.coords.longitude.toFixed(6))))
-          setLatitud(String(Number(p.coords.latitude.toFixed(6))))
-        })
-      },
-      () => {
-        if (lecturaDeUbicacion.current !== mia) return
-        setUbicando(false)
-        setSinUbicacion(true)
-      },
-      // sin plazo la espera sería infinita (permiso sin responder, GPS lento); una posición reciente basta para «aquí»
-      { timeout: PLAZO_DE_UBICACION, maximumAge: EDAD_MAXIMA_DE_UBICACION, enableHighAccuracy: true }
+  const leerUbicacion = () =>
+    telefono.leer(([lon, lat]) =>
+      editar(() => {
+        setLongitud(String(Number(lon.toFixed(6))))
+        setLatitud(String(Number(lat.toFixed(6))))
+      })
     )
-  }
 
   const guardar = () => {
     const punto = conPunto ? puntoDe(longitud, latitud) : null
@@ -487,15 +463,15 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
       </Campo>
       {conPunto ? (
         <fieldset className="space-y-2">
-          <Button type="button" variant="secondary" className="h-11 w-full" disabled={ubicando} aria-busy={ubicando} onClick={leerUbicacion}>
+          <Button type="button" variant="secondary" className="h-11 w-full" disabled={telefono.ubicando} aria-busy={telefono.ubicando} onClick={leerUbicacion}>
             {t('relacionamiento.registro.usarUbicacion')}
           </Button>
-          {ubicando ? (
+          {telefono.ubicando ? (
             <p role="status" className="text-sg-caption text-sg-text-muted">
               {t('relacionamiento.visita.obteniendoUbicacion')}
             </p>
           ) : null}
-          {sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
+          {telefono.sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
           <div className="grid grid-cols-2 gap-2">
             <Campo etiqueta={t('relacionamiento.visita.longitud')}>
               {(p) => (

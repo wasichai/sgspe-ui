@@ -14,6 +14,7 @@ import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { GuardadoParcial, useGuardarInteraccion, type Participante } from './guardarInteraccion'
 import { conModo } from './modos'
+import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 
 // el modo rápido de campo de S24 (screens.md §6, S55): una sola pantalla con el tipo, la ubicación del teléfono, los
 // grupos presentes, contadores por sexo y ámbito (objetivos de 44 px) y una nota; guarda la interacción como realizada
@@ -35,21 +36,12 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
   // abierto desde un grupo de interés (S16) o una visita de campo (S26): trae sus grupos y la visita
   const [presentes, setPresentes] = useState<string[]>(() => busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? [])
   const [conteos, setConteos] = useState<Record<Clave, number>>({})
-  const [ubicacion, setUbicacion] = useState<[number, number] | null>(null)
-  const [sinUbicacion, setSinUbicacion] = useState(false)
+  const [ubicacion, setUbicacion] = useState<Punto | null>(null)
+  const telefono = useUbicacionDelTelefono()
   const sexos = definicionDeParticipante.fields.find((f) => f.name === 'sex')?.enumOptions ?? []
   const ambitos = definicionDeParticipante.fields.find((f) => f.name === 'participant_scope')?.enumOptions ?? []
   const total = Object.values(conteos).reduce((s, n) => s + n, 0)
   const sumar = (clave: Clave, n: number) => setConteos({ ...conteos, [clave]: Math.max(0, (conteos[clave] ?? 0) + n) })
-
-  const leerUbicacion = () => {
-    setSinUbicacion(false)
-    if (!navigator.geolocation) return setSinUbicacion(true)
-    navigator.geolocation.getCurrentPosition(
-      (p) => setUbicacion([p.coords.longitude, p.coords.latitude]),
-      () => setSinUbicacion(true)
-    )
-  }
 
   const enviar = () => {
     // el día es el de Lima y el instante, UTC: a las 23:30 de Lima ya es el día siguiente en UTC
@@ -109,13 +101,25 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
         )}
       </Campo>
       <div className="space-y-1">
-        <Button type="button" variant="secondary" className="h-11 w-full" onClick={leerUbicacion}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="h-11 w-full"
+          disabled={telefono.ubicando}
+          aria-busy={telefono.ubicando}
+          onClick={() => telefono.leer(setUbicacion)}
+        >
           {t('relacionamiento.registro.usarUbicacion')}
         </Button>
+        {telefono.ubicando ? (
+          <p role="status" className="text-sg-caption text-sg-text-muted">
+            {t('relacionamiento.visita.obteniendoUbicacion')}
+          </p>
+        ) : null}
         {ubicacion ? (
           <p className="text-sg-caption">{t('relacionamiento.registro.ubicacion', { lat: ubicacion[1].toFixed(5), lon: ubicacion[0].toFixed(5) })}</p>
         ) : null}
-        {sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
+        {telefono.sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
       </div>
       <fieldset className="space-y-1">
         <legend className="text-sg-label font-medium">{t('relacionamiento.registro.grupos')}</legend>
