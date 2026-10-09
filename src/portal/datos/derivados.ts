@@ -1,5 +1,5 @@
-// los campos derivados de F2 (database-model.md, marca "(derivado)"; "derived": true en model.json): los escribe solo el
-// código de SGSPE. la API genérica responde 400 a un valor distinto del guardado (DerivedFieldsGuard) y devuelve el
+// los campos derivados de F2 y F3 (database-model.md, marca "(derivado)"; "derived": true en model.json): los escribe solo el
+// código de SGSPE (en F3, CommitmentDerivationsListener y JOB-01). la API genérica responde 400 a un valor distinto del guardado (DerivedFieldsGuard) y devuelve el
 // guardado al que el PUT deja vacío (DerivedFieldsKeeper, plan 2.2). el portal los muestra y nunca los envía
 export const CAMPOS_DERIVADOS: Readonly<Record<string, readonly string[]>> = {
   exploration_campaign: ['executed_social_amount', 'other_currency_items_count'],
@@ -28,7 +28,10 @@ export const CAMPOS_DERIVADOS: Readonly<Record<string, readonly string[]>> = {
     'attendees_regional_count',
     'attendees_national_count'
   ],
-  strategic_alliance: ['formalized']
+  strategic_alliance: ['formalized'],
+  commitment: ['executed_amount', 'deadline_status', 'requires_senior_approval', 'fulfilled_date', 'closed_date', 'cancelled_date'],
+  agreement: ['validity_status'],
+  task: ['deadline_status']
 }
 
 export const esDerivado = (objeto: string, campo: string): boolean => CAMPOS_DERIVADOS[objeto]?.includes(campo) ?? false

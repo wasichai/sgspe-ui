@@ -18,6 +18,12 @@ export function useMensajeDeError(): (error: unknown, propios?: MensajesPropios)
   const { t } = useTranslation(NS)
   return (error, propios = {}) => {
     if (!(error instanceof ApiError)) return t('comun.errores.red')
+    // la cabecera nativa Idempotency-Key de wasichai (WAS-ADR-0058) responde con texto libre sobre el campo de la cabecera: se
+    // dice como los códigos de SGSPE del mismo contrato
+    if (error.violations.some((v) => v.field === 'Idempotency-Key' && !esCodigo(v.message))) {
+      if (error.status === 409) return t('comun.codigos.IDEMPOTENCY_IN_FLIGHT')
+      if (error.status === 422) return t('comun.codigos.IDEMPOTENCY_KEY_REUSED')
+    }
     // todas las violaciones con código, no solo la primera; si dos dicen lo mismo, se dice una vez
     const dichos = new Set<string>()
     for (const v of error.violations) {
