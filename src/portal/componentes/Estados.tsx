@@ -1,5 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Alert, Button, cn } from '@wasichai/ui'
+import { Alert, Button, cn, Th } from '@wasichai/ui'
 import { CircleHelp, Info, Lock } from 'lucide-react'
 import { type ReactNode, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -105,7 +105,8 @@ export function Restringido({ describedPor }: { describedPor?: string }) {
   )
 }
 
-// la explicación única de una columna con celdas restringidas o no disponibles: va en el encabezado, con el id que las celdas
+// la explicación única de una columna con celdas restringidas o no disponibles: va en el encabezado (ThConExplicacion, que la
+// deja fuera del nombre de la columna), con el id que las celdas
 // (Restringido o NoDisponible con describedPor) referencian. con soloLectores no lleva botón: el motivo queda en el DOM para
 // los lectores de pantalla y la vista se queda con el candado y la etiqueta de cada celda (cuando no se sabe de antemano si
 // alguna celda se restringirá)
@@ -126,14 +127,38 @@ export function ExplicacionDeColumna({ id, tipo, soloLectores }: { id: string; t
   )
 }
 
+// el encabezado de una columna con explicación única: el nombre accesible es solo el de la columna (aria-labelledby al texto),
+// sin el botón de ayuda ni el motivo, que las celdas leen por aria-describedby; así un lector de pantalla no anuncia
+// «Postura, Por qué no se muestra, Su rol no puede leer este dato» en cada celda
+export function ThConExplicacion({
+  children,
+  explicacion,
+  tipo,
+  soloLectores
+}: {
+  children: ReactNode
+  explicacion: string
+  tipo: 'restringido' | 'noDisponible'
+  soloLectores?: boolean
+}) {
+  const nombre = useId()
+  return (
+    <Th scope="col" aria-labelledby={nombre}>
+      <span id={nombre}>{children}</span>
+      <ExplicacionDeColumna id={explicacion} tipo={tipo} soloLectores={soloLectores} />
+    </Th>
+  )
+}
+
 // un dato que no se muestra dice por qué (unavailableReason, plan 2.2): sin permiso sobre un campo o un objeto, candado
 // y "No disponible"; si el indicador se calcula para un solo proyecto, pide elegirlo. sin motivo, el texto es neutro: sirve
 // igual para una cifra que para una lista
 export function NoDisponible({ motivo, describedPor, enLista }: { motivo?: string | null; describedPor?: string; enLista?: boolean }) {
   const { t } = useTranslation(NS)
   // en una lista o un registro, el motivo no habla de «cifra»: comun.noDisponibleEnLista lo dice sin esa palabra y, si no
-  // tiene variante, vale el de la cifra
-  const claves = motivo ? [...(enLista ? [`comun.noDisponibleEnLista.${motivo}`] : []), `comun.noDisponiblePorMotivo.${motivo}`] : []
+  // tiene variante, vale el de la cifra; un motivo que es el código de una guarda (NOT_ASSIGNED…) se dice con comun.codigos,
+  // el mismo texto que las demás pantallas, y uno sin texto cae en el neutro
+  const claves = motivo ? [...(enLista ? [`comun.noDisponibleEnLista.${motivo}`] : []), `comun.noDisponiblePorMotivo.${motivo}`, `comun.codigos.${motivo}`] : []
   const ayuda = motivo ? t(claves, { defaultValue: t('comun.noDisponibleAyuda') }) : t('comun.noDisponibleAyuda')
   const unProyecto = motivo === 'SINGLE_PROJECT_REQUIRED'
   return (

@@ -7,7 +7,7 @@ import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
 import { EstadoChip } from './EstadoChip'
-import { Cargando, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido } from './Estados'
+import { Cargando, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido, ThConExplicacion } from './Estados'
 import { KpiCard } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
@@ -160,11 +160,57 @@ describe('celdas de tabla restringidas', () => {
     expect(document.getElementById('explica')).toHaveClass('sr-only')
   })
 
+  it('el encabezado con explicación se llama solo por el nombre de la columna y las celdas leen el motivo', async () => {
+    montar(
+      <table>
+        <thead>
+          <tr>
+            <ThConExplicacion explicacion="explica" tipo="restringido">
+              Postura
+            </ThConExplicacion>
+            <ThConExplicacion explicacion="solo" tipo="noDisponible" soloLectores>
+              Lugar
+            </ThConExplicacion>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <Restringido describedPor="explica" />
+            </td>
+            <td>
+              <NoDisponible describedPor="solo" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    )
+    // ni el botón «Por qué no se muestra» ni el texto del motivo entran en el nombre del encabezado
+    expect(await screen.findByRole('columnheader', { name: 'Postura' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Lugar' })).toBeInTheDocument()
+    expect(screen.getByText('Restringido')).toHaveAccessibleDescription('Su rol no puede leer este dato')
+    expect(screen.getByText('No disponible')).toHaveAccessibleDescription('Su cuenta no puede leer estos datos')
+  })
+
   it('el botón de ayuda aislado mide al menos 24 px y tiene su foco visible', async () => {
     montar(<Restringido />)
     const boton = await screen.findByRole('button', { name: 'Por qué no se muestra' })
     expect(boton).toHaveClass('size-6')
     expect(boton.className).toMatch(/focus-visible:outline-/)
+  })
+
+  it('un motivo que es el código de una guarda se dice con el texto de los códigos, sin duplicarlo', async () => {
+    montar(
+      <>
+        <NoDisponible motivo="NOT_ASSIGNED" />
+        <NoDisponible motivo="ROLE_REQUIRED" />
+        <NoDisponible motivo="CODIGO_SIN_TEXTO" />
+      </>
+    )
+    const [asignacion, rol, sinTexto] = await screen.findAllByText('No disponible')
+    expect(asignacion).toHaveAttribute('title', 'No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.')
+    expect(rol).toHaveAttribute('title', 'Su rol no puede dar este paso del flujo.')
+    expect(sinTexto).toHaveAttribute('title', 'Su cuenta no puede leer estos datos')
   })
 
   it('sin motivo, la ayuda de No disponible no habla de cifras: sirve para una lista', async () => {

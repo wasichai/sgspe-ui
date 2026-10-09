@@ -8,7 +8,7 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
-import { Cargando, Consulta, ErrorDeCarga, ExplicacionDeColumna, NoDisponible } from '../componentes/Estados'
+import { Cargando, Consulta, ErrorDeCarga, NoDisponible, ThConExplicacion } from '../componentes/Estados'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError, usePedir } from '../datos/http'
 import { atributo, leerTodos, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
@@ -129,12 +129,17 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
       <Table aria-label={t('areas.miembros')}>
         <thead>
           <tr>
-            {(['lugar', 'tipo', 'condicion', 'criterio', 'justificacion', 'estudiado'] as const).map((c) => (
-              <Th key={c} scope="col">
-                {t(`areas.columnas.${c}`)}
-                {c === 'lugar' ? <ExplicacionDeColumna id={idDelLugar} tipo="noDisponible" soloLectores /> : null}
-              </Th>
-            ))}
+            {(['lugar', 'tipo', 'condicion', 'criterio', 'justificacion', 'estudiado'] as const).map((c) =>
+              c === 'lugar' ? (
+                <ThConExplicacion key={c} explicacion={idDelLugar} tipo="noDisponible" soloLectores>
+                  {t(`areas.columnas.${c}`)}
+                </ThConExplicacion>
+              ) : (
+                <Th key={c} scope="col">
+                  {t(`areas.columnas.${c}`)}
+                </Th>
+              )
+            )}
             {vigente ? <Th scope="col">{t('areas.columnas.comparacion')}</Th> : null}
           </tr>
         </thead>

@@ -10,12 +10,12 @@ export const ES_COMUN = {
   porQue: 'Por qué no se muestra',
   noDisponible: 'No disponible',
   noDisponibleAyuda: 'Su cuenta no puede leer estos datos',
-  // unavailableReason de un indicador (plan 2.2): por qué una cifra no se muestra
+  // unavailableReason de un indicador (plan 2.2): por qué una cifra no se muestra. un motivo que es el código de una guarda
+  // (NOT_ASSIGNED, ROLE_REQUIRED…) y no está aquí se dice con comun.codigos
   noDisponiblePorMotivo: {
     FIELD_NOT_READABLE: 'Su rol no puede leer un dato de esta cifra',
     OBJECT_NOT_READABLE: 'Su rol no puede leer los registros de esta cifra',
-    SINGLE_PROJECT_REQUIRED: 'Esta cifra se calcula para un solo proyecto: elija uno en el selector',
-    NOT_ASSIGNED: 'No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.'
+    SINGLE_PROJECT_REQUIRED: 'Esta cifra se calcula para un solo proyecto: elija uno en el selector'
   },
   // el mismo motivo cuando lo que no se muestra es una lista o un registro, no una cifra
   noDisponibleEnLista: {
@@ -145,8 +145,7 @@ export const EN_COMUN: typeof ES_COMUN = {
   noDisponiblePorMotivo: {
     FIELD_NOT_READABLE: 'Your role cannot read a field behind this figure',
     OBJECT_NOT_READABLE: 'Your role cannot read the records behind this figure',
-    SINGLE_PROJECT_REQUIRED: 'This figure is computed for one project: pick one in the selector',
-    NOT_ASSIGNED: 'You have no current assignment to this project: ask the project administration for one.'
+    SINGLE_PROJECT_REQUIRED: 'This figure is computed for one project: pick one in the selector'
   },
   noDisponibleEnLista: {
     FIELD_NOT_READABLE: 'Your role cannot read a field in this information',

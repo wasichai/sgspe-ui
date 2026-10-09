@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, NoDisponible, Restringido, ThConExplicacion } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { useProyecto } from '../contexto/proyectos'
@@ -202,12 +202,17 @@ export function GruposPage() {
                           'evaluacion',
                           'contacto'
                         ] as const
-                      ).map((c) => (
-                        <Th key={c} scope="col">
-                          {t(`grupos.columnas.${c}`)}
-                          {c === 'postura' && !leePostura ? <ExplicacionDeColumna id={idDeLaPostura} tipo="restringido" /> : null}
-                        </Th>
-                      ))}
+                      ).map((c) =>
+                        c === 'postura' && !leePostura ? (
+                          <ThConExplicacion key={c} explicacion={idDeLaPostura} tipo="restringido">
+                            {t(`grupos.columnas.${c}`)}
+                          </ThConExplicacion>
+                        ) : (
+                          <Th key={c} scope="col">
+                            {t(`grupos.columnas.${c}`)}
+                          </Th>
+                        )
+                      )}
                     </tr>
                   </thead>
                   <tbody>

@@ -257,6 +257,8 @@ describe('S10 · área de influencia', () => {
       const celda = within(filas()[2]).getByText('No disponible')
       expect(within(filas()[2]).queryByRole('button', { name: 'Por qué no se muestra' })).not.toBeInTheDocument()
       expect(celda).toHaveAccessibleDescription('Su cuenta no puede leer estos datos')
+      // la explicación de la columna no entra en el nombre del encabezado
+      expect(screen.getByRole('columnheader', { name: 'Lugar' })).toBeInTheDocument()
     })
   })
 

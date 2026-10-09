@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Consulta, ExplicacionDeColumna, Restringido } from '../componentes/Estados'
+import { Cargando, Consulta, Restringido, ThConExplicacion } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -205,10 +205,13 @@ function Participantes({ interaccion }: { interaccion: Registro }) {
             <Table aria-label={t('relacionamiento.ficha.pestanas.participantes')}>
               <thead>
                 <tr>
-                  <Th scope="col">
-                    {t('relacionamiento.ficha.participante')}
-                    {leeNombres ? null : <ExplicacionDeColumna id={idDeNombres} tipo="restringido" />}
-                  </Th>
+                  {leeNombres ? (
+                    <Th scope="col">{t('relacionamiento.ficha.participante')}</Th>
+                  ) : (
+                    <ThConExplicacion explicacion={idDeNombres} tipo="restringido">
+                      {t('relacionamiento.ficha.participante')}
+                    </ThConExplicacion>
+                  )}
                   <Th scope="col">{t('relacionamiento.ficha.representa')}</Th>
                   <Th scope="col">{t('relacionamiento.registro.sexo')}</Th>
                   <Th scope="col">{t('relacionamiento.registro.ambito')}</Th>

@@ -44,7 +44,8 @@ describe('S16 · lista de grupos de interés', () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
     const tabla = screen.getByRole('table', { name: 'Grupos de interés' })
-    const encabezado = within(tabla).getByRole('columnheader', { name: /Postura/ })
+    // el nombre del encabezado es el de la columna: ni el botón de ayuda ni el motivo entran en él
+    const encabezado = within(tabla).getByRole('columnheader', { name: 'Postura' })
     // un solo botón de ayuda para toda la columna, en el encabezado
     const ayuda = within(encabezado).getByRole('button', { name: 'Por qué no se muestra' })
     expect(within(tabla).getAllByRole('button', { name: 'Por qué no se muestra' })).toEqual([ayuda])
