@@ -206,7 +206,7 @@ describe('S25 · editor de acta', () => {
     ])
     await hastaElConflicto(usuario)
     await usuario.click(screen.getByRole('button', { name: 'Recargar' }))
-    expect(await screen.findByText('El registro no existe o no es de su organización.')).toBeInTheDocument()
+    expect(await screen.findByText(/No se pudo recargar; lo escrito se conserva\. El registro no existe/)).toBeInTheDocument()
     expect(screen.getByLabelText(EDITOR)).toHaveValue('# Acta mío')
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Recargar' })).toBeInTheDocument()

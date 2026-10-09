@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { FetchMock } from '@wasichai/testing'
+import { jsonResponse, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
@@ -395,6 +395,32 @@ describe('S07 · borradores y errores', () => {
     expect(screen.getByRole('heading', { name: 'Ubicación y CRS de trabajo' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Latitud de referencia (WGS 84)' })).toHaveValue('-7.9')
     expect(screen.getByRole('textbox', { name: 'Longitud de referencia (WGS 84)' })).toHaveValue('-78.5')
+  })
+
+  it('un 412 al guardar un paso ofrece «Recargar»: relee el borrador, conserva lo tecleado y el siguiente PUT lleva la versión nueva (revisión final, I2)', async () => {
+    const deOtra = { ...BORRADOR, updatedAt: '2026-10-06T11:00:00Z' }
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, conBorrador())
+    let lecturas = 0
+    let cambios = 0
+    red = espiarRed([
+      { path: '/objects/project/records/p9', responder: () => jsonResponse(++lecturas === 1 ? BORRADOR : deOtra) },
+      { method: 'PUT', path: '/objects/project/records/p9', responder: () => (++cambios === 1 ? problema(412, 'Precondition Failed') : jsonResponse(deOtra)) }
+    ])
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(1)
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Latitud de referencia (WGS 84)' }), '-7.9')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Longitud de referencia (WGS 84)' }), '-78.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Recargar' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument())
+    expect(screen.getByRole('textbox', { name: 'Latitud de referencia (WGS 84)' })).toHaveValue('-7.9')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByRole('heading', { name: 'Partes' })
+    const [primero, segundo] = red.a('PUT', '/objects/project/records/p9')
+    expect(primero.cabeceras.get('If-Match')).toBe(`"${BORRADOR.updatedAt}"`)
+    expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-06T11:00:00Z"')
+    expect(segundo.cuerpo).toMatchObject({ geometries: { location: { coordinates: [-78.5, -7.9] } } })
   })
 
   it('«Anterior» y el indicador de pasos guardan lo que cambió', async () => {

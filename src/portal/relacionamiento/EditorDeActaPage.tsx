@@ -4,6 +4,7 @@ import { Alert, Button, Textarea } from '@wasichai/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useBlocker, useParams } from 'react-router'
+import { AvisoDeConflicto } from '../componentes/AvisoDeConflicto'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta } from '../componentes/Estados'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
@@ -74,8 +75,6 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
   const pedir = usePedir()
   // otra persona cambió el acta: su versión, a la vista hasta que se elija (M1); mientras tanto no se guarda nada
   const [ajena, setAjena] = useState<string | null>(null)
-  const [recargando, setRecargando] = useState(false)
-  const [falloDeRecarga, setFalloDeRecarga] = useState<unknown>(null)
   const [copiado, setCopiado] = useState<'si' | 'no' | null>(null)
   // lo que el vaciado al salir de esta misma acta no pudo guardar (la persona ya no estaba aquí para enterarse): el texto y el
   // error esperan en la caché de consultas, que sobrevive a la navegación, hasta que se recupere o se descarte
@@ -85,7 +84,8 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
     setPendiente(null)
   }
   const guardar = () => actualizar.mutate({ registro: interaccion, cambios: { minutes: texto_ } }, { onSuccess: () => setGuardado(texto_) })
-  const pausaPorFallo = actualizar.isError || ajena !== null || recargando
+  // durante «Recargar» el error sigue (se quita al llegar la relectura), así que la pausa dura toda la relectura
+  const pausaPorFallo = actualizar.isError || ajena !== null
   const enPausa = actualizar.isPending || pausaPorFallo
   // con texto sin guardar y el guardado en pausa por un fallo, un conflicto, una relectura o una versión ajena por elegir, salir
   // por un enlace del portal lo descartaría sin que la persona lo sepa: se confirma antes
@@ -124,24 +124,16 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
 
   // «Recargar» espera la relectura antes de reanudar el guardado, y si el acta de la otra persona difiere de lo que esta
   // pantalla leyó, la muestra para que se elija en lugar de pisarla
-  const recargar = async () => {
-    setRecargando(true)
-    setFalloDeRecarga(null)
-    try {
-      const nuevo = await cliente.fetchQuery({
-        queryKey: ['record', 'engagement', interaccion.id],
-        queryFn: () => pedir<Registro>(`/objects/engagement/records/${interaccion.id}`),
-        staleTime: 0
-      })
-      const delOtro = texto(nuevo, 'minutes')
-      if (delOtro === texto_) setGuardado(delOtro)
-      else if (delOtro !== guardado) setAjena(delOtro)
-      actualizar.reset()
-    } catch (error) {
-      setFalloDeRecarga(error)
-    } finally {
-      setRecargando(false)
-    }
+  // (BotonRecargar quita el aviso con actualizar.reset() solo cuando esto terminó, y dice si la relectura falló)
+  const releerActa = async () => {
+    const nuevo = await cliente.fetchQuery({
+      queryKey: ['record', 'engagement', interaccion.id],
+      queryFn: () => pedir<Registro>(`/objects/engagement/records/${interaccion.id}`),
+      staleTime: 0
+    })
+    const delOtro = texto(nuevo, 'minutes')
+    if (delOtro === texto_) setGuardado(delOtro)
+    else if (delOtro !== guardado) setAjena(delOtro)
   }
   const copiar = async () => {
     try {
@@ -286,7 +278,6 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
           </Button>
         </Alert>
       ) : null}
-      {falloDeRecarga ? <Alert tone="danger">{mensaje(falloDeRecarga)}</Alert> : null}
       {ajena !== null ? (
         <Alert tone="warning" title={t('relacionamiento.acta.otraPersona')}>
           <p>{t('relacionamiento.acta.otraVersion')}</p>
@@ -313,18 +304,13 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
         </Alert>
       ) : null}
       {actualizar.isError ? (
-        <Alert tone="danger">
-          {mensaje(actualizar.error)}
-          {conflicto ? (
-            <Button variant="secondary" size="sm" className="ml-2" disabled={recargando} aria-busy={recargando} onClick={() => void recargar()}>
-              {t('comun.recargar')}
-            </Button>
-          ) : (
+        <AvisoDeConflicto error={actualizar.error} releer={releerActa} alRecargar={() => actualizar.reset()}>
+          {conflicto ? null : (
             <Button variant="secondary" size="sm" className="ml-2" onClick={guardar}>
               {t('relacionamiento.acta.guardar')}
             </Button>
           )}
-        </Alert>
+        </AvisoDeConflicto>
       ) : null}
       {leeActa ? (
         <div className="grid gap-4 lg:grid-cols-[200px_1fr_260px]">

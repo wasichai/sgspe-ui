@@ -1,14 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Tabs, Td, Textarea, Th } from '@wasichai/ui'
+import { Button, Table, Tabs, Td, Textarea, Th } from '@wasichai/ui'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
+import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Restringido, ThConExplicacion } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
-import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { Rastro } from '../contexto/Rastro'
@@ -293,10 +293,9 @@ function Preguntas({ interaccion }: { interaccion: Registro }) {
 
 function FilaDePregunta({ pregunta, interaccionId, responde }: { pregunta: Registro; interaccionId: string; responde: boolean }) {
   const { t } = useTranslation(NS)
-  const cliente = useQueryClient()
+  const releer = useReleer()
   const actualizar = useActualizar('engagement_question')
   const refrescar = useRefrescarInteraccion(interaccionId)
-  const mensaje = useMensajeDeError()
   const [abierta, setAbierta] = useState(false)
   const [respuesta, setRespuesta] = useState('')
   const enElLugar = atributo(pregunta, 'answered_on_site') === true
@@ -345,23 +344,8 @@ function FilaDePregunta({ pregunta, interaccionId, responde }: { pregunta: Regis
               </Button>
             </div>
             {actualizar.isError ? (
-              <Alert tone="danger">
-                {mensaje(actualizar.error)}
-                {esConflictoDeVersion(actualizar.error) ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="ml-2"
-                    onClick={() => {
-                      // la pregunta se relee con su versión nueva; lo escrito queda en el cuadro
-                      for (const clave of ['records', 'record']) void cliente.invalidateQueries({ queryKey: [clave, 'engagement_question'] })
-                      actualizar.reset()
-                    }}
-                  >
-                    {t('comun.recargar')}
-                  </Button>
-                ) : null}
-              </Alert>
+              // la pregunta se relee con su versión nueva (la lista de preguntas es de donde sale); lo escrito queda en el cuadro
+              <AvisoDeConflicto error={actualizar.error} releer={() => releer(['records', 'engagement_question'])} alRecargar={() => actualizar.reset()} />
             ) : null}
           </div>
         ) : (

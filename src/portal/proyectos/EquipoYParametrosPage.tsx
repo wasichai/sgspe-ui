@@ -1,11 +1,11 @@
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Tabs, Td, Th } from '@wasichai/ui'
+import { Button, Table, Tabs, Td, Th } from '@wasichai/ui'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
+import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Drawer } from '../componentes/Drawer'
 import { Consulta } from '../componentes/Estados'
-import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { hoyEnLima } from '../datos/fechas'
@@ -75,7 +75,7 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
   const { t } = useTranslation(NS)
   const asignaciones = useTodos('project_assignment', { project: proyecto })
   const actualizar = useActualizar('project_assignment')
-  const mensaje = useMensajeDeError()
+  const releer = useReleer()
   const [abierto, setAbierto] = useState(false)
   // la asignación que se está por terminar (pide confirmación) y la última que se intentó terminar (dice cuál falló)
   const [confirmando, setConfirmando] = useState<string | null>(null)
@@ -153,22 +153,12 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
         )}
       </Consulta>
       {actualizar.isError ? (
-        <Alert tone="danger">
-          {intentada}: {mensaje(actualizar.error)}
-          {esConflictoDeVersion(actualizar.error) ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="ml-2"
-              onClick={() => {
-                void asignaciones.refetch()
-                actualizar.reset()
-              }}
-            >
-              {t('comun.recargar')}
-            </Button>
-          ) : null}
-        </Alert>
+        <AvisoDeConflicto
+          error={actualizar.error}
+          prefijo={`${intentada}: `}
+          releer={() => releer(['records', 'project_assignment'])}
+          alRecargar={() => actualizar.reset()}
+        />
       ) : null}
       <Drawer titulo={t('p360.asignacion.titulo')} abierto={abierto} alCerrar={() => setAbierto(false)}>
         <FormularioDeAsignacion proyecto={proyecto} alGuardar={() => setAbierto(false)} />
@@ -259,17 +249,17 @@ function PartesYConcesiones({ proyecto, editable }: { proyecto: string; editable
 
 function Parametros({ proyecto, editable }: { proyecto: string; editable: boolean }) {
   const consulta = useProyecto(proyecto)
-  return <Consulta consulta={consulta}>{(p) => <FormularioDeParametros proyecto={p} editable={editable} recargar={() => void consulta.refetch()} />}</Consulta>
+  return <Consulta consulta={consulta}>{(p) => <FormularioDeParametros proyecto={p} editable={editable} />}</Consulta>
 }
 
 // el formulario guarda solo lo que la persona cambió, sobre lo leído: lo demás se muestra con el registro vigente, así que un
 // refetch en segundo plano actualiza lo que no se tocó y nunca borra lo tecleado. el formulario se limpia tras un guardado
 // propio; «Recargar» tras un 412 relee el registro y conserva lo escrito (se manda sobre la versión nueva)
-function FormularioDeParametros({ proyecto, editable, recargar }: { proyecto: Registro; editable: boolean; recargar: () => void }) {
+function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; editable: boolean }) {
   const { t } = useTranslation(NS)
   const actualizar = useActualizar('project')
   const definicion = useDefinicion('project')
-  const mensaje = useMensajeDeError()
+  const releer = useReleer()
   const [tecleados, setTecleados] = useState<Record<string, number | boolean>>({})
   const [intento, setIntento] = useState(false)
   // el texto de cada campo numérico: si un refetch cambia el registro y el campo se vuelve a pintar, no pierde lo tecleado
@@ -346,23 +336,7 @@ function FormularioDeParametros({ proyecto, editable, recargar }: { proyecto: Re
         </fieldset>
       ))}
       {actualizar.isError ? (
-        <Alert tone="danger">
-          {mensaje(actualizar.error)}
-          {esConflictoDeVersion(actualizar.error) ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="ml-2"
-              onClick={() => {
-                recargar()
-                actualizar.reset()
-              }}
-            >
-              {t('comun.recargar')}
-            </Button>
-          ) : null}
-        </Alert>
+        <AvisoDeConflicto error={actualizar.error} releer={() => releer(['record', 'project', proyecto.id])} alRecargar={() => actualizar.reset()} />
       ) : null}
       {actualizar.isSuccess && !hayCambios ? (
         <p role="status" className="text-sm text-sg-success">

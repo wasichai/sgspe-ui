@@ -1,11 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
 import type { AvailableTransition } from '@wasichai/workflow'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
-import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
+import { useMensajeDeError } from '../componentes/errores'
 import { campoDe, useDefinicion, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useAplicarTransicion, useComprobacion, type Aviso } from './api'
@@ -34,7 +34,7 @@ export function DialogoDeTransicion({
   const definicion = useDefinicion(objeto)
   const aplicar = useAplicarTransicion(objeto)
   const mensaje = useMensajeDeError()
-  const cliente = useQueryClient()
+  const releer = useReleer()
   const [motivo, setMotivo] = useState('')
   const [intentado, setIntentado] = useState(false)
 
@@ -97,25 +97,13 @@ export function DialogoDeTransicion({
             {(props) => <Textarea {...props} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
           </Campo>
           {aplicar.isError ? (
-            <Alert tone="danger">
-              {mensaje(aplicar.error)}
-              {esConflictoDeVersion(aplicar.error) ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="ml-2"
-                  onClick={() => {
-                    // el registro, la lista de botones y las reglas que muestra este diálogo: si el estado cambió, todo
-                    // lo demás quedó viejo y confirmar sobre reglas obsoletas daría un STATE_MISMATCH
-                    for (const clave of ['record', 'transitions', 'transition-check'])
-                      void cliente.invalidateQueries({ queryKey: [clave, objeto, registro.id] })
-                    aplicar.reset()
-                  }}
-                >
-                  {t('comun.recargar')}
-                </Button>
-              ) : null}
-            </Alert>
+            // se relee el registro, la lista de botones y las reglas que muestra este diálogo: si el estado cambió, todo lo
+            // demás quedó viejo y confirmar sobre reglas obsoletas daría un STATE_MISMATCH
+            <AvisoDeConflicto
+              error={aplicar.error}
+              releer={() => releer(...['record', 'transitions', 'transition-check'].map((clave) => [clave, objeto, registro.id]))}
+              alRecargar={() => aplicar.reset()}
+            />
           ) : null}
         </div>
         <div className="mt-6 flex justify-end gap-2">

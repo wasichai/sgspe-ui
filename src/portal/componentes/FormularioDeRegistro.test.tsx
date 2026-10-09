@@ -1,9 +1,10 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, registro } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
+import { useRegistro } from '../datos/registros'
 import { FormularioDeRegistro } from './FormularioDeRegistro'
 
 // screens.md §2: el formulario sale de la metadata; SGSPE no manda derivados (DerivedFieldsGuard, api.md §2) ni
@@ -114,5 +115,79 @@ describe('FormularioDeRegistro', () => {
     const [cambio] = red.a('PUT', '/objects/community_sector/records/s1')
     expect(cambio.cabeceras.get('If-Match')).toBe('"2026-10-06T10:00:00Z"')
     expect(cambio.cuerpo).toEqual({ attributes: { name: 'Sector bajo', community: comunidad } })
+  })
+
+  describe('un 412 al cambiar (revisión final, I2)', () => {
+    const SECTOR = definicion('community_sector', [['name', { label: 'Nombre' }]])
+    const V1 = registro('s1', { name: 'Sector alto' }, { updatedAt: '2026-10-06T10:00:00Z' })
+    const V2 = registro('s1', { name: 'Sector alto' }, { updatedAt: '2026-10-06T11:00:00Z' })
+    // como en una ficha: el registro sale de su consulta, así que la relectura le llega al formulario
+    function Ficha() {
+      const sector = useRegistro('community_sector', 's1')
+      return sector.data ? <FormularioDeRegistro objeto="community_sector" registro={sector.data} /> : null
+    }
+    // la primera lectura es V1; las siguientes, lo que diga `relectura`
+    const montarConConflicto = (relectura: () => Response | Promise<Response>) => {
+      fetch = mockFetch([{ path: '/metadata/objects/community_sector', body: SECTOR }])
+      let lecturas = 0
+      let cambios = 0
+      red = espiarRed([
+        { path: '/objects/community_sector/records/s1', responder: () => (++lecturas === 1 ? jsonResponse(V1) : relectura()) },
+        {
+          method: 'PUT',
+          path: '/objects/community_sector/records/s1',
+          responder: () => (++cambios === 1 ? problema(412, 'Precondition Failed') : jsonResponse(V2))
+        }
+      ])
+      montar(<Ficha />)
+    }
+    const hastaElConflicto = async () => {
+      const nombre = await screen.findByLabelText('Nombre')
+      await userEvent.clear(nombre)
+      await userEvent.type(nombre, 'Sector bajo')
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Otra persona cambió este registro/)
+    }
+
+    it('«Recargar» relee, conserva lo escrito y el siguiente guardado lleva la versión nueva', async () => {
+      let suelta!: () => void
+      const espera = new Promise<void>((r) => (suelta = r))
+      montarConConflicto(async () => {
+        await espera
+        return jsonResponse(V2)
+      })
+      await hastaElConflicto()
+      await userEvent.click(screen.getByRole('button', { name: 'Recargar' }))
+      // el aviso sigue mientras la relectura no llega: un guardado ahora mandaría la versión vieja
+      expect(screen.getByRole('button', { name: 'Recargar' })).toBeDisabled()
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      suelta()
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument())
+      expect(screen.getByLabelText('Nombre')).toHaveValue('Sector bajo')
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+      await waitFor(() => expect(red!.a('PUT', '/objects/community_sector/records/s1')).toHaveLength(2))
+      const [primero, segundo] = red!.a('PUT', '/objects/community_sector/records/s1')
+      expect(primero.cabeceras.get('If-Match')).toBe('"2026-10-06T10:00:00Z"')
+      expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-06T11:00:00Z"')
+      expect(segundo.cuerpo).toEqual({ attributes: { name: 'Sector bajo' } })
+    })
+
+    it('si la relectura falla, lo dice, el aviso se queda y lo escrito sigue', async () => {
+      montarConConflicto(() => problema(404, 'No se encontró'))
+      await hastaElConflicto()
+      await userEvent.click(screen.getByRole('button', { name: 'Recargar' }))
+      expect(await screen.findByText(/No se pudo recargar; lo escrito se conserva\. El registro no existe/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Recargar' })).toBeEnabled()
+      expect(screen.getByLabelText('Nombre')).toHaveValue('Sector bajo')
+    })
+  })
+
+  it('el error del formulario se anuncia (role="alert"), no es un párrafo mudo (revisión final, M11)', async () => {
+    fetch = mockFetch([{ path: '/metadata/objects/community', body: COMUNIDAD }])
+    red = espiarRed([{ method: 'POST', path: '/objects/community/records', responder: () => problema(400, 'Revise los datos') }])
+    montar(<FormularioDeRegistro objeto="community" />)
+    await userEvent.type(await screen.findByLabelText(/^Nombre/), 'CC Tunas Pampa')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Revise los datos')
   })
 })

@@ -2,7 +2,8 @@ import { DynamicForm, type ObjectDefinition, type RecordPayload } from '@wasicha
 import { useMemo } from 'react'
 import { esDerivado } from '../datos/derivados'
 import { useActualizar, useCrear, useDefinicion, type Registro } from '../datos/registros'
-import { useErroresDeCampo, useMensajeDeError } from './errores'
+import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
+import { useErroresDeCampo } from './errores'
 import { Cargando, ErrorDeCarga } from './Estados'
 
 // el formulario de un registro armado desde la metadata del objeto (screens.md §2: el esquema Zod sale de
@@ -42,8 +43,8 @@ export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, camp
   const definicion = useDefinicion(objeto)
   const crear = useCrear(objeto)
   const actualizar = useActualizar(objeto)
-  const mensaje = useMensajeDeError()
   const erroresDeCampo = useErroresDeCampo()
+  const releer = useReleer()
   const preparada = useMemo(
     () => (definicion.data ? prepararDefinicion(definicion.data, objeto, fijos, campos) : undefined),
     [definicion.data, objeto, fijos, campos]
@@ -63,14 +64,20 @@ export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, camp
     if (registro) actualizar.mutate({ registro, cambios: atributos, motivo }, { onSuccess: alGuardar })
     else crear.mutate({ atributos, motivo }, { onSuccess: alGuardar })
   }
+  // el error va en un aviso que se anuncia (role="alert"), no en el párrafo mudo de DynamicForm. un 412 ofrece «Recargar»:
+  // relee el registro (la ficha lo lee con useRegistro, así que le llega al formulario con su updatedAt nuevo) y DynamicForm
+  // no reinicia sus valores, así que lo escrito se conserva y el siguiente guardado lleva el If-Match nuevo
   return (
-    <DynamicForm
-      definition={preparada}
-      record={base}
-      submitting={crear.isPending || actualizar.isPending}
-      error={error ? (deCampo.length > 0 ? deCampo.join('; ') : mensaje(error)) : null}
-      onSubmit={enviar}
-      onCancel={alCancelar}
-    />
+    <div className="space-y-3">
+      {error ? (
+        <AvisoDeConflicto
+          error={error}
+          releer={() => releer(['record', objeto, registro?.id])}
+          alRecargar={() => actualizar.reset()}
+          texto={deCampo.length > 0 ? deCampo.join('; ') : undefined}
+        />
+      ) : null}
+      <DynamicForm definition={preparada} record={base} submitting={crear.isPending || actualizar.isPending} onSubmit={enviar} onCancel={alCancelar} />
+    </div>
   )
 }

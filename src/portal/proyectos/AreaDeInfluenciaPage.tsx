@@ -4,6 +4,7 @@ import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, T
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
+import { BotonRecargar, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
@@ -255,6 +256,7 @@ function DialogoDeAprobacion({
   const { t } = useTranslation(NS)
   const pedir = usePedir()
   const cliente = useQueryClient()
+  const releer = useReleer()
   const mensaje = useMensajeDeError()
   const [motivo, setMotivo] = useState('')
   const [intentado, setIntentado] = useState(false)
@@ -276,10 +278,9 @@ function DialogoDeAprobacion({
   const codigo = codigoDelError(aprobar.error)
   // relee el área (y sus versiones): un 412 o un 428 conserva el motivo para volver a aprobar; STATE_MISMATCH cierra, porque
   // la versión ya no está en borrador
-  const recargar = (cerrar: boolean) => {
-    void cliente.invalidateQueries({ queryKey: ['record', 'area_of_influence', area.id] })
-    void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence'] })
-    void cliente.invalidateQueries({ queryKey: ['records', 'area_of_influence_member'] })
+  // (BotonRecargar quita el aviso, o cierra, solo cuando la relectura llegó)
+  const releerArea = () => releer(['record', 'area_of_influence', area.id], ['records', 'area_of_influence'], ['records', 'area_of_influence_member'])
+  const trasRecargar = (cerrar: boolean) => {
     aprobar.reset()
     if (cerrar) alCerrar()
   }
@@ -311,9 +312,7 @@ function DialogoDeAprobacion({
                   <p className="mt-2">{t('areas.sinPermisoParaMiembros')}</p>
                 )
               ) : esConflictoDeVersion(aprobar.error) || codigo === 'STATE_MISMATCH' || (aprobar.error instanceof ApiError && aprobar.error.status === 428) ? (
-                <Button variant="secondary" size="sm" className="mt-2 block" onClick={() => recargar(codigo === 'STATE_MISMATCH')}>
-                  {t('comun.recargar')}
-                </Button>
+                <BotonRecargar className="mt-2 block" releer={releerArea} alRecargar={() => trasRecargar(codigo === 'STATE_MISMATCH')} />
               ) : null}
             </Alert>
           ) : null}

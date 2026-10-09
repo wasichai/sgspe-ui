@@ -351,6 +351,9 @@ describe('S11 · equipo y parámetros', () => {
     const antes = red.a('GET', '/objects/project/records/p1').length
     await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
     await waitFor(() => expect(red!.a('GET', '/objects/project/records/p1').length).toBeGreaterThan(antes))
+    // el aviso se queda con «Recargar» y dice que la relectura falló (M1: el aviso no se quita antes de la relectura)
+    expect(await screen.findByText(/No se pudo recargar; lo escrito se conserva\. El registro no existe/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recargar' })).toBeEnabled()
     expect(screen.getByLabelText(/Umbral de poder/)).toHaveValue('2.5')
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })

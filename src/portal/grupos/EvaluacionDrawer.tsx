@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
+import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
-import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { Cargando, ErrorDeCarga } from '../componentes/Estados'
 import { hoyEnLima } from '../datos/fechas'
 import { campoDelError, codigoDelError, nuevaClave } from '../datos/http'
@@ -91,8 +91,8 @@ export function EvaluacionDrawer({
   const { can } = useAuth()
   const definicion = useDefinicion('stakeholder_assessment')
   const guardar = useGuardarEvaluacion(grupo)
-  const mensaje = useMensajeDeError()
   const cliente = useQueryClient()
+  const releer = useReleer()
   // una clave de idempotencia por evaluación: al guardar se renueva, porque el drawer sigue montado y la siguiente
   // evaluación no puede repetir la de la anterior (el servidor devolvería la primera)
   const [clave, setClave] = useState(nuevaClave)
@@ -136,12 +136,6 @@ export function EvaluacionDrawer({
       }
     )
   )
-  const recargar = async () => {
-    // otra persona cambió el grupo de interés: se relee su versión y se conserva lo escrito. el aviso se quita cuando ya
-    // llegó el updatedAt nuevo, para que el siguiente guardado no vuelva a mandar la versión vieja (otro 412)
-    await cliente.invalidateQueries({ queryKey: ['record', 'stakeholder', grupo.id] })
-    guardar.reset()
-  }
   const desajuste = codigoDelError(guardar.error) === 'STATE_MISMATCH'
   const retirado = grupo.state === 'retired' || desajuste
   // el servidor dice que el grupo de interés ya no está en el estado de partida: se relee para que la ficha muestre su
@@ -302,19 +296,19 @@ export function EvaluacionDrawer({
           {(p) => <Textarea {...p} maxLength={500} {...register('motivo')} />}
         </Campo>
         {guardar.isError && !retirado ? (
-          <Alert tone="danger">
-            {mensaje(guardar.error, {
+          // otra persona cambió el grupo de interés: se relee su versión y se conserva lo escrito; el aviso se quita cuando
+          // ya llegó el updatedAt nuevo, para que el siguiente guardado no vuelva a mandar la versión vieja (otro 412)
+          <AvisoDeConflicto
+            error={guardar.error}
+            propios={{
               FIELD_NOT_WRITABLE: campoNoEscribible
                 ? t('grupos.evaluacion.errores.FIELD_NOT_WRITABLE', { campo: campoNoEscribible })
                 : t('grupos.evaluacion.errores.FIELD_NOT_WRITABLE_SIN_CAMPO'),
               ROLE_REQUIRED: t('grupos.evaluacion.errores.ROLE_REQUIRED')
-            })}
-            {esConflictoDeVersion(guardar.error) ? (
-              <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={() => void recargar()}>
-                {t('comun.recargar')}
-              </Button>
-            ) : null}
-          </Alert>
+            }}
+            releer={() => releer(['record', 'stakeholder', grupo.id])}
+            alRecargar={() => guardar.reset()}
+          />
         ) : null}
       </form>
     </Drawer>

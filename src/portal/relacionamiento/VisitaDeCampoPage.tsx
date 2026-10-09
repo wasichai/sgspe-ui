@@ -4,12 +4,13 @@ import { Alert, Button, Input, Table, Td, Textarea, Th, cn } from '@wasichai/ui'
 import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
+import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo, CONTROL } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, NoDisponible, ThConExplicacion } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
-import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
+import { useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
@@ -343,31 +344,15 @@ function Visita({ visita }: { visita: Registro }) {
 // ofrece recargar y conserva lo escrito
 function ResultadoDeLaVisita({ visita, alGuardar, alCancelar }: { visita: Registro; alGuardar: () => void; alCancelar: () => void }) {
   const { t } = useTranslation(NS)
-  const cliente = useQueryClient()
-  const mensaje = useMensajeDeError()
+  const releer = useReleer()
   const actualizar = useActualizar('field_visit')
   const [resumen, setResumen] = useState(texto(visita, 'outcome_summary'))
   return (
     <div className="space-y-3">
       <Campo etiqueta={t('relacionamiento.visita.resultado')}>{(p) => <Textarea {...p} value={resumen} onChange={(e) => setResumen(e.target.value)} />}</Campo>
       {actualizar.isError ? (
-        <Alert tone="danger">
-          {mensaje(actualizar.error)}
-          {esConflictoDeVersion(actualizar.error) ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="ml-2"
-              onClick={() => {
-                // la visita se relee con su versión nueva; lo escrito queda en el cuadro
-                for (const clave of ['records', 'record']) void cliente.invalidateQueries({ queryKey: [clave, 'field_visit'] })
-                actualizar.reset()
-              }}
-            >
-              {t('comun.recargar')}
-            </Button>
-          ) : null}
-        </Alert>
+        // la visita se relee con su versión nueva; lo escrito queda en el cuadro
+        <AvisoDeConflicto error={actualizar.error} releer={() => releer(['record', 'field_visit', visita.id])} alRecargar={() => actualizar.reset()} />
       ) : null}
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={alCancelar}>

@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useRef, useState } from 'react'
@@ -6,10 +7,12 @@ import { useForm, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { z } from 'zod'
+import { AvisoDeConflicto } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
-import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
+import { useErroresDeCampo } from '../componentes/errores'
 import { Cargando, ErrorDeCarga } from '../componentes/Estados'
 import { Pasos } from '../componentes/Pasos'
+import { usePedir } from '../datos/http'
 import { atributo, campoDe, escribeAlgunCampo, texto, useActualizar, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useAplicarTransicion } from '../transiciones/api'
@@ -127,8 +130,9 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   // el texto de cada parámetro numérico, para que un cambio de paso no lo pierda (un inválido es NaN en el formulario)
   const textosDeParametros = useRef<Record<string, string>>({})
   const navegar = useNavigate()
-  const mensaje = useMensajeDeError()
   const erroresDeCampo = useErroresDeCampo()
+  const cliente = useQueryClient()
+  const pedir = usePedir()
   const definicion = useDefinicion('project')
   const crear = useCrear('project')
   const actualizar = useActualizar('project')
@@ -159,6 +163,16 @@ function Asistente({ inicial }: { inicial?: Registro }) {
     if (!proyecto) navegar(`?draft=${guardado.id}`, { replace: true })
     setProyecto(guardado)
     return guardado
+  }
+
+  // un 412: otra persona cambió el borrador (la PMG lo completa, S07). se relee y el asistente sigue con la versión nueva; lo
+  // tecleado queda en el formulario, que no se reinicia, y el siguiente guardado lleva su If-Match
+  const releerBorrador = async () => {
+    if (!proyecto) return
+    const id = proyecto.id
+    setProyecto(
+      await cliente.fetchQuery({ queryKey: ['record', 'project', id], queryFn: () => pedir<Registro>(`/objects/project/records/${id}`), staleTime: 0 })
+    )
   }
 
   const ir = (siguiente: number) => {
@@ -331,8 +345,8 @@ function Asistente({ inicial }: { inicial?: Registro }) {
         ) : null}
         {paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} /> : null}
         {sinGuardar ? <Alert tone="notice">{t('proyectos.asistente.sinGuardar')}</Alert> : null}
-        {fallo ? <Alert tone="danger">{mensaje(fallo)}</Alert> : null}
-        {enviarARevision.isError ? <Alert tone="danger">{mensaje(enviarARevision.error)}</Alert> : null}
+        {fallo ? <AvisoDeConflicto error={fallo} releer={releerBorrador} alRecargar={() => setFallo(null)} /> : null}
+        {enviarARevision.isError ? <AvisoDeConflicto error={enviarARevision.error} releer={releerBorrador} alRecargar={() => enviarARevision.reset()} /> : null}
         <p className="text-sg-caption text-sg-text-muted">{t('proyectos.asistente.guardadoAuto')}</p>
         <div className="flex flex-wrap justify-end gap-2 border-t border-sg-border pt-3">
           <Button type="button" variant="ghost" disabled={guardando} onClick={() => void guardarYSalir()}>
