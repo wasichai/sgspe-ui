@@ -167,13 +167,15 @@ function Dato({ termino, valor }: { termino: string; valor: React.ReactNode }) {
   )
 }
 
-// la vista previa de una foto, difuminada si muestra personas sin consentimiento; la URL del blob se revoca al salir
+// la vista previa de una foto, difuminada si muestra personas sin consentimiento; la URL del blob se revoca al salir.
+// «Reintentar» sube el contador de intentos, que es dependencia del efecto: el archivo se vuelve a pedir
 function VistaPrevia({ evidencia, difuminada }: { evidencia: Registro; difuminada: boolean }) {
   const { t } = useTranslation(NS)
   const nombreDeEvidencia = useNombreDeEvidencia()
   const pedir = usePedir()
   const [url, setUrl] = useState<string | null>(null)
   const [fallo, setFallo] = useState<unknown>(null)
+  const [intento, setIntento] = useState(0)
   useEffect(() => {
     let vigente = true
     let creada: string | null = null
@@ -189,13 +191,19 @@ function VistaPrevia({ evidencia, difuminada }: { evidencia: Registro; difuminad
       vigente = false
       if (creada) URL.revokeObjectURL(creada)
     }
-  }, [pedir, evidencia.id])
+  }, [pedir, evidencia.id, intento])
   return (
     <section aria-label={t('documentos.ficha.vistaPrevia')} className="space-y-2">
       <h2 className="text-sg-h3 font-semibold">{t('documentos.ficha.vistaPrevia')}</h2>
       {difuminada ? <p className="text-sg-caption text-sg-warning">{t('documentos.ficha.difuminada')}</p> : null}
       {fallo ? (
-        <FalloDeLectura error={fallo} alReintentar={() => setFallo(null)} />
+        <FalloDeLectura
+          error={fallo}
+          alReintentar={() => {
+            setFallo(null)
+            setIntento((n) => n + 1)
+          }}
+        />
       ) : url ? (
         <img src={url} alt={nombreDeEvidencia(evidencia)} className={difuminada ? 'max-h-96 blur-md' : 'max-h-96'} />
       ) : (
@@ -205,15 +213,20 @@ function VistaPrevia({ evidencia, difuminada }: { evidencia: Registro; difuminad
   )
 }
 
-// el nombre de un registro sustentado, sea del objeto que sea: su código y su título, nombre, observación o fecha de entrega
-const rotulo = (r: Registro): string => {
-  const partes = [texto(r, 'code'), texto(r, 'title') || texto(r, 'name') || texto(r, 'observation') || texto(r, 'delivery_date')]
-  return partes.filter(Boolean).join(' · ') || r.id
+// el nombre de un registro sustentado, sea del objeto que sea: su código y su título, nombre, observación o fecha de entrega;
+// sin ninguno, un texto (nunca su id)
+const useRotulo = (): ((r: Registro) => string) => {
+  const { t } = useTranslation(NS)
+  return (r) => {
+    const partes = [texto(r, 'code'), texto(r, 'title') || texto(r, 'name') || texto(r, 'observation') || texto(r, 'delivery_date')]
+    return partes.filter(Boolean).join(' · ') || t('documentos.ficha.sinNombre')
+  }
 }
 
 // los registros que sustenta: un vínculo evidence_<objeto> por destino; los objetos que la cuenta no lee (403) no se listan
 function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolean }) {
   const { t } = useTranslation(NS)
+  const rotulo = useRotulo()
   const pedir = usePedir()
   const consultas = useQueries({
     queries: DESTINOS_DE_EVIDENCIA.map((objeto) => ({
@@ -256,6 +269,7 @@ function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolea
 
 function Vincular({ evidencia }: { evidencia: Registro }) {
   const { t } = useTranslation(NS)
+  const rotulo = useRotulo()
   const { can } = useAuth()
   const vincular = useVincularEvidencia()
   const mensaje = useMensajeDeError()
@@ -477,7 +491,7 @@ function EditarEvidencia({ evidencia, alCerrar }: { evidencia: Registro; alCerra
             </Campo>
           </>
         ) : null}
-        {bajaRestringida ? <p className="text-sg-caption text-sg-warning">{t('documentos.ficha.motivoClasificacion')}</p> : null}
+        {bajaRestringida ? <p className="text-sg-caption text-sg-warning">{t('documentos.ficha.bajaRestringida')}</p> : null}
         {guardar.isError ? (
           <AvisoDeConflicto error={guardar.error} releer={() => releer(['record', 'evidence', evidencia.id])} alRecargar={() => guardar.reset()} />
         ) : null}

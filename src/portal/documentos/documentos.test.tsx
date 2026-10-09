@@ -56,17 +56,19 @@ const relacionados = (objeto: string, contenido: unknown[] | number): MockRoute 
     ? { path: `/objects/evidence/records/ev1/related/evidence_${objeto}`, status: contenido, body: { title: 'x' } }
     : { path: `/objects/evidence/records/ev1/related/evidence_${objeto}`, body: pagina(contenido) }
 
-const rutasDeFicha = (extra: MockRoute[] = []): MockRoute[] => [
+const rutasDeFicha = (extra: MockRoute[] = [], evidencia = EV): MockRoute[] => [
   ...extra,
   ...baseDeCompromisos(),
   { path: '/metadata/objects/evidence', body: DEF },
-  { path: '/objects/evidence/records/ev1', body: EV },
+  { path: '/objects/evidence/records/ev1', body: evidencia },
   { path: '/objects/evidence/records', body: pagina([]) },
   relacionados('commitment', [registro('c1', { project: 'p1', code: 'C-001', title: 'Reservorio' })]),
   relacionados('delivery', [registro('dl1', { delivery_date: '2026-10-01' })]),
+  // un registro sin código ni título se nombra con un texto, nunca con su id
+  relacionados('engagement', [registro('en1', { project: 'p1' })]),
   // los objetos que la cuenta no lee no se listan ni son un error
   relacionados('agreement', 403),
-  ...['engagement', 'stakeholder', 'community', 'land_parcel', 'field_visit', 'field_observation', 'study'].map((o) => relacionados(o, []))
+  ...['stakeholder', 'community', 'land_parcel', 'field_visit', 'field_observation', 'study'].map((o) => relacionados(o, []))
 ]
 const abrirFicha = (opciones: { permisos?: ReturnType<typeof permisos> } = {}) =>
   montar(<FichaEvidenciaPage />, {
@@ -86,7 +88,7 @@ describe('S45 · biblioteca', () => {
     montar(<BibliotecaPage />, { ruta: '/documents', camino: '/documents', permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Evidencias' })
     expect(await within(tabla).findByText('PRJ-01 · Pukaqaqa')).toBeInTheDocument()
-    expect(within(tabla).getByText('2 MB')).toBeInTheDocument()
+    expect(within(tabla).getByText('1.9 MB')).toBeInTheDocument()
     // la clasificación que la cuenta no lee (ev2 no la trae) dice Restringido, nunca vacío
     expect(within(tabla).getByText('Restringido')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo' }), 'FOTO')
@@ -140,6 +142,8 @@ describe('S46 · ficha de evidencia', () => {
     expect(await within(sustenta).findByRole('link', { name: 'Compromiso: C-001 · Reservorio' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
     expect(within(sustenta).getByRole('link', { name: 'Entrega: 2026-10-01' })).toHaveAttribute('href', '/r/delivery/dl1')
     expect(within(sustenta).queryByText(/Acuerdo/)).not.toBeInTheDocument()
+    expect(within(sustenta).getByRole('link', { name: 'Interacción: Registro sin nombre' })).toBeInTheDocument()
+    expect(within(sustenta).queryByText(/en1/)).not.toBeInTheDocument()
     expect(screen.getByText('a1b2')).toBeInTheDocument()
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })
@@ -152,6 +156,69 @@ describe('S46 · ficha de evidencia', () => {
     expect(screen.getByText('lista.pdf')).toBeInTheDocument()
     await waitFor(() => expect(red!.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1))
     expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  // una foto restringida que muestra personas sin consentimiento
+  const FOTO = registro(
+    'ev1',
+    {
+      project: 'p1',
+      title: 'Foto de la asamblea',
+      evidence_type: 'FOTO',
+      classification: 'DATOS PERSONALES',
+      file: { id: 'f5', name: 'asamblea.jpg', contentType: 'image/jpeg', size: 1024, sha256: 'c3d4' },
+      people_identifiable: true,
+      photo_consent_given: false
+    },
+    { updatedAt: '2026-10-05T15:00:00Z' }
+  )
+  const imagen = () => new Response('JPEG', { status: 200, headers: { 'Content-Type': 'image/jpeg' } })
+
+  it('sin DOWNLOAD_RESTRICTED una foto restringida no tiene vista previa ni se pide su archivo', async () => {
+    fetch = mockFetch(rutasDeFicha([], FOTO))
+    red = espiarRed()
+    abrirFicha({ permisos: permisos({ project: ['READ'], project_assignment: ['READ'], evidence: ['READ'] }) })
+    expect(await screen.findByRole('heading', { name: 'Foto de la asamblea', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Vista previa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
+  })
+
+  it('con DOWNLOAD_RESTRICTED la foto se pide y se difumina si muestra personas sin consentimiento', async () => {
+    fetch = mockFetch(rutasDeFicha([], FOTO))
+    red = espiarRed([{ path: '/sgspe/evidence/ev1/content', responder: imagen }])
+    abrirFicha()
+    const vista = await screen.findByRole('region', { name: 'Vista previa' })
+    const foto = await within(vista).findByRole('img', { name: 'Foto de la asamblea' })
+    expect(foto).toHaveAttribute('src', 'blob:x')
+    expect(foto).toHaveClass('blur-md')
+    expect(within(vista).getByText(/la vista previa va difuminada/)).toBeInTheDocument()
+    expect(screen.getByText(/No sale en una salida EXTERNO/)).not.toHaveTextContent(/RNF-/)
+    expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1)
+  })
+
+  it('si la vista previa falla, Reintentar vuelve a pedir el archivo', async () => {
+    fetch = mockFetch(rutasDeFicha([], FOTO))
+    let intentos = 0
+    red = espiarRed([{ path: '/sgspe/evidence/ev1/content', responder: () => (++intentos === 1 ? problema(500, 'falló el almacén') : imagen()) }])
+    abrirFicha()
+    const vista = await screen.findByRole('region', { name: 'Vista previa' })
+    await userEvent.click(await within(vista).findByRole('button', { name: 'Reintentar' }))
+    expect(await within(vista).findByRole('img', { name: 'Foto de la asamblea' })).toBeInTheDocument()
+    expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(2)
+  })
+
+  it('con la clasificación ilegible dice Restringido, no descarga ni nombra el archivo', async () => {
+    const SIN_CLASIFICACION = registro('ev1', { project: 'p1', evidence_type: 'FOTO', file: FOTO.attributes.file }, { updatedAt: '2026-10-05T15:00:00Z' })
+    fetch = mockFetch(rutasDeFicha([], SIN_CLASIFICACION))
+    red = espiarRed()
+    abrirFicha({ permisos: permisos({ project: ['READ'], project_assignment: ['READ'], evidence: ['READ'] }) })
+    expect(await screen.findByRole('heading', { name: 'Archivo reservado', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('Restringido')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Descargar' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/asamblea\.jpg/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Vista previa' })).not.toBeInTheDocument()
+    expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })
 
   it('cambiar la clasificación pide motivo, manda solo lo cambiado con If-Match y un 412 ofrece Recargar que conserva lo escrito', async () => {
@@ -169,6 +236,9 @@ describe('S46 · ficha de evidencia', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Cambiar datos o clasificación' }))
     const panel = await screen.findByRole('dialog')
     await userEvent.selectOptions(within(panel).getByLabelText('Clasificación'), 'INTERNA')
+    // el motivo se dice una vez; bajar una restringida añade su propio aviso
+    expect(within(panel).getAllByText(/Cambiar la clasificación exige un motivo/)).toHaveLength(1)
+    expect(within(panel).getByText(/Bajar una clasificación restringida exige además DOWNLOAD_RESTRICTED/)).toBeInTheDocument()
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
     expect(await within(panel).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
     expect(red.a('PATCH', '/sgspe/evidence/ev1')).toHaveLength(0)
