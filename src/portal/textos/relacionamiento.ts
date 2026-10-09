@@ -37,6 +37,7 @@ export const ES_RELACIONAMIENTO = {
       acta: 'Acta',
       acuerdos: 'Acuerdos',
       evidencias: 'Evidencias',
+      documentos: 'Documentos emitidos',
       actividad: 'Actividad'
     },
     convocante: 'Convoca',
@@ -67,8 +68,6 @@ export const ES_RELACIONAMIENTO = {
     agregarPregunta: 'Agregar pregunta',
     verActa: 'Ver el acta',
     editarActa: 'Redactar el acta',
-    acuerdosLlegan: 'Los acuerdos y compromisos que nacen de la interacción llegan en F3.',
-    evidenciasLlegan: 'Las evidencias (acta firmada, fotos, lista de asistentes) llegan en F3.',
     deDondeViene: 'De dónde viene',
     visita: 'Visita de campo',
     grupos: 'Grupos de interés',
@@ -247,6 +246,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
       acta: 'Minutes',
       acuerdos: 'Agreements',
       evidencias: 'Evidence',
+      documentos: 'Issued documents',
       actividad: 'Activity'
     },
     convocante: 'Convener',
@@ -277,8 +277,6 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     agregarPregunta: 'Add question',
     verActa: 'View the minutes',
     editarActa: 'Draft the minutes',
-    acuerdosLlegan: 'Agreements and commitments born from the engagement arrive in F3.',
-    evidenciasLlegan: 'Evidence (signed minutes, photos, attendance list) arrives in F3.',
     deDondeViene: 'Where it comes from',
     visita: 'Field visit',
     grupos: 'Stakeholders',

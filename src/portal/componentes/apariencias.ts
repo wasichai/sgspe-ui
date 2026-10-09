@@ -1,6 +1,6 @@
-import { Ban, Check, CircleCheck, CircleDashed, Clock, FileText, Lock, Pause, Play, X, type LucideIcon } from 'lucide-react'
+import { Ban, BadgeCheck, Check, CircleCheck, CircleDashed, Clock, Copy, FileText, Handshake, Lock, Pause, Play, X, type LucideIcon } from 'lucide-react'
 
-// el sistema de estados de design-system.md §4.1 para los workflows de F2: cada estado con su tono y su ícono, nunca solo
+// el sistema de estados de design-system.md §4.1 para los workflows de F2 y F3: cada estado con su tono y su ícono, nunca solo
 // color. la etiqueta sale de la metadata del workflow (español, CON-051); aquí solo el tono
 export type Tono = 'neutral' | 'info' | 'progress' | 'success' | 'warning' | 'danger' | 'final'
 
@@ -48,6 +48,43 @@ export const APARIENCIAS: Record<string, Record<string, Apariencia>> = {
     draft: a('neutral', CircleDashed),
     approved: a('success', CircleCheck),
     superseded: a('final', Lock)
+  },
+  // WF-D
+  commitment: {
+    draft: a('neutral', CircleDashed),
+    pending_approval: a('info', Clock),
+    approved: a('info', CircleCheck),
+    in_progress: a('progress', Play),
+    blocked: a('warning', Pause),
+    fulfilled: a('success', Check),
+    verified: a('success', BadgeCheck),
+    closed: a('final', Lock),
+    cancelled: a('final', X)
+  },
+  // WF-K
+  commitment_candidate: {
+    proposed: a('info', CircleDashed),
+    accepted: a('success', CircleCheck),
+    rejected: a('final', X),
+    duplicate: a('final', Copy)
+  },
+  // WF-I
+  agreement: {
+    draft: a('neutral', CircleDashed),
+    in_negotiation: a('progress', Handshake),
+    active: a('success', CircleCheck),
+    suspended: a('warning', Pause),
+    concluded: a('final', Lock),
+    terminated: a('final', Ban),
+    cancelled: a('final', X)
+  },
+  // WF-N
+  task: {
+    open: a('neutral', CircleDashed),
+    in_progress: a('progress', Play),
+    blocked: a('warning', Pause),
+    done: a('success', CircleCheck),
+    cancelled: a('final', X)
   }
 }
 

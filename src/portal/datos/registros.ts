@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useAuth, useObjectDefinition, type FieldMeta, type ObjectDefinition, type RecordItem } from '@wasichai/core'
+import { useRef } from 'react'
+import { enviarComando, esClaveReusada, type Esperar } from './comandos'
 import { esDerivado } from './derivados'
-import { usePedir, type Pedido } from './http'
+import { nuevaClave, usePedir, type Pedido } from './http'
 
 // los registros por la API genérica de wasichai (api.md §2): la forma { id, createdAt, updatedAt, state, attributes,
 // geometries }, la página { content, page, size, totalElements, totalPages, nextCursor } y las mismas claves de consulta
@@ -198,18 +200,36 @@ export interface Alta {
   motivo?: string | null
 }
 
-export function useCrear(objeto: string) {
+// el alta genérica honra la cabecera nativa Idempotency-Key desde wasichai 0.6.0 (WAS-ADR-0058, UPS-18, decisión D3): una clave
+// por alta, repetida si el mismo pedido se reintenta (un corte de red ya no duplica una interacción o una visita) y renovada al
+// terminar bien o si el servidor dice que ya se usó con otro cuerpo. una pantalla que empieza otra alta sin que la anterior
+// terminara bien llama a nuevaAccion
+export function useCrear(objeto: string, { esperar }: { esperar?: Esperar } = {}) {
   const pedir = usePedir()
   const cliente = useQueryClient()
-  return useMutation({
+  const clave = useRef<string>(nuevaClave())
+  const mutacion = useMutation({
     mutationFn: async ({ atributos, geometrias, motivo }: Alta) => {
       const definicion = await definicionDe(cliente, pedir, objeto)
       const geometries = geometriasDeEscritura(definicion, geometrias)
       const cuerpo = { attributes: atributosDeEscritura(objeto, definicion, atributos), ...(geometries ? { geometries } : {}) }
-      return pedir<Registro>(`/objects/${objeto}/records`, { json: cuerpo, motivo })
+      return enviarComando<Registro>(pedir, { ruta: `/objects/${objeto}/records`, json: cuerpo, motivo }, clave.current, esperar)
     },
-    onSuccess: () => invalidar(cliente, objeto)
+    onSuccess: () => {
+      clave.current = nuevaClave()
+      invalidar(cliente, objeto)
+    },
+    onError: (error) => {
+      if (esClaveReusada(error)) clave.current = nuevaClave()
+    }
   })
+  return {
+    ...mutacion,
+    nuevaAccion: () => {
+      clave.current = nuevaClave()
+      mutacion.reset()
+    }
+  }
 }
 
 export interface Cambio {

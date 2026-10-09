@@ -1,5 +1,15 @@
 import type { ComponentType } from 'react'
-import type { ClaveDeSeccion } from '../shell/navTree'
+import { AcuerdosPage } from '../acuerdos/AcuerdosPage'
+import { FichaAcuerdoPage } from '../acuerdos/FichaAcuerdoPage'
+import { CompromisosPage } from '../compromisos/CompromisosPage'
+import { FichaCompromisoPage } from '../compromisos/FichaCompromisoPage'
+import { NuevoCompromisoPage } from '../compromisos/NuevoCompromisoPage'
+import { TableroCompromisosPage } from '../compromisos/TableroCompromisosPage'
+import { BibliotecaPage } from '../documentos/BibliotecaPage'
+import { FichaEvidenciaPage } from '../documentos/FichaEvidenciaPage'
+import { MisTareasPage } from '../tareas/MisTareasPage'
+import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
+import type { ClaveDeSeccion, Par } from '../shell/navTree'
 import { FichaGrupoPage } from '../grupos/FichaGrupoPage'
 import { GruposPage } from '../grupos/GruposPage'
 import { MatrizPage } from '../grupos/MatrizPage'
@@ -17,12 +27,15 @@ import { EquipoYParametrosPage } from './EquipoYParametrosPage'
 import { MapaDelProyectoPage } from './MapaDelProyectoPage'
 import { ResumenPage } from './ResumenPage'
 
-// las rutas bajo /projects/:projectId que aporta cada módulo de F2, relativas al proyecto (screens.md §3 a §6). las de
-// otra sección (grupos de interés, relacionamiento, reportes) se guardan además con los permisos de esa sección
+// las rutas bajo /projects/:projectId que aporta cada módulo de F2 y F3, relativas al proyecto (screens.md §3 a §7 y §11). las
+// de otra sección (grupos de interés, relacionamiento, compromisos, documentos, tareas, reportes) se guardan además con los
+// permisos de esa sección
 export interface RutaEnProyecto {
   ruta: string
   Pantalla: ComponentType
   seccion?: ClaveDeSeccion
+  // los permisos que la ofrecen, si no son los de su sección: los acuerdos piden READ sobre agreement
+  seOfreceCon?: Par[][]
 }
 
 export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
@@ -43,5 +56,14 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'engagements/:engagementId/minutes', seccion: 'engagements', Pantalla: EditorDeActaPage },
   { ruta: 'field-visits', seccion: 'engagements', Pantalla: VisitasPage },
   { ruta: 'field-visits/:visitId', seccion: 'engagements', Pantalla: VisitaDeCampoPage },
+  { ruta: 'commitments', seccion: 'commitments', Pantalla: CompromisosPage },
+  { ruta: 'commitments/dashboard', seccion: 'commitments', Pantalla: TableroCompromisosPage },
+  { ruta: 'commitments/new', seccion: 'commitments', Pantalla: NuevoCompromisoPage },
+  { ruta: 'commitments/:commitmentId', seccion: 'commitments', Pantalla: FichaCompromisoPage },
+  { ruta: 'agreements', seccion: 'commitments', seOfreceCon: LEE_ACUERDOS, Pantalla: AcuerdosPage },
+  { ruta: 'agreements/:agreementId', seccion: 'commitments', seOfreceCon: LEE_ACUERDOS, Pantalla: FichaAcuerdoPage },
+  { ruta: 'documents', seccion: 'documents', Pantalla: BibliotecaPage },
+  { ruta: 'documents/:documentId', seccion: 'documents', Pantalla: FichaEvidenciaPage },
+  { ruta: 'tasks', seccion: 'tasks', Pantalla: MisTareasPage },
   { ruta: 'reports', seccion: 'reports', Pantalla: ReportesPage }
 ]

@@ -308,7 +308,7 @@ function Predios({
             return (
               <tr key={id} aria-selected={id === seleccion} className={id === seleccion ? 'bg-sg-primary-soft' : 'cursor-pointer'} onClick={() => alElegir(id)}>
                 <Td className="font-sg-mono text-sg-caption">
-                  <BotonDeFila alElegir={() => alElegir(id)}>{String(e.properties.code ?? id)}</BotonDeFila>
+                  <BotonDeFila alElegir={() => alElegir(id)}>{String(e.properties.code ?? t('mapa.predioSinCodigo'))}</BotonDeFila>
                 </Td>
                 <Td className="text-sm">{String(e.properties.tenure_type ?? '')}</Td>
                 <Td className="text-sm">

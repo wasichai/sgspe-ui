@@ -97,17 +97,24 @@ export const NAV_TREE: SeccionNav[] = [
   },
   { clave: 'documents', label: 'Documentos', to: '/documents', icon: FileText, fases: ['F3'], seOfreceCon: [[lee('evidence')]] },
   { clave: 'tasks', label: 'Tareas', to: '/tasks', icon: ListChecks, fases: ['F3'], seOfreceCon: [[lee('task')]] },
-  // en F2, Reportes es la exportación del registro de grupos de interés y su historial (export_log)
+  // en F2 y F3, Reportes son las exportaciones (el registro de grupos de interés y la matriz de compromisos) y su historial
   {
     clave: 'reports',
     label: 'Reportes',
     to: '/reports',
     icon: ChartColumn,
     fases: ['F2', 'F8'],
-    seOfreceCon: [[{ objeto: 'stakeholder', accion: 'EXPORT' }], [lee('export_log')]]
+    seOfreceCon: [[{ objeto: 'stakeholder', accion: 'EXPORT' }], [{ objeto: 'commitment', accion: 'EXPORT' }], [lee('export_log')]]
   },
   { clave: 'admin', label: 'Administración', to: '/admin', icon: Settings, external: true, soloAdmin: true, fases: ['F1'] }
 ]
+
+// la guarda de una pantalla que vive bajo una sección pero lee otro objeto: la sección (su nombre y su pantalla) con otros
+// permisos (LEE_ACUERDOS, de leeAcuerdos.ts)
+export function guardaDe(clave: ClaveDeSeccion, seOfreceCon?: Par[][]): SeccionNav {
+  const seccion = NAV_TREE.find((s) => s.clave === clave)!
+  return seOfreceCon ? { ...seccion, seOfreceCon } : seccion
+}
 
 // lo que el árbol pregunta de la cuenta (useAuth de core: can es siempre true para el admin) y de las pantallas
 export interface Oferta {

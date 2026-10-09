@@ -15,6 +15,10 @@ export const ES_CONTEXTO = {
     map: 'Mapa',
     stakeholders: 'Grupos de interés',
     engagements: 'Relacionamiento',
+    commitments: 'Compromisos',
+    agreements: 'Acuerdos',
+    documents: 'Documentos',
+    tasks: 'Tareas',
     settings: 'Equipo y parámetros',
     reports: 'Reportes'
   },
@@ -42,6 +46,10 @@ export const EN_CONTEXTO: typeof ES_CONTEXTO = {
     map: 'Map',
     stakeholders: 'Stakeholders',
     engagements: 'Engagement',
+    commitments: 'Commitments',
+    agreements: 'Agreements',
+    documents: 'Documents',
+    tasks: 'Tasks',
     settings: 'Team and parameters',
     reports: 'Reports'
   },

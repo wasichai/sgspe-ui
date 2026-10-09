@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router'
 import { client } from './api'
 import { LoginPage } from './auth/LoginPage'
+import { AbrirRegistroPage } from './avisos/AbrirRegistroPage'
+import { AvisosPage } from './avisos/AvisosPage'
+import { parametrosDe, PorRuta } from './componentes/PorRuta'
 import { RequireSession } from './auth/RequireSession'
 import { idiomaHtmlModule } from '../idiomaHtml'
 import { crearI18n, IDIOMAS, NS } from './i18n'
@@ -12,7 +15,7 @@ import { InicioPage } from './pages/InicioPage'
 import { PANTALLAS, RUTAS_ADICIONALES } from './pantallas'
 import { AppShell } from './shell/AppShell'
 import { GuardaDeSeccion } from './shell/GuardaDeSeccion'
-import { conPantalla, NAV_TREE, type SeccionNav } from './shell/navTree'
+import { conPantalla, guardaDe, NAV_TREE, type SeccionNav } from './shell/navTree'
 
 // un 4xx no cambia por preguntar otra vez; un corte de red o un 5xx tal vez sí
 const retry = (count: number, error: unknown) => !(error instanceof ApiError && error.status >= 400 && error.status < 500) && count < 2
@@ -30,8 +33,8 @@ function SeccionPorLlegar({ seccion }: { seccion: SeccionNav }) {
 
 // el Dashboard es la ruta índice; cada otra sección tiene ruta solo con su pantalla (PANTALLAS), y la pantalla se guarda
 // con los mismos permisos que el árbol (GuardaDeSeccion); una sección del árbol sin pantalla todavía dice en qué fase llega.
-// las fichas de los maestros del tenant que no son secciones (/actors/:actorId, /field-visits) son RUTAS_ADICIONALES,
-// guardadas con su sección; cualquier otra ruta es la página no encontrada
+// las fichas de los maestros del tenant que no son secciones (/actors/:actorId, /field-visits, /agreements) son RUTAS_ADICIONALES,
+// guardadas con su sección y montadas de nuevo por registro; cualquier otra ruta es la página no encontrada
 const rutas = () =>
   createRoutesFromElements(
     <>
@@ -65,17 +68,20 @@ const rutas = () =>
               ]
             : []
         })}
-        {RUTAS_ADICIONALES.map(({ ruta, seccion, Pantalla }) => (
+        {RUTAS_ADICIONALES.map(({ ruta, seccion, seOfreceCon, Pantalla }) => (
           <Route
             key={ruta}
             path={ruta}
             element={
-              <GuardaDeSeccion seccion={NAV_TREE.find((s) => s.clave === seccion)!}>
-                <Pantalla />
+              <GuardaDeSeccion seccion={guardaDe(seccion, seOfreceCon)}>
+                <PorRuta parametros={parametrosDe(ruta)} Pantalla={Pantalla} />
               </GuardaDeSeccion>
             }
           />
         ))}
+        {/* transversales, de toda cuenta (ux-architecture.md §6.2 y §7.4): los avisos y el salto a la ficha de un registro */}
+        <Route path="/notifications" element={<AvisosPage />} />
+        <Route path="/r/:object/:recordId" element={<AbrirRegistroPage />} />
         <Route path="*" element={<NoEncontrada />} />
       </Route>
     </>
