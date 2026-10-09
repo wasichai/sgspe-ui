@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { FetchMock } from '@wasichai/testing'
+import { jsonResponse, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
@@ -203,6 +203,29 @@ describe('S10 · área de influencia', () => {
       applied_criteria: null,
       studied_in_diagnosis: null
     })
+  })
+
+  it('si la relectura de «Recargar» falla tras un 412, el diálogo y el motivo siguen, y lo dice (revisión final, I1)', async () => {
+    fetch = abrirPortal('/projects/p1/areas/a2', GERENCIA_SOCIAL, SMG, rutas())
+    let conflicto = false
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/areas-of-influence/a2/approve',
+        responder: () => {
+          conflicto = true
+          return problema(412, 'Precondition Failed')
+        }
+      },
+      { path: '/objects/area_of_influence/records/a2', responder: () => (conflicto ? problema(404, 'No se encontró') : jsonResponse(V2)) }
+    ])
+    await userEvent.click(await screen.findByRole('button', { name: 'Aprobar versión 2' }))
+    await userEvent.type(await screen.findByLabelText('Motivo (obligatorio)'), 'Estudio aprobado')
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Aprobar versión 2' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
+    expect(await screen.findByText(/No se pudo recargar; lo escrito se conserva\./)).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByLabelText('Motivo (obligatorio)')).toHaveValue('Estudio aprobado')
   })
 
   it('un 428 ofrece recargar y conserva el motivo', async () => {
