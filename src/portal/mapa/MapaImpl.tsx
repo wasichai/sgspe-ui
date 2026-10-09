@@ -74,6 +74,9 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
   const contenedor = useRef<HTMLDivElement>(null)
   const mapa = useRef<MapLibreMap | null>(null)
   const [listo, setListo] = useState(false)
+  // en reposo: MapLibre terminó de pedir y dibujar (idle) y no hay datos en camino. lo lee e2e/hilo.spec.ts para afirmar que no
+  // se pidió nada externo sin esperar un plazo fijo
+  const [reposo, setReposo] = useState(false)
   const ultimo = useRef({ alSeleccionar, alMoverVista, alMoverCursor })
   ultimo.current = { alSeleccionar, alMoverVista, alMoverCursor }
   const dibujadas = useRef(new Set<string>())
@@ -100,6 +103,8 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     })
     instancia.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     instancia.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
+    instancia.on('idle', () => setReposo(true))
+    instancia.on('dataloading', () => setReposo(false))
     instancia.on('load', () => {
       if (mapa.current !== instancia) return
       const informar = () => {
@@ -295,5 +300,5 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     })
   }, [listo, clave])
 
-  return <div ref={contenedor} role="region" aria-label={etiqueta} className="h-full w-full" data-testid="mapa" />
+  return <div ref={contenedor} role="region" aria-label={etiqueta} className="h-full w-full" data-testid="mapa" data-reposo={reposo ? 'si' : 'no'} />
 }

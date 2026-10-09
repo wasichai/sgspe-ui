@@ -52,10 +52,11 @@ test('el mapa territorial dibuja con MapLibre sin pedir teselas externas', async
     if (!r.url().startsWith(baseURL!)) externas.push(r.url())
   })
   await page.goto('/territory')
-  await expect(page.getByRole('region', { name: 'Mapa territorial' }).locator('canvas')).toBeVisible()
-  // MapLibre pide teselas y fuentes después del primer dibujo: se espera a que la red quede en reposo y a que el mapa
-  // asiente (no expone un evento al exterior) antes de afirmar
+  const mapa = page.getByRole('region', { name: 'Mapa territorial' })
+  await expect(mapa.locator('canvas')).toBeVisible()
+  // MapLibre pide teselas y fuentes después del primer dibujo: se espera a que el mapa quede en reposo (su evento idle, que
+  // MapaImpl deja en data-reposo) y la red también, en lugar de un plazo fijo que depende de la carga (revisión final, M13)
+  await expect(mapa).toHaveAttribute('data-reposo', 'si')
   await page.waitForLoadState('networkidle')
-  await page.waitForTimeout(1000)
   expect(externas).toEqual([])
 })

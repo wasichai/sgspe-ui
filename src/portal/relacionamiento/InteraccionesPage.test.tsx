@@ -10,6 +10,13 @@ import { E1, E2, E3, EQUIPO, base } from '../../test/relacionamiento'
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
+// una respuesta que llega cuando la prueba la suelta
+const compuerta = () => {
+  let suelta!: () => void
+  const espera = new Promise<void>((resolver) => (suelta = resolver))
+  return { espera, suelta }
+}
+
 let fetch: FetchMock | null = null
 let red: Red | null = null
 beforeEach(() => {
@@ -215,16 +222,19 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
       ...base(),
       { path: '/objects/engagement/records', body: pagina([E1]) }
     ])
+    // la respuesta espera a que la prueba la suelte, no un plazo de reloj (revisión final, M13)
+    const { espera, suelta } = compuerta()
     red = espiarRed([
       {
         path: '/objects/festivity/records',
         responder: async () => {
-          await new Promise((resolver) => setTimeout(resolver, 300))
+          await espera
           return new Response(JSON.stringify(pagina([])), { headers: { 'Content-Type': 'application/json' } })
         }
       }
     ])
     expect((await screen.findAllByText('Cargando las festividades…')).length).toBeGreaterThan(0)
+    suelta()
     await waitFor(() => expect(screen.queryByText('Cargando las festividades…')).not.toBeInTheDocument())
   })
 
@@ -273,17 +283,19 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
 
   it('mientras llegan las interacciones dice Cargando y no dibuja un calendario vacío', async () => {
     fetch = abrirPortal('/projects/p1/engagements/calendar?month=2026-10', RELACIONISTA, EQUIPO, base())
+    const { espera, suelta } = compuerta()
     red = espiarRed([
       {
         path: '/objects/engagement/records',
         responder: async () => {
-          await new Promise((resolver) => setTimeout(resolver, 300))
+          await espera
           return new Response(JSON.stringify(pagina([E1])), { headers: { 'Content-Type': 'application/json' } })
         }
       }
     ])
     expect((await screen.findAllByRole('status')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('table', { name: 'Calendario de interacciones' })).not.toBeInTheDocument()
+    suelta()
     expect(await screen.findByRole('table', { name: 'Calendario de interacciones' })).toBeInTheDocument()
   })
 

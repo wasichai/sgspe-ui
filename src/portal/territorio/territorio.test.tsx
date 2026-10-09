@@ -1,11 +1,16 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { FetchMock } from '@wasichai/testing'
+import type { CallerPermissions } from '@wasichai/core'
+import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import type { ComponentType } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { definicion, pagina, registro } from '../../test/montar'
+import { definicion, montar, pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, type Red } from '../../test/red'
+import { useDefinicion } from '../datos/registros'
+import { FichaComunidadPage } from './FichaComunidadPage'
+import { FichaLocalidadPage } from './FichaLocalidadPage'
 
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
@@ -323,24 +328,45 @@ describe('Editar y agregar', () => {
     expect(await screen.findByRole('dialog', { name: 'Editar' })).toBeInTheDocument()
   })
 
-  // la definición llega después de la ficha: se espera a que se haya leído, y a que se asiente, antes de afirmar que no se ofrece
-  const definicionLeida = async (objeto: string) => {
-    await waitFor(() => expect(fetch!.calls.some((c) => c.path.endsWith(`/metadata/objects/${objeto}`))).toBe(true))
-    await new Promise((r) => setTimeout(r, 50))
+  // la definición llega después de la ficha: antes de afirmar que «Editar» no se ofrece, una sonda que lee la misma consulta
+  // (misma clave, misma caché) dice que llegó; las dos se notifican en el mismo lote, así que la ficha ya la vio. sin esperas
+  // fijas, que dependen de la carga de la máquina (revisión final, M13)
+  function Sonda({ objeto }: { objeto: string }) {
+    return useDefinicion(objeto).isSuccess ? <span>definición llegó</span> : null
+  }
+  const abrirFicha = async (Ficha: ComponentType, ruta: string, objeto: string, cuenta: CallerPermissions, rutas: MockRoute[]) => {
+    fetch = mockFetch(rutas)
+    montar(
+      <>
+        <Ficha />
+        <Sonda objeto={objeto} />
+      </>,
+      { ruta, camino: ruta.replace(/[^/]+$/, ':id'), usuario: RELACIONISTA, permisos: cuenta }
+    )
+    await screen.findByText('definición llegó')
   }
 
   it('un rol con "u" (UPDATE sin ningún campo escribible) no recibe "Editar" en la comunidad', async () => {
-    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, comunidad([['name', { editable: false }]]))
-    await screen.findByRole('heading', { name: 'CC Tunas Pampa' })
-    await definicionLeida('community')
+    await abrirFicha(FichaComunidadPage, '/territory/communities/c1', 'community', LEE_TERRITORIO, comunidad([['name', { editable: false }]]))
+    expect(screen.getByRole('heading', { name: 'CC Tunas Pampa' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
   })
 
   it('sin UPDATE no se ofrece "Editar" en la comunidad', async () => {
-    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, permisos({ ...LEE_TERRITORIO.objects, community: ['READ'] }), comunidad(['name']))
-    await screen.findByRole('heading', { name: 'CC Tunas Pampa' })
-    await definicionLeida('community')
+    await abrirFicha(
+      FichaComunidadPage,
+      '/territory/communities/c1',
+      'community',
+      permisos({ ...LEE_TERRITORIO.objects, community: ['READ'] }),
+      comunidad(['name'])
+    )
+    expect(screen.getByRole('heading', { name: 'CC Tunas Pampa' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
+  })
+
+  it('el control de la sonda: con UPDATE y un campo escribible, «Editar» ya está cuando la sonda dice que llegó', async () => {
+    await abrirFicha(FichaComunidadPage, '/territory/communities/c1', 'community', LEE_TERRITORIO, comunidad(['name']))
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument()
   })
 
   it('"Agregar sector" abre el formulario del sector', async () => {
@@ -356,14 +382,14 @@ describe('Editar y agregar', () => {
   })
 
   it('un rol con "u" no recibe "Editar" en la localidad', async () => {
-    fetch = abrirPortal(
+    await abrirFicha(
+      FichaLocalidadPage,
       '/territory/localities/l1',
-      RELACIONISTA,
+      'locality',
       permisos({ ...LEE_TERRITORIO.objects, locality: ['READ', 'UPDATE'] }),
       localidad([['name', { editable: false }]])
     )
-    await screen.findByRole('heading', { name: 'Tunas' })
-    await definicionLeida('locality')
+    expect(screen.getByRole('heading', { name: 'Tunas' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
   })
 
