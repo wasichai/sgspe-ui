@@ -698,6 +698,44 @@ describe('S07 · asignación de quien crea (P40)', () => {
     expect(screen.queryByRole('button', { name: 'Asignarme al proyecto' })).not.toBeInTheDocument()
   })
 
+  it('un error sobre el usuario de la sesión (campos ocultos) se ve al pie, no se calla (re-revisión, menor 2)', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed([
+      misAsignaciones(),
+      {
+        method: 'POST',
+        path: '/objects/project_assignment/records',
+        responder: () => problema(400, 'detalle', [{ field: 'member_user_id', message: 'USER_REFERENCE' }])
+      }
+    ])
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Rol en el proyecto' }), 'ROL_DE_PRUEBA')
+    await userEvent.click(screen.getByRole('button', { name: 'Asignarme al proyecto' }))
+    expect(await screen.findByText('El correo y el identificador no nombran a un usuario de su organización.')).toBeVisible()
+    expect(screen.queryByText(/USER_REFERENCE/)).not.toBeInTheDocument()
+  })
+
+  it('si la relectura de las asignaciones falla tras asignarse, no ofrece asignarse de nuevo: pide reintentar la lectura (re-revisión, menor 2)', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    // antes del alta, sin asignación; la primera lectura después del alta falla; la del reintento trae la asignación
+    let trasElAlta = 0
+    red = espiarRed([
+      {
+        path: /^\/objects\/project_assignment\/records\?.*member_user_id=/,
+        responder: () => {
+          if (red!.a('POST', '/objects/project_assignment/records').length === 0) return jsonResponse(pagina([]))
+          return ++trasElAlta === 1 ? problema(400, 'La lectura falló') : jsonResponse(pagina([MI_ASIGNACION]))
+        }
+      }
+    ])
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Rol en el proyecto' }), 'ROL_DE_PRUEBA')
+    await userEvent.click(screen.getByRole('button', { name: 'Asignarme al proyecto' }))
+    expect(await screen.findByText(/Ya se asignó a este proyecto, pero no se pudo leer su asignación/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Asignarme al proyecto' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(await screen.findByRole('textbox', { name: 'code' })).toBeInTheDocument()
+    expect(red.a('POST', '/objects/project_assignment/records')).toHaveLength(1)
+  })
+
   it('ADMIN no la ve: del paso 1 pasa directo a la ubicación', async () => {
     fetch = abrirPortal('/projects/new', ADMINISTRACION, { admin: true, objects: PAD.objects }, rutas())
     red = espiarRed([misAsignaciones()])

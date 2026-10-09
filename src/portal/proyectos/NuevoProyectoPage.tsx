@@ -403,17 +403,31 @@ function Asistente({ inicial }: { inicial?: Registro }) {
 
 // P40: el paso previo a toda escritura sobre el borrador. dice por qué, y sin CREATE sobre project_assignment, a quién pedirlo
 // si las asignaciones de la cuenta no se pudieron leer no se ofrece asignarse (podría estarlo ya): se dice el fallo
+// tras asignarse, el asistente sigue cuando la relectura de las asignaciones trae la nueva; si esa relectura falla, no se
+// ofrece asignarse otra vez (sería una asignación duplicada): se pide reintentar la lectura (re-revisión, menor 2)
 function AsignacionPropia({ proyecto, asignaciones }: { proyecto: string; asignaciones: UseQueryResult<unknown> }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
+  const [asignada, setAsignada] = useState(false)
   if (asignaciones.isPending) return <Cargando />
   if (asignaciones.isError && !asignaciones.data) return <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
+  if (asignada) {
+    if (asignaciones.isFetching) return <Cargando />
+    return (
+      <Alert tone="warning">
+        {t('proyectos.asistente.asignarse.yaAsignada')}
+        <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={() => void asignaciones.refetch()}>
+          {t('comun.reintentar')}
+        </Button>
+      </Alert>
+    )
+  }
   return (
     <section className="space-y-3">
       <h2 className="text-sg-h3 font-semibold">{t('proyectos.asistente.asignarse.titulo')}</h2>
       <p className="text-sm text-sg-text-secondary">{t('proyectos.asistente.asignarse.porQue')}</p>
       {can('project_assignment', 'CREATE') ? (
-        <FormularioDeAsignacion proyecto={proyecto} propia />
+        <FormularioDeAsignacion proyecto={proyecto} propia alGuardar={() => setAsignada(true)} />
       ) : (
         <Alert tone="warning">{t('proyectos.asistente.asignarse.sinPermiso')}</Alert>
       )}

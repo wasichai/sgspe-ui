@@ -50,8 +50,11 @@ export function FormularioDeAsignacion({ proyecto, alGuardar, propia = false }: 
   })
   const usuarioElegido = watch('member_user_id')
   // un error de campo ya está junto a su control: el aviso al pie es para lo que no cae en un campo
+  // en la asignación propia el usuario y las fechas no se muestran: un error sobre ellos (USER_REFERENCE…) va al pie, no a un
+  // campo oculto donde nadie lo vería (re-revisión, menor 2)
+  const visibles = propia ? ['role_name'] : CAMPOS
   const camposConError = Object.keys(erroresDeCampo(crear.error))
-  const avisoAlPie = crear.isError && (camposConError.length === 0 || camposConError.some((c) => !CAMPOS.includes(c)))
+  const avisoAlPie = crear.isError && (camposConError.length === 0 || camposConError.some((c) => !visibles.includes(c)))
   const error = (campo: keyof Valores) => {
     const e = formState.errors[campo]
     return e ? (e.type === 'manual' ? e.message : t('p360.asignacion.invalido')) : undefined
@@ -67,7 +70,7 @@ export function FormularioDeAsignacion({ proyecto, alGuardar, propia = false }: 
         },
         onError: (e) => {
           for (const [campo, texto] of Object.entries(erroresDeCampo(e)))
-            if (campo in valores) setError(campo as keyof Valores, { type: 'manual', message: texto })
+            if (visibles.includes(campo)) setError(campo as keyof Valores, { type: 'manual', message: texto })
         }
       }
     )

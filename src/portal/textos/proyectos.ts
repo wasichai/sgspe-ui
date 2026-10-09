@@ -46,7 +46,8 @@ export const ES_PROYECTOS = {
       titulo: 'Asígnese a este proyecto para seguir',
       porQue:
         'Un proyecto nuevo no tiene equipo, y el servidor solo acepta cambios de quien está asignado a él. Elija su rol en este proyecto: después podrá completar los demás pasos.',
-      sinPermiso: 'Su cuenta no puede asignarse a este proyecto: pida a quien administra los proyectos que la asigne para completar el borrador.'
+      sinPermiso: 'Su cuenta no puede asignarse a este proyecto: pida a quien administra los proyectos que la asigne para completar el borrador.',
+      yaAsignada: 'Ya se asignó a este proyecto, pero no se pudo leer su asignación. Reintente la lectura; no hace falta asignarse otra vez.'
     },
     numeroInvalido: 'Escriba un número mayor o igual a 0, o deje el campo vacío para el valor por defecto.',
     enteroInvalido: 'Escriba un número entero mayor o igual a 0, o deje el campo vacío para el valor por defecto.',
@@ -100,7 +101,8 @@ export const EN_PROYECTOS: typeof ES_PROYECTOS = {
       titulo: 'Assign yourself to this project to continue',
       porQue:
         'A new project has no team, and the server only accepts changes from people assigned to it. Choose your role in this project: then you can complete the other steps.',
-      sinPermiso: 'Your account cannot assign itself to this project: ask whoever manages projects to assign you so you can complete the draft.'
+      sinPermiso: 'Your account cannot assign itself to this project: ask whoever manages projects to assign you so you can complete the draft.',
+      yaAsignada: 'You are already assigned to this project, but your assignment could not be read. Retry the read; there is no need to assign yourself again.'
     },
     numeroInvalido: 'Type a number greater than or equal to 0, or leave the field empty for the default value.',
     enteroInvalido: 'Type a whole number greater than or equal to 0, or leave the field empty for the default value.',
