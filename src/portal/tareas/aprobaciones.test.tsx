@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { APROBADORA, baseDeCompromisos, C1 } from '../../test/compromisos'
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos } from '../../test/portal'
-import { espiarRed, type Red } from '../../test/red'
+import { espiarRed, problema, type Red } from '../../test/red'
 import type { Aviso } from '../datos/avisos'
 import { AprobacionesPage } from './AprobacionesPage'
 import { AprobacionPage } from './AprobacionPage'
@@ -41,7 +41,9 @@ const aviso = (id: string, objeto: string, registroId: string, fuente = 'sgspe.a
 })
 const APROBAR = { name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }
 const DEVOLVER = { name: 'return_to_draft', label: 'Devolver a borrador', to: 'draft', toLabel: 'Borrador', allowed: true, reason: null }
+const SUPERIOR = { name: 'approve_senior', label: 'Aprobar (nivel superior)', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }
 const SEGREGACION = { code: 'SEGREGATION_OF_DUTIES', message: 'Usted registró este compromiso: lo aprueba otra persona (D4)', field: 'record' }
+const NIVEL_SUPERIOR = { code: 'SENIOR_APPROVAL_REQUIRED', message: 'El monto pide la aprobación de nivel superior (D5)', field: 'amount' }
 
 const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   ...extra,
@@ -58,7 +60,7 @@ const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   },
   { path: '/objects/commitment/records/c1', body: PENDIENTE },
   { path: '/objects/commitment/records/c7', body: OTRO },
-  { path: /^\/objects\/commitment\/records\/c\d\/transitions/, body: [APROBAR, DEVOLVER] },
+  { path: /^\/objects\/commitment\/records\/c\d\/transitions/, body: [DEVOLVER, APROBAR] },
   { path: '/objects/engagement/records/e1', body: registro('e1', { title: 'Mesa de diálogo de agosto', engagement_type: 'MESA DE DIALOGO' }) },
   { path: '/objects/exploration_campaign/records/camp1', body: registro('camp1', { name: 'Campaña 2026' }) }
 ]
@@ -85,6 +87,13 @@ const APROBACION = permisos({
   engagement: ['READ'],
   exploration_campaign: ['READ']
 })
+const abrirS31 = (id: string) =>
+  montar(<AprobacionPage />, {
+    ruta: `/tasks/approvals/commitment/${id}`,
+    camino: '/tasks/approvals/commitment/:recordId',
+    usuario: APROBADORA,
+    permisos: APROBACION
+  })
 
 describe('S48 · aprobaciones', () => {
   it('lista solo las aprobaciones pendientes, con el monto, la espera y por qué no se puede decidir', async () => {
@@ -104,6 +113,41 @@ describe('S48 · aprobaciones', () => {
     expect(await within(otra).findByText('Sí')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Escalamientos' }))
     expect(await screen.findByRole('heading', { name: 'Pendiente c1' })).toBeInTheDocument()
+  })
+
+  it('dice «Sí» si alguna aprobación de su rol pasa, aunque otra se bloquee', async () => {
+    fetch = mockFetch(rutas([{ path: /^\/objects\/commitment\/records\/c1\/transitions/, body: [DEVOLVER, APROBAR, SUPERIOR] }]))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        responder: (l) => {
+          const { transition } = l.cuerpo as { transition: string }
+          return jsonResponse(
+            transition === 'approve' ? { allowed: false, blocking: [NIVEL_SUPERIOR], warnings: [] } : { allowed: true, blocking: [], warnings: [] }
+          )
+        }
+      }
+    ])
+    montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })
+    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    const fila = (await within(tabla).findByText('C-001 · Reservorio de agua para Tunas Pampa')).closest('tr') as HTMLElement
+    expect(await within(fila).findByText('Sí')).toBeInTheDocument()
+    expect(within(fila).queryByText(/SENIOR_APPROVAL_REQUIRED|nivel superior/)).not.toBeInTheDocument()
+  })
+
+  it('los escalamientos avisan cuando se revisaron solo los primeros 200 avisos', async () => {
+    fetch = mockFetch(
+      rutas([
+        {
+          path: '/auth/me/notifications',
+          body: { content: [aviso('n3', 'commitment', 'c1', 'sgspe.deadlines')], page: 0, size: 200, totalElements: 201, totalPages: 2 }
+        }
+      ])
+    )
+    montar(<AprobacionesPage />, { ruta: '/tasks/approvals?view=escalamientos', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })
+    expect(await screen.findByRole('heading', { name: 'Pendiente c1' })).toBeInTheDocument()
+    expect(screen.getByText('Se revisaron solo los primeros 200 avisos: puede haber más escalamientos que no se muestran.')).toBeInTheDocument()
   })
 
   it('sin el módulo de avisos lo dice en lugar de una bandeja vacía', async () => {
@@ -180,5 +224,53 @@ describe('S31 · aprobación de compromiso', () => {
     })
     expect(await screen.findByText('No tiene una asignación vigente a este proyecto: puede leer, no decidir.')).toBeInTheDocument()
     expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Su rol no tiene decisiones/)).not.toBeInTheDocument()
+  })
+
+  it('al pasar por la bandeja a otro compromiso ya leído, el motivo y la decisión empiezan de cero', async () => {
+    fetch = mockFetch(rutas())
+    red = reglas()
+    abrirS31('c7')
+    const bandeja = () => screen.getByRole('navigation', { name: 'Por aprobar' })
+    expect(await screen.findByRole('heading', { name: 'Botiquín' })).toBeInTheDocument()
+    await userEvent.click(await within(bandeja()).findByRole('link', { name: 'Pendiente c1' }))
+    expect(await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('radio', { name: 'Devolver a borrador' }))
+    await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Motivo de c1')
+    await userEvent.click(await within(bandeja()).findByRole('link', { name: 'Pendiente c7' }))
+    expect(await screen.findByRole('heading', { name: 'Botiquín' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('Motivo (obligatorio)')).toHaveValue('')
+    expect(screen.getByRole('radio', { name: 'Devolver a borrador' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Aprobar' })).toBeChecked()
+  })
+
+  it('un 412 al decidir dice que otra persona cambió el compromiso y ofrece recargar', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      { method: 'POST', path: '/sgspe/transition-checks', responder: () => jsonResponse({ allowed: true, blocking: [], warnings: [] }) },
+      { method: 'POST', path: '/objects/commitment/records/c7/transitions/approve', responder: () => problema(412, 'Versión vieja') }
+    ])
+    abrirS31('c7')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Confirmar la decisión' })).toBeEnabled())
+    await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Conforme')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar la decisión' }))
+    expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recargar' })).toBeInTheDocument()
+    expect(ubicacion.actual).toBe('/tasks/approvals/commitment/c7')
+  })
+
+  it('una bandeja que falla lo dice, y la campaña que la cuenta no lee dice «No disponible»', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      { path: '/auth/me/notifications', responder: () => problema(500, 'Falla') },
+      { path: '/objects/exploration_campaign/records/camp1', responder: () => problema(403, 'Sin permiso') },
+      { method: 'POST', path: '/sgspe/transition-checks', responder: () => jsonResponse({ allowed: true, blocking: [], warnings: [] }) }
+    ])
+    abrirS31('c1')
+    const bandeja = await screen.findByRole('navigation', { name: 'Por aprobar' })
+    expect(await within(bandeja).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    const resumen = screen.getByRole('region', { name: 'El compromiso' })
+    expect(await within(resumen).findByText('No disponible')).toBeInTheDocument()
+    expect(within(resumen).queryByText('…')).not.toBeInTheDocument()
   })
 })

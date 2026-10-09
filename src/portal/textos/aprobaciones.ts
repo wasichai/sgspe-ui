@@ -8,6 +8,7 @@ export const ES_APROBACIONES = {
   vacia: 'No tiene decisiones pendientes.',
   vaciaEscalamientos: 'No hay plazos vencidos ni escalamientos que le toquen.',
   truncado: 'Se muestran los primeros 200 avisos: decida algunos para ver el resto.',
+  truncadoEscalamientos: 'Se revisaron solo los primeros 200 avisos: puede haber más escalamientos que no se muestran.',
   columnas: { registro: 'Registro', que: 'Qué se decide', monto: 'Monto', espera: 'Espera', puede: '¿Puede decidir?', accion: 'Acción' },
   objetos: { commitment: 'Aprobación de compromiso', project: 'Revisión de proyecto', engagement: 'Aprobación de acta' },
   dias: '{{n}} días',
@@ -18,7 +19,6 @@ export const ES_APROBACIONES = {
   comprobando: 'Comprobando…',
   revisar: 'Revisar',
   ver: 'Ver',
-  noDisponible: 'Su cuenta no lee este registro',
   // S31
   decision: {
     titulo: 'Aprobación de compromiso',
@@ -50,6 +50,7 @@ export const EN_APROBACIONES: typeof ES_APROBACIONES = {
   vacia: 'You have no pending decisions.',
   vaciaEscalamientos: 'There are no overdue deadlines or escalations for you.',
   truncado: 'The first 200 notices are shown: decide some to see the rest.',
+  truncadoEscalamientos: 'Only the first 200 notices were checked: there may be more escalations not shown.',
   columnas: { registro: 'Record', que: 'What is decided', monto: 'Amount', espera: 'Waiting', puede: 'Can you decide?', accion: 'Action' },
   objetos: { commitment: 'Commitment approval', project: 'Project review', engagement: 'Minutes approval' },
   dias: '{{n}} days',
@@ -60,7 +61,6 @@ export const EN_APROBACIONES: typeof ES_APROBACIONES = {
   comprobando: 'Checking…',
   revisar: 'Review',
   ver: 'View',
-  noDisponible: 'Your account does not read this record',
   decision: {
     titulo: 'Commitment approval',
     volver: 'Back to the inbox',

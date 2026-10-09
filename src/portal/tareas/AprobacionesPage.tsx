@@ -19,8 +19,10 @@ import { useComprobacion } from '../transiciones/api'
 // quién le toca decidir. «¿Puede decidir?» pregunta GET …/transitions y transition-checks por la aprobación de su rol (D4,
 // D5, D7 dicen por qué no). «Escalamientos» son los avisos de plazo (sgspe.deadlines). la decisión de un compromiso se toma
 // en S31 (/tasks/approvals/commitment/:recordId); las de otros objetos, en su ficha
+// approve_direct no está: sale de draft, y los avisos de aprobación existen solo en pending_approval (ApprovalNotices los
+// resuelve al salir de ese estado), así que nunca llega a esta bandeja ni a las decisiones de S31
 export const APROBACIONES_DE: Readonly<Record<string, readonly string[]>> = {
-  commitment: ['approve', 'approve_senior', 'approve_direct'],
+  commitment: ['approve', 'approve_senior'],
   project: ['approve'],
   engagement: ['approve_minutes']
 }
@@ -46,6 +48,8 @@ export function AprobacionesPage() {
   const { avisos, pendientes, truncado } = useAprobacionesPendientes()
   const plazos = useAvisos({ size: TOPE }, lista.vista === 'escalamientos')
   const escalamientos = (plazos.data?.content ?? []).filter((a) => a.source === FUENTE_DE_PLAZOS && a.kind !== 'INFO')
+  // los escalamientos se filtran de los primeros 200 avisos de cualquier fuente: si hay más, se dice
+  const plazosTruncados = (plazos.data?.totalPages ?? 1) > 1
   if (avisos.isError && !avisos.data && sinBandeja(avisos.error)) {
     return (
       <section className="mx-auto max-w-[1200px] space-y-4">
@@ -73,26 +77,34 @@ export function AprobacionesPage() {
           <Cargando />
         ) : plazos.isError && !plazos.data ? (
           <FalloDeLectura error={plazos.error} alReintentar={() => void plazos.refetch()} />
-        ) : escalamientos.length === 0 ? (
-          <Vacio titulo={t('aprobaciones.vaciaEscalamientos')} />
         ) : (
-          <ul className="grid gap-3 md:grid-cols-2">
-            {escalamientos.map((a) => {
-              const destino = destinoDeAviso(a.link)
-              return (
-                <li key={a.id} className={cn('space-y-1 rounded-sg-lg border border-l-4 border-sg-border bg-sg-surface p-3 text-sm', CLASE_DE_TIPO[a.kind])}>
-                  <h2 className="font-medium">{a.title}</h2>
-                  {a.body ? <p>{a.body}</p> : null}
-                  <p className="text-sg-caption text-sg-text-muted">{fechaYHoraPe(new Date(a.publishAt))}</p>
-                  {destino ? (
-                    <Link to={destino} className="text-sg-primary-text underline">
-                      {t('aprobaciones.ver')}
-                    </Link>
-                  ) : null}
-                </li>
-              )
-            })}
-          </ul>
+          <>
+            {plazosTruncados ? <Alert tone="warning">{t('aprobaciones.truncadoEscalamientos')}</Alert> : null}
+            {escalamientos.length === 0 ? (
+              <Vacio titulo={t('aprobaciones.vaciaEscalamientos')} />
+            ) : (
+              <ul className="grid gap-3 md:grid-cols-2">
+                {escalamientos.map((a) => {
+                  const destino = destinoDeAviso(a.link)
+                  return (
+                    <li
+                      key={a.id}
+                      className={cn('space-y-1 rounded-sg-lg border border-l-4 border-sg-border bg-sg-surface p-3 text-sm', CLASE_DE_TIPO[a.kind])}
+                    >
+                      <h2 className="font-medium">{a.title}</h2>
+                      {a.body ? <p>{a.body}</p> : null}
+                      <p className="text-sg-caption text-sg-text-muted">{fechaYHoraPe(new Date(a.publishAt))}</p>
+                      {destino ? (
+                        <Link to={destino} className="text-sg-primary-text underline">
+                          {t('aprobaciones.ver')}
+                        </Link>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </>
         )
       ) : avisos.isPending ? (
         <Cargando />
@@ -165,13 +177,23 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
 function PuedeDecidir({ objeto, id }: { objeto: string; id: string }) {
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, id)
-  const aprobacion = (transiciones.data ?? []).find((x) => x.allowed && (APROBACIONES_DE[objeto] ?? []).includes(x.name))
-  const comprobacion = useComprobacion(objeto, id, aprobacion?.name ?? null)
   if (transiciones.isPending) return <>{t('aprobaciones.comprobando')}</>
   if (transiciones.isError) return <FalloDeLectura error={transiciones.error} alReintentar={() => void transiciones.refetch()} />
-  if (!aprobacion) return <>{t('aprobaciones.sinTransicion')}</>
+  const candidatas = transiciones.data.filter((x) => x.allowed && (APROBACIONES_DE[objeto] ?? []).includes(x.name)).map((x) => x.name)
+  if (candidatas.length === 0) return <>{t('aprobaciones.sinTransicion')}</>
+  return <Comprobar objeto={objeto} id={id} candidatas={candidatas} />
+}
+
+// prueba en orden las aprobaciones que su rol tiene (quien es APPROVER y PROJECT_MANAGER tiene approve y approve_senior):
+// «Sí» si alguna pasa; si todas se bloquean, el primer bloqueo de la primera
+function Comprobar({ objeto, id, candidatas, razon }: { objeto: string; id: string; candidatas: string[]; razon?: string }) {
+  const { t } = useTranslation(NS)
+  const [primera, ...resto] = candidatas
+  const comprobacion = useComprobacion(objeto, id, primera)
   if (comprobacion.isPending) return <>{t('aprobaciones.comprobando')}</>
   if (comprobacion.isError) return <FalloDeLectura error={comprobacion.error} alReintentar={() => void comprobacion.refetch()} />
   const bloqueo = comprobacion.data.blocking[0]
-  return <>{bloqueo ? t('aprobaciones.noPuede', { razon: bloqueo.message }) : t('aprobaciones.si')}</>
+  if (!bloqueo) return <>{t('aprobaciones.si')}</>
+  const motivo = razon ?? bloqueo.message
+  return resto.length > 0 ? <Comprobar objeto={objeto} id={id} candidatas={resto} razon={motivo} /> : <>{t('aprobaciones.noPuede', { razon: motivo })}</>
 }

@@ -8,12 +8,13 @@ import { Campo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { sinBandeja } from '../datos/avisos'
 import { montoPe } from '../componentes/Monto'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { atributo, texto, useRegistro, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { useAplicarTransicion, useComprobacion } from '../transiciones/api'
-import { rutaDeDecision, useAprobacionesPendientes } from './AprobacionesPage'
+import { APROBACIONES_DE, rutaDeDecision, useAprobacionesPendientes } from './AprobacionesPage'
 
 // S31 · aprobación de compromiso (/tasks/approvals/commitment/:recordId; screens.md §7, flujo 8): la bandeja a la izquierda,
 // el compromiso con su origen y la decisión con motivo obligatorio (commitment es requiresReason); a la derecha, las reglas de
@@ -26,7 +27,9 @@ const DECISIONES = ['approve', 'approve_senior', 'return_to_draft', 'cancel_pend
 export function AprobacionPage() {
   const { recordId = '' } = useParams()
   const compromiso = useRegistro('commitment', recordId)
-  return <Consulta consulta={compromiso}>{(c) => <Decision compromiso={c} />}</Consulta>
+  // la clave por registro: pasar por la bandeja a otro compromiso ya leído monta otra decisión, sin el motivo ni la elección
+  // del anterior (revisión de la Tarea 14, importante 1)
+  return <Consulta consulta={compromiso}>{(c) => <Decision key={c.id} compromiso={c} />}</Consulta>
 }
 
 function Decision({ compromiso }: { compromiso: Registro }) {
@@ -37,7 +40,12 @@ function Decision({ compromiso }: { compromiso: Registro }) {
   const transiciones = useAvailableTransitions('commitment', compromiso.id)
   const opciones = (transiciones.data ?? []).filter((x) => x.allowed && DECISIONES.includes(x.name))
   const [elegida, setElegida] = useState<string | null>(null)
-  const decision = elegida ?? opciones[0]?.name ?? null
+  // la elegida vale solo si el registro la ofrece; sin elección, la aprobación de su rol (S31: «Aprobar» es la acción
+  // principal), nunca la primera que liste el servidor (return_to_draft va antes en commitment.json); sin aprobación, nada
+  const decision =
+    (elegida && opciones.some((x) => x.name === elegida) ? elegida : null) ??
+    opciones.find((x) => (APROBACIONES_DE.commitment ?? []).includes(x.name))?.name ??
+    null
   const comprobacion = useComprobacion('commitment', compromiso.id, decision)
   const aplicar = useAplicarTransicion('commitment')
   const releer = useReleer()
@@ -76,7 +84,17 @@ function Decision({ compromiso }: { compromiso: Registro }) {
             </div>
             <div>
               <dt className="text-sg-text-muted">{t('aprobaciones.decision.campana')}</dt>
-              <dd>{campana.data ? texto(campana.data, 'name') : atributo(compromiso, 'exploration_campaign') ? '…' : '—'}</dd>
+              <dd>
+                {campana.data ? (
+                  texto(campana.data, 'name')
+                ) : !atributo(compromiso, 'exploration_campaign') ? (
+                  '—'
+                ) : campana.isError ? (
+                  <FalloDeLectura error={campana.error} alReintentar={() => void campana.refetch()} />
+                ) : (
+                  '…'
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-sg-text-muted">{t('aprobaciones.decision.responsable')}</dt>
@@ -87,30 +105,33 @@ function Decision({ compromiso }: { compromiso: Registro }) {
               <dd>{texto(compromiso, 'due_date') ? diaPe(texto(compromiso, 'due_date')) : '—'}</dd>
             </div>
           </dl>
-          <p>
+          <div>
             {t('aprobaciones.decision.origen')}:{' '}
             {origen.data ? (
               <Link to={`/projects/${proyecto}/engagements/${origen.data.id}`} className="text-sg-primary-text underline">
                 {texto(origen.data, 'title')} · {texto(origen.data, 'engagement_type')}
               </Link>
-            ) : atributo(compromiso, 'origin_engagement') ? (
-              '…'
-            ) : (
+            ) : !atributo(compromiso, 'origin_engagement') ? (
               t('aprobaciones.decision.sinOrigen')
+            ) : origen.isError ? (
+              <FalloDeLectura error={origen.error} alReintentar={() => void origen.refetch()} />
+            ) : (
+              '…'
             )}
-          </p>
+          </div>
           <Link to={`/projects/${proyecto}/commitments/${compromiso.id}`} className="text-sg-primary-text underline">
             {t('aprobaciones.decision.abrirFicha')}
           </Link>
         </section>
         <section aria-label={t('aprobaciones.decision.decidir')} className="space-y-3">
           <h2 className="text-sg-h3 font-semibold">{t('aprobaciones.decision.decidir')}</h2>
-          {!escribe ? <Alert tone="notice">{t('aprobaciones.decision.soloLectura')}</Alert> : null}
-          {transiciones.isPending ? (
+          {!escribe ? (
+            <Alert tone="notice">{t('aprobaciones.decision.soloLectura')}</Alert>
+          ) : transiciones.isPending ? (
             <Cargando compacto />
           ) : transiciones.isError ? (
             <FalloDeLectura error={transiciones.error} alReintentar={() => void transiciones.refetch()} />
-          ) : opciones.length === 0 || !escribe ? (
+          ) : opciones.length === 0 ? (
             <p className="text-sm text-sg-text-muted">{t('aprobaciones.decision.sinDecisiones')}</p>
           ) : (
             <>
@@ -197,7 +218,12 @@ function Bandeja({ actual }: { actual: string }) {
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('aprobaciones.vistas.porAprobar')}</h2>
       {avisos.isPending ? (
         <Cargando compacto />
-      ) : avisos.isError && !avisos.data ? null : (
+      ) : avisos.isError && !avisos.data ? (
+        // sin el módulo de avisos (404/403) no hay bandeja; cualquier otro fallo se dice, nunca una bandeja vacía
+        sinBandeja(avisos.error) ? null : (
+          <FalloDeLectura error={avisos.error} alReintentar={() => void avisos.refetch()} />
+        )
+      ) : (
         <ul className="space-y-1">
           {pendientes.map((a) => {
             const ruta = rutaDeDecision(a)
