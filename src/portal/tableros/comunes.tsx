@@ -1,5 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query'
-import { ApiError } from '@wasichai/core'
+import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -8,13 +8,14 @@ import { CONTROL } from '../componentes/Campo'
 import { Consulta, NoDisponible } from '../componentes/Estados'
 import { sonDemasiadosRegistros, useCatalogoDeIndicadores, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { codigoDelError } from '../datos/http'
-import { useDefinicion } from '../datos/registros'
+import { texto, useDefinicion, useTodos } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { fechaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 
 // la fila de filtros de dashboards.md §3.1, en la URL: proyecto (el del contexto; sin él, las asignaciones de la persona),
-// periodo, territorio (el chip) y ámbito. una sola llamada por pantalla (api.md §4.11)
+// periodo, territorio (el chip) y ámbito; desde F3, la campaña de exploración y el responsable (?explorationCampaign=, ?owner=),
+// que solo ofrece el tablero de compromisos. una sola llamada por pantalla (api.md §4.11)
 export function useFiltrosDeTablero(): FiltrosDeIndicador {
   const { scope, territory } = useContextFilters()
   const [busqueda] = useSearchParams()
@@ -27,6 +28,10 @@ export function useFiltrosDeTablero(): FiltrosDeIndicador {
     if (desde) filtros.periodStart = desde
     if (hasta) filtros.periodEnd = hasta
     if (ambito) filtros.scope = ambito
+    const campana = busqueda.get('explorationCampaign')
+    const responsable = busqueda.get('owner')
+    if (campana) filtros.explorationCampaign = campana
+    if (responsable) filtros.owner = responsable
     if (territory?.kind === 'locality') filtros.locality = territory.id
     if (territory?.kind === 'community') filtros.community = territory.id
     if (territory?.kind === 'admin-unit') filtros.administrativeUnit = territory.id
@@ -35,9 +40,25 @@ export function useFiltrosDeTablero(): FiltrosDeIndicador {
   }, [scope, territory, busqueda])
 }
 
-export function FiltrosDeTablero({ calculado, alActualizar }: { calculado?: string; alActualizar: () => void }) {
+// conCampana y conResponsable: los filtros del tablero de compromisos (dashboards.md §4.4). la campaña se elige entre las del
+// proyecto del contexto; el responsable es «solo los míos» (owner = quien mira)
+export function FiltrosDeTablero({
+  calculado,
+  alActualizar,
+  conCampana = false,
+  conResponsable = false
+}: {
+  calculado?: string
+  alActualizar: () => void
+  conCampana?: boolean
+  conResponsable?: boolean
+}) {
   const { t } = useTranslation(NS)
   const [busqueda, fijar] = useSearchParams()
+  const { user } = useAuth()
+  const { scope } = useContextFilters()
+  const proyecto = scope.kind === 'project' ? scope.projectId : undefined
+  const campanas = useTodos('exploration_campaign', { project: proyecto }, conCampana && proyecto !== undefined)
   const definicion = useDefinicion('stakeholder')
   const ambitos = definicion.data?.fields.find((f) => f.name === 'stakeholder_scope')?.enumOptions ?? []
   const cambiar = (clave: string, valor: string) => {
@@ -67,6 +88,25 @@ export function FiltrosDeTablero({ calculado, alActualizar }: { calculado?: stri
           ))}
         </select>
       </label>
+      {conCampana && proyecto ? (
+        <label className="space-y-1">
+          <span className="block text-sg-label">{t('tableros.campana')}</span>
+          <select className={CONTROL} value={busqueda.get('explorationCampaign') ?? ''} onChange={(e) => cambiar('explorationCampaign', e.target.value)}>
+            <option value="">{t('comun.ninguno')}</option>
+            {(campanas.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {texto(c, 'name')}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {conResponsable && user ? (
+        <label className="flex items-center gap-2 pb-2">
+          <input type="checkbox" checked={busqueda.get('owner') === user.id} onChange={(e) => cambiar('owner', e.target.checked ? user.id : '')} />
+          {t('tableros.soloMios')}
+        </label>
+      ) : null}
       <Button variant="secondary" size="sm" onClick={alActualizar}>
         {t('tableros.actualizar')}
       </Button>

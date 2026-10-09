@@ -4,6 +4,8 @@ export const ES_TABLEROS = {
   desde: 'Desde',
   hasta: 'Hasta',
   ambito: 'Ámbito',
+  campana: 'Campaña',
+  soloMios: 'Solo los míos (responsable)',
   actualizar: 'Actualizar',
   calculado: 'Calculado el {{fecha}}',
   otros: 'Otros',
@@ -44,7 +46,8 @@ export const ES_TABLEROS = {
     community: 'comunidad',
     areaOfInfluence: 'área de influencia',
     explorationCampaign: 'campaña de exploración',
-    scope: 'ámbito'
+    scope: 'ámbito',
+    owner: 'responsable'
   },
   // 400 TOO_MANY_RECORDS: la lectura acotada no recorta la cifra, pide acotar (dashboards.md §6.2)
   acotar: {
@@ -58,6 +61,8 @@ export const EN_TABLEROS: typeof ES_TABLEROS = {
   desde: 'From',
   hasta: 'To',
   ambito: 'Scope',
+  campana: 'Campaign',
+  soloMios: 'Mine only (owner)',
   actualizar: 'Refresh',
   calculado: 'Calculated on {{fecha}}',
   otros: 'Others',
@@ -97,7 +102,8 @@ export const EN_TABLEROS: typeof ES_TABLEROS = {
     community: 'community',
     areaOfInfluence: 'area of influence',
     explorationCampaign: 'exploration campaign',
-    scope: 'scope'
+    scope: 'scope',
+    owner: 'owner'
   },
   acotar: {
     titulo: 'Narrow the filters',

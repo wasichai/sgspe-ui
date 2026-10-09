@@ -40,7 +40,7 @@ export interface Indicador {
   missingFields?: string[]
   warnings?: string[]
   // los filtros pedidos que el indicador acepta y no aplica (ruling P27): community en los KPI-STK, explorationCampaign en
-  // F2. sin filtros ignorados la clave no viaja; con ellos la interfaz lo dice, para que no se lea como un cero filtrado
+  // F2, y explorationCampaign y owner en los KPI-COM que no los aplican. sin filtros ignorados la clave no viaja; con ellos la interfaz lo dice, para que no se lea como un cero filtrado
   ignoredFilters?: string[]
 }
 
@@ -60,6 +60,10 @@ export interface FiltrosDeIndicador {
   administrativeUnit?: string
   areaOfInfluence?: string
   scope?: string
+  // F3: la campaña de exploración y el responsable (owner_user_id) de los KPI-COM que los aplican (api.md §4.11); los demás los
+  // devuelven en ignoredFilters
+  explorationCampaign?: string
+  owner?: string
   breakdown?: string
 }
 
