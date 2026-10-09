@@ -40,6 +40,9 @@ const abrir = () =>
     usuario: GESTORA,
     permisos: EQUIPO_DE_COMPROMISOS
   })
+const JUSTIFICACION = 'Un compromiso que nace de un taller o de una reunión informativa exige la justificación de su origen'
+const alPaso = async (nombre: string) => userEvent.click(await screen.findByRole('button', { name: new RegExp(nombre) }))
+const pasoActual = () => screen.getByRole('heading', { level: 2 })
 const siguiente = async () => userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
 const escribir = async (etiqueta: string, valor: string) => userEvent.type(await screen.findByLabelText(etiqueta), valor)
 const elegir = async (etiqueta: string, valor: string) => userEvent.selectOptions(await screen.findByLabelText(etiqueta), valor)
@@ -58,10 +61,10 @@ async function llenarHastaLaRevision() {
   await elegir('Cómo se pidió', 'ACUERDO EN REUNION')
   await escribir('Fecha del acuerdo', '2026-09-10')
   await siguiente()
-  expect(
-    await screen.findByText('Un compromiso que nace de un taller o de una reunión informativa exige la justificación de su origen (RN-ENG-001)')
-  ).toBeInTheDocument()
+  expect(await screen.findByText(JUSTIFICACION)).toBeInTheDocument()
   await escribir('Justificación del origen', 'La asamblea lo ratificó')
+  // el aviso se va en cuanto la justificación está escrita
+  expect(screen.queryByText(JUSTIFICACION)).not.toBeInTheDocument()
   await siguiente()
   await userEvent.click(await screen.findByRole('checkbox', { name: 'Junta de regantes' }))
   await siguiente()
@@ -92,7 +95,7 @@ describe('S30 · crear compromiso', () => {
     expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
   })
 
-  it('la barra del tope suma lo aprobado en la campaña y avisa si este compromiso lo supera (D7)', async () => {
+  it('la barra del tope suma lo aprobado en la campaña y avisa si este compromiso lo supera', async () => {
     fetch = mockFetch(rutas())
     abrir()
     await escribir('Código', 'C-010')
@@ -157,14 +160,15 @@ describe('S30 · crear compromiso', () => {
     await llenarHastaLaRevision()
     await escribir('Motivo (obligatorio)', 'Acordado en el taller')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
-    expect(await screen.findByText('El registro elegido es de otro proyecto: un compromiso solo se vincula con lo de su proyecto.')).toBeInTheDocument()
+    expect(await screen.findByText(/El registro elegido es de otro proyecto/)).toBeInTheDocument()
     expect(screen.getByLabelText('Campaña de exploración')).toBeInTheDocument()
+    expect(red.a('GET', '/objects/exploration_campaign/records').length).toBeGreaterThan(0)
     expect(red.a('GET', '/objects/exploration_campaign/records').every((l) => l.ruta.includes('project=p1'))).toBe(true)
     expect(red.a('GET', '/objects/engagement/records').every((l) => l.ruta.includes('project=p1'))).toBe(true)
     expect(red.a('GET', '/objects/engagement/records').length).toBeGreaterThan(0)
   })
 
-  it('la revisión dice lo que falta para D1 y D2 con el paso donde se completa; enviar queda deshabilitado', async () => {
+  it('la revisión dice lo que falta para el envío con el paso donde se completa; enviar queda deshabilitado', async () => {
     fetch = mockFetch(rutas())
     abrir()
     await escribir('Código', 'C-010')
@@ -173,7 +177,7 @@ describe('S30 · crear compromiso', () => {
     await escribir('Monto', '100')
     await siguiente()
     await siguiente()
-    const lista = await screen.findByRole('region', { name: 'Lo que pide el envío a aprobación (D1 y D2)' })
+    const lista = await screen.findByRole('region', { name: 'Lo que pide el envío a aprobación' })
     expect(within(lista).getByText('Falta: Responsable')).toBeInTheDocument()
     expect(within(lista).getByText('Falta: Al menos un grupo de interés solicitante')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Enviar a aprobación' })).toBeDisabled()
@@ -199,8 +203,126 @@ describe('S30 · crear compromiso', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
     expect(await screen.findByText(/se creó en borrador pero no se terminó de registrar/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Abrir la ficha del compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/c9')
+    // tras el alta, los pasos ya no se editan: lo que cambie aquí no se guardaría
+    await alPaso('Qué se compromete')
+    expect(screen.getByText(/El borrador ya se creó: lo que cambie en estos pasos no se guarda/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Código')).toBeDisabled()
+    await alPaso('Revisión y envío')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments/c9'))
     expect(red.a('POST', '/objects/commitment/records')).toHaveLength(1)
+  })
+
+  it.each([
+    ['WORKSHOP_COMMITMENT_BLOCKED', 'El proyecto no admite compromisos que nazcan de un taller o de una reunión informativa.'],
+    ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un compromiso o un candidato solo se vincula con lo de su proyecto.']
+  ])('%s sobre la interacción de origen vuelve al paso del origen con su texto junto al buscador', async (codigo, textoEsperado) => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      { method: 'POST', path: '/objects/commitment/records', responder: () => problema(409, 'rechazado', [{ field: 'origin_engagement', message: codigo }]) }
+    ])
+    abrir()
+    await llenarHastaLaRevision()
+    await escribir('Motivo (obligatorio)', 'Acordado en el taller')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    await waitFor(() => expect(pasoActual()).toHaveTextContent('Origen'))
+    expect(screen.getByText(textoEsperado)).toBeInTheDocument()
+    expect(screen.queryByText(codigo)).not.toBeInTheDocument()
+  })
+
+  it('el responsable y el verificador del servidor vuelven al paso del plazo; lo que no tiene paso queda en la revisión', async () => {
+    fetch = mockFetch(rutas())
+    let intento = 0
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/objects/commitment/records',
+        responder: () =>
+          ++intento === 1
+            ? problema(409, 'rechazado', [{ field: 'owner_user_id', message: 'Usuario desconocido' }])
+            : problema(409, 'rechazado', [
+                { field: 'verifier_user_email', message: 'Usuario desconocido' },
+                { field: 'agreement', message: 'PROJECT_MISMATCH' }
+              ])
+      }
+    ])
+    abrir()
+    await llenarHastaLaRevision()
+    await escribir('Motivo (obligatorio)', 'Acordado en el taller')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    await waitFor(() => expect(pasoActual()).toHaveTextContent('Plazo y responsable'))
+    expect(screen.getByText('Usuario desconocido')).toBeInTheDocument()
+    await alPaso('Revisión y envío')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    // una violación sin paso deja el aviso en la revisión, con todas las que trae
+    expect(await screen.findByText(/El registro elegido es de otro proyecto/)).toBeInTheDocument()
+    expect(pasoActual()).toHaveTextContent('Revisión y envío')
+  })
+
+  it('al guardar se vuelven a revisar los pasos: un verificador igual al responsable no se envía aunque se salte el paso', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed()
+    abrir()
+    await llenarHastaLaRevision()
+    await alPaso('Plazo y responsable')
+    await escribir('Verificador · correo', 'cmm@sgspe.test')
+    await escribir('Verificador · identificador de usuario', 'u-cmm')
+    await alPaso('Qué se compromete')
+    await alPaso('Revisión y envío')
+    await escribir('Motivo (obligatorio)', 'Acordado en el taller')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    await waitFor(() => expect(pasoActual()).toHaveTextContent('Plazo y responsable'))
+    expect(screen.getByText('El verificador no puede ser el responsable')).toBeInTheDocument()
+    expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
+  })
+
+  it('una justificación que ya no corresponde al origen no se envía', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      { method: 'POST', path: '/objects/commitment/records', responder: () => jsonResponse(CREADO, 201) },
+      { method: 'POST', path: '/objects/commitment/records/c9/related/commitment_stakeholder', responder: () => new Response(null, { status: 204 }) }
+    ])
+    abrir()
+    await llenarHastaLaRevision()
+    await alPaso('Origen')
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar' }))
+    await alPaso('Revisión y envío')
+    await escribir('Motivo (obligatorio)', 'Acordado en el taller')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments/c9'))
+    const [alta] = red.a('POST', '/objects/commitment/records')
+    expect(alta.cuerpo).toMatchObject({ attributes: { code: 'C-010' } })
+    expect((alta.cuerpo as { attributes: Record<string, unknown> }).attributes).not.toHaveProperty('origin_justification')
+    expect((alta.cuerpo as { attributes: Record<string, unknown> }).attributes).not.toHaveProperty('origin_engagement')
+  })
+
+  it('un 412 al enviar relee la versión y reintenta una vez con la nueva', async () => {
+    fetch = mockFetch(rutas([{ path: '/objects/commitment/records/c9', body: { ...CREADO, updatedAt: '2026-10-09T15:00:05Z' } }]))
+    let envios = 0
+    red = espiarRed([
+      { method: 'POST', path: '/objects/commitment/records', responder: () => jsonResponse(CREADO, 201) },
+      { method: 'POST', path: '/objects/commitment/records/c9/related/commitment_stakeholder', responder: () => new Response(null, { status: 204 }) },
+      {
+        method: 'POST',
+        path: '/objects/commitment/records/c9/transitions/submit',
+        responder: () => (++envios === 1 ? problema(412, 'versión') : jsonResponse({ ...CREADO, state: 'pending_approval' }))
+      }
+    ])
+    abrir()
+    await llenarHastaLaRevision()
+    await escribir('Motivo (obligatorio)', 'Acordado en el taller')
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar a aprobación' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments/c9'))
+    const envio = red.a('POST', '/objects/commitment/records/c9/transitions/submit')
+    expect(envio.map((l) => l.cabeceras.get('If-Match'))).toEqual(['"2026-10-09T15:00:00Z"', '"2026-10-09T15:00:05Z"'])
+    expect(envio.every((l) => l.cabeceras.get('X-Change-Reason'))).toBe(true)
+  })
+
+  it('mientras se leen las asignaciones no dice solo lectura, y si su lectura falla lo dice con reintento', async () => {
+    fetch = mockFetch(rutas([{ path: /^\/objects\/project_assignment\/records\?.*member_user_id/, status: 500, body: { title: 'Error', status: 500 } }]))
+    abrir()
+    expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(screen.queryByText(/No está asignado a este proyecto/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Nuevo compromiso' })).not.toBeInTheDocument()
   })
 })

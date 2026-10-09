@@ -1,7 +1,7 @@
 // S30 · crear compromiso por pasos (screens.md §7, flujo 8)
 export const ES_NUEVO_COMPROMISO = {
   titulo: 'Nuevo compromiso',
-  ayuda: 'Nada se guarda hasta el último paso: el alta de un compromiso exige su monto y un motivo (RN-COM-004).',
+  ayuda: 'Nada se guarda hasta el último paso: el alta de un compromiso exige su monto y un motivo.',
   pasos: {
     que: 'Qué se compromete',
     origen: 'Origen',
@@ -42,26 +42,25 @@ export const ES_NUEVO_COMPROMISO = {
     obligatorio: 'Este dato es obligatorio',
     numero: 'Escriba un número de hasta 15 dígitos enteros y 4 decimales',
     entero: 'Escriba un número entero',
-    justificacion: 'Un compromiso que nace de un taller o de una reunión informativa exige la justificación de su origen (RN-ENG-001)',
+    justificacion: 'Un compromiso que nace de un taller o de una reunión informativa exige la justificación de su origen',
     usuario: 'Escriba el correo y el identificador de la persona',
-    mismaPersona: 'El verificador no puede ser el responsable (RN-COM-005)'
+    mismaPersona: 'El verificador no puede ser el responsable'
   },
   buscarInteraccion: 'Buscar la interacción por título',
-  sinOrigen: 'Sin interacción de origen',
-  buscarGrupo: 'Buscar el grupo de interés',
-  sinSolicitantes: 'Todavía no hay solicitantes: el envío a aprobación pide al menos uno (D1).',
+  sinSolicitantes: 'Todavía no hay solicitantes: el envío a aprobación pide al menos uno.',
   tope: {
     titulo: 'Tope de apoyo social de la campaña',
     sinTope: 'La campaña no tiene tope registrado.',
     aprobado: 'Aprobado en la campaña',
     este: 'Este compromiso',
     queda: 'Queda',
-    supera: 'Este compromiso supera el tope de la campaña. Con la política que bloquea, solo lo aprueba el nivel superior con APPROVE_OVER_CAP (D7).',
+    supera:
+      'Este compromiso supera el tope de la campaña. Si la política del proyecto bloquea lo que supera el tope, solo lo aprueba el nivel superior con permiso para superarlo.',
     otraMoneda: 'La campaña está en {{moneda}}: lo que está en otra moneda no se suma a su tope.',
     leyendo: 'Leyendo lo aprobado en la campaña…'
   },
   revision: {
-    lista: 'Lo que pide el envío a aprobación (D1 y D2)',
+    lista: 'Lo que pide el envío a aprobación',
     falta: 'Falta: {{campo}}',
     irAlPaso: 'Ir al paso',
     completo: 'Están los datos de la matriz y el responsable.',
@@ -73,13 +72,14 @@ export const ES_NUEVO_COMPROMISO = {
     enviar: 'Enviar a aprobación',
     guardando: 'Guardando…',
     parcial: 'El compromiso se creó en borrador pero no se terminó de registrar: complételo en su ficha.',
-    abrirFicha: 'Abrir la ficha del compromiso'
+    abrirFicha: 'Abrir la ficha del compromiso',
+    yaCreado: 'El borrador ya se creó: lo que cambie en estos pasos no se guarda. Complételo en su ficha.'
   }
 }
 
 export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
   titulo: 'New commitment',
-  ayuda: 'Nothing is saved until the last step: creating a commitment needs its amount and a reason (RN-COM-004).',
+  ayuda: 'Nothing is saved until the last step: creating a commitment needs its amount and a reason.',
   pasos: {
     que: 'What is committed',
     origen: 'Origin',
@@ -120,26 +120,25 @@ export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
     obligatorio: 'This value is required',
     numero: 'Type a number of up to 15 integer digits and 4 decimals',
     entero: 'Type a whole number',
-    justificacion: 'A commitment born in a workshop or an information meeting needs the justification of its origin (RN-ENG-001)',
+    justificacion: 'A commitment born in a workshop or an information meeting needs the justification of its origin',
     usuario: 'Type the person’s email and identifier',
-    mismaPersona: 'The verifier cannot be the owner (RN-COM-005)'
+    mismaPersona: 'The verifier cannot be the owner'
   },
   buscarInteraccion: 'Search the engagement by title',
-  sinOrigen: 'No origin engagement',
-  buscarGrupo: 'Search the stakeholder',
-  sinSolicitantes: 'There are no requesters yet: submitting for approval needs at least one (D1).',
+  sinSolicitantes: 'There are no requesters yet: submitting for approval needs at least one.',
   tope: {
     titulo: 'Campaign social support cap',
     sinTope: 'The campaign has no cap recorded.',
     aprobado: 'Approved in the campaign',
     este: 'This commitment',
     queda: 'Left',
-    supera: 'This commitment exceeds the campaign cap. With the blocking policy, only senior approval with APPROVE_OVER_CAP approves it (D7).',
+    supera:
+      'This commitment exceeds the campaign cap. If the project policy blocks what exceeds the cap, only the senior level with permission to exceed it can approve it.',
     otraMoneda: 'The campaign is in {{moneda}}: amounts in another currency are not added to its cap.',
     leyendo: 'Reading what was approved in the campaign…'
   },
   revision: {
-    lista: 'What submitting for approval needs (D1 and D2)',
+    lista: 'What submitting for approval needs',
     falta: 'Missing: {{campo}}',
     irAlPaso: 'Go to the step',
     completo: 'The matrix data and the owner are there.',
@@ -151,6 +150,7 @@ export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
     enviar: 'Submit for approval',
     guardando: 'Saving…',
     parcial: 'The commitment was created as a draft but not fully recorded: complete it on its page.',
-    abrirFicha: 'Open the commitment page'
+    abrirFicha: 'Open the commitment page',
+    yaCreado: 'The draft was already created: changes in these steps are not saved. Complete it on its page.'
   }
 }
