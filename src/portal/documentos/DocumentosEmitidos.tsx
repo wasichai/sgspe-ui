@@ -20,14 +20,15 @@ import { rutaDeImpresion, useDocumentosEmitidos, useEmitirDocumento, useTiposDeD
 // estricta) y solo si el objeto tiene tipos. sin el módulo (404) no se dibuja nada. las plantillas no imprimen campos
 // restringidos (ASM-090). el servidor exige además (IssueDocumentFilter, P62) la asignación vigente al proyecto del registro
 // y, sin EDIT_ANY, haberlo creado; la ficha no sabe quién lo creó, así que cada 403 (ACTION_REQUIRED, NOT_ASSIGNED,
-// NOT_OWN_RECORD, OBJECT_NOT_READABLE) se dice con el texto propio de la emisión
+// NOT_OWN_RECORD, OBJECT_NOT_READABLE) se dice con el texto propio de la emisión. escribe es la guarda de UI de quien abre la
+// ficha (useEscribeEnProyecto del proyecto del registro): sin asignación vigente no se ofrece emitir
 const NEGATIVAS = ['ACTION_REQUIRED', 'NOT_ASSIGNED', 'NOT_OWN_RECORD', 'OBJECT_NOT_READABLE'] as const
 
-export function DocumentosEmitidos({ objeto, registroId }: { objeto: string; registroId: string }) {
+export function DocumentosEmitidos({ objeto, registroId, escribe }: { objeto: string; registroId: string; escribe?: boolean }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const documentos = useDocumentosEmitidos(objeto, registroId)
-  const emite = can(objeto, 'UPDATE')
+  const emite = escribe !== false && can(objeto, 'UPDATE')
   const tipos = useTiposDeDocumento(objeto, emite)
   const emitir = useEmitirDocumento(objeto, registroId)
   const mensaje = useMensajeDeError()

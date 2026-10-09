@@ -114,7 +114,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             {
               id: 'documentos',
               label: t('relacionamiento.ficha.pestanas.documentos'),
-              render: () => <DocumentosEmitidos objeto="engagement" registroId={interaccion.id} />
+              render: () => <DocumentosEmitidos objeto="engagement" registroId={interaccion.id} escribe={escribe} />
             },
             {
               id: 'actividad',

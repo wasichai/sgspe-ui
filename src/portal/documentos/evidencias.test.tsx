@@ -153,6 +153,12 @@ describe('evidencias de un registro', () => {
     expect(await within(panel).findByText('El archivo pasa de 20 MB: redúzcalo o divídalo en varias evidencias.')).toBeInTheDocument()
     expect(within(panel).queryByText('FILE_TOO_LARGE')).not.toBeInTheDocument()
     expect(red.a('POST', '/sgspe/evidence')).toHaveLength(0)
+    // elegir otro archivo quita el error del anterior
+    await userEvent.upload(
+      within(panel).getByLabelText('Archivo (PDF, foto, hoja, documento o texto; hasta 20 MB)'),
+      new File(['x'], 'acta-corta.pdf', { type: 'application/pdf' })
+    )
+    await waitFor(() => expect(within(panel).queryByText('El archivo pasa de 20 MB: redúzcalo o divídalo en varias evidencias.')).not.toBeInTheDocument())
   })
 
   it('un archivo de más de 20 MB lo dice junto al archivo y no lo sube', async () => {
@@ -197,7 +203,51 @@ describe('evidencias de un registro', () => {
     const enviado = subida.formulario?.get('file') as File
     expect(enviado.name).toBe('evidencia-20261009-213005.pdf')
     expect(JSON.stringify(red.llamadas.map((l) => l.cuerpo))).not.toContain('padron-de-comuneros')
-    expect(nombreNeutro(new File(['x'], 'sin-extension'), new Date('2026-01-01T05:00:00Z'))).toBe('evidencia-20260101-000000')
+    const enero = new Date('2026-01-01T05:00:00Z')
+    expect(nombreNeutro(new File(['x'], 'sin-extension'), enero)).toBe('evidencia-20260101-000000')
+    // lo que sigue al último punto no siempre es una extensión: solo una conocida se conserva; si no, la del tipo MIME o ninguna
+    expect(nombreNeutro(new File(['x'], 'Lista Sra. Mamani'), enero)).toBe('evidencia-20260101-000000')
+    expect(nombreNeutro(new File(['x'], 'Lista Sra. Mamani', { type: 'image/jpeg' }), enero)).toBe('evidencia-20260101-000000.jpg')
+    expect(
+      nombreNeutro(new File(['x'], 'Padron comuneros v2.Juan Quispe', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), enero)
+    ).toBe('evidencia-20260101-000000.xlsx')
+    expect(nombreNeutro(new File(['x'], 'DNI 12345678.Quispe', { type: 'application/pdf' }), enero)).toBe('evidencia-20260101-000000.pdf')
+    expect(nombreNeutro(new File(['x'], 'DNI 12345678.Quispe'), enero)).toBe('evidencia-20260101-000000')
+    expect(nombreNeutro(new File(['x'], 'Foto.JPEG', { type: 'image/jpeg' }), enero)).toBe('evidencia-20260101-000000.jpeg')
+  })
+
+  // decisión 18: lo subido se recuerda por archivo y por clasificación. la primera subida, con el nombre original, queda
+  // huérfana en wasichai-files; se acepta (ver useRegistrarEvidencia)
+  it('pasar a CONFIDENCIAL tras un alta fallida vuelve a subir el archivo con el nombre neutro', async () => {
+    fetch = mockFetch(base())
+    let altas = 0
+    red = espiarRed([
+      { method: 'POST', path: '/objects/evidence/files/file', responder: () => jsonResponse(DESCRIPTOR, 201) },
+      {
+        method: 'POST',
+        path: '/sgspe/evidence',
+        responder: () => (++altas === 1 ? new Response(null, { status: 503 }) : jsonResponse(registro('ev9', {}), 201))
+      }
+    ])
+    montar(<EvidenciasDelRegistro objeto="commitment" registro={COMPROMISO} escribe />, { permisos: EQUIPO })
+    await userEvent.click(await screen.findByRole('button', { name: 'Subir evidencia' }))
+    const panel = await screen.findByRole('group', { name: 'Subir una evidencia' })
+    await userEvent.upload(
+      within(panel).getByLabelText('Archivo (PDF, foto, hoja, documento o texto; hasta 20 MB)'),
+      new File(['%PDF'], 'padron-de-comuneros.pdf', { type: 'application/pdf' })
+    )
+    await userEvent.selectOptions(within(panel).getByLabelText('Tipo de evidencia'), 'CARTA')
+    await userEvent.selectOptions(within(panel).getByLabelText('Clasificación'), 'INTERNA')
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'padrón')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Subir evidencia' }))
+    expect(await within(panel).findByRole('alert')).toBeInTheDocument()
+    await userEvent.selectOptions(within(panel).getByLabelText('Clasificación'), 'CONFIDENCIAL')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Subir evidencia' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/evidence')).toHaveLength(2))
+    const [primera, segunda] = red.a('POST', '/objects/evidence/files/file')
+    expect((primera.formulario?.get('file') as File).name).toBe('padron-de-comuneros.pdf')
+    expect((segunda.formulario?.get('file') as File).name).toMatch(/^evidencia-\d{8}-\d{6}\.pdf$/)
+    expect(red.a('POST', '/sgspe/evidence')[1].cuerpo).toMatchObject({ attributes: { classification: 'CONFIDENCIAL' } })
   })
 
   it('EVIDENCE_FILE_IN_USE lo dice junto al archivo; el siguiente intento lo sube de nuevo con otra clave', async () => {
@@ -247,6 +297,10 @@ describe('evidencias de un registro', () => {
     expect(within(fila('Lista de beneficiarios')).getByText('Restringida')).toBeInTheDocument()
     expect(within(fila('Foto')).getByText('Restringido')).toBeInTheDocument()
     expect(within(fila('Foto')).queryByRole('button', { name: /Descargar/ })).not.toBeInTheDocument()
+    expect(within(fila('Lista de beneficiarios')).getByText(/hace falta la acción DOWNLOAD_RESTRICTED/)).toBeInTheDocument()
+    // sin leer la clasificación, la ayuda no insinúa cuál es
+    expect(within(fila('Foto')).getByText(/Su rol no lee la clasificación de esta evidencia/)).toBeInTheDocument()
+    expect(within(fila('Foto')).queryByText(/CONFIDENCIAL/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Subir evidencia' })).not.toBeInTheDocument()
     await userEvent.click(within(fila('Acta de entrega')).getByRole('button', { name: 'Descargar Acta de entrega' }))
     await waitFor(() => expect(red!.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1))
@@ -343,7 +397,8 @@ describe('documentos emitidos', () => {
       new Response(JSON.stringify({ title: 'Error', status: 403, detail: 'no es suyo', errors: [{ message: 'NOT_OWN_RECORD' }] }), {
         status: 403,
         headers: { 'Content-Type': 'application/problem+json' }
-      })
+      }),
+      problema(403, 'no lo lee', [{ field: 'record', message: 'OBJECT_NOT_READABLE' }])
     ]
     fetch = mockFetch([
       { path: '/objects/engagement/records/e1/documents', body: [DOCUMENTO] },
@@ -358,8 +413,23 @@ describe('documentos emitidos', () => {
     expect(await screen.findByText('Solo el equipo del proyecto emite sus documentos: no tiene una asignación vigente a este proyecto.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Emitir' }))
     expect(await screen.findByText('Solo quien creó este registro emite sus documentos: su cuenta no edita registros de otras personas.')).toBeInTheDocument()
-    expect(screen.queryByText(/ACTION_REQUIRED|NOT_ASSIGNED|NOT_OWN_RECORD/)).not.toBeInTheDocument()
-    expect(red.a('POST', '/objects/engagement/records/e1/documents/meeting-minutes')).toHaveLength(3)
+    await userEvent.click(screen.getByRole('button', { name: 'Emitir' }))
+    expect(await screen.findByText('Su rol no puede leer este registro, así que no emite sus documentos.')).toBeInTheDocument()
+    expect(screen.queryByText(/ACTION_REQUIRED|NOT_ASSIGNED|NOT_OWN_RECORD|OBJECT_NOT_READABLE/)).not.toBeInTheDocument()
+    // el detail del servidor nombra el objeto y el proyecto: nunca se dibuja
+    expect(screen.queryByText(/sin edición|sin asignación|no es suyo|no lo lee/)).not.toBeInTheDocument()
+    expect(red.a('POST', '/objects/engagement/records/e1/documents/meeting-minutes')).toHaveLength(4)
+  })
+
+  // guarda de UI: emitir es editar el registro (P62) y pide la asignación vigente al proyecto (useEscribeEnProyecto)
+  it('con UPDATE pero sin asignación vigente no se ofrece emitir', async () => {
+    fetch = mockFetch([{ path: '/objects/engagement/records/e1/documents', body: [DOCUMENTO] }])
+    red = espiarRed()
+    montar(<DocumentosEmitidos objeto="engagement" registroId="e1" escribe={false} />, { permisos: permisos({ engagement: ['READ', 'UPDATE'] }) })
+    expect(await screen.findByRole('button', { name: 'Abrir MR-2026-001' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Emitir' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Tipo de documento')).not.toBeInTheDocument()
+    expect(red.a('GET', '/objects/engagement/document-types')).toHaveLength(0)
   })
 
   it('quien solo lee no emite; sin el módulo (404) no se dibuja', async () => {
