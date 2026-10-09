@@ -1,8 +1,64 @@
-// S47 · mis tareas: lista, tablero y calendario (WF-N)
+// S47 · mis tareas: lista, tablero y calendario (WF-N, screens.md §11)
 export const ES_TAREAS = {
-  titulo: 'Mis tareas'
+  titulo: 'Mis tareas',
+  delProyecto: 'Tareas del proyecto',
+  vistas: { lista: 'Lista', tablero: 'Tablero', calendario: 'Calendario', paraTomar: 'Para tomar' },
+  contadores: { vencidas: 'Vencidas', porVencer: 'Por vencer', abiertas: 'Abiertas' },
+  truncado: 'Se muestran las primeras 1000 tareas: acote con un proyecto para ver el resto.',
+  vacia: 'No tiene tareas abiertas.',
+  vaciaParaTomar: 'No hay tareas sin asignar en este proyecto.',
+  paraTomarAyuda: 'Las tareas de escalamiento llegan sin asignar: las toma una de las personas avisadas.',
+  paraTomarGlobal: 'Las tareas para tomar se ven dentro de cada proyecto: elija uno en el selector.',
+  columnas: { tarea: 'Tarea', origen: 'Origen', prioridad: 'Prioridad', vence: 'Vence', estado: 'Estado' },
+  origenes: { commitment: 'Compromiso', engagement: 'Interacción', agreement: 'Acuerdo', stakeholder: 'Grupo de interés' },
+  verOrigen: 'Abrir el origen',
+  sinOrigen: '—',
+  abrir: 'Abrir {{tarea}}',
+  columnasDelTablero: { open: 'Abiertas', in_progress: 'En curso', blocked: 'Bloqueadas', done: 'Hechas' },
+  mesAnterior: 'Mes anterior',
+  mesSiguiente: 'Mes siguiente',
+  sinFecha: 'Sin fecha de vencimiento: {{n}}',
+  diasDeLaSemana: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+  ficha: {
+    descripcion: 'Descripción',
+    asignada: 'Asignada a',
+    sinAsignar: 'Sin asignar',
+    vence: 'Vence',
+    prioridad: 'Prioridad',
+    tomar: 'Tomar la tarea',
+    tomando: 'Tomando…',
+    tomada: 'La tarea es suya.'
+  }
 }
 
 export const EN_TAREAS: typeof ES_TAREAS = {
-  titulo: 'My tasks'
+  titulo: 'My tasks',
+  delProyecto: 'Project tasks',
+  vistas: { lista: 'List', tablero: 'Board', calendario: 'Calendar', paraTomar: 'To take' },
+  contadores: { vencidas: 'Overdue', porVencer: 'Due soon', abiertas: 'Open' },
+  truncado: 'The first 1000 tasks are shown: narrow with a project to see the rest.',
+  vacia: 'You have no open tasks.',
+  vaciaParaTomar: 'There are no unassigned tasks in this project.',
+  paraTomarAyuda: 'Escalation tasks arrive unassigned: one of the notified people takes them.',
+  paraTomarGlobal: 'Tasks to take are shown inside each project: pick one in the selector.',
+  columnas: { tarea: 'Task', origen: 'Origin', prioridad: 'Priority', vence: 'Due', estado: 'Status' },
+  origenes: { commitment: 'Commitment', engagement: 'Engagement', agreement: 'Agreement', stakeholder: 'Stakeholder' },
+  verOrigen: 'Open the origin',
+  sinOrigen: '—',
+  abrir: 'Open {{tarea}}',
+  columnasDelTablero: { open: 'Open', in_progress: 'In progress', blocked: 'Blocked', done: 'Done' },
+  mesAnterior: 'Previous month',
+  mesSiguiente: 'Next month',
+  sinFecha: 'Without due date: {{n}}',
+  diasDeLaSemana: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  ficha: {
+    descripcion: 'Description',
+    asignada: 'Assigned to',
+    sinAsignar: 'Unassigned',
+    vence: 'Due',
+    prioridad: 'Priority',
+    tomar: 'Take the task',
+    tomando: 'Taking…',
+    tomada: 'The task is yours.'
+  }
 }
