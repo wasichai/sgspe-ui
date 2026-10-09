@@ -4,7 +4,7 @@ import { jsonResponse, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
-import { ADMINISTRACION_DE_PROYECTO, permisos, RELACIONISTA } from '../../test/portal'
+import { ADMINISTRACION, ADMINISTRACION_DE_PROYECTO, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 
 let fetch: FetchMock | null = null
@@ -44,6 +44,7 @@ const DEF = definicion('project', [
   ['policy_activation_preconditions', { type: 'BOOLEAN' }],
   ['location', { type: 'GEOMETRY' }]
 ])
+const MI_ASIGNACION = registro('as-pad', { project: 'p9', member_user_id: 'u-pad', active: true, role_name: 'ROL_DE_PRUEBA' })
 const CREADO = registro('p9', { code: 'PRJ-09', name: 'Antakuna', working_crs: 'EPSG 32718' }, { state: 'draft' })
 
 const rutas = () => [
@@ -63,6 +64,8 @@ const rutas = () => [
   { path: '/objects/project_party/records', body: pagina([registro('pp1', { party_role: 'CLIENTE', organization: 'o1', project: 'p9' })]) },
   { path: '/objects/organization/records/o1', body: registro('o1', { name: 'Minera Andina' }) },
   { path: '/objects/exploration_campaign/records', body: pagina([]) },
+  // la cuenta ya está asignada al borrador p9 (P40): el asistente sigue sin pedir la asignación propia
+  { path: /^\/objects\/project_assignment\/records\?.*member_user_id=/, body: pagina([MI_ASIGNACION]) },
   { path: '/objects/project_assignment/records', body: pagina([]) },
   {
     path: '/metadata/objects/project_assignment',
@@ -589,5 +592,92 @@ describe('S07 · borradores y errores', () => {
     expect(vuelto).toHaveValue('2x')
     expect(screen.getByText('Escriba un número mayor o igual a 0, o deje el campo vacío para el valor por defecto.')).toBeInTheDocument()
     expect(screen.queryByDisplayValue('NaN')).not.toBeInTheDocument()
+  })
+})
+
+// P40 (revisión final, C1): ProjectScopeGuard exige una asignación vigente para escribir en un proyecto, también en su borrador,
+// y un proyecto nuevo no tiene equipo. el asistente pide asignarse a quien lo crea antes de cualquier otra escritura; esa
+// escritura está exenta (security.md §9.2, ítem 5). ADMIN, o quien ya está asignado, no la ve
+describe('S07 · asignación de quien crea (P40)', () => {
+  // las asignaciones de la cuenta: ninguna hasta que se asigna; después, la suya
+  const misAsignaciones = () => ({
+    path: /^\/objects\/project_assignment\/records\?.*member_user_id=/,
+    responder: () => jsonResponse(pagina(red!.a('POST', '/objects/project_assignment/records').length > 0 ? [MI_ASIGNACION] : []))
+  })
+  const PIDE = 'Asígnese a este proyecto para seguir'
+
+  it('sin asignación, crea el borrador, pide asignarse y recién después sale el PUT del paso 2', async () => {
+    fetch = abrirPortal('/projects/new', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed([misAsignaciones()])
+    await identificar()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('heading', { name: PIDE })).toBeInTheDocument()
+    expect(screen.getByText(/solo acepta cambios de quien está asignado/)).toBeInTheDocument()
+    // sin el directorio de roles, el rol se escribe; el usuario es la cuenta, no se elige
+    expect(screen.queryByRole('textbox', { name: 'Correo del usuario' })).not.toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Rol en el proyecto' }), 'ROL_DE_PRUEBA')
+    await userEvent.click(screen.getByRole('button', { name: 'Asignarme al proyecto' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/project_assignment/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/project_assignment/records')[0].cuerpo).toMatchObject({
+      attributes: { project: 'p9', member_user_id: 'u-pad', member_user_email: 'pad@sgspe.test', role_name: 'ROL_DE_PRUEBA', active: true }
+    })
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'CRS de trabajo' }), 'EPSG 32718')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByRole('heading', { name: 'Partes' })
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(1)
+  })
+
+  it('con el directorio de roles, el rol se elige de la lista', async () => {
+    fetch = abrirPortal('/projects/new', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: '/roles', body: [{ name: 'ROL_DE_PRUEBA', label: 'Rol de prueba' }] },
+      ...rutas()
+    ])
+    red = espiarRed([misAsignaciones()])
+    await identificar()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Rol en el proyecto' }), 'ROL_DE_PRUEBA')
+    await userEvent.click(screen.getByRole('button', { name: 'Asignarme al proyecto' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/project_assignment/records')).toHaveLength(1))
+    expect(await screen.findByRole('combobox', { name: 'CRS de trabajo' })).toBeInTheDocument()
+  })
+
+  it('sin la asignación no sale ningún PUT: ni «Siguiente», ni el indicador, ni «Guardar y salir»', async () => {
+    fetch = abrirPortal('/projects/new', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed([misAsignaciones()])
+    await identificar()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByRole('heading', { name: PIDE })
+    expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Partes/ }))
+    expect(screen.getByRole('heading', { name: PIDE })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y salir' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p9/overview'))
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
+  })
+
+  it('un borrador abierto con ?draft= sin asignación pide lo mismo antes de cualquier escritura', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed([misAsignaciones()])
+    expect(await screen.findByRole('heading', { name: PIDE })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'code' })).not.toBeInTheDocument()
+    expect(red.a('PUT', '/objects/project/records/p9')).toHaveLength(0)
+  })
+
+  it('sin CREATE sobre project_assignment lo dice: pida a quien administra que lo asigne', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, permisos({ ...PAD.objects, project_assignment: ['READ'] }), rutas())
+    red = espiarRed([misAsignaciones()])
+    expect(await screen.findByText(/Su cuenta no puede asignarse/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Asignarme al proyecto' })).not.toBeInTheDocument()
+  })
+
+  it('ADMIN no la ve: del paso 1 pasa directo a la ubicación', async () => {
+    fetch = abrirPortal('/projects/new', ADMINISTRACION, { admin: true, objects: PAD.objects }, rutas())
+    red = espiarRed([misAsignaciones()])
+    await identificar()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('combobox', { name: 'CRS de trabajo' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: PIDE })).not.toBeInTheDocument()
+    expect(red.a('POST', '/objects/project_assignment/records')).toHaveLength(0)
   })
 })

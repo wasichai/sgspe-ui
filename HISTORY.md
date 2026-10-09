@@ -20,7 +20,9 @@ La entrada más reciente va primero. El diseño y los ADR están en el repositor
 - Decisiones de la ejecución: `RUTAS_EN_PROYECTO` lleva `seccion` solo para las pantallas de otra sección (P36); `EDIT_ANY`
   no exime de la asignación, y solo ADMIN la salta en la opción A (P38); la fila fuera de zona de una importación se
   resalta con su mensaje y lleva `APPLY` por defecto (P39); las lecturas con tope (`useTodosConTope`, `leerConTope`) avisan
-  del recorte, y el calendario y las interacciones leen en orden descendente.
+  del recorte, y el calendario y las interacciones leen en orden descendente; en S07, quien crea el borrador y no es ADMIN
+  se asigna a sí mismo con su rol antes de cualquier otra escritura, porque `ProjectScopeGuard` exige la asignación también
+  en el borrador y esa escritura está exenta (P40).
 - Piezas compartidas que dejó la ejecución: `LimiteDeError` (mapa y gráficos), `LecturaConEstados` y `FalloDeLectura`,
   `ThConExplicacion` y celdas con `describedPor` para los datos restringidos en tablas, y `hoyEnLima`, `diaEnLima` y
   `diasEntre` en `datos/fechas.ts`.

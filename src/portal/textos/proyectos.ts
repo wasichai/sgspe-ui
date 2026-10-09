@@ -44,6 +44,13 @@ export const ES_PROYECTOS = {
     quePasaraTexto: 'El proyecto pasa a «En revisión» y la administración del proyecto decide si lo aprueba o lo devuelve.',
     sinCrear: 'Su cuenta no puede crear proyectos: abra un borrador existente para completarlo.',
     sinEditar: 'Su cuenta puede ver este borrador, pero no cambiar sus datos.',
+    // P40: quien crea el proyecto se asigna antes de cualquier otra escritura
+    asignarse: {
+      titulo: 'Asígnese a este proyecto para seguir',
+      porQue:
+        'Un proyecto nuevo no tiene equipo, y el servidor solo acepta cambios de quien está asignado a él. Elija su rol en este proyecto: después podrá completar los demás pasos.',
+      sinPermiso: 'Su cuenta no puede asignarse a este proyecto: pida a quien administra los proyectos que la asigne para completar el borrador.'
+    },
     numeroInvalido: 'Escriba un número mayor o igual a 0, o deje el campo vacío para el valor por defecto.',
     enteroInvalido: 'Escriba un número entero mayor o igual a 0, o deje el campo vacío para el valor por defecto.',
     sinGuardar: 'Hay datos no válidos que no se guardaron: siguen en el formulario con su error. Corríjalos para que el borrador los guarde.'
@@ -95,6 +102,12 @@ export const EN_PROYECTOS: typeof ES_PROYECTOS = {
     quePasaraTexto: 'The project moves to “In review” and the project administration approves it or returns it.',
     sinCrear: 'Your account cannot create projects: open an existing draft to complete it.',
     sinEditar: 'Your account can see this draft but not change its data.',
+    asignarse: {
+      titulo: 'Assign yourself to this project to continue',
+      porQue:
+        'A new project has no team, and the server only accepts changes from people assigned to it. Choose your role in this project: then you can complete the other steps.',
+      sinPermiso: 'Your account cannot assign itself to this project: ask whoever manages projects to assign you so you can complete the draft.'
+    },
     numeroInvalido: 'Type a number greater than or equal to 0, or leave the field empty for the default value.',
     enteroInvalido: 'Type a whole number greater than or equal to 0, or leave the field empty for the default value.',
     sinGuardar: 'Some invalid data was not saved: it stays in the form with its error. Fix it so the draft saves it.'

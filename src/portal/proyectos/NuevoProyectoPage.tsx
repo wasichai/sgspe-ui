@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useRef, useState } from 'react'
@@ -11,19 +11,27 @@ import { AvisoDeConflicto } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Cargando, ErrorDeCarga } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Pasos } from '../componentes/Pasos'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
+import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
 import { atributo, campoDe, escribeAlgunCampo, texto, useActualizar, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useAplicarTransicion } from '../transiciones/api'
 import { CampanaDelProyecto, EquipoDelProyecto, PartesDelProyecto } from './EquipoYPartes'
+import { FormularioDeAsignacion } from './FormularioDeAsignacion'
 import { aNumero, ParametroNumerico } from './ParametroNumerico'
 import { PARAMETROS_F2, valoresPorDefecto } from './parametros'
 
 // S07 · crear proyecto (screens.md §3, flujo 1): siete pasos; el proyecto nace en draft al salir del paso 1 y cada cambio
 // de paso guarda el borrador si el formulario cambió (también «Anterior» y el indicador de pasos). un 409 por código
 // repetido vuelve al paso 1 con el campo marcado. el paso 7 muestra las precondiciones de activación (ASM-062) y aplica
-// submit_for_review. ?draft=<id> abre un borrador existente para completarlo; al crearlo, la URL recoge su id
+// submit_for_review. ?draft=<id> abre un borrador existente para completarlo; al crearlo, la URL recoge su id.
+// P40: ProjectScopeGuard exige una asignación vigente para escribir en el proyecto, también en su borrador, y uno nuevo no
+// tiene equipo. tras crear el borrador (o al abrir uno sin estar asignado), quien no es ADMIN se asigna a sí mismo con su rol
+// antes de cualquier otra escritura (la de project_assignment está exenta, security.md §9.2, ítem 5); hasta entonces los
+// demás pasos no se alcanzan y no sale ningún PUT
 const esquema = z
   .object({
     code: z.string().trim().min(1),
@@ -138,6 +146,10 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   const actualizar = useActualizar('project')
   const enviarARevision = useAplicarTransicion('project')
   const [proyecto, setProyecto] = useState<Registro | undefined>(inicial)
+  const misAsignaciones = useMisAsignaciones()
+  const escribeEnElProyecto = useEscribeEnProyecto(proyecto?.id)
+  // P40: el borrador existe y la cuenta todavía no puede escribir en él
+  const faltaAsignarse = Boolean(proyecto) && !escribeEnElProyecto
   const [paso, setPaso] = useState(0)
   const [visitados, setVisitados] = useState(0)
   // el último error de escritura que no quedó junto a un campo
@@ -219,6 +231,8 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   const moverA =
     (destino: number, libre = false) =>
     (e?: React.BaseSyntheticEvent) => {
+      // sin la asignación propia (P40) nada se guarda ni se avanza
+      if (faltaAsignarse) return
       setSinGuardar(false)
       return handleSubmit(
         async (v) => {
@@ -234,7 +248,8 @@ function Asistente({ inicial }: { inicial?: Registro }) {
     }
 
   const guardarYSalir = handleSubmit(async (v) => {
-    const guardado = !proyecto || sucio ? await persistir(v) : proyecto
+    // sin la asignación propia (P40) se sale sin escribir: el borrador ya existe y se completa al volver
+    const guardado = faltaAsignarse ? proyecto : !proyecto || sucio ? await persistir(v) : proyecto
     if (guardado) navegar(`/projects/${guardado.id}/overview`)
   }, alInvalidar)
 
@@ -264,9 +279,13 @@ function Asistente({ inicial }: { inicial?: Registro }) {
         <h1 className="text-sg-h2 font-semibold">{proyecto ? t('proyectos.asistente.completar') : t('proyectos.asistente.titulo')}</h1>
         <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void moverA(i, true)()} />
       </div>
-      <div role="group" className="space-y-4" aria-label={pasos[paso]}>
-        <h2 className="text-sg-h3 font-semibold">{pasos[paso]}</h2>
-        {paso === 0 ? (
+      <div role="group" className="space-y-4" aria-label={faltaAsignarse ? t('proyectos.asistente.asignarse.titulo') : pasos[paso]}>
+        {faltaAsignarse && proyecto ? (
+          <AsignacionPropia proyecto={proyecto.id} asignaciones={misAsignaciones} />
+        ) : (
+          <h2 className="text-sg-h3 font-semibold">{pasos[paso]}</h2>
+        )}
+        {faltaAsignarse ? null : paso === 0 ? (
           <form id={FORMULARIO} onSubmit={siguiente} className="grid gap-3 md:grid-cols-2">
             <Campo etiqueta={rotulo('code')} error={errorDe('code')}>
               {(p) => <Input {...p} {...register('code')} />}
@@ -289,7 +308,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
             </div>
           </form>
         ) : null}
-        {paso === 1 ? (
+        {!faltaAsignarse && paso === 1 ? (
           <form id={FORMULARIO} onSubmit={siguiente} className="grid gap-3 md:grid-cols-2">
             <div className="md:col-span-2">
               <Campo etiqueta={t('proyectos.asistente.crs')} ayuda={t('proyectos.asistente.crsAyuda')} error={errorDe('working_crs')}>
@@ -304,10 +323,10 @@ function Asistente({ inicial }: { inicial?: Registro }) {
             </Campo>
           </form>
         ) : null}
-        {paso === 2 && proyecto ? <PartesDelProyecto proyecto={proyecto.id} /> : null}
-        {paso === 3 && proyecto ? <CampanaDelProyecto proyecto={proyecto.id} /> : null}
-        {paso === 4 && proyecto ? <EquipoDelProyecto proyecto={proyecto.id} /> : null}
-        {paso === PASO_PARAMETROS ? (
+        {!faltaAsignarse && paso === 2 && proyecto ? <PartesDelProyecto proyecto={proyecto.id} /> : null}
+        {!faltaAsignarse && paso === 3 && proyecto ? <CampanaDelProyecto proyecto={proyecto.id} /> : null}
+        {!faltaAsignarse && paso === 4 && proyecto ? <EquipoDelProyecto proyecto={proyecto.id} /> : null}
+        {!faltaAsignarse && paso === PASO_PARAMETROS ? (
           <form id={FORMULARIO} onSubmit={siguiente}>
             <ul className="space-y-3">
               {PARAMETROS_F2.map((par) => {
@@ -343,7 +362,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
             </ul>
           </form>
         ) : null}
-        {paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} /> : null}
+        {!faltaAsignarse && paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} /> : null}
         {sinGuardar ? <Alert tone="notice">{t('proyectos.asistente.sinGuardar')}</Alert> : null}
         {fallo ? <AvisoDeConflicto error={fallo} releer={releerBorrador} alRecargar={() => setFallo(null)} /> : null}
         {enviarARevision.isError ? <AvisoDeConflicto error={enviarARevision.error} releer={releerBorrador} alRecargar={() => enviarARevision.reset()} /> : null}
@@ -352,12 +371,12 @@ function Asistente({ inicial }: { inicial?: Registro }) {
           <Button type="button" variant="ghost" disabled={guardando} onClick={() => void guardarYSalir()}>
             {t('proyectos.asistente.guardarYSalir')}
           </Button>
-          {paso > 0 ? (
+          {paso > 0 && !faltaAsignarse ? (
             <Button type="button" variant="secondary" disabled={guardando} onClick={() => void moverA(paso - 1, true)()}>
               {t('comun.anterior')}
             </Button>
           ) : null}
-          {paso < PASO_REVISION ? (
+          {faltaAsignarse ? null : paso < PASO_REVISION ? (
             <Button
               type={conCampos(paso) ? 'submit' : 'button'}
               form={conCampos(paso) ? FORMULARIO : undefined}
@@ -374,6 +393,26 @@ function Asistente({ inicial }: { inicial?: Registro }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// P40: el paso previo a toda escritura sobre el borrador. dice por qué, y sin CREATE sobre project_assignment, a quién pedirlo
+// si las asignaciones de la cuenta no se pudieron leer no se ofrece asignarse (podría estarlo ya): se dice el fallo
+function AsignacionPropia({ proyecto, asignaciones }: { proyecto: string; asignaciones: UseQueryResult<unknown> }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  if (asignaciones.isPending) return <Cargando />
+  if (asignaciones.isError && !asignaciones.data) return <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sg-h3 font-semibold">{t('proyectos.asistente.asignarse.titulo')}</h2>
+      <p className="text-sm text-sg-text-secondary">{t('proyectos.asistente.asignarse.porQue')}</p>
+      {can('project_assignment', 'CREATE') ? (
+        <FormularioDeAsignacion proyecto={proyecto} propia />
+      ) : (
+        <Alert tone="warning">{t('proyectos.asistente.asignarse.sinPermiso')}</Alert>
+      )}
+    </section>
   )
 }
 

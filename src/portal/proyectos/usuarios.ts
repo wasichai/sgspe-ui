@@ -15,9 +15,9 @@ export interface Usuario {
 const sinPermisoEsNulo = <T>(promesa: Promise<T>): Promise<T | null> =>
   promesa.catch((e: unknown) => (e instanceof ApiError && e.status === 403 ? null : Promise.reject(e)))
 
-export function useUsuarios() {
+export function useUsuarios(activo = true) {
   const pedir = usePedir()
-  return useQuery({ queryKey: ['users'], queryFn: () => sinPermisoEsNulo(pedir<Usuario[]>('/users')), staleTime: 300_000 })
+  return useQuery({ queryKey: ['users'], queryFn: () => sinPermisoEsNulo(pedir<Usuario[]>('/users')), staleTime: 300_000, enabled: activo })
 }
 
 export function useNombresDeRol() {
