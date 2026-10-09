@@ -70,6 +70,9 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
               <Link to={`${base}/engagements/dashboard`}>{t('relacionamiento.tablero')}</Link>
             </Button>
           ) : null}
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/field-visits">{t('relacionamiento.visitas')}</Link>
+          </Button>
           {proyecto && asignado && can('field_visit', 'CREATE') ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`${base}/field-visits/new`}>{t('relacionamiento.nuevaVisita')}</Link>
@@ -308,7 +311,7 @@ function moverSemana(dia: string, dias: number): Record<string, string> {
 }
 
 // el código del proyecto: mientras llega o si no se puede leer no se dibuja un código vacío
-function CodigoDeProyecto({ id }: { id: string }) {
+export function CodigoDeProyecto({ id }: { id: string }) {
   const { t } = useTranslation(NS)
   const proyecto = useRegistro('project', id)
   if (proyecto.isPending) return <Cargando compacto etiqueta="…" />

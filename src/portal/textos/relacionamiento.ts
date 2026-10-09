@@ -173,7 +173,18 @@ export const ES_RELACIONAMIENTO = {
     mapa: 'Ruta y observaciones',
     pasos: ['Planificada', 'En curso', 'Concluida o parcial'],
     concluirAviso: 'Concluir no cambia las interacciones pendientes: cada una se posterga o cancela con su motivo.',
-    nueva: 'Nueva visita de campo'
+    nueva: 'Nueva visita de campo',
+    sinInteracciones: 'Esta visita aún no tiene interacciones.',
+    sinObservaciones: 'Aún no hay observaciones.',
+    editarResultado: 'Editar el resultado',
+    longitud: 'Longitud',
+    latitud: 'Latitud',
+    ayudaCoordenadas: 'Grados decimales (WGS 84), por ejemplo -78.20 y -8.30; o use la ubicación del teléfono.',
+    faltaObservacion: 'Escriba la observación',
+    coordenadaInvalida: 'Indique la longitud (-180 a 180) y la latitud (-90 a 90) en grados decimales, o deje ambas vacías.',
+    truncado: 'Se leyeron solo los primeros {{n}} registros de esta lista: no se muestra completa.',
+    sinVisitas: 'Aún no hay visitas de campo.',
+    columnas: { titulo: 'Visita', inicio: 'Inicio planificado' }
   },
   tableroTitulo: 'Tablero de relacionamiento',
   zonas: {
@@ -360,7 +371,18 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     mapa: 'Route and observations',
     pasos: ['Planned', 'In progress', 'Completed or partial'],
     concluirAviso: 'Completing does not change pending engagements: each one is postponed or cancelled with its reason.',
-    nueva: 'New field visit'
+    nueva: 'New field visit',
+    sinInteracciones: 'This visit has no engagements yet.',
+    sinObservaciones: 'There are no observations yet.',
+    editarResultado: 'Edit the outcome',
+    longitud: 'Longitude',
+    latitud: 'Latitude',
+    ayudaCoordenadas: 'Decimal degrees (WGS 84), for example -78.20 and -8.30; or use the phone location.',
+    faltaObservacion: 'Write the observation',
+    coordenadaInvalida: 'Enter the longitude (-180 to 180) and the latitude (-90 to 90) in decimal degrees, or leave both empty.',
+    truncado: 'Only the first {{n}} records of this list were read: it is not shown in full.',
+    sinVisitas: 'There are no field visits yet.',
+    columnas: { titulo: 'Visit', inicio: 'Planned start' }
   },
   tableroTitulo: 'Engagement dashboard',
   zonas: {

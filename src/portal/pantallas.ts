@@ -3,6 +3,7 @@ import { FichaActorPage } from './grupos/FichaActorPage'
 import { GruposRutas } from './grupos/GruposRutas'
 import { ProyectosRutas } from './proyectos/ProyectosRutas'
 import { RelacionamientoRutas } from './relacionamiento/RelacionamientoRutas'
+import { VisitasPage } from './relacionamiento/VisitaDeCampoPage'
 import type { ClaveDeSeccion } from './shell/navTree'
 import { TerritorioRutas } from './territorio/TerritorioRutas'
 
@@ -24,4 +25,7 @@ export interface RutaAdicional {
   Pantalla: ComponentType
 }
 
-export const RUTAS_ADICIONALES: RutaAdicional[] = [{ ruta: '/actors/:actorId', seccion: 'stakeholders', Pantalla: FichaActorPage }]
+export const RUTAS_ADICIONALES: RutaAdicional[] = [
+  { ruta: '/actors/:actorId', seccion: 'stakeholders', Pantalla: FichaActorPage },
+  { ruta: '/field-visits', seccion: 'engagements', Pantalla: VisitasPage }
+]
