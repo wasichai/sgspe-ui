@@ -1,3 +1,4 @@
+import { ApiError } from '@wasichai/core'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useParams } from 'react-router'
 import { Cargando, Vacio } from '../componentes/Estados'
@@ -15,6 +16,9 @@ export function AbrirRegistroPage() {
   const { object = '', recordId = '' } = useParams()
   const registro = useRegistro(object, recordId)
   if (registro.isPending) return <Cargando etiqueta={t('avisos.abrirRegistro.abriendo')} />
+  // un aviso o una tarea puede apuntar a un registro que ya se borró: un 404 lo dice, sin un «Reintentar» que no sirve
+  if (registro.isError && !registro.data && registro.error instanceof ApiError && registro.error.status === 404)
+    return <Vacio titulo={t('avisos.abrirRegistro.noExiste')} />
   if (registro.isError && !registro.data) return <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
   const ruta = rutaDeFicha(object, registro.data)
   return ruta ? <Navigate to={ruta} replace /> : <Vacio titulo={t('comun.noDisponible')}>{t('avisos.abrirRegistro.sinFicha')}</Vacio>

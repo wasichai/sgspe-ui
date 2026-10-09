@@ -34,7 +34,8 @@ export const ES_AVISOS = {
   },
   abrirRegistro: {
     abriendo: 'Abriendo el registro…',
-    sinFicha: 'Este registro no tiene una ficha en el portal todavía.'
+    sinFicha: 'Este registro no tiene una ficha en el portal todavía.',
+    noExiste: 'Este registro ya no existe o no es de su organización.'
   }
 }
 
@@ -73,6 +74,7 @@ export const EN_AVISOS: typeof ES_AVISOS = {
   },
   abrirRegistro: {
     abriendo: 'Opening the record…',
-    sinFicha: 'This record has no page in the portal yet.'
+    sinFicha: 'This record has no page in the portal yet.',
+    noExiste: 'This record no longer exists or is not from your organization.'
   }
 }

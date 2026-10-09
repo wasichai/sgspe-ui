@@ -1,9 +1,10 @@
 import { useAuth } from '@wasichai/core'
-import { cn } from '@wasichai/ui'
+import { Alert, cn } from '@wasichai/ui'
 import { Bell } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
+import { useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import {
@@ -30,7 +31,9 @@ export function Campana() {
   const resumen = useResumenDeAvisos(user !== null)
   const [abierta, setAbierta] = useState(false)
   const boton = useRef<HTMLButtonElement>(null)
+  const contenedor = useRef<HTMLDivElement>(null)
   const panel = useId()
+  // Escape la cierra y devuelve el foco al botón; un clic fuera de la campana y su panel también la cierra
   useEffect(() => {
     if (!abierta) return
     const alTeclear = (e: KeyboardEvent) => {
@@ -39,19 +42,27 @@ export function Campana() {
         boton.current?.focus()
       }
     }
+    const alPulsar = (e: PointerEvent) => {
+      if (e.target instanceof Node && !contenedor.current?.contains(e.target)) setAbierta(false)
+    }
     document.addEventListener('keydown', alTeclear)
-    return () => document.removeEventListener('keydown', alTeclear)
+    document.addEventListener('pointerdown', alPulsar)
+    return () => {
+      document.removeEventListener('keydown', alTeclear)
+      document.removeEventListener('pointerdown', alPulsar)
+    }
   }, [abierta])
   if (resumen.isError && sinBandeja(resumen.error)) return null
   const n = sinLeer(resumen.data)
   return (
-    <div className="relative">
+    <div ref={contenedor} className="relative">
       <button
         ref={boton}
         type="button"
         aria-label={n > 0 ? t('avisos.campana', { n }) : t('avisos.campanaSinNuevos')}
         aria-expanded={abierta}
-        aria-controls={panel}
+        // el panel solo existe abierto: cerrado, aria-controls apuntaría a un id que no está
+        aria-controls={abierta ? panel : undefined}
         onClick={() => setAbierta(!abierta)}
         className="relative flex size-8 items-center justify-center rounded-sg-md text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text"
       >
@@ -74,6 +85,7 @@ function PanelDeAvisos({ id, alCerrar }: { id: string; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const ultimos = useAvisos({ size: 5 })
   const leerTodos = useLeerTodos()
+  const mensaje = useMensajeDeError()
   return (
     <div
       id={id}
@@ -92,6 +104,7 @@ function PanelDeAvisos({ id, alCerrar }: { id: string; alCerrar: () => void }) {
           {t('avisos.leerTodos')}
         </button>
       </div>
+      {leerTodos.isError ? <Alert tone="danger">{mensaje(leerTodos.error)}</Alert> : null}
       {ultimos.isPending ? (
         <Cargando compacto />
       ) : ultimos.isError && !ultimos.data ? (
