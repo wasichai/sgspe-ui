@@ -29,6 +29,8 @@ export function MisTareasPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const lista = useParametrosDeLista('lista')
   const vistas = ['lista', 'tablero', 'calendario', ...(proyecto ? ['paraTomar'] : [])]
+  // una vista que aquí no existe (?view=paraTomar fuera de un proyecto) es la lista: «Para tomar» filtraría solo las propias
+  const vista = vistas.includes(lista.vista) ? lista.vista : 'lista'
   const tareas = useTodosConTope(
     'task',
     proyecto ? { project: proyecto, sort: 'due_date', dir: 'asc' } : { assignee_user_id: user?.id, sort: 'due_date', dir: 'asc' },
@@ -64,24 +66,24 @@ export function MisTareasPage() {
       )}
       <VistasGuardadas
         vistas={vistas.map((v) => ({ id: v, etiqueta: t(`tareas.vistas.${v}`) }))}
-        actual={lista.vista}
+        actual={vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
-      {tareas.truncado ? <Alert tone="warning">{t('tareas.truncado')}</Alert> : null}
+      {tareas.truncado ? <Alert tone="warning">{t('tareas.truncado', { n: numeroPe(tareas.data?.length ?? 0) })}</Alert> : null}
       {tareas.isPending ? (
         <Cargando />
       ) : tareas.isError && !tareas.data ? (
         <FalloDeLectura error={tareas.error} alReintentar={() => void tareas.refetch()} />
-      ) : lista.vista === 'tablero' ? (
+      ) : vista === 'tablero' ? (
         <Tablero tareas={mias} alAbrir={abrir} />
-      ) : lista.vista === 'calendario' ? (
+      ) : vista === 'calendario' ? (
         <Calendario
           tareas={mias}
           mes={lista.filtro('month') || hoyEnLima().slice(0, 7)}
           alCambiarMes={(mes) => lista.cambiar({ month: mes })}
           alAbrir={abrir}
         />
-      ) : lista.vista === 'paraTomar' ? (
+      ) : vista === 'paraTomar' ? (
         <>
           <p className="text-sm text-sg-text-secondary">{t('tareas.paraTomarAyuda')}</p>
           <TablaDeTareas tareas={paraTomar} vacio={t('tareas.vaciaParaTomar')} alAbrir={abrir} />

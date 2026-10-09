@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -138,11 +138,37 @@ describe('S47 · mis tareas', () => {
   })
 
   it('mientras carga no dice que no hay tareas, y si falla lo dice con reintento', async () => {
+    let fallar: () => void = () => {}
+    const respuesta = new Promise<Response>((resolver) => {
+      fallar = () => resolver(problema(500, 'caído'))
+    })
     fetch = mockFetch(rutas().filter((r) => r.path !== '/objects/task/records'))
-    red = espiarRed([{ path: '/objects/task/records', responder: () => problema(500, 'caído') }])
+    red = espiarRed([{ path: '/objects/task/records', responder: () => respuesta }])
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    // la lectura sigue pendiente: «Cargando», sin conteos ni lista vacía
+    expect(await screen.findByRole('status')).toHaveTextContent('Cargando…')
+    expect(screen.queryByText('No tiene tareas abiertas.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
+    fallar()
     expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByText('No tiene tareas abiertas.')).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText('Vencidas')).not.toBeInTheDocument())
+    expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
+  })
+
+  it('una lista que el tope cortó lo dice con cuántas muestra', async () => {
+    const muchas = Array.from({ length: 200 }, (_, i) =>
+      registro(`x${i}`, { project: 'p1', title: `Tarea ${i}`, assignee_user_id: 'u-cmm' }, { state: 'open' })
+    )
+    fetch = mockFetch(rutas([{ path: /^\/objects\/task\/records\?/, body: pagina(muchas, { nextCursor: 'siguiente' }) }]))
+    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    expect(await screen.findByText('Se muestran las primeras 1,000 tareas: acote con un proyecto para ver el resto.')).toBeInTheDocument()
+  })
+
+  it('fuera de un proyecto, ?view=paraTomar muestra la lista: «Para tomar» solo existe en el proyecto', async () => {
+    fetch = mockFetch(rutas())
+    montar(<MisTareasPage />, { ruta: '/tasks?view=paraTomar', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    expect(await screen.findByRole('button', { name: 'Abrir Ejecutar compromiso C-001' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Lista' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tab', { name: 'Para tomar' })).not.toBeInTheDocument()
   })
 })

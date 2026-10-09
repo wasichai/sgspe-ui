@@ -104,6 +104,16 @@ describe('S28 · candidatos', () => {
     expect(await within(region).findByText('Mejorar el camino al anexo Huallpa')).toBeInTheDocument()
     expect(within(region).getByText('Propuesto por la IA · confianza 82 %')).toBeInTheDocument()
     expect(within(region).getByText('Restringido')).toBeInTheDocument()
+    // la cita que sí se lee se dice tal cual
+    expect(within(region).getByText(/«…pintar la escuela…»/)).toBeInTheDocument()
+  })
+
+  it('una lista de candidatos que el tope cortó lo dice con su propio texto', async () => {
+    const muchos = Array.from({ length: 200 }, (_, i) => registro(`k${i}`, { project: 'p1', proposed_text: `Propuesta ${i}` }, { state: 'proposed' }))
+    fetch = mockFetch(rutas([{ path: /^\/objects\/commitment_candidate\/records\?/, body: pagina(muchos, { nextCursor: 'siguiente' }) }]))
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
+    expect(await screen.findByText('Se muestran los 1,000 candidatos más recientes: elija un proyecto para ver el resto.')).toBeInTheDocument()
+    expect(screen.queryByText(/compromisos del alcance/)).not.toBeInTheDocument()
   })
 
   it('aceptar valida el monto, manda IK, If-Match y motivo sin el proyecto, y abre el compromiso creado', async () => {

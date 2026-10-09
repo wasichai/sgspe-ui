@@ -13,7 +13,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
-import { diaPe, NS } from '../i18n'
+import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { Candidatos } from './Candidatos'
@@ -118,7 +118,7 @@ export function CompromisosPage() {
               />
             </label>
           </div>
-          {compromisos.truncado ? <Alert tone="warning">{t('compromisos.truncado')}</Alert> : null}
+          {compromisos.truncado ? <Alert tone="warning">{t('compromisos.truncado', { n: numeroPe(compromisos.data?.length ?? 0) })}</Alert> : null}
           {compromisos.isPending ? (
             <Cargando />
           ) : compromisos.isError && !compromisos.data ? (
