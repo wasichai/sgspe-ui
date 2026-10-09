@@ -83,17 +83,17 @@ describe('NAV_TREE', () => {
   })
 
   it.each([
-    [[], ['Dashboard', 'Reportes']],
-    [['project READ'], ['Dashboard', 'Proyectos', 'Reportes']],
-    [['inquiry READ'], ['Dashboard', 'Quejas, consultas y solicitudes', 'Reportes']],
+    [[], ['Dashboard']],
+    [['project READ'], ['Dashboard', 'Proyectos']],
+    [['inquiry READ'], ['Dashboard', 'Quejas, consultas y solicitudes']],
     [
       ['early_warning READ', 'task READ'],
-      ['Dashboard', 'Riesgos', 'Tareas', 'Reportes']
+      ['Dashboard', 'Riesgos', 'Tareas']
     ],
-    [
-      ['project CREATE', 'stakeholder UPDATE'],
-      ['Dashboard', 'Reportes']
-    ]
+    [['project CREATE', 'stakeholder UPDATE'], ['Dashboard']],
+    // Reportes, con EXPORT sobre grupos de interés o con el historial de exportaciones (revisión final, M7)
+    [['stakeholder EXPORT'], ['Dashboard', 'Reportes']],
+    [['export_log READ'], ['Dashboard', 'Reportes']]
   ])('con todas las pantallas, la cuenta %j ve %j', (pares, secciones) => {
     expect(arbolPara(NAV_TREE, cuenta(pares)).map((s) => s.label)).toEqual(secciones)
   })

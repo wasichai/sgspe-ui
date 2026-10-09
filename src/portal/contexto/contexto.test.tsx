@@ -1,10 +1,10 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
-import { ADMIN_PERMISOS, RELACIONISTA } from '../../test/portal'
+import { ADMIN_PERMISOS, permisos, RELACIONISTA } from '../../test/portal'
 import { BarraDeContexto } from './BarraDeContexto'
 import { useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
@@ -145,6 +145,27 @@ describe('barra de contexto y Project 360', () => {
     montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
     await screen.findByText('asignaciones llegaron')
     expect(screen.queryByText(AVISO)).not.toBeInTheDocument()
+  })
+
+  it('las pestañas de otra sección se ofrecen con sus permisos (revisión final, M7)', async () => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: permisos({ project: ['READ'] }) })
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(
+      within(subnav)
+        .getAllByRole('link')
+        .map((a) => a.textContent)
+    ).toEqual(['Resumen', 'Mapa', 'Equipo y parámetros'])
+  })
+
+  it('con los permisos de cada sección, las seis pestañas', async () => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    montar(LAYOUT, {
+      ruta: '/projects/p1/overview',
+      permisos: permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], engagement: ['READ'] })
+    })
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(within(subnav).getAllByRole('link')).toHaveLength(6)
   })
 
   it.each([

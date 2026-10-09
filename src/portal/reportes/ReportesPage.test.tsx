@@ -245,9 +245,15 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     expect(within(seccion).queryByRole('option', { name: id })).not.toBeInTheDocument()
   })
 
-  it('sin la acción EXPORT lo dice y no ofrece exportar', async () => {
-    fetch = abrirPortal('/reports', RELACIONISTA, permisos({ project: ['READ'], stakeholder: ['READ'] }), rutas)
+  it('sin la acción EXPORT, quien lee el historial lo ve y lee que no puede exportar', async () => {
+    fetch = abrirPortal('/reports', RELACIONISTA, permisos({ project: ['READ'], stakeholder: ['READ'], export_log: ['READ'] }), rutas)
     expect(await screen.findByText('Su cuenta no tiene la acción EXPORT sobre grupos de interés.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exportar XLSX' })).not.toBeInTheDocument()
+  })
+
+  it('sin EXPORT ni el historial, Reportes no se ofrece y su ruta lo dice (revisión final, M7)', async () => {
+    fetch = abrirPortal('/reports', RELACIONISTA, permisos({ project: ['READ'], stakeholder: ['READ'] }), rutas)
+    expect(await screen.findByText('Su cuenta no puede abrir «Reportes».')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Reportes' })).not.toBeInTheDocument()
   })
 })
