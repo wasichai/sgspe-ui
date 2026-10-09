@@ -160,6 +160,27 @@ describe('S11 · equipo y parámetros', () => {
     expect(red.a('GET', '/roles')).toHaveLength(1)
   })
 
+  it('«Asignar persona» con capabilities vacío no pide usuarios ni roles y muestra los campos a mano, sin pasar por la lista', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, permisosConCapacidades(OBJETOS_PAD, []), [
+      { path: '/users', body: [{ id: 'u-1', email: 'ana@sgspe.test', displayName: 'Usuaria de prueba', enabled: true }] },
+      ROLES,
+      ...rutas()
+    ])
+    red = espiarRed()
+    // la lista de usuarios no aparece en ningún momento: el modo manual no salta a ella
+    const observador = new MutationObserver(() => {
+      if (screen.queryByRole('combobox', { name: 'Usuario' })) throw new Error('apareció la lista de usuarios')
+    })
+    observador.observe(document.body, { childList: true, subtree: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Asignar persona' }))
+    expect(await screen.findByLabelText('Correo del usuario')).toBeInTheDocument()
+    expect(screen.getByLabelText('Identificador del usuario')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Rol en el proyecto' })).toBeInTheDocument()
+    observador.disconnect()
+    expect(red.a('GET', '/users')).toHaveLength(0)
+    expect(red.a('GET', '/roles')).toHaveLength(0)
+  })
+
   it('cancelar la confirmación no escribe, y terminar una programada no deja el fin antes del inicio', async () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed()

@@ -1,8 +1,8 @@
 import { useAuth, type CallerPermissions } from '@wasichai/core'
 
 // las capacidades de tenant de la cuenta, como las responde GET /api/auth/me/permissions desde wasichai 0.5 (WAS-ADR-0053,
-// UPS-06): `capabilities` lista las acciones sin objeto que la cuenta tiene (MANAGE_METADATA, MANAGE_ORGANIZATION), siempre
-// presente y [] si no tiene ninguna. core 0.5.1 no la tipa pero conserva la respuesta tal cual, así que se lee de
+// UPS-06): `capabilities` lista las acciones sin objeto que la cuenta tiene (MANAGE_METADATA, MANAGE_ORGANIZATION; la 0.6.0 informa también MANAGE_TENANTS, que el portal no usa), siempre
+// presente y [] si no tiene ninguna. @wasichai/core 0.5.1 (el paquete de la interfaz) no la tipa pero conserva la respuesta tal cual, así que se lee de
 // `permissions`. una respuesta sin la clave (un backend anterior) es «no se sabe», no «ninguna»
 export type Capacidad = 'MANAGE_METADATA' | 'MANAGE_ORGANIZATION'
 

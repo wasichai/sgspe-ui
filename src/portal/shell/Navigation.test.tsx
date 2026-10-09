@@ -132,7 +132,9 @@ describe('navegación del portal', () => {
   it('con capabilities vacío, Administración no se ofrece', async () => {
     start(AUDITORA, rutasDeSesion(AUDITORA, permisosConCapacidades({ project: ['READ'] }, [])))
     await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(enlaces()).toEqual(['Dashboard'])
+    // los permisos ya se leyeron: la prueba no pasa por el estado «leyendo», en el que tampoco habría Administración
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path === '/auth/me/permissions')).toBe(true))
+    await waitFor(() => expect(enlaces()).toEqual(['Dashboard']))
   })
 
   it('AUDITOR no ve Administración', async () => {
