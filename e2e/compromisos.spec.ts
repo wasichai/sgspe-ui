@@ -1,0 +1,185 @@
+import { expect, test, type Page, type Request } from '@playwright/test'
+import { pagina, prepararApi, registro } from './api'
+
+// los recorridos de F3 en un navegador de verdad (flujos 9 y 10, S04): la ficha del compromiso, la entrega con el acta subida en
+// dos pasos (el archivo a wasichai-files y el registro con Idempotency-Key) y vinculada por id, y la campana de avisos que lleva
+// a la ficha por /r/…. la API se simula como en hilo.spec.ts; estas rutas se registran después y ganan a las comunes
+const COMPROMISO = registro(
+  'c1',
+  {
+    project: 'p1',
+    code: 'C-001',
+    title: 'Reservorio de agua para Tunas Pampa',
+    resource_type: 'MATERIAL',
+    amount: 25000,
+    currency: 'PEN',
+    executed_amount: 0,
+    due_date: '2026-11-30',
+    deadline_status: 'AL DIA',
+    owner_user_id: 'u-otro',
+    owner_user_email: 'cmm@sgspe.test'
+  },
+  'in_progress'
+)
+const ACTA = registro('ev1', { project: 'p1', title: 'Acta firmada', evidence_type: 'ACTA DE ENTREGA', classification: 'INTERNA' })
+
+async function prepararCompromisos(page: Page): Promise<Request[]> {
+  const escrituras: Request[] = []
+  const json = (body: unknown, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) })
+  const permisos = Object.fromEntries(
+    [
+      ['project', ['READ']],
+      ['project_assignment', ['READ']],
+      ['commitment', ['READ', 'UPDATE']],
+      ['delivery', ['READ', 'CREATE', 'UPDATE']],
+      ['evidence', ['READ', 'CREATE', 'UPDATE', 'DOWNLOAD_RESTRICTED']],
+      ['task', ['READ']],
+      ['stakeholder', ['READ']],
+      ['engagement', ['READ']]
+    ].map(([o, a]) => [o, a])
+  )
+  const rutas: [RegExp, string, unknown][] = [
+    [/^\/auth\/me\/permissions$/, 'GET', { admin: false, objects: permisos }],
+    [
+      /^\/objects\/commitment\/workflow$/,
+      'GET',
+      {
+        id: 'w',
+        objectName: 'commitment',
+        name: 'commitment',
+        label: 'commitment',
+        enabled: true,
+        definition: { states: [{ name: 'in_progress', label: 'En ejecución', type: 'INTERMEDIATE' }], transitions: [] }
+      }
+    ],
+    [/^\/objects\/commitment\/records\/c1$/, 'GET', COMPROMISO],
+    [/^\/objects\/commitment\/records\/c1\/transitions$/, 'GET', []],
+    [/^\/objects\/commitment\/records\/c1\/related\//, 'GET', pagina([])],
+    [
+      /^\/objects\/(delivery|task|commitment_candidate|commitment_action|commitment_milestone|commitment_reschedule|commitment_dependency)\/records$/,
+      'GET',
+      pagina([])
+    ],
+    [/^\/objects\/commitment\/records\/c1\/history$/, 'GET', []],
+    [
+      /^\/metadata\/objects\/evidence$/,
+      'GET',
+      {
+        id: 'ev',
+        name: 'evidence',
+        fields: [
+          { name: 'evidence_type', type: 'ENUM', enumOptions: ['ACTA DE ENTREGA', 'FOTO'], editable: true, visible: true },
+          { name: 'classification', type: 'ENUM', enumOptions: ['PUBLICA', 'INTERNA'], editable: true, visible: true },
+          { name: 'title', type: 'TEXT', editable: true, visible: true }
+        ]
+      }
+    ],
+    [
+      /^\/metadata\/objects\/delivery$/,
+      'GET',
+      {
+        id: 'dl',
+        name: 'delivery',
+        fields: ['delivery_date', 'place', 'delivered_items', 'delivered_amount', 'conformity_given', 'conformity_by'].map((name) => ({
+          name,
+          type: 'TEXT',
+          editable: true,
+          visible: true
+        }))
+      }
+    ],
+    [/^\/objects\/evidence\/files\/file$/, 'POST', { id: 'f1', name: 'acta.pdf', contentType: 'application/pdf', size: 8, sha256: 'ab' }],
+    [/^\/sgspe\/evidence$/, 'POST', ACTA],
+    [/^\/sgspe\/commitments\/c1\/deliveries$/, 'POST', { delivery: registro('dl1', { commitment: 'c1' }), commitment: COMPROMISO }],
+    [
+      /^\/auth\/me\/notifications\/summary$/,
+      'GET',
+      {
+        kinds: { ACTION: { active: 1, unread: 1, overdue: 0 }, WARNING: { active: 1, unread: 1, overdue: 0 }, INFO: { active: 0, unread: 0, overdue: 0 } },
+        latest: null
+      }
+    ],
+    [
+      /^\/auth\/me\/notifications$/,
+      'GET',
+      {
+        content: [
+          {
+            id: 'n1',
+            kind: 'WARNING',
+            title: 'Compromiso C-001 por vencer',
+            body: null,
+            link: { type: 'RECORD', object: 'commitment', recordId: 'c1' },
+            publishAt: '2026-10-08T15:00:00Z',
+            expiresAt: null,
+            dueAt: null,
+            overdue: false,
+            source: 'sgspe.deadlines',
+            read: false,
+            snoozedUntil: null,
+            dismissible: true
+          }
+        ],
+        page: 0,
+        size: 5,
+        totalElements: 1,
+        totalPages: 1
+      }
+    ],
+    [/^\/auth\/me\/notifications\/n1\/read$/, 'POST', null]
+  ]
+  await page.route('**/api/**', async (route) => {
+    const peticion = route.request()
+    const ruta = new URL(peticion.url()).pathname.replace(/^\/api/, '')
+    const encontrada = rutas.find(([patron, metodo]) => patron.test(ruta) && metodo === peticion.method())
+    if (!encontrada) return route.fallback()
+    if (peticion.method() !== 'GET') escrituras.push(peticion)
+    const [, metodo, cuerpo] = encontrada
+    return cuerpo === null ? route.fulfill({ status: 204 }) : route.fulfill(json(cuerpo, metodo === 'POST' ? 201 : 200))
+  })
+  return escrituras
+}
+
+test.beforeEach(async ({ page }) => {
+  await prepararApi(page)
+})
+
+test('la entrega lleva el acta subida en dos pasos, por id, con su clave y su motivo (flujo 10)', async ({ page }) => {
+  const escrituras = await prepararCompromisos(page)
+  await page.goto('/projects/p1/commitments/c1')
+  await expect(page.getByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeVisible()
+  await page.getByRole('tab', { name: 'Entregas' }).click()
+  await page.getByRole('button', { name: 'Registrar entrega' }).click()
+  const panel = page.getByRole('dialog')
+  const evidencia = panel.getByRole('group', { name: 'Subir una evidencia' })
+  await evidencia.getByLabel(/Archivo/).setInputFiles({ name: 'acta.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7') })
+  await expect(evidencia.getByLabel('Tipo de evidencia')).toHaveValue('ACTA DE ENTREGA')
+  await evidencia.getByLabel('Clasificación').selectOption('INTERNA')
+  await evidencia.getByRole('button', { name: 'Subir evidencia' }).click()
+  await expect(panel.getByText('Acta firmada · ACTA DE ENTREGA')).toBeVisible()
+  await panel.getByLabel('Monto entregado').fill('25,000')
+  await panel.getByLabel('El grupo de interés dio conformidad').check()
+  await panel.getByLabel('Quiénes dieron la conformidad').fill('Junta directiva')
+  await panel.getByLabel('Motivo (obligatorio)').fill('Entrega en obra')
+  await panel.getByRole('button', { name: 'Guardar entrega' }).click()
+  await expect(panel).toBeHidden()
+  const rutasEscritas = escrituras.map((r) => new URL(r.url()).pathname)
+  expect(rutasEscritas).toEqual(['/api/objects/evidence/files/file', '/api/sgspe/evidence', '/api/sgspe/commitments/c1/deliveries'])
+  const entrega = escrituras[2]
+  expect(entrega.postDataJSON()).toMatchObject({ attributes: { delivered_amount: '25000', conformity_given: true }, evidence: ['ev1'] })
+  expect(await entrega.headerValue('idempotency-key')).toBeTruthy()
+  expect(await escrituras[1].headerValue('idempotency-key')).toBeTruthy()
+})
+
+test('la campana cuenta los avisos sin leer y abrir uno lleva a la ficha del registro (S04)', async ({ page }) => {
+  const escrituras = await prepararCompromisos(page)
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Avisos, 2 sin leer' }).click()
+  await page
+    .getByRole('region', { name: 'Últimos avisos' })
+    .getByRole('button', { name: /Compromiso C-001 por vencer/ })
+    .click()
+  await expect(page).toHaveURL(/\/projects\/p1\/commitments\/c1$/)
+  await expect(page.getByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeVisible()
+  expect(escrituras.map((r) => new URL(r.url()).pathname)).toContain('/api/auth/me/notifications/n1/read')
+})
