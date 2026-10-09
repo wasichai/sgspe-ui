@@ -35,30 +35,34 @@ export function TableroRelacionamientoPage() {
                 {(i) => <SerieConMeta titulo={t('relacionamiento.zonas.reuniones')} serie={i.series ?? []} tipo="bar" />}
               </Zona>
               <Zona titulo={t('relacionamiento.zonas.informativas')} indicador={ind('KPI-ENG-03')}>
-                {(i) => (
-                  <Table aria-label={t('relacionamiento.zonas.informativas')}>
-                    <thead>
-                      <tr>
-                        {(['reunion', 'total', 'femenino', 'aids', 'aiis'] as const).map((c) => (
-                          <Th key={c} scope="col">
-                            {t(`relacionamiento.columnasInformativas.${c}`)}
-                          </Th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {desglose(i, 'engagement').map((f) => (
-                        <tr key={f.key}>
-                          <Td>{f.label ?? f.key}</Td>
-                          <Td className="tabular-nums">{typeof f.value === 'number' ? numeroPe(f.value) : '—'}</Td>
-                          <Td className="tabular-nums">{typeof f.femalePercent === 'number' ? `${numeroPe(f.femalePercent)} %` : '—'}</Td>
-                          <Td className="tabular-nums">{typeof f.directArea === 'number' ? numeroPe(f.directArea) : '—'}</Td>
-                          <Td className="tabular-nums">{typeof f.indirectArea === 'number' ? numeroPe(f.indirectArea) : '—'}</Td>
+                {(i) =>
+                  desglose(i, 'engagement').length === 0 ? (
+                    <p className="text-sm text-sg-text-muted">{t('tableros.sinDatos')}</p>
+                  ) : (
+                    <Table aria-label={t('relacionamiento.zonas.informativas')}>
+                      <thead>
+                        <tr>
+                          {(['reunion', 'total', 'femenino', 'aids', 'aiis'] as const).map((c) => (
+                            <Th key={c} scope="col">
+                              {t(`relacionamiento.columnasInformativas.${c}`)}
+                            </Th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
+                      </thead>
+                      <tbody>
+                        {desglose(i, 'engagement').map((f) => (
+                          <tr key={f.key}>
+                            <Td>{f.label ?? f.key}</Td>
+                            <Td className="tabular-nums">{typeof f.value === 'number' ? numeroPe(f.value) : '—'}</Td>
+                            <Td className="tabular-nums">{typeof f.femalePercent === 'number' ? `${numeroPe(f.femalePercent)} %` : '—'}</Td>
+                            <Td className="tabular-nums">{typeof f.directArea === 'number' ? numeroPe(f.directArea) : '—'}</Td>
+                            <Td className="tabular-nums">{typeof f.indirectArea === 'number' ? numeroPe(f.indirectArea) : '—'}</Td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )
+                }
               </Zona>
               <Zona titulo={t('relacionamiento.zonas.resueltas')} indicador={ind('KPI-ENG-05')}>
                 {(i) => <KpiCard titulo={i.label} indicador={i} />}

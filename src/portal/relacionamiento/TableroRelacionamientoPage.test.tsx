@@ -142,6 +142,28 @@ describe('tablero de relacionamiento', () => {
       }
     ])
     expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    // el texto del motivo, no su código, y los filtros siguen a la vista para acotar o cambiar el periodo
+    expect(screen.getByText(/No tiene una asignación vigente a este proyecto/)).toBeInTheDocument()
     expect(screen.queryByText('NOT_ASSIGNED')).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Filtros del tablero' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+  })
+
+  it('sin reuniones informativas la tabla dice «Sin datos para estos filtros» y no queda con solo la cabecera', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/dashboard', GERENCIA_SOCIAL, EQUIPO, [
+      ...base(GERENCIA_SOCIAL),
+      {
+        path: '/sgspe/dashboards/engagement',
+        body: {
+          dashboard: 'engagement',
+          computedAt: '2026-10-07T15:04:05Z',
+          filters: {},
+          indicators: [{ code: 'KPI-ENG-03', label: 'Asistentes', available: true, value: 0, breakdowns: [{ by: 'engagement', rows: [] }] }]
+        }
+      }
+    ])
+    const zona = await screen.findByRole('region', { name: 'Reuniones informativas' })
+    expect(within(zona).getByText('Sin datos para estos filtros.')).toBeInTheDocument()
+    expect(within(zona).queryByRole('table')).not.toBeInTheDocument()
   })
 })
