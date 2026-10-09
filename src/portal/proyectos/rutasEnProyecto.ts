@@ -9,6 +9,7 @@ import { InteraccionesCalendarioPage, InteraccionesListaPage } from '../relacion
 import { EditorDeActaPage } from '../relacionamiento/EditorDeActaPage'
 import { FichaInteraccionPage } from '../relacionamiento/FichaInteraccionPage'
 import { RegistrarInteraccionPage } from '../relacionamiento/RegistrarInteraccionPage'
+import { TableroRelacionamientoPage } from '../relacionamiento/TableroRelacionamientoPage'
 import { VisitaDeCampoPage } from '../relacionamiento/VisitaDeCampoPage'
 import { AreaDeInfluenciaPage } from './AreaDeInfluenciaPage'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
@@ -35,6 +36,7 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'stakeholders/:stakeholderId', seccion: 'stakeholders', Pantalla: FichaGrupoPage },
   { ruta: 'engagements', seccion: 'engagements', Pantalla: InteraccionesListaPage },
   { ruta: 'engagements/calendar', seccion: 'engagements', Pantalla: InteraccionesCalendarioPage },
+  { ruta: 'engagements/dashboard', seccion: 'engagements', Pantalla: TableroRelacionamientoPage },
   { ruta: 'engagements/new', seccion: 'engagements', Pantalla: RegistrarInteraccionPage },
   { ruta: 'engagements/:engagementId', seccion: 'engagements', Pantalla: FichaInteraccionPage },
   { ruta: 'engagements/:engagementId/minutes', seccion: 'engagements', Pantalla: EditorDeActaPage },
