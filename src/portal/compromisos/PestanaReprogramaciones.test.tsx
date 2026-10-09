@@ -4,6 +4,7 @@ import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasich
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
 import { montar, pagina, registro } from '../../test/montar'
+import { permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { atributo, useRegistro } from '../datos/registros'
@@ -58,6 +59,22 @@ describe('S29 · reprogramaciones', () => {
     expect(within(tabla).getByText('Lluvias')).toBeInTheDocument()
     expect(within(tabla).getByText('Sí')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reprogramar' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['approved', true, EQUIPO_DE_COMPROMISOS, true],
+    ['in_progress', true, EQUIPO_DE_COMPROMISOS, true],
+    ['blocked', true, EQUIPO_DE_COMPROMISOS, true],
+    ['closed', true, EQUIPO_DE_COMPROMISOS, false],
+    ['in_progress', false, EQUIPO_DE_COMPROMISOS, false],
+    ['in_progress', true, permisos({ commitment: ['READ', 'UPDATE'], commitment_reschedule: ['READ'] }), false],
+    ['in_progress', true, permisos({ commitment: ['READ'], commitment_reschedule: ['READ', 'CREATE'] }), false]
+  ])('en %s, con escribe=%s y los permisos dados, «Reprogramar» se ofrece: %s', async (estado, escribe, conPermisos, ofrecido) => {
+    fetch = mockFetch(rutas())
+    montar(<PestanaReprogramaciones compromiso={{ ...C1, state: estado }} escribe={escribe} />, { usuario: GESTORA, permisos: conPermisos })
+    expect(await screen.findByRole('table', { name: 'Reprogramaciones' })).toBeInTheDocument()
+    if (ofrecido) expect(screen.getByRole('button', { name: 'Reprogramar' })).toBeInTheDocument()
+    else expect(screen.queryByRole('button', { name: 'Reprogramar' })).not.toBeInTheDocument()
   })
 
   it('valida la fecha y el motivo, y manda IK, If-Match y el motivo', async () => {
@@ -122,6 +139,9 @@ describe('S29 · reprogramaciones', () => {
     await userEvent.click(await within(dialogo).findByRole('button', { name: 'Recargar' }))
     await waitFor(() => expect(within(dialogo).queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument())
     expect(within(dialogo).getByLabelText('Motivo de la reprogramación')).toHaveValue('Paro regional')
+    // el diálogo sigue abierto y la fecha elegida también se conserva
+    expect(screen.getByRole('dialog')).toBe(dialogo)
+    expect(within(dialogo).getByLabelText('Fecha nueva')).toHaveValue('2027-01-15')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Reprogramar' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/commitments/c1/reschedules')).toHaveLength(2))
     const [primera, segunda] = red.a('POST', '/sgspe/commitments/c1/reschedules')
