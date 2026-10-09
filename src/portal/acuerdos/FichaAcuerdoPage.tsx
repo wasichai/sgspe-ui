@@ -30,12 +30,16 @@ import { CAMPOS_DEL_ACUERDO } from './AcuerdosPage'
 // asamblea que autoriza, los predios y las evidencias. registrar la vigencia exige predios y titular en permisos de uso y
 // servidumbres, y la asamblea en las autorizaciones (AgreementWriteGuard): el portal lo avisa antes y transition-checks lo
 // comprueba en el diálogo. toda escritura sobre el acuerdo lleva motivo (requiresReason)
+// los valores del enum agreement_type de model.json que AgreementWriteGuard revisa: si cambian allí, cambian aquí (el aviso
+// previo dejaría de salir, pero transition-checks seguiría bloqueando)
 const CON_PREDIOS = ['PERMISO DE USO DE TERRENO', 'SERVIDUMBRE']
+const AUTORIZACION_DE_ASAMBLEA = 'AUTORIZACION DE ASAMBLEA'
 
 export function FichaAcuerdoPage() {
   const { agreementId = '' } = useParams()
   const acuerdo = useRegistro('agreement', agreementId)
-  return <Consulta consulta={acuerdo}>{(a) => <Ficha acuerdo={a} />}</Consulta>
+  // la clave es el acuerdo: al pasar a otro ya leído, nada de lo escrito en este (motivo, predio elegido, paneles) lo sigue
+  return <Consulta consulta={acuerdo}>{(a) => <Ficha key={a.id} acuerdo={a} />}</Consulta>
 }
 
 function Ficha({ acuerdo }: { acuerdo: Registro }) {
@@ -275,7 +279,7 @@ function Titulares({ acuerdo }: { acuerdo: Registro }) {
   const proyecto = texto(acuerdo, 'project')
   const comunidad = useRegistro('community', atributo<string>(acuerdo, 'community'))
   const asamblea = useRegistro('engagement', atributo<string>(acuerdo, 'assembly_engagement'))
-  const autorizacion = texto(acuerdo, 'agreement_type') === 'AUTORIZACION DE ASAMBLEA'
+  const autorizacion = texto(acuerdo, 'agreement_type') === AUTORIZACION_DE_ASAMBLEA
   return (
     <section className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
       <h2 className="font-semibold">{t('acuerdos.ficha.comunidad')}</h2>
@@ -342,6 +346,8 @@ function Predios({ acuerdo, escribe, conPredios }: { acuerdo: Registro; escribe:
     )
   }
   const lista = predios.data?.content ?? []
+  // un predio sin código se nombra con un texto neutro, nunca con su identificador
+  const rotulo = (p: Registro) => texto(p, 'code') || t('acuerdos.ficha.predioSinCodigo')
   return (
     <section aria-label={t('acuerdos.ficha.predios')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
       <h2 className="font-semibold">{t('acuerdos.ficha.predios')}</h2>
@@ -354,7 +360,7 @@ function Predios({ acuerdo, escribe, conPredios }: { acuerdo: Registro; escribe:
       ) : (
         <ul>
           {lista.map((p) => (
-            <li key={p.id}>{texto(p, 'code') || p.id}</li>
+            <li key={p.id}>{rotulo(p)}</li>
           ))}
         </ul>
       )}
@@ -365,7 +371,7 @@ function Predios({ acuerdo, escribe, conPredios }: { acuerdo: Registro; escribe:
           <div className="mt-2 space-y-2">
             {elegido ? (
               <p>
-                {texto(elegido, 'code')}{' '}
+                {rotulo(elegido)}{' '}
                 <button type="button" className="text-sg-caption text-sg-primary-text underline" onClick={() => setElegido(null)}>
                   {t('comun.quitar')}
                 </button>
@@ -374,8 +380,12 @@ function Predios({ acuerdo, escribe, conPredios }: { acuerdo: Registro; escribe:
               <BuscadorDeRegistro
                 objeto="land_parcel"
                 etiqueta={t('acuerdos.ficha.buscarPredio')}
-                rotulo={(r) => texto(r, 'code') || r.id}
-                alElegir={setElegido}
+                rotulo={rotulo}
+                alElegir={(r) => {
+                  // el aviso del vínculo anterior no se queda junto al predio nuevo
+                  vincular.reset()
+                  setElegido(r)
+                }}
               />
             )}
             <Campo etiqueta={t('comun.motivoObligatorio')} error={intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined}>
