@@ -104,6 +104,60 @@ describe('S29 · ficha de compromiso', () => {
     expect(await within(genero).findByRole('link', { name: 'Ejecutar compromiso C-001' })).toHaveAttribute('href', '/projects/p1/tasks?task=t1')
   })
 
+  it('un compromiso que la cuenta no lee dice «No disponible», sin reintento', async () => {
+    fetch = mockFetch(rutas(C1, [{ path: '/objects/commitment/records/c1', status: 403, body: { title: 'Forbidden', status: 403, detail: 'NOT_ASSIGNED' } }]))
+    abrir()
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+  })
+
+  it('un compromiso que no existe lo dice con su texto, sin reintento', async () => {
+    fetch = mockFetch(rutas(C1, [{ path: '/objects/commitment/records/c1', status: 404, body: { title: 'Not Found', status: 404 } }]))
+    abrir()
+    expect(await screen.findByText('Este compromiso no existe o no es de su organización.')).toBeInTheDocument()
+    expect(screen.queryByText('No se pudo cargar esta información. Los filtros se conservan.')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Compromisos del proyecto' })).toHaveAttribute('href', '/projects/p1/commitments')
+  })
+
+  it('una lectura de la trazabilidad que falla lo dice, junto a lo que no se pudo leer', async () => {
+    fetch = mockFetch(
+      rutas({ ...C1, attributes: { ...C1.attributes, origin_engagement: null, agreement: 'ag1', agreement_clause: 'cl1' } }, [
+        { path: '/objects/agreement/records/ag1', body: registro('ag1', { project: 'p1', code: 'A-001', title: 'Convenio de agua' }) },
+        { path: '/objects/agreement_clause/records/cl1', status: 403, body: { title: 'Forbidden', status: 403, detail: 'OBJECT_NOT_READABLE' } },
+        { path: '/objects/commitment_candidate/records', status: 500, body: { title: 'Error', status: 500 } },
+        { path: '/objects/delivery/records', status: 500, body: { title: 'Error', status: 500 } }
+      ])
+    )
+    abrir()
+    const deDonde = await screen.findByRole('region', { name: 'De dónde viene' })
+    expect(await within(deDonde).findByRole('link', { name: 'A-001 · Convenio de agua' })).toBeInTheDocument()
+    const clausula = await within(deDonde).findByText('Cláusula:')
+    expect(within(clausula.parentElement!).getByText('No disponible')).toBeInTheDocument()
+    const candidato = within(deDonde).getByText('Candidato aceptado:')
+    expect(within(candidato.parentElement!).getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    // sin los candidatos no se sabe si se registró directamente
+    expect(within(deDonde).queryByText('Registrado directamente.')).not.toBeInTheDocument()
+    const genero = screen.getByRole('region', { name: 'Qué generó' })
+    const entregas = await within(genero).findByText('Entregas:')
+    expect(within(entregas.parentElement!).getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+  })
+
+  it('el detalle de beneficiarios que se lee y viene vacío es «—»; el que no se lee, «Restringido»', async () => {
+    fetch = mockFetch(rutas({ ...C1, attributes: { ...C1.attributes, beneficiaries_detail: null } }))
+    const vista = abrir()
+    const vacio = await screen.findByText('Detalle de beneficiarios')
+    expect(vacio.nextElementSibling).toHaveTextContent(/^—$/)
+    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+    vista.unmount()
+    fetch.restore()
+    fetch = mockFetch(rutas())
+    abrir()
+    const restringido = await screen.findByText('Detalle de beneficiarios')
+    expect(within(restringido.parentElement!).getByText('Restringido')).toBeInTheDocument()
+  })
+
   it('editar un compromiso aprobado no ofrece la fecha y manda el motivo', async () => {
     fetch = mockFetch(
       rutas(C1, [

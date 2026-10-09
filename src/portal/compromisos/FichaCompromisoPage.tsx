@@ -1,3 +1,4 @@
+import type { UseQueryResult } from '@tanstack/react-query'
 import { Alert, Button, Tabs, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -57,10 +58,24 @@ const ANTES_DE_APROBAR = ['draft', 'pending_approval']
 const COMPROBAR = ['submit', 'approve', 'approve_senior', 'approve_direct', 'register_fulfillment', 'verify', 'close']
 
 export function FichaCompromisoPage() {
-  const { commitmentId = '' } = useParams()
+  const { t } = useTranslation(NS)
+  const { projectId = '', commitmentId = '' } = useParams()
   const compromiso = useRegistro('commitment', commitmentId)
+  // un compromiso que no existe (404) lo dice con su texto y lleva a la lista, sin un «Reintentar» que no sirve
+  const noExiste = (
+    <div className="space-y-3">
+      <Alert tone="warning">{t('fichaCompromiso.noExiste')}</Alert>
+      <Link to={`/projects/${encodeURIComponent(projectId)}/commitments`} className="text-sm text-sg-primary-text underline">
+        {t('fichaCompromiso.volver')}
+      </Link>
+    </div>
+  )
   // la ficha se monta de nuevo por compromiso (P63): pasar a otro ya leído no arrastra el drawer, el motivo ni la pestaña
-  return <Consulta consulta={compromiso}>{(c) => <Ficha key={c.id} compromiso={c} />}</Consulta>
+  return (
+    <Consulta consulta={compromiso} noExiste={noExiste}>
+      {(c) => <Ficha key={c.id} compromiso={c} />}
+    </Consulta>
+  )
 }
 
 function Ficha({ compromiso }: { compromiso: Registro }) {
@@ -291,7 +306,10 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
             {t('fichaCompromiso.trazabilidad.candidato')}: {texto(candidato, 'proposed_text')}
           </p>
         ) : null}
-        {[interaccion, acuerdo].map((c, i) => (c.isError && !c.data ? <FalloDeLectura key={i} error={c.error} alReintentar={() => void c.refetch()} /> : null))}
+        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.interaccion')} consulta={interaccion} />
+        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.acuerdo')} consulta={acuerdo} />
+        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.clausulaSinNumero')} consulta={clausula} />
+        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.candidato')} consulta={candidatos} />
         {sinOrigen ? <p className="text-sg-text-muted">{t('fichaCompromiso.trazabilidad.sinOrigen')}</p> : null}
       </section>
       <section aria-label={t('fichaCompromiso.trazabilidad.queGenero')} className="space-y-1">
@@ -318,7 +336,20 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
         {entregas.data ? (
           <p>{t('fichaCompromiso.trazabilidad.entregas', { n: numeroPe(entregas.data.totalElements ?? entregas.data.content.length) })}</p>
         ) : null}
+        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.entregasSinNumero')} consulta={entregas} />
       </section>
     </aside>
+  )
+}
+
+// una lectura de la trazabilidad que falló lo dice junto a lo que no se pudo leer: una línea que falta sin explicación haría
+// creer que no hay origen o que no se generó nada
+function FalloDe({ etiqueta, consulta }: { etiqueta: string; consulta: UseQueryResult<unknown> }) {
+  if (!consulta.isError || consulta.data !== undefined) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span>{etiqueta}:</span>
+      <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
+    </div>
   )
 }
