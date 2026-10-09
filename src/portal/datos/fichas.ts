@@ -35,11 +35,17 @@ export function rutaDeFicha(objeto: string, registro: Registro): string | null {
 
 export const rutaParaAbrir = (objeto: string, id: string): string => `/r/${encodeURIComponent(objeto)}/${encodeURIComponent(id)}`
 
+// una ruta del mismo origen: empieza por una sola '/'. un navegador trata la barra invertida como '/' y descarta
+// tabuladores y saltos de línea, así que «/\otro.example» o «/<tab>/otro.example» llevarían a otro sitio: una barra
+// invertida o un carácter de control la descartan
+const CONTROL_O_BARRA_INVERTIDA = /[\u0000-\u001f\u007f\\]/
+const esRutaPropia = (url: string) => url.startsWith('/') && !url.startsWith('//') && !CONTROL_O_BARRA_INVERTIDA.test(url)
+
 // el destino de un aviso: un RECORD pasa por /r/…; una URL del mismo origen se abre tal cual; una ROUTE es una clave de rutas de
 // wasichai-ui que el portal no tiene (SGSPE no publica avisos con ROUTE), así que no lleva a ninguna parte
 export function destinoDeAviso(enlace: EnlaceDeAviso | null | undefined): string | null {
   if (!enlace) return null
   if (enlace.type === 'RECORD' && enlace.object && enlace.recordId) return rutaParaAbrir(enlace.object, enlace.recordId)
-  if (enlace.type === 'URL' && enlace.url?.startsWith('/') && !enlace.url.startsWith('//')) return enlace.url
+  if (enlace.type === 'URL' && enlace.url && esRutaPropia(enlace.url)) return enlace.url
   return null
 }
