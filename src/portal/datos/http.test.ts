@@ -2,7 +2,7 @@ import { createApiClient } from '@wasichai/core'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { campoDelError, codigoDelError, crearPedido, ErrorDeSgspe, motivoEnCabecera, nombreDeArchivo } from './http'
+import { campoDelError, codigoDelError, crearPedido, ErrorDeSgspe, guardarArchivo, motivoEnCabecera, nombreDeArchivo } from './http'
 
 // api.md §3.5 a §3.8: el portal manda If-Match con el updatedAt leído, el motivo en la forma RFC 8187 y una clave de
 // idempotencia por acción; los errores traen su detail, sus campos y el X-Correlation-Id
@@ -132,8 +132,41 @@ describe('cabeceras', () => {
   it.each([
     ['attachment; filename="a.xlsx"', 'a.xlsx'],
     ["attachment; filename*=UTF-8''b%C3%B1.xlsx", 'bñ.xlsx'],
-    [null, null]
+    [null, null],
+    // un filename* mal codificado no lanza URIError: vale el filename simple, y sin él, ninguno (revisión final, M10)
+    ['attachment; filename*=UTF-8\'\'mal%E0%A4.xlsx; filename="respaldo.xlsx"', 'respaldo.xlsx'],
+    ["attachment; filename*=UTF-8''mal%E0%A4.xlsx", null]
   ])('Content-Disposition %j nombra %j', (valor, nombre) => {
     expect(nombreDeArchivo(valor)).toBe(nombre)
+  })
+})
+
+describe('guardarArchivo (revisión final, M10)', () => {
+  // jsdom no trae createObjectURL ni revokeObjectURL: se ponen y se devuelven a como estaban
+  const originales = { crear: URL.createObjectURL, revocar: URL.revokeObjectURL }
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    URL.createObjectURL = originales.crear
+    URL.revokeObjectURL = originales.revocar
+  })
+
+  it('revoca la URL del blob después del clic, no en el mismo tick: Firefox y Safari cortarían la descarga', () => {
+    vi.useFakeTimers()
+    const crear = vi.fn(() => 'blob:prueba')
+    const revocar = vi.fn()
+    URL.createObjectURL = crear
+    URL.revokeObjectURL = revocar
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      // el enlace está en el documento al hacer clic (Firefox no descarga desde un enlace suelto)
+      expect(this.isConnected).toBe(true)
+      expect(this.download).toBe('reporte.xlsx')
+    })
+    guardarArchivo({ blob: new Blob(['PK']), nombre: null }, 'reporte.xlsx')
+    expect(clic).toHaveBeenCalledOnce()
+    expect(revocar).not.toHaveBeenCalled()
+    vi.runAllTimers()
+    expect(revocar).toHaveBeenCalledWith('blob:prueba')
+    expect(document.querySelector('a[download]')).toBeNull()
   })
 })
