@@ -1,7 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { hoyEnLima } from '../../portal/datos/fechas'
 import { pagina, registro } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { RELACIONISTA } from '../../test/portal'
@@ -22,6 +21,7 @@ afterEach(() => {
   fetch?.restore()
   red = fetch = null
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('S21 y S22 · calendario y lista de interacciones', () => {
@@ -104,12 +104,14 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
   })
 
   it('un ?month= mal escrito cae en el mes actual de Lima y lo muestra', async () => {
+    // solo la fecha es falsa: los temporizadores de la red y de React siguen reales
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-03T12:00:00Z') })
     fetch = abrirPortal('/projects/p1/engagements/calendar?month=octubre', RELACIONISTA, EQUIPO, [
       ...base(),
       { path: '/objects/engagement/records', body: pagina([E1]) }
     ])
     expect(await screen.findByRole('table', { name: 'Calendario de interacciones' })).toBeInTheDocument()
-    expect(screen.getByText(hoyEnLima().slice(0, 7))).toBeInTheDocument()
+    expect(screen.getByText('2026-11')).toBeInTheDocument()
   })
 
   it('un ?view= desconocido cae en la vista de la ruta: la lista en /engagements y el mes en /engagements/calendar', async () => {
@@ -165,8 +167,10 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
         }
       }
     ])
-    const aviso = await screen.findByText(/Se leyeron solo las .*1.*000 interacciones más recientes del alcance/)
+    const aviso = await screen.findByText(/Se leyeron solo 1.*000 interacciones del alcance, ordenadas por fecha programada: pueden faltar otras/)
     expect(aviso).toBeInTheDocument()
+    // no promete «las más recientes»: una interacción solo con held_at queda donde el servidor ordene los nulos
+    expect(aviso.textContent).not.toMatch(/recientes/)
     expect(screen.getByRole('table', { name: 'Calendario de interacciones' })).toBeInTheDocument()
     const lecturas = red.a('GET', '/objects/engagement/records')
     expect(lecturas).toHaveLength(5)
@@ -179,7 +183,7 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
       { path: '/objects/engagement/records', body: pagina([E1]) }
     ])
     await screen.findByRole('table', { name: 'Calendario de interacciones' })
-    expect(screen.queryByText(/Se leyeron solo las/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Se leyeron solo/)).not.toBeInTheDocument()
   })
 
   it('las interacciones sin fecha se avisan en el calendario y salen con guion en la lista', async () => {
@@ -222,6 +226,19 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     ])
     expect((await screen.findAllByText('Cargando las festividades…')).length).toBeGreaterThan(0)
     await waitFor(() => expect(screen.queryByText('Cargando las festividades…')).not.toBeInTheDocument())
+  })
+
+  it('la grilla y el panel comparten la consulta de festividades: el mes visible se lee una vez', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/calendar?month=2026-10', RELACIONISTA, EQUIPO, [
+      ...base(),
+      { path: '/objects/engagement/records', body: pagina([E1]) }
+    ])
+    red = espiarRed()
+    await screen.findByRole('table', { name: 'Calendario de interacciones' })
+    await within(screen.getByRole('region', { name: 'Festividades del mes' })).findByText(/Fiesta patronal/)
+    const meses = red.a('GET', '/objects/festivity/records').map((l) => new URLSearchParams(l.ruta.split('?')[1]).get('month'))
+    // la grilla de octubre de 2026 muestra días de septiembre, octubre y noviembre; cada mes se pide una sola vez
+    expect([...meses].sort()).toEqual(['10', '11', '9'])
   })
 
   it('una semana que cruza de mes lleva la franja de festividades de los dos meses', async () => {
@@ -314,6 +331,18 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     const meta = await screen.findByRole('region', { name: 'Reuniones del mes' })
     expect(await within(meta).findByText('No disponible')).toBeInTheDocument()
     expect(meta).toHaveTextContent('Su rol no puede leer los registros de esta cifra')
+  })
+
+  it('un proyecto ilegible en la lista global dice «No disponible» sin botón por fila y no ensucia el nombre de la columna', async () => {
+    fetch = abrirPortal('/engagements', RELACIONISTA, EQUIPO, [...base(), { path: '/objects/engagement/records', body: pagina([E1, E2]) }])
+    red = espiarRed([{ path: '/objects/project/records/p1', responder: () => problema(403, 'Sin acceso') }])
+    const tabla = await screen.findByRole('table', { name: 'Relacionamiento' })
+    const celdas = await within(tabla).findAllByText('No disponible')
+    expect(celdas).toHaveLength(2)
+    expect(within(tabla).queryByRole('button', { name: 'Por qué no se muestra' })).not.toBeInTheDocument()
+    for (const celda of celdas) expect(celda).toHaveAccessibleDescription('Su cuenta no puede leer estos datos')
+    // el motivo lo lleva el encabezado, pero su nombre sigue siendo el de la columna
+    expect(within(tabla).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
   })
 
   it('la lista global suma la columna Proyecto con su código y ordena de la más reciente a la más antigua', async () => {

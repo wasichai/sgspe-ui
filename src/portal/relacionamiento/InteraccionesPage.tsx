@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th, cn } from '@wasichai/ui'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, NoDisponible, ThConExplicacion } from '../componentes/Estados'
 import { VacioDeLista } from '../componentes/Lista'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { filtroDeTerritorio } from '../contexto/rutas'
@@ -24,6 +24,7 @@ import { diaDe, esDia, esFormal, esMes, mesActual, semanaDe, semanasDelMes, suma
 // en Lima. una consulta que carga o falla nunca se dibuja como un calendario o una lista vacíos
 type Vista = 'mes' | 'semana' | 'lista'
 const VISTAS: readonly Vista[] = ['mes', 'semana', 'lista']
+const CINCO_MINUTOS = 300_000
 const sinPermiso = (error: unknown): boolean => error instanceof ApiError && error.status === 403
 
 export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
@@ -41,7 +42,8 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const diaPedido = busqueda.get('day')
   const mes = esMes(mesPedido) ? mesPedido : mesActual()
   const territorio = filtroDeTerritorio(territory, { locality: 'locality', community: 'community' })
-  // descendente: si el tope de lectura corta la lista, se pierden las más antiguas y no las del mes que se mira
+  // descendente por fecha programada: si el tope de lectura corta la lista, lo que queda fuera son, en general, las más antiguas.
+  // una interacción solo con held_at (sin scheduled_at) queda donde el servidor ordene los nulos, así que no se promete más
   const interacciones = useTodosConTope('engagement', { project: proyecto, ...(territorio ?? {}), sort: 'scheduled_at', dir: 'desc' })
   const base = proyecto ? `/projects/${proyecto}` : ''
   const cambiar = (cambios: Record<string, string>) => {
@@ -254,24 +256,33 @@ function Calendario({
 
 function Lista({ interacciones, global }: { interacciones: Registro[]; global: boolean }) {
   const { t } = useTranslation(NS)
+  const idDeProyecto = useId()
   if (interacciones.length === 0)
     return (
       <VacioDeLista conFiltros={false} alLimpiar={() => undefined}>
         {t('relacionamiento.vacio')}
       </VacioDeLista>
     )
-  // las más recientes primero, por su día de Lima; las que no tienen fecha, al final
+  // por su día de Lima, la más reciente primero; las que no tienen fecha, al final
   const ordenadas = [...interacciones].sort((a, b) => (diaDe(b) ?? '').localeCompare(diaDe(a) ?? ''))
   return (
     <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
       <Table aria-label={t('relacionamiento.titulo')}>
         <thead>
           <tr>
-            {(['titulo', ...(global ? ['proyecto'] : []), 'tipo', 'estado', 'fecha', 'lugar', 'asistentes'] as const).map((c) => (
-              <Th key={c} scope="col">
-                {t(`relacionamiento.columnas.${c}`)}
-              </Th>
-            ))}
+            {(['titulo', ...(global ? ['proyecto'] : []), 'tipo', 'estado', 'fecha', 'lugar', 'asistentes'] as const).map((c) =>
+              c === 'proyecto' ? (
+                // no se sabe de antemano qué proyectos no se podrán leer: la explicación única va en el encabezado, solo
+                // para los lectores de pantalla, y cada celda sin acceso la referencia
+                <ThConExplicacion key={c} explicacion={idDeProyecto} tipo="noDisponible" soloLectores>
+                  {t(`relacionamiento.columnas.${c}`)}
+                </ThConExplicacion>
+              ) : (
+                <Th key={c} scope="col">
+                  {t(`relacionamiento.columnas.${c}`)}
+                </Th>
+              )
+            )}
           </tr>
         </thead>
         <tbody>
@@ -282,7 +293,7 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
               </Td>
               {global ? (
                 <Td className="font-sg-mono text-sg-caption">
-                  <CodigoDeProyecto id={texto(i, 'project')} />
+                  <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} />
                 </Td>
               ) : null}
               <Td className="text-sm">{texto(i, 'engagement_type')}</Td>
@@ -310,12 +321,14 @@ function moverSemana(dia: string, dias: number): Record<string, string> {
   return { day: siguiente, month: siguiente.slice(0, 7) }
 }
 
-// el código del proyecto: mientras llega o si no se puede leer no se dibuja un código vacío
-export function CodigoDeProyecto({ id }: { id: string }) {
+// el código del proyecto: mientras llega o si no se puede leer no se dibuja un código vacío. en una tabla, describedPor es el id
+// de la explicación única del encabezado (ThConExplicacion): la celda sin acceso no lleva botón de ayuda
+export function CodigoDeProyecto({ id, describedPor }: { id: string; describedPor?: string }) {
   const { t } = useTranslation(NS)
   const proyecto = useRegistro('project', id)
   if (proyecto.isPending) return <Cargando compacto etiqueta="…" />
-  if (proyecto.isError && !proyecto.data) return sinPermiso(proyecto.error) ? <NoDisponible /> : <span>{t('comun.errorDeCarga')}</span>
+  if (proyecto.isError && !proyecto.data)
+    return sinPermiso(proyecto.error) ? <NoDisponible describedPor={describedPor} /> : <span>{t('comun.errorDeCarga')}</span>
   return <>{texto(proyecto.data, 'code') || '—'}</>
 }
 
@@ -330,14 +343,14 @@ interface Festividades {
 
 function useFestividades(proyecto: string | undefined, meses: number[]): Festividades {
   const pedir = usePedir()
-  const clave = meses.join(',')
-  const festividades = useQuery({
-    queryKey: ['records', 'festivity', 'meses', clave],
-    queryFn: async () => {
-      const porMes = await Promise.all(meses.map((month) => leerTodos(pedir, 'festivity', { month })))
-      // un mes repetido no duplica la festividad
-      return [...new Map(porMes.flat().map((f) => [f.id, f])).values()]
-    }
+  // una consulta por mes, con la misma clave en la grilla y en el panel: el mes visible se lee una sola vez
+  const porMes = useQueries({
+    queries: meses.map((month) => ({
+      queryKey: ['records', 'festivity', 'mes', month],
+      queryFn: () => leerTodos(pedir, 'festivity', { month }),
+      // la línea base de festividades casi no cambia: sin esto, montar la grilla tras el panel la volvería a pedir
+      staleTime: CINCO_MINUTOS
+    }))
   })
   const localidades = useQuery({
     queryKey: ['records', 'area_of_influence_member', 'localidades-aprobadas', proyecto],
@@ -348,12 +361,14 @@ function useFestividades(proyecto: string | undefined, meses: number[]): Festivi
     },
     enabled: Boolean(proyecto)
   })
-  const fallida = [festividades, localidades].find((q) => q.isError && !q.data)
+  const fallida = [...porMes, localidades].find((q) => q.isError && !q.data)
+  // un mes repetido no duplica la festividad
+  const todas = [...new Map(porMes.flatMap((q) => q.data ?? []).map((f) => [f.id, f])).values()]
   return {
-    lista: (festividades.data ?? []).filter((f) => !proyecto || localidades.data?.has(String(atributo(f, 'locality')))),
-    pendiente: festividades.isPending || (Boolean(proyecto) && localidades.isPending),
+    lista: todas.filter((f) => !proyecto || localidades.data?.has(String(atributo(f, 'locality')))),
+    pendiente: porMes.some((q) => q.isPending) || (Boolean(proyecto) && localidades.isPending),
     error: fallida?.error,
-    reintentar: () => void (fallida ?? festividades).refetch()
+    reintentar: () => void (fallida ?? porMes[0]).refetch()
   }
 }
 
