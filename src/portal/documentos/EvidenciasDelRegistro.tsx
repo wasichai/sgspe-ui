@@ -50,6 +50,9 @@ export function EvidenciasDelRegistro({
   const sube = escribe && can('evidence', 'CREATE') && can('evidence', 'UPDATE') && can(objeto, 'UPDATE')
   const vincula = escribe && can('evidence', 'UPDATE') && can(objeto, 'UPDATE')
   const vinculo = { object: objeto, recordId: registro.id }
+  // sin leer la clasificación, la ayuda no insinúa cuál es
+  const ayudaDeRestringida = (e: Registro) =>
+    'classification' in e.attributes ? t('evidencias.restringidaAyuda') : t('evidencias.restringidaSinClasificacion')
 
   return (
     <section aria-label={t('evidencias.titulo')} className="space-y-3 pt-3">
@@ -120,9 +123,9 @@ export function EvidenciasDelRegistro({
                           {descargar.isPending && descargar.variables?.id === e.id ? t('evidencias.descargando') : t('evidencias.descargarBoton')}
                         </Button>
                       ) : (
-                        <span className="text-sg-caption text-sg-text-muted" title={t('evidencias.restringidaAyuda')}>
+                        <span className="text-sg-caption text-sg-text-muted" title={ayudaDeRestringida(e)}>
                           {t('evidencias.restringida')}
-                          <span className="sr-only">: {t('evidencias.restringidaAyuda')}</span>
+                          <span className="sr-only">: {ayudaDeRestringida(e)}</span>
                         </span>
                       )}
                       {vincula ? (
