@@ -118,6 +118,10 @@ function DialogoDeReprogramacion({
     reprogramar.mutate({ nueva, motivo: motivo.trim(), acordada }, { onSuccess: () => alReprogramar(nueva) })
   }
   const deCampo = Object.keys(delServidor).some((c) => ['attributes.new_due_date', 'attributes.reschedule_reason', 'reason'].includes(c))
+  // el error del servidor junto a un campo era del valor enviado: al cambiar la fecha o el motivo deja de valer
+  const alEditar = () => {
+    if (deCampo) reprogramar.reset()
+  }
   return (
     <Dialog open onOpenChange={(abrir) => !abrir && !reprogramar.isPending && alCerrar()}>
       <DialogContent className="max-w-lg">
@@ -127,10 +131,31 @@ function DialogoDeReprogramacion({
         </DialogDescription>
         <div className="mt-3 space-y-3">
           <Campo etiqueta={t('reprogramaciones.nueva')} error={errorDeFecha}>
-            {(p) => <Input {...p} type="date" value={nueva} onChange={(e) => setNueva(e.target.value)} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="date"
+                value={nueva}
+                onChange={(e) => {
+                  setNueva(e.target.value)
+                  alEditar()
+                }}
+              />
+            )}
           </Campo>
           <Campo etiqueta={t('reprogramaciones.motivo')} error={errorDeMotivo}>
-            {(p) => <Textarea {...p} value={motivo} maxLength={2000} onChange={(e) => setMotivo(e.target.value)} />}
+            {(p) => (
+              // X-Change-Reason admite 500 caracteres (api.md §3.7)
+              <Textarea
+                {...p}
+                value={motivo}
+                maxLength={500}
+                onChange={(e) => {
+                  setMotivo(e.target.value)
+                  alEditar()
+                }}
+              />
+            )}
           </Campo>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={acordada} onChange={(e) => setAcordada(e.target.checked)} />

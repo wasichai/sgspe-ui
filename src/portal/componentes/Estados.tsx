@@ -49,10 +49,12 @@ export function Vacio({ titulo, children }: { titulo: string; children?: ReactNo
 
 // la carga, el error y los datos de una consulta de TanStack Query. el error se dibuja solo sin datos: una relectura fallida
 // (un «Recargar» tras un 412, la invalidación tras una transición) conserva los datos y no desmonta lo que está debajo,
-// donde puede haber texto sin guardar; quien relee dice su propio fallo. un 403 es «no disponible», nunca un error
-export function Consulta<T>({ consulta, children }: { consulta: UseQueryResult<T>; children: (datos: T) => ReactNode }) {
+// donde puede haber texto sin guardar; quien relee dice su propio fallo. un 403 es «no disponible», nunca un error. con
+// noExiste, un 404 (el registro de una ficha que no existe) dibuja ese contenido y no un error con «Reintentar», que no sirve
+export function Consulta<T>({ consulta, noExiste, children }: { consulta: UseQueryResult<T>; noExiste?: ReactNode; children: (datos: T) => ReactNode }) {
   if (consulta.isPending) return <Cargando />
   if (consulta.isError && consulta.data === undefined) {
+    if (noExiste && consulta.error instanceof ApiError && consulta.error.status === 404) return <>{noExiste}</>
     return esProhibido(consulta.error) ? (
       <NoDisponible motivo={codigoDelError(consulta.error)} />
     ) : (

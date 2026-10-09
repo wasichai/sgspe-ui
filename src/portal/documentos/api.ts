@@ -135,10 +135,11 @@ export function useNombreDeArchivo(): (evidencia: Registro) => string | null {
 }
 
 // cómo se nombra una evidencia en una lista, una ficha o un aviso: su título; sin título, el nombre de su archivo que se puede
-// decir; sin archivo, su id
+// decir; sin archivo, un texto neutro. nunca su id: un UUID no le dice nada a nadie
 export function useNombreDeEvidencia(): (evidencia: Registro) => string {
+  const { t } = useTranslation(NS)
   const nombreDeArchivo = useNombreDeArchivo()
-  return (evidencia) => texto(evidencia, 'title') || nombreDeArchivo(evidencia) || evidencia.id
+  return (evidencia) => texto(evidencia, 'title') || nombreDeArchivo(evidencia) || t('evidencias.sinNombre')
 }
 
 // las evidencias vinculadas a un registro, desde su lado del vínculo (evidence_commitment desde commitment…)

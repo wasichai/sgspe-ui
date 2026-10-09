@@ -297,7 +297,7 @@ describe('evidencias de un registro', () => {
     expect(within(fila('Lista de beneficiarios')).getByText('Restringida')).toBeInTheDocument()
     expect(within(fila('Foto')).getByText('Restringido')).toBeInTheDocument()
     expect(within(fila('Foto')).queryByRole('button', { name: /Descargar/ })).not.toBeInTheDocument()
-    expect(within(fila('Lista de beneficiarios')).getByText(/hace falta la acción DOWNLOAD_RESTRICTED/)).toBeInTheDocument()
+    expect(within(fila('Lista de beneficiarios')).getByText(/hace falta permiso para descargar archivos restringidos/)).toBeInTheDocument()
     // sin leer la clasificación, la ayuda no insinúa cuál es
     expect(within(fila('Foto')).getByText(/Su rol no lee la clasificación de esta evidencia/)).toBeInTheDocument()
     expect(within(fila('Foto')).queryByText(/CONFIDENCIAL/)).not.toBeInTheDocument()
@@ -376,7 +376,7 @@ describe('documentos emitidos', () => {
       { method: 'POST', path: '/objects/engagement/records/e1/documents/attendance-list', status: 201, body: { ...DOCUMENTO, id: 'd2', number: 'LA-2026-001' } }
     ])
     red = espiarRed()
-    montar(<DocumentosEmitidos objeto="engagement" registroId="e1" />, { permisos: permisos({ engagement: ['READ', 'UPDATE'] }) })
+    montar(<DocumentosEmitidos objeto="engagement" registroId="e1" escribe />, { permisos: permisos({ engagement: ['READ', 'UPDATE'] }) })
     await userEvent.click(await screen.findByRole('button', { name: 'Abrir MR-2026-001' }))
     const panel = await screen.findByRole('dialog')
     expect(within(panel).getByText('Minuta de la asamblea de octubre')).toBeInTheDocument()
@@ -405,7 +405,7 @@ describe('documentos emitidos', () => {
       { path: '/objects/engagement/document-types', body: [{ name: 'meeting-minutes', label: 'Minuta de reunión' }] }
     ])
     red = espiarRed([{ method: 'POST', path: '/objects/engagement/records/e1/documents/meeting-minutes', responder: () => negativas.shift()! }])
-    montar(<DocumentosEmitidos objeto="engagement" registroId="e1" />, { permisos: permisos({ engagement: ['READ', 'UPDATE'] }) })
+    montar(<DocumentosEmitidos objeto="engagement" registroId="e1" escribe />, { permisos: permisos({ engagement: ['READ', 'UPDATE'] }) })
     await userEvent.selectOptions(await screen.findByLabelText('Tipo de documento'), 'meeting-minutes')
     await userEvent.click(screen.getByRole('button', { name: 'Emitir' }))
     expect(await screen.findByText('Emitir un documento exige poder editar este registro: su rol no lo tiene.')).toBeInTheDocument()
@@ -435,7 +435,7 @@ describe('documentos emitidos', () => {
   it('quien solo lee no emite; sin el módulo (404) no se dibuja', async () => {
     fetch = mockFetch([{ path: '/objects/engagement/records/e1/documents', body: [DOCUMENTO] }])
     red = espiarRed()
-    const { unmount } = montar(<DocumentosEmitidos objeto="engagement" registroId="e1" />, { permisos: permisos({ engagement: ['READ'] }) })
+    const { unmount } = montar(<DocumentosEmitidos objeto="engagement" registroId="e1" escribe />, { permisos: permisos({ engagement: ['READ'] }) })
     expect(await screen.findByRole('button', { name: 'Abrir MR-2026-001' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Emitir' })).not.toBeInTheDocument()
     expect(red.a('GET', '/objects/engagement/document-types')).toHaveLength(0)
@@ -444,7 +444,7 @@ describe('documentos emitidos', () => {
     fetch.restore()
     fetch = mockFetch([])
     red = espiarRed()
-    montar(<DocumentosEmitidos objeto="engagement" registroId="e1" />, { permisos: permisos({ engagement: ['READ'] }) })
+    montar(<DocumentosEmitidos objeto="engagement" registroId="e1" escribe />, { permisos: permisos({ engagement: ['READ'] }) })
     await waitFor(() => expect(red!.a('GET', '/objects/engagement/records/e1/documents')).toHaveLength(1))
     await waitFor(() => expect(screen.queryByText('Documentos emitidos')).not.toBeInTheDocument())
   })

@@ -8,7 +8,7 @@ export const ES_COMPROMISOS = {
   buscar: 'Buscar por código o título',
   estado: 'Estado',
   tabla: 'Compromisos',
-  truncado: 'Se muestran los primeros 1000 compromisos del alcance: elija un proyecto o un territorio para ver el resto.',
+  truncado: 'Se muestran los primeros {{n}} compromisos del alcance: elija un proyecto o un territorio para ver el resto.',
   territorioNoAplica: 'Ese territorio no filtra compromisos: se muestran todos los del alcance.',
   vistas: {
     abiertos: 'Abiertos',
@@ -34,6 +34,7 @@ export const ES_COMPROMISOS = {
     titulo: 'Candidatos a compromiso',
     ayuda: 'Posibles compromisos de las actas: solo son compromisos si una persona los acepta.',
     registrar: 'Registrar candidato',
+    truncado: 'Se muestran los {{n}} candidatos más recientes: elija un proyecto para ver el resto.',
     registrarTitulo: 'Nuevo candidato a compromiso',
     texto: 'Lo que se propuso',
     textoFalta: 'Escriba lo que se propuso',
@@ -88,7 +89,7 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
   buscar: 'Search by code or title',
   estado: 'Status',
   tabla: 'Commitments',
-  truncado: 'The first 1000 commitments of the scope are shown: pick a project or a territory to see the rest.',
+  truncado: 'The first {{n}} commitments of the scope are shown: pick a project or a territory to see the rest.',
   territorioNoAplica: 'That territory does not filter commitments: all of the scope are shown.',
   vistas: {
     abiertos: 'Open',
@@ -114,6 +115,7 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
     titulo: 'Commitment candidates',
     ayuda: 'Possible commitments from the minutes: they are commitments only if a person accepts them.',
     registrar: 'Record candidate',
+    truncado: 'The {{n}} most recent candidates are shown: pick a project to see the rest.',
     registrarTitulo: 'New commitment candidate',
     texto: 'What was proposed',
     textoFalta: 'Write what was proposed',

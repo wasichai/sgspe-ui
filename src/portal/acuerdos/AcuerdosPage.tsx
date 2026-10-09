@@ -13,7 +13,7 @@ import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useTodosConTope } from '../datos/registros'
-import { diaPe, NS } from '../i18n'
+import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 
 // S33, la lista: los acuerdos del alcance (global con la columna Proyecto, o de un proyecto) con su tipo, su estado de WF-I y su
@@ -53,7 +53,7 @@ export function AcuerdosPage() {
         {proyecto && escribe && can('agreement', 'CREATE') ? <Button onClick={() => setCreando(true)}>{t('acuerdos.nuevo')}</Button> : null}
       </div>
       {!proyecto && can('agreement', 'CREATE') ? <p className="text-sm text-sg-text-muted">{t('acuerdos.eligeProyecto')}</p> : null}
-      {acuerdos.truncado ? <Alert tone="warning">{t('acuerdos.truncado')}</Alert> : null}
+      {acuerdos.truncado ? <Alert tone="warning">{t('acuerdos.truncado', { n: numeroPe(acuerdos.data?.length ?? 0) })}</Alert> : null}
       {acuerdos.isPending ? (
         <Cargando />
       ) : acuerdos.isError && !acuerdos.data ? (

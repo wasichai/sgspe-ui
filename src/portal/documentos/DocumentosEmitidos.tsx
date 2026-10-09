@@ -21,14 +21,15 @@ import { rutaDeImpresion, useDocumentosEmitidos, useEmitirDocumento, useTiposDeD
 // restringidos (ASM-090). el servidor exige además (IssueDocumentFilter, P62) la asignación vigente al proyecto del registro
 // y, sin EDIT_ANY, haberlo creado; la ficha no sabe quién lo creó, así que cada 403 (ACTION_REQUIRED, NOT_ASSIGNED,
 // NOT_OWN_RECORD, OBJECT_NOT_READABLE) se dice con el texto propio de la emisión. escribe es la guarda de UI de quien abre la
-// ficha (useEscribeEnProyecto del proyecto del registro): sin asignación vigente no se ofrece emitir
+// ficha (useEscribeEnProyecto del proyecto del registro): sin asignación vigente no se ofrece emitir. es obligatoria para que un
+// llamador nuevo no ofrezca emitir por olvido
 const NEGATIVAS = ['ACTION_REQUIRED', 'NOT_ASSIGNED', 'NOT_OWN_RECORD', 'OBJECT_NOT_READABLE'] as const
 
-export function DocumentosEmitidos({ objeto, registroId, escribe }: { objeto: string; registroId: string; escribe?: boolean }) {
+export function DocumentosEmitidos({ objeto, registroId, escribe }: { objeto: string; registroId: string; escribe: boolean }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const documentos = useDocumentosEmitidos(objeto, registroId)
-  const emite = escribe !== false && can(objeto, 'UPDATE')
+  const emite = escribe && can(objeto, 'UPDATE')
   const tipos = useTiposDeDocumento(objeto, emite)
   const emitir = useEmitirDocumento(objeto, registroId)
   const mensaje = useMensajeDeError()

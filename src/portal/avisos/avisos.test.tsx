@@ -80,6 +80,35 @@ describe('S04 · campana', () => {
     expect(container.querySelector('img')).toBeNull()
   })
 
+  it('cerrada no apunta a un panel que no existe; un clic fuera la cierra', async () => {
+    fetch = mockFetch(rutas())
+    montar(
+      <>
+        <p>afuera</p>
+        <Campana />
+      </>
+    )
+    const boton = await screen.findByRole('button', { name: 'Avisos, 3 sin leer' })
+    expect(boton).not.toHaveAttribute('aria-controls')
+    await userEvent.click(boton)
+    const panel = await screen.findByRole('region', { name: 'Últimos avisos' })
+    expect(boton).toHaveAttribute('aria-controls', panel.id)
+    // un clic dentro del panel no la cierra
+    await userEvent.click(within(panel).getByRole('heading', { name: 'Últimos avisos' }))
+    expect(screen.getByRole('region', { name: 'Últimos avisos' })).toBeInTheDocument()
+    await userEvent.click(screen.getByText('afuera'))
+    expect(screen.queryByRole('region', { name: 'Últimos avisos' })).not.toBeInTheDocument()
+  })
+
+  it('«Marcar todos como leídos» que falla lo dice en el panel', async () => {
+    fetch = mockFetch(rutas([{ method: 'POST', path: '/auth/me/notifications/read-all', status: 500, body: { title: 'Error', status: 500 } }]))
+    montar(<Campana />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Avisos, 3 sin leer' }))
+    const panel = await screen.findByRole('region', { name: 'Últimos avisos' })
+    await userEvent.click(within(panel).getByRole('button', { name: 'Marcar todos como leídos' }))
+    expect(await within(panel).findByRole('alert')).toBeInTheDocument()
+  })
+
   it('sin el módulo de avisos (404) no hay campana', async () => {
     fetch = mockFetch([])
     red = espiarRed()
@@ -114,6 +143,16 @@ describe('S04 · bandeja', () => {
     expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
     expect(screen.getByText(cuerpo)).toBeInTheDocument()
     expect(container.querySelector('img, script, b')).toBeNull()
+  })
+
+  it('«Abrir» marca leído el aviso que no lo estaba', async () => {
+    fetch = mockFetch(rutas([{ method: 'POST', path: '/auth/me/notifications/n1/read', status: 204 }]))
+    red = espiarRed()
+    montar(<AvisosPage />, { ruta: '/notifications', camino: '/notifications' })
+    const primero = (await screen.findByRole('heading', { name: 'Compromiso C-001 pendiente de aprobación' })).closest('li') as HTMLElement
+    await userEvent.click(within(primero).getByRole('link', { name: 'Abrir' }))
+    await waitFor(() => expect(red!.a('POST', '/auth/me/notifications/n1/read')).toHaveLength(1))
+    expect(ubicacion.actual).toBe('/r/commitment/c1')
   })
 
   it('posponer lo esconde hasta mañana a las 8:00 de Lima', async () => {
@@ -156,6 +195,14 @@ describe('/r/:object/:recordId', () => {
     expect(await screen.findByText('No disponible')).toBeInTheDocument()
     expect(screen.getByText('Este registro no tiene una ficha en el portal todavía.')).toBeInTheDocument()
     expect(ubicacion.actual).toBe('/r/widget/w1')
+  })
+
+  it('un registro que ya no existe (404) lo dice, sin reintento, y no salta', async () => {
+    fetch = mockFetch([{ path: '/objects/commitment/records/c1', status: 404, body: { title: 'Not Found', status: 404 } }])
+    montar(<AbrirRegistroPage />, { ruta: '/r/commitment/c1', camino: '/r/:object/:recordId' })
+    expect(await screen.findByText('Este registro ya no existe o no es de su organización.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(ubicacion.actual).toBe('/r/commitment/c1')
   })
 
   it('un registro que la cuenta no lee (403) es «No disponible» y no salta', async () => {

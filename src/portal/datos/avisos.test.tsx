@@ -89,6 +89,64 @@ describe('flujo SSE', () => {
     expect(programar).not.toHaveBeenCalled()
   })
 
+  it('una cuenta de servicio (403) no reintenta; un 401 cierra la sesión y tampoco', async () => {
+    localStorage.setItem('sgspe.token', 't')
+    fetch = mockFetch([{ path: '/auth/me/notifications/summary', body: resumen(1) }])
+    const respuestas = [() => problema(403, 'no'), () => problema(401, 'vencido')]
+    red = espiarRed([{ path: '/auth/me/notifications/stream', responder: () => respuestas.shift()!() }])
+    const programar = vi.fn<Programar>(() => () => {})
+    const vista = montar(<Contador programar={programar} />)
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications/stream')).toHaveLength(1))
+    vista.unmount()
+    localStorage.setItem('sgspe.token', 't')
+    montar(<Contador programar={programar} />)
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications/stream')).toHaveLength(2))
+    await waitFor(() => expect(localStorage.getItem('sgspe.token')).toBeNull())
+    expect(programar).not.toHaveBeenCalled()
+  })
+
+  it('reconectar vuelve a abrir el flujo, y si falla la espera crece', async () => {
+    fetch = mockFetch([{ path: '/auth/me/notifications/summary', body: resumen(1) }])
+    const respuestas = [
+      () => new Response(flujo(`event: summary\ndata: ${JSON.stringify(resumen(2))}\n\n`), { headers: { 'Content-Type': 'text/event-stream' } }),
+      () => problema(500, 'caído')
+    ]
+    red = espiarRed([{ path: '/auth/me/notifications/stream', responder: () => respuestas.shift()!() }])
+    const tareas: (() => void)[] = []
+    const programar = vi.fn<Programar>((tarea) => {
+      tareas.push(tarea)
+      return () => {}
+    })
+    montar(<Contador programar={programar} />)
+    await waitFor(() => expect(programar).toHaveBeenCalledTimes(1))
+    expect(programar).toHaveBeenLastCalledWith(expect.any(Function), 5000)
+    tareas[0]()
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications/stream')).toHaveLength(2))
+    await waitFor(() => expect(programar).toHaveBeenCalledTimes(2))
+    expect(programar).toHaveBeenLastCalledWith(expect.any(Function), 10000)
+  })
+
+  // la lectura inicial del resumen llega después del primer evento del flujo: sin cancelarla, pisaría el resumen más nuevo
+  it('una lectura inicial lenta no pisa el resumen que ya trajo el flujo', async () => {
+    let responderLectura: () => void = () => {}
+    const lectura = new Promise<Response>((resolver) => {
+      responderLectura = () => resolver(new Response(JSON.stringify(resumen(1)), { headers: { 'Content-Type': 'application/json' } }))
+    })
+    fetch = mockFetch([])
+    red = espiarRed([
+      { path: '/auth/me/notifications/summary', responder: () => lectura },
+      {
+        path: '/auth/me/notifications/stream',
+        responder: () => new Response(flujo(`event: summary\ndata: ${JSON.stringify(resumen(3, 1))}\n\n`), { headers: { 'Content-Type': 'text/event-stream' } })
+      }
+    ])
+    montar(<Contador programar={() => () => {}} />)
+    expect(await screen.findByText('sin leer: 4')).toBeInTheDocument()
+    responderLectura()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.getByText('sin leer: 4')).toBeInTheDocument()
+  })
+
   it('la espera de reconexión crece hasta un minuto', () => {
     expect([0, 1, 2, 3, 9].map(esperaDeReconexion)).toEqual([5000, 10000, 20000, 40000, 60000])
   })
@@ -138,6 +196,29 @@ describe('bandeja y destinos', () => {
     expect(destinoDeAviso(null)).toBeNull()
   })
 
+  // un navegador trata la barra invertida como '/' y descarta tabuladores y saltos de línea de una URL: «/\otro.example» o
+  // «/<tab>/otro.example» serían «//otro.example», otro sitio
+  it('una URL que el navegador leería como de otro sitio no lleva a ninguna parte', () => {
+    for (const url of [
+      '/\\otro.example',
+      '/\\/otro.example',
+      '/\t/otro.example',
+      '/\n/otro.example',
+      '/\r/otro.example',
+      '/tasks\u0000',
+      '/tasks\u007f',
+      ' //otro.example'
+    ])
+      expect(destinoDeAviso({ type: 'URL', url }), JSON.stringify(url)).toBeNull()
+    expect(destinoDeAviso({ type: 'URL', url: '/projects/p1/commitments?view=mios#x' })).toBe('/projects/p1/commitments?view=mios#x')
+  })
+
+  it('un aviso de registro sin objeto o sin id no lleva a ninguna parte; el objeto y el id van codificados', () => {
+    expect(destinoDeAviso({ type: 'RECORD', recordId: 'c1' })).toBeNull()
+    expect(destinoDeAviso({ type: 'RECORD', object: 'commitment' })).toBeNull()
+    expect(destinoDeAviso({ type: 'RECORD', object: 'commitment', recordId: 'c/1?x' })).toBe('/r/commitment/c%2F1%3Fx')
+  })
+
   it('la ficha de un registro vive bajo su proyecto; una evidencia del tenant, en la biblioteca', () => {
     expect(rutaDeFicha('commitment', registro('c1', { project: 'p1' }))).toBe('/projects/p1/commitments/c1')
     expect(rutaDeFicha('task', registro('t1', { project: 'p1' }))).toBe('/projects/p1/tasks?task=t1')
@@ -145,5 +226,21 @@ describe('bandeja y destinos', () => {
     expect(rutaDeFicha('project', registro('p1', {}))).toBe('/projects/p1/overview')
     expect(rutaDeFicha('commitment', registro('c1', {}))).toBeNull()
     expect(rutaDeFicha('grievance', registro('g1', { project: 'p1' }))).toBeNull()
+  })
+
+  it.each([
+    ['engagement', '/projects/p1/engagements/r1'],
+    ['agreement', '/projects/p1/agreements/r1'],
+    ['stakeholder', '/projects/p1/stakeholders/r1'],
+    ['area_of_influence', '/projects/p1/areas/r1'],
+    ['field_visit', '/projects/p1/field-visits/r1'],
+    ['evidence', '/projects/p1/documents/r1']
+  ])('la ficha de %s vive bajo su proyecto', (objeto, ruta) => {
+    expect(rutaDeFicha(objeto, registro('r1', { project: 'p1' }))).toBe(ruta)
+    if (objeto !== 'evidence') expect(rutaDeFicha(objeto, registro('r1', {}))).toBeNull()
+  })
+
+  it('el proyecto y el id de la ruta de una ficha van codificados', () => {
+    expect(rutaDeFicha('commitment', registro('c/1', { project: 'p 1' }))).toBe('/projects/p%201/commitments/c%2F1')
   })
 })

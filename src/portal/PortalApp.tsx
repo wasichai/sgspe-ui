@@ -15,7 +15,7 @@ import { InicioPage } from './pages/InicioPage'
 import { PANTALLAS, RUTAS_ADICIONALES } from './pantallas'
 import { AppShell } from './shell/AppShell'
 import { GuardaDeSeccion } from './shell/GuardaDeSeccion'
-import { conPantalla, NAV_TREE, type SeccionNav } from './shell/navTree'
+import { conPantalla, guardaDe, NAV_TREE, type SeccionNav } from './shell/navTree'
 
 // un 4xx no cambia por preguntar otra vez; un corte de red o un 5xx tal vez sí
 const retry = (count: number, error: unknown) => !(error instanceof ApiError && error.status >= 400 && error.status < 500) && count < 2
@@ -68,12 +68,12 @@ const rutas = () =>
               ]
             : []
         })}
-        {RUTAS_ADICIONALES.map(({ ruta, seccion, Pantalla }) => (
+        {RUTAS_ADICIONALES.map(({ ruta, seccion, seOfreceCon, Pantalla }) => (
           <Route
             key={ruta}
             path={ruta}
             element={
-              <GuardaDeSeccion seccion={NAV_TREE.find((s) => s.clave === seccion)!}>
+              <GuardaDeSeccion seccion={guardaDe(seccion, seOfreceCon)}>
                 <PorRuta parametros={parametrosDe(ruta)} Pantalla={Pantalla} />
               </GuardaDeSeccion>
             }

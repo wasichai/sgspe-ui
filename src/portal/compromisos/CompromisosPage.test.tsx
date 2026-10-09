@@ -6,7 +6,7 @@ import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA, P1 } from '../..
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { CompromisosPage } from './CompromisosPage'
+import { CompromisosPage, enVista } from './CompromisosPage'
 
 // S28 (screens.md §7, flujo 7): las vistas de lo vencido, por vencer y bloqueado, el alta solo con asignación, y los candidatos
 // decididos por una persona con IK, IM y CR; un código de error se dice con su texto
@@ -78,6 +78,13 @@ describe('S28 · lista de compromisos', () => {
     expect(screen.getByRole('link', { name: 'Nuevo compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new')
   })
 
+  it('«Míos» lista los abiertos de quien mira; «Cerrados y cancelados», los cerrados', () => {
+    expect([C1, C2, C3, C4].filter((c) => enVista('mios', c, 'u-cmm')).map((c) => c.id)).toEqual(['c1', 'c3'])
+    expect([C1, C2, C3, C4].filter((c) => enVista('cerrados', c, 'u-cmm')).map((c) => c.id)).toEqual(['c4'])
+    expect(enVista('cerrados', { ...C1, state: 'cancelled' }, 'u-cmm')).toBe(true)
+    expect(enVista('mios', { ...C1, state: 'cancelled' }, 'u-cmm')).toBe(false)
+  })
+
   it('sin asignación vigente no se ofrece el alta; mientras carga no dice que no hay compromisos', async () => {
     fetch = mockFetch([...rutas().filter((r) => !(r.path instanceof RegExp)), { path: /^\/objects\/project_assignment\/records/, body: pagina([]) }])
     red = espiarRed([{ path: '/objects/commitment/records', responder: () => problema(500, 'caído') }])
@@ -104,6 +111,16 @@ describe('S28 · candidatos', () => {
     expect(await within(region).findByText('Mejorar el camino al anexo Huallpa')).toBeInTheDocument()
     expect(within(region).getByText('Propuesto por la IA · confianza 82 %')).toBeInTheDocument()
     expect(within(region).getByText('Restringido')).toBeInTheDocument()
+    // la cita que sí se lee se dice tal cual
+    expect(within(region).getByText(/«…pintar la escuela…»/)).toBeInTheDocument()
+  })
+
+  it('una lista de candidatos que el tope cortó lo dice con su propio texto', async () => {
+    const muchos = Array.from({ length: 200 }, (_, i) => registro(`k${i}`, { project: 'p1', proposed_text: `Propuesta ${i}` }, { state: 'proposed' }))
+    fetch = mockFetch(rutas([{ path: /^\/objects\/commitment_candidate\/records\?/, body: pagina(muchos, { nextCursor: 'siguiente' }) }]))
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
+    expect(await screen.findByText('Se muestran los 1,000 candidatos más recientes: elija un proyecto para ver el resto.')).toBeInTheDocument()
+    expect(screen.queryByText(/compromisos del alcance/)).not.toBeInTheDocument()
   })
 
   it('aceptar valida el monto, manda IK, If-Match y motivo sin el proyecto, y abre el compromiso creado', async () => {

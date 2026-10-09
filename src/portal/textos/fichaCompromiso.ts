@@ -2,6 +2,7 @@
 export const ES_FICHA_COMPROMISO = {
   titulo: 'Compromiso',
   volver: 'Compromisos del proyecto',
+  noExiste: 'Este compromiso no existe o no es de su organización.',
   pestanas: {
     resumen: 'Resumen',
     seguimiento: 'Acciones e hitos',
@@ -49,11 +50,13 @@ export const ES_FICHA_COMPROMISO = {
     interaccion: 'Interacción',
     acuerdo: 'Acuerdo',
     clausula: 'Cláusula {{numero}}',
+    clausulaSinNumero: 'Cláusula',
     candidato: 'Candidato aceptado',
     sinOrigen: 'Registrado directamente.',
     tareas: 'Tareas',
     sinTareas: 'Sin tareas.',
-    entregas: 'Entregas: {{n}}'
+    entregas: 'Entregas: {{n}}',
+    entregasSinNumero: 'Entregas'
   },
   sinActividad: 'Sin actividad registrada.'
 }
@@ -61,6 +64,7 @@ export const ES_FICHA_COMPROMISO = {
 export const EN_FICHA_COMPROMISO: typeof ES_FICHA_COMPROMISO = {
   titulo: 'Commitment',
   volver: 'Project commitments',
+  noExiste: 'This commitment does not exist or is not from your organization.',
   pestanas: {
     resumen: 'Overview',
     seguimiento: 'Actions and milestones',
@@ -108,11 +112,13 @@ export const EN_FICHA_COMPROMISO: typeof ES_FICHA_COMPROMISO = {
     interaccion: 'Engagement',
     acuerdo: 'Agreement',
     clausula: 'Clause {{numero}}',
+    clausulaSinNumero: 'Clause',
     candidato: 'Accepted candidate',
     sinOrigen: 'Recorded directly.',
     tareas: 'Tasks',
     sinTareas: 'No tasks.',
-    entregas: 'Deliveries: {{n}}'
+    entregas: 'Deliveries: {{n}}',
+    entregasSinNumero: 'Deliveries'
   },
   sinActividad: 'No activity recorded.'
 }

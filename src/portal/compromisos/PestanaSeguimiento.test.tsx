@@ -131,6 +131,24 @@ describe('S29 · dependencias', () => {
     expect(await screen.findByText('Esa dependencia cerraría un ciclo entre compromisos.')).toBeInTheDocument()
     expect(red.a('POST', '/objects/commitment_dependency/records')[0].cuerpo).toEqual({ attributes: { commitment: 'c1', depends_on: 'c2', blocking: true } })
   })
+  it.each([
+    ['DEPENDENCY_SELF', 'Un compromiso no depende de sí mismo.'],
+    ['DEPENDENCY_CYCLE', 'Esa dependencia cerraría un ciclo entre compromisos.'],
+    ['DEPENDENCY_GRAPH_TOO_LARGE', 'Hay demasiadas dependencias encadenadas para comprobar esta: simplifique la cadena.']
+  ])('%s se dice con su texto, nunca con el código', async (codigo, texto) => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      { method: 'POST', path: '/objects/commitment_dependency/records', responder: () => problema(409, 'rechazo', [{ field: 'depends_on', message: codigo }]) }
+    ])
+    montar(<PestanaDependencias compromiso={C1} escribe />, { usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await userEvent.click(await screen.findByText('+ Dependencia'))
+    await userEvent.type(screen.getByLabelText('Buscar el compromiso del que depende'), 'Ac')
+    await userEvent.click(await screen.findByRole('button', { name: 'C-002 · Acceso vehicular' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar la dependencia' }))
+    expect(await screen.findByText(texto)).toBeInTheDocument()
+    expect(screen.queryByText(codigo)).not.toBeInTheDocument()
+  })
+
   // P63: una clave nunca cruza acciones. otra dependencia no es un reintento de la que se rechazó
   it('otro compromiso elegido tras un rechazo lleva otra clave', async () => {
     fetch = mockFetch(rutas([{ path: '/objects/commitment/records', body: pagina([OTRO, TERCERO]) }]))

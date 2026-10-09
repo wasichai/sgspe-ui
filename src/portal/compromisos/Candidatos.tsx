@@ -10,15 +10,15 @@ import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
-import { codigoDelError } from '../datos/http'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Restringido, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
+import { codigoDelError } from '../datos/http'
 import { atributo, campoDe, texto, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
-import { diaPe, NS } from '../i18n'
+import { diaPe, NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarCandidato, useMarcarDuplicado, useRegistrarCandidato } from './comandosDeCandidatos'
 
@@ -48,7 +48,7 @@ export function Candidatos({ proyecto }: { proyecto?: string }) {
           </Button>
         ) : null}
       </div>
-      {candidatos.truncado ? <Alert tone="warning">{t('compromisos.truncado')}</Alert> : null}
+      {candidatos.truncado ? <Alert tone="warning">{t('compromisos.candidatos.truncado', { n: numeroPe(lista.length) })}</Alert> : null}
       {candidatos.isPending ? (
         <Cargando />
       ) : candidatos.isError && !candidatos.data ? (
@@ -78,7 +78,7 @@ export function Candidatos({ proyecto }: { proyecto?: string }) {
         </>
       )}
       {proyecto ? <RegistrarCandidato proyecto={proyecto} abierto={registrando} alCerrar={() => setRegistrando(false)} /> : null}
-      {enRevision ? <RevisionDeCandidato candidato={enRevision} alCerrar={() => setRevisando(null)} /> : null}
+      {enRevision ? <RevisionDeCandidato key={enRevision.id} candidato={enRevision} alCerrar={() => setRevisando(null)} /> : null}
     </section>
   )
 }
@@ -105,12 +105,12 @@ function TarjetaDeCandidato({ candidato, alRevisar }: { candidato: Registro; alR
         {t('compromisos.candidatos.cita')}: {'evidence_quote' in candidato.attributes ? texto(candidato, 'evidence_quote') || '—' : <Restringido />}
       </p>
       {creado ? (
-        <Link to={`/projects/${proyecto}/commitments/${creado}`} className="text-sg-primary-text underline">
+        <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(creado)}`} className="text-sg-primary-text underline">
           {t('compromisos.candidatos.abrirCompromiso')}
         </Link>
       ) : null}
       {duplicado ? (
-        <Link to={`/projects/${proyecto}/commitments/${duplicado}`} className="text-sg-primary-text underline">
+        <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(duplicado)}`} className="text-sg-primary-text underline">
           {t('compromisos.candidatos.duplicadoDe')}
         </Link>
       ) : null}
@@ -252,7 +252,8 @@ function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alC
   const [compromiso, setCompromiso] = useState<Registro | null>(null)
   const [motivoDuplicado, setMotivoDuplicado] = useState('')
   const [intentado, setIntentado] = useState(false)
-  const texto120 = texto(candidato, 'proposed_text').slice(0, 120)
+  // por puntos de código: cortar en 120 unidades UTF-16 puede partir un par sustituto (un emoji)
+  const texto120 = Array.from(texto(candidato, 'proposed_text')).slice(0, 120).join('')
   const { register, handleSubmit, formState } = useForm<Aceptacion>({
     resolver: zodResolver(esquemaDeAceptacion),
     defaultValues: {

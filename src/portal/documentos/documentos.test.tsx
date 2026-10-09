@@ -125,6 +125,18 @@ describe('S45 · biblioteca', () => {
     montar(<BibliotecaPage />, { ruta: '/documents', camino: '/documents', permisos: EQUIPO_DE_COMPROMISOS })
     expect(await within(await screen.findByRole('table', { name: 'Evidencias' })).findByText('padron-de-comuneros.xlsx')).toBeInTheDocument()
   })
+
+  it('una evidencia sin título ni archivo se nombra con un texto, nunca con su id', async () => {
+    fetch = mockFetch([
+      { path: '/metadata/objects/evidence', body: DEF },
+      { path: '/objects/project/records', body: pagina([P1]) },
+      { path: '/objects/evidence/records', body: pagina([registro('3f2a9c1e-0000-4000-8000-000000000001', { project: 'p1', evidence_type: 'OTRO' })]) }
+    ])
+    montar(<BibliotecaPage />, { ruta: '/documents', camino: '/documents', permisos: EQUIPO_DE_COMPROMISOS })
+    const tabla = await screen.findByRole('table', { name: 'Evidencias' })
+    expect(await within(tabla).findByText('Evidencia sin nombre')).toBeInTheDocument()
+    expect(screen.queryByText(/3f2a9c1e/)).not.toBeInTheDocument()
+  })
 })
 
 describe('S46 · ficha de evidencia', () => {
@@ -238,7 +250,7 @@ describe('S46 · ficha de evidencia', () => {
     await userEvent.selectOptions(within(panel).getByLabelText('Clasificación'), 'INTERNA')
     // el motivo se dice una vez; bajar una restringida añade su propio aviso
     expect(within(panel).getAllByText(/Cambiar la clasificación exige un motivo/)).toHaveLength(1)
-    expect(within(panel).getByText(/Bajar una clasificación restringida exige además DOWNLOAD_RESTRICTED/)).toBeInTheDocument()
+    expect(within(panel).getByText(/Bajar una clasificación restringida exige además permiso para descargar archivos restringidos/)).toBeInTheDocument()
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
     expect(await within(panel).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
     expect(red.a('PATCH', '/sgspe/evidence/ev1')).toHaveLength(0)

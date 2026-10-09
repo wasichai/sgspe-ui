@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { ErrorDeCarga } from '../componentes/Estados'
 import { NS } from '../i18n'
-import { estadoDe, NAV_TREE, useOferta, type ClaveDeSeccion } from '../shell/navTree'
+import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
+import { estadoDe, guardaDe, useOferta, type ClaveDeSeccion, type Par } from '../shell/navTree'
 import { BarraDeContexto } from './BarraDeContexto'
 import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyectos'
 import { Rastro } from './Rastro'
@@ -13,7 +14,8 @@ import { Rastro } from './Rastro'
 // debajo de lg pasa a una fila desplazable. quien no está asignado lee en solo lectura (alcance A, design-system.md §6.5), salvo ADMIN, que no necesita asignación
 const PESTANAS = ['overview', 'map', 'stakeholders', 'engagements', 'commitments', 'agreements', 'documents', 'tasks', 'settings', 'reports'] as const
 // las pestañas de otra sección se ofrecen con los permisos de esa sección, como el árbol y su guarda (GuardaDeSeccion): el PAD
-// no ve «Grupos de interés» ni «Relacionamiento» para llegar al aviso de que no puede abrirlas
+// no ve «Grupos de interés» ni «Relacionamiento» para llegar al aviso de que no puede abrirlas. Acuerdos vive bajo Compromisos
+// pero se ofrece con READ sobre agreement, como sus rutas (rutasEnProyecto.ts y pantallas.ts)
 const SECCION_DE_PESTANA: Partial<Record<(typeof PESTANAS)[number], ClaveDeSeccion>> = {
   stakeholders: 'stakeholders',
   engagements: 'engagements',
@@ -23,6 +25,7 @@ const SECCION_DE_PESTANA: Partial<Record<(typeof PESTANAS)[number], ClaveDeSecci
   tasks: 'tasks',
   reports: 'reports'
 }
+const PERMISOS_DE_PESTANA: Partial<Record<(typeof PESTANAS)[number], Par[][]>> = { agreements: LEE_ACUERDOS }
 
 export function ProyectoLayout() {
   const { t } = useTranslation(NS)
@@ -32,8 +35,8 @@ export function ProyectoLayout() {
   const escribe = useEscribeEnProyecto(projectId)
   const oferta = useOferta()
   const pestanas = PESTANAS.filter((p) => {
-    const seccion = NAV_TREE.find((s) => s.clave === SECCION_DE_PESTANA[p])
-    return !seccion || estadoDe(seccion, oferta) === 'disponible'
+    const clave = SECCION_DE_PESTANA[p]
+    return !clave || estadoDe(guardaDe(clave, PERMISOS_DE_PESTANA[p]), oferta) === 'disponible'
   })
   // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
   if (proyecto.isError && !proyecto.data)

@@ -8,7 +8,8 @@ import { TableroCompromisosPage } from '../compromisos/TableroCompromisosPage'
 import { BibliotecaPage } from '../documentos/BibliotecaPage'
 import { FichaEvidenciaPage } from '../documentos/FichaEvidenciaPage'
 import { MisTareasPage } from '../tareas/MisTareasPage'
-import type { ClaveDeSeccion } from '../shell/navTree'
+import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
+import type { ClaveDeSeccion, Par } from '../shell/navTree'
 import { FichaGrupoPage } from '../grupos/FichaGrupoPage'
 import { GruposPage } from '../grupos/GruposPage'
 import { MatrizPage } from '../grupos/MatrizPage'
@@ -33,6 +34,8 @@ export interface RutaEnProyecto {
   ruta: string
   Pantalla: ComponentType
   seccion?: ClaveDeSeccion
+  // los permisos que la ofrecen, si no son los de su sección: los acuerdos piden READ sobre agreement
+  seOfreceCon?: Par[][]
 }
 
 export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
@@ -57,8 +60,8 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'commitments/dashboard', seccion: 'commitments', Pantalla: TableroCompromisosPage },
   { ruta: 'commitments/new', seccion: 'commitments', Pantalla: NuevoCompromisoPage },
   { ruta: 'commitments/:commitmentId', seccion: 'commitments', Pantalla: FichaCompromisoPage },
-  { ruta: 'agreements', seccion: 'commitments', Pantalla: AcuerdosPage },
-  { ruta: 'agreements/:agreementId', seccion: 'commitments', Pantalla: FichaAcuerdoPage },
+  { ruta: 'agreements', seccion: 'commitments', seOfreceCon: LEE_ACUERDOS, Pantalla: AcuerdosPage },
+  { ruta: 'agreements/:agreementId', seccion: 'commitments', seOfreceCon: LEE_ACUERDOS, Pantalla: FichaAcuerdoPage },
   { ruta: 'documents', seccion: 'documents', Pantalla: BibliotecaPage },
   { ruta: 'documents/:documentId', seccion: 'documents', Pantalla: FichaEvidenciaPage },
   { ruta: 'tasks', seccion: 'tasks', Pantalla: MisTareasPage },
