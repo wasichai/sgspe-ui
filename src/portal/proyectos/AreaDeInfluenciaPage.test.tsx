@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { pagina, registro, workflow } from '../../test/montar'
+import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMINISTRACION, GERENCIA_SOCIAL, permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -29,6 +29,22 @@ const V2 = registro(
 )
 const miembro = (id: string, area: string, lugar: [string, string]) =>
   registro(id, { area_of_influence: area, [lugar[0]]: lugar[1], member_condition: 'INCLUIDO' })
+
+// las definiciones para quien llama: con `restringidos`, esos campos no se pueden escribir (editable: false)
+const DEF_AREA = (...restringidos: string[]) =>
+  definicion(
+    'area_of_influence',
+    ['project', 'area_type', 'version_number', 'criteria', 'study'].map(
+      (c) => [c, { editable: !restringidos.includes(c) }] as [string, Record<string, unknown>]
+    )
+  )
+const DEF_MIEMBRO = (...restringidos: string[]) =>
+  definicion('area_of_influence_member', [
+    ['member_condition', { type: 'ENUM', enumOptions: ['INCLUIDO', 'PROVISIONAL'], editable: !restringidos.includes('member_condition') }],
+    ...['area_of_influence', 'locality', 'community', 'applied_criteria', 'rationale', 'studied_in_diagnosis'].map(
+      (c) => [c, { editable: !restringidos.includes(c) }] as [string, Record<string, unknown>]
+    )
+  ])
 
 const SMG = permisos({ project: ['READ'], area_of_influence: ['READ', 'CREATE', 'UPDATE', 'APPROVE'], area_of_influence_member: ['READ', 'CREATE'] })
 const rutas = (miembrosV2 = [miembro('m1', 'a2', ['locality', 'l1']), miembro('m2', 'a2', ['community', 'c1'])]) => [
@@ -57,10 +73,8 @@ const rutas = (miembrosV2 = [miembro('m1', 'a2', ['locality', 'l1']), miembro('m
   { path: '/objects/locality/records/l1', body: registro('l1', { name: 'Tunas' }) },
   { path: '/objects/locality/records/l9', body: registro('l9', { name: 'Sector en separación' }) },
   { path: '/objects/community/records/c1', body: registro('c1', { name: 'CC Tunas Pampa' }) },
-  {
-    path: '/metadata/objects/area_of_influence_member',
-    body: { id: 'x', name: 'area_of_influence_member', fields: [{ name: 'member_condition', enumOptions: ['INCLUIDO', 'PROVISIONAL'] }] }
-  },
+  { path: '/metadata/objects/area_of_influence', body: DEF_AREA() },
+  { path: '/metadata/objects/area_of_influence_member', body: DEF_MIEMBRO() },
   {
     method: 'POST',
     path: '/sgspe/areas-of-influence/a2/approve',
@@ -168,6 +182,27 @@ describe('S10 · área de influencia', () => {
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/areas/a3'))
     expect(red.a('POST', '/objects/area_of_influence/records')[0].cuerpo).toMatchObject({ attributes: { area_type: 'AIDS', version_number: 3 } })
     expect(red.a('POST', '/objects/area_of_influence_member/records')).toHaveLength(2)
+  })
+
+  it('la versión nueva y la copia de sus miembros se escriben con la definición de quien llama (revisión final, M5)', async () => {
+    fetch = abrirPortal('/projects/p1/areas/a1', GERENCIA_SOCIAL, SMG, [
+      { path: '/metadata/objects/area_of_influence', body: DEF_AREA('study') },
+      { path: '/metadata/objects/area_of_influence_member', body: DEF_MIEMBRO('rationale') },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('button', { name: 'Nueva versión' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/areas/a3'))
+    const [area] = red.a('POST', '/objects/area_of_influence/records')
+    expect((area.cuerpo as { attributes: object }).attributes).toEqual({ project: 'p1', area_type: 'AIDS', version_number: 3, criteria: null })
+    const [primero] = red.a('POST', '/objects/area_of_influence_member/records')
+    expect((primero.cuerpo as { attributes: object }).attributes).toEqual({
+      area_of_influence: 'a3',
+      locality: 'l1',
+      member_condition: 'INCLUIDO',
+      applied_criteria: null,
+      studied_in_diagnosis: null
+    })
   })
 
   it('un 428 ofrece recargar y conserva el motivo', async () => {

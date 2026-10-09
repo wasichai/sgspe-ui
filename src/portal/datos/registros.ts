@@ -175,7 +175,8 @@ export function geometriasDeEscritura(
   return escribibles.length > 0 ? Object.fromEntries(escribibles) : undefined
 }
 
-async function definicionDe(cliente: QueryClient, pedir: Pedido, objeto: string): Promise<ObjectDefinition> {
+// la definición del objeto para quien llama, de la caché o leída: para armar una escritura fuera de useCrear y useActualizar
+export async function definicionDe(cliente: QueryClient, pedir: Pedido, objeto: string): Promise<ObjectDefinition> {
   return cliente.ensureQueryData({ queryKey: ['objects', objeto], queryFn: () => pedir<ObjectDefinition>(`/metadata/objects/${objeto}`) })
 }
 

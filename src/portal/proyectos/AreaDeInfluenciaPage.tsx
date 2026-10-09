@@ -13,7 +13,18 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Cargando, Consulta, NoDisponible, ThConExplicacion } from '../componentes/Estados'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError, usePedir } from '../datos/http'
-import { atributo, leerTodos, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
+import {
+  atributo,
+  atributosDeEscritura,
+  definicionDe,
+  leerTodos,
+  texto,
+  useCrear,
+  useDefinicion,
+  useRegistro,
+  useTodos,
+  type Registro
+} from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { Mapa } from '../mapa/Mapa'
 
@@ -358,15 +369,20 @@ function NuevaVersion({ area, miembros, versionesListas }: { area: Registro; mie
         dir: 'desc'
       })
       const siguiente = Math.max(Number(atributo(area, 'version_number') ?? 0), ...existentes.map((v) => Number(atributo(v, 'version_number') ?? 0))) + 1
+      // la copia se arma con la definición de quien llama (atributosDeEscritura): un campo que no puede escribir no viaja
+      const [defArea, defMiembro] = await Promise.all([
+        definicionDe(cliente, pedir, 'area_of_influence'),
+        definicionDe(cliente, pedir, 'area_of_influence_member')
+      ])
       const nueva = await pedir<Registro>('/objects/area_of_influence/records', {
         json: {
-          attributes: {
+          attributes: atributosDeEscritura('area_of_influence', defArea, {
             project: atributo(area, 'project'),
             area_type: atributo(area, 'area_type'),
             version_number: siguiente,
             criteria: atributo(area, 'criteria') ?? null,
             study: atributo(area, 'study') ?? null
-          }
+          })
         }
       })
       setCreada(nueva)
@@ -375,14 +391,14 @@ function NuevaVersion({ area, miembros, versionesListas }: { area: Registro; mie
         const tipo = tipoDe(m)
         await pedir('/objects/area_of_influence_member/records', {
           json: {
-            attributes: {
+            attributes: atributosDeEscritura('area_of_influence_member', defMiembro, {
               area_of_influence: nueva.id,
               [tipo]: atributo(m, tipo),
               member_condition: atributo(m, 'member_condition'),
               applied_criteria: atributo(m, 'applied_criteria') ?? null,
               rationale: atributo(m, 'rationale') ?? null,
               studied_in_diagnosis: atributo(m, 'studied_in_diagnosis') ?? null
-            }
+            })
           }
         })
       }
