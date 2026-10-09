@@ -172,6 +172,36 @@ describe('FormularioDeRegistro', () => {
       expect(segundo.cuerpo).toEqual({ attributes: { name: 'Sector bajo' } })
     })
 
+    it('tras «Recargar», guardar no pisa lo que la otra persona cambió en un campo que no se tocó (re-revisión, N1)', async () => {
+      // A abre con delegates_count 3 y edita solo el nombre; B guarda delegates_count 9 antes
+      const DEF = definicion('community_sector', [
+        ['name', { label: 'Nombre' }],
+        ['delegates_count', { label: 'Delegados', type: 'INTEGER' }]
+      ])
+      const DE_A = registro('s1', { name: 'Sector alto', delegates_count: 3 }, { updatedAt: '2026-10-06T10:00:00Z' })
+      const DE_B = registro('s1', { name: 'Sector alto', delegates_count: 9 }, { updatedAt: '2026-10-06T11:00:00Z' })
+      fetch = mockFetch([{ path: '/metadata/objects/community_sector', body: DEF }])
+      let lecturas = 0
+      let cambios = 0
+      red = espiarRed([
+        { path: '/objects/community_sector/records/s1', responder: () => jsonResponse(++lecturas === 1 ? DE_A : DE_B) },
+        {
+          method: 'PUT',
+          path: '/objects/community_sector/records/s1',
+          responder: () => (++cambios === 1 ? problema(412, 'Precondition Failed') : jsonResponse(DE_B))
+        }
+      ])
+      montar(<Ficha />)
+      await hastaElConflicto()
+      await userEvent.click(screen.getByRole('button', { name: 'Recargar' }))
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument())
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+      await waitFor(() => expect(red!.a('PUT', '/objects/community_sector/records/s1')).toHaveLength(2))
+      const segundo = red!.a('PUT', '/objects/community_sector/records/s1')[1]
+      expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-06T11:00:00Z"')
+      expect(segundo.cuerpo).toEqual({ attributes: { name: 'Sector bajo', delegates_count: 9 } })
+    })
+
     it('si la relectura falla, lo dice, el aviso se queda y lo escrito sigue', async () => {
       montarConConflicto(() => problema(404, 'No se encontró'))
       await hastaElConflicto()

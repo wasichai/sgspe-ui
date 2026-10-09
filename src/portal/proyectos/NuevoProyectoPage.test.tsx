@@ -426,6 +426,33 @@ describe('S07 · borradores y errores', () => {
     expect(segundo.cuerpo).toMatchObject({ geometries: { location: { coordinates: [-78.5, -7.9] } } })
   })
 
+  it('tras «Recargar», guardar no pisa lo que la otra persona cambió en un campo que no se tocó (re-revisión, N1)', async () => {
+    // B renombró el borrador y cambió un parámetro; A solo teclea la ubicación
+    const deOtra = { ...BORRADOR, updatedAt: '2026-10-06T11:00:00Z', attributes: { ...BORRADOR.attributes, name: 'Antakuna Norte', inactivity_days: 120 } }
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, conBorrador())
+    let lecturas = 0
+    let cambios = 0
+    red = espiarRed([
+      { path: '/objects/project/records/p9', responder: () => jsonResponse(++lecturas === 1 ? BORRADOR : deOtra) },
+      { method: 'PUT', path: '/objects/project/records/p9', responder: () => (++cambios === 1 ? problema(412, 'Precondition Failed') : jsonResponse(deOtra)) }
+    ])
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    await avanzar(1)
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Latitud de referencia (WGS 84)' }), '-7.9')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Longitud de referencia (WGS 84)' }), '-78.5')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument())
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await screen.findByRole('heading', { name: 'Partes' })
+    const segundo = red.a('PUT', '/objects/project/records/p9')[1]
+    expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-06T11:00:00Z"')
+    expect(segundo.cuerpo).toMatchObject({
+      attributes: { name: 'Antakuna Norte', inactivity_days: 120 },
+      geometries: { location: { coordinates: [-78.5, -7.9] } }
+    })
+  })
+
   it('«Anterior» y el indicador de pasos guardan lo que cambió', async () => {
     fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, conBorrador())
     red = espiarRed()

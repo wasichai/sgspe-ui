@@ -1,5 +1,5 @@
-import { DynamicForm, type ObjectDefinition, type RecordPayload } from '@wasichai/core'
-import { useMemo } from 'react'
+import { CORE_FIELD_TYPES, DynamicForm, toAttributes, toFormValues, type ObjectDefinition, type RecordPayload } from '@wasichai/core'
+import { useMemo, useRef } from 'react'
 import { esDerivado } from '../datos/derivados'
 import { useActualizar, useCrear, useDefinicion, type Registro } from '../datos/registros'
 import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
@@ -39,12 +39,33 @@ export function prepararDefinicion(definicion: ObjectDefinition, objeto: string,
 // sin fijos, siempre el mismo objeto: uno nuevo por render desharía el useMemo de la definición preparada
 const SIN_FIJOS: Record<string, unknown> = {}
 
+const TIPOS_DEL_FORMULARIO = new Set<string>(CORE_FIELD_TYPES)
+// dos valores del formulario son el mismo dato: null y vacío lo son, y un número igual a su texto (el input de un INTEGER)
+const mismoValor = (a: unknown, b: unknown): boolean => {
+  if ((a ?? null) === (b ?? null)) return true
+  if (a === null || a === undefined || b === null || b === undefined) return false
+  return typeof a === 'object' || typeof b === 'object' ? JSON.stringify(a) === JSON.stringify(b) : String(a) === String(b)
+}
+
+// lo que la persona cambió: los valores que difieren de los del registro con que se abrió el formulario (sus valores
+// iniciales), normalizados como DynamicForm normaliza los suyos (toFormValues y toAttributes). lo no tocado no viaja como
+// cambio, así que atributosDeEscritura lo toma del registro vigente: tras «Recargar», un campo que otra persona cambió y que
+// esta no tocó conserva el valor nuevo en lugar de volver al viejo (re-revisión, N1)
+export function cambiosRespectoDe(definicion: ObjectDefinition, abierto: Registro, enviados: Record<string, unknown>): Record<string, unknown> {
+  const campos = definicion.fields.filter((f) => TIPOS_DEL_FORMULARIO.has(f.type))
+  const iniciales = toAttributes(campos, toFormValues(campos, abierto.attributes))
+  return Object.fromEntries(Object.entries(enviados).filter(([campo, valor]) => !mismoValor(valor, iniciales[campo])))
+}
+
 export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, campos, motivo, alGuardar, alCancelar }: FormularioDeRegistroProps) {
   const definicion = useDefinicion(objeto)
   const crear = useCrear(objeto)
   const actualizar = useActualizar(objeto)
   const erroresDeCampo = useErroresDeCampo()
   const releer = useReleer()
+  // el registro con que se abrió el formulario: DynamicForm toma de él sus valores iniciales y no los reinicia (ni tras
+  // «Recargar» ni con un refetch), así que es la base para saber qué cambió la persona
+  const abierto = useRef<Registro | undefined>(undefined)
   const preparada = useMemo(
     () => (definicion.data ? prepararDefinicion(definicion.data, objeto, fijos, campos) : undefined),
     [definicion.data, objeto, fijos, campos]
@@ -59,10 +80,12 @@ export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, camp
     .filter(([etiqueta]) => etiqueta)
     .map(([etiqueta, texto]) => `${etiqueta}: ${texto}`)
   const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: fijos }
+  abierto.current ??= registro
   const enviar = ({ attributes }: RecordPayload) => {
-    const atributos = { ...attributes, ...fijos }
-    if (registro) actualizar.mutate({ registro, cambios: atributos, motivo }, { onSuccess: alGuardar })
-    else crear.mutate({ atributos, motivo }, { onSuccess: alGuardar })
+    if (registro) {
+      const cambios = { ...cambiosRespectoDe(preparada, abierto.current ?? registro, attributes), ...fijos }
+      actualizar.mutate({ registro, cambios, motivo }, { onSuccess: alGuardar })
+    } else crear.mutate({ atributos: { ...attributes, ...fijos }, motivo }, { onSuccess: alGuardar })
   }
   // el error va en un aviso que se anuncia (role="alert"), no en el párrafo mudo de DynamicForm. un 412 ofrece «Recargar»:
   // relee el registro (la ficha lo lee con useRegistro, así que le llega al formulario con su updatedAt nuevo) y DynamicForm

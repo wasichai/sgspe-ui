@@ -177,14 +177,19 @@ function Asistente({ inicial }: { inicial?: Registro }) {
     return guardado
   }
 
-  // un 412: otra persona cambió el borrador (la PMG lo completa, S07). se relee y el asistente sigue con la versión nueva; lo
-  // tecleado queda en el formulario, que no se reinicia, y el siguiente guardado lleva su If-Match
+  // un 412: otra persona cambió el borrador (la PMG lo completa, S07). se relee y el asistente sigue con la versión nueva: lo
+  // tecleado (sucio) se conserva y lo no tocado toma los valores nuevos, así el siguiente guardado, con su If-Match, no pisa
+  // el cambio de la otra persona (re-revisión, N1)
   const releerBorrador = async () => {
     if (!proyecto) return
     const id = proyecto.id
-    setProyecto(
-      await cliente.fetchQuery({ queryKey: ['record', 'project', id], queryFn: () => pedir<Registro>(`/objects/project/records/${id}`), staleTime: 0 })
-    )
+    const releido = await cliente.fetchQuery({
+      queryKey: ['record', 'project', id],
+      queryFn: () => pedir<Registro>(`/objects/project/records/${id}`),
+      staleTime: 0
+    })
+    reset(valoresDe(releido), { keepDirtyValues: true })
+    setProyecto(releido)
   }
 
   const ir = (siguiente: number) => {
