@@ -125,6 +125,18 @@ describe('S45 · biblioteca', () => {
     montar(<BibliotecaPage />, { ruta: '/documents', camino: '/documents', permisos: EQUIPO_DE_COMPROMISOS })
     expect(await within(await screen.findByRole('table', { name: 'Evidencias' })).findByText('padron-de-comuneros.xlsx')).toBeInTheDocument()
   })
+
+  it('una evidencia sin título ni archivo se nombra con un texto, nunca con su id', async () => {
+    fetch = mockFetch([
+      { path: '/metadata/objects/evidence', body: DEF },
+      { path: '/objects/project/records', body: pagina([P1]) },
+      { path: '/objects/evidence/records', body: pagina([registro('3f2a9c1e-0000-4000-8000-000000000001', { project: 'p1', evidence_type: 'OTRO' })]) }
+    ])
+    montar(<BibliotecaPage />, { ruta: '/documents', camino: '/documents', permisos: EQUIPO_DE_COMPROMISOS })
+    const tabla = await screen.findByRole('table', { name: 'Evidencias' })
+    expect(await within(tabla).findByText('Evidencia sin nombre')).toBeInTheDocument()
+    expect(screen.queryByText(/3f2a9c1e/)).not.toBeInTheDocument()
+  })
 })
 
 describe('S46 · ficha de evidencia', () => {

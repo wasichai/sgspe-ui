@@ -36,6 +36,8 @@ export const ES_MAPA = {
     sinPredios: 'La capa «{{capa}}» no tiene predios en esta vista.'
   },
   tabla: { componentes: 'Componentes', predios: 'Predios', areas: 'Áreas de influencia' },
+  // un predio sin código: nunca su id
+  predioSinCodigo: 'Predio sin código',
   columnas: {
     codigo: 'Código',
     tipo: 'Tipo',
@@ -107,6 +109,7 @@ export const EN_MAPA: typeof ES_MAPA = {
     sinPredios: 'The “{{capa}}” layer has no parcels in this view.'
   },
   tabla: { componentes: 'Components', predios: 'Parcels', areas: 'Areas of influence' },
+  predioSinCodigo: 'Parcel without code',
   columnas: {
     codigo: 'Code',
     tipo: 'Type',

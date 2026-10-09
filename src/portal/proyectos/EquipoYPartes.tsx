@@ -79,9 +79,11 @@ export function PartesDelProyecto({ proyecto, editable = true }: { proyecto: str
   )
 }
 
+// el nombre de la organización; mientras se lee, «…», y si no se puede leer, «No disponible». nunca su id
 export function OrganizacionNombre({ id }: { id: string }) {
+  const { t } = useTranslation(NS)
   const organizacion = useRegistro('organization', id)
-  return <>{texto(organizacion.data, 'name') || id}</>
+  return <>{texto(organizacion.data, 'name') || (organizacion.isPending ? '…' : t('comun.noDisponible'))}</>
 }
 
 const CAMPOS_DE_CAMPANA = ['name', 'activity_type', 'social_support_cap', 'currency']

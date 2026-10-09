@@ -202,6 +202,19 @@ describe('S09 · mapa del proyecto', () => {
       expect(screen.getByRole('list', { name: 'Mapa del proyecto' })).toHaveAttribute('data-seleccion', 'lp1')
     })
 
+    it('un predio sin código se nombra con un texto, nunca con su id', async () => {
+      fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), [
+        { path: '/sgspe/territory/layers/LYR-14', body: coleccion('land_parcel', [['5c7e0d4b-0000-4000-8000-000000000001', { tenure_type: 'PROPIEDAD' }]]) },
+        ...rutas().filter((r) => !String(r.path).includes('LYR-14'))
+      ])
+      await userEvent.click(await screen.findByRole('tab', { name: 'Predios' }))
+      await userEvent.click(await screen.findByRole('checkbox', { name: /Predios de propiedad/ }))
+      const tabla = await screen.findByRole('table', { name: 'Predios' })
+      expect(await within(tabla).findByRole('button', { name: 'Predio sin código' })).toBeInTheDocument()
+      // el mapa falso de las pruebas sí dibuja ids: lo que se mira es la tabla
+      expect(within(tabla).queryByText(/5c7e0d4b/)).not.toBeInTheDocument()
+    })
+
     it('una capa recortada, bloqueada o apagada lo dice en lugar de una tabla vacía', async () => {
       fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), prediales({ truncated: true }))
       await userEvent.click(await screen.findByRole('tab', { name: 'Predios' }))

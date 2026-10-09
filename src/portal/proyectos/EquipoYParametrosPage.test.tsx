@@ -7,6 +7,7 @@ import { abrirPortal } from '../../test/pantalla'
 import { ADMINISTRACION, ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos, permisosConCapacidades } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useDefinicion } from '../datos/registros'
+import { PartesDelProyecto } from './EquipoYPartes'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
 
 let fetch: FetchMock | null = null
@@ -542,5 +543,25 @@ describe('S11 · equipo y parámetros', () => {
     await screen.findByRole('table', { name: 'Equipo' })
     expect(screen.queryByRole('button', { name: 'Asignar persona' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Terminar asignación/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('partes del proyecto', () => {
+  it('una organización que no se puede leer se dice «No disponible», nunca con su id', async () => {
+    fetch = mockFetch([
+      { path: '/metadata/objects/project_party', body: definicion('project_party', [['party_role', { type: 'ENUM', enumOptions: ['CLIENTE'] }]]) },
+      {
+        path: '/objects/project_party/records',
+        body: pagina([registro('pp1', { party_role: 'CLIENTE', organization: '9b1d7e2a-0000-4000-8000-000000000001', project: 'p1' })])
+      },
+      {
+        path: '/objects/organization/records/9b1d7e2a-0000-4000-8000-000000000001',
+        status: 403,
+        body: { title: 'Error', status: 403, detail: 'OBJECT_NOT_READABLE' }
+      }
+    ])
+    montar(<PartesDelProyecto proyecto="p1" editable={false} />, { permisos: permisos({ project_party: ['READ'] }) })
+    expect(await screen.findByText(/CLIENTE · No disponible/)).toBeInTheDocument()
+    expect(screen.queryByText(/9b1d7e2a/)).not.toBeInTheDocument()
   })
 })
