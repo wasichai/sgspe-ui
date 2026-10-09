@@ -223,7 +223,9 @@ const useRotulo = (): ((r: Registro) => string) => {
   }
 }
 
-// los registros que sustenta: un vínculo evidence_<objeto> por destino; los objetos que la cuenta no lee (403) no se listan
+// los registros que sustenta: un vínculo evidence_<objeto> por destino; los objetos que la cuenta no lee (403) no se listan, ni los
+// que el modelo del tenant todavía no tiene (404: un tenant de F3 no tiene las QCS ni los riesgos de F4). una QCS confidencial que
+// la cuenta no lee no aparece: wasichai la quita de los relacionados (security.md §9.6)
 function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolean }) {
   const { t } = useTranslation(NS)
   const rotulo = useRotulo()
@@ -236,7 +238,7 @@ function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolea
   })
   const legibles = consultas
     .map((c, i) => ({ objeto: DESTINOS_DE_EVIDENCIA[i], c }))
-    .filter(({ c }) => !(c.error instanceof ApiError && c.error.status === 403))
+    .filter(({ c }) => !(c.error instanceof ApiError && (c.error.status === 403 || c.error.status === 404)))
   const cargando = legibles.some(({ c }) => c.isPending)
   const fallida = legibles.find(({ c }) => c.isError && !c.data)
   const filas = legibles.flatMap(({ objeto, c }) => (c.data?.content ?? []).map((r) => ({ objeto, r })))

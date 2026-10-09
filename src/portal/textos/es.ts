@@ -24,6 +24,20 @@ import { ES_TABLEROS } from './tableros'
 import { ES_TAREAS } from './tareas'
 import { ES_TERRITORIO } from './territorio'
 import { ES_TRANSICIONES } from './transiciones'
+import { ES_PIEZAS } from './piezas'
+import { ES_ATENCION } from './atencion'
+import { ES_NUEVA_QCS } from './nuevaQcs'
+import { ES_FICHA_QUEJA } from './fichaQueja'
+import { ES_FICHA_CONSULTA } from './fichaConsulta'
+import { ES_TABLERO_ATENCION } from './tableroAtencion'
+import { ES_REPORTE_QCS } from './reporteQcs'
+import { ES_RIESGOS } from './riesgos'
+import { ES_FICHA_RIESGO } from './fichaRiesgo'
+import { ES_ALERTAS } from './alertas'
+import { ES_INCIDENTES } from './incidentes'
+import { ES_REGISTROS_DE_ALERTA } from './registrosDeAlerta'
+import { ES_REGLAS_DE_ALERTA } from './reglasDeAlerta'
+import { ES_TABLERO_RIESGOS } from './tableroRiesgos'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
@@ -55,6 +69,21 @@ export const ES = {
   aprobaciones: ES_APROBACIONES,
   acuerdos: ES_ACUERDOS,
   tableroCompromisos: ES_TABLERO_COMPROMISOS,
+  // F4: quejas, consultas y solicitudes, riesgos y alerta temprana
+  piezas: ES_PIEZAS,
+  atencion: ES_ATENCION,
+  nuevaQcs: ES_NUEVA_QCS,
+  fichaQueja: ES_FICHA_QUEJA,
+  fichaConsulta: ES_FICHA_CONSULTA,
+  tableroAtencion: ES_TABLERO_ATENCION,
+  reporteQcs: ES_REPORTE_QCS,
+  riesgos: ES_RIESGOS,
+  fichaRiesgo: ES_FICHA_RIESGO,
+  alertas: ES_ALERTAS,
+  incidentes: ES_INCIDENTES,
+  registrosDeAlerta: ES_REGISTROS_DE_ALERTA,
+  reglasDeAlerta: ES_REGLAS_DE_ALERTA,
+  tableroRiesgos: ES_TABLERO_RIESGOS,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',

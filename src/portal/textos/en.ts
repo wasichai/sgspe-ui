@@ -24,6 +24,20 @@ import { EN_TABLEROS } from './tableros'
 import { EN_TAREAS } from './tareas'
 import { EN_TERRITORIO } from './territorio'
 import { EN_TRANSICIONES } from './transiciones'
+import { EN_PIEZAS } from './piezas'
+import { EN_ATENCION } from './atencion'
+import { EN_NUEVA_QCS } from './nuevaQcs'
+import { EN_FICHA_QUEJA } from './fichaQueja'
+import { EN_FICHA_CONSULTA } from './fichaConsulta'
+import { EN_TABLERO_ATENCION } from './tableroAtencion'
+import { EN_REPORTE_QCS } from './reporteQcs'
+import { EN_RIESGOS } from './riesgos'
+import { EN_FICHA_RIESGO } from './fichaRiesgo'
+import { EN_ALERTAS } from './alertas'
+import { EN_INCIDENTES } from './incidentes'
+import { EN_REGISTROS_DE_ALERTA } from './registrosDeAlerta'
+import { EN_REGLAS_DE_ALERTA } from './reglasDeAlerta'
+import { EN_TABLERO_RIESGOS } from './tableroRiesgos'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
@@ -55,6 +69,21 @@ export const EN: Textos = {
   aprobaciones: EN_APROBACIONES,
   acuerdos: EN_ACUERDOS,
   tableroCompromisos: EN_TABLERO_COMPROMISOS,
+  // F4: quejas, consultas y solicitudes, riesgos y alerta temprana
+  piezas: EN_PIEZAS,
+  atencion: EN_ATENCION,
+  nuevaQcs: EN_NUEVA_QCS,
+  fichaQueja: EN_FICHA_QUEJA,
+  fichaConsulta: EN_FICHA_CONSULTA,
+  tableroAtencion: EN_TABLERO_ATENCION,
+  reporteQcs: EN_REPORTE_QCS,
+  riesgos: EN_RIESGOS,
+  fichaRiesgo: EN_FICHA_RIESGO,
+  alertas: EN_ALERTAS,
+  incidentes: EN_INCIDENTES,
+  registrosDeAlerta: EN_REGISTROS_DE_ALERTA,
+  reglasDeAlerta: EN_REGLAS_DE_ALERTA,
+  tableroRiesgos: EN_TABLERO_RIESGOS,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',
