@@ -203,9 +203,7 @@ describe('S41 · ficha de alerta', () => {
     abrirFicha()
     await userEvent.type(await screen.findByLabelText('Vincular riesgo: buscar por código o título'), 'R-0')
     await userEvent.click(await screen.findByRole('button', { name: 'R-001 · Bloqueo de la vía de acceso por la comunidad' }))
-    expect(
-      await screen.findByText('La regla y la hora de detección de una alerta las escribe solo el sistema: recargue y vuelva a guardar sin cambiarlas.')
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Este dato lo escribe solo el sistema: recargue para ver su valor vigente y vuelva a guardar.')).toBeInTheDocument()
     expect(screen.queryByText('PLATFORM_ONLY')).not.toBeInTheDocument()
   })
 

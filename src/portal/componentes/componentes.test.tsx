@@ -73,7 +73,7 @@ describe('estados comunes', () => {
     ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un registro solo se vincula con lo de su proyecto.'],
     ['EVIDENCE_FILE_IN_USE', 'Ese archivo ya es de otra evidencia: elíjalo de nuevo para subirlo otra vez, o reemplace esa evidencia con una versión nueva.'],
     ['GENERATOR_KEY_PLATFORM_ONLY', 'La clave de origen de una tarea la escribe solo el sistema: no se cambia.'],
-    ['PLATFORM_ONLY', 'La regla y la hora de detección de una alerta las escribe solo el sistema: recargue y vuelva a guardar sin cambiarlas.'],
+    ['PLATFORM_ONLY', 'Este dato lo escribe solo el sistema: recargue para ver su valor vigente y vuelva a guardar.'],
     ['ROLE_REQUIRED', 'Su rol no puede dar este paso del flujo.'],
     ['FIELD_NOT_WRITABLE', 'Este paso escribe un dato que su rol no puede escribir.'],
     ['OBJECT_NOT_READABLE', 'Su rol no puede leer datos que esta regla necesita revisar.'],
