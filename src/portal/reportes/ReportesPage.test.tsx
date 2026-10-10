@@ -234,6 +234,38 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toMatchObject({ filters: { project: ['p2'] } })
   })
 
+  // con READ_ALL_PROJECTS el servidor no pide asignación para un proyecto (spec 4.4 §3.7): el alcance es «Todos los proyectos» y
+  // la interfaz no frena un proyecto sin asignación
+  it('con la acción de leer todos los proyectos, el alcance de la exportación es «Todos los proyectos» y un proyecto sin asignación se exporta', async () => {
+    fetch = abrirPortal(
+      '/reports',
+      GERENCIA_SOCIAL,
+      permisos({ project: ['READ', 'READ_ALL_PROJECTS'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }),
+      rutas
+    )
+    red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
+    const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
+    const proyecto = within(seccion).getByRole('combobox', { name: 'Proyecto' })
+    expect(within(proyecto).getAllByRole('option')[0]).toHaveTextContent('Todos los proyectos')
+    await waitFor(() =>
+      expect(
+        within(proyecto)
+          .getAllByRole('option')
+          .map((o) => o.getAttribute('value'))
+      ).toContain('p2')
+    )
+    await userEvent.selectOptions(proyecto, 'p2')
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar XLSX' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toMatchObject({ filters: { project: ['p2'] } })
+  })
+
+  it('sin la acción, el alcance de la exportación sigue siendo «Todos mis proyectos»', async () => {
+    fetch = abrirPortal('/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
+    const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
+    expect(within(within(seccion).getByRole('combobox', { name: 'Proyecto' })).getAllByRole('option')[0]).toHaveTextContent('Todos mis proyectos')
+  })
+
   it('si la lista de proyectos falla, el selector rotula el proyecto de la URL sin mostrar su identificador', async () => {
     const id = '0b6f1c3e-5d2a-4c1e-9a77-3f8e2d1b4a90'
     fetch = abrirPortal(`/projects/${id}/reports`, GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), [

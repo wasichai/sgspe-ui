@@ -2,7 +2,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, cn } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
-import { ErrorDeCarga } from '../componentes/Estados'
+import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { NS } from '../i18n'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
 import { estadoDe, guardaDe, useOferta, type ClaveDeSeccion, type Par } from '../shell/navTree'
@@ -11,7 +11,9 @@ import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyect
 import { Rastro } from './Rastro'
 
 // el ProjectLayout de screens.md §2: dentro de un proyecto, la barra de contexto y la sub-navegación de Project 360; por
-// debajo de lg pasa a una fila desplazable. quien no está asignado lee en solo lectura (alcance A, design-system.md §6.5), salvo ADMIN, que no necesita asignación
+// debajo de lg pasa a una fila desplazable. con el alcance por proyecto (ADR-0029) solo llega aquí sin asignación quien lee
+// todos los proyectos (READ_ALL_PROJECTS): lee en solo lectura (design-system.md §6.5), salvo ADMIN, que no necesita asignación.
+// un proyecto que responde 404 no existe o no es de sus proyectos, sin distinguir (spec 4.4 §3.6)
 const PESTANAS = [
   'overview',
   'map',
@@ -57,7 +59,7 @@ export function ProyectoLayout() {
   if (proyecto.isError && !proyecto.data)
     return (
       <div className="mx-auto max-w-[1440px] space-y-3">
-        <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />
+        {esIlegible(proyecto.error) ? <NoEsDeSusProyectos /> : <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />}
         <Link to="/projects" className="inline-block text-sm font-medium text-sg-primary-text">
           {t('contexto.irAProyectos')}
         </Link>

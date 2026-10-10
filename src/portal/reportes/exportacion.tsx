@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { correlacionDe, useMensajeDeError, type MensajesPropios } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useProyectos } from '../contexto/proyectos'
+import { useLeeTodosLosProyectos, useProyectos } from '../contexto/proyectos'
 import { ACEPTAR_REPORTE, guardarArchivo, nuevaClave, usePedir } from '../datos/http'
 import { texto } from '../datos/registros'
 import { NS } from '../i18n'
@@ -16,7 +16,8 @@ import { useContextFilters } from '../shell/context'
 // exportación pone solo sus filtros y sus textos: lo que dice un nivel depende de lo que esa exportación escribe
 export const NIVELES = ['INTERNO', 'EXTERNO', 'PUBLICO']
 
-// el proyecto de la URL, salvo que la persona elija otro; '' es «todos mis proyectos». lo elegido vale solo para el proyecto
+// el proyecto de la URL, salvo que la persona elija otro; '' es «todos mis proyectos» (o «todos los proyectos» para quien los
+// lee todos, plan 4.4b). lo elegido vale solo para el proyecto
 // de la URL con el que se eligió: si el conmutador del shell cambia de proyecto, manda la URL otra vez
 export function useProyectoElegido() {
   const { scope } = useContextFilters()
@@ -75,6 +76,7 @@ export type Exportacion = ReturnType<typeof useExportacion>
 export function SelectorDeProyecto({ proyecto, alCambiar }: { proyecto: string; alCambiar: (id: string) => void }) {
   const { t } = useTranslation(NS)
   const proyectos = useProyectos()
+  const leeTodo = useLeeTodosLosProyectos()
   const lista = proyectos.data ?? []
   // mientras la lista carga (o si falla), el proyecto de la URL sigue a la vista en el selector
   const faltaEnLista = proyecto !== '' && !lista.some((x) => x.id === proyecto)
@@ -87,7 +89,7 @@ export function SelectorDeProyecto({ proyecto, alCambiar }: { proyecto: string; 
           value={proyecto}
           onChange={(e) => alCambiar(e.target.value)}
         >
-          <option value="">{t('reportes.todosMisProyectos')}</option>
+          <option value="">{leeTodo ? t('reportes.todosLosProyectos') : t('reportes.todosMisProyectos')}</option>
           {faltaEnLista ? <option value={proyecto}>{proyectos.isPending ? t('reportes.proyectosCargando') : t('reportes.proyectoDeLaPagina')}</option> : null}
           {lista.map((x) => (
             <option key={x.id} value={x.id}>
