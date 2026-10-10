@@ -154,8 +154,9 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
   const espera = diasEntre(aviso.publishAt, hoyEnLima())
   const decision = rutaDeDecision(aviso)
   // un 404 es un registro que la cuenta no lee: de un proyecto en que no está asignada (ADR-0029), una QCS confidencial (§9.6) o uno
-  // borrado, sin distinguir. la fila no dice qué es ni de qué trata, y no ofrece una ficha que solo repetiría «Registro reservado»
-  const reservada = esIlegible(registro.error)
+  // borrado, sin distinguir. la fila no dice qué es ni de qué trata, y no ofrece una ficha que solo repetiría «Registro reservado».
+  // una relectura con 404 sobre una fila ya leída la conserva entera, sin mezclar lo leído con lo reservado
+  const reservada = !registro.data && esIlegible(registro.error)
   return (
     <tr>
       <Td className="text-sm">

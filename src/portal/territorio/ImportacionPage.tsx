@@ -7,7 +7,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { Cargando } from '../componentes/Estados'
+import { Cargando, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { Pasos } from '../componentes/Pasos'
 import { useMisProyectos, useProyectos } from '../contexto/proyectos'
 import { codigoDelError, guardarArchivo } from '../datos/http'
@@ -169,8 +169,13 @@ function Preparar() {
           <section className="space-y-3" aria-label={pasos[1]}>
             {definicion.isPending ? <Cargando /> : null}
             {definicion.isError && !definicion.data ? <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
+            {/* un proyecto de la dirección (un marcador viejo) que ya no se lee responde 404, como uno que no existe (ADR-0029) */}
             {registroDelProyecto.isError && !registroDelProyecto.data ? (
-              <FalloDeLectura error={registroDelProyecto.error} alReintentar={() => void registroDelProyecto.refetch()} />
+              esIlegible(registroDelProyecto.error) ? (
+                <NoEsDeSusProyectos />
+              ) : (
+                <FalloDeLectura error={registroDelProyecto.error} alReintentar={() => void registroDelProyecto.refetch()} />
+              )
             ) : null}
             <Campo etiqueta={t('importacion.crs')} ayuda={t('importacion.crsAyuda')}>
               {(p) => (

@@ -44,5 +44,6 @@ test('un aviso que lleva a un registro que la cuenta no lee dice «Registro rese
   await page.goto('/r/commitment/c9')
   await expect(page.getByText('Registro reservado')).toBeVisible()
   await expect(page.getByText(/Su cuenta no lee este registro/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reintentar' })).toHaveCount(0)
   await expect(page).toHaveURL(/\/r\/commitment\/c9$/)
 })

@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { focusManager, useQuery } from '@tanstack/react-query'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,6 +18,8 @@ let red: Red | null = null
 beforeEach(() => localStorage.clear())
 afterEach(() => {
   vi.useRealTimers()
+  // la prueba de la relectura fuerza el foco: se suelta aunque falle
+  focusManager.setFocused(undefined)
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
@@ -239,6 +242,49 @@ describe('S48 · aprobaciones', () => {
     const fila = within(tabla).getByText('Registro reservado').closest('tr')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
     expect(within(fila).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    // la tercera columna es la del monto
+    expect(within(fila).getAllByRole('cell')[2]).toHaveTextContent(/^—$/)
+  })
+
+  // una sonda sobre la consulta de la fila: dice cuándo terminó la relectura, sin esperar un tiempo fijo. enabled: false
+  // observa la consulta sin pedir nada por su cuenta. repite la clave de useRegistro (datos/registros.ts)
+  function Sonda() {
+    const c7 = useQuery({ queryKey: ['record', 'commitment', 'c7'], enabled: false })
+    return <output aria-label="errores de c7">{c7.errorUpdateCount}</output>
+  }
+
+  // la asignación vence con la bandeja abierta: la relectura da 404 pero la fila ya leída se conserva entera, sin mezclar
+  // lo leído con «reservado» (como RegistroVinculado y AbrirRegistroPage, que también exigen que no haya datos)
+  it('una relectura que responde 404 conserva la fila ya leída con su enlace', async () => {
+    fetch = mockFetch(rutas())
+    let lecturas = 0
+    red = espiarRed([
+      {
+        path: '/objects/commitment/records/c7',
+        responder: () => (++lecturas === 1 ? jsonResponse(OTRO) : problema(404, 'Record c7 does not exist'))
+      }
+    ])
+    montar(
+      <>
+        <AprobacionesPage />
+        <Sonda />
+      </>,
+      { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION }
+    )
+    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    const fila = (await within(tabla).findByText('C-007 · Botiquín')).closest('tr')!
+    expect(within(fila).getByRole('link')).toBeInTheDocument()
+    act(() => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+    })
+    // la sonda y la fila observan la misma consulta y se pintan en el mismo commit: al ver el error, la fila ya lo recibió
+    await waitFor(() => expect(screen.getByLabelText('errores de c7')).toHaveTextContent('1'))
+    expect(lecturas).toBe(2)
+    expect(within(fila).getByText('C-007 · Botiquín')).toBeInTheDocument()
+    expect(within(fila).getByText('Aprobación de compromiso')).toBeInTheDocument()
+    expect(within(fila).getByRole('link')).toBeInTheDocument()
+    expect(within(fila).queryByText('Registro reservado')).not.toBeInTheDocument()
   })
 
   it('sin el módulo de avisos lo dice en lugar de una bandeja vacía', async () => {

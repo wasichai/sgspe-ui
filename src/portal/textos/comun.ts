@@ -56,8 +56,8 @@ export const ES_COMUN = {
   // F3: la situación de plazo o de vigencia (derivada por JOB-01, nunca un estado) y la elección de una persona usuaria
   situacionDePlazo: 'Situación de plazo',
   situacionDeVigencia: 'Situación de vigencia',
-  // F4: la situación de revisión de un riesgo (review_status), los nombres de las QCS, el vínculo a una QCS confidencial que quien
-  // mira no lee (ASM-095) y la nota de una cifra que no cuenta las confidenciales (confidentialHidden)
+  // F4: la situación de revisión de un riesgo (review_status), los nombres de las QCS, el vínculo a un registro que quien mira
+  // no lee (ADR-0029, ASM-095) y la nota de una cifra que no cuenta las confidenciales (confidentialHidden)
   situacionDeRevision: 'Situación de revisión',
   qcs: {
     grievance: 'Queja',
@@ -285,7 +285,8 @@ export const EN_COMUN: typeof ES_COMUN = {
     plural: { grievance: 'Grievances', inquiry: 'Inquiries', stakeholder_request: 'Requests' }
   },
   registroReservado: 'Reserved record',
-  registroReservadoAyuda: 'Your account cannot read this record: it belongs to a project it is not assigned to, it is confidential or it no longer exists.',
+  registroReservadoAyuda:
+    'Your account cannot read this record: it belongs to a project your account is not assigned to, it is confidential or it no longer exists.',
   confidencialesOcultas:
     'This figure does not include the confidential grievances, inquiries and requests your account cannot read. Ask grievance management for the total.',
   usuario: {
