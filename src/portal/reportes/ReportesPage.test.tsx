@@ -608,3 +608,35 @@ describe('F4 · matriz de riesgos', () => {
     expect(screen.queryByRole('region', { name: 'Matriz de riesgos' })).not.toBeInTheDocument()
   })
 })
+
+describe('S49 · las tres salidas a la vez', () => {
+  it('la matriz de compromisos, el registro de QCS y la matriz de riesgos no comparten la key del proyecto (humo F4, D2)', async () => {
+    const errores = vi.spyOn(console, 'error')
+    const qcs = ['READ', 'EXPORT']
+    fetch = abrirPortal(
+      '/projects/p1/reports',
+      GERENCIA_SOCIAL,
+      permisos({
+        project: ['READ'],
+        export_log: ['READ'],
+        commitment: ['READ', 'EXPORT'],
+        grievance: qcs,
+        inquiry: qcs,
+        stakeholder_request: qcs,
+        social_risk: ['READ', 'EXPORT']
+      }),
+      [
+        ...rutas,
+        { path: '/objects/grievance/workflow', body: WF_QUEJA },
+        { path: '/objects/inquiry/workflow', body: WF_CONSULTA },
+        { path: '/objects/stakeholder_request/workflow', body: WF_SOLICITUD },
+        { path: '/metadata/objects/grievance', body: DEF_QUEJA },
+        { path: '/objects/social_risk/workflow', body: WF_RIESGO },
+        { path: '/metadata/objects/social_risk', body: DEF_RIESGO }
+      ]
+    )
+    expect(await screen.findByRole('region', { name: 'Matriz de riesgos' })).toBeInTheDocument()
+    const claveRepetida = errores.mock.calls.filter((c) => c.some((a) => typeof a === 'string' && a.includes('same key')))
+    expect(claveRepetida).toEqual([])
+  })
+})
