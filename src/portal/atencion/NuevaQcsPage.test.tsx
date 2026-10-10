@@ -127,6 +127,27 @@ describe('S37 · registrar QCS', () => {
     expect(await screen.findByText(/quítelos o desmarque/)).toBeInTheDocument()
   })
 
+  // el selector lista solo los grupos que la cuenta lee; si uno dejó de leerse antes de guardar, wasichai responde 400 sobre la
+  // relación (spec 4.4 §3.12)
+  it('el grupo de interés que el servidor no deja vincular (400 sobre la relación) se dice junto a su campo, sin el texto en inglés', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/objects/grievance/records',
+        responder: () => problema(400, "Invalid value for 'stakeholder'", [{ field: 'stakeholder', message: 'no record with this id' }])
+      }
+    ])
+    abrir()
+    await llenar('Q-012')
+    const grupo = screen.getByLabelText('Grupo de interés')
+    await waitFor(() => expect(grupo.querySelector('option[value="s1"]')).not.toBeNull())
+    await userEvent.selectOptions(grupo, 's1')
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar queja' }))
+    await waitFor(() => expect(screen.getByLabelText('Grupo de interés')).toHaveAccessibleDescription('El registro elegido no existe o es de otro proyecto.'))
+    expect(screen.queryByText(/no record with this id|Invalid value/)).not.toBeInTheDocument()
+  })
+
   it('la persona solo se ofrece a quien la lee; sin asignación vigente el alta no se ofrece', async () => {
     fetch = mockFetch(rutas([{ path: '/metadata/objects/grievance', body: sinPersona(DEF_QUEJA) }]))
     abrir()

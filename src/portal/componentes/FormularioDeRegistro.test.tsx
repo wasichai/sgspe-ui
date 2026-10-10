@@ -152,6 +152,31 @@ describe('FormularioDeRegistro', () => {
     expect(cambio.cuerpo).toEqual({ attributes: { name: 'Sector bajo', community: comunidad } })
   })
 
+  it('un 400 sobre una relación oculta se dice con la etiqueta del campo y el texto propio, no el inglés de wasichai', async () => {
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/stakeholder',
+        body: definicion('stakeholder', [
+          ['name', { label: 'Nombre' }],
+          ['project', { label: 'Proyecto', type: 'RELATION', relationTarget: 'project' }]
+        ])
+      }
+    ])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/objects/stakeholder/records',
+        responder: () => problema(400, "Invalid value for 'project'", [{ field: 'project', message: 'no record with this id' }])
+      }
+    ])
+    // las relaciones son UUID: Zod las valida aunque viajen ocultas
+    montar(<FormularioDeRegistro objeto="stakeholder" fijos={{ project: '6f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f' }} />)
+    await userEvent.type(await screen.findByLabelText('Nombre'), 'Ronda campesina')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Proyecto: El registro elegido no existe o es de otro proyecto.')).toBeInTheDocument()
+    expect(screen.queryByText(/no record with this id|Invalid value/)).not.toBeInTheDocument()
+  })
+
   describe('un 412 al cambiar (revisión final, I2)', () => {
     const SECTOR = definicion('community_sector', [['name', { label: 'Nombre' }]])
     const V1 = registro('s1', { name: 'Sector alto' }, { updatedAt: '2026-10-06T10:00:00Z' })

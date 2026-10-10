@@ -20,7 +20,9 @@ import { rutaDeImpresion, useDocumentosEmitidos, useEmitirDocumento, useTiposDeD
 // estricta) y solo si el objeto tiene tipos. sin el módulo (404) no se dibuja nada. las plantillas no imprimen campos
 // restringidos (ASM-090). el servidor exige además (IssueDocumentFilter, P62) la asignación vigente al proyecto del registro
 // y, sin EDIT_ANY, haberlo creado; la ficha no sabe quién lo creó, así que cada 403 (ACTION_REQUIRED, NOT_ASSIGNED,
-// NOT_OWN_RECORD, OBJECT_NOT_READABLE) se dice con el texto propio de la emisión. escribe es la guarda de UI de quien abre la
+// NOT_OWN_RECORD, OBJECT_NOT_READABLE) se dice con el texto propio de la emisión. con el alcance por proyecto (ADR-0029) un
+// registro que la cuenta no lee responde 404 al listar o emitir, como su ficha; NOT_ASSIGNED queda para quien lee todos los
+// proyectos sin estar asignado (spec 4.4 §3.6). escribe es la guarda de UI de quien abre la
 // ficha (useEscribeEnProyecto del proyecto del registro): sin asignación vigente no se ofrece emitir. es obligatoria para que un
 // llamador nuevo no ofrezca emitir por olvido
 const NEGATIVAS = ['ACTION_REQUIRED', 'NOT_ASSIGNED', 'NOT_OWN_RECORD', 'OBJECT_NOT_READABLE'] as const
