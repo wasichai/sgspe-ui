@@ -146,6 +146,8 @@ describe('S37 · registrar QCS', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Registrar queja' }))
     await waitFor(() => expect(screen.getByLabelText('Grupo de interés')).toHaveAccessibleDescription('El registro elegido no existe o es de otro proyecto.'))
     expect(screen.queryByText(/no record with this id|Invalid value/)).not.toBeInTheDocument()
+    // el alta salió una vez y fue el servidor quien la rechazó
+    expect(red.a('POST', '/objects/grievance/records')).toHaveLength(1)
   })
 
   it('la persona solo se ofrece a quien la lee; sin asignación vigente el alta no se ofrece', async () => {
