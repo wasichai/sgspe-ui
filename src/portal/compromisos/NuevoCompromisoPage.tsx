@@ -5,7 +5,7 @@ import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
@@ -15,6 +15,7 @@ import { ConDefiniciones, FalloDeLectura } from '../componentes/LecturaConEstado
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { Pasos } from '../componentes/Pasos'
+import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuario'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
@@ -28,7 +29,9 @@ import { BarraDelTope } from './BarraDelTope'
 // requiresReason, un motivo: nada se escribe hasta el último paso, donde se crea el borrador (con la clave nativa de
 // Idempotency-Key), se vinculan los solicitantes y, si se pide, se envía a aprobación (submit). la revisión dice, antes de
 // enviar, lo que D1 y D2 van a exigir, con el paso donde se completa. si algo falla después del alta, el borrador existe: se
-// dice y se enlaza su ficha, y un reintento no lo vuelve a crear
+// dice y se enlaza su ficha, y un reintento no lo vuelve a crear. desde F4, «Crear compromiso desde esta queja» (S36) llega con
+// ?origin_grievance=<id>: el paso de origen lo dice y el alta lo manda (el proyecto ya es el de la queja: ProjectLinkGuard
+// rechaza otro con PROJECT_MISMATCH, que vuelve a ese paso)
 const PASOS = ['que', 'origen', 'solicitantes', 'beneficiarios', 'monto', 'plazo', 'revision'] as const
 type Paso = (typeof PASOS)[number]
 
@@ -80,6 +83,8 @@ const pasoDe = (campo: string): Paso | undefined => PASOS.find((p) => (CAMPOS[p]
 type Externo = 'origin_engagement' | 'owner' | 'verifier'
 const EXTERNOS: Record<string, Externo> = {
   origin_engagement: 'origin_engagement',
+  // la queja de origen se dice en el mismo paso, junto al origen
+  origin_grievance: 'origin_engagement',
   owner_user_id: 'owner',
   owner_user_email: 'owner',
   verifier_user_id: 'verifier',
@@ -150,6 +155,8 @@ export function NuevoCompromisoPage() {
 function Asistente() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
+  const [busqueda] = useSearchParams()
+  const quejaDeOrigen = busqueda.get('origin_grievance') || null
   const navegar = useNavigate()
   const pedir = usePedir()
   const cliente = useQueryClient()
@@ -246,6 +253,7 @@ function Asistente() {
       salida[campo] = campo === 'amount' || campo === 'quantity' ? normalizarMonto(valor) : typeof valor === 'string' ? valor.trim() : valor
     }
     if (origen) salida.origin_engagement = origen.id
+    if (quejaDeOrigen) salida.origin_grievance = quejaDeOrigen
     if (responsable) Object.assign(salida, { owner_user_id: responsable.id, owner_user_email: responsable.email })
     if (verificador) Object.assign(salida, { verifier_user_id: verificador.id, verifier_user_email: verificador.email })
     return salida
@@ -379,6 +387,11 @@ function Asistente() {
             ) : null}
             {paso === 'origen' ? (
               <>
+                {quejaDeOrigen ? (
+                  <div className="text-sm">
+                    {t('nuevoCompromiso.naceDeLaQueja')}: <RegistroVinculado objeto="grievance" id={quejaDeOrigen} />
+                  </div>
+                ) : null}
                 <div className="space-y-1">
                   <p className="text-sg-body-sm font-medium">{nombreDeCampo('origin_engagement')}</p>
                   {origen ? (

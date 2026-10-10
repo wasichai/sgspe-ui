@@ -47,6 +47,7 @@ export const ES_NUEVO_COMPROMISO = {
     mismaPersona: 'El verificador no puede ser el responsable'
   },
   buscarInteraccion: 'Buscar la interacción por título',
+  naceDeLaQueja: 'Nace de la queja',
   sinSolicitantes: 'Todavía no hay solicitantes: el envío a aprobación pide al menos uno.',
   tope: {
     titulo: 'Tope de apoyo social de la campaña',
@@ -125,6 +126,7 @@ export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
     mismaPersona: 'The verifier cannot be the owner'
   },
   buscarInteraccion: 'Search the engagement by title',
+  naceDeLaQueja: 'Comes from the grievance',
   sinSolicitantes: 'There are no requesters yet: submitting for approval needs at least one.',
   tope: {
     titulo: 'Campaign social support cap',

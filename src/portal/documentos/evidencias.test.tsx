@@ -362,6 +362,52 @@ const DOCUMENTO = {
 }
 
 // en F3 solo la interacción tiene tipos de documento (meeting-minutes y attendance-list, plan 3.1): el «Acta de entrega» espera a UPS-23
+// F4 (ASM-098): el cargo o la carta firmados de una QCS se suben como evidencia, con el tipo y la clasificación DATOS PERSONALES
+// propuestos (una QCS confidencial solo admite evidencias restringidas, EVIDENCE_NOT_RESTRICTED), y viajan con el nombre neutro
+describe('cargo y carta firmados de una QCS', () => {
+  it('«Subir carta firmada» propone CARTA y DATOS PERSONALES y manda el vínculo con la consulta', async () => {
+    const CONSULTA = registro('i1', { project: 'p1', code: 'C-001' }, { state: 'answered' })
+    fetch = mockFetch([
+      { path: '/metadata/objects/evidence', body: DEF_EVIDENCIA },
+      { path: '/objects/inquiry/records/i1/related/evidence_inquiry', body: pagina([]) }
+    ])
+    red = espiarRed([
+      { method: 'POST', path: '/objects/evidence/files/file', responder: () => jsonResponse({ ...DESCRIPTOR, name: 'evidencia.pdf' }, 201) },
+      { method: 'POST', path: '/sgspe/evidence', responder: () => jsonResponse(registro('ev9', {}), 201) }
+    ])
+    montar(
+      <EvidenciasDelRegistro
+        objeto="inquiry"
+        registro={CONSULTA}
+        escribe
+        tipoInicial="CARTA"
+        clasificacionInicial="DATOS PERSONALES"
+        textoSubir="Subir carta firmada"
+      />,
+      { permisos: permisos({ inquiry: ['READ', 'UPDATE'], evidence: ['READ', 'CREATE', 'UPDATE'] }) }
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Subir carta firmada' }))
+    const panel = await screen.findByRole('group', { name: 'Subir una evidencia' })
+    expect(within(panel).getByLabelText('Tipo de evidencia')).toHaveValue('CARTA')
+    expect(within(panel).getByLabelText('Clasificación')).toHaveValue('DATOS PERSONALES')
+    expect(within(panel).getByText(/se sube con un nombre neutro/)).toBeInTheDocument()
+    await userEvent.upload(
+      within(panel).getByLabelText('Archivo (PDF, foto, hoja, documento o texto; hasta 20 MB)'),
+      new File(['%PDF'], 'carta-a-la-junta.pdf', { type: 'application/pdf' })
+    )
+    // una QCS es requiresReason: vincularle una evidencia lleva motivo
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'carta entregada en mano')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Subir evidencia' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/evidence')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/evidence')[0].cuerpo).toMatchObject({
+      attributes: { evidence_type: 'CARTA', classification: 'DATOS PERSONALES', project: 'p1' },
+      links: [{ object: 'inquiry', recordId: 'i1' }]
+    })
+    expect(red.a('POST', '/sgspe/evidence')[0].cabeceras.get('X-Change-Reason')).toBe("UTF-8''carta%20entregada%20en%20mano")
+    expect((red.a('POST', '/objects/evidence/files/file')[0].formulario?.get('file') as File).name).toMatch(/^evidencia-/)
+  })
+})
+
 describe('documentos emitidos', () => {
   it('lista los documentos, abre uno congelado con su enlace de impresión y emite otro con el tipo elegido', async () => {
     fetch = mockFetch([

@@ -57,8 +57,11 @@ const VACIO: Valores = {
 
 export interface FormularioDeEvidenciaProps {
   vinculos?: Vinculo[]
-  // el tipo que se propone (FOTO para una foto de entrega, ACTA DE ENTREGA para el acta)
+  // el tipo que se propone (FOTO para una foto de entrega, ACTA DE ENTREGA para el acta, FORMULARIO para el cargo de una queja)
   tipoInicial?: string
+  // la clasificación que se propone: DATOS PERSONALES para el cargo o la carta firmados de una QCS (ASM-098), que pueden vincularse a
+  // una QCS confidencial solo si son restringidos (EVIDENCE_NOT_RESTRICTED)
+  clasificacionInicial?: string
   // el vínculo con un objeto requiresReason exige motivo
   conMotivo?: boolean
   // el proyecto de la evidencia, si es de un proyecto
@@ -74,7 +77,16 @@ export function FormularioDeEvidencia(props: FormularioDeEvidenciaProps) {
   return <ConDefiniciones definiciones={[definicion]}>{() => <Formulario {...props} />}</ConDefiniciones>
 }
 
-function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, reemplaza, alRegistrar, alCancelar }: FormularioDeEvidenciaProps) {
+function Formulario({
+  vinculos,
+  tipoInicial = '',
+  clasificacionInicial = '',
+  conMotivo = false,
+  proyecto,
+  reemplaza,
+  alRegistrar,
+  alCancelar
+}: FormularioDeEvidenciaProps) {
   const { t } = useTranslation(NS)
   const definicion = useDefinicion('evidence')
   const alta = useRegistrarEvidencia()
@@ -85,7 +97,7 @@ function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, r
   const [faltaArchivo, setFaltaArchivo] = useState(false)
   const { register, handleSubmit, control, formState, reset } = useForm<Valores>({
     resolver: zodResolver(esquema(conMotivo)),
-    defaultValues: { ...VACIO, evidence_type: tipoInicial }
+    defaultValues: { ...VACIO, evidence_type: tipoInicial, classification: clasificacionInicial }
   })
   const personas = useWatch({ control, name: 'people_identifiable' })
   const clasificacion = useWatch({ control, name: 'classification' })
@@ -136,7 +148,7 @@ function Formulario({ vinculos, tipoInicial = '', conMotivo = false, proyecto, r
         motivo: conMotivo ? v.motivo.trim() : undefined
       })
       if (!registrada) return
-      reset({ ...VACIO, evidence_type: tipoInicial })
+      reset({ ...VACIO, evidence_type: tipoInicial, classification: clasificacionInicial })
       setArchivo(null)
       setCaptura({})
       alta.nuevaAccion()
