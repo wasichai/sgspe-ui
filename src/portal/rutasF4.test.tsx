@@ -6,7 +6,7 @@ import { P1 } from '../test/compromisos'
 import { pagina } from '../test/montar'
 import { abrirPortal } from '../test/pantalla'
 import { permisos } from '../test/portal'
-import { baseDeRiesgos, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, RIESGO } from '../test/riesgos'
+import { baseDeRiesgos, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, INCIDENTE, RIESGO } from '../test/riesgos'
 import { rutaEquivalente } from './contexto/rutas'
 
 vi.mock('./graficos/Grafico', () => import('../test/graficoFalso'))
@@ -75,6 +75,23 @@ describe('rutas de F4', () => {
     expect(await screen.findByRole('heading', { name: 'Bloqueo de la vía de acceso por la comunidad', level: 1 })).toBeInTheDocument()
   })
 
+  it('risks/incidents no es la ficha de un riesgo: lleva a la lista de incidentes del proyecto, y risks/incidents/:id a su ficha (humo F4, D4)', async () => {
+    const conIncidentes = (): MockRoute[] => [
+      { path: '/objects/incident/records/n1', body: INCIDENTE },
+      { path: /^\/objects\/incident\/records\?/, body: pagina([INCIDENTE]) },
+      ...deRiesgos()
+    ]
+    fetch = abrirPortal('/projects/p1/risks/incidents', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, conIncidentes())
+    expect(await screen.findByRole('heading', { name: 'Incidentes', level: 1 })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/projects/p1/incidents')
+    expect(await screen.findByRole('table', { name: 'Incidentes del proyecto' })).toBeInTheDocument()
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/risks/incidents/n1', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, conIncidentes())
+    expect(await screen.findByRole('link', { name: 'Volver a los incidentes' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/projects/p1/incidents/n1')
+  })
+
   it('sin READ sobre las QCS, la ruta lo dice y la sección no se ofrece', async () => {
     fetch = abrirPortal('/attention', GESTOR_DE_RIESGOS, permisos({ project: ['READ'], social_risk: ['READ'] }), deRiesgos())
     expect(await screen.findByText('Su cuenta no puede abrir «Quejas, consultas y solicitudes».')).toBeInTheDocument()
@@ -103,6 +120,7 @@ describe('rutas de F4', () => {
     ['/projects/p1/risks/warnings/w1', 'p2', '/projects/p2/risks/warnings'],
     ['/projects/p1/risks/k1', 'p2', '/projects/p2/risks'],
     ['/projects/p1/incidents/n1', 'p2', '/projects/p2/incidents'],
+    ['/projects/p1/risks/incidents', 'p2', '/projects/p2/incidents'],
     ['/projects/p1/inquiries/i1', null, '/attention'],
     ['/projects/p1/risks/dashboard', null, '/risks'],
     ['/projects/p1/risks/k1', null, '/risks/register']

@@ -9,7 +9,7 @@ import { TableroAtencionPage } from '../atencion/TableroAtencionPage'
 import { AlertasPage, FichaAlertaPage } from '../riesgos/AlertasPage'
 import { FichaRiesgoPage } from '../riesgos/FichaRiesgoPage'
 import { ImpactosPage } from '../riesgos/ImpactosPage'
-import { FichaIncidentePage, IncidentesPage } from '../riesgos/IncidentesPage'
+import { FichaIncidentePage, IncidentesDesdeRiesgos, IncidentesPage } from '../riesgos/IncidentesPage'
 import { MencionesPage } from '../riesgos/MencionesPage'
 import { ReglasPage } from '../riesgos/ReglasPage'
 import { RiesgosPage } from '../riesgos/RiesgosPage'
@@ -101,6 +101,9 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'risks/signals/:signalId', seccion: 'risks', Pantalla: SenalesPage },
   { ruta: 'risks/impacts', seccion: 'risks', Pantalla: ImpactosPage },
   { ruta: 'risks/rules', seccion: 'risks', Pantalla: ReglasPage },
+  // los incidentes viven en incidents: risks/incidents no es un riesgo con ese id, sino un camino a su lista (humo F4)
+  { ruta: 'risks/incidents', seccion: 'risks', Pantalla: IncidentesDesdeRiesgos },
+  { ruta: 'risks/incidents/:incidentId', seccion: 'risks', Pantalla: IncidentesDesdeRiesgos },
   { ruta: 'risks/:riskId', seccion: 'risks', Pantalla: FichaRiesgoPage },
   { ruta: 'incidents', seccion: 'risks', Pantalla: IncidentesPage },
   { ruta: 'incidents/:incidentId', seccion: 'risks', Pantalla: FichaIncidentePage }
