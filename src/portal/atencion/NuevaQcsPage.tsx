@@ -331,7 +331,8 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
             })}
           </p>
           {tipo === 'stakeholder_request' ? null : <p className="text-sg-text-muted">{t('nuevaQcs.quePasara.plazoAlRegistrar')}</p>}
-          {tipo === 'grievance' ? <p>{t('nuevaQcs.quePasara.tarea')}</p> : null}
+          {/* la tarea de acuse de una confidencial es genérica, sin vínculo con la queja (sgspe#20, D-1) */}
+          {tipo === 'grievance' ? <p>{t(confidencial ? 'nuevaQcs.quePasara.tareaGenerica' : 'nuevaQcs.quePasara.tarea')}</p> : null}
           {confidencial ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.confidencialAyuda')}</p> : null}
         </aside>
       </div>
