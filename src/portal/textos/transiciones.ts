@@ -9,6 +9,9 @@ export const ES_TRANSICIONES = {
   bloqueo: 'No se puede todavía',
   advertencia: 'Advertencia: confirme con una justificación',
   campo: 'Campo: {{campo}}',
+  faltaCampo: 'Para «{{accion}}» falta «{{campo}}»: complételo y vuelva a intentar.',
+  faltaCampoSinAccion: 'Falta «{{campo}}» para este paso: complételo y vuelva a intentar.',
+  reglaSinTexto: 'Una regla del sistema no permite este paso todavía.',
   // field de un aviso que no es un campo del registro (api.md §4.1): un objeto que la regla revisa, el motivo o el estado
   campos: {
     reason: 'Motivo',
@@ -38,6 +41,9 @@ export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
   bloqueo: 'Not possible yet',
   advertencia: 'Warning: confirm with a justification',
   campo: 'Field: {{campo}}',
+  faltaCampo: 'To «{{accion}}», «{{campo}}» is missing: fill it in and try again.',
+  faltaCampoSinAccion: '«{{campo}}» is missing for this step: fill it in and try again.',
+  reglaSinTexto: 'A system rule does not allow this step yet.',
   campos: {
     reason: 'Reason',
     state: 'State',

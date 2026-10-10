@@ -1,11 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { AuthUser } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeAtencion, DEF_QUEJA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA, sinPersona } from '../../test/atencion'
 import { WF_COMPROMISO } from '../../test/compromisos'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
-import { permisos } from '../../test/portal'
+import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaQuejaPage } from './FichaQuejaPage'
@@ -233,5 +234,102 @@ describe('S36 · ficha de queja', () => {
     expect(await screen.findByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Crear compromiso desde esta queja' })).not.toBeInTheDocument()
+  })
+})
+
+// marcar confidencial una queja ya registrada (decisión del usuario del 2026-10-10, D-3; security.md §9.6): solo su receptor,
+// su responsable guardados o quien lee todas las confidenciales; la marca se confirma con lo que implica y el 403 se dice con texto
+describe('S36 · marcar confidencial al editar', () => {
+  const COLEGA: AuthUser = { id: 'u-otro', email: 'otro@sgspe.test', displayName: 'Colega de prueba', organizationId: 'o1', roles: ['GRIEVANCE_MANAGER'] }
+  const sinLeerConfidenciales = permisos({
+    project: ['READ'],
+    project_assignment: ['READ'],
+    grievance: ['READ', 'CREATE', 'UPDATE'],
+    stakeholder: ['READ'],
+    commitment: ['READ']
+  })
+  const abrirComo = (usuario: AuthUser, permisosDeCuenta = sinLeerConfidenciales) =>
+    montar(<FichaQuejaPage />, {
+      ruta: '/projects/p1/grievances/g1',
+      camino: '/projects/:projectId/grievances/:grievanceId',
+      usuario,
+      permisos: permisosDeCuenta
+    })
+  const editar = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
+    return screen.findByRole('dialog', { name: 'Editar el caso' })
+  }
+
+  it('quien la recibió la marca tras confirmar lo que implica, con motivo e If-Match y los datos leídos', async () => {
+    fetch = mockFetch([
+      ...rutas(QUEJA, baseDeAtencion(RELACIONISTA)),
+      { method: 'PUT', path: '/objects/grievance/records/g1', body: { ...QUEJA, attributes: { ...QUEJA.attributes, confidential: true } } }
+    ])
+    red = espiarRed()
+    abrirComo(RELACIONISTA)
+    const drawer = await editar()
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Marcar como confidencial…' }))
+    const confirmacion = await screen.findByRole('dialog', { name: '¿Marcar la queja como confidencial?' })
+    expect(within(confirmacion).getByText(/Sus colegas sin acceso dejarán de verla/)).toBeInTheDocument()
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Marcar como confidencial' }))
+    expect(within(confirmacion).getByText('Escriba el motivo del cambio')).toBeInTheDocument()
+    expect(red.a('PUT', '/objects/grievance/records/g1')).toHaveLength(0)
+    await userEvent.type(within(confirmacion).getByLabelText('Motivo del cambio (obligatorio)'), 'datos sensibles del reclamante')
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Marcar como confidencial' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/grievance/records/g1')).toHaveLength(1))
+    const [cambio] = red.a('PUT', '/objects/grievance/records/g1')
+    expect(cambio.cabeceras.get('If-Match')).toBe(`"${QUEJA.updatedAt}"`)
+    expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''datos%20sensibles%20del%20reclamante")
+    expect(cambio.cuerpo).toMatchObject({ attributes: { confidential: true, category: 'AGUA Y MEDIO AMBIENTE' } })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '¿Marcar la queja como confidencial?' })).not.toBeInTheDocument())
+  })
+
+  it('su responsable y quien lee todas las confidenciales también la marcan; un colega sin esa relación ni ese permiso, no', async () => {
+    fetch = mockFetch(rutas(QUEJA, baseDeAtencion(COLEGA)))
+    const vista = abrirComo(COLEGA)
+    const drawer = await editar()
+    expect(await within(drawer).findByLabelText(/^description/)).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: 'Marcar como confidencial…' })).not.toBeInTheDocument()
+    vista.unmount()
+    fetch.restore()
+    fetch = mockFetch(rutas(QUEJA, baseDeAtencion(COLEGA)))
+    const conPermiso = abrirComo(COLEGA, EQUIPO_DE_QUEJAS)
+    expect(await within(await editar()).findByRole('button', { name: 'Marcar como confidencial…' })).toBeInTheDocument()
+    conPermiso.unmount()
+    fetch.restore()
+    fetch = mockFetch(rutas(QUEJA))
+    abrirComo(GESTORA_DE_QUEJAS)
+    expect(await within(await editar()).findByRole('button', { name: 'Marcar como confidencial…' })).toBeInTheDocument()
+  })
+
+  it('una queja ya confidencial no ofrece marcarla', async () => {
+    fetch = mockFetch(rutas({ ...QUEJA, attributes: { ...QUEJA.attributes, confidential: true } }, baseDeAtencion(RELACIONISTA)))
+    abrirComo(RELACIONISTA)
+    const drawer = await editar()
+    expect(await within(drawer).findByLabelText(/^description/)).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: 'Marcar como confidencial…' })).not.toBeInTheDocument()
+  })
+
+  it('el 403 de quien no puede marcarla se dice con su texto, nunca con el código', async () => {
+    fetch = mockFetch(rutas(QUEJA, baseDeAtencion(RELACIONISTA)))
+    red = espiarRed([
+      {
+        method: 'PUT',
+        path: '/objects/grievance/records/g1',
+        responder: () => problema(403, 'marca', [{ field: 'confidential', message: 'CONFIDENTIAL_MARK_FORBIDDEN' }])
+      }
+    ])
+    abrirComo(RELACIONISTA)
+    const drawer = await editar()
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Marcar como confidencial…' }))
+    const confirmacion = await screen.findByRole('dialog', { name: '¿Marcar la queja como confidencial?' })
+    await userEvent.type(within(confirmacion).getByLabelText('Motivo del cambio (obligatorio)'), 'datos sensibles')
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Marcar como confidencial' }))
+    expect(
+      await within(confirmacion).findByText(
+        'Solo quien la recibió, su responsable o la gestión de quejas pueden marcarla como confidencial: pídaselo a una de esas personas.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText('CONFIDENTIAL_MARK_FORBIDDEN')).not.toBeInTheDocument()
   })
 })

@@ -48,6 +48,7 @@ export const ES_NUEVA_QCS = {
     codigo: 'Se registra con el código {{codigo}} en estado «Recibida».',
     sinCodigo: 'Se registra en estado «Recibida» con el código que escriba.',
     tarea: 'Se crea la tarea de acusar recibo.',
+    tareaGenerica: 'Se crea una tarea genérica de acusar recibo, sin vínculo con la queja, para no revelarla.',
     plazoAlRegistrar: 'Los plazos los calcula el sistema al registrar y se ven en la ficha.'
   },
   obligatorio: 'Complete este dato.',
@@ -110,6 +111,7 @@ export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
     codigo: 'It is recorded with code {{codigo}} in state «Received».',
     sinCodigo: 'It is recorded in state «Received» with the code you type.',
     tarea: 'The task to acknowledge receipt is created.',
+    tareaGenerica: 'A generic task to acknowledge receipt is created, not linked to the grievance, so as not to reveal it.',
     plazoAlRegistrar: 'The system computes the deadlines on recording; the record shows them.'
   },
   obligatorio: 'Fill in this value.',

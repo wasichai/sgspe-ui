@@ -106,18 +106,22 @@ describe('estados comunes', () => {
     expect(screen.queryByText(codigo)).not.toBeInTheDocument()
   })
 
-  it('HAS_DEPENDENTS nombra el dependiente; un código que el portal no conoce muestra el detail', async () => {
+  it('HAS_DEPENDENTS no nombra el campo de la API; un código que el portal no conoce muestra el detail si no delata un código', async () => {
     montar(
       <>
         <ErrorDeCarga error={new ErrorDeSgspe(409, 'x', [{ field: 'engagement.project', message: 'HAS_DEPENDENTS' }], null)} />
         <ErrorDeCarga error={new ErrorDeSgspe(409, 'La regla nueva del servidor', [{ field: 'record', message: 'SOME_NEW_RULE' }], null)} />
+        <ErrorDeCarga error={new ErrorDeSgspe(400, 'La transición decline exige response', [{ field: 'response', message: 'OTHER_NEW_RULE' }], null)} />
+        <ErrorDeCarga error={new ErrorDeSgspe(400, 'Días entre revisiones (400 OUT_OF_RANGE)', [], null)} />
       </>
     )
-    expect(
-      await screen.findByText('No se puede borrar: otros registros dependen de este (engagement.project). Bórrelos o cámbielos primero.')
-    ).toBeInTheDocument()
+    expect(await screen.findByText('No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.')).toBeInTheDocument()
+    expect(screen.queryByText(/engagement\.project/)).not.toBeInTheDocument()
     expect(screen.getByText('La regla nueva del servidor')).toBeInTheDocument()
     expect(screen.queryByText('SOME_NEW_RULE')).not.toBeInTheDocument()
+    // el detail que delata una transición, un campo o un código dice el texto fijo de su estado (humo F4, D3)
+    expect(screen.getAllByText('Revise los datos marcados.')).toHaveLength(2)
+    expect(screen.queryByText(/decline|response|OUT_OF_RANGE/)).not.toBeInTheDocument()
   })
 
   it('un campo restringido y una cifra no disponible lo dicen con candado, nunca vacío', async () => {

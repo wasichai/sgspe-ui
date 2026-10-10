@@ -3,7 +3,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Tabs, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Vacio } from '../componentes/Estados'
@@ -92,6 +92,15 @@ export function IncidentesPage() {
       </Drawer>
     </section>
   )
+}
+
+// risks/incidents y risks/incidents/:incidentId no son rutas del diseño (screens.md: los incidentes viven en
+// /projects/:projectId/incidents), pero se escriben al lado de risks/warnings o risks/signals: llevan a la ruta canónica en lugar
+// de abrir la ficha de un riesgo con el id «incidents», que quedaba vacía (humo F4, D4)
+export function IncidentesDesdeRiesgos() {
+  const { projectId = '', incidentId } = useParams()
+  const base = `/projects/${encodeURIComponent(projectId)}/incidents`
+  return <Navigate to={incidentId ? `${base}/${encodeURIComponent(incidentId)}` : base} replace />
 }
 
 export function FichaIncidentePage() {

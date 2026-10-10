@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { codigosEn as codigosDe } from './componentes/codigosVisibles'
 
 // los textos de pantalla nunca muestran un código interno: ni un ID de requisito o de decisión del diseño, ni el código de
 // una acción, de un error o de un campo de la API. quien está en campo no sabe qué es UPS-23, (D11) o DOWNLOAD_RESTRICTED.
@@ -8,20 +9,6 @@ import { describe, expect, it } from 'vitest'
 const MODULOS = import.meta.glob<Record<string, unknown>>(['./textos/*.ts', '!./textos/es.ts', '!./textos/en.ts'], {
   eager: true
 })
-
-// lo que delata un código en un texto visible
-const PATRONES: [string, RegExp][] = [
-  // un ID de requirements-analysis.md: RF-…, RNF-PRIV-004, ASM-090, UPS-23, CON-006
-  ['ID de requisito', /\b(?:RF|RNF|RN|RQ|ASM|UPS|GAP|CON)-[A-Z0-9-]+/g],
-  // una decisión del plan o del diseño: (D11), D10
-  ['ID de decisión', /\bD\d+\b/g],
-  // un código de acción, de error o de enum en UPPER_SNAKE: DOWNLOAD_RESTRICTED, APPROVE_OVER_CAP
-  ['código UPPER_SNAKE', /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g],
-  // una acción de permiso de wasichai en crudo: «la acción APPROVE», «el permiso EXPORT»
-  ['acción de permiso', /\b(?:READ|CREATE|UPDATE|DELETE|EXPORT|IMPORT|APPROVE|DOWNLOAD)\b/g],
-  // un nombre de la API en camelCase o snake_case: requiresReason, ignoredFilters, due_date
-  ['nombre de la API', /\b[a-z]+[A-Z][A-Za-z0-9]*\b|\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g]
-]
 
 // palabras que casan con un patrón y aun así son texto legítimo. se mantiene corta: cada entrada dice por qué. las
 // etiquetas de enum del modelo en mayúsculas («CONFIDENCIAL», «DATOS PERSONALES», «ASAMBLEA», «VENCIDO») ya no casan,
@@ -35,16 +22,7 @@ function hojas(textos: unknown, prefijo: string): [string, string][] {
   return Object.entries(textos).flatMap(([clave, valor]) => hojas(valor, `${prefijo}.${clave}`))
 }
 
-// los códigos que aparecen en un texto; las interpolaciones {{n}} de i18next no son texto visible
-function codigosEn(texto: string): string[] {
-  const visible = texto.replace(/\{\{[^}]*\}\}/g, '')
-  return PATRONES.flatMap(([nombre, patron]) =>
-    [...visible.matchAll(patron)]
-      .map(([m]) => m)
-      .filter((m) => !PERMITIDAS.has(m))
-      .map((m) => `${nombre}: ${m}`)
-  )
-}
+const codigosEn = (texto: string): string[] => codigosDe(texto).filter((c) => !PERMITIDAS.has(c.slice(c.indexOf(': ') + 2)))
 
 describe('textos sin códigos internos', () => {
   it('hay módulos de textos en español y en inglés', () => {
@@ -62,6 +40,28 @@ describe('textos sin códigos internos', () => {
     expect(codigosEn('sin due_date')).toEqual(['nombre de la API: due_date'])
     expect(codigosEn('es CONFIDENCIAL o de DATOS PERSONALES, de tipo ASAMBLEA o VENCIDO')).toEqual([])
     expect(codigosEn('{{n}} de {{totalDeFilas}} por código GI-')).toEqual([])
+    // humo F4 (D3): la transición y el campo en crudo, un estado HTTP, una decisión P54 y una propiedad de configuración
+    expect(codigosEn('La transición decline exige response')).toEqual(['transición en crudo: transición decline exige'])
+    expect(codigosEn('La transición reject_acknowledged exige response')).toContain('nombre de la API: reject_acknowledged')
+    expect(codigosEn('de 1 a 365 (400 OUT_OF_RANGE)')).toEqual(['código UPPER_SNAKE: OUT_OF_RANGE', 'estado HTTP: 400'])
+    expect(codigosEn('solo lo de su proyecto (P54)')).toEqual(['ID de decisión: P54'])
+    expect(codigosEn('feriados de sgspe.calendar.holidays')).toEqual(['propiedad de configuración: sgspe.calendar.holidays'])
+    expect(codigosEn('De 1 a 365; vacío = la frecuencia del proyecto. Llega en F7.')).toEqual([])
+    expect(codigosEn('el servidor responde 403')).toEqual(['estado HTTP: 403'])
+    expect(codigosEn('450 compromisos de la campaña tienen un monto inválido')).toEqual([])
+  })
+
+  // errores.ts dice el texto de un código sin interpolar errors[].field: es el nombre de la API («engagement.project»), no una
+  // etiqueta (humo F4, D3)
+  it('ningún texto de un código de la API interpola el campo crudo', () => {
+    const conCampo = Object.entries(MODULOS).flatMap(([archivo, modulo]) =>
+      Object.entries(modulo).flatMap(([nombre, textos]) =>
+        hojas((textos as { codigos?: unknown }).codigos, `${archivo.replace('./textos/', '')}:${nombre}.codigos`)
+          .filter(([, texto]) => texto.includes('{{campo}}'))
+          .map(([clave]) => clave)
+      )
+    )
+    expect(conCampo).toEqual([])
   })
 
   it('ningún texto de src/portal/textos muestra un código', () => {

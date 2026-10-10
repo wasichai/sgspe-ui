@@ -1,8 +1,10 @@
-import { Alert, Textarea } from '@wasichai/ui'
+import { useAuth } from '@wasichai/core'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
 import { Lock } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { Restringido } from '../componentes/Estados'
@@ -10,8 +12,8 @@ import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { nombreDe, NombreDelGrupo } from '../componentes/NombreDeActor'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
-import { plazoQueCorre, type ObjetoDeQcs } from '../datos/atencion'
-import { atributo, texto, useRegistro, type Registro } from '../datos/registros'
+import { LEE_CONFIDENCIALES, plazoQueCorre, type ObjetoDeQcs } from '../datos/atencion'
+import { atributo, puedeEscribir, texto, useActualizar, useDefinicion, useRegistro, type Registro } from '../datos/registros'
 import { diaPe, fechaYHoraPe, NS } from '../i18n'
 
 // lo que comparten la ficha de queja (S36) y las de consulta y solicitud (S57): las marcas de anonimato y confidencialidad, el plazo
@@ -130,7 +132,8 @@ export function EditarQcs({
   campos,
   abierto,
   alCerrar,
-  titulo
+  titulo,
+  marcaConfidencial = false
 }: {
   objeto: ObjetoDeQcs
   qcs: Registro
@@ -138,6 +141,8 @@ export function EditarQcs({
   abierto: boolean
   alCerrar: () => void
   titulo?: string
+  // «Editar» ofrece marcarla confidencial; «Responder», que reusa este cajón, no
+  marcaConfidencial?: boolean
 }) {
   const { t } = useTranslation(NS)
   const [motivo, setMotivo] = useState('')
@@ -151,9 +156,81 @@ export function EditarQcs({
         {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
       </Campo>
       {abierto ? (
-        <FormularioDeRegistro objeto={objeto} registro={qcs} campos={campos} motivo={motivo.trim() || undefined} alGuardar={cerrar} alCancelar={cerrar} />
+        <>
+          {marcaConfidencial ? <MarcarConfidencial objeto={objeto} qcs={qcs} alMarcar={cerrar} /> : null}
+          <FormularioDeRegistro objeto={objeto} registro={qcs} campos={campos} motivo={motivo.trim() || undefined} alGuardar={cerrar} alCancelar={cerrar} />
+        </>
       ) : null}
     </Drawer>
+  )
+}
+
+// marcar confidencial una QCS ya registrada (decisión del usuario del 2026-10-10, D-3; security.md §9.6): lo hacen su receptor o
+// su responsable guardados, o quien lee todas las confidenciales (READ_CONFIDENTIAL); a los demás el servidor responde 403
+// CONFIDENTIAL_MARK_FORBIDDEN, así que la marca no se les ofrece. no es un campo más del formulario: se confirma aparte, con lo
+// que implica (los colegas sin acceso dejan de verla) y su motivo. quitar la marca exige READ_CONFIDENTIAL y no se ofrece aquí
+function MarcarConfidencial({ objeto, qcs, alMarcar }: { objeto: ObjetoDeQcs; qcs: Registro; alMarcar: () => void }) {
+  const { t } = useTranslation(NS)
+  const { user, can } = useAuth()
+  const definicion = useDefinicion(objeto)
+  const actualizar = useActualizar(objeto)
+  const releer = useReleer()
+  const [confirmando, setConfirmando] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const [intentado, setIntentado] = useState(false)
+  const suya = Boolean(user?.id) && (atributo(qcs, 'received_by_user_id') === user?.id || atributo(qcs, 'owner_user_id') === user?.id)
+  const ofrece = atributo(qcs, 'confidential') !== true && puedeEscribir(definicion.data, 'confidential') && (suya || can(objeto, LEE_CONFIDENCIALES))
+  if (!ofrece) return null
+  const cerrar = () => {
+    setConfirmando(false)
+    setMotivo('')
+    setIntentado(false)
+    actualizar.reset()
+  }
+  const confirmar = () => {
+    setIntentado(true)
+    if (!motivo.trim() || actualizar.isPending) return
+    actualizar.mutate(
+      { registro: qcs, cambios: { confidential: true }, motivo: motivo.trim() },
+      {
+        onSuccess: () => {
+          cerrar()
+          alMarcar()
+        }
+      }
+    )
+  }
+  return (
+    <section className="space-y-1 rounded-sg-md border border-sg-border p-3 text-sm">
+      <p className="text-sg-text-secondary">{t('fichaQueja.comun.marcar.ayuda')}</p>
+      <Button size="sm" variant="secondary" onClick={() => setConfirmando(true)}>
+        {t('fichaQueja.comun.marcar.boton')}
+      </Button>
+      <Dialog open={confirmando} onOpenChange={(abierto) => !abierto && cerrar()}>
+        <DialogContent className="max-w-lg">
+          <DialogTitle className="text-sg-h3 font-semibold">
+            {t('fichaQueja.comun.marcar.titulo', { tipo: t(`comun.qcs.${objeto}`).toLowerCase() })}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-sg-text-secondary">{t('fichaQueja.comun.marcar.texto')}</DialogDescription>
+          <div className="mt-4 space-y-3">
+            <Campo etiqueta={t('fichaQueja.comun.motivo')} error={intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined}>
+              {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
+            </Campo>
+            {actualizar.isError ? (
+              <AvisoDeConflicto error={actualizar.error} releer={() => releer(['record', objeto, qcs.id])} alRecargar={() => actualizar.reset()} />
+            ) : null}
+          </div>
+          <div className="mt-6 flex justify-end gap-2">
+            <Button variant="secondary" onClick={cerrar}>
+              {t('comun.cancelar')}
+            </Button>
+            <Button onClick={confirmar} disabled={actualizar.isPending} aria-busy={actualizar.isPending}>
+              {actualizar.isPending ? t('fichaQueja.comun.marcar.marcando') : t('fichaQueja.comun.marcar.confirmar')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
   )
 }
 

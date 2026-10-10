@@ -106,7 +106,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       409,
       'CATALOGUE_UNAVAILABLE',
       'stance',
-      'Falta el catálogo de stance: la salida pública necesita todos sus valores. Pida a la administración que lo cargue.'
+      'Falta el catálogo de uno de los datos: la salida pública necesita todos sus valores. Pida a la administración que lo cargue.'
     ]
   ])('un %i %s dice su texto, no el código', async (status, codigo, campo, texto) => {
     fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
@@ -606,5 +606,38 @@ describe('F4 · matriz de riesgos', () => {
     fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], export_log: ['READ'], social_risk: ['READ'] }), rutasDeRiesgos)
     expect(await screen.findByRole('heading', { name: 'Reportes', level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Matriz de riesgos' })).not.toBeInTheDocument()
+  })
+})
+
+describe('S49 · las tres salidas a la vez', () => {
+  it('la matriz de compromisos, el registro de QCS y la matriz de riesgos no comparten la key del proyecto (humo F4, D2)', async () => {
+    const errores = vi.spyOn(console, 'error')
+    const qcs = ['READ', 'EXPORT']
+    fetch = abrirPortal(
+      '/projects/p1/reports',
+      GERENCIA_SOCIAL,
+      permisos({
+        project: ['READ'],
+        export_log: ['READ'],
+        commitment: ['READ', 'EXPORT'],
+        grievance: qcs,
+        inquiry: qcs,
+        stakeholder_request: qcs,
+        social_risk: ['READ', 'EXPORT']
+      }),
+      [
+        ...rutas,
+        { path: '/objects/grievance/workflow', body: WF_QUEJA },
+        { path: '/objects/inquiry/workflow', body: WF_CONSULTA },
+        { path: '/objects/stakeholder_request/workflow', body: WF_SOLICITUD },
+        { path: '/metadata/objects/grievance', body: DEF_QUEJA },
+        { path: '/objects/social_risk/workflow', body: WF_RIESGO },
+        { path: '/metadata/objects/social_risk', body: DEF_RIESGO }
+      ]
+    )
+    expect(await screen.findByRole('region', { name: 'Matriz de riesgos' })).toBeInTheDocument()
+    const claveRepetida = errores.mock.calls.filter((c) => c.some((a) => typeof a === 'string' && a.includes('same key')))
+    errores.mockRestore()
+    expect(claveRepetida).toEqual([])
   })
 })

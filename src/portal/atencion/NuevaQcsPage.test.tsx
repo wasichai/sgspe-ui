@@ -82,6 +82,9 @@ describe('S37 · registrar QCS', () => {
     expect(screen.queryByLabelText('Buscar persona')).not.toBeInTheDocument()
     await userEvent.click(screen.getByLabelText(/^Confidencial/))
     expect(screen.getAllByText(/Solo la leerán la gestión de quejas, su responsable, usted, que la recibe/).length).toBeGreaterThan(0)
+    // sgspe#20: la tarea de acuse de una confidencial es genérica, sin vínculo con la queja
+    expect(screen.getByText('Se crea una tarea genérica de acusar recibo, sin vínculo con la queja, para no revelarla.')).toBeInTheDocument()
+    expect(screen.queryByText('Se crea la tarea de acusar recibo.')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Registrar queja' }))
     await waitFor(() => expect(red!.a('POST', '/objects/grievance/records')).toHaveLength(1))
     const { attributes } = red.a('POST', '/objects/grievance/records')[0].cuerpo as { attributes: Record<string, unknown> }

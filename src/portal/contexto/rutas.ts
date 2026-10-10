@@ -63,6 +63,7 @@ export function rutaEquivalente(pathname: string, proyecto: string | null): stri
     if (primera === 'commitments' && segunda === 'dashboard') return `${base}/commitments/dashboard`
     if (primera === 'attention' && (segunda === 'dashboard' || segunda === 'report')) return `${base}/attention/${segunda}`
     if (['grievances', 'inquiries', 'requests'].includes(primera)) return `${base}/attention`
+    if (primera === 'risks' && segunda === 'incidents') return `${base}/incidents`
     if (primera === 'risks' && ['register', 'dashboard', 'warnings', 'mentions', 'signals', 'impacts', 'rules'].includes(segunda ?? ''))
       return `${base}/risks/${segunda}`
     if (primera === 'field-visits') return `${base}/engagements`

@@ -14,6 +14,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { atributo, texto, useRegistro, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { useAplicarTransicion, useComprobacion } from '../transiciones/api'
+import { useTextoDeAviso } from '../transiciones/avisos'
 import { APROBACIONES_DE, rutaDeDecision, useAprobacionesPendientes } from './AprobacionesPage'
 
 // S31 · aprobación de compromiso (/tasks/approvals/commitment/:recordId; screens.md §7, flujo 8): la bandeja a la izquierda,
@@ -47,6 +48,9 @@ function Decision({ compromiso }: { compromiso: Registro }) {
     opciones.find((x) => (APROBACIONES_DE.commitment ?? []).includes(x.name))?.name ??
     null
   const comprobacion = useComprobacion('commitment', compromiso.id, decision)
+  // cada regla con su texto, nunca el mensaje del servidor con los nombres de la API (humo F4, D3)
+  const textoDe = useTextoDeAviso('commitment')
+  const transicionDecidida = opciones.find((x) => x.name === decision)
   const aplicar = useAplicarTransicion('commitment')
   const releer = useReleer()
   const [motivo, setMotivo] = useState('')
@@ -193,12 +197,12 @@ function Decision({ compromiso }: { compromiso: Registro }) {
           <>
             {comprobacion.data.blocking.map((b) => (
               <Alert key={`${b.code}-${b.field ?? ''}`} tone="danger" title={t('transiciones.bloqueo')}>
-                {b.message}
+                {textoDe(b, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
               </Alert>
             ))}
             {comprobacion.data.warnings.map((w) => (
               <Alert key={`${w.code}-${w.field ?? ''}`} tone="warning" title={t('transiciones.advertencia')}>
-                {w.message}
+                {textoDe(w, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
               </Alert>
             ))}
             {!bloqueado && comprobacion.data.warnings.length === 0 ? <p className="text-sg-success">{t('transiciones.sinBloqueos')}</p> : null}

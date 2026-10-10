@@ -142,11 +142,15 @@ const cifra = (fila: FilaDeDesglose, clave: string): string => {
 function PorTerritorio({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const disponibles = DIMENSIONES.filter((d) => indicador.breakdowns?.some((b) => b.by === d))
-  const [elegida, setDimension] = useState<string>(disponibles[0] ?? 'locality')
-  // la elegida solo si llegó (otros filtros pueden no traerla); si no, la primera. sin desgloses no se afirma que no hay riesgos
-  const dimension = disponibles.includes(elegida as (typeof disponibles)[number]) ? elegida : disponibles[0]
+  const [elegida, setDimension] = useState<string | null>(null)
+  const conFilas = disponibles.filter((d) => desglose(indicador, d).length > 0)
+  // la elegida solo si llegó (otros filtros pueden no traerla); si no, la primera que tiene filas: sin localidades ni comunidades
+  // registradas el tablero abre por proyecto y no dice «no hay riesgos» (humo F4, D5). sin desgloses no se afirma que no hay riesgos
+  const dimension = elegida !== null && disponibles.includes(elegida as (typeof disponibles)[number]) ? elegida : (conFilas[0] ?? disponibles[0])
   if (!dimension) return <p className="text-sm text-sg-text-muted">{t('tableroRiesgos.sinDesglose')}</p>
   const filas = desglose(indicador, dimension)
+  // el vacío dice qué falta: si otro desglose tiene filas, hay riesgos activos sin esa dimensión registrada; si ninguno, no hay riesgos
+  const vacio = conFilas.length > 0 ? t(`tableroRiesgos.sinDimension.${dimension}`) : t('tableroRiesgos.sinFilas')
   const nombre = t(`tableroRiesgos.dimensiones.${dimension}`, { defaultValue: dimension })
   return (
     <div className="space-y-2">
@@ -161,7 +165,7 @@ function PorTerritorio({ indicador }: { indicador: Indicador }) {
         </select>
       </label>
       {filas.length === 0 ? (
-        <p className="text-sm text-sg-text-muted">{t('tableroRiesgos.sinFilas')}</p>
+        <p className="text-sm text-sg-text-muted">{vacio}</p>
       ) : (
         <div className="overflow-x-auto">
           <Table aria-label={t('tableroRiesgos.tablaTerritorio', { dimension: nombre })}>

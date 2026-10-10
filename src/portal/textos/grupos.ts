@@ -1,5 +1,6 @@
 // grupos de interés: lista (S16), ficha (S17), actor (S18), matriz (S19), evaluación (S20) y tablero (RF-DSH-007)
 export const ES_GRUPOS = {
+  advertenciaSinTexto: 'Revise los datos: el sistema advierte sobre esta evaluación.',
   titulo: 'Grupos de interés',
   conteo: '{{n}} grupos de interés',
   nuevo: 'Nuevo grupo de interés',
@@ -178,6 +179,7 @@ export const ES_GRUPOS = {
 }
 
 export const EN_GRUPOS: typeof ES_GRUPOS = {
+  advertenciaSinTexto: 'Check the data: the system warns about this assessment.',
   titulo: 'Stakeholders',
   conteo: '{{n}} stakeholders',
   nuevo: 'New stakeholder',

@@ -164,9 +164,46 @@ describe('S62 · tablero de riesgos', () => {
     abrir()
     const territorio = await screen.findByRole('region', { name: 'Riesgos por territorio' })
     expect(await within(territorio).findByText('El desglose por territorio no está disponible.')).toBeInTheDocument()
-    expect(within(territorio).queryByText('No hay riesgos para estos filtros.')).not.toBeInTheDocument()
+    expect(within(territorio).queryByText('No hay riesgos activos para estos filtros.')).not.toBeInTheDocument()
     expect(within(territorio).queryByRole('table')).not.toBeInTheDocument()
     expect(within(territorio).queryByLabelText('Ver por')).not.toBeInTheDocument()
+  })
+
+  it('sin datos de territorio abre por proyecto, y el vacío de cada desglose dice qué falta (humo F4, D5)', async () => {
+    const conTerritorio = (proyecto: unknown[]) => ({
+      ...TABLERO,
+      indicators: TABLERO.indicators.map((i) =>
+        i.code === 'KPI-RSK-03'
+          ? {
+              ...i,
+              breakdowns: [
+                { by: 'locality', rows: [] },
+                { by: 'community', rows: [] },
+                { by: 'areaOfInfluence', rows: [] },
+                { by: 'project', rows: proyecto }
+              ]
+            }
+          : i
+      )
+    })
+    fetch = mockFetch(baseDeRiesgos())
+    red = espiarRed([
+      { path: '/sgspe/dashboards/risks', responder: () => jsonResponse(conTerritorio([{ key: 'p1', label: 'Pukaqaqa', value: 3, ...nivelesEnCero, ALTO: 3 }])) }
+    ])
+    const vista = abrir()
+    expect(await screen.findByRole('table', { name: 'Riesgos por Proyecto y nivel' })).toHaveTextContent('Pukaqaqa')
+    expect(screen.getByLabelText('Ver por')).toHaveValue('project')
+    const territorio = screen.getByRole('region', { name: 'Riesgos por territorio' })
+    await userEvent.selectOptions(screen.getByLabelText('Ver por'), 'locality')
+    expect(within(territorio).getByText('Ningún riesgo activo de estos filtros tiene localidad registrada.')).toBeInTheDocument()
+    expect(within(territorio).queryByText(/No hay riesgos/)).not.toBeInTheDocument()
+    vista.unmount()
+    red.restaurar()
+    red = espiarRed([{ path: '/sgspe/dashboards/risks', responder: () => jsonResponse(conTerritorio([])) }])
+    abrir()
+    const vacio = await screen.findByRole('region', { name: 'Riesgos por territorio' })
+    expect(await within(vacio).findByText('No hay riesgos activos para estos filtros.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Ver por')).toHaveValue('locality')
   })
 
   it('un indicador que la cuenta no lee dice «No disponible», nunca cero', async () => {

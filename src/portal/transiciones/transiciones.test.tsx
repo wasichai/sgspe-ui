@@ -8,6 +8,7 @@ import { useAvailableTransitions } from '@wasichai/workflow'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useRegistro } from '../datos/registros'
+import { useTextoDeAviso } from './avisos'
 import { BotonesDeTransicion } from './BotonesDeTransicion'
 
 // design-system.md §6.2 y screens.md §2: la lista sale de GET …/transitions (las que el rol no tiene no se muestran),
@@ -133,6 +134,46 @@ describe('transiciones', () => {
     expect(await screen.findByText('El proyecto no tiene CRS de trabajo')).toBeInTheDocument()
     expect(await screen.findByText('Campo: CRS de trabajo')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+  })
+
+  it('una regla que nombra la transición o el campo por su nombre de la API dice la acción y la etiqueta (humo F4, D3)', async () => {
+    start(
+      [
+        {
+          path: '/metadata/objects/project',
+          body: definicion('project', [
+            ['response', { label: 'Respuesta' }],
+            ['attended', { label: 'Asistió' }]
+          ])
+        }
+      ],
+      {
+        allowed: false,
+        blocking: [
+          { code: 'FIELD_REQUIRED', message: 'La transición suspend exige response', field: 'response' },
+          { code: 'ATTENDANCE_REQUIRED', message: 'Registrar la realización exige al menos un participante que asistió (attended)', field: 'attended' },
+          { code: 'OTRA_REGLA', message: 'Otra regla nueva (RN-ENG-005)', field: null }
+        ],
+        warnings: []
+      }
+    )
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    expect(await screen.findByText('Para «Suspender» falta «Respuesta»: complételo y vuelva a intentar.')).toBeInTheDocument()
+    expect(screen.getByText('Registre al menos un participante que asistió.')).toBeInTheDocument()
+    expect(screen.getByText('Una regla del sistema no permite este paso todavía.')).toBeInTheDocument()
+    expect(screen.queryByText(/\bsuspend\b|\bresponse\b|\battended\b|RN-ENG/)).not.toBeInTheDocument()
+  })
+
+  it('sin el nombre de la acción (la bandeja de aprobaciones), un dato que falta no deja «Para «»» (revisión, importante 1)', async () => {
+    start([{ path: '/metadata/objects/project', body: definicion('project', [['resolution', { label: 'Resolución' }]]) }])
+    function Sonda() {
+      const textoDe = useTextoDeAviso('project')
+      const aviso = { code: 'FIELD_REQUIRED', message: 'La transición resolve_high_severity exige resolution', field: 'resolution' }
+      return <p>{textoDe(aviso, { name: 'resolve_high_severity', label: '' }).texto}</p>
+    }
+    montar(<Sonda />)
+    expect(await screen.findByText('Falta «Resolución» para este paso: complételo y vuelva a intentar.')).toBeInTheDocument()
   })
 
   it('una advertencia vuelve obligatorio el motivo', async () => {
@@ -294,8 +335,16 @@ describe('transiciones', () => {
     expect(boton).toHaveAccessibleDescription('Hay 1 pregunta pendiente')
   })
 
-  it('un bloqueo sin mensaje deshabilita igual el botón, sin inventar una razón', async () => {
+  it('un bloqueo sin mensaje y con un código conocido dice el texto del código', async () => {
     start([], { allowed: false, blocking: [{ code: 'PENDING_QUESTIONS', message: '', field: null }], warnings: [] })
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} comprobarAntes={['suspend']} />)
+    const boton = await screen.findByRole('button', { name: 'Suspender' })
+    await waitFor(() => expect(boton).toBeDisabled())
+    expect(boton).toHaveAccessibleDescription('Hay preguntas sin respuesta ni derivación: respóndalas antes de cerrar.')
+  })
+
+  it('un bloqueo sin mensaje y con un código desconocido deshabilita igual el botón, sin inventar una razón', async () => {
+    start([], { allowed: false, blocking: [{ code: 'OTRA_REGLA', message: '', field: null }], warnings: [] })
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} comprobarAntes={['suspend']} />)
     const boton = await screen.findByRole('button', { name: 'Suspender' })
     await waitFor(() => expect(boton).toBeDisabled())

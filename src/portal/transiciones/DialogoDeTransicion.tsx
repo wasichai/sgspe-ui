@@ -6,17 +6,17 @@ import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { useMensajeDeError } from '../componentes/errores'
-import { campoDe, useDefinicion, type Registro } from '../datos/registros'
+import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
-import { useAplicarTransicion, useComprobacion, type Aviso } from './api'
+import { useAplicarTransicion, useComprobacion } from './api'
+import { useTextoDeAviso, type TextoDeAviso } from './avisos'
 import { exigeMotivo } from './reglas'
 
 // el diálogo de transición de design-system.md §6.2: de dónde a dónde, las reglas que la bloquearían o que piden
 // justificación (transition-checks), qué pasará y el motivo, obligatorio cuando la transición lo exige o hay advertencias.
 // un 412 dice "otra persona cambió este registro" con "Recargar", y lo escrito se conserva; un 403 o un 409 con código
-// dice el texto de su código. un aviso con field dice el campo con su etiqueta de la metadata; field también puede ser un
-// objeto que la regla revisa (engagement_question, project_party…), `reason` o `state` (api.md §4.1), que llevan una
-// etiqueta de respaldo; uno que no se reconoce no se nombra
+// dice el texto de su código. cada regla se dice con useTextoDeAviso: el campo con su etiqueta y la acción con su nombre,
+// nunca sus nombres de la API
 export function DialogoDeTransicion({
   objeto,
   registro,
@@ -34,7 +34,7 @@ export function DialogoDeTransicion({
   const { t } = useTranslation(NS)
   const etiquetas = useEtiquetasDeEstado(objeto)
   const comprobacion = useComprobacion(objeto, registro.id, transicion.name)
-  const definicion = useDefinicion(objeto)
+  const textoDe = useTextoDeAviso(objeto)
   const aplicar = useAplicarTransicion(objeto)
   const mensaje = useMensajeDeError()
   const releer = useReleer()
@@ -43,8 +43,6 @@ export function DialogoDeTransicion({
 
   const advertencias = comprobacion.data?.warnings ?? []
   const bloqueos = comprobacion.data?.blocking ?? []
-  const etiqueta = (field: string | null): string | null =>
-    field ? campoDe(definicion.data, field)?.label || t(`transiciones.campos.${field}`, { defaultValue: '' }) || null : null
   const motivoRequerido = exigeMotivo(objeto, transicion.name) || advertencias.length > 0
   const faltaMotivo = motivoRequerido && motivo.trim() === ''
   const desde = etiquetas[registro.state ?? ''] ?? registro.state ?? ''
@@ -84,12 +82,12 @@ export function DialogoDeTransicion({
             ) : null}
             {bloqueos.map((b) => (
               <Alert key={`${b.code}-${b.field ?? ''}-${b.message}`} tone="danger" title={t('transiciones.bloqueo')}>
-                <TextoDelAviso aviso={b} campo={etiqueta(b.field)} />
+                <TextoDelAviso {...textoDe(b, transicion)} />
               </Alert>
             ))}
             {advertencias.map((a) => (
               <Alert key={`${a.code}-${a.field ?? ''}-${a.message}`} tone="warning" title={t('transiciones.advertencia')}>
-                <TextoDelAviso aviso={a} campo={etiqueta(a.field)} />
+                <TextoDelAviso {...textoDe(a, transicion)} />
               </Alert>
             ))}
             {comprobacion.isSuccess && !comprobacion.data.allowed && bloqueos.length === 0 ? (
@@ -130,11 +128,11 @@ export function DialogoDeTransicion({
   )
 }
 
-function TextoDelAviso({ aviso, campo }: { aviso: Aviso; campo: string | null }) {
+function TextoDelAviso({ texto, campo }: TextoDeAviso) {
   const { t } = useTranslation(NS)
   return (
     <>
-      <p>{aviso.message}</p>
+      <p>{texto}</p>
       {campo ? <p className="text-sg-caption">{t('transiciones.campo', { campo })}</p> : null}
     </>
   )

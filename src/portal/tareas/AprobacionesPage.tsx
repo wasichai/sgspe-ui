@@ -14,6 +14,7 @@ import { destinoDeAviso, rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, useRegistro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { useComprobacion } from '../transiciones/api'
+import { useTextoDeAviso } from '../transiciones/avisos'
 
 // S48 · aprobaciones y escalamientos (screens.md §11): las aprobaciones son transiciones, no objetos (domain-model.md §6.13).
 // «Por aprobar» sale de los avisos approval_pending de wasichai-notifications (fuente sgspe.approvals, ACTION, con su enlace
@@ -209,10 +210,11 @@ function Comprobar({ objeto, id, candidatas, razon }: { objeto: string; id: stri
   const { t } = useTranslation(NS)
   const [primera, ...resto] = candidatas
   const comprobacion = useComprobacion(objeto, id, primera)
+  const textoDe = useTextoDeAviso(objeto)
   if (comprobacion.isPending) return <>{t('aprobaciones.comprobando')}</>
   if (comprobacion.isError) return <FalloDeLectura error={comprobacion.error} alReintentar={() => void comprobacion.refetch()} />
   const bloqueo = comprobacion.data.blocking[0]
   if (!bloqueo) return <>{t('aprobaciones.si')}</>
-  const motivo = razon ?? bloqueo.message
+  const motivo = razon ?? textoDe(bloqueo, { name: primera, label: '' }).texto ?? t('transiciones.reglaSinTexto')
   return resto.length > 0 ? <Comprobar objeto={objeto} id={id} candidatas={resto} razon={motivo} /> : <>{t('aprobaciones.noPuede', { razon: motivo })}</>
 }

@@ -256,7 +256,7 @@ function Ficha({
           <DeDondeViene objeto={objeto} qcs={qcs} />
         </aside>
       </div>
-      <EditarQcs objeto={objeto} qcs={qcs} campos={editables} abierto={editando} alCerrar={() => setEditando(false)} />
+      <EditarQcs objeto={objeto} qcs={qcs} campos={editables} abierto={editando} alCerrar={() => setEditando(false)} marcaConfidencial />
       {reclasificando ? <DialogoDeReclasificacion objeto={objeto} registro={qcs} alCerrar={() => setReclasificando(false)} /> : null}
     </article>
   )

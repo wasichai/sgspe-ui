@@ -1,7 +1,9 @@
 import { CORE_FIELD_TYPES, DynamicForm, toAttributes, toFormValues, type ObjectDefinition, type RecordPayload } from '@wasichai/core'
 import { useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { esDeComando, esDerivado } from '../datos/derivados'
 import { useActualizar, useCrear, useDefinicion, type Registro } from '../datos/registros'
+import { NS } from '../i18n'
 import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
 import { useErroresDeCampo } from './errores'
 import { Cargando, ErrorDeCarga } from './Estados'
@@ -22,7 +24,16 @@ export interface FormularioDeRegistroProps {
   alCancelar?: () => void
 }
 
-export function prepararDefinicion(definicion: ObjectDefinition, objeto: string, fijos: Record<string, unknown>, campos?: readonly string[]): ObjectDefinition {
+// las ayudas propias del portal por campo (comun.ayudas.<objeto>.<campo>)
+export type AyudasDeCampos = Partial<Record<string, string>>
+
+export function prepararDefinicion(
+  definicion: ObjectDefinition,
+  objeto: string,
+  fijos: Record<string, unknown>,
+  campos?: readonly string[],
+  ayudas: AyudasDeCampos = {}
+): ObjectDefinition {
   const orden = (nombre: string) => (campos ? campos.indexOf(nombre) : 0)
   return {
     ...definicion,
@@ -30,8 +41,15 @@ export function prepararDefinicion(definicion: ObjectDefinition, objeto: string,
       .filter((f) => f.type !== 'GEOMETRY')
       .map((f) => {
         const oculto = esDerivado(objeto, f.name) || f.name in fijos || (campos !== undefined && !campos.includes(f.name))
-        // un campo de solo comando (CAMPOS_DE_COMANDO) se ve, pero no se edita: viaja tal como se leyó
-        return { ...f, visible: f.visible && !oculto, editable: f.editable && !esDerivado(objeto, f.name) && !esDeComando(objeto, f.name) }
+        // un campo de solo comando (CAMPOS_DE_COMANDO) se ve, pero no se edita: viaja tal como se leyó. la descripción del modelo
+        // es documentación (IDs de requisitos, códigos de error, nombres de campos y de estados, la fase): DynamicForm la dibujaría
+        // bajo el control, así que se cambia por la ayuda propia del portal o no se muestra (humo F4, D3)
+        return {
+          ...f,
+          description: ayudas[f.name] ?? null,
+          visible: f.visible && !oculto,
+          editable: f.editable && !esDerivado(objeto, f.name) && !esDeComando(objeto, f.name)
+        }
       })
       .sort((a, b) => orden(a.name) - orden(b.name))
   }
@@ -59,7 +77,10 @@ export function cambiosRespectoDe(definicion: ObjectDefinition, abierto: Registr
 }
 
 export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, campos, motivo, alGuardar, alCancelar }: FormularioDeRegistroProps) {
+  const { t } = useTranslation(NS)
   const definicion = useDefinicion(objeto)
+  // i18next arma un objeto nuevo en cada llamada con returnObjects: se memoriza para no deshacer el useMemo de la definición
+  const ayudas = useMemo(() => t(`comun.ayudas.${objeto}`, { returnObjects: true, defaultValue: {} }) as AyudasDeCampos, [t, objeto])
   const crear = useCrear(objeto)
   const actualizar = useActualizar(objeto)
   const erroresDeCampo = useErroresDeCampo()
@@ -68,8 +89,8 @@ export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, camp
   // «Recargar» ni con un refetch), así que es la base para saber qué cambió la persona
   const abierto = useRef<Registro | undefined>(undefined)
   const preparada = useMemo(
-    () => (definicion.data ? prepararDefinicion(definicion.data, objeto, fijos, campos) : undefined),
-    [definicion.data, objeto, fijos, campos]
+    () => (definicion.data ? prepararDefinicion(definicion.data, objeto, fijos, campos, ayudas) : undefined),
+    [definicion.data, objeto, fijos, campos, ayudas]
   )
   if (definicion.isPending) return <Cargando />
   if (definicion.isError || !preparada) return <ErrorDeCarga error={definicion.error} />

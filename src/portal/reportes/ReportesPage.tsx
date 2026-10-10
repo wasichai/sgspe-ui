@@ -89,9 +89,9 @@ export function ReportesPage() {
           <Alert tone="notice">{t('reportes.sinPermiso')}</Alert>
         )}
       </section>
-      {can('commitment', 'EXPORT') ? <MatrizDeCompromisos key={delaUrl} niveles={niveles} /> : null}
-      {OBJETOS_DE_QCS.every((o) => can(o, 'EXPORT')) ? <RegistroDeAtencion key={delaUrl} niveles={niveles} /> : null}
-      {can('social_risk', 'EXPORT') ? <RegistroDeRiesgos key={delaUrl} niveles={niveles} /> : null}
+      {can('commitment', 'EXPORT') ? <MatrizDeCompromisos key={`compromisos-${delaUrl}`} niveles={niveles} /> : null}
+      {OBJETOS_DE_QCS.every((o) => can(o, 'EXPORT')) ? <RegistroDeAtencion key={`atencion-${delaUrl}`} niveles={niveles} /> : null}
+      {can('social_risk', 'EXPORT') ? <RegistroDeRiesgos key={`riesgos-${delaUrl}`} niveles={niveles} /> : null}
       {verHistorial ? (
         <section aria-label={t('reportes.historial')} className="space-y-2">
           <h2 className="text-sg-h3 font-semibold">{t('reportes.historial')}</h2>
