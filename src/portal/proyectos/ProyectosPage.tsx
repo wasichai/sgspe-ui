@@ -5,10 +5,10 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, NoDisponible, Vacio } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
 import { ROL_DE_JEFATURA } from '../config'
-import { useMisAsignaciones } from '../contexto/proyectos'
+import { useLeeTodosLosProyectos, useMisAsignaciones } from '../contexto/proyectos'
 import { atributo, texto, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
@@ -32,6 +32,7 @@ export function ProyectosPage() {
   const asignaciones = useMisAsignaciones()
   const jefaturas = useTodos('project_assignment', { role_name: ROL_DE_JEFATURA, active: true })
   const campanas = useTodos('exploration_campaign', { campaign_status: 'EN EJECUCION' })
+  const leeTodo = useLeeTodosLosProyectos()
 
   // «Mis proyectos» sale de las asignaciones propias: sin ellas no hay lista que mostrar, ni siquiera vacía
   const mios = new Set((asignaciones.data ?? []).map((a) => String(atributo(a, 'project'))))
@@ -63,6 +64,9 @@ export function ProyectosPage() {
   const cargando = proyectos.isPending || (lasMias && asignaciones.isPending)
   // el error de carga reemplaza la lista solo si no hay lista: un refetch fallido deja la ya cargada
   const fallo = proyectos.isError && !proyectos.data ? proyectos : lasMias && asignaciones.isError && !asignaciones.data ? asignaciones : null
+  // sin asignaciones vigentes ni la acción de leer todos, el servidor no devuelve ningún proyecto (alcance por proyecto, spec 4.4
+  // §3.12): se dice que no tiene proyectos asignados, no «un proyecto nace con Nuevo proyecto» a quien no puede crearlo
+  const sinProyectos = proyectos.isSuccess && proyectos.data.length === 0 && !leeTodo && !can('project', 'CREATE')
 
   const filtrados = (proyectos.data ?? []).filter((p) => {
     if (lasMias && !mios.has(p.id)) return false
@@ -80,7 +84,7 @@ export function ProyectosPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-sg-h1 font-semibold text-sg-text">{t('proyectos.titulo')}</h1>
-          {cargando || fallo ? null : <p className="text-sm text-sg-text-muted">{t('proyectos.conteo', { count: filtrados.length })}</p>}
+          {cargando || fallo || sinProyectos ? null : <p className="text-sm text-sg-text-muted">{t('proyectos.conteo', { count: filtrados.length })}</p>}
         </div>
         {can('project', 'CREATE') ? (
           <Button asChild>
@@ -114,6 +118,8 @@ export function ProyectosPage() {
         <Cargando />
       ) : fallo ? (
         <ErrorDeCarga error={fallo.error} alReintentar={() => void fallo.refetch()} />
+      ) : sinProyectos ? (
+        <Vacio titulo={t('contexto.sinProyectos')} />
       ) : filtrados.length === 0 ? (
         <VacioDeLista
           conFiltros={chips.length > 0 || lista.vista !== 'all'}
