@@ -2,6 +2,12 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-11 — `@wasichai/*` 1.0.0
+
+- Antes del release 1.0.0, los diez paquetes (nueve de la app y `@wasichai/testing`) pasan de 0.6.0 a 1.0.0, el mismo
+  código que la 0.6.0 con la versión estable; el backend pasa a wasichai 1.0.0 en `sgspe`. `maplibre-gl` sigue en 6.10.0.
+- El texto «no record with this id» del `400` de una relación ilegible sigue igual en wasichai-core 1.0.0.
+
 ## 2026-10-10 — Alcance de lectura por proyecto (plan 4.4b)
 
 - El servidor acota lo que cada cuenta lee a sus proyectos (plan 4.4a, ADR-0029); el portal no filtra, dice bien lo que
