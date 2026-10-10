@@ -6,7 +6,7 @@ import { baseDeAtencion, CANALES, CONSULTA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS,
 import { P1 } from '../../test/compromisos'
 import { montar, pagina, registro } from '../../test/montar'
 import { permisos } from '../../test/portal'
-import { AtencionPage, enVista, grupoDe } from './AtencionPage'
+import { AtencionPage, enVista, grupoDe, porPlazo } from './AtencionPage'
 
 // S35 (screens.md §8): las tres QCS unidas por plazo, cada una con el estado de su workflow y el plazo que corre en él; las vistas,
 // los filtros, «anónima» en lugar de la persona, las cifras con la nota de confidenciales y nunca un vacío mientras carga
@@ -128,5 +128,30 @@ describe('S35 · lista unificada de QCS', () => {
   it('una QCS cerrada no está en Atención y un plazo solo cuenta en su estado', () => {
     expect(enVista('atencion', { objeto: 'grievance', registro: CERRADA }, 'u-gvm')).toBe(false)
     expect(grupoDe({ objeto: 'grievance', registro: registro('x', { deadline_status: 'VENCIDO' }, { state: 'resolved' }) })).toBe('alDia')
+  })
+
+  it('la tabla de cada grupo muestra primero la que vence antes', async () => {
+    const antes = registro('g9', { ...VENCIDA.attributes, code: 'Q-010', ack_due_date: '2026-10-01' }, { state: 'received' })
+    fetch = mockFetch(rutas([{ path: '/objects/grievance/records', body: pagina([VENCIDA, antes]) }]))
+    abrir()
+    const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
+    const codigos = within(vencidas)
+      .getAllByRole('link', { name: /^Q-/ })
+      .map((a) => a.textContent)
+    expect(codigos).toEqual(['Q-010', 'Q-002'])
+  })
+
+  it('dentro de cada grupo ordena por el plazo que corre, sin plazo al final, y desempata por recepción y código', () => {
+    const q = (id: string, code: string, vence: string | null, recibida: string, state = 'received') => ({
+      objeto: 'grievance' as const,
+      registro: registro(id, { code, ack_due_date: vence, resolution_due_date: vence, received_at: recibida }, { state })
+    })
+    const sinPlazo = q('a', 'Q-001', null, '2026-10-01T00:00:00Z')
+    const tarde = q('b', 'Q-002', '2026-10-09', '2026-10-01T00:00:00Z')
+    const pronto = q('c', 'Q-003', '2026-10-05', '2026-10-03T00:00:00Z')
+    const mismoPlazoAntes = q('d', 'Q-009', '2026-10-05', '2026-10-02T00:00:00Z')
+    const mismoDiaYCodigo = q('e', 'Q-004', '2026-10-05', '2026-10-02T00:00:00Z')
+    const filas = [sinPlazo, tarde, pronto, mismoDiaYCodigo, mismoPlazoAntes]
+    expect([...filas].sort(porPlazo).map((f) => f.registro.id)).toEqual(['e', 'd', 'c', 'b', 'a'])
   })
 })

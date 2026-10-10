@@ -50,6 +50,23 @@ export function grupoDe({ objeto, registro }: Fila): Grupo {
   return situacion === 'VENCIDO' ? 'vencidas' : situacion === 'POR VENCER' ? 'porVencer' : 'alDia'
 }
 
+// dentro de un grupo, primero lo que vence antes (el plazo que corre en su estado); sin fecha al final; empata la recepción más
+// antigua y, luego, el código
+export function porPlazo(a: Fila, b: Fila): number {
+  const vence = (f: Fila) => {
+    const fecha = plazoQueCorre(f.objeto, f.registro)?.fecha
+    return fecha ? Date.parse(fecha) : Number.POSITIVE_INFINITY
+  }
+  const recibida = (f: Fila) => Date.parse(texto(f.registro, 'received_at')) || Number.POSITIVE_INFINITY
+  const va = vence(a)
+  const vb = vence(b)
+  if (va !== vb) return va < vb ? -1 : 1
+  const ra = recibida(a)
+  const rb = recibida(b)
+  if (ra !== rb) return ra < rb ? -1 : 1
+  return texto(a.registro, 'code').localeCompare(texto(b.registro, 'code'))
+}
+
 export function AtencionPage() {
   const { t } = useTranslation(NS)
   const { user, can } = useAuth()
@@ -173,7 +190,7 @@ export function AtencionPage() {
         <Vacio titulo={t('atencion.vacio')} />
       ) : (
         GRUPOS.map((grupo) => {
-          const delGrupo = visibles.filter((f) => grupoDe(f) === grupo)
+          const delGrupo = visibles.filter((f) => grupoDe(f) === grupo).sort(porPlazo)
           if (delGrupo.length === 0) return null
           return (
             <section key={grupo} aria-label={t(`atencion.grupos.${grupo}`)} className="space-y-2">
