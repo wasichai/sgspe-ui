@@ -135,6 +135,35 @@ describe('transiciones', () => {
     expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
   })
 
+  it('una regla que nombra la transición o el campo por su nombre de la API dice la acción y la etiqueta (humo F4, D3)', async () => {
+    start(
+      [
+        {
+          path: '/metadata/objects/project',
+          body: definicion('project', [
+            ['response', { label: 'Respuesta' }],
+            ['attended', { label: 'Asistió' }]
+          ])
+        }
+      ],
+      {
+        allowed: false,
+        blocking: [
+          { code: 'FIELD_REQUIRED', message: 'La transición suspend exige response', field: 'response' },
+          { code: 'ATTENDANCE_REQUIRED', message: 'Registrar la realización exige al menos un participante que asistió (attended)', field: 'attended' },
+          { code: 'OTRA_REGLA', message: 'Otra regla nueva (RN-ENG-005)', field: null }
+        ],
+        warnings: []
+      }
+    )
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    expect(await screen.findByText('Para «Suspender» falta «Respuesta»: complételo y vuelva a intentar.')).toBeInTheDocument()
+    expect(screen.getByText('Registre al menos un participante que asistió.')).toBeInTheDocument()
+    expect(screen.getByText('Una regla del sistema no permite este paso todavía.')).toBeInTheDocument()
+    expect(screen.queryByText(/\bsuspend\b|\bresponse\b|\battended\b|RN-ENG/)).not.toBeInTheDocument()
+  })
+
   it('una advertencia vuelve obligatorio el motivo', async () => {
     start([], { allowed: true, blocking: [], warnings: [{ code: 'REASON_REQUIRED', message: 'Este paso pide un motivo', field: 'reason' }] })
     montar(<BotonesDeTransicion objeto="project" registro={{ ...PROYECTO }} ocultar={[]} />)
@@ -294,8 +323,16 @@ describe('transiciones', () => {
     expect(boton).toHaveAccessibleDescription('Hay 1 pregunta pendiente')
   })
 
-  it('un bloqueo sin mensaje deshabilita igual el botón, sin inventar una razón', async () => {
+  it('un bloqueo sin mensaje y con un código conocido dice el texto del código', async () => {
     start([], { allowed: false, blocking: [{ code: 'PENDING_QUESTIONS', message: '', field: null }], warnings: [] })
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} comprobarAntes={['suspend']} />)
+    const boton = await screen.findByRole('button', { name: 'Suspender' })
+    await waitFor(() => expect(boton).toBeDisabled())
+    expect(boton).toHaveAccessibleDescription('Hay preguntas sin respuesta ni derivación: respóndalas antes de cerrar.')
+  })
+
+  it('un bloqueo sin mensaje y con un código desconocido deshabilita igual el botón, sin inventar una razón', async () => {
+    start([], { allowed: false, blocking: [{ code: 'OTRA_REGLA', message: '', field: null }], warnings: [] })
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} comprobarAntes={['suspend']} />)
     const boton = await screen.findByRole('button', { name: 'Suspender' })
     await waitFor(() => expect(boton).toBeDisabled())

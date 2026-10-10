@@ -106,7 +106,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       409,
       'CATALOGUE_UNAVAILABLE',
       'stance',
-      'Falta el catálogo de stance: la salida pública necesita todos sus valores. Pida a la administración que lo cargue.'
+      'Falta el catálogo de uno de los datos: la salida pública necesita todos sus valores. Pida a la administración que lo cargue.'
     ]
   ])('un %i %s dice su texto, no el código', async (status, codigo, campo, texto) => {
     fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)

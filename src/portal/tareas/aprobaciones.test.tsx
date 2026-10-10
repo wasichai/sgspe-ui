@@ -42,6 +42,7 @@ const aviso = (id: string, objeto: string, registroId: string, fuente = 'sgspe.a
 const APROBAR = { name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }
 const DEVOLVER = { name: 'return_to_draft', label: 'Devolver a borrador', to: 'draft', toLabel: 'Borrador', allowed: true, reason: null }
 const SUPERIOR = { name: 'approve_senior', label: 'Aprobar (nivel superior)', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }
+// el mensaje del servidor lleva un ID de decisión (D4): la interfaz dice el texto del código (humo F4, D3)
 const SEGREGACION = { code: 'SEGREGATION_OF_DUTIES', message: 'Usted registró este compromiso: lo aprueba otra persona (D4)', field: 'record' }
 const NIVEL_SUPERIOR = { code: 'SENIOR_APPROVAL_REQUIRED', message: 'El monto pide la aprobación de nivel superior (D5)', field: 'amount' }
 
@@ -107,7 +108,9 @@ describe('S48 · aprobaciones', () => {
     const fila = (await within(tabla).findByText('C-001 · Reservorio de agua para Tunas Pampa')).closest('tr') as HTMLElement
     expect(within(fila).getByText('S/ 25,000.00')).toBeInTheDocument()
     expect(within(fila).getByText('3 días')).toBeInTheDocument()
-    expect(await within(fila).findByText('No: Usted registró este compromiso: lo aprueba otra persona (D4)')).toBeInTheDocument()
+    expect(
+      await within(fila).findByText('No: Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.')
+    ).toBeInTheDocument()
     expect(within(fila).getByRole('link', { name: 'Revisar' })).toHaveAttribute('href', '/tasks/approvals/commitment/c1')
     const otra = (await within(tabla).findByText('C-007 · Botiquín')).closest('tr') as HTMLElement
     expect(await within(otra).findByText('Sí')).toBeInTheDocument()
@@ -234,7 +237,9 @@ describe('S31 · aprobación de compromiso', () => {
     })
     expect(await screen.findByRole('link', { name: 'Mesa de diálogo de agosto · MESA DE DIALOGO' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     const reglasDelPanel = screen.getByRole('complementary', { name: 'Reglas' })
-    expect(await within(reglasDelPanel).findByText('Usted registró este compromiso: lo aprueba otra persona (D4)')).toBeInTheDocument()
+    expect(
+      await within(reglasDelPanel).findByText('Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.')
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Confirmar la decisión' })).toBeDisabled()
     await userEvent.click(screen.getByRole('radio', { name: 'Devolver a borrador' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Confirmar la decisión' })).toBeEnabled())

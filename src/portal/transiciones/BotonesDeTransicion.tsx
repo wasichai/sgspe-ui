@@ -6,6 +6,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useComprobacion } from './api'
+import { useTextoDeAviso } from './avisos'
 import { DialogoDeTransicion } from './DialogoDeTransicion'
 import { esDeComando } from './reglas'
 
@@ -104,9 +105,11 @@ function BotonDeTransicion({
 }) {
   const id = useId()
   const comprobacion = useComprobacion(objeto, registro.id, comprobar ? transicion.name : null)
-  // un bloqueo deshabilita el botón aunque su mensaje venga vacío; la razón se dice solo si existe
+  // un bloqueo deshabilita el botón aunque no traiga qué decir; la razón se dice solo si existe
   const bloqueado = (comprobacion.data?.blocking.length ?? 0) > 0
-  const razon = comprobacion.data?.blocking.find((b) => b.message)?.message
+  // la razón con el texto de su regla, nunca el mensaje del servidor con los nombres de la API (humo F4, D3)
+  const textoDe = useTextoDeAviso(objeto)
+  const razon = (comprobacion.data?.blocking ?? []).map((b) => textoDe(b, transicion).texto).find((x) => x) ?? undefined
   return (
     <>
       <Button

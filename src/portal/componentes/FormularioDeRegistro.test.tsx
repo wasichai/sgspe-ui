@@ -44,6 +44,29 @@ describe('FormularioDeRegistro', () => {
     expect(alta.cuerpo).toEqual({ attributes: { name: 'CC Tunas Pampa', community_type: null, registered_members_count: null } })
   })
 
+  it('no dibuja la descripción del modelo, que es documentación; la ayuda propia del portal sí (humo F4, D3)', async () => {
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/social_risk',
+        body: definicion('social_risk', [
+          ['owner_user_id', { label: 'Responsable', type: 'UUID', description: 'Responsable (ASM-023).' }],
+          [
+            'review_every_days',
+            {
+              label: 'Días entre revisiones',
+              type: 'INTEGER',
+              description: 'Días entre revisiones, de 1 a 365 (400 OUT_OF_RANGE fuera de rango); vacío = risk_review_days del proyecto.'
+            }
+          ]
+        ])
+      }
+    ])
+    montar(<FormularioDeRegistro objeto="social_risk" />)
+    expect(await screen.findByLabelText(/^Días entre revisiones/)).toBeInTheDocument()
+    expect(screen.getByText('De 1 a 365; vacío = la frecuencia del proyecto.')).toBeInTheDocument()
+    expect(screen.queryByText(/ASM-023|OUT_OF_RANGE|risk_review_days/)).not.toBeInTheDocument()
+  })
+
   it('un 400 de una guarda dice el texto del código junto a la etiqueta de su campo, nunca el código', async () => {
     fetch = mockFetch([{ path: '/metadata/objects/community', body: COMUNIDAD }])
     red = espiarRed([

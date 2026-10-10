@@ -76,9 +76,18 @@ export const ES_COMUN = {
       'Su cuenta no lista los usuarios de la organización: escriba el correo y el identificador; el servidor comprueba que nombren a alguien de su organización.',
     noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.'
   },
-  dependientesSinCampo: 'No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.',
+  // la ayuda de un campo en un formulario armado desde el modelo (FormularioDeRegistro): la descripción del modelo es
+  // documentación y no se muestra; aquí, la de los campos que la necesitan, por objeto
+  ayudas: {
+    social_risk: { review_every_days: 'De 1 a 365; vacío = la frecuencia del proyecto.' },
+    early_warning_rule: {
+      threshold: 'Un conteo de 1 en adelante o, en una regla por nivel de riesgo, un puntaje de 1 a 25.',
+      window_days: 'Días hasta hoy, de 1 a 365; vacío = 7. Tras una alerta, la regla calla ese mismo tiempo.'
+    }
+  },
   // los códigos de las guardas y los comandos de SGSPE (api.md §3.3 y §4, ruling P15): errors[0].message trae el código y
-  // la interfaz dice su texto; uno que no está aquí muestra el detail del servidor. {{campo}} es errors[0].field
+  // la interfaz dice su texto; uno que no está aquí muestra el detail del servidor si no delata un código. ninguno interpola el
+  // campo: errors[].field es el nombre de la API («engagement.project»), no una etiqueta (humo F4, D3)
   codigos: {
     DERIVED_FIELD: 'Ese dato lo calcula el sistema: no se escribe a mano.',
     REASON_REQUIRED: 'Este paso exige un motivo: escríbalo y vuelva a intentar.',
@@ -95,7 +104,7 @@ export const ES_COMUN = {
     NOT_OWN_RECORD: 'Solo quien registró este dato puede cambiarlo: su cuenta no edita registros de otras personas.',
     FIELD_NOT_WRITABLE: 'Este paso escribe un dato que su rol no puede escribir.',
     OBJECT_NOT_READABLE: 'Su rol no puede leer datos que esta regla necesita revisar.',
-    HAS_DEPENDENTS: 'No se puede borrar: otros registros dependen de este ({{campo}}). Bórrelos o cámbielos primero.',
+    HAS_DEPENDENTS: 'No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.',
     FROZEN_MEMBERS: 'Esta versión del área ya está aprobada o reemplazada: sus miembros no cambian. Cree una versión nueva.',
     FROZEN_AREA: 'El proyecto, el tipo y el número de una versión aprobada o reemplazada no cambian.',
     WORKING_CRS_REQUIRED: 'El proyecto necesita su CRS de trabajo antes de este paso.',
@@ -120,7 +129,7 @@ export const ES_COMUN = {
     CHECKLIST_REQUIRED: 'Una salida fuera de la organización exige confirmar la lista de verificación.',
     INVALID_FILTER: 'Uno de los filtros no es válido.',
     EXPORT_NOT_FOUND: 'Esa exportación no existe en esta fase.',
-    CATALOGUE_UNAVAILABLE: 'Falta el catálogo de {{campo}}: la salida pública necesita todos sus valores. Pida a la administración que lo cargue.',
+    CATALOGUE_UNAVAILABLE: 'Falta el catálogo de uno de los datos: la salida pública necesita todos sus valores. Pida a la administración que lo cargue.',
     FILE_TYPE_NOT_ALLOWED: 'Ese tipo de archivo no se admite: elija un PDF, una imagen u otro tipo permitido.',
     FILE_EMPTY: 'El archivo está vacío: elija otro.',
     FILE_REJECTED: 'El archivo no se admite: elija otro.',
@@ -282,7 +291,13 @@ export const EN_COMUN: typeof ES_COMUN = {
     aMano: 'Your account does not list the organization’s users: type the email and the identifier; the server checks they name someone in your organization.',
     noLeido: 'The user list could not be read; type the email and the identifier.'
   },
-  dependientesSinCampo: 'It cannot be deleted: other records depend on it. Delete or change them first.',
+  ayudas: {
+    social_risk: { review_every_days: 'From 1 to 365; empty = the project’s frequency.' },
+    early_warning_rule: {
+      threshold: 'A count from 1 upwards or, in a risk level rule, a score from 1 to 25.',
+      window_days: 'Days up to today, from 1 to 365; empty = 7. After an alert, the rule stays silent for the same time.'
+    }
+  },
   codigos: {
     DERIVED_FIELD: 'The system calculates this value: it is not typed in.',
     REASON_REQUIRED: 'This step needs a reason: write it and try again.',
@@ -299,7 +314,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     NOT_OWN_RECORD: 'Only whoever recorded this can change it: your account does not edit other people’s records.',
     FIELD_NOT_WRITABLE: 'This step writes a value your role cannot write.',
     OBJECT_NOT_READABLE: 'Your role cannot read data this rule needs to check.',
-    HAS_DEPENDENTS: 'It cannot be deleted: other records depend on it ({{campo}}). Delete or change them first.',
+    HAS_DEPENDENTS: 'It cannot be deleted: other records depend on it. Delete or change them first.',
     FROZEN_MEMBERS: 'This area version is already approved or superseded: its members do not change. Create a new version.',
     FROZEN_AREA: 'The project, type and number of an approved or superseded version do not change.',
     WORKING_CRS_REQUIRED: 'The project needs its working CRS before this step.',
@@ -324,7 +339,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     CHECKLIST_REQUIRED: 'An output leaving the organization needs the checklist confirmed.',
     INVALID_FILTER: 'One of the filters is not valid.',
     EXPORT_NOT_FOUND: 'That export does not exist in this phase.',
-    CATALOGUE_UNAVAILABLE: 'The catalogue of {{campo}} is missing: the public output needs all its values. Ask the administration to load it.',
+    CATALOGUE_UNAVAILABLE: 'The catalogue of one of the fields is missing: the public output needs all its values. Ask the administration to load it.',
     FILE_TYPE_NOT_ALLOWED: 'That type of file is not accepted: pick a PDF, an image or another allowed type.',
     FILE_EMPTY: 'The file is empty: pick another.',
     FILE_REJECTED: 'The file is not accepted: pick another.',
