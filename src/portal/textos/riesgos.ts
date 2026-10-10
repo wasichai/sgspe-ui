@@ -1,4 +1,78 @@
-// S38 y S39 · el registro y la matriz de riesgos (F4). lo llena la tarea de su pantalla
-export const ES_RIESGOS = {}
+// S38 y S39 · el registro y la matriz de riesgos (F4), con el nivel de un riesgo que usan también la ficha y el tablero
+export const ES_RIESGOS = {
+  titulo: 'Riesgos',
+  identificar: 'Identificar riesgo',
+  eligeProyecto: 'Para identificar un riesgo, elija su proyecto en el selector.',
+  truncado: 'Se muestran los primeros {{n}} riesgos: elija un proyecto para ver el resto.',
+  vacio: 'No hay riesgos en esta vista.',
+  tabla: 'Riesgos',
+  nivel: 'Nivel de riesgo',
+  nivelResidual: 'Nivel residual',
+  sinEvaluar: 'Sin evaluar',
+  vistas: { registro: 'Registro y matriz', revision: 'Revisión pendiente', mios: 'Mis riesgos', cerrados: 'Cerrados' },
+  columnas: {
+    riesgo: 'Riesgo',
+    proyecto: 'Proyecto',
+    categoria: 'Categoría',
+    puntaje: 'P × I',
+    nivel: 'Nivel',
+    estado: 'Estado',
+    revision: 'Revisión',
+    responsable: 'Responsable'
+  },
+  mapa: {
+    titulo: 'Mapa de calor',
+    leyenda: 'Riesgos por probabilidad (filas) e impacto (columnas), con el nivel de cada celda',
+    pi: 'P \\ I',
+    probabilidad: 'P{{n}}',
+    impacto: 'I{{n}}',
+    celda: 'Probabilidad {{p}}, impacto {{i}}: {{n}} riesgos, nivel {{nivel}}',
+    sinEvaluar: 'Sin evaluar (fuera del mapa): {{n}}',
+    quitar: 'Quitar filtro de celda'
+  },
+  alta: {
+    descripcion: 'El riesgo nace identificado; su nivel sale de la primera revisión.',
+    desdeIncidente: 'El riesgo se registra con el incidente de origen.',
+    motivoAyuda: 'Todo cambio de un riesgo queda con su motivo en la historia.',
+    cadencia: 'Cada cuántos días se revisa: de 1 a 365. Vacío, vale la cadencia del proyecto (7 días por defecto).'
+  }
+}
 
-export const EN_RIESGOS: typeof ES_RIESGOS = {}
+export const EN_RIESGOS: typeof ES_RIESGOS = {
+  titulo: 'Risks',
+  identificar: 'Identify risk',
+  eligeProyecto: 'To identify a risk, pick its project in the selector.',
+  truncado: 'The first {{n}} risks are shown: pick a project to see the rest.',
+  vacio: 'There are no risks in this view.',
+  tabla: 'Risks',
+  nivel: 'Risk level',
+  nivelResidual: 'Residual level',
+  sinEvaluar: 'Not assessed',
+  vistas: { registro: 'Register and matrix', revision: 'Review due', mios: 'My risks', cerrados: 'Closed' },
+  columnas: {
+    riesgo: 'Risk',
+    proyecto: 'Project',
+    categoria: 'Category',
+    puntaje: 'P × I',
+    nivel: 'Level',
+    estado: 'State',
+    revision: 'Review',
+    responsable: 'Owner'
+  },
+  mapa: {
+    titulo: 'Heat map',
+    leyenda: 'Risks by probability (rows) and impact (columns), with the level of each cell',
+    pi: 'P \\ I',
+    probabilidad: 'P{{n}}',
+    impacto: 'I{{n}}',
+    celda: 'Probability {{p}}, impact {{i}}: {{n}} risks, level {{nivel}}',
+    sinEvaluar: 'Not assessed (outside the map): {{n}}',
+    quitar: 'Clear cell filter'
+  },
+  alta: {
+    descripcion: 'The risk starts as identified; its level comes from the first review.',
+    desdeIncidente: 'The risk is recorded with its origin incident.',
+    motivoAyuda: 'Every change to a risk keeps its reason in the history.',
+    cadencia: 'How many days between reviews: 1 to 365. Empty, the project cadence applies (7 days by default).'
+  }
+}
