@@ -154,6 +154,9 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
   const registro = useRegistro(objeto, id)
   const espera = diasEntre(aviso.publishAt, hoyEnLima())
   const decision = rutaDeDecision(aviso)
+  // nadie borra una QCS (security.md §7.6): su 404 es una confidencial que la cuenta no lee (§9.6). la fila no dice qué es ni de qué
+  // trata, y no ofrece una ficha que solo repetiría «Registro reservado»
+  const reservada = esQcs(objeto) && registro.error instanceof ApiError && registro.error.status === 404
   return (
     <tr>
       <Td className="text-sm">
@@ -163,23 +166,26 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
           [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name') || texto(registro.data, 'category')]
             .filter(Boolean)
             .join(' · ')
-        ) : esQcs(objeto) && registro.error instanceof ApiError && registro.error.status === 404 ? (
-          // nadie borra una QCS (security.md §7.6): su 404 es una confidencial que la cuenta no lee (§9.6)
+        ) : reservada ? (
           <Reservado />
         ) : (
           <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
         )}
       </Td>
-      <Td className="text-sm">{t(`aprobaciones.objetos.${objeto}`, { defaultValue: aviso.title })}</Td>
+      <Td className="text-sm">{reservada ? '—' : t(`aprobaciones.objetos.${objeto}`, { defaultValue: aviso.title })}</Td>
       <Td className="text-sm tabular-nums">
         {registro.data && objeto === 'commitment' ? montoPe(atributo(registro.data, 'amount'), atributo(registro.data, 'currency')) : '—'}
       </Td>
       <Td className="text-sm">{espera === null || espera <= 0 ? t('aprobaciones.hoy') : t('aprobaciones.dias', { n: espera })}</Td>
       <Td className="text-sm">{registro.data ? <PuedeDecidir objeto={objeto} id={id} /> : '—'}</Td>
       <Td className="text-sm">
-        <Link to={decision ?? rutaParaAbrir(objeto, id)} className="text-sg-primary-text underline">
-          {decision ? t('aprobaciones.revisar') : t('aprobaciones.ver')}
-        </Link>
+        {reservada ? (
+          '—'
+        ) : (
+          <Link to={decision ?? rutaParaAbrir(objeto, id)} className="text-sg-primary-text underline">
+            {decision ? t('aprobaciones.revisar') : t('aprobaciones.ver')}
+          </Link>
+        )}
       </Td>
     </tr>
   )

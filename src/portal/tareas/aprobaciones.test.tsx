@@ -208,6 +208,10 @@ describe('S48 · aprobaciones', () => {
     const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
     expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
     expect(within(tabla).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    // sin enlace a una ficha que solo diría lo mismo y sin decir qué es ni de qué trata
+    const fila = within(tabla).getByText('Registro reservado').closest('tr')!
+    expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
+    expect(within(fila).queryByText(/^Queja/)).not.toBeInTheDocument()
   })
 
   it('sin el módulo de avisos lo dice en lugar de una bandeja vacía', async () => {
