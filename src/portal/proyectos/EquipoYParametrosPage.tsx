@@ -335,11 +335,26 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
               return (
                 <div key={p.campo} className="space-y-1">
                   <div className="flex items-center justify-between gap-4">
-                    <label htmlFor={id} className="text-sm">
-                      {t(`p360.parametros.${p.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
-                    </label>
+                    <div className="space-y-0.5">
+                      <label htmlFor={id} className="text-sm">
+                        {t(`p360.parametros.${p.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
+                      </label>
+                      <p id={`${id}-ayuda`} className="text-sg-caption text-sg-text-muted">
+                        {t(`p360.parametros.ayuda.${p.campo}`)}{' '}
+                        {t('p360.parametros.porDefecto', {
+                          valor: typeof p.porDefecto === 'boolean' ? t(p.porDefecto ? 'p360.parametros.activada' : 'p360.parametros.desactivada') : p.porDefecto
+                        })}
+                      </p>
+                    </div>
                     {p.tipo === 'politica' ? (
-                      <input id={id} type="checkbox" disabled={bloqueado} checked={Boolean(valor)} onChange={(e) => cambiar(p, e.target.checked)} />
+                      <input
+                        id={id}
+                        type="checkbox"
+                        aria-describedby={`${id}-ayuda`}
+                        disabled={bloqueado}
+                        checked={Boolean(valor)}
+                        onChange={(e) => cambiar(p, e.target.checked)}
+                      />
                     ) : (
                       // el campo se vuelve a pintar cuando el registro cambia su valor (lo no tocado se actualiza, lo tecleado
                       // recupera su texto)
@@ -348,6 +363,7 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
                         textoInicial={textos.current[p.campo]}
                         alEscribir={(x) => (textos.current[p.campo] = x)}
                         id={id}
+                        descritoPor={`${id}-ayuda`}
                         valor={Number(valor)}
                         porDefecto={Number(p.porDefecto)}
                         entero={campoDe(definicion.data, p.campo)?.type === 'INTEGER'}

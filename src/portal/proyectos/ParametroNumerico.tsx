@@ -20,6 +20,7 @@ export const convertir = (escrito: string, porDefecto: number, entero: boolean):
 // el error de un texto inválido sale junto al campo al salir de él o al intentar guardar
 export function ParametroNumerico({
   id,
+  descritoPor,
   valor,
   porDefecto,
   entero,
@@ -30,6 +31,8 @@ export function ParametroNumerico({
   alCambiar
 }: {
   id: string
+  // el id de un texto de ayuda que describe el campo
+  descritoPor?: string
   valor: number
   porDefecto: number
   entero: boolean
@@ -58,7 +61,7 @@ export function ParametroNumerico({
         disabled={disabled}
         value={escrito}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={[descritoPor, error ? `${id}-error` : undefined].filter(Boolean).join(' ') || undefined}
         onChange={(e) => {
           setEscrito(e.target.value)
           alEscribir?.(e.target.value)
