@@ -8,7 +8,7 @@ import { useMisAsignaciones } from '../contexto/proyectos'
 import { useTodos } from '../datos/registros'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ProyectosPage } from './ProyectosPage'
-import { ADMINISTRACION_DE_PROYECTO, permisos, RELACIONISTA } from '../../test/portal'
+import { ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos, RELACIONISTA } from '../../test/portal'
 
 let fetch: FetchMock | null = null
 beforeEach(() => {
@@ -75,6 +75,17 @@ describe('S06 · lista de proyectos', () => {
     expect(await within(p1).findByText('Perforación 2026')).toBeInTheDocument()
     expect(await within(p1).findByText('Activo')).toBeInTheDocument()
     expect(await within(p3).findByText('Sin jefatura asignada')).toBeInTheDocument()
+  })
+
+  it('quien lee todos los proyectos abre en «Todos», no en una lista vacía de asignaciones', async () => {
+    const lectorDeTodo = permisos({ project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'], exploration_campaign: ['READ'] })
+    fetch = abrirPortal('/projects', AUDITORA, lectorDeTodo, rutas(AUDITORA))
+    await waitFor(() => expect(filas()).toHaveLength(3))
+    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAttribute('aria-selected', 'true')
+    // «Mis proyectos» sigue a un clic
+    await userEvent.click(screen.getByRole('tab', { name: 'Mis proyectos' }))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(rutaActual()).toBe('/projects?view=mine')
   })
 
   it('las vistas y los filtros viven en la URL', async () => {
@@ -213,7 +224,9 @@ describe('S06 · lista de proyectos', () => {
       ruta: '/projects',
       permisos: permisos({ project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'], exploration_campaign: ['READ'] })
     })
-    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    // abre en «Todos» (sin filtros que limpiar) y no le sugiere «Nuevo proyecto» a quien no puede crearlo
+    expect(await screen.findByText('Aún no hay registros')).toBeInTheDocument()
+    expect(screen.queryByText(/Un proyecto nace con/)).not.toBeInTheDocument()
     expect(screen.queryByText(/No tiene proyectos asignados/)).not.toBeInTheDocument()
   })
 

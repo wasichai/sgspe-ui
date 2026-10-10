@@ -26,13 +26,15 @@ export function ProyectosPage() {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const navegar = useNavigate()
-  const lista = useParametrosDeLista('mine')
+  const leeTodo = useLeeTodosLosProyectos()
+  // quien lee todos los proyectos abre en «Todos»: sus asignaciones pueden no existir, y el
+  // selector de la cabecera ya le dice «Todos los proyectos»
+  const lista = useParametrosDeLista(leeTodo ? 'all' : 'mine')
   const proyectos = useTodos('project', { sort: 'name', dir: 'asc' })
   const definicion = useDefinicion('project')
   const asignaciones = useMisAsignaciones()
   const jefaturas = useTodos('project_assignment', { role_name: ROL_DE_JEFATURA, active: true })
   const campanas = useTodos('exploration_campaign', { campaign_status: 'EN EJECUCION' })
-  const leeTodo = useLeeTodosLosProyectos()
 
   // «Mis proyectos» sale de las asignaciones propias: sin ellas no hay lista que mostrar, ni siquiera vacía
   const mios = new Set((asignaciones.data ?? []).map((a) => String(atributo(a, 'project'))))
@@ -125,7 +127,8 @@ export function ProyectosPage() {
           conFiltros={chips.length > 0 || lista.vista !== 'all'}
           alLimpiar={() => lista.cambiar({ view: 'all', ...Object.fromEntries(FILTROS.map(([c]) => [c, null])) })}
         >
-          {t('proyectos.vacio')}
+          {/* «Nuevo proyecto» solo se le sugiere a quien puede crearlo, no a quien solo lee todos */}
+          {can('project', 'CREATE') ? t('proyectos.vacio') : null}
         </VacioDeLista>
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
