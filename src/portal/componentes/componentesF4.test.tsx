@@ -85,7 +85,8 @@ describe('vínculo a otro registro', () => {
     expect(screen.getByText('Registro reservado')).toHaveAccessibleDescription(/Su cuenta no lee este registro/)
   })
 
-  it('otro objeto que ya no existe lo dice; uno que la cuenta no lee es «No disponible»; sin id no dibuja nada', async () => {
+  // con el alcance por proyecto (ADR-0029) un 404 es también un registro de otro proyecto, y no se distingue de uno borrado
+  it('cualquier destino que responde 404 es «Registro reservado»; uno sin permiso es «No disponible»; sin id no dibuja nada', async () => {
     fetch = mockFetch([
       { path: '/objects/incident/records/n1', ...noEncontrado },
       { path: '/objects/social_risk/records/k1', status: 403, body: { title: 'Forbidden', status: 403 } }
@@ -97,9 +98,11 @@ describe('vínculo a otro registro', () => {
         <RegistroVinculado objeto="grievance" id={null} />
       </>
     )
-    expect(await screen.findByText('El registro vinculado ya no existe.')).toBeInTheDocument()
+    expect(await screen.findByText('Registro reservado')).toBeInTheDocument()
+    expect(screen.getByText('Registro reservado')).toHaveAccessibleDescription(/Su cuenta no lee este registro/)
     expect(await screen.findByText('No disponible')).toBeInTheDocument()
-    expect(screen.queryByText('Registro reservado')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByText('El registro vinculado ya no existe.')).not.toBeInTheDocument()
   })
 })
 

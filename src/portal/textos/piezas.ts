@@ -1,7 +1,6 @@
 // las piezas comunes de F4: el vínculo a otro registro, reclasificar una QCS y los registros simples de riesgos y alertas
 export const ES_PIEZAS = {
   vinculado: {
-    noExiste: 'El registro vinculado ya no existe.',
     sinNombre: 'Registro sin nombre'
   },
   reclasificar: {
@@ -26,7 +25,6 @@ export const ES_PIEZAS = {
 
 export const EN_PIEZAS: typeof ES_PIEZAS = {
   vinculado: {
-    noExiste: 'The linked record no longer exists.',
     sinNombre: 'Unnamed record'
   },
   reclasificar: {
