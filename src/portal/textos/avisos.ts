@@ -11,7 +11,13 @@ export const ES_AVISOS = {
   filtros: { todos: 'Activos', sinLeer: 'Solo sin leer', pospuestos: 'Pospuestos' },
   tipo: 'Tipo',
   tipos: { ACTION: 'Para hacer', WARNING: 'Advertencia', INFO: 'Información' },
-  fuentes: { 'sgspe.approvals': 'Aprobación pendiente', 'sgspe.deadlines': 'Plazos', otra: 'Otros avisos' },
+  fuentes: {
+    'sgspe.approvals': 'Aprobación pendiente',
+    'sgspe.deadlines': 'Plazos',
+    'sgspe.risks': 'Riesgos',
+    'sgspe.warnings': 'Alerta temprana',
+    otra: 'Otros avisos'
+  },
   publicado: 'Publicado el {{fecha}}',
   vence: 'Vence el {{fecha}}',
   vencido: 'Vencido',
@@ -51,7 +57,13 @@ export const EN_AVISOS: typeof ES_AVISOS = {
   filtros: { todos: 'Active', sinLeer: 'Unread only', pospuestos: 'Snoozed' },
   tipo: 'Kind',
   tipos: { ACTION: 'To do', WARNING: 'Warning', INFO: 'Information' },
-  fuentes: { 'sgspe.approvals': 'Pending approval', 'sgspe.deadlines': 'Deadlines', otra: 'Other notices' },
+  fuentes: {
+    'sgspe.approvals': 'Pending approval',
+    'sgspe.deadlines': 'Deadlines',
+    'sgspe.risks': 'Risks',
+    'sgspe.warnings': 'Early warning',
+    otra: 'Other notices'
+  },
   publicado: 'Published on {{fecha}}',
   vence: 'Due on {{fecha}}',
   vencido: 'Overdue',

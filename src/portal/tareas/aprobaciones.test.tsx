@@ -150,6 +150,44 @@ describe('S48 · aprobaciones', () => {
     expect(screen.getByText('Se revisaron solo los primeros 200 avisos: puede haber más escalamientos que no se muestran.')).toBeInTheDocument()
   })
 
+  it('una queja grave por resolver (F4) se revisa en su ficha; un riesgo que escala es un escalamiento', async () => {
+    const QUEJA = registro('g1', { project: 'p1', code: 'Q-001', category: 'AGUA Y MEDIO AMBIENTE', severity: 'ALTA' }, { state: 'in_action' })
+    fetch = mockFetch(
+      rutas([
+        {
+          path: '/auth/me/notifications',
+          body: {
+            content: [aviso('n7', 'grievance', 'g1'), aviso('n8', 'social_risk', 'k1', 'sgspe.risks')],
+            page: 0,
+            size: 200,
+            totalElements: 2,
+            totalPages: 1
+          }
+        },
+        { path: '/objects/grievance/records/g1', body: QUEJA },
+        {
+          path: '/objects/grievance/records/g1/transitions',
+          body: [{ name: 'resolve_high_severity', label: 'Resolver con aprobación', to: 'resolved', toLabel: 'Resuelta', allowed: true, reason: null }]
+        }
+      ])
+    )
+    red = espiarRed([{ method: 'POST', path: '/sgspe/transition-checks', responder: () => jsonResponse({ allowed: true, blocking: [], warnings: [] }) }])
+    montar(<AprobacionesPage />, {
+      ruta: '/tasks/approvals',
+      camino: '/tasks/approvals',
+      usuario: APROBADORA,
+      permisos: permisos({ grievance: ['READ', 'UPDATE', 'APPROVE'], social_risk: ['READ'] })
+    })
+    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    const fila = (await within(tabla).findByText('Q-001 · AGUA Y MEDIO AMBIENTE')).closest('tr') as HTMLElement
+    expect(within(fila).getByText('Queja grave por resolver')).toBeInTheDocument()
+    expect(await within(fila).findByText('Sí')).toBeInTheDocument()
+    expect(within(fila).getByRole('link', { name: 'Ver' })).toHaveAttribute('href', '/r/grievance/g1')
+    expect(red.a('POST', '/sgspe/transition-checks')[0].cuerpo).toMatchObject({ object: 'grievance', transition: 'resolve_high_severity' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Escalamientos' }))
+    expect(await screen.findByRole('heading', { name: 'Pendiente k1' })).toBeInTheDocument()
+  })
+
   it('sin el módulo de avisos lo dice en lugar de una bandeja vacía', async () => {
     fetch = mockFetch(rutas().filter((r) => r.path !== '/auth/me/notifications'))
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })

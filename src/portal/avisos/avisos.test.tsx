@@ -135,6 +135,33 @@ describe('S04 · bandeja', () => {
     await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').at(-1)?.ruta).toContain('state=unread'))
   })
 
+  it('nombra las fuentes de F4: riesgos y alerta temprana; el aviso genérico de una QCS confidencial no lleva enlace', async () => {
+    fetch = mockFetch(
+      rutas([
+        {
+          path: '/auth/me/notifications',
+          body: pagina([
+            aviso('n4', { title: 'El riesgo R-001 subió a CRITICO', source: 'sgspe.risks', link: { type: 'RECORD', object: 'social_risk', recordId: 'k1' } }),
+            aviso('n5', { title: 'Alerta nueva', source: 'sgspe.warnings', link: { type: 'RECORD', object: 'early_warning', recordId: 'w1' } }),
+            aviso('n6', {
+              title: 'Una QCS confidencial del proyecto Pukaqaqa superó su plazo. Pida el detalle al equipo de quejas.',
+              source: 'sgspe.deadlines',
+              link: null
+            })
+          ])
+        }
+      ])
+    )
+    montar(<AvisosPage />, { ruta: '/notifications', camino: '/notifications' })
+    const riesgo = (await screen.findByRole('heading', { name: 'El riesgo R-001 subió a CRITICO' })).closest('li') as HTMLElement
+    expect(within(riesgo).getByText(/Riesgos/)).toBeInTheDocument()
+    expect(within(riesgo).getByRole('link', { name: 'Abrir' })).toHaveAttribute('href', '/r/social_risk/k1')
+    const alerta = screen.getByRole('heading', { name: 'Alerta nueva' }).closest('li') as HTMLElement
+    expect(within(alerta).getByText(/Alerta temprana/)).toBeInTheDocument()
+    const generico = screen.getByRole('heading', { name: /Una QCS confidencial del proyecto Pukaqaqa/ }).closest('li') as HTMLElement
+    expect(within(generico).queryByRole('link', { name: 'Abrir' })).not.toBeInTheDocument()
+  })
+
   it('dibuja el título y el cuerpo de un aviso como texto, nunca como HTML', async () => {
     const titulo = '<img src=x onerror=alert(1)>'
     const cuerpo = '<script>alert(2)</script><b>negrita</b>'
@@ -203,6 +230,21 @@ describe('/r/:object/:recordId', () => {
     expect(await screen.findByText('Este registro ya no existe o no es de su organización.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(ubicacion.actual).toBe('/r/commitment/c1')
+  })
+
+  it('una QCS confidencial que la cuenta no lee (404) es «Registro reservado», sin datos, y no salta', async () => {
+    fetch = mockFetch([{ path: '/objects/grievance/records/g9', status: 404, body: { title: 'Not Found', status: 404 } }])
+    montar(<AbrirRegistroPage />, { ruta: '/r/grievance/g9', camino: '/r/:object/:recordId' })
+    expect(await screen.findByText('Registro reservado')).toBeInTheDocument()
+    expect(screen.getByText(/solo la leen la gestión de quejas, su responsable y quien la recibió/)).toBeInTheDocument()
+    expect(screen.queryByText('Este registro ya no existe o no es de su organización.')).not.toBeInTheDocument()
+    expect(ubicacion.actual).toBe('/r/grievance/g9')
+  })
+
+  it('una queja que la cuenta lee salta a su ficha de F4', async () => {
+    fetch = mockFetch([{ path: '/objects/grievance/records/g1', body: registro('g1', { project: 'p1' }) }])
+    montar(<AbrirRegistroPage />, { ruta: '/r/grievance/g1', camino: '/r/:object/:recordId' })
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/grievances/g1'))
   })
 
   it('un registro que la cuenta no lee (403) es «No disponible» y no salta', async () => {

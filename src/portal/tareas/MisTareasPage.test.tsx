@@ -165,6 +165,16 @@ describe('S47 · mis tareas', () => {
     await waitFor(() => expect(within(drawer).queryByRole('button', { name: 'Tomar la tarea' })).not.toBeInTheDocument())
   })
 
+  it('una tarea de una QCS, un riesgo o una alerta (F4) lleva a su origen por /r/…', async () => {
+    const acuse = registro('t5', { project: 'p1', title: 'Acusar recibo de la queja Q-001', grievance: 'g1', assignee_user_id: 'u-cmm' }, { state: 'open' })
+    const revision = registro('t6', { project: 'p1', title: 'Revisar el riesgo R-001', social_risk: 'k1', assignee_user_id: 'u-cmm' }, { state: 'open' })
+    fetch = mockFetch(rutas([{ path: '/objects/task/records', body: pagina([acuse, revision]) }]))
+    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
+    expect(within(tabla).getByRole('link', { name: 'Queja' })).toHaveAttribute('href', '/r/grievance/g1')
+    expect(within(tabla).getByRole('link', { name: 'Riesgo' })).toHaveAttribute('href', '/r/social_risk/k1')
+  })
+
   it('mientras carga no dice que no hay tareas, y si falla lo dice con reintento', async () => {
     let fallar: () => void = () => {}
     const respuesta = new Promise<Response>((resolver) => {
