@@ -155,7 +155,7 @@ export function GruposPage() {
             >
               <span aria-live="polite">{t('comun.seleccionados', { n: elegidos.length })}</span>
               {can('engagement', 'CREATE') && escribeEnElProyecto ? (
-                <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.join(',')}`)}>
+                <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.map(encodeURIComponent).join(',')}`)}>
                   {t('grupos.registrarConEllos')}
                 </Button>
               ) : null}
