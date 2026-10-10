@@ -609,6 +609,28 @@ describe('S11 · parámetros de F4', () => {
     expect(red.a('PUT', '/objects/project/records/p1')).toHaveLength(0)
   })
 
+  it('un valor viejo fuera de regla que nadie tocó no bloquea otra escritura: el PUT sale sin tocar los umbrales', async () => {
+    const viejos = { ...VACIOS, risk_medium_min_score: 10, risk_high_min_score: 5, risk_critical_min_score: 15, grievance_ack_days: 400 }
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: '/metadata/objects/project', body: CON_F4 },
+      { path: '/objects/project/records/p1', body: { ...P1, attributes: { ...P1.attributes, ...viejos } } },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const umbral = await screen.findByLabelText(/Umbral de interés/)
+    await userEvent.clear(umbral)
+    await userEvent.type(umbral, '2')
+    expect(screen.queryByText('Los umbrales deben crecer: medio menor que alto y alto menor que crítico.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Escriba un número entero de 1 a 365.')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project/records/p1')).toHaveLength(1))
+    const { attributes } = red.a('PUT', '/objects/project/records/p1')[0].cuerpo as { attributes: Record<string, unknown> }
+    expect(attributes).toMatchObject({ interest_threshold: 2 })
+    // los umbrales y el plazo viejos viajan tal como se leyeron (la forma del GET), sin cambio alguno
+    expect(attributes).toMatchObject({ risk_medium_min_score: 10, risk_high_min_score: 5, risk_critical_min_score: 15, grievance_ack_days: 400 })
+  })
+
   it('el rechazo del servidor (400 OUT_OF_RANGE) se dice con su texto, nunca el código', async () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
       {
@@ -630,11 +652,61 @@ describe('S11 · parámetros de F4', () => {
 
   it('las reglas de rango y orden son las del servidor', () => {
     const valores: Record<string, number> = { grievance_ack_days: 5, risk_medium_min_score: 5, risk_high_min_score: 10, risk_critical_min_score: 15 }
-    expect(problemasDeParametros((c) => valores[c])).toEqual([])
-    expect(problemasDeParametros((c) => ({ ...valores, grievance_ack_days: 0 })[c])).toEqual([{ campo: 'grievance_ack_days', motivo: 'rango' }])
-    expect(problemasDeParametros((c) => ({ ...valores, risk_critical_min_score: 26 })[c])).toContainEqual({ campo: 'risk_critical_min_score', motivo: 'rango' })
-    expect(problemasDeParametros((c) => ({ ...valores, risk_high_min_score: 5 })[c])).toEqual([{ campo: 'risk_high_min_score', motivo: 'orden' }])
-    expect(problemasDeParametros((c) => ({ ...valores, grievance_ack_days: 2.5 })[c])).toEqual([{ campo: 'grievance_ack_days', motivo: 'rango' }])
+    expect(
+      problemasDeParametros(
+        (c) => valores[c],
+        () => true
+      )
+    ).toEqual([])
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, grievance_ack_days: 0 })[c],
+        () => true
+      )
+    ).toEqual([{ campo: 'grievance_ack_days', motivo: 'rango' }])
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, risk_critical_min_score: 26 })[c],
+        () => true
+      )
+    ).toContainEqual({ campo: 'risk_critical_min_score', motivo: 'rango' })
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, risk_high_min_score: 5 })[c],
+        () => true
+      )
+    ).toEqual([{ campo: 'risk_high_min_score', motivo: 'orden' }])
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, grievance_ack_days: 2.5 })[c],
+        () => true
+      )
+    ).toEqual([{ campo: 'grievance_ack_days', motivo: 'rango' }])
+    // solo se juzga lo que cambia; el orden, solo si cambió un umbral, y no se suma al rango de un umbral
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, grievance_ack_days: 0 })[c],
+        () => false
+      )
+    ).toEqual([])
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, risk_high_min_score: 5 })[c],
+        (c) => c === 'grievance_ack_days'
+      )
+    ).toEqual([])
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, risk_high_min_score: 5 })[c],
+        (c) => c === 'risk_medium_min_score'
+      )
+    ).toEqual([{ campo: 'risk_high_min_score', motivo: 'orden' }])
+    expect(
+      problemasDeParametros(
+        (c) => ({ ...valores, risk_critical_min_score: 26 })[c],
+        () => true
+      )
+    ).toEqual([{ campo: 'risk_critical_min_score', motivo: 'rango' }])
   })
 })
 

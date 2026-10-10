@@ -282,10 +282,14 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
   )
   const hayCambios = Object.keys(cambios).length > 0
   // el rango de los plazos y la cadencia, y el orden de los umbrales, se dicen antes de guardar (el servidor responde 400 OUT_OF_RANGE)
-  const problemas = problemasDeParametros((campo) => {
-    const p = parametros.find((x) => x.campo === campo)
-    return p ? valorDe(p) : undefined
-  })
+  // (solo lo que cambia, como el servidor: un valor viejo fuera de regla no bloquea otra escritura)
+  const problemas = problemasDeParametros(
+    (campo) => {
+      const p = parametros.find((x) => x.campo === campo)
+      return p ? valorDe(p) : undefined
+    },
+    (campo) => campo in cambios
+  )
   const problemaDe = (campo: string) => problemas.find((x) => x.campo === campo)
   const invalido = Object.values(cambios).some((v) => typeof v === 'number' && Number.isNaN(v)) || problemas.length > 0
   // devolver un parámetro a su valor original lo saca de lo tecleado: no se envía ni pisa el cambio de otra persona

@@ -37,17 +37,28 @@ export const PARAMETROS_F4: readonly Parametro[] = [
 
 export const UMBRALES_DE_RIESGO = ['risk_medium_min_score', 'risk_high_min_score', 'risk_critical_min_score'] as const
 
-// lo que el servidor rechazaría (400 OUT_OF_RANGE), dicho antes de guardar: un valor fuera de su rango o no entero, y los umbrales
-// que no crecen. devuelve el campo y el motivo; sin problemas, vacío
-export function problemasDeParametros(valorDe: (campo: string) => number | boolean | undefined): { campo: string; motivo: 'rango' | 'orden' }[] {
+// lo que el servidor rechazaría (400 OUT_OF_RANGE), dicho antes de guardar. como el servidor (ProjectParameters.outOfRange), solo
+// juzga los campos que cambian: un valor viejo fuera de regla no bloquea otra escritura. el rango, de cada campo cambiado (entero
+// dentro de su rango); el orden de los umbrales, solo si cambió alguno y ninguno está fuera de rango. devuelve el campo y el
+// motivo; sin problemas, vacío
+export function problemasDeParametros(
+  valorDe: (campo: string) => number | boolean | undefined,
+  cambiado: (campo: string) => boolean
+): { campo: string; motivo: 'rango' | 'orden' }[] {
   const problemas: { campo: string; motivo: 'rango' | 'orden' }[] = []
   for (const p of PARAMETROS_F4) {
     const v = valorDe(p.campo)
-    if (!p.rango || typeof v !== 'number' || Number.isNaN(v)) continue
+    if (!p.rango || !cambiado(p.campo) || typeof v !== 'number' || Number.isNaN(v)) continue
     if (!Number.isInteger(v) || v < p.rango.min || v > p.rango.max) problemas.push({ campo: p.campo, motivo: 'rango' })
   }
+  const umbralFuera = problemas.some((x) => (UMBRALES_DE_RIESGO as readonly string[]).includes(x.campo))
   const [medio, alto, critico] = UMBRALES_DE_RIESGO.map((c) => valorDe(c))
-  if ([medio, alto, critico].every((v) => typeof v === 'number') && !((medio as number) < (alto as number) && (alto as number) < (critico as number)))
+  if (
+    !umbralFuera &&
+    UMBRALES_DE_RIESGO.some((c) => cambiado(c)) &&
+    [medio, alto, critico].every((v) => typeof v === 'number') &&
+    !((medio as number) < (alto as number) && (alto as number) < (critico as number))
+  )
     problemas.push({ campo: 'risk_high_min_score', motivo: 'orden' })
   return problemas
 }
