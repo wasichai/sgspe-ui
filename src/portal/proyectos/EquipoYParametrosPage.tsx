@@ -26,7 +26,7 @@ import { CampanaDelProyecto, PartesDelProyecto } from './EquipoYPartes'
 import { FormularioDeAsignacion } from './FormularioDeAsignacion'
 import { useNombresDeRol } from './usuarios'
 import { ParametroNumerico } from './ParametroNumerico'
-import { PARAMETROS_F2, vigente } from './parametros'
+import { PARAMETROS_F2, PARAMETROS_F4, problemasDeParametros, vigente, type Parametro } from './parametros'
 
 // S11 · equipo y parámetros del proyecto (screens.md §3): asignaciones con su vigencia (una vencida no da escritura,
 // RQ-SEC-006), campañas con su tope y lo ejecutado por moneda (ASM-063), partes y concesiones, y los parámetros de F2 con
@@ -273,15 +273,23 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
   const [intento, setIntento] = useState(false)
   // el texto de cada campo numérico: si un refetch cambia el registro y el campo se vuelve a pintar, no pierde lo tecleado
   const textos = useRef<Record<string, string>>({})
-  const grupos = [...new Set(PARAMETROS_F2.map((p) => p.grupo))]
-  const valorDe = (p: (typeof PARAMETROS_F2)[number]) => (p.campo in tecleados ? tecleados[p.campo] : vigente(proyecto.attributes, p))
+  // los de F4 solo si el modelo del tenant ya los tiene (un tenant de F3 no los ve)
+  const parametros = [...PARAMETROS_F2, ...PARAMETROS_F4.filter((p) => campoDe(definicion.data, p.campo) !== undefined)]
+  const grupos = [...new Set(parametros.map((p) => p.grupo))]
+  const valorDe = (p: Parametro) => (p.campo in tecleados ? tecleados[p.campo] : vigente(proyecto.attributes, p))
   const cambios = Object.fromEntries(
-    PARAMETROS_F2.filter((p) => p.campo in tecleados && tecleados[p.campo] !== vigente(proyecto.attributes, p)).map((p) => [p.campo, tecleados[p.campo]])
+    parametros.filter((p) => p.campo in tecleados && tecleados[p.campo] !== vigente(proyecto.attributes, p)).map((p) => [p.campo, tecleados[p.campo]])
   )
   const hayCambios = Object.keys(cambios).length > 0
-  const invalido = Object.values(cambios).some((v) => typeof v === 'number' && Number.isNaN(v))
+  // el rango de los plazos y la cadencia, y el orden de los umbrales, se dicen antes de guardar (el servidor responde 400 OUT_OF_RANGE)
+  const problemas = problemasDeParametros((campo) => {
+    const p = parametros.find((x) => x.campo === campo)
+    return p ? valorDe(p) : undefined
+  })
+  const problemaDe = (campo: string) => problemas.find((x) => x.campo === campo)
+  const invalido = Object.values(cambios).some((v) => typeof v === 'number' && Number.isNaN(v)) || problemas.length > 0
   // devolver un parámetro a su valor original lo saca de lo tecleado: no se envía ni pisa el cambio de otra persona
-  const cambiar = (p: (typeof PARAMETROS_F2)[number], valor: number | boolean) => {
+  const cambiar = (p: Parametro, valor: number | boolean) => {
     const original = vigente(proyecto.attributes, p)
     setTecleados((v) => {
       const resto = Object.fromEntries(Object.entries(v).filter(([campo]) => campo !== p.campo))
@@ -311,37 +319,48 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
       {grupos.map((grupo) => (
         <fieldset key={grupo} className="space-y-2 rounded-sg-lg border border-sg-border p-4">
           <legend className="px-1 font-medium">{t(`p360.parametros.grupos.${grupo}`)}</legend>
-          {PARAMETROS_F2.filter((p) => p.grupo === grupo).map((p) => {
-            const valor = valorDe(p)
-            const marca = valor === p.porDefecto ? t('proyectos.asistente.porDefecto') : t('proyectos.asistente.cambiado')
-            const id = `param-${p.campo}`
-            const bloqueado = !editable || !puedeEscribir(definicion.data, p.campo)
-            return (
-              <div key={p.campo} className="flex items-center justify-between gap-4">
-                <label htmlFor={id} className="text-sm">
-                  {t(`p360.parametros.${p.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
-                </label>
-                {p.tipo === 'politica' ? (
-                  <input id={id} type="checkbox" disabled={bloqueado} checked={Boolean(valor)} onChange={(e) => cambiar(p, e.target.checked)} />
-                ) : (
-                  // el campo se vuelve a pintar cuando el registro cambia su valor (lo no tocado se actualiza, lo tecleado
-                  // recupera su texto)
-                  <ParametroNumerico
-                    key={`${p.campo}:${String(vigente(proyecto.attributes, p))}`}
-                    textoInicial={textos.current[p.campo]}
-                    alEscribir={(x) => (textos.current[p.campo] = x)}
-                    id={id}
-                    valor={Number(valor)}
-                    porDefecto={Number(p.porDefecto)}
-                    entero={campoDe(definicion.data, p.campo)?.type === 'INTEGER'}
-                    intentoDeGuardar={intento}
-                    disabled={bloqueado}
-                    alCambiar={(n) => cambiar(p, n)}
-                  />
-                )}
-              </div>
-            )
-          })}
+          {grupo === 'quejas' || grupo === 'riesgos' ? <p className="text-sg-caption text-sg-text-muted">{t(`p360.parametros.ayudas.${grupo}`)}</p> : null}
+          {parametros
+            .filter((p) => p.grupo === grupo)
+            .map((p) => {
+              const valor = valorDe(p)
+              const marca = valor === p.porDefecto ? t('proyectos.asistente.porDefecto') : t('proyectos.asistente.cambiado')
+              const id = `param-${p.campo}`
+              const bloqueado = !editable || !puedeEscribir(definicion.data, p.campo)
+              const problema = problemaDe(p.campo)
+              return (
+                <div key={p.campo} className="space-y-1">
+                  <div className="flex items-center justify-between gap-4">
+                    <label htmlFor={id} className="text-sm">
+                      {t(`p360.parametros.${p.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
+                    </label>
+                    {p.tipo === 'politica' ? (
+                      <input id={id} type="checkbox" disabled={bloqueado} checked={Boolean(valor)} onChange={(e) => cambiar(p, e.target.checked)} />
+                    ) : (
+                      // el campo se vuelve a pintar cuando el registro cambia su valor (lo no tocado se actualiza, lo tecleado
+                      // recupera su texto)
+                      <ParametroNumerico
+                        key={`${p.campo}:${String(vigente(proyecto.attributes, p))}`}
+                        textoInicial={textos.current[p.campo]}
+                        alEscribir={(x) => (textos.current[p.campo] = x)}
+                        id={id}
+                        valor={Number(valor)}
+                        porDefecto={Number(p.porDefecto)}
+                        entero={campoDe(definicion.data, p.campo)?.type === 'INTEGER'}
+                        intentoDeGuardar={intento}
+                        disabled={bloqueado}
+                        alCambiar={(n) => cambiar(p, n)}
+                      />
+                    )}
+                  </div>
+                  {problema ? (
+                    <p role="alert" className="text-right text-sg-caption text-sg-danger">
+                      {problema.motivo === 'orden' ? t('p360.parametros.umbralesEnOrden') : t('p360.parametros.fueraDeRango', p.rango)}
+                    </p>
+                  ) : null}
+                </div>
+              )
+            })}
         </fieldset>
       ))}
       {actualizar.isError ? (

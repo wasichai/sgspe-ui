@@ -9,6 +9,7 @@ import { espiarRed, problema, type Red } from '../../test/red'
 import { useDefinicion } from '../datos/registros'
 import { PartesDelProyecto } from './EquipoYPartes'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
+import { problemasDeParametros } from './parametros'
 
 let fetch: FetchMock | null = null
 let red: Red | null = null
@@ -543,6 +544,97 @@ describe('S11 · equipo y parámetros', () => {
     await screen.findByRole('table', { name: 'Equipo' })
     expect(screen.queryByRole('button', { name: 'Asignar persona' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Terminar asignación/ })).not.toBeInTheDocument()
+  })
+})
+
+// F4 (plan 4.2a): los ocho parámetros de quejas y riesgos, solo si el modelo del tenant los tiene, con su rango y el orden de los
+// umbrales dichos antes de guardar; el 400 OUT_OF_RANGE del servidor se dice con su texto
+describe('S11 · parámetros de F4', () => {
+  const entero = (campo: string): [string, Record<string, unknown>] => [campo, { type: 'INTEGER' }]
+  const CON_F4 = definicion('project', [
+    ['interest_threshold', { type: 'DECIMAL' }],
+    'name',
+    entero('grievance_ack_days'),
+    entero('grievance_resolution_days'),
+    entero('inquiry_response_days'),
+    ['policy_high_severity_requires_approver', { type: 'BOOLEAN' }],
+    entero('risk_review_days'),
+    entero('risk_medium_min_score'),
+    entero('risk_high_min_score'),
+    entero('risk_critical_min_score')
+  ])
+  // un proyecto creado antes de F4: el GET trae las claves de los ocho, vacías (vale el por defecto)
+  const VACIOS = Object.fromEntries(CON_F4.fields.slice(2).map((f) => [f.name, null]))
+  const conF4 = () => [
+    { path: '/metadata/objects/project', body: CON_F4 },
+    { path: '/objects/project/records/p1', body: { ...P1, attributes: { ...P1.attributes, ...VACIOS } } },
+    ...rutas()
+  ]
+
+  it('un tenant sin F4 no ve los parámetros de quejas ni de riesgos', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByText('Umbral de interés', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByText('Riesgos')).not.toBeInTheDocument()
+  })
+
+  it('con F4 muestra los ocho por defecto y guarda la cadencia cambiada con la versión leída', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, conF4())
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByRole('group', { name: 'Quejas, consultas y solicitudes' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Días hábiles para acusar recibo/)).toHaveValue('5')
+    expect(screen.getByLabelText(/Una queja ALTA o CRITICA la resuelve quien aprueba/)).toBeChecked()
+    const cadencia = screen.getByLabelText(/Días entre revisiones de un riesgo/)
+    await userEvent.clear(cadencia)
+    await userEvent.type(cadencia, '14')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project/records/p1')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/project/records/p1')[0].cuerpo).toMatchObject({ attributes: { risk_review_days: 14 } })
+  })
+
+  it('un plazo fuera de 1 a 365 o umbrales que no crecen se dicen y no se guardan', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, conF4())
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const acuse = await screen.findByLabelText(/Días hábiles para acusar recibo/)
+    await userEvent.clear(acuse)
+    await userEvent.type(acuse, '400')
+    const alto = screen.getByLabelText(/Puntaje desde el que un riesgo es ALTO/)
+    await userEvent.clear(alto)
+    await userEvent.type(alto, '20')
+    expect(await screen.findByText('Escriba un número entero de 1 a 365.')).toBeInTheDocument()
+    expect(screen.getByText('Los umbrales deben crecer: medio menor que alto y alto menor que crítico.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    expect(red.a('PUT', '/objects/project/records/p1')).toHaveLength(0)
+  })
+
+  it('el rechazo del servidor (400 OUT_OF_RANGE) se dice con su texto, nunca el código', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      {
+        method: 'PUT',
+        path: '/objects/project/records/p1',
+        status: 400,
+        body: { title: 'Bad Request', status: 400, detail: 'fuera de rango', errors: [{ field: 'risk_review_days', message: 'OUT_OF_RANGE' }] }
+      },
+      ...conF4()
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const cadencia = await screen.findByLabelText(/Días entre revisiones de un riesgo/)
+    await userEvent.clear(cadencia)
+    await userEvent.type(cadencia, '30')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    expect(await screen.findByText('El número está fuera del rango permitido.')).toBeInTheDocument()
+    expect(screen.queryByText('OUT_OF_RANGE')).not.toBeInTheDocument()
+  })
+
+  it('las reglas de rango y orden son las del servidor', () => {
+    const valores: Record<string, number> = { grievance_ack_days: 5, risk_medium_min_score: 5, risk_high_min_score: 10, risk_critical_min_score: 15 }
+    expect(problemasDeParametros((c) => valores[c])).toEqual([])
+    expect(problemasDeParametros((c) => ({ ...valores, grievance_ack_days: 0 })[c])).toEqual([{ campo: 'grievance_ack_days', motivo: 'rango' }])
+    expect(problemasDeParametros((c) => ({ ...valores, risk_critical_min_score: 26 })[c])).toContainEqual({ campo: 'risk_critical_min_score', motivo: 'rango' })
+    expect(problemasDeParametros((c) => ({ ...valores, risk_high_min_score: 5 })[c])).toEqual([{ campo: 'risk_high_min_score', motivo: 'orden' }])
+    expect(problemasDeParametros((c) => ({ ...valores, grievance_ack_days: 2.5 })[c])).toEqual([{ campo: 'grievance_ack_days', motivo: 'rango' }])
   })
 })
 

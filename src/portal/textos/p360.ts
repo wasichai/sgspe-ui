@@ -86,7 +86,29 @@ export const ES_P360 = {
     meetings_per_month_target: 'Meta de reuniones al mes',
     policy_minutes_only_formal_types: 'Solo los tipos formales necesitan acta aprobada',
     policy_activation_preconditions: 'Exigir CRS de trabajo y una parte CLIENTE u OPERADOR para activar',
-    grupos: { grupos: 'Grupos de interés', relacionamiento: 'Relacionamiento', proyecto: 'Proyecto' }
+    grievance_ack_days: 'Días hábiles para acusar recibo de una queja',
+    grievance_resolution_days: 'Días para resolver una queja',
+    inquiry_response_days: 'Días para responder una consulta',
+    policy_high_severity_requires_approver: 'Una queja ALTA o CRITICA la resuelve quien aprueba',
+    risk_review_days: 'Días entre revisiones de un riesgo',
+    risk_medium_min_score: 'Puntaje desde el que un riesgo es MEDIO',
+    risk_high_min_score: 'Puntaje desde el que un riesgo es ALTO',
+    risk_critical_min_score: 'Puntaje desde el que un riesgo es CRITICO',
+    grupos: {
+      grupos: 'Grupos de interés',
+      relacionamiento: 'Relacionamiento',
+      proyecto: 'Proyecto',
+      quejas: 'Quejas, consultas y solicitudes',
+      riesgos: 'Riesgos'
+    },
+    ayudas: {
+      quejas:
+        'El acuse cuenta días hábiles (de lunes a viernes, sin feriados) desde el día siguiente a la recepción; la resolución y la respuesta, días calendario. Un cambio no recalcula los plazos ya puestos.',
+      riesgos:
+        'El puntaje es probabilidad por impacto, de 1 a 25. Un cambio de umbrales no recalcula los niveles guardados: los cambia la revisión siguiente de cada riesgo.'
+    },
+    fueraDeRango: 'Escriba un número entero de {{min}} a {{max}}.',
+    umbralesEnOrden: 'Los umbrales deben crecer: medio menor que alto y alto menor que crítico.'
   }
 }
 
@@ -177,6 +199,27 @@ export const EN_P360: typeof ES_P360 = {
     meetings_per_month_target: 'Meetings per month target',
     policy_minutes_only_formal_types: 'Only formal types need approved minutes',
     policy_activation_preconditions: 'Require working CRS and a CLIENT or OPERATOR party to activate',
-    grupos: { grupos: 'Stakeholders', relacionamiento: 'Engagement', proyecto: 'Project' }
+    grievance_ack_days: 'Business days to acknowledge a grievance',
+    grievance_resolution_days: 'Days to resolve a grievance',
+    inquiry_response_days: 'Days to answer an inquiry',
+    policy_high_severity_requires_approver: 'An ALTA or CRITICA grievance is resolved by the approver',
+    risk_review_days: 'Days between reviews of a risk',
+    risk_medium_min_score: 'Score from which a risk is MEDIO',
+    risk_high_min_score: 'Score from which a risk is ALTO',
+    risk_critical_min_score: 'Score from which a risk is CRITICO',
+    grupos: {
+      grupos: 'Stakeholders',
+      relacionamiento: 'Engagement',
+      proyecto: 'Project',
+      quejas: 'Grievances, inquiries and requests',
+      riesgos: 'Risks'
+    },
+    ayudas: {
+      quejas:
+        'Acknowledgement counts business days (Monday to Friday, without holidays) from the day after reception; resolution and answer, calendar days. A change does not recompute deadlines already set.',
+      riesgos: 'The score is probability times impact, from 1 to 25. A threshold change does not recompute stored levels: the next review of each risk does.'
+    },
+    fueraDeRango: 'Type a whole number from {{min}} to {{max}}.',
+    umbralesEnOrden: 'Thresholds must grow: medium lower than high and high lower than critical.'
   }
 }
