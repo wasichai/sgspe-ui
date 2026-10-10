@@ -97,7 +97,20 @@ describe('incidentes', () => {
     )
   })
 
-  it('quien no crea riesgos no ve «Identificar un riesgo»; un incidente que no existe lo dice', async () => {
+  it('quien edita incidentes pero no crea riesgos no ve «Identificar un riesgo»; quien sí crea, lo ve', async () => {
+    const sinRiesgos = { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, social_risk: ['READ', 'UPDATE', 'EXPORT'] } }
+    fetch = mockFetch(rutasDeFicha())
+    const { unmount } = abrirFicha(GESTOR_DE_RIESGOS, sinRiesgos)
+    expect(await screen.findByRole('heading', { name: 'I-001', level: 1 })).toBeInTheDocument()
+    // «Editar» sale con la misma guarda de proyecto: con ella resuelta, la ausencia del enlace es por el permiso
+    expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Identificar un riesgo desde este incidente' })).not.toBeInTheDocument()
+    unmount()
+    abrirFicha(GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS)
+    expect(await screen.findByRole('link', { name: 'Identificar un riesgo desde este incidente' })).toBeInTheDocument()
+  })
+
+  it('un incidente que no existe lo dice y no ofrece identificar un riesgo', async () => {
     fetch = mockFetch(rutasDeFicha(RELACIONISTA, [{ path: '/objects/incident/records/n1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrirFicha(RELACIONISTA)
     expect(await screen.findByText('Este incidente no existe o no es de su organización.')).toBeInTheDocument()
