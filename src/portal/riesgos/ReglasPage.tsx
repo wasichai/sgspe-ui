@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Table, Td, Textarea, Th } from '@wasichai/ui'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
@@ -213,6 +213,17 @@ export function erroresDeRegla(v: Valores): Partial<Record<keyof Valores, 'nombr
   return errores
 }
 
+// lo que se manda de los valores del formulario (escalares: null o número, texto o booleano)
+const aAtributos = (v: Valores): Record<string, unknown> => ({
+  name: v.name.trim(),
+  rule_kind: v.rule_kind,
+  threshold: entero(v.threshold),
+  window_days: v.window_days.trim() === '' ? null : entero(v.window_days),
+  severity: v.severity || null,
+  enabled: v.enabled,
+  description: v.description.trim() || null
+})
+
 function FormularioDeRegla({ regla, proyecto, alTerminar }: { regla?: Registro; proyecto?: string; alTerminar: () => void }) {
   const { t } = useTranslation(NS)
   const definicion = useDefinicion(OBJETO)
@@ -230,6 +241,8 @@ function FormularioDeRegla({ regla, proyecto, alTerminar }: { regla?: Registro; 
     enabled: regla ? atributo(regla, 'enabled') === true : true,
     description: texto(regla, 'description')
   }))
+  // los valores con que se abrió el formulario: la base para saber qué cambió la persona
+  const alAbrir = useRef(valores)
   const [intentado, setIntentado] = useState(false)
   const errores = erroresDeRegla(valores)
   const error = crear.error ?? actualizar.error
@@ -246,17 +259,14 @@ function FormularioDeRegla({ regla, proyecto, alTerminar }: { regla?: Registro; 
   const guardar = () => {
     setIntentado(true)
     if (Object.keys(errores).length > 0) return
-    const atributos: Record<string, unknown> = {
-      name: valores.name.trim(),
-      rule_kind: valores.rule_kind,
-      threshold: entero(valores.threshold),
-      window_days: valores.window_days.trim() === '' ? null : entero(valores.window_days),
-      severity: valores.severity || null,
-      enabled: valores.enabled,
-      description: valores.description.trim() || null
-    }
-    if (regla) actualizar.mutate({ registro: regla, cambios: atributos }, { onSuccess: alTerminar })
-    else crear.mutate({ atributos: { ...atributos, ...(proyecto ? { project: proyecto } : {}) } }, { onSuccess: alTerminar })
+    const atributos = aAtributos(valores)
+    // al editar viaja solo lo que la persona cambió respecto de lo que abrió: lo demás lo toma atributosDeEscritura del registro
+    // vigente, así que tras «Recargar» un campo que otra persona cambió y esta no tocó conserva el valor nuevo
+    if (regla) {
+      const abiertos = aAtributos(alAbrir.current)
+      const cambios = Object.fromEntries(Object.entries(atributos).filter(([campo, valor]) => valor !== abiertos[campo]))
+      actualizar.mutate({ registro: regla, cambios }, { onSuccess: alTerminar })
+    } else crear.mutate({ atributos: { ...atributos, ...(proyecto ? { project: proyecto } : {}) } }, { onSuccess: alTerminar })
   }
   const enCurso = crear.isPending || actualizar.isPending
   return (

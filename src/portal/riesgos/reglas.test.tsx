@@ -125,6 +125,40 @@ describe('S60 · reglas de alerta', () => {
     expect(await screen.findByText(/desactívela en lugar de borrarla/)).toBeInTheDocument()
   })
 
+  it('editar manda solo lo que la persona cambió: tras un 412 y «Recargar», no pisa lo que otra persona guardó', async () => {
+    // A abre la regla con umbral 3 y cambia solo el nombre; B guarda umbral 5 antes
+    const DE_B = { ...REGLA, updatedAt: '2026-10-06T11:00:00Z', attributes: { ...REGLA.attributes, threshold: 5 } }
+    fetch = mockFetch(rutas())
+    let lecturas = 0
+    let cambios = 0
+    red = espiarRed([
+      { path: '/objects/early_warning_rule/records', responder: () => jsonResponse(pagina(++lecturas === 1 ? [REGLA] : [DE_B])) },
+      {
+        method: 'PUT',
+        path: '/objects/early_warning_rule/records/rg1',
+        responder: () => (++cambios === 1 ? problema(412, 'Precondition Failed') : jsonResponse(DE_B))
+      }
+    ])
+    delProyecto()
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Señales de conflicto' }))
+    const drawer = await screen.findByRole('dialog')
+    const nombre = await within(drawer).findByLabelText('Nombre')
+    await userEvent.clear(nombre)
+    await userEvent.type(nombre, 'Señales de bloqueo')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar' }))
+    expect(await within(drawer).findByRole('alert')).toHaveTextContent(/Otra persona cambió este registro/)
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Recargar' }))
+    await waitFor(() => expect(within(drawer).queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument())
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/early_warning_rule/records/rg1')).toHaveLength(2))
+    const [primero, segundo] = red.a('PUT', '/objects/early_warning_rule/records/rg1')
+    // el cuerpo lleva el registro vigente con lo cambiado encima: lo no tocado sale del registro, no del formulario
+    expect(primero.cuerpo).toMatchObject({ attributes: { name: 'Señales de bloqueo', threshold: 3 } })
+    expect(primero.cabeceras.get('If-Match')).toBe(`"${REGLA.updatedAt}"`)
+    expect(segundo.cuerpo).toMatchObject({ attributes: { name: 'Señales de bloqueo', threshold: 5 } })
+    expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-06T11:00:00Z"')
+  })
+
   it('quien solo lee ve las reglas sin «Nueva regla», editar, desactivar ni borrar', async () => {
     fetch = mockFetch(rutas(RELACIONISTA))
     delProyecto(RELACIONISTA, RELACIONES_EN_RIESGOS)
