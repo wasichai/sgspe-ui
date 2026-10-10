@@ -2,6 +2,14 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-11 — UPS-24: el servidor oculta el nombre y la huella
+
+- El servidor entrega el descriptor de una evidencia restringida sin `name` ni `sha256` (solo `id`, `contentType` y `size`) a
+  quien no tiene `DOWNLOAD_RESTRICTED`; la respuesta de la subida sigue completa.
+- `descriptorDe` exige solo `id`, `size` y `contentType`; `name` y `sha256` son opcionales y, si vienen, deben ser texto.
+- S46 sigue mostrando tipo y tamaño; sin nombre o sin huella dice «Archivo reservado» y «Reservada», y nunca `undefined`. El
+  portal conserva su regla de reservar ambos a quien no descarga, ahora como defensa adicional.
+
 ## 2026-10-11 — `@wasichai/*` 1.0.0
 
 - Antes del release 1.0.0, los diez paquetes (nueve de la app y `@wasichai/testing`) pasan de 0.6.0 a 1.0.0, el mismo

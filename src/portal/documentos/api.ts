@@ -137,7 +137,7 @@ export function useNombreDeArchivo(): (evidencia: Registro) => string | null {
   return (evidencia) => {
     const descriptor = descriptorDe(atributo(evidencia, 'file'))
     if (!descriptor) return null
-    return puedeDescargar(evidencia) ? descriptor.name : t('evidencias.archivoReservado')
+    return puedeDescargar(evidencia) && descriptor.name ? descriptor.name : t('evidencias.archivoReservado')
   }
 }
 

@@ -162,6 +162,50 @@ describe('S46 · ficha de evidencia', () => {
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })
 
+  // UPS-24: el servidor oculta el nombre y la huella a quien no descarga; el tipo y el tamaño siguen
+  it('un descriptor sin nombre ni huella muestra el tipo y el tamaño y reserva ambos, sin «undefined»', async () => {
+    const sinNombre = registro(
+      'ev1',
+      {
+        project: 'p1',
+        title: 'Lista de beneficiarios',
+        evidence_type: 'OTRO',
+        classification: 'CONFIDENCIAL',
+        file: { id: 'f1', contentType: 'application/pdf', size: 2_000_000 }
+      },
+      { updatedAt: '2026-10-05T15:00:00Z' }
+    )
+    fetch = mockFetch(rutasDeFicha([], sinNombre))
+    abrirFicha({ permisos: permisos({ project: ['READ'], project_assignment: ['READ'], evidence: ['READ'] }) })
+    expect(await screen.findByRole('heading', { name: 'Lista de beneficiarios', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('application/pdf')).toBeInTheDocument()
+    expect(screen.getByText('1.9 MB')).toBeInTheDocument()
+    expect(screen.getByText('Archivo reservado')).toBeInTheDocument()
+    expect(screen.getByText('Reservada')).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('undefined')
+  })
+
+  it('quien descarga, con un descriptor sin nombre ni huella, ve lo reservado y no «undefined»', async () => {
+    const sinNombre = registro(
+      'ev1',
+      {
+        project: 'p1',
+        title: 'Lista de beneficiarios',
+        evidence_type: 'OTRO',
+        classification: 'CONFIDENCIAL',
+        file: { id: 'f1', contentType: 'application/pdf', size: 2_000_000 }
+      },
+      { updatedAt: '2026-10-05T15:00:00Z' }
+    )
+    fetch = mockFetch(rutasDeFicha([], sinNombre))
+    abrirFicha()
+    expect(await screen.findByRole('heading', { name: 'Lista de beneficiarios', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('application/pdf')).toBeInTheDocument()
+    expect(screen.getByText('Archivo reservado')).toBeInTheDocument()
+    expect(screen.getByText('Reservada')).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('undefined')
+  })
+
   it('un objeto que el modelo del tenant no tiene (404) no se lista en «Sustenta» ni es un fallo', async () => {
     fetch = mockFetch(
       rutasDeFicha([
