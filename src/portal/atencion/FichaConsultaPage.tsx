@@ -13,7 +13,7 @@ import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import type { ObjetoDeQcs } from '../datos/atencion'
-import { instanteDeLima } from '../datos/fechas'
+import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
 import { rutaDeFicha } from '../datos/fichas'
 import { campoDe, texto, useDefinicion, usePuedeEditar, useRegistro, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
@@ -260,9 +260,6 @@ function Ficha({
     </article>
   )
 }
-
-// ahora en Lima como lo lee un datetime-local (AAAA-MM-DDTHH:mm): Lima es UTC-5 todo el año
-const ahoraEnLima = (): string => new Date(Date.now() - 5 * 3_600_000).toISOString().slice(0, 16)
 
 // aceptar la solicitud creando el compromiso (POST /api/sgspe/stakeholder-requests/{id}/accept): la respuesta y cuándo se comunicó,
 // los datos mínimos del compromiso que nace en borrador (código, título, monto y moneda; el resto se completa en su ficha antes de

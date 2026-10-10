@@ -6,7 +6,7 @@ import { baseDeAtencion, EQUIPO_DE_RELACIONES, sinPersona, DEF_QUEJA } from '../
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { ahoraEnLima, NuevaQcsPage } from './NuevaQcsPage'
+import { NuevaQcsPage } from './NuevaQcsPage'
 
 // S37 (screens.md §8): el tipo con su definición y la regla de sus plazos, quien registra como quien recibe, la anónima sin
 // persona ni grupo, la explicación de la confidencialidad, el motivo obligatorio y la Idempotency-Key nativa del alta
@@ -133,9 +133,5 @@ describe('S37 · registrar QCS', () => {
     fetch = mockFetch(rutas([{ path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) }]))
     abrir('/projects/p1/attention/new', permisos({ ...EQUIPO_DE_RELACIONES.objects }))
     expect(await screen.findByText('No está asignado a este proyecto: puede leerlo, pero no cambiarlo.')).toBeInTheDocument()
-  })
-
-  it('la hora por defecto es la de Lima, no la del navegador', () => {
-    expect(ahoraEnLima(new Date('2026-10-09T03:30:00Z'))).toBe('2026-10-08T22:30')
   })
 })

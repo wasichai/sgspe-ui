@@ -24,3 +24,21 @@ export const instanteDeLima = (local: string): string => {
   const enLima = new Date(fecha.getTime() - 5 * 3_600_000).toISOString()
   return enLima.startsWith(`${a}-${m}-${d}T${h}:${min}:${s}`) ? fecha.toISOString() : ''
 }
+
+// la hora de Lima de ahora, como la escribe un datetime-local (AAAA-MM-DDTHH:mm)
+export function ahoraEnLima(ahora: Date = new Date()): string {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    })
+      .formatToParts(ahora)
+      .map((x) => [x.type, x.value])
+  )
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
+}

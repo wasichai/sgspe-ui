@@ -15,6 +15,10 @@ const registroDe = (objeto: string, id: string): QueryKey[] => [
   ['history', objeto, id]
 ]
 
+// las cifras de QCS (tarjetas de S35, KPI-ENG-05 y los tableros) salen de los indicadores: cambiar el estado o el tipo de una QCS las
+// deja viejas
+const cifras = (): QueryKey[] => [['indicator'], ['dashboard']]
+
 export interface Reclasificacion {
   original: Registro
   created: Registro
@@ -38,7 +42,7 @@ export function useReclasificar(objeto: ObjetoDeQcs) {
       version: registro.updatedAt,
       motivo
     }),
-    { invalidar: (_r, { registro, destino }) => [...registroDe(objeto, registro.id), ['records', destino]] }
+    { invalidar: (_r, { registro, destino }) => [...registroDe(objeto, registro.id), ['records', destino], ...cifras()] }
   )
 }
 
@@ -67,7 +71,7 @@ export function useAceptarSolicitud() {
       version: solicitud.updatedAt,
       motivo
     }),
-    { invalidar: (_r, { solicitud }) => [...registroDe('stakeholder_request', solicitud.id), ['records', 'commitment']] }
+    { invalidar: (_r, { solicitud }) => [...registroDe('stakeholder_request', solicitud.id), ['records', 'commitment'], ...cifras()] }
   )
 }
 
@@ -100,7 +104,8 @@ export function useDerivarPregunta() {
         ['record', 'engagement_question', pregunta.id],
         ['records', 'engagement_question'],
         ['records', destino],
-        ['transition-check', 'engagement']
+        ['transition-check', 'engagement'],
+        ...cifras()
       ]
     }
   )

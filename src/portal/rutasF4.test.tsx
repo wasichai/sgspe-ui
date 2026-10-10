@@ -49,7 +49,7 @@ describe('rutas de F4', () => {
     fetch = abrirPortal('/projects/p1/attention', GESTORA_DE_QUEJAS, EQUIPO_DE_QUEJAS, deQuejas())
     expect(await screen.findByRole('heading', { name: 'Quejas, consultas y solicitudes', level: 1 })).toBeInTheDocument()
     const pestanas = screen.getByRole('navigation', { name: 'Secciones del proyecto' })
-    expect(within(pestanas).getByRole('link', { name: 'Quejas y consultas' })).toHaveAttribute('href', '/projects/p1/attention')
+    expect(within(pestanas).getByRole('link', { name: 'Quejas, consultas y solicitudes' })).toHaveAttribute('href', '/projects/p1/attention')
     // la gestión de quejas lee los riesgos (security.md §7.6): la pestaña Riesgos lleva al registro del proyecto
     expect(within(pestanas).getByRole('link', { name: 'Riesgos' })).toHaveAttribute('href', '/projects/p1/risks')
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })

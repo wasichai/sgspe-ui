@@ -118,6 +118,38 @@ describe('comandos de QCS', () => {
     expect(llamada.cabeceras.get('Idempotency-Key')).toBeTruthy()
   })
 
+  it('reclasificar, aceptar y derivar dejan viejas las cifras de los indicadores y tableros', async () => {
+    fetch = mockFetch([
+      { method: 'POST', path: '/sgspe/grievances/g1/reclassify', status: 201, body: { original: QUEJA, created: registro('i9', {}) } },
+      { method: 'POST', path: '/sgspe/stakeholder-requests/r1/accept', status: 201, body: { request: SOLICITUD, commitment: registro('c9', {}) } },
+      { method: 'POST', path: '/sgspe/engagement-questions/q1/referral', status: 201, body: { question: registro('q1', {}), created: CONSULTA } }
+    ])
+    red = espiarRed()
+    const invalidar = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
+    montar(
+      <>
+        <Reclasificar original={QUEJA} />
+        <Aceptar />
+        <Derivar />
+      </>,
+      { usuario: GESTORA_DE_QUEJAS, permisos: { ...EQUIPO_DE_QUEJAS, objects: { ...EQUIPO_DE_QUEJAS.objects, ...EQUIPO_DE_RELACIONES.objects } } }
+    )
+    for (const [boton, ruta] of [
+      ['Reclasificar', '/sgspe/grievances/g1/reclassify'],
+      ['Aceptar', '/sgspe/stakeholder-requests/r1/accept'],
+      ['Derivar', '/sgspe/engagement-questions/q1/referral']
+    ]) {
+      invalidar.mockClear()
+      await userEvent.click(screen.getByRole('button', { name: boton }))
+      await waitFor(() => expect(red!.a('POST', ruta)).toHaveLength(1))
+      await waitFor(() => {
+        const claves = invalidar.mock.calls.map(([f]) => JSON.stringify(f?.queryKey))
+        expect(claves).toContain(JSON.stringify(['indicator']))
+        expect(claves).toContain(JSON.stringify(['dashboard']))
+      })
+    }
+  })
+
   it('derivar una pregunta manda el destino y los datos de la QCS, con el motivo y la clave, sin If-Match', async () => {
     fetch = mockFetch([
       { method: 'POST', path: '/sgspe/engagement-questions/q1/referral', status: 201, body: { question: registro('q1', {}), created: CONSULTA } }
