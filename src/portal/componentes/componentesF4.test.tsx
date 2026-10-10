@@ -82,7 +82,7 @@ describe('vínculo a otro registro', () => {
     montar(<RegistroVinculado objeto="inquiry" id="i1" />)
     expect(await screen.findByText('Registro reservado')).toBeInTheDocument()
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
-    expect(screen.getByText('Registro reservado')).toHaveAccessibleDescription(/Es una QCS confidencial/)
+    expect(screen.getByText('Registro reservado')).toHaveAccessibleDescription(/Su cuenta no lee este registro/)
   })
 
   it('otro objeto que ya no existe lo dice; uno que la cuenta no lee es «No disponible»; sin id no dibuja nada', async () => {

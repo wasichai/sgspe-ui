@@ -83,6 +83,18 @@ describe('FormularioDeRegistro', () => {
     expect(screen.queryByText(/DERIVED_FIELD/)).not.toBeInTheDocument()
   })
 
+  it('un 404 al guardar dice que el registro no existe o no es de sus proyectos (alcance por proyecto), sin el detalle', async () => {
+    fetch = mockFetch([{ path: '/metadata/objects/community_sector', body: definicion('community_sector', [['name', { label: 'Nombre' }]]) }])
+    red = espiarRed([{ method: 'PUT', path: '/objects/community_sector/records/s1', responder: () => problema(404, 'Record s1 does not exist') }])
+    montar(<FormularioDeRegistro objeto="community_sector" registro={registro('s1', { name: 'Sector alto' })} />)
+    const nombre = await screen.findByLabelText('Nombre')
+    await userEvent.clear(nombre)
+    await userEvent.type(nombre, 'Sector bajo')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('El registro no existe o no es de sus proyectos.')
+    expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
+  })
+
   it('muestra todos los errores de campo reconocidos, cada uno con su etiqueta, no solo el primero', async () => {
     fetch = mockFetch([{ path: '/metadata/objects/community', body: COMUNIDAD }])
     red = espiarRed([

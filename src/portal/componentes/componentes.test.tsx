@@ -9,7 +9,7 @@ import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
 import { Campo } from './Campo'
 import { EstadoChip } from './EstadoChip'
-import { Cargando, Consulta, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido, ThConExplicacion } from './Estados'
+import { Cargando, Consulta, ErrorDeCarga, esIlegible, ExplicacionDeColumna, NoDisponible, NoEsDeSusProyectos, Restringido, ThConExplicacion } from './Estados'
 import { KpiCard } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
@@ -206,6 +206,24 @@ describe('Consulta (revisión final, I1)', () => {
     const noDisponible = await screen.findByText('No disponible')
     expect(document.getElementById(noDisponible.getAttribute('aria-describedby')!)).toHaveTextContent(/No tiene una asignación vigente/)
     expect(screen.getAllByRole('button', { name: 'Reintentar' })).toHaveLength(1)
+  })
+
+  it('con noExiste={<NoEsDeSusProyectos />}, un 404 dice que no existe o no es de sus proyectos, sin reintento ni el detalle', async () => {
+    montar(
+      <Consulta consulta={consulta(undefined, new ErrorDeSgspe(404, 'Record r9 does not exist', [], null))} noExiste={<NoEsDeSusProyectos />}>
+        {() => null}
+      </Consulta>
+    )
+    expect(await screen.findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
+  })
+
+  it('esIlegible es un 404 de la API y nada más', () => {
+    expect(esIlegible(new ErrorDeSgspe(404, 'x', [], null))).toBe(true)
+    expect(esIlegible(new ErrorDeSgspe(403, 'x', [], null))).toBe(false)
+    expect(esIlegible(new Error('sin red'))).toBe(false)
+    expect(esIlegible(null)).toBe(false)
   })
 })
 

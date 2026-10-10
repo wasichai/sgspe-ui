@@ -3,6 +3,9 @@
 export const ES_CONTEXTO = {
   proyecto: 'Proyecto',
   todos: 'Todos mis proyectos',
+  // con la acción de leer todos los proyectos (o ADMIN), el alcance global no es «mis» proyectos (plan 4.4b)
+  todosLosProyectos: 'Todos los proyectos',
+  sinProyectos: 'No tiene proyectos asignados. Pida una asignación al administrador de proyectos.',
   contexto: 'Contexto',
   territorio: 'Territorio: {{nombre}}',
   quitarTerritorio: 'Quitar el filtro de territorio',
@@ -36,6 +39,8 @@ export const ES_CONTEXTO = {
 export const EN_CONTEXTO: typeof ES_CONTEXTO = {
   proyecto: 'Project',
   todos: 'All my projects',
+  todosLosProyectos: 'All projects',
+  sinProyectos: 'You have no assigned projects. Ask the project administrator for an assignment.',
   contexto: 'Context',
   territorio: 'Territory: {{nombre}}',
   quitarTerritorio: 'Remove the territory filter',

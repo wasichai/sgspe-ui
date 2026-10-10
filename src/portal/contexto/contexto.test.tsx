@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { ADMIN_PERMISOS, permisos, RELACIONISTA } from '../../test/portal'
 import { BarraDeContexto } from './BarraDeContexto'
-import { useMisAsignaciones, useProyecto } from './proyectos'
+import { useLeeTodosLosProyectos, useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
 import { filtroDeTerritorio, rutaEquivalente } from './rutas'
 import { SelectorDeProyecto } from './SelectorDeProyecto'
@@ -66,6 +66,23 @@ describe('filtroDeTerritorio', () => {
     expect(filtroDeTerritorio({ kind: 'locality', id: 'l1' }, { locality: 'locality' })).toEqual({ locality: 'l1' })
     expect(filtroDeTerritorio({ kind: 'community', id: 'c1' }, { locality: 'locality' })).toBeNull()
     expect(filtroDeTerritorio(null, {})).toEqual({})
+  })
+})
+
+// la acción declarada READ_ALL_PROJECTS sobre project exime del alcance de lectura por proyecto (ADR-0029); ADMIN la tiene siempre
+describe('useLeeTodosLosProyectos', () => {
+  function Sonda() {
+    return <span>{useLeeTodosLosProyectos() ? 'lee todo' : 'lee lo suyo'}</span>
+  }
+  it.each([
+    ['con la acción sobre project', permisos({ project: ['READ', 'READ_ALL_PROJECTS'] }), 'lee todo'],
+    ['ADMIN', ADMIN_PERMISOS, 'lee todo'],
+    ['solo READ sobre project', permisos({ project: ['READ'] }), 'lee lo suyo'],
+    ['la acción sobre otro objeto no cuenta', permisos({ project: ['READ'], commitment: ['READ_ALL_PROJECTS'] }), 'lee lo suyo']
+  ])('%s', async (_caso, p, texto) => {
+    fetch = mockFetch([])
+    montar(<Sonda />, { permisos: p })
+    expect(await screen.findByText(texto)).toBeInTheDocument()
   })
 })
 
@@ -180,7 +197,7 @@ describe('barra de contexto y Project 360', () => {
   })
 
   it.each([
-    [404, 'El registro no existe o no es de su organización.'],
+    [404, 'El registro no existe o no es de sus proyectos.'],
     [403, 'Su cuenta no tiene permiso para esta acción. Pídalo a la administración del proyecto.']
   ])('un proyecto que responde %i dice el error y ofrece reintentar y volver a /projects', async (status, texto) => {
     fetch = mockFetch([

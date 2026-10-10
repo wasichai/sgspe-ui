@@ -66,7 +66,7 @@ export const ES_COMUN = {
     plural: { grievance: 'Quejas', inquiry: 'Consultas', stakeholder_request: 'Solicitudes' }
   },
   registroReservado: 'Registro reservado',
-  registroReservadoAyuda: 'Es una QCS confidencial: solo la leen la gestión de quejas, su responsable y quien la recibió.',
+  registroReservadoAyuda: 'Su cuenta no lee este registro: es de un proyecto al que no está asignada, es confidencial o ya no existe.',
   confidencialesOcultas: 'Esta cifra no incluye las QCS confidenciales que su cuenta no puede leer. Para el total, pídala a la gestión de quejas.',
   usuario: {
     deLaLista: 'Elija a la persona',
@@ -210,12 +210,14 @@ export const ES_COMUN = {
   codigosEnCampo: {
     vinculoDeComando:
       'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.',
-    qcsNoLeida: 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.'
+    qcsNoLeida: 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.',
+    // el 400 de wasichai sobre una relación cuyo destino la cuenta no lee: no existe o es de otro proyecto (spec 4.4 §3.6)
+    registroNoLegible: 'El registro elegido no existe o es de otro proyecto.'
   },
   errores: {
     '400': 'Revise los datos marcados.',
     '403': 'Su cuenta no tiene permiso para esta acción. Pídalo a la administración del proyecto.',
-    '404': 'El registro no existe o no es de su organización.',
+    '404': 'El registro no existe o no es de sus proyectos.',
     '409': 'No se pudo: el registro está en otro estado.',
     '412': 'Otra persona cambió este registro. Recargue para ver la versión actual; lo escrito se conserva.',
     '422': 'La consulta no es válida.',
@@ -283,7 +285,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     plural: { grievance: 'Grievances', inquiry: 'Inquiries', stakeholder_request: 'Requests' }
   },
   registroReservado: 'Reserved record',
-  registroReservadoAyuda: 'It is a confidential grievance, inquiry or request: only grievance management, its owner and whoever received it read it.',
+  registroReservadoAyuda: 'Your account cannot read this record: it belongs to a project it is not assigned to, it is confidential or it no longer exists.',
   confidencialesOcultas:
     'This figure does not include the confidential grievances, inquiries and requests your account cannot read. Ask grievance management for the total.',
   usuario: {
@@ -419,12 +421,13 @@ export const EN_COMUN: typeof ES_COMUN = {
   codigosEnCampo: {
     vinculoDeComando:
       'Only reclassification and acceptance write the link to the reclassified record or to the created commitment: reload and save again without changing it.',
-    qcsNoLeida: 'Your account cannot read that grievance, inquiry or request (it may be confidential): nothing is linked to it.'
+    qcsNoLeida: 'Your account cannot read that grievance, inquiry or request (it may be confidential): nothing is linked to it.',
+    registroNoLegible: 'The chosen record does not exist or belongs to another project.'
   },
   errores: {
     '400': 'Check the highlighted data.',
     '403': 'Your account is not allowed to do this. Ask the project administration.',
-    '404': 'The record does not exist or is not from your organization.',
+    '404': 'The record does not exist or is not in your projects.',
     '409': 'Not possible: the record is in another state.',
     '412': 'Someone else changed this record. Reload to see the current version; what you wrote is kept.',
     '422': 'The query is not valid.',
