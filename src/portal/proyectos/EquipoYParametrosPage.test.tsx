@@ -9,7 +9,7 @@ import { espiarRed, problema, type Red } from '../../test/red'
 import { useDefinicion } from '../datos/registros'
 import { PartesDelProyecto } from './EquipoYPartes'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
-import { problemasDeParametros } from './parametros'
+import { PARAMETROS_F2, PARAMETROS_F4, problemasDeParametros } from './parametros'
 
 let fetch: FetchMock | null = null
 let red: Red | null = null
@@ -570,6 +570,29 @@ describe('S11 · parámetros de F4', () => {
     { path: '/objects/project/records/p1', body: { ...P1, attributes: { ...P1.attributes, ...VACIOS } } },
     ...rutas()
   ]
+
+  it('cada parámetro dice qué controla, su unidad y su valor por defecto, sin códigos', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, conF4())
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    await screen.findByLabelText(/Días entre revisiones de un riesgo/)
+    const todos = [...PARAMETROS_F2, ...PARAMETROS_F4]
+    expect(todos).toHaveLength(15)
+    for (const p of todos) {
+      const campo = document.getElementById(`param-${p.campo}`)
+      expect(campo, p.campo).not.toBeNull()
+      const ayuda = campo!.getAttribute('aria-describedby')
+      expect(ayuda, p.campo).toContain(`param-${p.campo}-ayuda`)
+      const texto = document.getElementById(`param-${p.campo}-ayuda`)!.textContent!
+      const defecto = typeof p.porDefecto === 'boolean' ? (p.porDefecto ? 'activada' : 'desactivada') : String(p.porDefecto)
+      expect(texto.length, p.campo).toBeGreaterThan(30)
+      expect(texto, p.campo).toContain(`Por defecto: ${defecto}`)
+      expect(texto, p.campo).not.toMatch(/[A-Z]{2,}-\d|[a-z]+_[a-z_]+|\b(ALTA|CRITICA|MEDIO|ALTO|CRITICO)\b/)
+    }
+    // la unidad de los plazos: el acuse en días hábiles, los demás en días calendario
+    expect(document.getElementById('param-grievance_ack_days-ayuda')).toHaveTextContent(/días hábiles/i)
+    expect(document.getElementById('param-grievance_resolution_days-ayuda')).toHaveTextContent(/días calendario/i)
+    expect(document.getElementById('param-risk_high_min_score-ayuda')).toHaveTextContent('de 1 a 25')
+  })
 
   it('un tenant sin F4 no ve los parámetros de quejas ni de riesgos', async () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
