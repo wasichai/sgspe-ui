@@ -11,8 +11,21 @@ import { ES_COMUN } from '../textos/comun'
 const CON_DETALLE = new Set([400, 409])
 const CODIGOS = new Set(Object.keys(ES_COMUN.codigos))
 
-// lo que una pantalla dice distinto de un código, por ejemplo con la acción que ofrece: { MEMBERS_REQUIRED: '…' }
+// lo que una pantalla dice distinto de un código, por ejemplo con la acción que ofrece: { MEMBERS_REQUIRED: '…' }. una clave
+// «CÓDIGO:campo» gana sobre «CÓDIGO» cuando el mismo código dice otra cosa según el campo (STATE_MISMATCH sobre record o engagement)
 export type MensajesPropios = Partial<Record<string, string>>
+
+const QCS = new Set(['grievance', 'inquiry', 'stakeholder_request'])
+const campoDeComando = (campo: string) => /^(attributes\.)?(reclassified_from_|created_commitment$)/.test(campo)
+
+// el texto propio de un código sobre un campo (plan 4.2a), si lo tiene: COMMAND_ONLY sobre un vínculo que solo escriben la
+// reclasificación y la aceptación no es una transición de comando, y OBJECT_NOT_READABLE sobre una QCS es una que la cuenta no lee
+const claveEnCampo = (codigo: string, campo: string | undefined): string | null => {
+  if (!campo) return null
+  if (codigo === 'COMMAND_ONLY' && campoDeComando(campo)) return 'comun.codigosEnCampo.vinculoDeComando'
+  if (codigo === 'OBJECT_NOT_READABLE' && QCS.has(campo)) return 'comun.codigosEnCampo.qcsNoLeida'
+  return null
+}
 
 export function useMensajeDeError(): (error: unknown, propios?: MensajesPropios) => string {
   const { t } = useTranslation(NS)
@@ -28,8 +41,10 @@ export function useMensajeDeError(): (error: unknown, propios?: MensajesPropios)
     const dichos = new Set<string>()
     for (const v of error.violations) {
       if (!esCodigo(v.message)) continue
-      const propio = propios[v.message]
+      const propio = (v.field ? propios[`${v.message}:${v.field}`] : undefined) ?? propios[v.message]
+      const enCampo = claveEnCampo(v.message, v.field)
       if (propio) dichos.add(propio)
+      else if (enCampo) dichos.add(t(enCampo))
       else if (v.message === 'HAS_DEPENDENTS' && !v.field) dichos.add(t('comun.dependientesSinCampo'))
       else if (CODIGOS.has(v.message)) dichos.add(t(`comun.codigos.${v.message}`, { campo: v.field ?? '' }))
       else if (error.message) dichos.add(error.message)
@@ -51,11 +66,14 @@ export function useErroresDeCampo(): (error: unknown) => Record<string, string> 
     if (!(error instanceof ApiError) || (error.status !== 400 && error.status !== 409)) return {}
     const porCampo: Record<string, string[]> = {}
     for (const v of error.violations) {
+      const enCampo = esCodigo(v.message) ? claveEnCampo(v.message, v.field) : null
       const texto = !esCodigo(v.message)
         ? v.message
-        : CODIGOS.has(v.message)
-          ? t(`comun.codigos.${v.message}`, { campo: v.field })
-          : error.message || t(`comun.errores.${error.status}`)
+        : enCampo
+          ? t(enCampo)
+          : CODIGOS.has(v.message)
+            ? t(`comun.codigos.${v.message}`, { campo: v.field })
+            : error.message || t(`comun.errores.${error.status}`)
       // dos violaciones del mismo campo se unen: la segunda no pisa a la primera
       const textos = (porCampo[v.field] ??= [])
       if (!textos.includes(texto)) textos.push(texto)

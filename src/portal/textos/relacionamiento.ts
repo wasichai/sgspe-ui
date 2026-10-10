@@ -219,6 +219,7 @@ export const ES_RELACIONAMIENTO = {
     categoria: 'Categoría',
     falta: 'Este dato es obligatorio',
     fueraDeEstado: 'La interacción ya no está realizada sin cerrar: solo se derivan preguntas de una reunión realizada y sin cerrar.',
+    yaRespondida: 'Esa pregunta ya fue respondida: solo se deriva una pregunta pendiente. Recargue para verla.',
     confirmar: 'Derivar',
     derivando: 'Derivando…'
   }
@@ -442,6 +443,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     categoria: 'Category',
     falta: 'This value is required',
     fueraDeEstado: 'The engagement is no longer held and open: only questions of a held, open meeting are referred.',
+    yaRespondida: 'That question was already answered: only a pending question is referred. Reload to see it.',
     confirmar: 'Refer',
     derivando: 'Referring…'
   }

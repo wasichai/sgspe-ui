@@ -8,6 +8,7 @@ import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Consulta } from '../componentes/Estados'
+import { useErroresDeCampo } from '../componentes/errores'
 import { Historia } from '../componentes/Historia'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
@@ -263,12 +264,18 @@ function Ficha({
 
 // aceptar la solicitud creando el compromiso (POST /api/sgspe/stakeholder-requests/{id}/accept): la respuesta y cuándo se comunicó,
 // los datos mínimos del compromiso que nace en borrador (código, título, monto y moneda; el resto se completa en su ficha antes de
-// enviarlo a aprobación) y el motivo. un reintento repite la misma Idempotency-Key: no nacen dos compromisos
+// enviarlo a aprobación) y el motivo. un reintento repite la misma Idempotency-Key: no nacen dos compromisos. un 400 sobre la
+// respuesta, su fecha (respondedAt mal formado, plan 4.2a) o un dato del compromiso se dice junto a su control; el resto, en el aviso
+const CAMPOS_DE_ACEPTACION = ['response', 'respondedAt', 'code', 'title', 'amount', 'currency']
+
 function DialogoDeAceptacion({ solicitud, alCerrar }: { solicitud: Registro; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const navegar = useNavigate()
   const releer = useReleer()
   const aceptar = useAceptarSolicitud()
+  const erroresDeCampo = useErroresDeCampo()
+  const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(aceptar.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
+  const soloDeCampos = Object.keys(delServidor).length > 0 && Object.keys(delServidor).every((c) => CAMPOS_DE_ACEPTACION.includes(c))
   const definicion = useDefinicion('commitment')
   const monedas = campoDe(definicion.data, 'currency')?.enumOptions ?? ['PEN']
   const [valores, setValores] = useState({
@@ -309,37 +316,43 @@ function DialogoDeAceptacion({ solicitud, alCerrar }: { solicitud: Registro; alC
         <DialogTitle className="text-sg-h3 font-semibold">{t('fichaConsulta.solicitud.aceptar.titulo')}</DialogTitle>
         <DialogDescription className="text-sm text-sg-text-secondary">{t('fichaConsulta.solicitud.aceptar.descripcion')}</DialogDescription>
         <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto">
-          <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.respuesta')} error={falta('respuesta')}>
+          <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.respuesta')} error={falta('respuesta') ?? delServidor.response}>
             {(p) => <Textarea {...p} value={valores.respuesta} maxLength={4000} onChange={cambiar('respuesta')} />}
           </Campo>
           <Campo
             etiqueta={t('fichaConsulta.solicitud.aceptar.respondida')}
-            error={intentado && instante === '' ? t('fichaConsulta.solicitud.aceptar.falta') : undefined}
+            error={
+              intentado && instante === ''
+                ? t('fichaConsulta.solicitud.aceptar.falta')
+                : delServidor.respondedAt
+                  ? t('fichaConsulta.solicitud.aceptar.respondidaInvalida')
+                  : undefined
+            }
           >
             {(p) => <Input {...p} type="datetime-local" value={valores.respondida} onChange={cambiar('respondida')} />}
           </Campo>
           <fieldset className="space-y-3">
             <legend className="text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.compromiso')}</legend>
-            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.codigo')} error={falta('codigo')}>
+            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.codigo')} error={falta('codigo') ?? delServidor.code}>
               {(p) => <Input {...p} value={valores.codigo} maxLength={60} onChange={cambiar('codigo')} />}
             </Campo>
-            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.tituloDelCompromiso')} error={falta('titulo')}>
+            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.tituloDelCompromiso')} error={falta('titulo') ?? delServidor.title}>
               {(p) => <Input {...p} value={valores.titulo} maxLength={300} onChange={cambiar('titulo')} />}
             </Campo>
             <Campo
               etiqueta={t('fichaConsulta.solicitud.aceptar.monto')}
-              error={falta('monto') ?? (montoMal ? t('fichaConsulta.solicitud.aceptar.montoInvalido') : undefined)}
+              error={falta('monto') ?? (montoMal ? t('fichaConsulta.solicitud.aceptar.montoInvalido') : delServidor.amount)}
             >
               {(p) => <Input {...p} inputMode="decimal" value={valores.monto} onChange={cambiar('monto')} />}
             </Campo>
-            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.moneda')}>
+            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.moneda')} error={delServidor.currency}>
               {(p) => <SelectNativo {...p} vacio={false} value={valores.moneda} opciones={monedas} onChange={cambiar('moneda')} />}
             </Campo>
           </fieldset>
           <Campo etiqueta={t('comun.motivoObligatorio')} error={intentado && valores.motivo.trim() === '' ? t('comun.motivoFalta') : undefined}>
             {(p) => <Textarea {...p} value={valores.motivo} maxLength={500} onChange={cambiar('motivo')} />}
           </Campo>
-          {aceptar.isError ? (
+          {aceptar.isError && !soloDeCampos ? (
             <AvisoDeConflicto
               error={aceptar.error}
               releer={() => releer(['record', 'stakeholder_request', solicitud.id], ['transitions', 'stakeholder_request', solicitud.id])}

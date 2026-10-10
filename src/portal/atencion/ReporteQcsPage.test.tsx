@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeAtencion, EQUIPO_DE_RELACIONES } from '../../test/atencion'
 import { montar } from '../../test/montar'
@@ -108,6 +108,23 @@ describe('reporte unificado de QCS', () => {
     await waitFor(() =>
       expect(red!.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toBe('/sgspe/attention/report?project=p1&type=grievance&channel=CARTA&page=0&size=25')
     )
+  })
+
+  // plan 4.2a: una página más allá del final responde 200 con la lista vacía (por ejemplo, tras cerrar casos o con un enlace viejo):
+  // el reporte vuelve a la última página con casos en lugar de decir que no hay ninguno
+  it('una página más allá del final vuelve a la última página', async () => {
+    const lleno = (pagina: number, items: ReporteDeQcs['page']['items']) => ({ ...REPORTE, page: { ...REPORTE.page, page: pagina, items, totalElements: 30 } })
+    fetch = mockFetch(baseDeAtencion(RELACIONISTA))
+    red = espiarRed([
+      {
+        path: '/sgspe/attention/report',
+        responder: (llamada) => jsonResponse(llamada.ruta.includes('page=7') ? lleno(7, []) : lleno(1, REPORTE.page.items))
+      }
+    ])
+    abrir('/projects/p1/attention/report?page=7')
+    expect(await screen.findByRole('link', { name: 'Q-001' })).toBeInTheDocument()
+    expect(red.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toBe('/sgspe/attention/report?project=p1&page=1&size=25')
+    expect(screen.queryByText('No hay quejas, consultas ni solicitudes con estos filtros.')).not.toBeInTheDocument()
   })
 
   it('demasiados registros pide acotar, sin conteos; mientras carga no dibuja ceros', async () => {

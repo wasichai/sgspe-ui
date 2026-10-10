@@ -84,6 +84,27 @@ describe('estados comunes', () => {
     expect(screen.queryByText(/Su cuenta no tiene permiso para esta acción/)).not.toBeInTheDocument()
   })
 
+  // plan 4.2a: el mismo código dice otra cosa según el campo. COMMAND_ONLY sobre un vínculo que solo escriben la reclasificación y
+  // la aceptación no es una transición; OBJECT_NOT_READABLE sobre una QCS es una que la cuenta no lee (puede ser confidencial)
+  it.each([
+    [
+      'COMMAND_ONLY',
+      'reclassified_from_inquiry',
+      'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
+    ],
+    [
+      'COMMAND_ONLY',
+      'created_commitment',
+      'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
+    ],
+    ['OBJECT_NOT_READABLE', 'grievance', 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.'],
+    ['OBJECT_NOT_READABLE', 'stakeholder_request', 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.']
+  ])('un 403 %s sobre %s dice el texto de ese campo', async (codigo, campo, texto) => {
+    montar(<ErrorDeCarga error={new ErrorDeSgspe(403, 'Prohibido', [{ field: campo, message: codigo }], null)} />)
+    expect(await screen.findByText(texto)).toBeInTheDocument()
+    expect(screen.queryByText(codigo)).not.toBeInTheDocument()
+  })
+
   it('HAS_DEPENDENTS nombra el dependiente; un código que el portal no conoce muestra el detail', async () => {
     montar(
       <>

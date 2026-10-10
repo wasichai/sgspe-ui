@@ -1,6 +1,6 @@
 import { CORE_FIELD_TYPES, DynamicForm, toAttributes, toFormValues, type ObjectDefinition, type RecordPayload } from '@wasichai/core'
 import { useMemo, useRef } from 'react'
-import { esDerivado } from '../datos/derivados'
+import { esDeComando, esDerivado } from '../datos/derivados'
 import { useActualizar, useCrear, useDefinicion, type Registro } from '../datos/registros'
 import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
 import { useErroresDeCampo } from './errores'
@@ -30,7 +30,8 @@ export function prepararDefinicion(definicion: ObjectDefinition, objeto: string,
       .filter((f) => f.type !== 'GEOMETRY')
       .map((f) => {
         const oculto = esDerivado(objeto, f.name) || f.name in fijos || (campos !== undefined && !campos.includes(f.name))
-        return { ...f, visible: f.visible && !oculto, editable: f.editable && !esDerivado(objeto, f.name) }
+        // un campo de solo comando (CAMPOS_DE_COMANDO) se ve, pero no se edita: viaja tal como se leyó
+        return { ...f, visible: f.visible && !oculto, editable: f.editable && !esDerivado(objeto, f.name) && !esDeComando(objeto, f.name) }
       })
       .sort((a, b) => orden(a.name) - orden(b.name))
   }

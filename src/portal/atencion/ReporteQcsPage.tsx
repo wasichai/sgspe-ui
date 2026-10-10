@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Pagination, Table, Td, Th } from '@wasichai/ui'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 import { CONTROL, SelectNativo } from '../componentes/Campo'
@@ -79,6 +80,17 @@ export function ReporteQcsPage() {
     queryKey: ['attention-report', consulta(parametros)],
     queryFn: () => pedir<ReporteDeQcs>(`/sgspe/attention/report?${consulta(parametros)}`)
   })
+  // una página más allá del final responde 200 con la lista vacía (plan 4.2a: casos que se cerraron o un enlace viejo): se vuelve a
+  // la última página con casos, sin decir que no hay ninguno mientras tanto
+  const ultima = reporte.data ? Math.max(0, Math.ceil(reporte.data.page.totalElements / POR_PAGINA) - 1) : 0
+  const masAllaDelFinal = reporte.data !== undefined && reporte.data.page.items.length === 0 && pagina > ultima
+  useEffect(() => {
+    if (!masAllaDelFinal) return
+    const siguiente = new URLSearchParams(busqueda)
+    if (ultima > 0) siguiente.set('page', String(ultima))
+    else siguiente.delete('page')
+    fijar(siguiente, { replace: true })
+  }, [masAllaDelFinal, ultima, busqueda, fijar])
   const cambiar = (clave: string, valor: string) => {
     const siguiente = new URLSearchParams(busqueda)
     if (valor) siguiente.set(clave, valor)
@@ -125,7 +137,7 @@ export function ReporteQcsPage() {
           <SelectNativo value={filtro('category')} onChange={(e) => cambiar('category', e.target.value)} opciones={opciones('category')} />
         </label>
       </div>
-      {reporte.isPending ? (
+      {reporte.isPending || masAllaDelFinal ? (
         <Cargando />
       ) : reporte.isError && !reporte.data ? (
         codigo === 'TOO_MANY_RECORDS' ? (
