@@ -48,10 +48,17 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
 - La guarda de UI de una escritura con alcance de proyecto es `useEscribeEnProyecto` (`contexto/ProyectoLayout.tsx`): ADMIN
   la salta y los demás necesitan una asignación vigente. Las escrituras de `project_assignment` están exentas
   (security.md §9.2, ítem 5) y dependen solo de `can(...)`.
+- La lectura la acota el servidor (alcance por proyecto, ADR-0029): el portal no filtra por proyecto lo que lee. Si la cuenta
+  lee todos los proyectos lo dice solo `useLeeTodosLosProyectos` (`contexto/proyectos.ts`, `READ_ALL_PROJECTS` sobre
+  `project`; ADMIN siempre), el único lugar que nombra la acción (`boundaries.test.ts`). Un `404` nunca distingue «no
+  existe» de «no es de sus proyectos»: la ficha lo dice con `NoEsDeSusProyectos` y su `noExiste`
+  (`componentes/Estados.tsx`).
 - Un error de la API se muestra con `useMensajeDeError` o `useErroresDeCampo`, nunca con su `message`: el de una guarda
   es un código. Un código nuevo del backend suma su texto a `comun.codigos` en los dos idiomas.
-- Un vínculo a otro registro se dibuja con `RegistroVinculado` (`componentes/RegistroVinculado.tsx`): una QCS confidencial que
-  la cuenta no lee responde 404 y se dice «Registro reservado», sin enlace ni datos. `EnlaceDeFicha` (mismo archivo) lleva a la ficha de un
+- Un vínculo a otro registro se dibuja con `RegistroVinculado` (`componentes/RegistroVinculado.tsx`): un destino que responde 404
+  (de otro proyecto, una QCS confidencial o borrado; `esIlegible`) se dice «Registro reservado», sin enlace ni datos, y
+  `/r/:object/:recordId` hace lo mismo. El `400` de wasichai sobre una relación («no record with this id») se dice en su
+  campo con `comun.codigosEnCampo.registroNoLegible` (`componentes/errores.ts`). `EnlaceDeFicha` (mismo archivo) lleva a la ficha de un
   registro ya leído. Una cifra o una lista de QCS con
   `confidentialHidden` lleva `NotaDeConfidenciales`, sin conteo. La huella SHA-256 de una evidencia, como su nombre, solo para
   quien la descarga.
