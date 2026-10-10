@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { focusManager } from '@tanstack/react-query'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -239,6 +240,37 @@ describe('S48 · aprobaciones', () => {
     const fila = within(tabla).getByText('Registro reservado').closest('tr')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
     expect(within(fila).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    // la tercera columna es la del monto
+    expect(within(fila).getAllByRole('cell')[2]).toHaveTextContent(/^—$/)
+  })
+
+  // la asignación vence con la bandeja abierta: la relectura da 404 pero la fila ya leída se conserva entera, sin mezclar
+  // lo leído con «reservado» (como RegistroVinculado y AbrirRegistroPage, que también exigen que no haya datos)
+  it('una relectura que responde 404 conserva la fila ya leída con su enlace', async () => {
+    fetch = mockFetch(rutas())
+    let lecturas = 0
+    red = espiarRed([
+      {
+        path: '/objects/commitment/records/c7',
+        responder: () => (++lecturas === 1 ? jsonResponse(OTRO) : problema(404, 'Record c7 does not exist'))
+      }
+    ])
+    montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })
+    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    const fila = (await within(tabla).findByText('C-007 · Botiquín')).closest('tr')!
+    expect(within(fila).getByRole('link')).toBeInTheDocument()
+    act(() => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+    })
+    await waitFor(() => expect(lecturas).toBe(2))
+    // la respuesta tarda un instante en llegar a la consulta
+    await act(() => new Promise((r) => setTimeout(r, 50)))
+    focusManager.setFocused(undefined)
+    expect(within(fila).getByText('C-007 · Botiquín')).toBeInTheDocument()
+    expect(within(fila).getByText('Aprobación de compromiso')).toBeInTheDocument()
+    expect(within(fila).getByRole('link')).toBeInTheDocument()
+    expect(within(fila).queryByText('Registro reservado')).not.toBeInTheDocument()
   })
 
   it('sin el módulo de avisos lo dice en lugar de una bandeja vacía', async () => {

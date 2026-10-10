@@ -9,6 +9,7 @@ import { FichaGrupoPage } from './grupos/FichaGrupoPage'
 import { AreaDeInfluenciaPage } from './proyectos/AreaDeInfluenciaPage'
 import { EditorDeActaPage } from './relacionamiento/EditorDeActaPage'
 import { FichaInteraccionPage } from './relacionamiento/FichaInteraccionPage'
+import { VisitaDeCampoPage } from './relacionamiento/VisitaDeCampoPage'
 import { AprobacionPage } from './tareas/AprobacionPage'
 
 vi.mock('./graficos/Grafico', () => import('../test/graficoFalso'))
@@ -42,7 +43,8 @@ const FICHAS: [string, ComponentType, string, string, MockRoute[]][] = [
     [{ path: '/metadata/objects/engagement', body: definicion('engagement', ['title']) }]
   ],
   ['aprobación', AprobacionPage, '/tasks/approvals/commitment/r9', '/tasks/approvals/:object/:recordId', []],
-  ['área de influencia', AreaDeInfluenciaPage, '/projects/p1/areas/r9', '/projects/:projectId/areas/:areaId', []]
+  ['área de influencia', AreaDeInfluenciaPage, '/projects/p1/areas/r9', '/projects/:projectId/areas/:areaId', []],
+  ['visita de campo', VisitaDeCampoPage, '/projects/p1/field-visits/r9', '/projects/:projectId/field-visits/:visitId', []]
 ]
 
 describe('fichas de un registro que la cuenta no lee', () => {

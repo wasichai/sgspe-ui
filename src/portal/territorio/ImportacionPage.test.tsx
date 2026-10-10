@@ -105,6 +105,22 @@ describe('S15 · importación geoespacial', () => {
     expect(JSON.parse(String(vista.formulario?.get('columns')))).toEqual({ code: 'Hole ID', easting: 'East' })
   })
 
+  it('un proyecto de la dirección que responde 404 dice que no existe o no es de sus proyectos, sin reintento', async () => {
+    // un marcador viejo: el proyecto ya no es de los asignados o no existe (ADR-0029), y el portal no los distingue
+    const ilegible = {
+      path: '/objects/project/records/p9',
+      status: 404,
+      body: { title: 'Not Found', status: 404, detail: 'Record p9 does not exist', errors: [] }
+    }
+    fetch = abrirPortal('/territory/imports/new?project=p9', RELACIONISTA, GAN, [ilegible, ...rutas()])
+    const archivo = new File(['Hole ID,East,North'], 'sondajes.csv', { type: 'text/csv' })
+    await userEvent.upload(await screen.findByLabelText('Archivo (XLSX, CSV o GeoJSON)'), archivo)
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
+  })
+
   it('cambiar el CRS pide confirmarlo otra vez', async () => {
     fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
     await prepararHastaLaVistaPrevia()
