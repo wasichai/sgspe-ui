@@ -1,4 +1,85 @@
-// S41 · el centro de alerta temprana (F4). lo llena la tarea de su pantalla
-export const ES_ALERTAS = {}
+// S41 · el centro de alerta temprana (F4): la lista de alertas del proyecto y la ficha de una alerta con su regla, sus señales y
+// la decisión del triaje
+export const ES_ALERTAS = {
+  titulo: 'Alerta temprana',
+  tabla: 'Alertas del proyecto',
+  vacio: 'No hay alertas en esta vista',
+  truncado: 'Se muestran las primeras {{n}} alertas: hay más.',
+  vistas: { triaje: 'Por triar', activas: 'Confirmadas', todas: 'Todas', cerradas: 'Cerradas' },
+  columnas: { detectada: 'Detectada', titulo: 'Alerta', severidad: 'Severidad', regla: 'Origen', estado: 'Estado' },
+  aMano: 'Registrada a mano',
+  ficha: {
+    volver: 'Volver a las alertas',
+    noExiste: 'Esta alerta no existe o no es de su organización.',
+    detectada: 'Detectada el {{fecha}}',
+    severidad: 'Severidad',
+    sinSeveridad: 'Sin severidad',
+    disparo: 'Qué la disparó',
+    regla: 'Regla que la creó',
+    reglaNombre: 'Regla',
+    reglaTipo: 'Tipo',
+    reglaUmbral: 'Umbral',
+    reglaVentana: 'Ventana',
+    reglaDias: '{{n}} días',
+    creadaPorRegla: 'La creó la regla en su revisión automática: una persona decide si es real.',
+    aMano: 'La registró una persona: no la creó ninguna regla.',
+    soloGestion: 'Solo quien gestiona los riesgos confirma o descarta una alerta.',
+    riesgo: 'Riesgo vinculado',
+    sinRiesgo: 'Sin riesgo vinculado',
+    buscarRiesgo: 'Vincular riesgo: buscar por código o título',
+    riesgoVinculado: 'Riesgo vinculado.',
+    senales: 'Señales',
+    sinSenales: 'Ninguna señal vinculada a esta alerta.',
+    vincularSenal: 'Vincular señal…',
+    senalAVincular: 'Señal del proyecto sin alerta',
+    sinSenalesLibres: 'No hay señales del proyecto sin alerta.',
+    vincular: 'Vincular',
+    vinculando: 'Vinculando…',
+    senalVinculada: 'Señal vinculada.',
+    fuente: 'Fuente',
+    recibida: 'Recibida',
+    sinFuente: 'Sin fuente'
+  }
+}
 
-export const EN_ALERTAS: typeof ES_ALERTAS = {}
+export const EN_ALERTAS: typeof ES_ALERTAS = {
+  titulo: 'Early warning',
+  tabla: 'Project alerts',
+  vacio: 'There are no alerts in this view',
+  truncado: 'The first {{n}} alerts are shown: there are more.',
+  vistas: { triaje: 'To triage', activas: 'Confirmed', todas: 'All', cerradas: 'Closed' },
+  columnas: { detectada: 'Detected', titulo: 'Alert', severidad: 'Severity', regla: 'Origin', estado: 'State' },
+  aMano: 'Recorded by hand',
+  ficha: {
+    volver: 'Back to the alerts',
+    noExiste: 'This alert does not exist or is not from your organization.',
+    detectada: 'Detected on {{fecha}}',
+    severidad: 'Severity',
+    sinSeveridad: 'No severity',
+    disparo: 'What triggered it',
+    regla: 'Rule that created it',
+    reglaNombre: 'Rule',
+    reglaTipo: 'Kind',
+    reglaUmbral: 'Threshold',
+    reglaVentana: 'Window',
+    reglaDias: '{{n}} days',
+    creadaPorRegla: 'The rule created it in its automatic review: a person decides whether it is real.',
+    aMano: 'A person recorded it: no rule created it.',
+    soloGestion: 'Only risk management confirms or dismisses an alert.',
+    riesgo: 'Linked risk',
+    sinRiesgo: 'No linked risk',
+    buscarRiesgo: 'Link a risk: search by code or title',
+    riesgoVinculado: 'Risk linked.',
+    senales: 'Signals',
+    sinSenales: 'No signal is linked to this alert.',
+    vincularSenal: 'Link a signal…',
+    senalAVincular: 'Project signal without an alert',
+    sinSenalesLibres: 'There are no project signals without an alert.',
+    vincular: 'Link',
+    vinculando: 'Linking…',
+    senalVinculada: 'Signal linked.',
+    fuente: 'Source',
+    recibida: 'Received',
+    sinFuente: 'No source'
+  }
+}
