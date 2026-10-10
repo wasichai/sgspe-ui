@@ -7,10 +7,12 @@ import { ErrorDeSgspe, esCodigo, type Pedido } from './http'
 // descriptor en el campo. un reintento repite solo el segundo paso: el archivo ya subido no viaja otra vez
 export interface DescriptorDeArchivo {
   id: string
-  name: string
+  // UPS-24: el servidor los omite del descriptor que lee quien no descarga una evidencia restringida; la respuesta de la
+  // subida (201) los trae siempre
+  name?: string
   contentType: string
   size: number
-  sha256: string
+  sha256?: string
 }
 
 export async function subirArchivo(pedir: Pedido, objeto: string, campo: string, archivo: File): Promise<DescriptorDeArchivo> {
@@ -41,15 +43,16 @@ function conCodigoDeArchivo(error: unknown): unknown {
   return new ErrorDeSgspe(400, error.message, [{ field: 'file', message: codigo }], error instanceof ErrorDeSgspe ? error.correlationId : null)
 }
 
-// el valor de un campo FILE en un registro leído: el descriptor, o nada si el campo está vacío o es restringido
+// el valor de un campo FILE en un registro leído: el descriptor, o nada si el campo está vacío o es restringido. `name` y
+// `sha256` pueden faltar (UPS-24): quien llama no los da por hechos
 export function descriptorDe(valor: unknown): DescriptorDeArchivo | null {
   if (!valor || typeof valor !== 'object') return null
   const d = valor as Partial<DescriptorDeArchivo>
   return typeof d.id === 'string' &&
-    typeof d.name === 'string' &&
     typeof d.size === 'number' &&
     typeof d.contentType === 'string' &&
-    typeof d.sha256 === 'string'
+    (d.name === undefined || typeof d.name === 'string') &&
+    (d.sha256 === undefined || typeof d.sha256 === 'string')
     ? (d as DescriptorDeArchivo)
     : null
 }

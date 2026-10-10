@@ -55,9 +55,17 @@ describe('archivos', () => {
     expect(codigoDelError(error)).toBe(codigo)
   })
 
+  // UPS-24: el servidor entrega a quien no descarga una restringida solo { id, contentType, size }
+  it('lee el descriptor sin nombre ni huella', () => {
+    const d = { id: 'f1', size: 10, contentType: 'image/jpeg' }
+    expect(descriptorDe(d)).toEqual(d)
+  })
+
   it('lee el descriptor de un registro y dice el tamaño en es-PE', () => {
     expect(descriptorDe({ id: 'f1', name: 'a.jpg', size: 10, contentType: 'image/jpeg', sha256: 'x' })?.name).toBe('a.jpg')
     expect(descriptorDe({ id: 'f1', name: 'a.jpg', size: 10 })).toBeNull()
+    expect(descriptorDe({ id: 'f1', name: 5, size: 10, contentType: 'image/jpeg' })).toBeNull()
+    expect(descriptorDe({ id: 'f1', size: 10, contentType: 'image/jpeg', sha256: 7 })).toBeNull()
     expect(descriptorDe(null)).toBeNull()
     expect(descriptorDe('f1')).toBeNull()
     expect(tamanoPe(980)).toBe('980 B')
