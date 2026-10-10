@@ -26,7 +26,14 @@ export const ES_TABLERO_RIESGOS = {
   niveles: { BAJO: 'Bajo', MEDIO: 'Medio', ALTO: 'Alto', CRITICO: 'Crítico' },
   tendencias: { AUMENTA: 'Aumenta', 'SE MANTIENE': 'Se mantiene', DISMINUYE: 'Disminuye' },
   semana: 'Semana del',
-  sinFilas: 'No hay riesgos para estos filtros.',
+  sinFilas: 'No hay riesgos activos para estos filtros.',
+  // el vacío de un desglose cuando otro sí tiene filas: los riesgos activos no tienen esa dimensión registrada
+  sinDimension: {
+    locality: 'Ningún riesgo activo de estos filtros tiene localidad registrada.',
+    community: 'Ningún riesgo activo de estos filtros tiene comunidad registrada.',
+    areaOfInfluence: 'Ningún riesgo activo de estos filtros está en un área de influencia registrada.',
+    project: 'Ningún riesgo activo de estos filtros tiene proyecto.'
+  },
   sinDesglose: 'El desglose por territorio no está disponible.',
   atrasadasPor: 'Medidas atrasadas por',
   atrasadasDimensiones: { overdue: 'Medida', risk: 'Riesgo', owner: 'Responsable' },
@@ -60,7 +67,13 @@ export const EN_TABLERO_RIESGOS: typeof ES_TABLERO_RIESGOS = {
   niveles: { BAJO: 'Low', MEDIO: 'Medium', ALTO: 'High', CRITICO: 'Critical' },
   tendencias: { AUMENTA: 'Rising', 'SE MANTIENE': 'Stable', DISMINUYE: 'Falling' },
   semana: 'Week of',
-  sinFilas: 'There are no risks for these filters.',
+  sinFilas: 'There are no active risks for these filters.',
+  sinDimension: {
+    locality: 'No active risk for these filters has a recorded locality.',
+    community: 'No active risk for these filters has a recorded community.',
+    areaOfInfluence: 'No active risk for these filters is in a recorded area of influence.',
+    project: 'No active risk for these filters has a project.'
+  },
   sinDesglose: 'The breakdown by territory is not available.',
   atrasadasPor: 'Overdue measures by',
   atrasadasDimensiones: { overdue: 'Measure', risk: 'Risk', owner: 'Owner' },
