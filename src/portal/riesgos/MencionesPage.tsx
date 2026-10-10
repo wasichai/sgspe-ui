@@ -52,7 +52,7 @@ export function MencionesPage() {
   const navegar = useNavigate()
   const base = `/projects/${encodeURIComponent(projectId)}/risks/mentions`
   const columnas = [
-    { id: 'titular', encabezado: t('registrosDeAlerta.menciones.columnas.titular'), celda: (r: Registro) => texto(r, 'headline') },
+    { id: 'titular', encabezado: t('registrosDeAlerta.menciones.columnas.titular'), celda: (r: Registro) => texto(r, 'headline') || '—' },
     {
       id: 'fecha',
       encabezado: t('registrosDeAlerta.menciones.columnas.fecha'),

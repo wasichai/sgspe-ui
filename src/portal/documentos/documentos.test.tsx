@@ -162,6 +162,23 @@ describe('S46 · ficha de evidencia', () => {
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })
 
+  it('un objeto que el modelo del tenant no tiene (404) no se lista en «Sustenta» ni es un fallo', async () => {
+    fetch = mockFetch(
+      rutasDeFicha([
+        // un tenant de F3 no tiene las QCS: el relacionado responde 404
+        relacionados('grievance', 404),
+        relacionados('inquiry', [registro('i1', { project: 'p1', code: 'CON-001' })]),
+        ...['stakeholder_request', 'social_risk', 'incident', 'media_mention'].map((o) => relacionados(o, []))
+      ])
+    )
+    abrirFicha()
+    const sustenta = await screen.findByRole('region', { name: 'Sustenta' })
+    expect(await within(sustenta).findByRole('link', { name: 'Consulta: CON-001' })).toBeInTheDocument()
+    expect(within(sustenta).queryByText(/Queja/)).not.toBeInTheDocument()
+    expect(within(sustenta).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(within(sustenta).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('con DOWNLOAD_RESTRICTED se descarga por la ruta de SGSPE', async () => {
     fetch = mockFetch(rutasDeFicha())
     red = espiarRed([{ path: '/sgspe/evidence/ev1/content', responder: () => archivoXlsx('lista.pdf') }])

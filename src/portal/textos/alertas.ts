@@ -36,8 +36,6 @@ export const ES_ALERTAS = {
     vincular: 'Vincular',
     vinculando: 'Vinculando…',
     senalVinculada: 'Señal vinculada.',
-    fuente: 'Fuente',
-    recibida: 'Recibida',
     sinFuente: 'Sin fuente'
   }
 }
@@ -78,8 +76,6 @@ export const EN_ALERTAS: typeof ES_ALERTAS = {
     vincular: 'Link',
     vinculando: 'Linking…',
     senalVinculada: 'Signal linked.',
-    fuente: 'Source',
-    recibida: 'Received',
     sinFuente: 'No source'
   }
 }

@@ -396,6 +396,32 @@ describe('S23 · ficha de interacción', () => {
     await waitFor(() => expect(comprobaciones()).toBeGreaterThan(antes))
   })
 
+  it('cambiar el tipo de la derivación reinicia la categoría, que sale de la definición del tipo nuevo', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, CON_QCS, [definicionDeConsulta, definicionDeQueja, ...rutas()])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/engagement-questions/q1/referral',
+        responder: () => jsonResponse({ question: registro('q1', {}), created: registro('g5', { project: 'p1', code: 'Q-020' }) }, 201)
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Preguntas' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Derivar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Derivar la pregunta' })
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Consulta' }))
+    await userEvent.selectOptions(await within(dialogo).findByLabelText('Categoría'), 'OTRO')
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Queja' }))
+    expect(within(dialogo).getByLabelText('Categoría')).toHaveValue('')
+    await userEvent.type(within(dialogo).getByLabelText('Código de la QCS'), 'Q-020')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'reclamo de la asamblea')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Derivar' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/engagement-questions/q1/referral')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/engagement-questions/q1/referral')[0].cuerpo).toEqual({
+      target: 'grievance',
+      attributes: { code: 'Q-020', description: '¿Habrá empleo local?' }
+    })
+  })
+
   it('una pregunta ya derivada dice cuándo y enlaza la QCS que la cuenta lee; no ofrece derivar ni responder', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, CON_QCS, [
       {

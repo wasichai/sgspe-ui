@@ -5,8 +5,9 @@ import { NS } from '../i18n'
 import { CLASE_DE_TONO, type Tono } from './apariencias'
 
 // la situación de plazo de un compromiso, una QCS o una tarea (deadline_status), la de vigencia de un acuerdo (validity_status) y,
-// desde F4, la de revisión de un riesgo (review_status): las deriva JOB-01 y nunca son un estado del workflow (RN-WFL-001). el valor se muestra como se guarda (ASM-025), con tono e
-// ícono, nunca solo color (design-system.md §4.1). vacío fuera de los estados en que JOB-01 la calcula: no se dibuja nada
+// desde F4, la de revisión de un riesgo (review_status): las deriva JOB-01 y nunca son un estado del workflow (RN-WFL-001). el
+// valor se muestra como se guarda (ASM-025), con tono e ícono, nunca solo color (design-system.md §4.1). vacío fuera de los
+// estados en que JOB-01 la calcula: no se dibuja nada
 const APARIENCIA: Record<string, { tono: Tono; Icono: LucideIcon }> = {
   'AL DIA': { tono: 'success', Icono: CircleCheck },
   VIGENTE: { tono: 'success', Icono: CircleCheck },

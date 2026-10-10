@@ -1,11 +1,13 @@
+import { ApiError } from '@wasichai/core'
 import { useAvailableTransitions } from '@wasichai/workflow'
 import { Alert, cn, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
-import { Cargando, Vacio } from '../componentes/Estados'
+import { Cargando, Reservado, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
+import { esQcs } from '../datos/atencion'
 import { CLASE_DE_TIPO, FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS, sinBandeja, useAvisos, type Aviso } from '../datos/avisos'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { destinoDeAviso, rutaParaAbrir } from '../datos/fichas'
@@ -161,6 +163,9 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
           [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name') || texto(registro.data, 'category')]
             .filter(Boolean)
             .join(' · ')
+        ) : esQcs(objeto) && registro.error instanceof ApiError && registro.error.status === 404 ? (
+          // nadie borra una QCS (security.md §7.6): su 404 es una confidencial que la cuenta no lee (§9.6)
+          <Reservado />
         ) : (
           <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
         )}

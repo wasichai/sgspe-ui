@@ -63,7 +63,10 @@ export function AtencionPage() {
   const lecturas = { grievance: quejas, inquiry: consultas, stakeholder_request: solicitudes }
   const legibles = OBJETOS_DE_QCS.filter((o) => can(o, 'READ'))
   const proyectos = useProyectos()
-  const definicion = useDefinicion('grievance')
+  // canal y categoría usan el mismo ENUM en los tres tipos: sus opciones salen del primero que la cuenta lee. severity es solo de
+  // las quejas
+  const definicion = useDefinicion(legibles[0])
+  const conSeveridad = can('grievance', 'READ')
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const filtrosDeIndicador: FiltrosDeIndicador = proyecto ? { project: [proyecto] } : {}
   const abiertas = useIndicador('KPI-GRV-02', filtrosDeIndicador)
@@ -82,7 +85,7 @@ export function AtencionPage() {
       enVista(lista.vista, f, user?.id) &&
       (!canal || texto(f.registro, 'channel') === canal) &&
       (!categoria || texto(f.registro, 'category') === categoria) &&
-      (!severidad || texto(f.registro, 'severity') === severidad) &&
+      (!conSeveridad || !severidad || texto(f.registro, 'severity') === severidad) &&
       (!q || texto(f.registro, 'code').toLowerCase().includes(q) || texto(f.registro, 'description').toLowerCase().includes(q))
   )
   const porVencer = filas.filter((f) => estaAbierta(f.objeto, f.registro) && grupoDe(f) === 'porVencer').length
@@ -122,7 +125,12 @@ export function AtencionPage() {
           <KpiCard
             titulo={t('atencion.tarjetas.porVencer')}
             cargando={cargando}
-            indicador={cargando || fallida ? undefined : { code: 'por-vencer', label: t('atencion.tarjetas.porVencer'), available: true, value: porVencer }}
+            indicador={
+              cargando || fallida
+                ? undefined
+                : // sin ninguna QCS legible no hay cifra: «No disponible», nunca cero
+                  { code: 'por-vencer', label: t('atencion.tarjetas.porVencer'), available: legibles.length > 0, value: legibles.length > 0 ? porVencer : null }
+            }
             error={fallida?.error}
           />
           {tarjeta(absueltas.data?.label || t('atencion.tarjetas.absueltas'), absueltas)}
@@ -147,10 +155,12 @@ export function AtencionPage() {
           <span className="block">{t('atencion.categoria')}</span>
           <SelectNativo value={categoria} onChange={(e) => lista.cambiar({ category: e.target.value })} opciones={opciones('category')} />
         </label>
-        <label className="space-y-1">
-          <span className="block">{t('atencion.severidad')}</span>
-          <SelectNativo value={severidad} onChange={(e) => lista.cambiar({ severity: e.target.value })} opciones={opciones('severity')} />
-        </label>
+        {conSeveridad ? (
+          <label className="space-y-1">
+            <span className="block">{t('atencion.severidad')}</span>
+            <SelectNativo value={severidad} onChange={(e) => lista.cambiar({ severity: e.target.value })} opciones={opciones('severity')} />
+          </label>
+        ) : null}
       </div>
       {truncado ? <Alert tone="warning">{t('atencion.truncado', { n: numeroPe(1000) })}</Alert> : null}
       {legibles.length === 0 ? (
@@ -179,7 +189,7 @@ export function AtencionPage() {
                       {proyecto ? null : <Th scope="col">{t('atencion.columnas.proyecto')}</Th>}
                       <Th scope="col">{t('atencion.columnas.canal')}</Th>
                       <Th scope="col">{t('atencion.columnas.categoria')}</Th>
-                      <Th scope="col">{t('atencion.columnas.severidad')}</Th>
+                      {conSeveridad ? <Th scope="col">{t('atencion.columnas.severidad')}</Th> : null}
                       <Th scope="col">{t('atencion.columnas.estado')}</Th>
                       <Th scope="col">{t('atencion.columnas.plazo')}</Th>
                       <Th scope="col">{t('atencion.columnas.responsable')}</Th>
@@ -188,7 +198,13 @@ export function AtencionPage() {
                   </thead>
                   <tbody>
                     {delGrupo.map((f) => (
-                      <FilaDeQcs key={`${f.objeto}:${f.registro.id}`} fila={f} conProyecto={!proyecto} nombreDelProyecto={nombreDelProyecto} />
+                      <FilaDeQcs
+                        key={`${f.objeto}:${f.registro.id}`}
+                        fila={f}
+                        conProyecto={!proyecto}
+                        conSeveridad={conSeveridad}
+                        nombreDelProyecto={nombreDelProyecto}
+                      />
                     ))}
                   </tbody>
                 </Table>
@@ -201,7 +217,17 @@ export function AtencionPage() {
   )
 }
 
-function FilaDeQcs({ fila, conProyecto, nombreDelProyecto }: { fila: Fila; conProyecto: boolean; nombreDelProyecto: (id: string) => string }) {
+function FilaDeQcs({
+  fila,
+  conProyecto,
+  conSeveridad,
+  nombreDelProyecto
+}: {
+  fila: Fila
+  conProyecto: boolean
+  conSeveridad: boolean
+  nombreDelProyecto: (id: string) => string
+}) {
   const { t } = useTranslation(NS)
   const { objeto, registro } = fila
   const plazo = plazoQueCorre(objeto, registro)
@@ -216,7 +242,7 @@ function FilaDeQcs({ fila, conProyecto, nombreDelProyecto }: { fila: Fila; conPr
       {conProyecto ? <Td className="text-sm">{nombreDelProyecto(texto(registro, 'project'))}</Td> : null}
       <Td className="text-sm">{texto(registro, 'channel') || '—'}</Td>
       <Td className="text-sm">{texto(registro, 'category') || '—'}</Td>
-      <Td className="text-sm">{texto(registro, 'severity') || '—'}</Td>
+      {conSeveridad ? <Td className="text-sm">{texto(registro, 'severity') || '—'}</Td> : null}
       <Td>
         <EstadoChip objeto={objeto} estado={registro.state} />
       </Td>

@@ -95,7 +95,9 @@ export function useDerivarPregunta() {
       motivo
     }),
     {
-      invalidar: (_r, { destino }) => [
+      invalidar: (_r, { pregunta, destino }) => [
+        // la pregunta leída sola también: ahora lleva referred_at
+        ['record', 'engagement_question', pregunta.id],
         ['records', 'engagement_question'],
         ['records', destino],
         ['transition-check', 'engagement']

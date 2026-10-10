@@ -174,6 +174,22 @@ describe('S40 · ficha de riesgo', () => {
     expect(await within(lado).findByRole('link', { name: /Señales de conflicto/ })).toHaveAttribute('href', '/projects/p1/risks/warnings/w1')
   })
 
+  it('una queja o alerta que llega sin proyecto se nombra sin enlace', async () => {
+    const sinProyecto = (r: typeof QUEJA) => ({ ...r, attributes: { ...r.attributes, project: null, social_risk: 'k1' } })
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/grievance/records', body: pagina([sinProyecto(QUEJA)]) },
+        { path: '/objects/early_warning/records', body: pagina([sinProyecto(ALERTA)]) }
+      ])
+    )
+    abrir()
+    const lado = await screen.findByRole('complementary', { name: 'Lo alimentan' })
+    expect(await within(lado).findByText(/Q-001/)).toBeInTheDocument()
+    expect(await within(lado).findByText(/Señales de conflicto/)).toBeInTheDocument()
+    expect(within(lado).queryByRole('link', { name: /Q-001/ })).not.toBeInTheDocument()
+    expect(within(lado).queryByRole('link', { name: /Señales de conflicto/ })).not.toBeInTheDocument()
+  })
+
   it('quien solo lee no ve «Nueva revisión» ni «Editar»', async () => {
     fetch = mockFetch(rutas())
     abrir(RELACIONISTA, RELACIONES_EN_RIESGOS)

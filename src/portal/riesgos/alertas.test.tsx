@@ -180,7 +180,9 @@ describe('S41 · ficha de alerta', () => {
     await userEvent.type(await screen.findByLabelText('Vincular riesgo: buscar por código o título'), 'R-0')
     await userEvent.click(await screen.findByRole('button', { name: 'R-001 · Bloqueo de la vía de acceso por la comunidad' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/early_warning/records/w1')).toHaveLength(1))
-    expect(red.a('PUT', '/objects/early_warning/records/w1')[0].cuerpo).toMatchObject({ attributes: { social_risk: 'k1' } })
+    const [escritura] = red.a('PUT', '/objects/early_warning/records/w1')
+    expect(escritura.cuerpo).toMatchObject({ attributes: { social_risk: 'k1' } })
+    expect(escritura.cabeceras.get('If-Match')).toBe(`"${ALERTA_LEIDA.updatedAt}"`)
   })
 
   it('una alerta que no existe lo dice con su texto', async () => {

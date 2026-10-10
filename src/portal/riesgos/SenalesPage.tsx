@@ -19,7 +19,7 @@ export function SenalesPage() {
   const navegar = useNavigate()
   const base = `/projects/${encodeURIComponent(projectId)}/risks/signals`
   const columnas = [
-    { id: 'descripcion', encabezado: t('registrosDeAlerta.senales.columnas.descripcion'), celda: (r: Registro) => resumen(texto(r, 'description')) },
+    { id: 'descripcion', encabezado: t('registrosDeAlerta.senales.columnas.descripcion'), celda: (r: Registro) => resumen(texto(r, 'description')) || '—' },
     {
       id: 'recibida',
       encabezado: t('registrosDeAlerta.senales.columnas.recibida'),

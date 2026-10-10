@@ -79,6 +79,25 @@ describe('reporte unificado de QCS', () => {
     expect(within(lista).getByLabelText('Situación de plazo: VENCIDO')).toBeInTheDocument()
   })
 
+  it('«Anónima» sin dato dice «—», no «No»', async () => {
+    const [item] = REPORTE.page.items
+    const conAnonimas = {
+      ...REPORTE,
+      page: { ...REPORTE.page, items: [item, { ...item, id: 'g2', code: 'Q-002', anonymous: false }, { ...item, id: 'g3', code: 'Q-003', anonymous: null }] }
+    }
+    fetch = mockFetch([...baseDeAtencion(RELACIONISTA), { path: '/sgspe/attention/report', body: conAnonimas }])
+    abrir()
+    const lista = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes del reporte' })
+    const ultima = (codigo: string) =>
+      within(lista)
+        .getByRole('row', { name: new RegExp(codigo) })
+        .querySelectorAll('td')
+    const anonima = (codigo: string) => Array.from(ultima(codigo)).at(-1)?.textContent
+    expect(anonima('Q-001')).toBe('Sí')
+    expect(anonima('Q-002')).toBe('No')
+    expect(anonima('Q-003')).toBe('—')
+  })
+
   it('pide con el proyecto y los filtros de la URL, sin los vacíos; un filtro nuevo vuelve a la primera página', async () => {
     fetch = mockFetch([...baseDeAtencion(RELACIONISTA), { path: '/sgspe/attention/report', body: REPORTE }])
     red = espiarRed()

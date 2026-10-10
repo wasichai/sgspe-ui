@@ -261,7 +261,7 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
                       <Td className="text-sm">{x.dueDate ? diaPe(x.dueDate) : '—'}</Td>
                       <Td className="text-sm">{x.ownerEmail ?? '—'}</Td>
                       <Td className="text-sm">{x.respondedAt ? fechaYHoraPe(new Date(x.respondedAt)) : '—'}</Td>
-                      <Td className="text-sm">{x.anonymous === true ? t('comun.si') : t('comun.no')}</Td>
+                      <Td className="text-sm">{x.anonymous === null || x.anonymous === undefined ? '—' : x.anonymous ? t('comun.si') : t('comun.no')}</Td>
                     </tr>
                   ))}
                 </tbody>

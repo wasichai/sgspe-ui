@@ -142,7 +142,10 @@ const cifra = (fila: FilaDeDesglose, clave: string): string => {
 function PorTerritorio({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const disponibles = DIMENSIONES.filter((d) => indicador.breakdowns?.some((b) => b.by === d))
-  const [dimension, setDimension] = useState<string>(disponibles[0] ?? 'locality')
+  const [elegida, setDimension] = useState<string>(disponibles[0] ?? 'locality')
+  // la elegida solo si llegó (otros filtros pueden no traerla); si no, la primera. sin desgloses no se afirma que no hay riesgos
+  const dimension = disponibles.includes(elegida as (typeof disponibles)[number]) ? elegida : disponibles[0]
+  if (!dimension) return <p className="text-sm text-sg-text-muted">{t('tableroRiesgos.sinDesglose')}</p>
   const filas = desglose(indicador, dimension)
   const nombre = t(`tableroRiesgos.dimensiones.${dimension}`, { defaultValue: dimension })
   return (
@@ -227,8 +230,10 @@ function Semanas({ indicador, titulo }: { indicador: Indicador; titulo: string }
 function Atrasadas({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const disponibles = (['risk', 'owner', 'overdue'] as const).filter((d) => indicador.breakdowns?.some((b) => b.by === d))
-  const [dimension, setDimension] = useState<string>(disponibles[0] ?? 'risk')
-  if (disponibles.length === 0) return <NotasDeIndicador indicador={indicador} />
+  const [elegida, setDimension] = useState<string>(disponibles[0] ?? 'risk')
+  // la elegida solo si llegó; si no, la primera
+  const dimension = disponibles.includes(elegida as (typeof disponibles)[number]) ? elegida : disponibles[0]
+  if (!dimension) return <NotasDeIndicador indicador={indicador} />
   const filas = desglose(indicador, dimension)
   const nombre = t(`tableroRiesgos.atrasadasDimensiones.${dimension}`)
   return (
@@ -246,22 +251,24 @@ function Atrasadas({ indicador }: { indicador: Indicador }) {
           </select>
         </label>
       ) : null}
-      <Table aria-label={t('tableroRiesgos.tablaAtrasadas', { dimension: nombre })}>
-        <thead>
-          <tr>
-            <Th scope="col">{nombre}</Th>
-            <Th scope="col">{t('tableroRiesgos.cantidad')}</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((f) => (
-            <tr key={f.key}>
-              <Td className="text-sm">{f.label ?? f.key}</Td>
-              <Td className="text-sm tabular-nums">{f.value === null ? '—' : numeroPe(f.value)}</Td>
+      {filas.length === 0 ? null : (
+        <Table aria-label={t('tableroRiesgos.tablaAtrasadas', { dimension: nombre })}>
+          <thead>
+            <tr>
+              <Th scope="col">{nombre}</Th>
+              <Th scope="col">{t('tableroRiesgos.cantidad')}</Th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.key}>
+                <Td className="text-sm">{f.label ?? f.key}</Td>
+                <Td className="text-sm tabular-nums">{f.value === null ? '—' : numeroPe(f.value)}</Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
     </div>
   )
 }

@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { QueryClient } from '@tanstack/react-query'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeAtencion, CONSULTA, EQUIPO_DE_QUEJAS, EQUIPO_DE_RELACIONES, GESTORA_DE_QUEJAS, QUEJA, SOLICITUD } from '../../test/atencion'
 import { montar, registro, ubicacion } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -15,6 +16,7 @@ let fetch: FetchMock | null = null
 let red: Red | null = null
 beforeEach(() => localStorage.clear())
 afterEach(() => {
+  vi.restoreAllMocks()
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
@@ -121,8 +123,13 @@ describe('comandos de QCS', () => {
       { method: 'POST', path: '/sgspe/engagement-questions/q1/referral', status: 201, body: { question: registro('q1', {}), created: CONSULTA } }
     ])
     red = espiarRed()
+    const invalidar = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
     montar(<Derivar />, { usuario: RELACIONISTA, permisos: EQUIPO_DE_RELACIONES })
     await userEvent.click(screen.getByRole('button', { name: 'Derivar' }))
+    // la pregunta leída sola también queda vieja: ahora tiene referred_at
+    await waitFor(() =>
+      expect(invalidar.mock.calls.map(([f]) => JSON.stringify(f?.queryKey))).toContain(JSON.stringify(['record', 'engagement_question', 'q1']))
+    )
     await waitFor(() => expect(red!.a('POST', '/sgspe/engagement-questions/q1/referral')).toHaveLength(1))
     const [llamada] = red.a('POST', '/sgspe/engagement-questions/q1/referral')
     expect(llamada.cuerpo).toEqual({ target: 'inquiry', attributes: { code: 'C-020', description: '¿Habrá empleo local?' } })
@@ -168,7 +175,28 @@ describe('diálogo de reclasificación', () => {
     expect(red.a('POST', '/sgspe/grievances/g1/reclassify')[0].cuerpo).toEqual({ targetType: 'stakeholder_request', attributes: { code: 'S-009' } })
   })
 
-  it('el estado que cambió mientras tanto dice su texto, y un 412 ofrece «Recargar»', async () => {
+  it('el estado que cambió mientras tanto (409 STATE_MISMATCH) dice su texto', async () => {
+    fetch = mockFetch([
+      ...baseDeAtencion(),
+      { path: '/objects/grievance/records/g1', body: QUEJA },
+      transiciones([]),
+      {
+        method: 'POST',
+        path: '/sgspe/grievances/g1/reclassify',
+        status: 409,
+        body: { title: 'Conflict', status: 409, detail: 'estado', errors: [{ field: 'state', message: 'STATE_MISMATCH' }] }
+      }
+    ])
+    abrir()
+    const dialogo = await screen.findByRole('dialog', { name: 'Reclasificar' })
+    await userEvent.type(within(dialogo).getByLabelText('Código del registro nuevo'), 'C-009')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'era una consulta')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Reclasificar' }))
+    expect(await within(dialogo).findByText(/ya no está en el estado de partida/)).toBeInTheDocument()
+    expect(within(dialogo).queryByText(/STATE_MISMATCH/)).not.toBeInTheDocument()
+  })
+
+  it('un 412 ofrece «Recargar»', async () => {
     fetch = mockFetch([
       ...baseDeAtencion(),
       { path: '/objects/grievance/records/g1', body: QUEJA },

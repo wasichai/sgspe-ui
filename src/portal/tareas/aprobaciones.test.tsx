@@ -188,6 +188,28 @@ describe('S48 · aprobaciones', () => {
     expect(await screen.findByRole('heading', { name: 'Pendiente k1' })).toBeInTheDocument()
   })
 
+  it('la queja de un aviso que responde 404 es «Registro reservado», no un fallo de lectura', async () => {
+    fetch = mockFetch(
+      rutas([
+        {
+          path: '/auth/me/notifications',
+          body: { content: [aviso('n7', 'grievance', 'g1')], page: 0, size: 200, totalElements: 1, totalPages: 1 }
+        },
+        // una queja confidencial que la cuenta ya no lee responde 404: nadie borra una QCS
+        { path: '/objects/grievance/records/g1', status: 404, body: { title: 'Not Found', status: 404, detail: 'x' } }
+      ])
+    )
+    montar(<AprobacionesPage />, {
+      ruta: '/tasks/approvals',
+      camino: '/tasks/approvals',
+      usuario: APROBADORA,
+      permisos: permisos({ grievance: ['READ', 'UPDATE', 'APPROVE'] })
+    })
+    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
+    expect(within(tabla).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+  })
+
   it('sin el módulo de avisos lo dice en lugar de una bandeja vacía', async () => {
     fetch = mockFetch(rutas().filter((r) => r.path !== '/auth/me/notifications'))
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })

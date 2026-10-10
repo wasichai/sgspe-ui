@@ -13,13 +13,12 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { RegistrosSimples } from '../componentes/RegistrosSimples'
-import { RegistroVinculado } from '../componentes/RegistroVinculado'
+import { EnlaceDeFicha, RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto } from '../contexto/proyectos'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { hoyEnLima } from '../datos/fechas'
-import { rutaDeFicha } from '../datos/fichas'
 import { atributo, texto, usePuedeEditar, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
@@ -395,7 +394,8 @@ function NuevaRevision({
     if (faltaMotivo || faltaFecha || !completos) return
     revisar.mutate(
       { riesgo, fecha, probabilidad: Number(probabilidad), impacto: Number(impacto), residual: !primera && residual, notas, motivo: motivo.trim() },
-      { onSuccess: ({ risk }) => alRegistrar(texto(risk, residual ? 'residual_level' : 'risk_level') || null) }
+      // el nivel que se anuncia es el de lo que se mandó (!primera && residual), no el de la casilla
+      { onSuccess: ({ risk }, enviada) => alRegistrar(texto(risk, enviada.residual ? 'residual_level' : 'risk_level') || null) }
     )
   }
   return (
@@ -485,9 +485,9 @@ function LoAlimentan({ riesgo }: { riesgo: Registro }) {
           <ul>
             {(consulta.data ?? []).map((r) => (
               <li key={r.id}>
-                <Link to={rutaDeFicha(objeto, r) ?? '#'} className="text-sg-primary-text underline">
+                <EnlaceDeFicha objeto={objeto} registro={r}>
                   {[texto(r, 'code'), texto(r, 'title') || texto(r, 'category')].filter(Boolean).join(' · ')}
-                </Link>{' '}
+                </EnlaceDeFicha>{' '}
                 <EstadoChip objeto={objeto} estado={r.state} />
               </li>
             ))}
