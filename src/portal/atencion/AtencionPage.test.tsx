@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { baseDeAtencion, CONSULTA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA, SOLICITUD } from '../../test/atencion'
+import { baseDeAtencion, CANALES, CONSULTA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA, SOLICITUD } from '../../test/atencion'
 import { P1 } from '../../test/compromisos'
 import { montar, pagina, registro } from '../../test/montar'
 import { permisos } from '../../test/portal'
@@ -97,6 +97,25 @@ describe('S35 · lista unificada de QCS', () => {
     expect(screen.queryByRole('link', { name: 'Q-001' })).not.toBeInTheDocument()
     expect(fetch.calls.some((c) => c.url.includes('/objects/grievance/records'))).toBe(false)
     expect(screen.queryByRole('link', { name: 'Registrar QCS' })).not.toBeInTheDocument()
+  })
+
+  it('los filtros salen de la definición de un tipo que la cuenta lee; «Severidad» solo para quien lee quejas', async () => {
+    fetch = mockFetch(rutas())
+    abrir(permisos({ project: ['READ'], project_assignment: ['READ'], inquiry: ['READ'] }))
+    await screen.findByRole('link', { name: 'C-001' })
+    const canal = screen.getByLabelText('Canal')
+    expect(within(canal).getByRole('option', { name: CANALES[0] })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Severidad')).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Severidad' })).not.toBeInTheDocument()
+    expect(fetch.calls.some((c) => c.url.includes('/metadata/objects/grievance'))).toBe(false)
+  })
+
+  it('sin ninguna QCS legible «Por vencer» dice «No disponible», no cero', async () => {
+    fetch = mockFetch(rutas())
+    abrir(permisos({ project: ['READ'], project_assignment: ['READ'] }))
+    const porVencer = await within(await screen.findByRole('region', { name: 'Indicadores' })).findByRole('region', { name: 'Por vencer' })
+    expect(porVencer).toHaveTextContent('No disponible')
+    expect(porVencer).not.toHaveTextContent('0')
   })
 
   it('un fallo de lectura se dice con su reintento, no como una lista vacía', async () => {

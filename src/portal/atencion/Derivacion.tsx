@@ -65,7 +65,16 @@ export function DialogoDeDerivacion({
             <legend className="text-sg-body-sm font-medium">{t('relacionamiento.derivacion.destino')}</legend>
             {destinos.map((o) => (
               <label key={o} className="flex items-center gap-2 text-sm">
-                <input type="radio" name="destino-de-la-pregunta" checked={destino === o} onChange={() => setDestino(o)} />
+                <input
+                  type="radio"
+                  name="destino-de-la-pregunta"
+                  checked={destino === o}
+                  onChange={() => {
+                    // la categoría es de la definición del tipo: otro tipo empieza sin ella
+                    setDestino(o)
+                    setCategoria('')
+                  }}
+                />
                 {t(`comun.qcs.${o}`)}
               </label>
             ))}
