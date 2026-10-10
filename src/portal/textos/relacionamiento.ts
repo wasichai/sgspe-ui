@@ -64,7 +64,8 @@ export const ES_RELACIONAMIENTO = {
     respuesta: 'Respuesta',
     guardarRespuesta: 'Guardar respuesta',
     usarAlineada: 'Usar respuesta alineada',
-    derivarLlega: 'Derivar a una QCS llega en F4',
+    derivar: 'Derivar…',
+    derivada: 'Derivada el {{fecha}}',
     agregarPregunta: 'Agregar pregunta',
     verActa: 'Ver el acta',
     editarActa: 'Redactar el acta',
@@ -206,7 +207,21 @@ export const ES_RELACIONAMIENTO = {
     resueltas: 'Inquietudes resueltas',
     temas: 'Temas consultados'
   },
-  columnasInformativas: { reunion: 'Reunión', total: 'Asistentes', femenino: '% femenino', aids: 'Del AIDS', aiis: 'Del AIIS' }
+  columnasInformativas: { reunion: 'Reunión', total: 'Asistentes', femenino: '% femenino', aids: 'Del AIDS', aiis: 'Del AIIS' },
+  // F4: derivar una pregunta pendiente a una QCS (S23)
+  derivacion: {
+    titulo: 'Derivar la pregunta',
+    descripcion:
+      'Nace una queja, una consulta o una solicitud del proyecto, con el canal reunión y la fecha de la interacción; la pregunta queda atendida para cerrar la interacción.',
+    destino: 'Derivar como',
+    codigo: 'Código de la QCS',
+    quePlantea: 'Qué plantea',
+    categoria: 'Categoría',
+    falta: 'Este dato es obligatorio',
+    fueraDeEstado: 'La interacción ya no está realizada sin cerrar: solo se derivan preguntas de una reunión realizada y sin cerrar.',
+    confirmar: 'Derivar',
+    derivando: 'Derivando…'
+  }
 }
 
 export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
@@ -273,7 +288,8 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     respuesta: 'Answer',
     guardarRespuesta: 'Save answer',
     usarAlineada: 'Use an aligned answer',
-    derivarLlega: 'Referral to a grievance arrives in F4',
+    derivar: 'Refer…',
+    derivada: 'Referred on {{fecha}}',
     agregarPregunta: 'Add question',
     verActa: 'View the minutes',
     editarActa: 'Draft the minutes',
@@ -415,5 +431,18 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     resueltas: 'Concerns resolved',
     temas: 'Topics raised'
   },
-  columnasInformativas: { reunion: 'Meeting', total: 'Attendees', femenino: '% female', aids: 'From AIDS', aiis: 'From AIIS' }
+  columnasInformativas: { reunion: 'Meeting', total: 'Attendees', femenino: '% female', aids: 'From AIDS', aiis: 'From AIIS' },
+  derivacion: {
+    titulo: 'Refer the question',
+    descripcion:
+      'A grievance, inquiry or request of the project is born, with the meeting channel and the engagement date; the question counts as attended to close the engagement.',
+    destino: 'Refer as',
+    codigo: 'Code of the new record',
+    quePlantea: 'What it raises',
+    categoria: 'Category',
+    falta: 'This value is required',
+    fueraDeEstado: 'The engagement is no longer held and open: only questions of a held, open meeting are referred.',
+    confirmar: 'Refer',
+    derivando: 'Referring…'
+  }
 }

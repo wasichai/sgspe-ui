@@ -352,4 +352,91 @@ describe('S23 · ficha de interacción', () => {
     expect(await screen.findByText(/smg@sgspe.test/)).toBeInTheDocument()
     expect(screen.getByText(/Cierre/)).toBeInTheDocument()
   })
+
+  // F4 (RF-ENG-006, api.md §4.4): una pregunta pendiente se deriva a una QCS con su comando; derivada, queda atendida y enlaza la QCS
+  // si la cuenta la lee
+  const CON_QCS = { ...EQUIPO, objects: { ...EQUIPO.objects, inquiry: ['READ', 'CREATE'], grievance: ['READ', 'CREATE'] } }
+  const definicionDeConsulta = {
+    path: '/metadata/objects/inquiry',
+    body: definicion('inquiry', ['code', ['category', { type: 'ENUM', enumOptions: ['EMPLEO', 'OTRO'] }]])
+  }
+  const definicionDeQueja = {
+    path: '/metadata/objects/grievance',
+    body: definicion('grievance', ['code', ['category', { type: 'ENUM', enumOptions: ['EMPLEO'] }]])
+  }
+
+  it('derivar una pregunta pendiente manda el tipo, el código, lo que plantea y el motivo, y vuelve a comprobar el cierre', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, CON_QCS, [definicionDeConsulta, definicionDeQueja, ...rutas()])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/engagement-questions/q1/referral',
+        responder: () => jsonResponse({ question: registro('q1', {}), created: registro('i5', { project: 'p1', code: 'C-020' }) }, 201)
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Preguntas' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Derivar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Derivar la pregunta' })
+    expect(within(dialogo).getByLabelText('Qué plantea')).toHaveValue('¿Habrá empleo local?')
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Consulta' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Derivar' }))
+    expect(within(dialogo).getByText('Este dato es obligatorio')).toBeInTheDocument()
+    await userEvent.type(within(dialogo).getByLabelText('Código de la QCS'), 'C-020')
+    await userEvent.selectOptions(await within(dialogo).findByLabelText('Categoría'), 'EMPLEO')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'pregunta de la asamblea')
+    const comprobaciones = () => red!.a('POST', '/sgspe/transition-checks').length
+    const antes = comprobaciones()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Derivar' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/engagement-questions/q1/referral')).toHaveLength(1))
+    const [derivacion] = red.a('POST', '/sgspe/engagement-questions/q1/referral')
+    expect(derivacion.cuerpo).toEqual({ target: 'inquiry', attributes: { code: 'C-020', description: '¿Habrá empleo local?', category: 'EMPLEO' } })
+    expect(derivacion.cabeceras.get('Idempotency-Key')).toBeTruthy()
+    expect(derivacion.cabeceras.get('X-Change-Reason')).toBe("UTF-8''pregunta%20de%20la%20asamblea")
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Derivar la pregunta' })).not.toBeInTheDocument())
+    await waitFor(() => expect(comprobaciones()).toBeGreaterThan(antes))
+  })
+
+  it('una pregunta ya derivada dice cuándo y enlaza la QCS que la cuenta lee; no ofrece derivar ni responder', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, CON_QCS, [
+      {
+        path: '/objects/engagement_question/records',
+        body: pagina([
+          registro('q1', {
+            question_text: '¿Habrá empleo local?',
+            answer: null,
+            answered_at: null,
+            answered_on_site: false,
+            referred_at: '2026-10-07T15:00:00Z'
+          })
+        ])
+      },
+      { path: '/objects/inquiry/records', body: pagina([registro('i5', { project: 'p1', code: 'C-020', origin_question: 'q1' })]) },
+      { path: '/objects/grievance/records', body: pagina([]) },
+      ...rutas()
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Preguntas' }))
+    expect(await screen.findByText(/Derivada el 7 oct/)).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Consulta C-020' })).toHaveAttribute('href', '/projects/p1/inquiries/i5')
+    expect(screen.queryByRole('button', { name: 'Derivar…' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Responder' })).not.toBeInTheDocument()
+  })
+
+  it('una pregunta que otra persona ya derivó lo dice con su texto, nunca con el código', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, CON_QCS, [definicionDeConsulta, definicionDeQueja, ...rutas()])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/engagement-questions/q1/referral',
+        responder: () => problema(409, 'ya derivada', [{ field: 'record', message: 'ALREADY_REFERRED' }])
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Preguntas' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Derivar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Derivar la pregunta' })
+    await userEvent.type(within(dialogo).getByLabelText('Código de la QCS'), 'Q-030')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'reclamo')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Derivar' }))
+    expect(await within(dialogo).findByText('Esta pregunta ya se derivó a una QCS.')).toBeInTheDocument()
+    expect(screen.queryByText('ALREADY_REFERRED')).not.toBeInTheDocument()
+  })
 })
