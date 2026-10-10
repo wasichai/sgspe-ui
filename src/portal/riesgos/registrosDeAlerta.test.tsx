@@ -52,6 +52,13 @@ describe('S58 · menciones en medios', () => {
     expect(within(tabla).getAllByRole('link')).toHaveLength(1)
   })
 
+  it('una mención sin titular abre su drawer con un botón que dice «—», nunca sin nombre', async () => {
+    fetch = mockFetch(rutas().map((r) => (r.path === '/objects/media_mention/records' ? { ...r, body: pagina([registro('m3', { project: 'p1' })]) } : r)))
+    montarEn(<MencionesPage />, '/projects/p1/risks/mentions', '/projects/:projectId/risks/mentions/:mentionId?')
+    const tabla = await screen.findByRole('table', { name: 'Menciones' })
+    expect(within(tabla).getByRole('button', { name: '—' })).toBeInTheDocument()
+  })
+
   it('abrir una mención lleva a su ruta, y la ruta abre su drawer', async () => {
     fetch = mockFetch(rutas())
     montarEn(<MencionesPage />, '/projects/p1/risks/mentions', '/projects/:projectId/risks/mentions/:mentionId?')
@@ -82,6 +89,13 @@ describe('S59 · señales de alerta', () => {
     expect(within(tabla).getByText('Sin alerta')).toBeInTheDocument()
     expect(await within(tabla).findByRole('link', { name: /Señales de conflicto/ })).toHaveAttribute('href', '/projects/p1/risks/warnings/w1')
     expect(within(tabla).getByRole('button', { name: `${'x'.repeat(80)}…` })).toBeInTheDocument()
+  })
+
+  it('una señal sin descripción abre su drawer con un botón que dice «—», nunca sin nombre', async () => {
+    fetch = mockFetch([...baseDeRiesgos(), { path: '/objects/early_warning_signal/records', body: pagina([registro('sg3', { project: 'p1' })]) }])
+    montarEn(<SenalesPage />, '/projects/p1/risks/signals', '/projects/:projectId/risks/signals/:signalId?')
+    const tabla = await screen.findByRole('table', { name: 'Señales' })
+    expect(within(tabla).getByRole('button', { name: '—' })).toBeInTheDocument()
   })
 
   it('el alta pide no escribir nombres de personas', async () => {

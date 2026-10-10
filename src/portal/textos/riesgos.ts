@@ -26,7 +26,8 @@ export const ES_RIESGOS = {
     pi: 'P \\ I',
     probabilidad: 'P{{n}}',
     impacto: 'I{{n}}',
-    celda: 'Probabilidad {{p}}, impacto {{i}}: {{n}} riesgos, nivel {{nivel}}',
+    celda_one: 'Probabilidad {{p}}, impacto {{i}}: {{count}} riesgo, nivel {{nivel}}',
+    celda_other: 'Probabilidad {{p}}, impacto {{i}}: {{count}} riesgos, nivel {{nivel}}',
     sinEvaluar: 'Sin evaluar (fuera del mapa): {{n}}',
     quitar: 'Quitar filtro de celda'
   },
@@ -65,7 +66,8 @@ export const EN_RIESGOS: typeof ES_RIESGOS = {
     pi: 'P \\ I',
     probabilidad: 'P{{n}}',
     impacto: 'I{{n}}',
-    celda: 'Probability {{p}}, impact {{i}}: {{n}} risks, level {{nivel}}',
+    celda_one: 'Probability {{p}}, impact {{i}}: {{count}} risk, level {{nivel}}',
+    celda_other: 'Probability {{p}}, impact {{i}}: {{count}} risks, level {{nivel}}',
     sinEvaluar: 'Not assessed (outside the map): {{n}}',
     quitar: 'Clear cell filter'
   },

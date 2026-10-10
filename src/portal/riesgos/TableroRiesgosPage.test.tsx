@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -130,6 +130,43 @@ describe('S62 · tablero de riesgos', () => {
     expect(within(semanas).getAllByRole('row')).toHaveLength(3)
     expect(semanas).toHaveTextContent('Crítico')
     expect(screen.getByRole('table', { name: 'Medidas atrasadas por Riesgo' })).toHaveTextContent('R-001 · Bloqueo de la vía')
+  })
+
+  it('si la dimensión elegida deja de venir usa la primera que llegó; sin desgloses no afirma que no hay riesgos', async () => {
+    const cambiado = (codigo: string, breakdowns: unknown[] | undefined) => ({
+      ...TABLERO,
+      indicators: TABLERO.indicators.map((i) => (i.code === codigo ? { ...i, breakdowns } : i))
+    })
+    const despues = {
+      ...TABLERO,
+      indicators: TABLERO.indicators.map((i) =>
+        i.code === 'KPI-RSK-03'
+          ? { ...i, breakdowns: i.breakdowns!.filter((b) => b.by === 'locality') }
+          : i.code === 'KPI-RSK-05'
+            ? { ...i, breakdowns: i.breakdowns!.filter((b) => b.by === 'owner') }
+            : i
+      )
+    }
+    let veces = 0
+    fetch = mockFetch(baseDeRiesgos())
+    red = espiarRed([{ path: '/sgspe/dashboards/risks', responder: () => jsonResponse(++veces === 1 ? TABLERO : despues) }])
+    const vista = abrir()
+    await screen.findByRole('table', { name: 'Riesgos por Localidad y nivel' })
+    await userEvent.selectOptions(screen.getByLabelText('Ver por'), 'community')
+    await userEvent.selectOptions(screen.getByLabelText('Medidas atrasadas por'), 'risk')
+    await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }))
+    expect(await screen.findByRole('table', { name: 'Riesgos por Localidad y nivel' })).toHaveTextContent('Tunas Pampa')
+    expect(screen.getByLabelText('Ver por')).toHaveValue('locality')
+    expect(screen.getByRole('table', { name: 'Medidas atrasadas por Responsable' })).toHaveTextContent('srm@sgspe.test')
+    vista.unmount()
+    red.restaurar()
+    red = espiarRed([{ path: '/sgspe/dashboards/risks', responder: () => jsonResponse(cambiado('KPI-RSK-03', undefined)) }])
+    abrir()
+    const territorio = await screen.findByRole('region', { name: 'Riesgos por territorio' })
+    expect(await within(territorio).findByText('El desglose por territorio no está disponible.')).toBeInTheDocument()
+    expect(within(territorio).queryByText('No hay riesgos para estos filtros.')).not.toBeInTheDocument()
+    expect(within(territorio).queryByRole('table')).not.toBeInTheDocument()
+    expect(within(territorio).queryByLabelText('Ver por')).not.toBeInTheDocument()
   })
 
   it('un indicador que la cuenta no lee dice «No disponible», nunca cero', async () => {

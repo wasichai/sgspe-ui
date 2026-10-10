@@ -2,7 +2,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 import { CLASE_DE_TONO } from '../componentes/apariencias'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
@@ -12,9 +12,9 @@ import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
+import { EnlaceDeFicha } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { nombreDeProyecto, useProyecto, useProyectos } from '../contexto/proyectos'
-import { rutaDeFicha } from '../datos/fichas'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
@@ -148,13 +148,15 @@ export function RiesgosPage() {
                   {filtrados.map((r) => (
                     <tr key={r.id}>
                       <Td className="text-sm">
-                        <Link to={rutaDeFicha('social_risk', r) ?? '#'} className="text-sg-primary-text underline">
+                        <EnlaceDeFicha objeto="social_risk" registro={r}>
                           {texto(r, 'code')} · {texto(r, 'title')}
-                        </Link>
+                        </EnlaceDeFicha>
                       </Td>
                       {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(r, 'project'))}</Td>}
                       <Td className="text-sm">{texto(r, 'category') || '—'}</Td>
-                      <Td className="text-sm tabular-nums">{celdaDe(r) ? `${texto(r, 'probability')} × ${texto(r, 'impact')} = ${texto(r, 'score')}` : '—'}</Td>
+                      <Td className="text-sm tabular-nums">
+                        {celdaDe(r) && texto(r, 'score') ? `${texto(r, 'probability')} × ${texto(r, 'impact')} = ${texto(r, 'score')}` : '—'}
+                      </Td>
                       <Td>
                         <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
                       </Td>
@@ -228,7 +230,7 @@ function MapaDeCalor({
                   <button
                     type="button"
                     aria-pressed={elegida === clave}
-                    aria-label={t('riesgos.mapa.celda', { p, i, n, nivel })}
+                    aria-label={t('riesgos.mapa.celda', { p, i, count: n, nivel })}
                     onClick={() => alElegir(clave)}
                     className={cn(
                       'h-12 w-full rounded-sg-sm',

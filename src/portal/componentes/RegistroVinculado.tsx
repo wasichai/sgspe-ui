@@ -37,3 +37,16 @@ export function RegistroVinculado({ objeto, id, rotulo }: { objeto: string; id: 
     </Link>
   )
 }
+
+// el enlace a la ficha de un registro ya leído; sin ruta (un registro de proyecto que llega sin proyecto), su nombre sin enlace,
+// nunca un enlace a «#»
+export function EnlaceDeFicha({ objeto, registro, children }: { objeto: string; registro: Registro; children: React.ReactNode }) {
+  const ruta = rutaDeFicha(objeto, registro)
+  return ruta ? (
+    <Link to={ruta} className="text-sg-primary-text underline">
+      {children}
+    </Link>
+  ) : (
+    <span>{children}</span>
+  )
+}
