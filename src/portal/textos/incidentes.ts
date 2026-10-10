@@ -8,7 +8,7 @@ export const ES_INCIDENTES = {
   columnas: { codigo: 'Código', ocurrio: 'Ocurrió', tipo: 'Tipo', lugar: 'Lugar', estado: 'Estado' },
   ficha: {
     volver: 'Volver a los incidentes',
-    noExiste: 'Este incidente no existe o no es de su organización.',
+    noExiste: 'Este incidente no existe o no es de sus proyectos.',
     ocurrio: 'Ocurrió el {{fecha}}',
     editar: 'Editar',
     editarTitulo: 'Editar el incidente',
@@ -38,7 +38,7 @@ export const EN_INCIDENTES: typeof ES_INCIDENTES = {
   columnas: { codigo: 'Code', ocurrio: 'Occurred', tipo: 'Type', lugar: 'Place', estado: 'State' },
   ficha: {
     volver: 'Back to the incidents',
-    noExiste: 'This incident does not exist or is not from your organization.',
+    noExiste: 'This incident does not exist or is not in your projects.',
     ocurrio: 'Occurred on {{fecha}}',
     editar: 'Edit',
     editarTitulo: 'Edit the incident',

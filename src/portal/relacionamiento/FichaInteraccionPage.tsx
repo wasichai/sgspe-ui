@@ -7,7 +7,7 @@ import { Link, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Consulta, Restringido, ThConExplicacion } from '../componentes/Estados'
+import { Cargando, Consulta, Restringido, ThConExplicacion, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -62,7 +62,12 @@ function useRefrescarInteraccion(id: string) {
 export function FichaInteraccionPage() {
   const { engagementId = '' } = useParams()
   const interaccion = useRegistro('engagement', engagementId)
-  return <Consulta consulta={interaccion}>{(i) => <Ficha interaccion={i} />}</Consulta>
+  // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
+  return (
+    <Consulta consulta={interaccion} noExiste={<NoEsDeSusProyectos />}>
+      {(i) => <Ficha interaccion={i} />}
+    </Consulta>
+  )
 }
 
 function Ficha({ interaccion }: { interaccion: Registro }) {

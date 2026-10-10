@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Consulta } from '../componentes/Estados'
+import { Cargando, Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { sinBandeja } from '../datos/avisos'
 import { montoPe } from '../componentes/Monto'
@@ -30,7 +30,12 @@ export function AprobacionPage() {
   const compromiso = useRegistro('commitment', recordId)
   // la clave por registro: pasar por la bandeja a otro compromiso ya leído monta otra decisión, sin el motivo ni la elección
   // del anterior (revisión de la Tarea 14, importante 1)
-  return <Consulta consulta={compromiso}>{(c) => <Decision key={c.id} compromiso={c} />}</Consulta>
+  // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
+  return (
+    <Consulta consulta={compromiso} noExiste={<NoEsDeSusProyectos />}>
+      {(c) => <Decision key={c.id} compromiso={c} />}
+    </Consulta>
+  )
 }
 
 function Decision({ compromiso }: { compromiso: Registro }) {

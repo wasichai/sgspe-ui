@@ -2,7 +2,7 @@
 export const ES_FICHA_COMPROMISO = {
   titulo: 'Compromiso',
   volver: 'Compromisos del proyecto',
-  noExiste: 'Este compromiso no existe o no es de su organización.',
+  noExiste: 'Este compromiso no existe o no es de sus proyectos.',
   pestanas: {
     resumen: 'Resumen',
     seguimiento: 'Acciones e hitos',
@@ -66,7 +66,7 @@ export const ES_FICHA_COMPROMISO = {
 export const EN_FICHA_COMPROMISO: typeof ES_FICHA_COMPROMISO = {
   titulo: 'Commitment',
   volver: 'Project commitments',
-  noExiste: 'This commitment does not exist or is not from your organization.',
+  noExiste: 'This commitment does not exist or is not in your projects.',
   pestanas: {
     resumen: 'Overview',
     seguimiento: 'Actions and milestones',

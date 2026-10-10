@@ -6,7 +6,7 @@ import { Link, useParams, useSearchParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { Cargando, Consulta, NoDisponible, Restringido } from '../componentes/Estados'
+import { Cargando, Consulta, NoDisponible, Restringido, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useActorDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -56,7 +56,12 @@ const diaEnLima = (marca: string): string => {
 export function FichaGrupoPage() {
   const { stakeholderId = '' } = useParams()
   const grupo = useRegistro('stakeholder', stakeholderId)
-  return <Consulta consulta={grupo}>{(g) => <Ficha grupo={g} />}</Consulta>
+  // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
+  return (
+    <Consulta consulta={grupo} noExiste={<NoEsDeSusProyectos />}>
+      {(g) => <Ficha grupo={g} />}
+    </Consulta>
+  )
 }
 
 function Ficha({ grupo }: { grupo: Registro }) {

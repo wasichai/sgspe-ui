@@ -3,7 +3,7 @@
 export const ES_FICHA_QUEJA = {
   titulo: 'Queja {{codigo}}',
   volver: 'Volver a quejas, consultas y solicitudes',
-  noExiste: 'Esta queja no existe o es confidencial y su cuenta no la lee.',
+  noExiste: 'Esta queja no existe, no es de sus proyectos o es confidencial y su cuenta no la lee.',
   severidad: 'Severidad {{valor}}',
   grave: 'Es una queja {{severidad}}: la resuelve quien aprueba («Resolver con aprobación») y le llega en Aprobaciones.',
   crearCompromiso: 'Crear compromiso desde esta queja',
@@ -72,7 +72,7 @@ export const ES_FICHA_QUEJA = {
 export const EN_FICHA_QUEJA: typeof ES_FICHA_QUEJA = {
   titulo: 'Grievance {{codigo}}',
   volver: 'Back to grievances, inquiries and requests',
-  noExiste: 'This grievance does not exist, or it is confidential and your account cannot read it.',
+  noExiste: 'This grievance does not exist, is not in your projects, or is confidential and your account cannot read it.',
   severidad: 'Severity {{valor}}',
   grave: 'It is a {{severidad}} grievance: the approver resolves it («Resolve with approval») and receives it in Approvals.',
   crearCompromiso: 'Create a commitment from this grievance',
