@@ -98,6 +98,31 @@ yarn e2e             # Playwright sobre vite preview (npx playwright install chr
 yarn -s csp          # la Content-Security-Policy para el proxy
 ```
 
+## Releases
+
+Como en wasichai-ui, con [release-please](https://github.com/googleapis/release-please) (`release-please.yml`, tipo `node`):
+cada push a `main` mantiene abierto un PR de release que sube la versión de `package.json`, escribe `CHANGELOG.md` y
+fija `.release-please-manifest.json`. El tipo de los commits convencionales decide la versión (`fix` sube el parche,
+`feat` el menor mientras sea 0.x, `!` o `BREAKING CHANGE` el mayor); `chore`, `docs`, `test` y similares no aparecen en
+el changelog. Al mezclar el PR se crea el tag `vX.Y.Z` y el release de GitHub. `HISTORY.md` sigue siendo la historia
+escrita a mano por fases; `CHANGELOG.md` lo genera la herramienta y no se edita.
+
+`sgspe-ui` es una app privada: no publica en GitHub Packages (wasichai-ui sí, con `publish.yml` y `release-dev.yml`), así
+que el release no sube artefactos.
+
+El primer release, v0.1.0, está fijado con `"release-as"` en `release-please-config.json`; al mezclarlo, se quita en un
+commit aparte (`chore: quita release-as tras v0.1.0`).
+
+Secreto del repositorio (Settings → Secrets and variables → Actions):
+
+| Secreto                | Para qué                                                                                            | PAT de grano fino                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `RELEASE_PLEASE_TOKEN` | que el PR de release dispare `ci.yml` y `commits.yml` (un PR abierto con `GITHUB_TOKEN` no lo hace) | en este repositorio: Contents y Pull requests, lectura y escritura |
+
+Sin el secreto, el workflow usa `GITHUB_TOKEN`: abre el PR y hace el release, pero el PR queda sin checks. En cualquier
+caso, el repositorio debe permitir «Allow GitHub Actions to create and approve pull requests» (Settings → Actions →
+General).
+
 ## Notas
 
 - En `yarn dev`, el script de recarga en caliente que Vite inyecta (react-refresh) y sus etiquetas `<style>` aparecen en la

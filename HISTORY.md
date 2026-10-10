@@ -2,6 +2,13 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-10 — Releases con GitHub Actions
+
+- `release-please.yml`, `release-please-config.json` y `.release-please-manifest.json`, como en wasichai-ui: un PR de
+  release por cada push a `main`, que al mezclarse sube la versión, escribe `CHANGELOG.md` y crea el tag y el release de
+  GitHub. El primer release, v0.1.0, va fijado con `release-as`. Sin `publish.yml` ni `release-dev.yml`: la app es
+  privada y no publica paquetes.
+
 ## 2026-10-10 — Fase 4: portal de quejas, consultas y solicitudes, riesgos y alerta temprana
 
 - Bases de F4: los derivados de las QCS y del riesgo, el plazo que corre en cada estado, la ficha de cada objeto de F4, el
