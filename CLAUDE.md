@@ -26,7 +26,10 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
 - Conventional Commits en español; `git add` con rutas explícitas.
 - Los releases los arma release-please desde esos commits (`release-please.yml`): el tipo (`feat`, `fix`, `!`) decide la
   versión, y `version` de `package.json`, `CHANGELOG.md` y `.release-please-manifest.json` no se editan a mano.
-- Una fecha con hora que el portal escribe es la de Lima (`ahoraEnLima`, `datos/fechas.ts`).
+- Una fecha con hora que el portal escribe es la de Lima (`ahoraEnLima`, `datos/fechas.ts`); un DATETIME de `DynamicForm`
+  también, con `ZONA_DE_LIMA` (`timeZone` del formulario y `config.timeZone` del portal y de `/admin`).
+- El motivo de un objeto `requiresReason` lo pide la pantalla del portal; `prepararDefinicion` apaga el «Motivo» de core para
+  no pedirlo dos veces.
 - Toda escritura del portal pasa por `src/portal/datos` (`useCrear`, `useActualizar`, `usePedir`): manda `If-Match` con la
   versión leída, se arma con la forma del GET y los permisos de quien llama (`atributosDeEscritura`), nunca con el modelo,
   y nunca lleva un campo derivado ni uno restringido; «Editar» se ofrece con `usePuedeEditar` (un rol con `u` no edita).

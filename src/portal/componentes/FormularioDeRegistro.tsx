@@ -2,6 +2,7 @@ import { CORE_FIELD_TYPES, DynamicForm, toAttributes, toFormValues, type ObjectD
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { esDeComando, esDerivado } from '../datos/derivados'
+import { ZONA_DE_LIMA } from '../datos/fechas'
 import { useActualizar, useCrear, useDefinicion, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
@@ -11,7 +12,8 @@ import { Cargando, ErrorDeCarga } from './Estados'
 // el formulario de un registro armado desde la metadata del objeto (screens.md §2: el esquema Zod sale de
 // /api/metadata/objects/**), con DynamicForm de @wasichai/core y React Hook Form. lo que SGSPE agrega: los derivados no
 // se muestran ni se mandan (DerivedFieldsGuard), las geometrías van aparte (se editan en el mapa o por importación), las
-// relaciones fijas (el proyecto, la comunidad de un sector) viajan ocultas y, al cambiar, va If-Match con la versión
+// relaciones fijas (el proyecto, la comunidad de un sector) viajan ocultas y, al cambiar, va If-Match con la versión. un DATETIME
+// se lee y se escribe en la hora de Lima (ZONA_DE_LIMA), no en la del navegador
 export interface FormularioDeRegistroProps {
   objeto: string
   registro?: Registro
@@ -37,6 +39,9 @@ export function prepararDefinicion(
   const orden = (nombre: string) => (campos ? campos.indexOf(nombre) : 0)
   return {
     ...definicion,
+    // el motivo de un objeto requiresReason lo pide la pantalla que abre el formulario (prop motivo) y viaja en X-Change-Reason
+    // con useCrear y useActualizar: sin esto, DynamicForm de core 0.6.0 pediría un segundo «Motivo» y lo descartaríamos
+    requiresReason: false,
     fields: definicion.fields
       .filter((f) => f.type !== 'GEOMETRY')
       .map((f) => {
@@ -69,10 +74,12 @@ const mismoValor = (a: unknown, b: unknown): boolean => {
 // lo que la persona cambió: los valores que difieren de los del registro con que se abrió el formulario (sus valores
 // iniciales), normalizados como DynamicForm normaliza los suyos (toFormValues y toAttributes). lo no tocado no viaja como
 // cambio, así que atributosDeEscritura lo toma del registro vigente: tras «Recargar», un campo que otra persona cambió y que
-// esta no tocó conserva el valor nuevo en lugar de volver al viejo (re-revisión, N1)
+// esta no tocó conserva el valor nuevo en lugar de volver al viejo (re-revisión, N1). los DATETIME se normalizan
+// en la hora de Lima, el mismo huso con que DynamicForm los dibuja y los manda
 export function cambiosRespectoDe(definicion: ObjectDefinition, abierto: Registro, enviados: Record<string, unknown>): Record<string, unknown> {
   const campos = definicion.fields.filter((f) => TIPOS_DEL_FORMULARIO.has(f.type))
-  const iniciales = toAttributes(campos, toFormValues(campos, abierto.attributes))
+  const zona = { timeZone: ZONA_DE_LIMA }
+  const iniciales = toAttributes(campos, toFormValues(campos, abierto.attributes, zona), zona)
   return Object.fromEntries(Object.entries(enviados).filter(([campo, valor]) => !mismoValor(valor, iniciales[campo])))
 }
 
@@ -122,7 +129,14 @@ export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, camp
           texto={deCampo.length > 0 ? deCampo.join('; ') : undefined}
         />
       ) : null}
-      <DynamicForm definition={preparada} record={base} submitting={crear.isPending || actualizar.isPending} onSubmit={enviar} onCancel={alCancelar} />
+      <DynamicForm
+        definition={preparada}
+        record={base}
+        timeZone={ZONA_DE_LIMA}
+        submitting={crear.isPending || actualizar.isPending}
+        onSubmit={enviar}
+        onCancel={alCancelar}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router'
 import { client } from './api'
+import { ZONA_DE_LIMA } from './datos/fechas'
 import { LoginPage } from './auth/LoginPage'
 import { AbrirRegistroPage } from './avisos/AbrirRegistroPage'
 import { AvisosPage } from './avisos/AvisosPage'
@@ -89,10 +90,11 @@ const rutas = () =>
 
 // el portal: los proveedores de core, como /admin, así que la sesión, el tema y el idioma son los mismos. sin módulos de starters:
 // el portal dibuja sus propias pantallas. el único módulo es idiomaHtmlModule: core 0.5.1 ya escribe <html lang> con el
-// código de i18n (`es`), y el módulo lo vuelve a es-PE después de él (WCAG 3.1.1)
+// código de i18n (`es`), y el módulo lo vuelve a es-PE después de él (WCAG 3.1.1). los DATETIME de un DynamicForm, en la hora de
+// Lima (ZONA_DE_LIMA, core 0.6.0)
 export function PortalApp() {
   const [app] = useState(() => {
-    const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS })
+    const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS, timeZone: ZONA_DE_LIMA })
     const registry = createRegistry([idiomaHtmlModule()])
     const i18n = crearI18n(registry.modules)
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry, refetchOnWindowFocus: false } } })

@@ -9,10 +9,10 @@ const paquete = leer('package.json')
 
 describe('dependencias de F2 y F3', () => {
   it.each([
-    ['@wasichai/gis', '0.5.1'],
-    ['@wasichai/workflow', '0.5.1'],
-    ['@wasichai/documents', '0.5.1'],
-    ['@wasichai/automation', '0.5.1'],
+    ['@wasichai/gis', '0.6.0'],
+    ['@wasichai/workflow', '0.6.0'],
+    ['@wasichai/documents', '0.6.0'],
+    ['@wasichai/automation', '0.6.0'],
     ['maplibre-gl', '6.10.0'],
     ['echarts', '6.1.0'],
     ['react-hook-form', '7.89.0'],
@@ -42,6 +42,6 @@ describe('dependencias de F2 y F3', () => {
         .filter(([nombre]) => nombre.startsWith('@wasichai/'))
         .map(([, v]) => v)
     )
-    expect([...versiones]).toEqual(['0.5.1'])
+    expect([...versiones]).toEqual(['0.6.0'])
   })
 })

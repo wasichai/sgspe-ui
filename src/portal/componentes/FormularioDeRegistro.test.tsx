@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -233,6 +233,77 @@ describe('FormularioDeRegistro', () => {
       expect(screen.getByRole('button', { name: 'Recargar' })).toBeEnabled()
       expect(screen.getByLabelText('Nombre')).toHaveValue('Sector bajo')
     })
+  })
+
+  // la hora que se teclea en un DATETIME es la de Lima, sea cual sea el huso del navegador (core 0.6.0, huso fijo de
+  // DynamicForm): la prueba corre con el reloj en Tokio para que el huso del navegador no coincida con el de Lima
+  describe('los DATETIME en la hora de Lima', () => {
+    const husoOriginal = process.env.TZ
+    beforeEach(() => {
+      process.env.TZ = 'Asia/Tokyo'
+    })
+    afterEach(() => {
+      if (husoOriginal === undefined) delete process.env.TZ
+      else process.env.TZ = husoOriginal
+    })
+    const INCIDENTE = definicion('incident', [
+      ['title', { label: 'Título' }],
+      ['occurred_at', { label: 'Ocurrió', type: 'DATETIME' }]
+    ])
+
+    it('las 10:00 tecleadas viajan como las 15:00Z, aunque el navegador esté en otro huso', async () => {
+      expect(new Date('2026-10-10T00:00:00Z').getTimezoneOffset()).toBe(-540)
+      fetch = mockFetch([
+        { path: '/metadata/objects/incident', body: INCIDENTE },
+        { method: 'POST', path: '/objects/incident/records', body: registro('i1', {}) }
+      ])
+      red = espiarRed()
+      const guardado = vi.fn()
+      montar(<FormularioDeRegistro objeto="incident" alGuardar={guardado} />)
+      fireEvent.change(await screen.findByLabelText('Ocurrió'), { target: { value: '2026-10-10T10:00' } })
+      expect(screen.getByText('Hora de America/Lima')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+      await waitFor(() => expect(guardado).toHaveBeenCalled())
+      const [alta] = red.a('POST', '/objects/incident/records')
+      expect(alta.cuerpo).toEqual({ attributes: { title: null, occurred_at: '2026-10-10T15:00:00.000Z' } })
+    })
+
+    it('un instante guardado en UTC se muestra con la hora de Lima y, sin tocarlo, no viaja como cambio', async () => {
+      fetch = mockFetch([
+        { path: '/metadata/objects/incident', body: INCIDENTE },
+        { method: 'PUT', path: '/objects/incident/records/i1', body: registro('i1', {}) },
+        { path: '/objects/incident/records/i1', body: registro('i1', {}) }
+      ])
+      red = espiarRed()
+      const incidente = registro('i1', { title: 'Bloqueo', occurred_at: '2026-10-10T15:00:00Z' })
+      montar(<FormularioDeRegistro objeto="incident" registro={incidente} />)
+      expect(await screen.findByLabelText('Ocurrió')).toHaveValue('2026-10-10T10:00')
+      const titulo = screen.getByLabelText('Título')
+      await userEvent.clear(titulo)
+      await userEvent.type(titulo, 'Bloqueo de vía')
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+      await waitFor(() => expect(red!.a('PUT', '/objects/incident/records/i1')).toHaveLength(1))
+      const [cambio] = red.a('PUT', '/objects/incident/records/i1')
+      expect(cambio.cuerpo).toEqual({ attributes: { title: 'Bloqueo de vía', occurred_at: '2026-10-10T15:00:00Z' } })
+    })
+  })
+
+  // core 0.6.0 dibuja su propio campo «Motivo» en DynamicForm cuando el objeto es requiresReason; el portal ya lo pide en la
+  // pantalla que abre el formulario (prop motivo), así que el formulario no lo vuelve a pedir y manda el de la pantalla
+  it('un objeto requiresReason no pide un segundo motivo: manda el que pidió la pantalla', async () => {
+    fetch = mockFetch([
+      { path: '/metadata/objects/agreement', body: { ...definicion('agreement', [['title', { label: 'Título' }]]), requiresReason: true } },
+      { method: 'POST', path: '/objects/agreement/records', body: registro('a1', {}) }
+    ])
+    red = espiarRed()
+    const guardado = vi.fn()
+    montar(<FormularioDeRegistro objeto="agreement" motivo="acta de la asamblea" alGuardar={guardado} />)
+    await userEvent.type(await screen.findByLabelText('Título'), 'Acuerdo de caminos')
+    expect(screen.queryByLabelText(/Motivo/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(guardado).toHaveBeenCalled())
+    const [alta] = red.a('POST', '/objects/agreement/records')
+    expect(alta.cabeceras.get('X-Change-Reason')).toBe("UTF-8''acta%20de%20la%20asamblea")
   })
 
   it('el error del formulario se anuncia (role="alert"), no es un párrafo mudo (revisión final, M11)', async () => {

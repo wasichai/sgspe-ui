@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { AdminApp } from './AdminApp'
+import { AdminApp, configDeAdministracion } from './AdminApp'
 
 const admin = { id: 'u1', email: 'admin@wasichai.local', displayName: 'Administración de prueba', organizationId: 'o1', roles: ['ADMIN'] }
 
@@ -78,5 +78,10 @@ describe('admin', () => {
     render(<AdminApp />)
     expect(await screen.findByLabelText('Email')).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('en')
+  })
+
+  // los formularios de registro de /admin (DynamicForm) leen y escriben los DATETIME en la hora de Lima, no en la del navegador
+  it('fija el huso de Lima para los DATETIME', () => {
+    expect(configDeAdministracion.timeZone).toBe('America/Lima')
   })
 })
