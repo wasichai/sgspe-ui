@@ -1,10 +1,12 @@
-// los parámetros y políticas de project que llegan en F2 (database-model.md, project; los de F3 y F4 llegan con su módulo).
-// wasichai no aplica defaultValue (UPS-15): el portal propone el valor por defecto al crear y lo muestra como tal (ASM-019)
+// los parámetros y políticas de project que llegan en F2 y, desde F4, los de quejas y riesgos (database-model.md, project). wasichai
+// no aplica defaultValue (UPS-15): el portal propone el valor por defecto al crear y lo muestra como tal (ASM-019)
 export interface Parametro {
   campo: string
   tipo: 'numero' | 'politica'
   porDefecto: number | boolean
-  grupo: 'grupos' | 'relacionamiento' | 'proyecto'
+  grupo: 'grupos' | 'relacionamiento' | 'proyecto' | 'quejas' | 'riesgos'
+  // el rango entero que el servidor acepta (ProjectWriteGuard, plan 4.2a: 400 OUT_OF_RANGE fuera de él)
+  rango?: { min: number; max: number }
 }
 
 export const PARAMETROS_F2: readonly Parametro[] = [
@@ -16,6 +18,50 @@ export const PARAMETROS_F2: readonly Parametro[] = [
   { campo: 'policy_minutes_only_formal_types', tipo: 'politica', porDefecto: true, grupo: 'relacionamiento' },
   { campo: 'policy_activation_preconditions', tipo: 'politica', porDefecto: true, grupo: 'proyecto' }
 ]
+
+// F4 (plan 4.2a, ProjectParameters): los plazos de las QCS (el acuse en días hábiles), la política de las quejas graves, la
+// cadencia de revisión de los riesgos y los umbrales de nivel por puntaje P × I, que deben crecer (medio < alto < crítico). un
+// proyecto creado antes de F4 los tiene vacíos y vale el por defecto; el alta de un proyecto no los manda (no son de su asistente)
+const DIAS = { min: 1, max: 365 }
+const PUNTAJE = { min: 1, max: 25 }
+export const PARAMETROS_F4: readonly Parametro[] = [
+  { campo: 'grievance_ack_days', tipo: 'numero', porDefecto: 5, grupo: 'quejas', rango: DIAS },
+  { campo: 'grievance_resolution_days', tipo: 'numero', porDefecto: 30, grupo: 'quejas', rango: DIAS },
+  { campo: 'inquiry_response_days', tipo: 'numero', porDefecto: 15, grupo: 'quejas', rango: DIAS },
+  { campo: 'policy_high_severity_requires_approver', tipo: 'politica', porDefecto: true, grupo: 'quejas' },
+  { campo: 'risk_review_days', tipo: 'numero', porDefecto: 7, grupo: 'riesgos', rango: DIAS },
+  { campo: 'risk_medium_min_score', tipo: 'numero', porDefecto: 5, grupo: 'riesgos', rango: PUNTAJE },
+  { campo: 'risk_high_min_score', tipo: 'numero', porDefecto: 10, grupo: 'riesgos', rango: PUNTAJE },
+  { campo: 'risk_critical_min_score', tipo: 'numero', porDefecto: 15, grupo: 'riesgos', rango: PUNTAJE }
+]
+
+export const UMBRALES_DE_RIESGO = ['risk_medium_min_score', 'risk_high_min_score', 'risk_critical_min_score'] as const
+
+// lo que el servidor rechazaría (400 OUT_OF_RANGE), dicho antes de guardar. como el servidor (ProjectParameters.outOfRange), solo
+// juzga los campos que cambian: un valor viejo fuera de regla no bloquea otra escritura. el rango, de cada campo cambiado (entero
+// dentro de su rango); el orden de los umbrales, solo si cambió alguno y ninguno está fuera de rango. devuelve el campo y el
+// motivo; sin problemas, vacío
+export function problemasDeParametros(
+  valorDe: (campo: string) => number | boolean | undefined,
+  cambiado: (campo: string) => boolean
+): { campo: string; motivo: 'rango' | 'orden' }[] {
+  const problemas: { campo: string; motivo: 'rango' | 'orden' }[] = []
+  for (const p of PARAMETROS_F4) {
+    const v = valorDe(p.campo)
+    if (!p.rango || !cambiado(p.campo) || typeof v !== 'number' || Number.isNaN(v)) continue
+    if (!Number.isInteger(v) || v < p.rango.min || v > p.rango.max) problemas.push({ campo: p.campo, motivo: 'rango' })
+  }
+  const umbralFuera = problemas.some((x) => (UMBRALES_DE_RIESGO as readonly string[]).includes(x.campo))
+  const [medio, alto, critico] = UMBRALES_DE_RIESGO.map((c) => valorDe(c))
+  if (
+    !umbralFuera &&
+    UMBRALES_DE_RIESGO.some((c) => cambiado(c)) &&
+    [medio, alto, critico].every((v) => typeof v === 'number') &&
+    !((medio as number) < (alto as number) && (alto as number) < (critico as number))
+  )
+    problemas.push({ campo: 'risk_high_min_score', motivo: 'orden' })
+  return problemas
+}
 
 export const valoresPorDefecto = (): Record<string, number | boolean> => Object.fromEntries(PARAMETROS_F2.map((p) => [p.campo, p.porDefecto]))
 
