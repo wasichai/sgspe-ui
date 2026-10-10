@@ -193,6 +193,8 @@ export const ES_COMUN = {
     // F4: QCS, riesgos y alertas (api.md §3.3, §4.4, §4.6 y §4.7)
     ANONYMOUS_WITH_IDENTITY: 'Una QCS anónima no lleva persona ni grupo de interés: quítelos o desmarque «Anónima».',
     CONFIDENTIAL_RECEIVER_REQUIRED: 'Una QCS confidencial la recibe quien la registra: vuelva a registrarla desde su cuenta.',
+    CONFIDENTIAL_MARK_FORBIDDEN:
+      'Solo quien la recibió, su responsable o la gestión de quejas pueden marcarla como confidencial: pídaselo a una de esas personas.',
     CONFORMITY_GIVEN: 'El reclamante ya dio su conformidad: la queja no se reabre.',
     INVALID_TARGET: 'Ese destino no es válido: elija otro tipo de QCS o, al aceptar una solicitud, un compromiso.',
     ALREADY_REFERRED: 'Esta pregunta ya se derivó a una QCS.',
@@ -401,6 +403,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     IDEMPOTENCY_KEY_REUSED: 'This action was already recorded with other data: reload to see what was recorded.',
     ANONYMOUS_WITH_IDENTITY: 'An anonymous grievance, inquiry or request carries no person or stakeholder: remove them or untick «Anonymous».',
     CONFIDENTIAL_RECEIVER_REQUIRED: 'Whoever records a confidential grievance, inquiry or request receives it: record it again from your account.',
+    CONFIDENTIAL_MARK_FORBIDDEN: 'Only whoever received it, its owner or grievance management can mark it as confidential: ask one of them.',
     CONFORMITY_GIVEN: 'The complainant already gave conformity: the grievance is not reopened.',
     INVALID_TARGET: 'That target is not valid: pick another type or, when accepting a request, a commitment.',
     ALREADY_REFERRED: 'This question was already referred.',

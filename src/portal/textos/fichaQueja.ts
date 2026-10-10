@@ -55,7 +55,17 @@ export const ES_FICHA_QUEJA = {
     compromisos: 'Compromisos que nacen de ella',
     compromisoCreado: 'Compromiso creado',
     sinOrigen: 'Se registró directamente, sin interacción ni pregunta de origen.',
-    sinNada: 'Todavía no alimenta ni generó otros registros.'
+    sinNada: 'Todavía no alimenta ni generó otros registros.',
+    // marcar confidencial una QCS ya registrada (D-3 del 2026-10-10): su receptor, su responsable o la gestión de quejas
+    marcar: {
+      boton: 'Marcar como confidencial…',
+      ayuda: 'Puede marcarla porque la recibió, es su responsable o gestiona las quejas.',
+      titulo: '¿Marcar la {{tipo}} como confidencial?',
+      texto:
+        'Sus colegas sin acceso dejarán de verla en listas, tableros y reportes: solo la leerán la gestión de quejas, su responsable, quien la recibió y, si es una queja grave, quien aprueba su resolución. Quitar la marca después lo decide solo la gestión de quejas.',
+      confirmar: 'Marcar como confidencial',
+      marcando: 'Marcando…'
+    }
   }
 }
 
@@ -115,6 +125,15 @@ export const EN_FICHA_QUEJA: typeof ES_FICHA_QUEJA = {
     compromisos: 'Commitments born from it',
     compromisoCreado: 'Created commitment',
     sinOrigen: 'It was recorded directly, without an origin engagement or question.',
-    sinNada: 'It does not feed or produce other records yet.'
+    sinNada: 'It does not feed or produce other records yet.',
+    marcar: {
+      boton: 'Mark as confidential…',
+      ayuda: 'You can mark it because you received it, own it or manage grievances.',
+      titulo: 'Mark the {{tipo}} as confidential?',
+      texto:
+        'Colleagues without access will stop seeing it in lists, dashboards and reports: only grievance management, its owner, whoever received it and, for a serious grievance, the approver of its resolution will read it. Only grievance management can remove the mark later.',
+      confirmar: 'Mark as confidential',
+      marcando: 'Marking…'
+    }
   }
 }
