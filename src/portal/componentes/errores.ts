@@ -27,6 +27,11 @@ export type MensajesPropios = Partial<Record<string, string>>
 const QCS = new Set(['grievance', 'inquiry', 'stakeholder_request'])
 const campoDeComando = (campo: string) => /^(attributes\.)?(reclassified_from_|created_commitment$)/.test(campo)
 
+// la violación que wasichai 0.6.0 pone sobre un campo RELATION cuyo destino la cuenta no lee o no existe (RelationTargets, D30 de
+// wasichai): con el alcance por proyecto (ADR-0029) es también un registro de otro proyecto. llega como texto libre en inglés, sin
+// código, así que se reconoce por su texto exacto y se dice con comun.codigosEnCampo.registroNoLegible, en su campo
+const SIN_REGISTRO = 'no record with this id'
+
 // el texto propio de un código sobre un campo (plan 4.2a), si lo tiene: COMMAND_ONLY sobre un vínculo que solo escriben la
 // reclasificación y la aceptación no es una transición de comando, y OBJECT_NOT_READABLE sobre una QCS es una que la cuenta no lee
 const claveEnCampo = (codigo: string, campo: string | undefined): string | null => {
@@ -49,6 +54,10 @@ export function useMensajeDeError(): (error: unknown, propios?: MensajesPropios)
     // todas las violaciones con código, no solo la primera; si dos dicen lo mismo, se dice una vez
     const dichos = new Set<string>()
     for (const v of error.violations) {
+      if (v.message === SIN_REGISTRO) {
+        dichos.add(t('comun.codigosEnCampo.registroNoLegible'))
+        continue
+      }
       if (!esCodigo(v.message)) continue
       const propio = (v.field ? propios[`${v.message}:${v.field}`] : undefined) ?? propios[v.message]
       const enCampo = claveEnCampo(v.message, v.field)
@@ -75,13 +84,16 @@ export function useErroresDeCampo(): (error: unknown) => Record<string, string> 
     const porCampo: Record<string, string[]> = {}
     for (const v of error.violations) {
       const enCampo = esCodigo(v.message) ? claveEnCampo(v.message, v.field) : null
-      const texto = !esCodigo(v.message)
-        ? (detalleVisible(v.message) ?? t(claveDeEstado(error.status)))
-        : enCampo
-          ? t(enCampo)
-          : CODIGOS.has(v.message)
-            ? t(`comun.codigos.${v.message}`)
-            : (detalleVisible(error.message) ?? t(claveDeEstado(error.status)))
+      const texto =
+        v.message === SIN_REGISTRO
+          ? t('comun.codigosEnCampo.registroNoLegible')
+          : !esCodigo(v.message)
+            ? (detalleVisible(v.message) ?? t(claveDeEstado(error.status)))
+            : enCampo
+              ? t(enCampo)
+              : CODIGOS.has(v.message)
+                ? t(`comun.codigos.${v.message}`)
+                : (detalleVisible(error.message) ?? t(claveDeEstado(error.status)))
       // dos violaciones del mismo campo se unen: la segunda no pisa a la primera
       const textos = (porCampo[v.field] ??= [])
       if (!textos.includes(texto)) textos.push(texto)

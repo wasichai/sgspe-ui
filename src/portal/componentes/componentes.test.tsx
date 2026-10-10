@@ -413,6 +413,14 @@ describe('errores con varias violaciones', () => {
     expect(await screen.findByText('No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.')).toBeInTheDocument()
     expect(screen.queryByText(/\(\)/)).not.toBeInTheDocument()
   })
+
+  // wasichai 0.6.0 (RelationTargets) responde así una RELATION a un registro que la cuenta no lee: con el alcance por proyecto,
+  // también uno de otro proyecto (spec 4.4 §3.6). el texto en inglés y el detail nunca llegan a la pantalla
+  it('el 400 de una relación a un registro que no se lee dice su texto, no el inglés de wasichai', async () => {
+    montar(<ErrorDeCarga error={new ErrorDeSgspe(400, "Invalid value for 'project'", [{ field: 'project', message: 'no record with this id' }], null)} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('El registro elegido no existe o es de otro proyecto.')
+    expect(screen.queryByText(/no record with this id|Invalid value/)).not.toBeInTheDocument()
+  })
 })
 
 describe('TablaDeRegistros', () => {
