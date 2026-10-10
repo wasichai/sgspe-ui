@@ -114,8 +114,8 @@ escrita a mano por fases; `CHANGELOG.md` lo genera la herramienta y no se edita.
 `sgspe-ui` es una app privada: no publica en GitHub Packages (wasichai-ui sí, con `publish.yml` y `release-dev.yml`), así
 que el release no sube artefactos.
 
-El primer release, v0.1.0, está fijado con `"release-as"` en `release-please-config.json`; al mezclarlo, se quita en un
-commit aparte (`chore: quita release-as tras v0.1.0`).
+El primer release, v1.0.0, el que cierra el MVP (Release 1 del roadmap de `sgspe`), está fijado con `"release-as"` en
+`release-please-config.json`; al mezclarlo, se quita en un commit aparte (`chore: quita release-as tras v1.0.0`).
 
 Secreto del repositorio (Settings → Secrets and variables → Actions):
 
