@@ -201,7 +201,7 @@ describe('S40 · ficha de riesgo', () => {
   it('un riesgo que no existe lo dice con su texto, sin reintento', async () => {
     fetch = mockFetch(rutas([{ path: '/objects/social_risk/records/k1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrir()
-    expect(await screen.findByText('Este riesgo no existe o no es de su organización.')).toBeInTheDocument()
+    expect(await screen.findByText('Este riesgo no existe o no es de sus proyectos.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 })

@@ -9,7 +9,7 @@ import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { useMensajeDeError } from '../componentes/errores'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Consulta, Vacio } from '../componentes/Estados'
+import { Cargando, Consulta, Vacio, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -39,7 +39,12 @@ export function FichaAcuerdoPage() {
   const { agreementId = '' } = useParams()
   const acuerdo = useRegistro('agreement', agreementId)
   // la clave es el acuerdo: al pasar a otro ya leído, nada de lo escrito en este (motivo, predio elegido, paneles) lo sigue
-  return <Consulta consulta={acuerdo}>{(a) => <Ficha key={a.id} acuerdo={a} />}</Consulta>
+  // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
+  return (
+    <Consulta consulta={acuerdo} noExiste={<NoEsDeSusProyectos />}>
+      {(a) => <Ficha key={a.id} acuerdo={a} />}
+    </Consulta>
+  )
 }
 
 function Ficha({ acuerdo }: { acuerdo: Registro }) {

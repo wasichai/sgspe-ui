@@ -74,7 +74,7 @@ describe('S57 · ficha de consulta', () => {
   it('una consulta que no existe o que la cuenta no lee lo dice sin delatar cuál', async () => {
     fetch = mockFetch([{ path: '/objects/inquiry/records/i1', status: 404, body: { title: 'Not Found', status: 404 } }, ...comunes('inquiry', 'i1')])
     abrir()
-    expect(await screen.findByText('Esta consulta no existe o es confidencial y su cuenta no la lee.')).toBeInTheDocument()
+    expect(await screen.findByText('Esta consulta no existe, no es de sus proyectos o es confidencial y su cuenta no la lee.')).toBeInTheDocument()
   })
 })
 

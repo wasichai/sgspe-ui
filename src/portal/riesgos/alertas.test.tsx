@@ -210,6 +210,6 @@ describe('S41 · ficha de alerta', () => {
   it('una alerta que no existe lo dice con su texto', async () => {
     fetch = mockFetch(rutasDeFicha(GESTOR_DE_RIESGOS, [{ path: '/objects/early_warning/records/w1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrirFicha()
-    expect(await screen.findByText('Esta alerta no existe o no es de su organización.')).toBeInTheDocument()
+    expect(await screen.findByText('Esta alerta no existe o no es de sus proyectos.')).toBeInTheDocument()
   })
 })

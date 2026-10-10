@@ -10,7 +10,7 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { Cargando, Consulta, NoDisponible, ThConExplicacion } from '../componentes/Estados'
+import { Cargando, Consulta, NoDisponible, ThConExplicacion, NoEsDeSusProyectos } from '../componentes/Estados'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError, usePedir } from '../datos/http'
 import {
@@ -41,7 +41,12 @@ const claveDe = (m: Registro) => `${tipoDe(m)}:${String(atributo(m, tipoDe(m)))}
 export function AreaDeInfluenciaPage() {
   const { areaId = '' } = useParams()
   const area = useRegistro('area_of_influence', areaId)
-  return <Consulta consulta={area}>{(a) => <Area area={a} refrescando={area.isFetching} />}</Consulta>
+  // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
+  return (
+    <Consulta consulta={area} noExiste={<NoEsDeSusProyectos />}>
+      {(a) => <Area area={a} refrescando={area.isFetching} />}
+    </Consulta>
+  )
 }
 
 function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {

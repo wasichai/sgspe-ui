@@ -94,7 +94,7 @@ describe('S36 · ficha de queja', () => {
   it('una queja que no existe o que la cuenta no lee lo dice sin delatar cuál, sin reintento', async () => {
     fetch = mockFetch(rutas(QUEJA, [{ path: '/objects/grievance/records/g1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrir()
-    expect(await screen.findByText('Esta queja no existe o es confidencial y su cuenta no la lee.')).toBeInTheDocument()
+    expect(await screen.findByText('Esta queja no existe, no es de sus proyectos o es confidencial y su cuenta no la lee.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 
