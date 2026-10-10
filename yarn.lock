@@ -1411,68 +1411,68 @@
   resolved "https://registry.yarnpkg.com/@vitest/spy/-/spy-5.0.2.tgz#a4a13f5b336e7c4227cfd74e9b0199209ffbb7fb"
   integrity sha512-Ijc7T1nT9efNb5LxvjaBrEqw3f/QwUv5EE0nKqZxgqsaV/FxAAZ8baGylA8X/Z2oS4Lp+K74Jr6dTJsDKxJDeg==
 
-"@wasichai/automation@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/automation/0.6.0/d03131a6ef09073ba30d9c85d98810d1fe6c0ce2#d03131a6ef09073ba30d9c85d98810d1fe6c0ce2"
-  integrity sha512-cdhs3Wdd9FD4KiPpCmZ/rG7DjD3RHWriWNkx0WsyZ702gp7OMH/iRBcFOdvBP/+h4OWWqiGQuJnm39ivb1oIgA==
+"@wasichai/automation@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/automation/1.0.0/0c81e16399da67209dff247ae4b1fe174c7d1179#0c81e16399da67209dff247ae4b1fe174c7d1179"
+  integrity sha512-ClrEmnqeoq40KZGn8HR6yipxphG5IStkZ1Izj1YF12z8m2xilbYRZ0UhqrcRwSo5olVuzWLdQ+DS5PeapjOpgA==
   dependencies:
     lucide-react "^1.51.0"
 
-"@wasichai/core@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/core/0.6.0/f35d22a9b31cd6e4fe45560019fa2ae104bb36a5#f35d22a9b31cd6e4fe45560019fa2ae104bb36a5"
-  integrity sha512-T1ODWjRXctD49ZaNzmm4z7WJk1rmhX1P+7Rh3Iuux7vY9ufYiL+7kYgIwblNrhkqtAfUft7NvyFLt0SBg0qWEQ==
+"@wasichai/core@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/core/1.0.0/d2a558ccc87e966127bca674f0a295bc809e8831#d2a558ccc87e966127bca674f0a295bc809e8831"
+  integrity sha512-fz+4J7sfFu5YFtS2A/OyCq1ttCER5x+oQ+mGde2eYz6DQlAjYFhZMl1slKyxTaGi/fXNA4E1PhUjNCxA61AXNw==
   dependencies:
     "@hookform/resolvers" "5.9.1"
-    "@wasichai/ui" "0.6.0"
+    "@wasichai/ui" "1.0.0"
     lucide-react "^1.51.0"
     react-hook-form "^7.89.0"
     zod "^4.6.5"
 
-"@wasichai/documents@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/documents/0.6.0/d4b44c777000b33ba79fbb408a628fd07e7701c8#d4b44c777000b33ba79fbb408a628fd07e7701c8"
-  integrity sha512-4yRsyq8RVsJkscQYfC8zCsGQosyzDMf4SCHe5/CXEPlme7L4QdGg1oBCDJakJpjJkcdNaBa0c894NS7rKimVQg==
+"@wasichai/documents@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/documents/1.0.0/465f4c68c6275ab29df9f15441aeb3d1ac8d8b1c#465f4c68c6275ab29df9f15441aeb3d1ac8d8b1c"
+  integrity sha512-g/9OUs4Sq5+sX++GqfUW4XAxtLmcEd4h/jk5SR4mOadBoH9Oj00+m9hwihLPQmZPGGQYFDzpWod4gEut3RYaMg==
   dependencies:
     "@tiptap/core" "3.31.3"
     "@tiptap/react" "3.31.3"
     "@tiptap/starter-kit" "3.31.3"
     lucide-react "^1.51.0"
 
-"@wasichai/forms@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/forms/0.6.0/31022c76d01ddf7b0b6286ad64dcb899ae11f292#31022c76d01ddf7b0b6286ad64dcb899ae11f292"
-  integrity sha512-l1Icu9+oLar4QWmGwSWgPEkoDdJM22AfS9S6bUFljY+418GZbYWlod79lsPZdP6BLFe+UyVfP+eR6YPwInDf3Q==
+"@wasichai/forms@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/forms/1.0.0/644c5e3339f04b189488a60025dd53628072e745#644c5e3339f04b189488a60025dd53628072e745"
+  integrity sha512-E4fpBO6vLLDNMp2Ivq0xNuhoCmfOlI5FAovpWSJ8pkwUvXvtu8KD/te3MjqATBne1MqgIR/8DpGM3CFaTMFGKQ==
   dependencies:
     lucide-react "^1.51.0"
 
-"@wasichai/gis@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/gis/0.6.0/e09af7493f4708a60c46f80f12852c0d6d019d68#e09af7493f4708a60c46f80f12852c0d6d019d68"
-  integrity sha512-QSOluUBIw3LDud/IvwCgOpaQvNHNO6AKlfRR2wjospPxgzfe7gZrofrWRXeM1QxPH2QCnj7TX1eHi0AwAktKQg==
+"@wasichai/gis@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/gis/1.0.0/48a094656bd3febff6cff9032a266fd03875ed64#48a094656bd3febff6cff9032a266fd03875ed64"
+  integrity sha512-AsMufA9IG67DWhnDgbo01PdCT88lBcS7eza+Tw8vgEyA8y5fXD9mqTXU/gQXpD+dioPA7HrIP+9qe8YRqSdZYg==
   dependencies:
     lucide-react "^1.51.0"
     maplibre-gl "6.10.0"
     terra-draw "1.35.0"
     terra-draw-maplibre-gl-adapter "1.4.1"
 
-"@wasichai/pages@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/pages/0.6.0/0bff16e3c9bf531e23996f3afd8be586b74b87d1#0bff16e3c9bf531e23996f3afd8be586b74b87d1"
-  integrity sha512-yTkoQDMvhae2AzcTbFlo35EoB6lvxKFQWrSGxaTutbm+Wu4o1RV50hodOmnd9mae33iudi8qTp6TTVgqPspg3w==
+"@wasichai/pages@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/pages/1.0.0/01b6295f1fa2b46b226e07a00a01e32ea2cecf81#01b6295f1fa2b46b226e07a00a01e32ea2cecf81"
+  integrity sha512-7DUU9TIuY0FHCU9Tkfj+APIKxvIe1qywirBlGpOmCGeQwCAk42SHSB4JneFNWMoezHU77RiGted0A11XKx7ILg==
   dependencies:
     "@dnd-kit/core" "6.3.1"
     lucide-react "^1.51.0"
 
-"@wasichai/testing@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/testing/0.6.0/6b726db992d57e7fbbbb7c8bf76fab0d45c42b87#6b726db992d57e7fbbbb7c8bf76fab0d45c42b87"
-  integrity sha512-h8t/pHJNW8tbSYMzGO/sAdDHi+tAn+c7JdfOWOYE77gBKDQQsNPZE8grdRTNnDzYe2lAghnhy7Vea+NGfuPmvg==
+"@wasichai/testing@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/testing/1.0.0/8f69a7a9233b0c0bb15fada240a015011d13f24a#8f69a7a9233b0c0bb15fada240a015011d13f24a"
+  integrity sha512-JeJv7XURGovTa7vKUJ1IlpASBxE3oqP+31nhH9ar5ofxbSZul5S9a2Rnbw8PzbjVdcjiIJz1weabvbBawyTuuQ==
 
-"@wasichai/ui@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/ui/0.6.0/f9027fd98cb3cc8d7ce1a138aa45142d52adf22b#f9027fd98cb3cc8d7ce1a138aa45142d52adf22b"
-  integrity sha512-sFDlzFO5qR1Q3mGG0vQrPo3cbo99wNkE1tZ3mfyG9lOMdYVQ2jO8EUKf8sax5dAVNLL0kkmAhjS2uMj3IRcDEA==
+"@wasichai/ui@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/ui/1.0.0/a66b0f5358376fd4de291381543f3fac4d766f1f#a66b0f5358376fd4de291381543f3fac4d766f1f"
+  integrity sha512-zetP2IBmQQcgYbxUEw67tqs+gPcf+refYR5Uz/pNyR+dXkGnTsmCUgW9lERMZql91fnadQypYk1U5YMtVOYtRA==
   dependencies:
     "@radix-ui/react-dialog" "1.2.0"
     "@radix-ui/react-label" "2.1.15"
@@ -1483,17 +1483,17 @@
     lucide-react "1.51.0"
     tailwind-merge "3.7.0"
 
-"@wasichai/views@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/views/0.6.0/151ac6b1d2fa1745291d06c6393f56c9e31b50ba#151ac6b1d2fa1745291d06c6393f56c9e31b50ba"
-  integrity sha512-HSE4kWZw6vMts/b4AXHmHMeQcX9FcAxt5F/9hFM7EWgkEwDlqYpxfUxDXDTbp3G5wnNCeuIm0gLWyd8x7wa8ZA==
+"@wasichai/views@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/views/1.0.0/535999a90c3d0b0a4af88eda56316950950eb2e5#535999a90c3d0b0a4af88eda56316950950eb2e5"
+  integrity sha512-ejvEf35+fbpSQkgDiSwzvATLXBseozRRwbTuIvJYbwtproQ/fJkzVG2vwOUPO1JOy3pmomYpQyOB1t8+gxgUAg==
   dependencies:
     lucide-react "^1.51.0"
 
-"@wasichai/workflow@0.6.0":
-  version "0.6.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/workflow/0.6.0/eade87a19fc9eba83db5ce5b246c1a7e55f67eaf#eade87a19fc9eba83db5ce5b246c1a7e55f67eaf"
-  integrity sha512-f2WYurZq5zUCHhPW9qMKOAJ+tV8D/DTtsGwkdBniMcUh5Lydu3J1GvU18UqYav/BYXcWXD/XTK3tX0Jv3sGZpw==
+"@wasichai/workflow@1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/workflow/1.0.0/5ebc7b6ea38c86a8b35c3595e7a4576263969e0c#5ebc7b6ea38c86a8b35c3595e7a4576263969e0c"
+  integrity sha512-+SAWO4dW+OCEYg3IYEnX9LBPZXaqC97nAzYUL9WmscFRCXQD1D1tQg7n7gycFVt13RJ1qNgKl+iermz0b8wwmw==
   dependencies:
     "@xyflow/react" "12.12.0"
     lucide-react "^1.51.0"
