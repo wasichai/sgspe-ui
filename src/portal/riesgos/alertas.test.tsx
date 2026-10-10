@@ -4,7 +4,7 @@ import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasich
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro } from '../../test/montar'
 import { RELACIONISTA } from '../../test/portal'
-import { espiarRed, type Red } from '../../test/red'
+import { espiarRed, problema, type Red } from '../../test/red'
 import { ALERTA, baseDeRiesgos, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, REGLA, RELACIONES_EN_RIESGOS, RIESGO } from '../../test/riesgos'
 import { AlertasPage, FichaAlertaPage } from './AlertasPage'
 
@@ -181,8 +181,32 @@ describe('S41 · ficha de alerta', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'R-001 · Bloqueo de la vía de acceso por la comunidad' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/early_warning/records/w1')).toHaveLength(1))
     const [escritura] = red.a('PUT', '/objects/early_warning/records/w1')
-    expect(escritura.cuerpo).toMatchObject({ attributes: { social_risk: 'k1' } })
+    // plan 4.2b: la regla y la hora de detección son de la plataforma y vuelven tal como se leyeron (un PUT que las omite es 403)
+    expect(escritura.cuerpo).toMatchObject({ attributes: { social_risk: 'k1', early_warning_rule: 'rg1', detected_at: '2026-10-05T13:00:00Z' } })
     expect(escritura.cabeceras.get('If-Match')).toBe(`"${ALERTA_LEIDA.updatedAt}"`)
+  })
+
+  it('un 403 PLATFORM_ONLY sobre la regla de la alerta se dice con su texto, nunca con el código', async () => {
+    fetch = mockFetch(
+      rutasDeFicha(GESTOR_DE_RIESGOS, [
+        { path: /^\/objects\/social_risk\/records\?project=p1/, body: pagina([RIESGO]) },
+        { path: '/objects/social_risk/records/k1', body: RIESGO }
+      ])
+    )
+    red = espiarRed([
+      {
+        method: 'PUT',
+        path: '/objects/early_warning/records/w1',
+        responder: () => problema(403, 'solo la plataforma', [{ field: 'early_warning_rule', message: 'PLATFORM_ONLY' }])
+      }
+    ])
+    abrirFicha()
+    await userEvent.type(await screen.findByLabelText('Vincular riesgo: buscar por código o título'), 'R-0')
+    await userEvent.click(await screen.findByRole('button', { name: 'R-001 · Bloqueo de la vía de acceso por la comunidad' }))
+    expect(
+      await screen.findByText('La regla y la hora de detección de una alerta las escribe solo el sistema: recargue y vuelva a guardar sin cambiarlas.')
+    ).toBeInTheDocument()
+    expect(screen.queryByText('PLATFORM_ONLY')).not.toBeInTheDocument()
   })
 
   it('una alerta que no existe lo dice con su texto', async () => {

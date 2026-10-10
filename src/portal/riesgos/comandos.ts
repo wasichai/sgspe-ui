@@ -4,7 +4,9 @@ import type { Registro } from '../datos/registros'
 // la revisión de un riesgo (api.md §4.7, plan 4.2b): POST /api/sgspe/social-risks/{id}/assessments → 201 { assessment, risk }. el
 // servidor valida probabilidad e impacto de 1 a 5, la fecha (no futura en Lima ni anterior a la última del mismo tipo), calcula
 // puntaje, nivel y tendencia, crea la revisión inmutable, mueve los valores vigentes o residuales y la próxima revisión, y en la
-// primera aplica assess. exige motivo (CR) y honra Idempotency-Key (IK): un reintento tras perder la red no crea dos revisiones
+// primera aplica assess. exige motivo (CR) y honra Idempotency-Key (IK): un reintento tras perder la red no crea dos revisiones. desde
+// el plan 4.2b también deja hechas las tareas de revisión abiertas del riesgo (risk_review de JOB-01): se releen las tareas (S47 y
+// su drawer) para que la cerrada no siga a la vista
 export interface Revision {
   assessment: Registro
   risk: Registro
@@ -37,7 +39,9 @@ export function useRevisarRiesgo() {
         ['records', 'risk_assessment'],
         ['transitions', 'social_risk', riesgo.id],
         ['history', 'social_risk', riesgo.id],
-        ['transition-check', 'social_risk', riesgo.id]
+        ['transition-check', 'social_risk', riesgo.id],
+        ['records', 'task'],
+        ['record', 'task']
       ]
     }
   )

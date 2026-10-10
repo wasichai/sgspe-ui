@@ -169,6 +169,7 @@ export const ES_COMUN = {
     CAP_DATA_INVALID: 'Un monto guardado de la campaña o de sus compromisos no es válido: el tope no se pudo verificar. Avise a quien administra los datos.',
     EVIDENCE_FILE_IN_USE: 'Ese archivo ya es de otra evidencia: elíjalo de nuevo para subirlo otra vez, o reemplace esa evidencia con una versión nueva.',
     GENERATOR_KEY_PLATFORM_ONLY: 'La clave de origen de una tarea la escribe solo el sistema: no se cambia.',
+    PLATFORM_ONLY: 'La regla y la hora de detección de una alerta las escribe solo el sistema: recargue y vuelva a guardar sin cambiarlas.',
     SAME_DUE_DATE: 'La fecha nueva es la misma que la vigente.',
     LAND_PARCEL_REQUIRED: 'Un permiso de uso de terreno o una servidumbre necesita al menos un predio.',
     ASSEMBLY_REQUIRED: 'Una autorización de asamblea necesita la interacción de tipo ASAMBLEA que la autoriza.',
@@ -371,6 +372,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     EVIDENCE_FILE_IN_USE:
       'That file already belongs to another piece of evidence: pick it again to upload it anew, or replace that evidence with a new version.',
     GENERATOR_KEY_PLATFORM_ONLY: 'Only the system writes a task’s origin key: it does not change.',
+    PLATFORM_ONLY: 'Only the system writes an alert’s rule and detection time: reload and save again without changing them.',
     SAME_DUE_DATE: 'The new date is the current one.',
     LAND_PARCEL_REQUIRED: 'A land use permit or an easement needs at least one parcel.',
     ASSEMBLY_REQUIRED: 'An assembly authorization needs the engagement of type ASAMBLEA that authorizes it.',

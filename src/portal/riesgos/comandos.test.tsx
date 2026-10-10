@@ -2,9 +2,10 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { montar, registro } from '../../test/montar'
+import { montar, pagina, registro } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, RIESGO } from '../../test/riesgos'
+import { useTodos } from '../datos/registros'
 import { useRevisarRiesgo } from './comandos'
 
 // el endpoint de revisiones (api.md §4.7): la fecha, la probabilidad, el impacto y si es residual, con el motivo y una clave que el
@@ -71,5 +72,30 @@ describe('revisión de un riesgo', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Revisar otro' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/social-risks/k2/assessments')).toHaveLength(1))
     expect(red.a('POST', '/sgspe/social-risks/k2/assessments')[0].cabeceras.get('Idempotency-Key')).not.toBe(primera.cabeceras.get('Idempotency-Key'))
+  })
+
+  // plan 4.2b: la revisión deja hechas las tareas de revisión abiertas del riesgo (risk_review de JOB-01). S47 y toda lista de tareas
+  // se vuelven a leer para que la tarea cerrada no siga a la vista
+  it('tras la revisión se releen las tareas: la de revisión del riesgo ya quedó hecha', async () => {
+    fetch = mockFetch([
+      { method: 'POST', path: '/sgspe/social-risks/k1/assessments', status: 201, body: { assessment: registro('a1', {}), risk: RIESGO } },
+      { path: /^\/objects\/task\/records/, body: pagina([]) }
+    ])
+    red = espiarRed()
+    function ConTareas() {
+      const tareas = useTodos('task', { project: 'p1' })
+      return (
+        <>
+          <Revisar />
+          <p>{tareas.isSuccess ? 'tareas leídas' : 'leyendo tareas'}</p>
+        </>
+      )
+    }
+    montar(<ConTareas />, { usuario: GESTOR_DE_RIESGOS, permisos: EQUIPO_DE_RIESGOS })
+    await screen.findByText('tareas leídas')
+    expect(red.a('GET', '/objects/task/records')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Revisar' }))
+    await screen.findByText(/nivel/)
+    await waitFor(() => expect(red!.a('GET', '/objects/task/records')).toHaveLength(2))
   })
 })
