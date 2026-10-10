@@ -256,7 +256,8 @@ export const DEF_REGLA = definicion('early_warning_rule', [
 ])
 export const DEF_ALERTA = definicion('early_warning', [
   ['title', { required: true }],
-  ['detected_at', { type: 'DATETIME', required: true }],
+  // plan 4.2b: ya no es obligatoria al crear; la pone SGSPE en una alerta manual
+  ['detected_at', { type: 'DATETIME' }],
   ['severity', enumeracion(NIVELES)],
   ['trigger_description', { type: 'LONG_TEXT' }],
   ['ai_detected', { type: 'BOOLEAN' }],

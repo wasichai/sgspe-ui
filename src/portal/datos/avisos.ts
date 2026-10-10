@@ -68,8 +68,9 @@ export interface PaginaDeAvisos {
 export type EstadoDeBandeja = 'active' | 'unread' | 'snoozed'
 
 // las fuentes de SGSPE (api.md §4.10): aprobación pendiente y plazos; desde F4, los riesgos que escalan de nivel (risk_escalated
-// de RiskNoticeListener) y las alertas nuevas (warning_new de WarningNoticeListener). la revisión vencida de un riesgo y el aviso
-// genérico de una QCS confidencial vencida (sin enlace ni datos) llegan por plazos
+// de RiskNoticeListener) y las alertas nuevas (warning_new de WarningNoticeListener). la revisión vencida de un riesgo llega solo como
+// risk_escalated (desde el plan 4.2b su tarea no da task_overdue), y el aviso genérico de una QCS confidencial vencida (sin enlace
+// ni datos) llega por plazos
 export const FUENTE_DE_APROBACIONES = 'sgspe.approvals'
 export const FUENTE_DE_PLAZOS = 'sgspe.deadlines'
 export const FUENTE_DE_RIESGOS = 'sgspe.risks'

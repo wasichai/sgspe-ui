@@ -153,6 +153,37 @@ describe('atributosDeEscritura', () => {
     })
   })
 
+  // plan 4.2b: la regla y la hora de detección de una alerta las escribe solo la plataforma (403 PLATFORM_ONLY a quien las fija, cambia
+  // o vacía, también con un PUT que las omite); una alerta manual se da de alta sin ellas y SGSPE le pone la hora
+  const DEF_ALERTA: ObjectDefinition = {
+    ...STAKEHOLDER,
+    id: 'o-ew',
+    name: 'early_warning',
+    fields: [
+      campo('title'),
+      campo('detected_at', { type: 'DATETIME' }),
+      campo('early_warning_rule', { type: 'RELATION' }),
+      campo('social_risk', { type: 'RELATION' })
+    ]
+  }
+  const alerta: Registro = {
+    ...registro,
+    id: 'w1',
+    attributes: { title: 'Bloqueo anunciado', detected_at: '2026-10-05T13:00:00Z', early_warning_rule: 'rg1', social_risk: null }
+  }
+
+  it('la regla y la hora de detección de una alerta viajan tal como se leyeron, aunque el formulario las cambie o las vacíe', () => {
+    expect(
+      atributosDeEscritura('early_warning', DEF_ALERTA, { social_risk: 'k1', detected_at: '2026-10-09T10:00:00Z', early_warning_rule: '' }, alerta)
+    ).toEqual({ title: 'Bloqueo anunciado', detected_at: '2026-10-05T13:00:00Z', early_warning_rule: 'rg1', social_risk: 'k1' })
+  })
+
+  it('el alta de una alerta manual no manda su regla ni su hora de detección', () => {
+    expect(
+      atributosDeEscritura('early_warning', DEF_ALERTA, { title: 'Bloqueo anunciado', detected_at: '2026-10-09T10:00:00Z', early_warning_rule: 'rg1' })
+    ).toEqual({ title: 'Bloqueo anunciado' })
+  })
+
   it('una geometría nunca va en attributes', () => {
     const conGeometria = { ...STAKEHOLDER, fields: [...STAKEHOLDER.fields, campo('location', { type: 'GEOMETRY' })] }
     expect(atributosDeEscritura('stakeholder', conGeometria, { location: { type: 'Point' } })).toEqual({})
