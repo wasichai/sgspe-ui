@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { baseDeCompromisos, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
+import { baseDeCompromisos, DEF_COMPROMISO, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { NuevoCompromisoPage } from './NuevoCompromisoPage'
@@ -147,6 +147,45 @@ describe('S30 · crear compromiso', () => {
     expect(envio.cabeceras.get('If-Match')).toBe('"2026-10-09T15:00:00Z"')
   })
 
+  it('desde una queja (S36) dice que nace de ella y manda origin_grievance en el alta', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/grievance/records/g1', body: registro('g1', { project: 'p1', code: 'Q-001', description: 'Canal turbio' }) },
+        // F4: el compromiso suma la relación con su queja de origen (plan 4.1)
+        {
+          path: '/metadata/objects/commitment',
+          body: {
+            ...DEF_COMPROMISO,
+            fields: [
+              ...DEF_COMPROMISO.fields,
+              { ...DEF_COMPROMISO.fields[0], id: 'commitment.origin_grievance', name: 'origin_grievance', type: 'RELATION', relationTarget: 'grievance' }
+            ]
+          }
+        }
+      ])
+    )
+    red = espiarRed([{ method: 'POST', path: '/objects/commitment/records', responder: () => jsonResponse(CREADO, 201) }])
+    montar(<NuevoCompromisoPage />, {
+      ruta: '/projects/p1/commitments/new?origin_grievance=g1',
+      camino: '/projects/:projectId/commitments/new',
+      usuario: GESTORA,
+      permisos: EQUIPO_DE_COMPROMISOS
+    })
+    await escribir('Código', 'C-011')
+    await escribir('Título', 'Limpieza del canal')
+    await siguiente()
+    expect(await screen.findByRole('link', { name: 'Q-001' })).toHaveAttribute('href', '/projects/p1/grievances/g1')
+    expect(screen.getByText(/Nace de la queja/)).toBeInTheDocument()
+    for (let i = 0; i < 3; i++) await siguiente()
+    await escribir('Monto', '500')
+    await siguiente()
+    await siguiente()
+    await escribir('Motivo (obligatorio)', 'Atiende la queja Q-001')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/commitment/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/commitment/records')[0].cuerpo).toMatchObject({ attributes: { project: 'p1', origin_grievance: 'g1' } })
+  })
+
   it('las campañas y las interacciones se piden del proyecto; PROJECT_MISMATCH vuelve al paso del monto con su texto (P54)', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed([
@@ -215,7 +254,7 @@ describe('S30 · crear compromiso', () => {
 
   it.each([
     ['WORKSHOP_COMMITMENT_BLOCKED', 'El proyecto no admite compromisos que nazcan de un taller o de una reunión informativa.'],
-    ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un compromiso o un candidato solo se vincula con lo de su proyecto.']
+    ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un registro solo se vincula con lo de su proyecto.']
   ])('%s sobre la interacción de origen vuelve al paso del origen con su texto junto al buscador', async (codigo, textoEsperado) => {
     fetch = mockFetch(rutas())
     red = espiarRed([

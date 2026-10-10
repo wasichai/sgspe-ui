@@ -104,6 +104,20 @@ describe('S29 · ficha de compromiso', () => {
     expect(await within(genero).findByRole('link', { name: 'Ejecutar compromiso C-001' })).toHaveAttribute('href', '/projects/p1/tasks?task=t1')
   })
 
+  it('la queja de origen que la cuenta no lee (confidencial) es «Registro reservado»; el riesgo que atiende se enlaza', async () => {
+    fetch = mockFetch(
+      rutas({ ...C1, attributes: { ...C1.attributes, origin_engagement: null, origin_grievance: 'g9', social_risk: 'k1' } }, [
+        { path: '/objects/grievance/records/g9', status: 404, body: { title: 'Not Found', status: 404 } },
+        { path: '/objects/social_risk/records/k1', body: registro('k1', { project: 'p1', code: 'R-001', title: 'Bloqueo de la vía' }) }
+      ])
+    )
+    abrir()
+    const deDonde = await screen.findByRole('region', { name: 'De dónde viene' })
+    expect(await within(deDonde).findByText('Registro reservado')).toBeInTheDocument()
+    expect(within(deDonde).queryByText('Registrado directamente.')).not.toBeInTheDocument()
+    expect(await within(deDonde).findByRole('link', { name: 'R-001 · Bloqueo de la vía' })).toHaveAttribute('href', '/projects/p1/risks/k1')
+  })
+
   it('un compromiso que la cuenta no lee dice «No disponible», sin reintento', async () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/commitment/records/c1', status: 403, body: { title: 'Forbidden', status: 403, detail: 'NOT_ASSIGNED' } }]))
     abrir()

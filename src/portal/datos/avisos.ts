@@ -67,9 +67,14 @@ export interface PaginaDeAvisos {
 
 export type EstadoDeBandeja = 'active' | 'unread' | 'snoozed'
 
-// las fuentes de SGSPE (api.md §4.10): aprobación pendiente y plazos
+// las fuentes de SGSPE (api.md §4.10): aprobación pendiente y plazos; desde F4, los riesgos que escalan de nivel (risk_escalated
+// de RiskNoticeListener) y las alertas nuevas (warning_new de WarningNoticeListener). la revisión vencida de un riesgo y el aviso
+// genérico de una QCS confidencial vencida (sin enlace ni datos) llegan por plazos
 export const FUENTE_DE_APROBACIONES = 'sgspe.approvals'
 export const FUENTE_DE_PLAZOS = 'sgspe.deadlines'
+export const FUENTE_DE_RIESGOS = 'sgspe.risks'
+export const FUENTE_DE_ALERTAS = 'sgspe.warnings'
+export const FUENTES_DE_SGSPE: readonly string[] = [FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS, FUENTE_DE_ALERTAS]
 
 // el borde de un aviso por su tipo, en la campana, la bandeja y las aprobaciones (el texto del tipo va siempre al lado)
 export const CLASE_DE_TIPO: Record<string, string> = {

@@ -99,12 +99,12 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
         <div className="flex flex-wrap items-center gap-2">
           {escribeEnElProyecto && can('engagement', 'CREATE') ? (
             <Button asChild size="sm">
-              <Link to={`/projects/${proyecto.id}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
+              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
             </Button>
           ) : null}
           {proyecto.state === 'draft' && editaProyecto ? (
             <Button asChild size="sm" variant="secondary">
-              <Link to={`/projects/new?draft=${proyecto.id}`}>{t('p360.resumen.completar')}</Link>
+              <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
             </Button>
           ) : null}
           <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} />
@@ -152,7 +152,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
                   {t('p360.resumen.sinEvaluar', { n: numeroPe((stk03.data.denominator ?? 0) - (stk03.data.numerator ?? 0)) })}
                 </p>
               ) : null}
-              <Link to={`/projects/${proyecto.id}/stakeholders/matrix`} className="text-sg-caption text-sg-primary-text underline">
+              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/stakeholders/matrix`} className="text-sg-caption text-sg-primary-text underline">
                 {t('p360.resumen.verMatriz')}
               </Link>
             </div>
@@ -214,7 +214,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               .filter((a) => a.state === 'approved')
               .map((a) => (
                 <li key={a.id}>
-                  <Link to={`/projects/${proyecto.id}/areas/${a.id}`} className="text-sg-primary-text underline">
+                  <Link to={`/projects/${encodeURIComponent(proyecto.id)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
                     {texto(a, 'area_type')} · v{texto(a, 'version_number')}
                   </Link>
                 </li>
@@ -235,7 +235,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {t(`mapa.avisos.${avisoMapa}`)}
             </p>
           ) : null}
-          <Link to={`/projects/${proyecto.id}/map`} className="text-sg-caption text-sg-primary-text underline">
+          <Link to={`/projects/${encodeURIComponent(proyecto.id)}/map`} className="text-sg-caption text-sg-primary-text underline">
             {t('p360.resumen.verMapa')}
           </Link>
         </section>
@@ -257,7 +257,11 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   const items = [
     ...(interacciones.data ?? [])
       .filter((e) => e.state === 'held' && TIPOS_FORMALES.includes(texto(e, 'engagement_type')))
-      .map((e) => ({ id: e.id, texto: t('p360.resumen.actaPendiente', { titulo: texto(e, 'title') }), ruta: `/projects/${proyecto.id}/engagements/${e.id}` })),
+      .map((e) => ({
+        id: e.id,
+        texto: t('p360.resumen.actaPendiente', { titulo: texto(e, 'title') }),
+        ruta: `/projects/${encodeURIComponent(proyecto.id)}/engagements/${encodeURIComponent(e.id)}`
+      })),
     ...(grupos.data ?? [])
       // una cuenta que no lee last_contact_date (la clave no viene en el registro) no puede decir si hubo contacto
       .filter((g) => g.state !== 'retired' && 'last_contact_date' in g.attributes)
@@ -270,7 +274,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
             grupo: g,
             clave: dias === null ? 'p360.resumen.nuncaContactado' : 'p360.resumen.sinContacto',
             dias: inactividad,
-            ruta: `/projects/${proyecto.id}/stakeholders/${g.id}`
+            ruta: `/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`
           }
         ]
       }),
@@ -281,7 +285,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
         grupo: g,
         clave: 'p360.resumen.evaluacionVencida',
         dias: revision,
-        ruta: `/projects/${proyecto.id}/stakeholders/${g.id}`
+        ruta: `/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`
       }))
   ]
   const fuentes = [

@@ -43,7 +43,7 @@ export function TableroGruposPage() {
               <Zona titulo={t('grupos.zonas.matriz')} indicador={ind('KPI-STK-03')}>
                 {() =>
                   scope.kind === 'project' ? (
-                    <Link to={`/projects/${scope.projectId}/stakeholders/matrix`} className="text-sm text-sg-primary-text underline">
+                    <Link to={`/projects/${encodeURIComponent(scope.projectId)}/stakeholders/matrix`} className="text-sm text-sg-primary-text underline">
                       {t('tableros.verMatriz')}
                     </Link>
                   ) : (
@@ -87,7 +87,7 @@ function MasIndicadores() {
   const sinZona = (catalogo.data ?? []).filter((i) => i.dashboard === null && i.code.startsWith('KPI-STK-'))
   // solo un catálogo leído y sin esos indicadores deja la sección fuera; en carga o con error se dice (nunca "vacío")
   if (catalogo.data && sinZona.length === 0) return null
-  const base = scope.kind === 'project' ? `/projects/${scope.projectId}/stakeholders/indicators` : '/stakeholders/indicators'
+  const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}/stakeholders/indicators` : '/stakeholders/indicators'
   let cuerpo
   if (catalogo.isPending) cuerpo = <Cargando compacto />
   else if (catalogo.isError)

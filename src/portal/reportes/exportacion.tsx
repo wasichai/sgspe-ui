@@ -184,3 +184,43 @@ export function ErrorYBotonDeExportar({
     </>
   )
 }
+
+// un filtro de varios valores como casillas (los tipos, los estados, las categorías, los niveles): sin ninguna marcada, todos.
+// cambiar una casilla quita el error del pedido anterior
+export function CasillasDeFiltro({
+  leyenda,
+  ayuda,
+  opciones,
+  elegidas,
+  alCambiar
+}: {
+  leyenda: string
+  ayuda?: string
+  opciones: { valor: string; etiqueta: string }[]
+  elegidas: ReadonlySet<string>
+  alCambiar: (elegidas: Set<string>) => void
+}) {
+  return (
+    <fieldset className="space-y-1 text-sm">
+      <legend className="font-medium">{leyenda}</legend>
+      {ayuda ? <p className="text-sg-caption text-sg-text-muted">{ayuda}</p> : null}
+      <div className="flex flex-wrap gap-3">
+        {opciones.map((o) => (
+          <label key={o.valor} className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={elegidas.has(o.valor)}
+              onChange={(e) => {
+                const siguiente = new Set(elegidas)
+                if (e.target.checked) siguiente.add(o.valor)
+                else siguiente.delete(o.valor)
+                alCambiar(siguiente)
+              }}
+            />
+            {o.etiqueta}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}

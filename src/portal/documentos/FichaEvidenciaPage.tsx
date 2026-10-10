@@ -117,7 +117,20 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
             <Dato termino={t('documentos.ficha.archivo')} valor={nombreDeArchivo ?? '—'} />
             <Dato termino={t('documentos.ficha.tipoDeArchivo')} valor={descriptor?.contentType ?? '—'} />
             <Dato termino={t('documentos.ficha.tamano')} valor={descriptor ? tamanoPe(descriptor.size) : '—'} />
-            <Dato termino={t('documentos.ficha.huella')} valor={<span className="break-all font-sg-mono text-sg-caption">{descriptor?.sha256 ?? '—'}</span>} />
+            {/* sgspe#14: la huella deja confirmar si alguien tiene un archivo concreto; se reserva como el nombre (P59) a quien no lo
+                descarga. el servidor todavía la entrega en el descriptor (UPS-24): se oculta solo en el portal */}
+            <Dato
+              termino={t('documentos.ficha.huella')}
+              valor={
+                !descriptor ? (
+                  '—'
+                ) : puedeDescargar ? (
+                  <span className="break-all font-sg-mono text-sg-caption">{descriptor.sha256}</span>
+                ) : (
+                  t('documentos.ficha.huellaReservada')
+                )
+              }
+            />
             <Dato termino={t('documentos.ficha.capturada')} valor={capturada ? fechaYHoraPe(new Date(capturada)) : '—'} />
             {ubicacion?.type === 'Point' && Array.isArray(ubicacion.coordinates) ? (
               <Dato
@@ -223,7 +236,9 @@ const useRotulo = (): ((r: Registro) => string) => {
   }
 }
 
-// los registros que sustenta: un vínculo evidence_<objeto> por destino; los objetos que la cuenta no lee (403) no se listan
+// los registros que sustenta: un vínculo evidence_<objeto> por destino; los objetos que la cuenta no lee (403) no se listan, ni los
+// que el modelo del tenant todavía no tiene (404: un tenant de F3 no tiene las QCS ni los riesgos de F4). una QCS confidencial que
+// la cuenta no lee no aparece: wasichai la quita de los relacionados (security.md §9.6)
 function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolean }) {
   const { t } = useTranslation(NS)
   const rotulo = useRotulo()
@@ -236,7 +251,7 @@ function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolea
   })
   const legibles = consultas
     .map((c, i) => ({ objeto: DESTINOS_DE_EVIDENCIA[i], c }))
-    .filter(({ c }) => !(c.error instanceof ApiError && c.error.status === 403))
+    .filter(({ c }) => !(c.error instanceof ApiError && (c.error.status === 403 || c.error.status === 404)))
   const cargando = legibles.some(({ c }) => c.isPending)
   const fallida = legibles.find(({ c }) => c.isError && !c.data)
   const filas = legibles.flatMap(({ objeto, c }) => (c.data?.content ?? []).map((r) => ({ objeto, r })))

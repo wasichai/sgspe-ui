@@ -17,9 +17,13 @@ import {
   useProyectoElegido
 } from './exportacion'
 import { MatrizDeCompromisos } from './MatrizDeCompromisos'
+import { RegistroDeAtencion } from './RegistroDeAtencion'
+import { RegistroDeRiesgos } from './RegistroDeRiesgos'
+import { OBJETOS_DE_QCS } from '../datos/atencion'
 
-// S49 en F2 y F3 · reportes y exportaciones: el registro de grupos de interés y, desde F3, la matriz de compromisos
-// (MatrizDeCompromisos, con EXPORT sobre commitment) en XLSX (api.md §4.13) con el nivel de divulgación
+// S49 en F2 a F4 · reportes y exportaciones: el registro de grupos de interés, desde F3 la matriz de compromisos
+// (MatrizDeCompromisos, con EXPORT sobre commitment) y desde F4 el registro de quejas, consultas y solicitudes (RegistroDeAtencion,
+// con EXPORT sobre los tres objetos) y la matriz de riesgos (RegistroDeRiesgos, con EXPORT sobre social_risk), en XLSX (api.md §4.13) con el nivel de divulgación
 // elegido; una salida fuera de la organización exige confirmar la lista de verificación (checklistConfirmed, RQ-REP-033).
 // EXTERNO cita a las personas por cargo o por código GI- (un seudónimo, deliverables.md §9.1); PUBLICO marca «reservado»
 // todo conteo menor que 5 y advierte no publicar dos salidas que difieran en pocas personas (ASM-088). con un solo proyecto
@@ -86,6 +90,8 @@ export function ReportesPage() {
         )}
       </section>
       {can('commitment', 'EXPORT') ? <MatrizDeCompromisos key={delaUrl} niveles={niveles} /> : null}
+      {OBJETOS_DE_QCS.every((o) => can(o, 'EXPORT')) ? <RegistroDeAtencion key={delaUrl} niveles={niveles} /> : null}
+      {can('social_risk', 'EXPORT') ? <RegistroDeRiesgos key={delaUrl} niveles={niveles} /> : null}
       {verHistorial ? (
         <section aria-label={t('reportes.historial')} className="space-y-2">
           <h2 className="text-sg-h3 font-semibold">{t('reportes.historial')}</h2>

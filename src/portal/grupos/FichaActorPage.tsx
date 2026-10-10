@@ -77,7 +77,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
                 <>
                   {' · '}
                   {t('grupos.actor.representa')}:{' '}
-                  <Link to={`/territory/communities/${comunidad.data.id}`} className="text-sg-primary-text underline">
+                  <Link to={`/territory/communities/${encodeURIComponent(comunidad.data.id)}`} className="text-sg-primary-text underline">
                     {texto(comunidad.data, 'name')}
                   </Link>
                 </>
@@ -191,7 +191,7 @@ function ActorVinculado({ objeto, id, enlazar }: { objeto: Tipo; id: string | un
     objeto === 'person' ? nombreDe(actor.data, objeto, t('comun.personaRegistrada')) || t('comun.personaRegistrada') : nombreDe(actor.data, objeto, '')
   if (!nombre) return <NoDisponible />
   return enlazar ? (
-    <Link to={`/actors/${id}`} className="text-sg-primary-text underline">
+    <Link to={`/actors/${encodeURIComponent(id)}`} className="text-sg-primary-text underline">
       {nombre}
     </Link>
   ) : (
@@ -256,7 +256,7 @@ function ProyectosDelActor({ grupos }: { grupos: Registro[] }) {
     <ul>
       {legibles.map(({ grupo, proyecto }) => (
         <li key={grupo.id}>
-          <Link to={`/projects/${proyecto!.id}/stakeholders/${grupo.id}`} className="text-sg-primary-text underline">
+          <Link to={`/projects/${encodeURIComponent(proyecto!.id)}/stakeholders/${encodeURIComponent(grupo.id)}`} className="text-sg-primary-text underline">
             {texto(proyecto, 'code')} · {texto(proyecto, 'name')}
           </Link>
         </li>

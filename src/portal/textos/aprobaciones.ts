@@ -10,7 +10,12 @@ export const ES_APROBACIONES = {
   truncado: 'Se muestran los primeros 200 avisos: decida algunos para ver el resto.',
   truncadoEscalamientos: 'Se revisaron solo los primeros 200 avisos: puede haber más escalamientos que no se muestran.',
   columnas: { registro: 'Registro', que: 'Qué se decide', monto: 'Monto', espera: 'Espera', puede: '¿Puede decidir?', accion: 'Acción' },
-  objetos: { commitment: 'Aprobación de compromiso', project: 'Revisión de proyecto', engagement: 'Aprobación de acta' },
+  objetos: {
+    commitment: 'Aprobación de compromiso',
+    project: 'Revisión de proyecto',
+    engagement: 'Aprobación de acta',
+    grievance: 'Queja grave por resolver'
+  },
   dias: '{{n}} días',
   hoy: 'Hoy',
   si: 'Sí',
@@ -52,7 +57,12 @@ export const EN_APROBACIONES: typeof ES_APROBACIONES = {
   truncado: 'The first 200 notices are shown: decide some to see the rest.',
   truncadoEscalamientos: 'Only the first 200 notices were checked: there may be more escalations not shown.',
   columnas: { registro: 'Record', que: 'What is decided', monto: 'Amount', espera: 'Waiting', puede: 'Can you decide?', accion: 'Action' },
-  objetos: { commitment: 'Commitment approval', project: 'Project review', engagement: 'Minutes approval' },
+  objetos: {
+    commitment: 'Commitment approval',
+    project: 'Project review',
+    engagement: 'Minutes approval',
+    grievance: 'Serious grievance to resolve'
+  },
   dias: '{{n}} days',
   hoy: 'Today',
   si: 'Yes',

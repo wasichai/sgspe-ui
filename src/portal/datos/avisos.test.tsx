@@ -225,7 +225,7 @@ describe('bandeja y destinos', () => {
     expect(rutaDeFicha('evidence', registro('ev1', {}))).toBe('/documents/ev1')
     expect(rutaDeFicha('project', registro('p1', {}))).toBe('/projects/p1/overview')
     expect(rutaDeFicha('commitment', registro('c1', {}))).toBeNull()
-    expect(rutaDeFicha('grievance', registro('g1', { project: 'p1' }))).toBeNull()
+    expect(rutaDeFicha('social_program', registro('sp1', { project: 'p1' }))).toBeNull()
   })
 
   it.each([

@@ -42,6 +42,9 @@ export interface Indicador {
   // los filtros pedidos que el indicador acepta y no aplica (ruling P27): community en los KPI-STK, explorationCampaign en
   // F2, y explorationCampaign y owner en los KPI-COM que no los aplican. sin filtros ignorados la clave no viaja; con ellos la interfaz lo dice, para que no se lea como un cero filtrado
   ignoredFilters?: string[]
+  // F4: el indicador no cuenta las QCS confidenciales que quien llama no lee (KPI-GRV y KPI-ENG-05; dashboards.md §8, ASM-095).
+  // un booleano, nunca cuántas
+  confidentialHidden?: boolean
 }
 
 export interface Tablero {
@@ -49,6 +52,8 @@ export interface Tablero {
   computedAt: string
   filters: Record<string, unknown>
   indicators: Indicador[]
+  // F4: el tablero attention excluye las QCS confidenciales que quien llama no lee
+  confidentialHidden?: boolean
 }
 
 export interface FiltrosDeIndicador {

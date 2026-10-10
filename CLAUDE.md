@@ -24,6 +24,7 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
   cambia, se copia de nuevo y se verifica con `cmp`.
 - Pruebas primero, con Vitest, Testing Library y `mockFetch` de `@wasichai/testing`; usuarios ficticios `@sgspe.test`.
 - Conventional Commits en español; `git add` con rutas explícitas.
+- Una fecha con hora que el portal escribe es la de Lima (`ahoraEnLima`, `datos/fechas.ts`).
 - Toda escritura del portal pasa por `src/portal/datos` (`useCrear`, `useActualizar`, `usePedir`): manda `If-Match` con la
   versión leída, se arma con la forma del GET y los permisos de quien llama (`atributosDeEscritura`), nunca con el modelo,
   y nunca lleva un campo derivado ni uno restringido; «Editar» se ofrece con `usePuedeEditar` (un rol con `u` no edita).
@@ -44,6 +45,13 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
   (security.md §9.2, ítem 5) y dependen solo de `can(...)`.
 - Un error de la API se muestra con `useMensajeDeError` o `useErroresDeCampo`, nunca con su `message`: el de una guarda
   es un código. Un código nuevo del backend suma su texto a `comun.codigos` en los dos idiomas.
+- Un vínculo a otro registro se dibuja con `RegistroVinculado` (`componentes/RegistroVinculado.tsx`): una QCS confidencial que
+  la cuenta no lee responde 404 y se dice «Registro reservado», sin enlace ni datos. `EnlaceDeFicha` (mismo archivo) lleva a la ficha de un
+  registro ya leído. Una cifra o una lista de QCS con
+  `confidentialHidden` lleva `NotaDeConfidenciales`, sin conteo. La huella SHA-256 de una evidencia, como su nombre, solo para
+  quien la descarga.
+- Toda ruta del portal codifica con `encodeURIComponent` el id o el proyecto que lleva; `src/portal/enlacesCodificados.test.ts`
+  lo vigila en cada fuente.
 - `src/portal/textosSinCodigos.test.ts` vigila que ningún texto de interfaz lleve códigos de error ni identificadores de
   requisitos (RF, RN, UPS…): esos viven en la documentación, no ante la persona usuaria.
 - Una pantalla de proyecto se registra en `proyectos/rutasEnProyecto.ts` con la `seccion` cuya guarda le corresponde.

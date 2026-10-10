@@ -156,8 +156,27 @@ describe('S46 · ficha de evidencia', () => {
     expect(within(sustenta).queryByText(/Acuerdo/)).not.toBeInTheDocument()
     expect(within(sustenta).getByRole('link', { name: 'Interacción: Registro sin nombre' })).toBeInTheDocument()
     expect(within(sustenta).queryByText(/en1/)).not.toBeInTheDocument()
-    expect(screen.getByText('a1b2')).toBeInTheDocument()
+    // sgspe#14: la huella SHA-256 tampoco, porque deja confirmar si alguien tiene un archivo concreto
+    expect(screen.queryByText('a1b2')).not.toBeInTheDocument()
+    expect(screen.getByText('Reservada')).toBeInTheDocument()
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
+  })
+
+  it('un objeto que el modelo del tenant no tiene (404) no se lista en «Sustenta» ni es un fallo', async () => {
+    fetch = mockFetch(
+      rutasDeFicha([
+        // un tenant de F3 no tiene las QCS: el relacionado responde 404
+        relacionados('grievance', 404),
+        relacionados('inquiry', [registro('i1', { project: 'p1', code: 'CON-001' })]),
+        ...['stakeholder_request', 'social_risk', 'incident', 'media_mention'].map((o) => relacionados(o, []))
+      ])
+    )
+    abrirFicha()
+    const sustenta = await screen.findByRole('region', { name: 'Sustenta' })
+    expect(await within(sustenta).findByRole('link', { name: 'Consulta: CON-001' })).toBeInTheDocument()
+    expect(within(sustenta).queryByText(/Queja/)).not.toBeInTheDocument()
+    expect(within(sustenta).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(within(sustenta).queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('con DOWNLOAD_RESTRICTED se descarga por la ruta de SGSPE', async () => {
@@ -166,6 +185,7 @@ describe('S46 · ficha de evidencia', () => {
     abrirFicha()
     await userEvent.click(await screen.findByRole('button', { name: 'Descargar' }))
     expect(screen.getByText('lista.pdf')).toBeInTheDocument()
+    expect(screen.getByText('a1b2')).toBeInTheDocument()
     await waitFor(() => expect(red!.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1))
     expect(URL.createObjectURL).toHaveBeenCalled()
   })
@@ -229,6 +249,7 @@ describe('S46 · ficha de evidencia', () => {
     expect(screen.getByText('Restringido')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Descargar' })).not.toBeInTheDocument()
     expect(screen.queryByText(/asamblea\.jpg/)).not.toBeInTheDocument()
+    expect(screen.queryByText('c3d4')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Vista previa' })).not.toBeInTheDocument()
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })

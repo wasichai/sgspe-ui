@@ -12,8 +12,20 @@ import { atributo, texto, useActualizar, type Registro } from '../datos/registro
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 
-// los orígenes de una tarea en F3 (task: exactamente uno, plan 3.1); los de F4 y F5 llegan con sus objetos
-export const ORIGENES: readonly string[] = ['commitment', 'engagement', 'agreement', 'stakeholder']
+// los orígenes de una tarea (task: exactamente uno, planes 3.1 y 4.1): los de F3 y, desde F4, las tres QCS, el riesgo y la alerta
+// (AUT-02, AUT-09, AUT-11, JOB-01). una QCS confidencial que quien mira no lee se abre como «Registro reservado» (/r/…); los de F5
+// llegan con sus objetos
+export const ORIGENES: readonly string[] = [
+  'commitment',
+  'engagement',
+  'agreement',
+  'stakeholder',
+  'grievance',
+  'inquiry',
+  'stakeholder_request',
+  'social_risk',
+  'early_warning'
+]
 export const origenDe = (tarea: Registro): { objeto: string; id: string } | null => {
   const objeto = ORIGENES.find((o) => atributo<string>(tarea, o))
   return objeto ? { objeto, id: String(atributo(tarea, objeto)) } : null

@@ -193,7 +193,10 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link to={`/projects/${proyecto}/engagements/${interaccion.id}`} className="text-sm text-sg-primary-text underline">
+          <Link
+            to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(interaccion.id)}`}
+            className="text-sm text-sg-primary-text underline"
+          >
             {texto(interaccion, 'title')}
           </Link>
           {leeActa ? (

@@ -1,6 +1,27 @@
-import { Ban, BadgeCheck, Check, CircleCheck, CircleDashed, Clock, Copy, FileText, Handshake, Lock, Pause, Play, X, type LucideIcon } from 'lucide-react'
+import {
+  Ban,
+  BadgeCheck,
+  Check,
+  CircleCheck,
+  CircleDashed,
+  Clock,
+  Copy,
+  Eye,
+  FileText,
+  Forward,
+  Handshake,
+  Inbox,
+  Lock,
+  Pause,
+  Play,
+  Search,
+  Siren,
+  Undo2,
+  X,
+  type LucideIcon
+} from 'lucide-react'
 
-// el sistema de estados de design-system.md §4.1 para los workflows de F2 y F3: cada estado con su tono y su ícono, nunca solo
+// el sistema de estados de design-system.md §4.1 para los workflows de F2 a F4: cada estado con su tono y su ícono, nunca solo
 // color. la etiqueta sale de la metadata del workflow (español, CON-051); aquí solo el tono
 export type Tono = 'neutral' | 'info' | 'progress' | 'success' | 'warning' | 'danger' | 'final'
 
@@ -85,6 +106,59 @@ export const APARIENCIAS: Record<string, Record<string, Apariencia>> = {
     blocked: a('warning', Pause),
     done: a('success', CircleCheck),
     cancelled: a('final', X)
+  },
+  // WF-E1
+  grievance: {
+    received: a('neutral', Inbox),
+    acknowledged: a('info', Check),
+    in_assessment: a('info', Search),
+    in_investigation: a('progress', Search),
+    in_action: a('progress', Play),
+    resolved: a('success', CircleCheck),
+    verified: a('success', BadgeCheck),
+    closed: a('final', Lock),
+    rejected: a('final', Ban),
+    withdrawn: a('final', Undo2)
+  },
+  // WF-E2
+  inquiry: {
+    received: a('neutral', Inbox),
+    answered: a('success', CircleCheck),
+    referred: a('info', Forward),
+    closed: a('final', Lock)
+  },
+  // WF-E3
+  stakeholder_request: {
+    received: a('neutral', Inbox),
+    under_evaluation: a('info', Search),
+    accepted: a('success', CircleCheck),
+    declined: a('warning', Ban),
+    closed: a('final', Lock)
+  },
+  // WF-F
+  social_risk: {
+    identified: a('neutral', CircleDashed),
+    assessed: a('info', Check),
+    mitigating: a('progress', Play),
+    monitoring: a('info', Eye),
+    closed: a('final', Lock)
+  },
+  // WF-J
+  early_warning: {
+    detected: a('warning', Siren),
+    in_triage: a('info', Search),
+    confirmed: a('danger', CircleCheck),
+    responding: a('progress', Play),
+    resolved: a('success', CircleCheck),
+    dismissed: a('final', X),
+    closed: a('final', Lock)
+  },
+  // WF-M
+  incident: {
+    reported: a('warning', Siren),
+    under_review: a('info', Search),
+    responding: a('progress', Play),
+    closed: a('final', Lock)
   }
 }
 

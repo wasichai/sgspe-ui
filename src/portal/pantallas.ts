@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import { AcuerdosPage } from './acuerdos/AcuerdosPage'
+import { AtencionRutas } from './atencion/AtencionRutas'
 import { CompromisosRutas } from './compromisos/CompromisosRutas'
 import { DocumentosRutas } from './documentos/DocumentosRutas'
 import { FichaActorPage } from './grupos/FichaActorPage'
@@ -7,6 +8,7 @@ import { GruposRutas } from './grupos/GruposRutas'
 import { ProyectosRutas } from './proyectos/ProyectosRutas'
 import { RelacionamientoRutas } from './relacionamiento/RelacionamientoRutas'
 import { ReportesRutas } from './reportes/ReportesRutas'
+import { RiesgosRutas } from './riesgos/RiesgosRutas'
 import { TareasRutas } from './tareas/TareasRutas'
 import { VisitasPage } from './relacionamiento/VisitaDeCampoPage'
 import { LEE_ACUERDOS } from './shell/leeAcuerdos'
@@ -22,6 +24,8 @@ export const PANTALLAS: Partial<Record<ClaveDeSeccion, ComponentType>> = {
   stakeholders: GruposRutas,
   engagements: RelacionamientoRutas,
   commitments: CompromisosRutas,
+  attention: AtencionRutas,
+  risks: RiesgosRutas,
   documents: DocumentosRutas,
   tasks: TareasRutas,
   reports: ReportesRutas

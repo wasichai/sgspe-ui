@@ -1,12 +1,14 @@
+import { ApiError } from '@wasichai/core'
 import { useAvailableTransitions } from '@wasichai/workflow'
 import { Alert, cn, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
-import { Cargando, Vacio } from '../componentes/Estados'
+import { Cargando, Reservado, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
-import { CLASE_DE_TIPO, FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, sinBandeja, useAvisos, type Aviso } from '../datos/avisos'
+import { esQcs } from '../datos/atencion'
+import { CLASE_DE_TIPO, FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS, sinBandeja, useAvisos, type Aviso } from '../datos/avisos'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { destinoDeAviso, rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, useRegistro } from '../datos/registros'
@@ -21,11 +23,17 @@ import { useComprobacion } from '../transiciones/api'
 // en S31 (/tasks/approvals/commitment/:recordId); las de otros objetos, en su ficha
 // approve_direct no está: sale de draft, y los avisos de aprobación existen solo en pending_approval (ApprovalNotices los
 // resuelve al salir de ese estado), así que nunca llega a esta bandeja ni a las decisiones de S31
+// desde F4, la queja ALTA o CRITICA que resuelve quien aprueba (resolve_high_severity, decisión 8): su aviso llega con la misma
+// fuente y la decisión se toma en la ficha de la queja (S36)
 export const APROBACIONES_DE: Readonly<Record<string, readonly string[]>> = {
   commitment: ['approve', 'approve_senior'],
   project: ['approve'],
-  engagement: ['approve_minutes']
+  engagement: ['approve_minutes'],
+  grievance: ['resolve_high_severity']
 }
+// los avisos que son escalamientos: los de plazo (QCS, compromisos, tareas, la revisión vencida de un riesgo y el aviso genérico de
+// una QCS confidencial, sin enlace) y los de un riesgo que sube de nivel
+const DE_ESCALAMIENTO: readonly string[] = [FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS]
 const TOPE = 200
 
 // los avisos ACTION de aprobación pendiente con su registro: lo que «Por aprobar» y la bandeja de S31 listan
@@ -47,7 +55,7 @@ export function AprobacionesPage() {
   const hecha = (useLocation().state as { hecha?: boolean } | null)?.hecha === true
   const { avisos, pendientes, truncado } = useAprobacionesPendientes()
   const plazos = useAvisos({ size: TOPE }, lista.vista === 'escalamientos')
-  const escalamientos = (plazos.data?.content ?? []).filter((a) => a.source === FUENTE_DE_PLAZOS && a.kind !== 'INFO')
+  const escalamientos = (plazos.data?.content ?? []).filter((a) => DE_ESCALAMIENTO.includes(a.source) && a.kind !== 'INFO')
   // los escalamientos se filtran de los primeros 200 avisos de cualquier fuente: si hay más, se dice
   const plazosTruncados = (plazos.data?.totalPages ?? 1) > 1
   if (avisos.isError && !avisos.data && sinBandeja(avisos.error)) {
@@ -146,27 +154,38 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
   const registro = useRegistro(objeto, id)
   const espera = diasEntre(aviso.publishAt, hoyEnLima())
   const decision = rutaDeDecision(aviso)
+  // nadie borra una QCS (security.md §7.6): su 404 es una confidencial que la cuenta no lee (§9.6). la fila no dice qué es ni de qué
+  // trata, y no ofrece una ficha que solo repetiría «Registro reservado»
+  const reservada = esQcs(objeto) && registro.error instanceof ApiError && registro.error.status === 404
   return (
     <tr>
       <Td className="text-sm">
         {registro.isPending ? (
           <Cargando compacto />
         ) : registro.data ? (
-          [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name')].filter(Boolean).join(' · ')
+          [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name') || texto(registro.data, 'category')]
+            .filter(Boolean)
+            .join(' · ')
+        ) : reservada ? (
+          <Reservado />
         ) : (
           <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
         )}
       </Td>
-      <Td className="text-sm">{t(`aprobaciones.objetos.${objeto}`, { defaultValue: aviso.title })}</Td>
+      <Td className="text-sm">{reservada ? '—' : t(`aprobaciones.objetos.${objeto}`, { defaultValue: aviso.title })}</Td>
       <Td className="text-sm tabular-nums">
         {registro.data && objeto === 'commitment' ? montoPe(atributo(registro.data, 'amount'), atributo(registro.data, 'currency')) : '—'}
       </Td>
       <Td className="text-sm">{espera === null || espera <= 0 ? t('aprobaciones.hoy') : t('aprobaciones.dias', { n: espera })}</Td>
       <Td className="text-sm">{registro.data ? <PuedeDecidir objeto={objeto} id={id} /> : '—'}</Td>
       <Td className="text-sm">
-        <Link to={decision ?? rutaParaAbrir(objeto, id)} className="text-sg-primary-text underline">
-          {decision ? t('aprobaciones.revisar') : t('aprobaciones.ver')}
-        </Link>
+        {reservada ? (
+          '—'
+        ) : (
+          <Link to={decision ?? rutaParaAbrir(objeto, id)} className="text-sg-primary-text underline">
+            {decision ? t('aprobaciones.revisar') : t('aprobaciones.ver')}
+          </Link>
+        )}
       </Td>
     </tr>
   )

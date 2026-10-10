@@ -22,18 +22,23 @@ import { FormularioDeEvidencia } from './FormularioDeEvidencia'
 // ya vinculada, vincular una existente y desvincular. escribe es la guarda de UI de quien abre la ficha (useEscribeEnProyecto
 // del proyecto del registro); además se piden los permisos de evidence y del objeto (security.md §5.6: vincular pide UPDATE
 // sobre los dos). un vínculo con un objeto requiresReason lleva motivo. el nombre de una evidencia sin título es el de su
-// archivo solo para quien la descarga (P59, useNombreDeEvidencia)
+// archivo solo para quien la descarga (P59, useNombreDeEvidencia). una QCS propone subir su cargo o su carta firmados (ASM-098): el
+// botón dice eso (textoSubir) y el formulario propone el tipo y la clasificación (DATOS PERSONALES)
 
 export function EvidenciasDelRegistro({
   objeto,
   registro,
   escribe,
-  tipoInicial
+  tipoInicial,
+  clasificacionInicial,
+  textoSubir
 }: {
   objeto: string
   registro: Registro
   escribe: boolean
   tipoInicial?: string
+  clasificacionInicial?: string
+  textoSubir?: string
 }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
@@ -60,7 +65,7 @@ export function EvidenciasDelRegistro({
         <h2 className="text-sg-h3 font-semibold">{t('evidencias.titulo')}</h2>
         {sube ? (
           <Button size="sm" onClick={() => setSubiendo(true)}>
-            {t('evidencias.subir')}
+            {textoSubir ?? t('evidencias.subir')}
           </Button>
         ) : null}
       </div>
@@ -142,12 +147,13 @@ export function EvidenciasDelRegistro({
         </div>
       )}
       {vincula ? <VincularExistente vinculo={vinculo} conMotivo={conMotivo} /> : null}
-      <Drawer titulo={t('evidencias.subirTitulo')} abierto={subiendo} alCerrar={() => setSubiendo(false)}>
+      <Drawer titulo={textoSubir ?? t('evidencias.subirTitulo')} abierto={subiendo} alCerrar={() => setSubiendo(false)}>
         <FormularioDeEvidencia
           vinculos={[vinculo]}
           conMotivo={conMotivo}
           proyecto={proyecto}
           tipoInicial={tipoInicial}
+          clasificacionInicial={clasificacionInicial}
           alRegistrar={() => setSubiendo(false)}
           alCancelar={() => setSubiendo(false)}
         />

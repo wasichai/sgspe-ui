@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { diaPe, fechaPe, fechaYHoraPe } from '../i18n'
-import { diasEntre, hoyEnLima, instanteDeLima } from './fechas'
+import { ahoraEnLima, diasEntre, hoyEnLima, instanteDeLima } from './fechas'
+
+describe('ahoraEnLima', () => {
+  it('la hora por defecto es la de Lima, no la del navegador', () => {
+    expect(ahoraEnLima(new Date('2026-10-09T03:30:00Z'))).toBe('2026-10-08T22:30')
+  })
+})
 
 describe('hoyEnLima', () => {
   it('a las 03:00Z todavía es el día anterior en Lima', () => {

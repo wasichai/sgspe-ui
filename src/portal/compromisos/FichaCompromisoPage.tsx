@@ -12,6 +12,7 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { Rastro } from '../contexto/Rastro'
@@ -256,7 +257,7 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
           <ul>
             {solicitantes.data.content.map((g) => (
               <li key={g.id}>
-                <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${g.id}`} className="text-sg-primary-text underline">
+                <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
                   <NombreDelGrupo grupo={g} />
                 </Link>
               </li>
@@ -271,7 +272,7 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
 // el panel de trazabilidad (ux-architecture.md §8): de dónde viene el compromiso y qué generó, sin salir del proyecto
 function Trazabilidad({ compromiso }: { compromiso: Registro }) {
   const { t } = useTranslation(NS)
-  const proyecto = encodeURIComponent(texto(compromiso, 'project'))
+  const proyecto = texto(compromiso, 'project')
   const interaccion = useRegistro('engagement', atributo<string>(compromiso, 'origin_engagement'))
   const acuerdo = useRegistro('agreement', atributo<string>(compromiso, 'agreement'))
   const clausula = useRegistro('agreement_clause', atributo<string>(compromiso, 'agreement_clause'))
@@ -279,7 +280,11 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
   const tareas = useTodos('task', { commitment: compromiso.id })
   const entregas = useRegistros('delivery', { commitment: compromiso.id, size: 1 })
   const candidato = candidatos.data?.content[0]
-  const sinOrigen = !atributo(compromiso, 'origin_engagement') && !atributo(compromiso, 'agreement') && candidatos.isSuccess && !candidato
+  // desde F4 un compromiso nace también de una queja (origin_grievance) o atiende un riesgo (social_risk): una queja confidencial que
+  // quien mira no lee se dice «Registro reservado» (RegistroVinculado)
+  const queja = atributo<string>(compromiso, 'origin_grievance')
+  const riesgo = atributo<string>(compromiso, 'social_risk')
+  const sinOrigen = !atributo(compromiso, 'origin_engagement') && !atributo(compromiso, 'agreement') && !queja && candidatos.isSuccess && !candidato
   return (
     <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
       <section aria-label={t('fichaCompromiso.trazabilidad.deDondeViene')} className="space-y-1">
@@ -287,7 +292,10 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
         {interaccion.data ? (
           <p>
             {t('fichaCompromiso.trazabilidad.interaccion')}:{' '}
-            <Link to={`/projects/${proyecto}/engagements/${interaccion.data.id}`} className="text-sg-primary-text underline">
+            <Link
+              to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(interaccion.data.id)}`}
+              className="text-sg-primary-text underline"
+            >
               {texto(interaccion.data, 'title')}
             </Link>
           </p>
@@ -295,7 +303,7 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
         {acuerdo.data ? (
           <p>
             {t('fichaCompromiso.trazabilidad.acuerdo')}:{' '}
-            <Link to={`/projects/${proyecto}/agreements/${acuerdo.data.id}`} className="text-sg-primary-text underline">
+            <Link to={`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(acuerdo.data.id)}`} className="text-sg-primary-text underline">
               {texto(acuerdo.data, 'code')} · {texto(acuerdo.data, 'title')}
             </Link>
             {clausula.data ? ` · ${t('fichaCompromiso.trazabilidad.clausula', { numero: texto(clausula.data, 'clause_number') })}` : ''}
@@ -304,6 +312,16 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
         {candidato ? (
           <p>
             {t('fichaCompromiso.trazabilidad.candidato')}: {texto(candidato, 'proposed_text')}
+          </p>
+        ) : null}
+        {queja ? (
+          <p>
+            {t('fichaCompromiso.trazabilidad.queja')}: <RegistroVinculado objeto="grievance" id={queja} />
+          </p>
+        ) : null}
+        {riesgo ? (
+          <p>
+            {t('fichaCompromiso.trazabilidad.riesgo')}: <RegistroVinculado objeto="social_risk" id={riesgo} />
           </p>
         ) : null}
         <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.interaccion')} consulta={interaccion} />
@@ -325,7 +343,7 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
           <ul>
             {tareas.data.map((x) => (
               <li key={x.id} className="flex flex-wrap items-center gap-2">
-                <Link to={`/projects/${proyecto}/tasks?task=${x.id}`} className="text-sg-primary-text underline">
+                <Link to={`/projects/${encodeURIComponent(proyecto)}/tasks?task=${encodeURIComponent(x.id)}`} className="text-sg-primary-text underline">
                   {texto(x, 'title')}
                 </Link>
                 <EstadoChip objeto="task" estado={x.state} />
