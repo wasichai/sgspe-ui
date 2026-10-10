@@ -2,6 +2,22 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-10 — Fase 4: portal de quejas, consultas y solicitudes, riesgos y alerta temprana
+
+- Bases de F4: los derivados de las QCS y del riesgo, el plazo que corre en cada estado, la ficha de cada objeto de F4, el
+  motivo en toda transición de las QCS y del riesgo, las transiciones de comando, los estados de WF-E1 a WF-M y los doce
+  códigos nuevos del backend. Los comandos de reclasificar, aceptar, derivar y revisar un riesgo van por `useComando`.
+- Pantallas S34 a S41, S57 a S62, el reporte unificado y los incidentes; «Derivar» en S23; la queja grave en S48; las
+  fuentes de riesgos y alertas en S04; `attention-register` y `risk-register` en Reportes; los ocho parámetros de F4 en
+  S11; las secciones Quejas, consultas y solicitudes y Riesgos con sus pestañas en Project 360.
+- Confidencialidad (ASM-095): «Registro reservado» en todo vínculo a una QCS que la cuenta no lee y la nota de
+  `confidentialHidden` en tableros, indicadores y reporte, sin conteo.
+- sgspe#14: la huella SHA-256 de una evidencia restringida se reserva a quien la descarga, y toda ruta del portal codifica
+  sus ids, con una prueba que lo vigila.
+- Brecha conocida: los campos DATETIME que edita `FormularioDeRegistro` usan el huso del navegador, porque `DynamicForm` de
+  `@wasichai/core` no admite un huso fijo; las altas de QCS, aceptar y la revisión de riesgo sí usan la hora de Lima.
+- Pruebas: 1271 unitarias en 90 archivos (201 más que las 1070 de F3) y 13 extremo a extremo (3 nuevas).
+
 ## 2026-10-09 — Capacidades de tenant desde `/me/permissions` (UPS-06)
 
 - El portal lee `capabilities` de `GET /api/auth/me/permissions` (WAS-ADR-0053, backend wasichai 0.6.0) en lugar de deducirlas: Administración se

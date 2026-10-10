@@ -5,10 +5,10 @@ Interfaz web de **SGSPE** (Sistema de Gestión Social para Proyectos Extractivos
 sola app Vite + React con dos partes que comparten el login (el mismo token en `localStorage['sgspe.token']`), el tema y
 el idioma:
 
-| Ruta     | Para quién       | Qué es                                                                                                                                        |
-| -------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`      | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F3 suma Compromisos, Documentos, Tareas y Avisos a lo de F2 |
-| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages                                                                                      |
+| Ruta     | Para quién       | Qué es                                                                                                                                   |
+| -------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`      | el equipo social | el **portal**: las 13 secciones de `docs/ux` de `sgspe`, cada una con su fase; en F4 suma QCS, Riesgos y alerta temprana a lo de F2 y F3 |
+| `/admin` | quien administra | el `WasichaiApp` de wasichai-ui con views, forms y pages                                                                                 |
 
 |                     |                                                                          |
 | ------------------- | ------------------------------------------------------------------------ |
@@ -41,6 +41,13 @@ el idioma:
   interacción. Un comando del backend se manda con `useComando` (una `Idempotency-Key` por acción y por ruta); la emisión de
   un documento no la manda, como pide wasichai-documents. Una evidencia restringida se sube con un nombre neutro y su
   descarga pide `DOWNLOAD_RESTRICTED`. Cada pantalla de un registro se vuelve a montar al cambiar su ruta (`PorRuta`).
+- **Pantallas de F4:** quejas, consultas y solicitudes (S34 a S37, S57 y el reporte unificado; reclasificar, aceptar una
+  solicitud y derivar una pregunta de S23 van por `useComando`), riesgos y alerta temprana (S38 a S41, S58 a S62 e
+  incidentes; la revisión de un riesgo por su comando), los avisos de riesgos y alertas, la queja grave en S48, las dos
+  exportaciones de F4 en Reportes y los parámetros de F4 en S11. Una QCS confidencial que la cuenta no lee responde 404:
+  su vínculo dice «Registro reservado» (`RegistroVinculado`) y una cifra que no la cuenta lo dice sin conteo
+  (`NotaDeConfidenciales`). La huella SHA-256 de una evidencia se reserva, como su nombre, a quien la descarga, y toda ruta
+  del portal codifica sus ids (`enlacesCodificados.test.ts`, sgspe#14).
 - **Datos:** `src/portal/datos` usa el token de core y agrega `If-Match`, `X-Change-Reason`, `Idempotency-Key`, multipart y
   descargas; un error trae el `X-Correlation-Id`. Una escritura sale de la forma del GET y de los permisos de quien
   llama, nunca del modelo: un `PUT` manda las claves leídas que la cuenta puede escribir, nunca un campo restringido
