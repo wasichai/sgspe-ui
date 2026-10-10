@@ -123,10 +123,15 @@ describe('S41 · ficha de alerta', () => {
   })
 
   it('sin la acción de confirmar alertas, confirmar y descartar no se ofrecen y se dice por qué', async () => {
-    fetch = mockFetch(rutasDeFicha(RELACIONISTA))
+    // una transición que no es de confirmar ni descartar prueba que las transiciones ya llegaron antes de afirmar la ausencia
+    const conOtra = {
+      path: transiciones.path,
+      body: [...transiciones.body, { name: 'watch', label: 'Poner en seguimiento', to: 'watching', toLabel: 'En seguimiento', allowed: true, reason: null }]
+    }
+    fetch = mockFetch(rutasDeFicha(RELACIONISTA, [conOtra]))
     abrirFicha(RELACIONISTA, RELACIONES_EN_RIESGOS)
     expect(await screen.findByText('Solo quien gestiona los riesgos confirma o descarta una alerta.')).toBeInTheDocument()
-    await screen.findByRole('heading', { level: 1 })
+    expect(await screen.findByRole('button', { name: 'Poner en seguimiento' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Descartar' })).not.toBeInTheDocument()
   })
