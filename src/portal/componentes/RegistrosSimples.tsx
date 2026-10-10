@@ -148,6 +148,8 @@ function DelRegistro({
 // un campo que la cuenta no lee no llega y no se muestra
 function SoloLectura({ objeto, campos, registro }: { objeto: string; campos: readonly string[]; registro: Registro }) {
   const definicion = useDefinicion(objeto)
+  if (definicion.isPending) return <Cargando compacto />
+  if (definicion.isError && !definicion.data) return <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
   const legibles = campos.map((c) => campoDe(definicion.data, c)).filter((f): f is FieldMeta => f !== undefined)
   return (
     <dl className="space-y-2 text-sm">
