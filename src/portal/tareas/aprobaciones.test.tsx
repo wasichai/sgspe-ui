@@ -217,6 +217,30 @@ describe('S48 · aprobaciones', () => {
     expect(within(fila).queryByText(/^Queja/)).not.toBeInTheDocument()
   })
 
+  // con el alcance por proyecto (ADR-0029) un compromiso de un proyecto que la cuenta dejó de leer también responde 404
+  it('un compromiso de un aviso que responde 404 también es «Registro reservado», sin enlace ni monto', async () => {
+    fetch = mockFetch(
+      rutas([
+        {
+          path: '/auth/me/notifications',
+          body: { content: [aviso('n9', 'commitment', 'c9')], page: 0, size: 200, totalElements: 1, totalPages: 1 }
+        },
+        { path: '/objects/commitment/records/c9', status: 404, body: { title: 'Not Found', status: 404, detail: 'x' } }
+      ])
+    )
+    montar(<AprobacionesPage />, {
+      ruta: '/tasks/approvals',
+      camino: '/tasks/approvals',
+      usuario: APROBADORA,
+      permisos: permisos({ commitment: ['READ', 'UPDATE', 'APPROVE'] })
+    })
+    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
+    const fila = within(tabla).getByText('Registro reservado').closest('tr')!
+    expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
+    expect(within(fila).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+  })
+
   it('sin el módulo de avisos lo dice en lugar de una bandeja vacía', async () => {
     fetch = mockFetch(rutas().filter((r) => r.path !== '/auth/me/notifications'))
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })
