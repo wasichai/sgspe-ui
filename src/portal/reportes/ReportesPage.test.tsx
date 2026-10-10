@@ -637,6 +637,7 @@ describe('S49 · las tres salidas a la vez', () => {
     )
     expect(await screen.findByRole('region', { name: 'Matriz de riesgos' })).toBeInTheDocument()
     const claveRepetida = errores.mock.calls.filter((c) => c.some((a) => typeof a === 'string' && a.includes('same key')))
+    errores.mockRestore()
     expect(claveRepetida).toEqual([])
   })
 })

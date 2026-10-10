@@ -132,7 +132,8 @@ export function EditarQcs({
   campos,
   abierto,
   alCerrar,
-  titulo
+  titulo,
+  marcaConfidencial = false
 }: {
   objeto: ObjetoDeQcs
   qcs: Registro
@@ -140,6 +141,8 @@ export function EditarQcs({
   abierto: boolean
   alCerrar: () => void
   titulo?: string
+  // «Editar» ofrece marcarla confidencial; «Responder», que reusa este cajón, no
+  marcaConfidencial?: boolean
 }) {
   const { t } = useTranslation(NS)
   const [motivo, setMotivo] = useState('')
@@ -154,7 +157,7 @@ export function EditarQcs({
       </Campo>
       {abierto ? (
         <>
-          <MarcarConfidencial objeto={objeto} qcs={qcs} alMarcar={cerrar} />
+          {marcaConfidencial ? <MarcarConfidencial objeto={objeto} qcs={qcs} alMarcar={cerrar} /> : null}
           <FormularioDeRegistro objeto={objeto} registro={qcs} campos={campos} motivo={motivo.trim() || undefined} alGuardar={cerrar} alCancelar={cerrar} />
         </>
       ) : null}

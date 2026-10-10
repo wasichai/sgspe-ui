@@ -193,7 +193,7 @@ function Ficha({ queja }: { queja: Registro }) {
           <QueGenero queja={queja} />
         </aside>
       </div>
-      <EditarQcs objeto="grievance" qcs={queja} campos={EDITABLES} abierto={editando} alCerrar={() => setEditando(false)} />
+      <EditarQcs objeto="grievance" qcs={queja} campos={EDITABLES} abierto={editando} alCerrar={() => setEditando(false)} marcaConfidencial />
       {reclasificando ? <DialogoDeReclasificacion objeto="grievance" registro={queja} alCerrar={() => setReclasificando(false)} /> : null}
     </article>
   )

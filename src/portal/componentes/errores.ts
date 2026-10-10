@@ -13,11 +13,11 @@ import { tieneCodigos } from './codigosVisibles'
 const CON_DETALLE = new Set([400, 409])
 const CODIGOS = new Set(Object.keys(ES_COMUN.codigos))
 
-// el detail del servidor, si se puede decir tal cual
 // el texto fijo de un estado; uno sin texto propio (un 500) dice el genérico de revisar los datos
 const ESTADOS_CON_TEXTO = ['400', '403', '404', '409', '412', '422', '428']
 const claveDeEstado = (estado: number): string => `comun.errores.${ESTADOS_CON_TEXTO.includes(String(estado)) ? estado : 400}`
 
+// el detail del servidor, si se puede decir tal cual
 const detalleVisible = (texto: string | undefined | null): string | null => (texto && !tieneCodigos(texto) ? texto : null)
 
 // lo que una pantalla dice distinto de un código, por ejemplo con la acción que ofrece: { MEMBERS_REQUIRED: '…' }. una clave

@@ -197,12 +197,12 @@ function Decision({ compromiso }: { compromiso: Registro }) {
           <>
             {comprobacion.data.blocking.map((b) => (
               <Alert key={`${b.code}-${b.field ?? ''}`} tone="danger" title={t('transiciones.bloqueo')}>
-                {textoDe(b, transicionDecidida).texto}
+                {textoDe(b, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
               </Alert>
             ))}
             {comprobacion.data.warnings.map((w) => (
               <Alert key={`${w.code}-${w.field ?? ''}`} tone="warning" title={t('transiciones.advertencia')}>
-                {textoDe(w, transicionDecidida).texto}
+                {textoDe(w, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
               </Alert>
             ))}
             {!bloqueado && comprobacion.data.warnings.length === 0 ? <p className="text-sg-success">{t('transiciones.sinBloqueos')}</p> : null}

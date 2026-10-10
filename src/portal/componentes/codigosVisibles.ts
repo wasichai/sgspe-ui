@@ -11,8 +11,9 @@ export const PATRONES: [string, RegExp][] = [
   ['código UPPER_SNAKE', /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g],
   // una acción de permiso de wasichai en crudo: «la acción APPROVE», «el permiso EXPORT»
   ['acción de permiso', /\b(?:READ|CREATE|UPDATE|DELETE|EXPORT|IMPORT|APPROVE|DOWNLOAD)\b/g],
-  // un estado HTTP de error: «(400 OUT_OF_RANGE)», «responde 403»
-  ['estado HTTP', /\b[45]\d\d\b/g],
+  // un estado HTTP de error junto a su código o nombrado como tal: «(400 OUT_OF_RANGE)», «responde 403». una cifra suelta
+  // («450 compromisos») no lo es
+  ['estado HTTP', /\b[45]\d\d(?=\s+[A-Z][A-Z0-9]*_[A-Z])|(?<=\b(?:HTTP|[Ee]rror|[Ee]stado|[Ss]tatus|[Rr]esponde)\s)[45]\d\d\b/g],
   // un nombre de la API en camelCase o snake_case: requiresReason, ignoredFilters, due_date, reject_acknowledged
   ['nombre de la API', /\b[a-z]+[A-Z][A-Za-z0-9]*\b|\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g],
   // una propiedad de configuración: sgspe.calendar.holidays

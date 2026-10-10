@@ -47,6 +47,8 @@ describe('textos sin códigos internos', () => {
     expect(codigosEn('solo lo de su proyecto (P54)')).toEqual(['ID de decisión: P54'])
     expect(codigosEn('feriados de sgspe.calendar.holidays')).toEqual(['propiedad de configuración: sgspe.calendar.holidays'])
     expect(codigosEn('De 1 a 365; vacío = la frecuencia del proyecto. Llega en F7.')).toEqual([])
+    expect(codigosEn('el servidor responde 403')).toEqual(['estado HTTP: 403'])
+    expect(codigosEn('450 compromisos de la campaña tienen un monto inválido')).toEqual([])
   })
 
   // errores.ts dice el texto de un código sin interpolar errors[].field: es el nombre de la API («engagement.project»), no una

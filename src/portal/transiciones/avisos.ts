@@ -35,7 +35,7 @@ export function useTextoDeAviso(objeto: string): (aviso: Aviso, transicion?: { n
     if (mensaje && !tieneCodigos(mensaje) && !nombra(mensaje, aviso.field) && !nombra(mensaje, transicion?.name)) return { texto: mensaje, campo }
     if (aviso.code === 'FIELD_REQUIRED' && campo)
       return {
-        texto: transicion ? t('transiciones.faltaCampo', { accion: transicion.label, campo }) : t('transiciones.faltaCampoSinAccion', { campo }),
+        texto: transicion?.label ? t('transiciones.faltaCampo', { accion: transicion.label, campo }) : t('transiciones.faltaCampoSinAccion', { campo }),
         campo: null
       }
     if (CODIGOS.has(aviso.code)) return { texto: t(`comun.codigos.${aviso.code}`), campo }

@@ -8,6 +8,7 @@ import { useAvailableTransitions } from '@wasichai/workflow'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useRegistro } from '../datos/registros'
+import { useTextoDeAviso } from './avisos'
 import { BotonesDeTransicion } from './BotonesDeTransicion'
 
 // design-system.md §6.2 y screens.md §2: la lista sale de GET …/transitions (las que el rol no tiene no se muestran),
@@ -162,6 +163,17 @@ describe('transiciones', () => {
     expect(screen.getByText('Registre al menos un participante que asistió.')).toBeInTheDocument()
     expect(screen.getByText('Una regla del sistema no permite este paso todavía.')).toBeInTheDocument()
     expect(screen.queryByText(/\bsuspend\b|\bresponse\b|\battended\b|RN-ENG/)).not.toBeInTheDocument()
+  })
+
+  it('sin el nombre de la acción (la bandeja de aprobaciones), un dato que falta no deja «Para «»» (revisión, importante 1)', async () => {
+    start([{ path: '/metadata/objects/project', body: definicion('project', [['resolution', { label: 'Resolución' }]]) }])
+    function Sonda() {
+      const textoDe = useTextoDeAviso('project')
+      const aviso = { code: 'FIELD_REQUIRED', message: 'La transición resolve_high_severity exige resolution', field: 'resolution' }
+      return <p>{textoDe(aviso, { name: 'resolve_high_severity', label: '' }).texto}</p>
+    }
+    montar(<Sonda />)
+    expect(await screen.findByText('Falta «Resolución» para este paso: complételo y vuelva a intentar.')).toBeInTheDocument()
   })
 
   it('una advertencia vuelve obligatorio el motivo', async () => {
