@@ -13,6 +13,8 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { AcuerdosDeLaInteraccion } from '../acuerdos/AcuerdosDeLaInteraccion'
+import { DialogoDeDerivacion, QcsDeLaPregunta } from '../atencion/Derivacion'
+import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { Rastro } from '../contexto/Rastro'
 import { DocumentosEmitidos } from '../documentos/DocumentosEmitidos'
@@ -293,15 +295,21 @@ function Participantes({ interaccion }: { interaccion: Registro }) {
   )
 }
 
-// una pregunta cuenta como atendida si se respondió en el lugar o tiene answered_at (EngagementWriteGuard.answered): sin
-// answered_at, la respuesta no la atiende y "Cerrar" sigue bloqueado por PENDING_QUESTIONS. por eso responder se ofrece
-// solo a quien puede escribir answer y answered_at
+// una pregunta cuenta como atendida si se respondió en el lugar, tiene answered_at o, desde F4, se derivó a una QCS (referred_at,
+// EngagementWriteGuard): sin eso, "Cerrar" sigue bloqueado por PENDING_QUESTIONS. responder se ofrece solo a quien puede escribir
+// answer y answered_at; derivar (RF-ENG-006, api.md §4.4), a quien actualiza la pregunta y crea algún tipo de QCS, mientras la
+// interacción está realizada y sin cerrar (de held a minutes_approved: fuera de eso el comando responde STATE_MISMATCH)
+const DERIVABLE = ['held', 'minutes_drafted', 'minutes_in_review', 'minutes_approved']
+
 function Preguntas({ interaccion }: { interaccion: Registro }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const preguntas = useTodosConTope('engagement_question', { engagement: interaccion.id })
   const definicion = useDefinicion('engagement_question')
+  const escribe = useEscribeEnProyecto(texto(interaccion, 'project'))
   const responde = can('engagement_question', 'UPDATE') && puedeEscribir(definicion.data, 'answer') && puedeEscribir(definicion.data, 'answered_at')
+  const destinos =
+    escribe && can('engagement_question', 'UPDATE') && DERIVABLE.includes(interaccion.state ?? '') ? OBJETOS_DE_QCS.filter((o) => can(o, 'CREATE')) : []
   if (preguntas.isPending) return <Cargando compacto />
   if (preguntas.isError && !preguntas.data) return <FalloDeLectura error={preguntas.error} alReintentar={() => void preguntas.refetch()} />
   return (
@@ -311,27 +319,41 @@ function Preguntas({ interaccion }: { interaccion: Registro }) {
       ) : null}
       {preguntas.data?.length === 0 ? <li className="text-sg-text-muted">{t('relacionamiento.ficha.sinPreguntas')}</li> : null}
       {(preguntas.data ?? []).map((p) => (
-        <FilaDePregunta key={p.id} pregunta={p} interaccionId={interaccion.id} responde={responde} />
+        <FilaDePregunta key={p.id} pregunta={p} interaccionId={interaccion.id} responde={responde} destinos={destinos} />
       ))}
-      <li className="text-sg-caption text-sg-text-muted">{t('relacionamiento.ficha.derivarLlega')}</li>
     </ul>
   )
 }
 
-function FilaDePregunta({ pregunta, interaccionId, responde }: { pregunta: Registro; interaccionId: string; responde: boolean }) {
+function FilaDePregunta({
+  pregunta,
+  interaccionId,
+  responde,
+  destinos
+}: {
+  pregunta: Registro
+  interaccionId: string
+  responde: boolean
+  destinos: readonly (typeof OBJETOS_DE_QCS)[number][]
+}) {
   const { t } = useTranslation(NS)
   const releer = useReleer()
   const actualizar = useActualizar('engagement_question')
   const refrescar = useRefrescarInteraccion(interaccionId)
   const [abierta, setAbierta] = useState(false)
+  const [derivando, setDerivando] = useState(false)
   const [respuesta, setRespuesta] = useState('')
   const enElLugar = atributo(pregunta, 'answered_on_site') === true
   const respondida = atributo<string>(pregunta, 'answered_at')
+  const derivada = atributo<string>(pregunta, 'referred_at')
   const estado = enElLugar
     ? t('relacionamiento.ficha.respondidaEnElLugar')
     : respondida
       ? t('relacionamiento.ficha.respondida', { fecha: fechaPe(new Date(respondida)) })
-      : t('relacionamiento.ficha.pendiente')
+      : derivada
+        ? t('relacionamiento.ficha.derivada', { fecha: fechaPe(new Date(derivada)) })
+        : t('relacionamiento.ficha.pendiente')
+  const pendiente = !enElLugar && !respondida && !derivada
   const cerrar = () => {
     actualizar.reset()
     setAbierta(false)
@@ -352,10 +374,17 @@ function FilaDePregunta({ pregunta, interaccionId, responde }: { pregunta: Regis
     <li className="space-y-1 rounded-sg-md border border-sg-border p-3">
       <p className="font-medium">{texto(pregunta, 'question_text')}</p>
       <p className="text-sg-caption text-sg-text-muted">
-        {texto(pregunta, 'raised_by_role')} · <span data-estado={enElLugar || respondida ? 'respondida' : 'pendiente'}>{estado}</span>
+        {texto(pregunta, 'raised_by_role')} · <span data-estado={enElLugar || respondida ? 'respondida' : derivada ? 'derivada' : 'pendiente'}>{estado}</span>
       </p>
       {texto(pregunta, 'answer') ? <p className="text-sg-text-secondary">{texto(pregunta, 'answer')}</p> : null}
-      {!enElLugar && !respondida && responde ? (
+      {derivada ? <QcsDeLaPregunta pregunta={pregunta} /> : null}
+      {pendiente && destinos.length > 0 && !abierta ? (
+        <Button size="sm" variant="secondary" onClick={() => setDerivando(true)}>
+          {t('relacionamiento.ficha.derivar')}
+        </Button>
+      ) : null}
+      {derivando ? <DialogoDeDerivacion pregunta={pregunta} destinos={destinos} alDerivar={refrescar} alCerrar={() => setDerivando(false)} /> : null}
+      {pendiente && responde ? (
         abierta ? (
           <div className="space-y-2">
             <label className="block text-sg-label" htmlFor={`r-${pregunta.id}`}>

@@ -188,19 +188,19 @@ export function DeDondeViene({ objeto, qcs }: { objeto: ObjetoDeQcs; qcs: Regist
     <section aria-label={t('fichaQueja.comun.deDondeViene')} className="space-y-1">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaQueja.comun.deDondeViene')}</h2>
       {interaccion ? (
-        <p>
+        <div>
           {t('fichaQueja.comun.interaccion')}: <RegistroVinculado objeto="engagement" id={interaccion} />
-        </p>
+        </div>
       ) : null}
       {pregunta ? (
-        <p>
+        <div>
           {t('fichaQueja.comun.pregunta')}: <Pregunta id={pregunta} />
-        </p>
+        </div>
       ) : null}
       {reclasificadas.map(([campo, otro]) => (
-        <p key={campo}>
+        <div key={campo}>
           {t('fichaQueja.comun.reclasificadaDe')} ({t(`comun.qcs.${otro}`)}): <RegistroVinculado objeto={otro} id={atributo<string>(qcs, campo)} />
-        </p>
+        </div>
       ))}
       {!interaccion && !pregunta && reclasificadas.length === 0 ? <p className="text-sg-text-muted">{t('fichaQueja.comun.sinOrigen')}</p> : null}
     </section>
