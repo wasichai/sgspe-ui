@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest'
 // del portal, cada ${…} es encodeURIComponent(…) o uno de los trozos de ruta fijos de PERMITIDOS
 const PORTAL = import.meta.dirname
 
-// los inicios de una ruta del portal (ux-architecture.md §6.2): las fichas y listas que llevan un id o un proyecto
-const RUTA = /`\/(projects|actors|territory|documents|tasks|agreements|r|risks|attention|commitments|engagements|stakeholders)\b[^`]*`/g
+// los inicios de una ruta del portal, con un literal o con una interpolación delante (`${base}/engagements/…`) (ux-architecture.md §6.2): las fichas y listas que llevan un id o un proyecto
+const RUTA = /`(?:\/|\$\{[^}`]*\}\/)(projects|actors|territory|documents|tasks|agreements|r|risks|attention|commitments|engagements|stakeholders)\b[^`]*`/g
 
 // lo que puede ir sin codificar porque ya es un trozo de ruta, nunca un dato: la base ya codificada de una pantalla, un sufijo de
 // consulta ya armado, una pestaña del proyecto, la sección de territorio o de QCS de un objeto, y un id o un resto de ruta que
@@ -20,6 +20,7 @@ const PERMITIDOS = new Set([
   'p',
   'idEnRuta',
   'resto',
+  'segunda', // contexto/rutas.ts: solo llega tras compararla con 'matrix', 'calendar' o 'dashboard'
   'FICHA[objeto]',
   'FICHA[objetoElegido]',
   'RUTA_DE_QCS[objeto]',
@@ -50,7 +51,9 @@ function interpolaciones(plantilla: string): string[] {
 }
 
 export const sinCodificar = (codigo: string): string[] =>
-  [...codigo.matchAll(RUTA)].flatMap(([plantilla]) => interpolaciones(plantilla).filter((x) => !x.startsWith('encodeURIComponent(') && !PERMITIDOS.has(x)))
+  [...codigo.matchAll(RUTA)].flatMap(([plantilla]) =>
+    interpolaciones(plantilla).filter((x) => !/^encodeURIComponent\(|^[\w.]+\.map\(encodeURIComponent\)\.join\(/.test(x) && !PERMITIDOS.has(x))
+  )
 
 describe('las rutas del portal codifican lo que llevan', () => {
   it('reconoce una interpolación sin codificar y deja pasar las codificadas', () => {
@@ -58,6 +61,9 @@ describe('las rutas del portal codifican lo que llevan', () => {
     expect(sinCodificar("navegar(`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`)")).toEqual([])
     expect(sinCodificar('`/projects/${encodeURIComponent(p)}/stakeholders?territory=${encodeURIComponent(valor)}`')).toEqual([])
     expect(sinCodificar('to={`${base}/commitments/new`}')).toEqual([])
+    expect(sinCodificar("`${base}/engagements/new?stakeholders=${elegidos.join(',')}`")).toEqual(["elegidos.join(',')"])
+    expect(sinCodificar("`${base}/engagements/new?stakeholders=${elegidos.map(encodeURIComponent).join(',')}`")).toEqual([])
+    expect(sinCodificar('`${raiz}/projects/${id}`')).toEqual(['raiz', 'id'])
   })
 
   it('ninguna fuente del portal arma una ruta con un dato sin codificar', () => {
