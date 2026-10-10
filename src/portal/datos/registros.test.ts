@@ -144,7 +144,7 @@ describe('atributosDeEscritura', () => {
     })
   })
 
-  it('la clave de origen de una tarea, escribible o no para el rol, viaja tal como se leyó', () => {
+  it('la clave de origen de una tarea escribible para el rol viaja tal como se leyó', () => {
     const TAREA: ObjectDefinition = { ...STAKEHOLDER, id: 'o-task', name: 'task', fields: [campo('assignee_user_id'), campo('generator_key')] }
     const tarea: Registro = { ...registro, id: 't1', attributes: { assignee_user_id: null, generator_key: 'escalation:grievance:abc:2026-10-09:2' } }
     expect(atributosDeEscritura('task', TAREA, { assignee_user_id: 'u-1', generator_key: null }, tarea)).toEqual({

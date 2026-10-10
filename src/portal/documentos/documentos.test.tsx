@@ -310,6 +310,7 @@ describe('S46 · ficha de evidencia', () => {
     const texto = 'Una evidencia vinculada a una QCS confidencial es CONFIDENCIAL o de DATOS PERSONALES: no se vincula ni baja a otra clasificación.'
     await waitFor(() => expect(within(panel).getByLabelText('Clasificación')).toHaveAccessibleDescription(texto))
     expect(within(panel).queryByText('EVIDENCE_NOT_RESTRICTED')).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('una versión nueva lleva replaces con el id de esta evidencia', async () => {

@@ -262,12 +262,13 @@ function Ficha({
   )
 }
 
+// los campos del cuerpo de la aceptación que tienen control en el diálogo
+const CAMPOS_DE_ACEPTACION = ['response', 'respondedAt', 'code', 'title', 'amount', 'currency']
+
 // aceptar la solicitud creando el compromiso (POST /api/sgspe/stakeholder-requests/{id}/accept): la respuesta y cuándo se comunicó,
 // los datos mínimos del compromiso que nace en borrador (código, título, monto y moneda; el resto se completa en su ficha antes de
 // enviarlo a aprobación) y el motivo. un reintento repite la misma Idempotency-Key: no nacen dos compromisos. un 400 sobre la
 // respuesta, su fecha (respondedAt mal formado, plan 4.2a) o un dato del compromiso se dice junto a su control; el resto, en el aviso
-const CAMPOS_DE_ACEPTACION = ['response', 'respondedAt', 'code', 'title', 'amount', 'currency']
-
 function DialogoDeAceptacion({ solicitud, alCerrar }: { solicitud: Registro; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const navegar = useNavigate()
