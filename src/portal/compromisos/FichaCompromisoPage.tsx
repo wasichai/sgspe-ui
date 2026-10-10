@@ -12,6 +12,7 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { Rastro } from '../contexto/Rastro'
@@ -279,7 +280,11 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
   const tareas = useTodos('task', { commitment: compromiso.id })
   const entregas = useRegistros('delivery', { commitment: compromiso.id, size: 1 })
   const candidato = candidatos.data?.content[0]
-  const sinOrigen = !atributo(compromiso, 'origin_engagement') && !atributo(compromiso, 'agreement') && candidatos.isSuccess && !candidato
+  // desde F4 un compromiso nace también de una queja (origin_grievance) o atiende un riesgo (social_risk): una queja confidencial que
+  // quien mira no lee se dice «Registro reservado» (RegistroVinculado)
+  const queja = atributo<string>(compromiso, 'origin_grievance')
+  const riesgo = atributo<string>(compromiso, 'social_risk')
+  const sinOrigen = !atributo(compromiso, 'origin_engagement') && !atributo(compromiso, 'agreement') && !queja && candidatos.isSuccess && !candidato
   return (
     <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
       <section aria-label={t('fichaCompromiso.trazabilidad.deDondeViene')} className="space-y-1">
@@ -307,6 +312,16 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
         {candidato ? (
           <p>
             {t('fichaCompromiso.trazabilidad.candidato')}: {texto(candidato, 'proposed_text')}
+          </p>
+        ) : null}
+        {queja ? (
+          <p>
+            {t('fichaCompromiso.trazabilidad.queja')}: <RegistroVinculado objeto="grievance" id={queja} />
+          </p>
+        ) : null}
+        {riesgo ? (
+          <p>
+            {t('fichaCompromiso.trazabilidad.riesgo')}: <RegistroVinculado objeto="social_risk" id={riesgo} />
           </p>
         ) : null}
         <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.interaccion')} consulta={interaccion} />

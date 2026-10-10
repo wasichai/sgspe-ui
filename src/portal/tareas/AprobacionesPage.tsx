@@ -6,7 +6,7 @@ import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
-import { CLASE_DE_TIPO, FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, sinBandeja, useAvisos, type Aviso } from '../datos/avisos'
+import { CLASE_DE_TIPO, FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS, sinBandeja, useAvisos, type Aviso } from '../datos/avisos'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { destinoDeAviso, rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, useRegistro } from '../datos/registros'
@@ -21,11 +21,17 @@ import { useComprobacion } from '../transiciones/api'
 // en S31 (/tasks/approvals/commitment/:recordId); las de otros objetos, en su ficha
 // approve_direct no está: sale de draft, y los avisos de aprobación existen solo en pending_approval (ApprovalNotices los
 // resuelve al salir de ese estado), así que nunca llega a esta bandeja ni a las decisiones de S31
+// desde F4, la queja ALTA o CRITICA que resuelve quien aprueba (resolve_high_severity, decisión 8): su aviso llega con la misma
+// fuente y la decisión se toma en la ficha de la queja (S36)
 export const APROBACIONES_DE: Readonly<Record<string, readonly string[]>> = {
   commitment: ['approve', 'approve_senior'],
   project: ['approve'],
-  engagement: ['approve_minutes']
+  engagement: ['approve_minutes'],
+  grievance: ['resolve_high_severity']
 }
+// los avisos que son escalamientos: los de plazo (QCS, compromisos, tareas, la revisión vencida de un riesgo y el aviso genérico de
+// una QCS confidencial, sin enlace) y los de un riesgo que sube de nivel
+const DE_ESCALAMIENTO: readonly string[] = [FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS]
 const TOPE = 200
 
 // los avisos ACTION de aprobación pendiente con su registro: lo que «Por aprobar» y la bandeja de S31 listan
@@ -47,7 +53,7 @@ export function AprobacionesPage() {
   const hecha = (useLocation().state as { hecha?: boolean } | null)?.hecha === true
   const { avisos, pendientes, truncado } = useAprobacionesPendientes()
   const plazos = useAvisos({ size: TOPE }, lista.vista === 'escalamientos')
-  const escalamientos = (plazos.data?.content ?? []).filter((a) => a.source === FUENTE_DE_PLAZOS && a.kind !== 'INFO')
+  const escalamientos = (plazos.data?.content ?? []).filter((a) => DE_ESCALAMIENTO.includes(a.source) && a.kind !== 'INFO')
   // los escalamientos se filtran de los primeros 200 avisos de cualquier fuente: si hay más, se dice
   const plazosTruncados = (plazos.data?.totalPages ?? 1) > 1
   if (avisos.isError && !avisos.data && sinBandeja(avisos.error)) {
@@ -152,7 +158,9 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
         {registro.isPending ? (
           <Cargando compacto />
         ) : registro.data ? (
-          [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name')].filter(Boolean).join(' · ')
+          [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name') || texto(registro.data, 'category')]
+            .filter(Boolean)
+            .join(' · ')
         ) : (
           <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
         )}

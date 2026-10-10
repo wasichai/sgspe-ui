@@ -8,8 +8,7 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import {
   CLASE_DE_TIPO,
-  FUENTE_DE_APROBACIONES,
-  FUENTE_DE_PLAZOS,
+  FUENTES_DE_SGSPE,
   sinBandeja,
   TIPOS_DE_AVISO,
   useAccionDeAviso,
@@ -103,7 +102,8 @@ export function AvisosPage() {
   )
 }
 
-const fuenteDe = (aviso: Aviso) => (aviso.source === FUENTE_DE_APROBACIONES || aviso.source === FUENTE_DE_PLAZOS ? aviso.source : 'otra')
+// la fuente de un aviso de SGSPE (aprobaciones, plazos y, desde F4, riesgos y alertas) se nombra; las del módulo, «Otros avisos»
+const fuenteDe = (aviso: Aviso) => (FUENTES_DE_SGSPE.includes(aviso.source) ? aviso.source : 'otra')
 
 function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
   const { t } = useTranslation(NS)
