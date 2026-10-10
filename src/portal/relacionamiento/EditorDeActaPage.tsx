@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useBlocker, useParams } from 'react-router'
 import { AvisoDeConflicto } from '../componentes/AvisoDeConflicto'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Consulta } from '../componentes/Estados'
+import { Cargando, Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
 import { esConflictoDeVersion, useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { usePedir } from '../datos/http'
@@ -47,7 +47,12 @@ export function EditorDeActaPage() {
   // sin la definición no se sabe si la cuenta puede leer o escribir el acta: no se dibuja un editor a ciegas
   if (definicion.isError && !definicion.data) return <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
   if (definicion.isPending) return <Cargando />
-  return <Consulta consulta={interaccion}>{(i) => <Editor key={i.id} interaccion={i} definicion={definicion.data} />}</Consulta>
+  // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
+  return (
+    <Consulta consulta={interaccion} noExiste={<NoEsDeSusProyectos />}>
+      {(i) => <Editor key={i.id} interaccion={i} definicion={definicion.data} />}
+    </Consulta>
+  )
 }
 
 function Editor({ interaccion, definicion }: { interaccion: Registro; definicion: ObjectDefinition }) {

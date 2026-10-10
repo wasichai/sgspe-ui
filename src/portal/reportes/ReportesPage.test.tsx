@@ -29,10 +29,10 @@ afterEach(() => {
 const rutas = [
   {
     path: '/objects/project/records',
-    body: pagina([registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }), registro('p2', { code: 'PRJ-02', name: 'Antamina Norte' })])
+    body: pagina([registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }), registro('p2', { code: 'PRJ-02', name: 'Wayra Norte' })])
   },
   { path: '/objects/project/records/p1', body: registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }, { state: 'active' }) },
-  { path: '/objects/project/records/p2', body: registro('p2', { code: 'PRJ-02', name: 'Antamina Norte' }, { state: 'active' }) },
+  { path: '/objects/project/records/p2', body: registro('p2', { code: 'PRJ-02', name: 'Wayra Norte' }, { state: 'active' }) },
   { path: '/objects/project/workflow', body: workflow('project', [['active', 'Activo']]) },
   { path: '/objects/project_assignment/records', body: pagina([registro('a', { project: 'p1', active: true, member_user_id: 'u-smg' })]) },
   {
@@ -201,7 +201,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
     const selector = within(seccion).getByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() => expect(within(selector).getByRole('option', { name: 'PRJ-02 · Antamina Norte' })).toBeInTheDocument())
+    await waitFor(() => expect(within(selector).getByRole('option', { name: 'PRJ-02 · Wayra Norte' })).toBeInTheDocument())
     await userEvent.selectOptions(selector, 'p2')
     await userEvent.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
@@ -220,7 +220,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
     const delaPagina = within(seccion).getByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() => expect(within(delaPagina).getByRole('option', { name: 'PRJ-02 · Antamina Norte' })).toBeInTheDocument())
+    await waitFor(() => expect(within(delaPagina).getByRole('option', { name: 'PRJ-02 · Wayra Norte' })).toBeInTheDocument())
     await userEvent.selectOptions(delaPagina, '')
     expect(delaPagina).toHaveValue('')
     // el conmutador del shell (el primer combobox «Proyecto») cambia el proyecto de la URL
@@ -232,6 +232,38 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
     expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toMatchObject({ filters: { project: ['p2'] } })
+  })
+
+  // con READ_ALL_PROJECTS el servidor no pide asignación para un proyecto (spec 4.4 §3.7): el alcance es «Todos los proyectos» y
+  // la interfaz no frena un proyecto sin asignación
+  it('con la acción de leer todos los proyectos, el alcance de la exportación es «Todos los proyectos» y un proyecto sin asignación se exporta', async () => {
+    fetch = abrirPortal(
+      '/reports',
+      GERENCIA_SOCIAL,
+      permisos({ project: ['READ', 'READ_ALL_PROJECTS'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }),
+      rutas
+    )
+    red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
+    const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
+    const proyecto = within(seccion).getByRole('combobox', { name: 'Proyecto' })
+    expect(within(proyecto).getAllByRole('option')[0]).toHaveTextContent('Todos los proyectos')
+    await waitFor(() =>
+      expect(
+        within(proyecto)
+          .getAllByRole('option')
+          .map((o) => o.getAttribute('value'))
+      ).toContain('p2')
+    )
+    await userEvent.selectOptions(proyecto, 'p2')
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar XLSX' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toMatchObject({ filters: { project: ['p2'] } })
+  })
+
+  it('sin la acción, el alcance de la exportación sigue siendo «Todos mis proyectos»', async () => {
+    fetch = abrirPortal('/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
+    const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
+    expect(within(within(seccion).getByRole('combobox', { name: 'Proyecto' })).getAllByRole('option')[0]).toHaveTextContent('Todos mis proyectos')
   })
 
   it('si la lista de proyectos falla, el selector rotula el proyecto de la URL sin mostrar su identificador', async () => {

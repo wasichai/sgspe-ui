@@ -8,7 +8,7 @@ import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo, CONTROL } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, NoDisponible, ThConExplicacion } from '../componentes/Estados'
+import { Cargando, esIlegible, NoDisponible, NoEsDeSusProyectos, ThConExplicacion } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -63,7 +63,9 @@ export function VisitaDeCampoPage() {
 function VisitaExistente({ id }: { id: string }) {
   const visita = useRegistro('field_visit', id)
   if (visita.isPending) return <Cargando />
-  if (visita.isError && !visita.data) return <FalloDeLectura error={visita.error} alReintentar={() => void visita.refetch()} />
+  // una visita de otro proyecto o de una asignación vencida responde 404, como una que no existe (ADR-0029)
+  if (visita.isError && !visita.data)
+    return esIlegible(visita.error) ? <NoEsDeSusProyectos /> : <FalloDeLectura error={visita.error} alReintentar={() => void visita.refetch()} />
   return <Visita visita={visita.data as Registro} />
 }
 

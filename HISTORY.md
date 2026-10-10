@@ -2,6 +2,21 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-10 — Alcance de lectura por proyecto (plan 4.4b)
+
+- El servidor acota lo que cada cuenta lee a sus proyectos (plan 4.4a, ADR-0029); el portal no filtra, dice bien lo que
+  recibe. `useLeeTodosLosProyectos` (`contexto/proyectos.ts`) dice si la cuenta tiene `READ_ALL_PROJECTS` sobre `project`
+  (`AUDITOR`, `PROJECT_ADMIN`; ADMIN siempre) y es el único lugar que nombra la acción.
+- Selector de proyectos: «Todos los proyectos» para quien los lee todos, «Todos mis proyectos» para los demás; sin
+  proyectos ni la acción, el selector y S06 dicen que no hay asignaciones. S49 usa la misma etiqueta.
+- Un `404` no distingue «no existe» de «no es de sus proyectos»: las fichas lo dicen con `NoEsDeSusProyectos` o su texto
+  propio, sin «Reintentar» (ocho fichas con `NoEsDeSusProyectos`, la visita de campo incluida, y la importación con un
+  `?project=` ilegible); un vínculo, un aviso (`/r/…`) o una aprobación dicen «Registro reservado» por cualquier objeto.
+- El `400` de wasichai sobre una relación a un registro ilegible se dice en su campo, nunca en inglés. Se reconoce por el
+  texto exacto «no record with this id» (`SIN_REGISTRO`, `componentes/errores.ts`): revisarlo en cada subida de
+  `@wasichai/*`.
+- Pruebas: 91 archivos con 1341 pruebas en Vitest y 16 recorridos en Playwright (3 nuevos en `e2e/alcance.spec.ts`).
+
 ## 2026-10-10 — `@wasichai/*` 0.6.0
 
 - Los diez paquetes (nueve de la app y `@wasichai/testing`) pasan de 0.5.1 a 0.6.0 (`maplibre-gl` sigue en 6.10.0;

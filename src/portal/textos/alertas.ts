@@ -10,7 +10,7 @@ export const ES_ALERTAS = {
   aMano: 'Registrada a mano',
   ficha: {
     volver: 'Volver a las alertas',
-    noExiste: 'Esta alerta no existe o no es de su organización.',
+    noExiste: 'Esta alerta no existe o no es de sus proyectos.',
     detectada: 'Detectada el {{fecha}}',
     severidad: 'Severidad',
     sinSeveridad: 'Sin severidad',
@@ -50,7 +50,7 @@ export const EN_ALERTAS: typeof ES_ALERTAS = {
   aMano: 'Recorded by hand',
   ficha: {
     volver: 'Back to the alerts',
-    noExiste: 'This alert does not exist or is not from your organization.',
+    noExiste: 'This alert does not exist or is not in your projects.',
     detectada: 'Detected on {{fecha}}',
     severidad: 'Severity',
     sinSeveridad: 'No severity',

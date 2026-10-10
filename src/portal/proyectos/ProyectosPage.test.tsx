@@ -191,6 +191,32 @@ describe('S06 · lista de proyectos', () => {
     await waitFor(() => expect(filas()).toHaveLength(3))
   })
 
+  // con el alcance por proyecto, una cuenta sin asignaciones vigentes no lee ningún proyecto (spec 4.4 §3.12)
+  const SIN_PROYECTOS = [
+    { path: '/objects/project/records', body: pagina([]) },
+    { path: '/objects/project_assignment/records', body: pagina([]) },
+    { path: '/objects/exploration_campaign/records', body: pagina([]) },
+    { path: '/metadata/objects/project', body: definicion('project', []) }
+  ]
+
+  it('sin proyectos que leer ni la acción de leer todos, dice que no tiene proyectos asignados', async () => {
+    fetch = mockFetch(SIN_PROYECTOS)
+    montar(<ProyectosPage />, { ruta: '/projects', permisos: LECTOR })
+    expect(await screen.findByText('No tiene proyectos asignados. Pida una asignación al administrador de proyectos.')).toBeInTheDocument()
+    expect(screen.queryByText(/Un proyecto nace con/)).not.toBeInTheDocument()
+    expect(screen.queryByText('0 proyectos')).not.toBeInTheDocument()
+  })
+
+  it('con la acción de leer todos y ningún proyecto en la organización, no dice que le falte una asignación', async () => {
+    fetch = mockFetch(SIN_PROYECTOS)
+    montar(<ProyectosPage />, {
+      ruta: '/projects',
+      permisos: permisos({ project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'], exploration_campaign: ['READ'] })
+    })
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    expect(screen.queryByText(/No tiene proyectos asignados/)).not.toBeInTheDocument()
+  })
+
   describe('mientras las consultas auxiliares cargan', () => {
     // retiene las respuestas de las URL que contienen el patrón hasta soltarlas
     const retener = (patron: string) => {

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { ADMIN_PERMISOS, permisos, RELACIONISTA } from '../../test/portal'
 import { BarraDeContexto } from './BarraDeContexto'
-import { useMisAsignaciones, useProyecto } from './proyectos'
+import { useLeeTodosLosProyectos, useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
 import { filtroDeTerritorio, rutaEquivalente } from './rutas'
 import { SelectorDeProyecto } from './SelectorDeProyecto'
@@ -69,6 +69,23 @@ describe('filtroDeTerritorio', () => {
   })
 })
 
+// la acción declarada READ_ALL_PROJECTS sobre project exime del alcance de lectura por proyecto (ADR-0029); ADMIN la tiene siempre
+describe('useLeeTodosLosProyectos', () => {
+  function Sonda() {
+    return <span>{useLeeTodosLosProyectos() ? 'lee todo' : 'lee lo suyo'}</span>
+  }
+  it.each([
+    ['con la acción sobre project', permisos({ project: ['READ', 'READ_ALL_PROJECTS'] }), 'lee todo'],
+    ['ADMIN', ADMIN_PERMISOS, 'lee todo'],
+    ['solo READ sobre project', permisos({ project: ['READ'] }), 'lee lo suyo'],
+    ['la acción sobre otro objeto no cuenta', permisos({ project: ['READ'], commitment: ['READ_ALL_PROJECTS'] }), 'lee lo suyo']
+  ])('%s', async (_caso, p, texto) => {
+    fetch = mockFetch([])
+    montar(<Sonda />, { permisos: p })
+    expect(await screen.findByText(texto)).toBeInTheDocument()
+  })
+})
+
 describe('selector de proyecto', () => {
   it('lista primero los proyectos de la persona y lleva a la misma sección del proyecto elegido', async () => {
     fetch = mockFetch([
@@ -87,6 +104,42 @@ describe('selector de proyecto', () => {
   it('sin READ sobre project no se dibuja', () => {
     fetch = mockFetch([])
     montar(<SelectorDeProyecto />, { permisos: { admin: false, objects: {} } })
+    expect(screen.queryByRole('combobox', { name: 'Proyecto' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['la acción de leer todos', permisos({ project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'] })],
+    ['ADMIN', ADMIN_PERMISOS]
+  ])('con %s, el alcance global es «Todos los proyectos», por defecto, aunque no tenga asignaciones', async (_caso, p) => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: p })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() =>
+      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos los proyectos', 'PRJ-01 · Pukaqaqa', 'PRJ-02 · Qorihuasi'])
+    )
+    expect(selector).toHaveValue('')
+  })
+
+  it('con la acción de leer todos y una organización sin proyectos, sigue el selector y no el aviso de asignación', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: permisos({ project: ['READ', 'READ_ALL_PROJECTS'] }) })
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos los proyectos']))
+    expect(screen.queryByText(/No tiene proyectos asignados/)).not.toBeInTheDocument()
+  })
+
+  it('sin proyectos que leer ni la acción de leer todos, dice que no tiene proyectos asignados en lugar de un selector vacío', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
+    expect(await screen.findByText('No tiene proyectos asignados. Pida una asignación al administrador de proyectos.')).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Proyecto' })).not.toBeInTheDocument()
   })
 })
@@ -179,19 +232,31 @@ describe('barra de contexto y Project 360', () => {
     expect(within(subnav).getAllByRole('link')).toHaveLength(6)
   })
 
-  it.each([
-    [404, 'El registro no existe o no es de su organización.'],
-    [403, 'Su cuenta no tiene permiso para esta acción. Pídalo a la administración del proyecto.']
-  ])('un proyecto que responde %i dice el error y ofrece reintentar y volver a /projects', async (status, texto) => {
+  // con el alcance por proyecto, un proyecto ajeno responde 404 como uno inexistente (spec 4.4 §3.6): no se distingue y
+  // reintentar no sirve
+  it('un proyecto que responde 404 dice que no existe o no es de sus proyectos, sin reintento, y ofrece volver a /projects', async () => {
     fetch = mockFetch([
-      { path: '/objects/project/records/p9', status, body: { title: 'Error', status, detail: 'x', errors: [] } },
+      { path: '/objects/project/records/p9', status: 404, body: { title: 'Error', status: 404, detail: 'Record p9 does not exist', errors: [] } },
       { path: '/objects/project_assignment/records', body: pagina([]) }
     ])
     montar(LAYOUT, { ruta: '/projects/p9/overview', permisos: LEE_PROYECTOS })
-    expect(await screen.findByText(texto)).toBeInTheDocument()
+    expect(await screen.findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ir a todos los proyectos' })).toHaveAttribute('href', '/projects')
+    expect(screen.queryByLabelText('Motivo')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Resumen' })).not.toBeInTheDocument()
+  })
+
+  it('un proyecto que responde 403 dice el error y ofrece reintentar y volver a /projects', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records/p9', status: 403, body: { title: 'Error', status: 403, detail: 'x', errors: [] } },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(LAYOUT, { ruta: '/projects/p9/overview', permisos: LEE_PROYECTOS })
+    expect(await screen.findByText('Su cuenta no tiene permiso para esta acción. Pídalo a la administración del proyecto.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Ir a todos los proyectos' })).toHaveAttribute('href', '/projects')
-    // sin datos del proyecto no hay barra, pestañas ni contenido
     expect(screen.queryByLabelText('Motivo')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Resumen' })).not.toBeInTheDocument()
   })

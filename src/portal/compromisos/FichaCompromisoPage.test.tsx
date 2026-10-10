@@ -129,7 +129,7 @@ describe('S29 · ficha de compromiso', () => {
   it('un compromiso que no existe lo dice con su texto, sin reintento', async () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/commitment/records/c1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrir()
-    expect(await screen.findByText('Este compromiso no existe o no es de su organización.')).toBeInTheDocument()
+    expect(await screen.findByText('Este compromiso no existe o no es de sus proyectos.')).toBeInTheDocument()
     expect(screen.queryByText('No se pudo cargar esta información. Los filtros se conservan.')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Compromisos del proyecto' })).toHaveAttribute('href', '/projects/p1/commitments')

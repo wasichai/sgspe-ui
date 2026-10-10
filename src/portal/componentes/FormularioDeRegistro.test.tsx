@@ -83,6 +83,18 @@ describe('FormularioDeRegistro', () => {
     expect(screen.queryByText(/DERIVED_FIELD/)).not.toBeInTheDocument()
   })
 
+  it('un 404 al guardar dice que el registro no existe o no es de sus proyectos (alcance por proyecto), sin el detalle', async () => {
+    fetch = mockFetch([{ path: '/metadata/objects/community_sector', body: definicion('community_sector', [['name', { label: 'Nombre' }]]) }])
+    red = espiarRed([{ method: 'PUT', path: '/objects/community_sector/records/s1', responder: () => problema(404, 'Record s1 does not exist') }])
+    montar(<FormularioDeRegistro objeto="community_sector" registro={registro('s1', { name: 'Sector alto' })} />)
+    const nombre = await screen.findByLabelText('Nombre')
+    await userEvent.clear(nombre)
+    await userEvent.type(nombre, 'Sector bajo')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('El registro no existe o no es de sus proyectos.')
+    expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
+  })
+
   it('muestra todos los errores de campo reconocidos, cada uno con su etiqueta, no solo el primero', async () => {
     fetch = mockFetch([{ path: '/metadata/objects/community', body: COMUNIDAD }])
     red = espiarRed([
@@ -138,6 +150,31 @@ describe('FormularioDeRegistro', () => {
     const [cambio] = red.a('PUT', '/objects/community_sector/records/s1')
     expect(cambio.cabeceras.get('If-Match')).toBe('"2026-10-06T10:00:00Z"')
     expect(cambio.cuerpo).toEqual({ attributes: { name: 'Sector bajo', community: comunidad } })
+  })
+
+  it('un 400 sobre una relación oculta se dice con la etiqueta del campo y el texto propio, no el inglés de wasichai', async () => {
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/stakeholder',
+        body: definicion('stakeholder', [
+          ['name', { label: 'Nombre' }],
+          ['project', { label: 'Proyecto', type: 'RELATION', relationTarget: 'project' }]
+        ])
+      }
+    ])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/objects/stakeholder/records',
+        responder: () => problema(400, "Invalid value for 'project'", [{ field: 'project', message: 'no record with this id' }])
+      }
+    ])
+    // las relaciones son UUID: Zod las valida aunque viajen ocultas
+    montar(<FormularioDeRegistro objeto="stakeholder" fijos={{ project: '6f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f' }} />)
+    await userEvent.type(await screen.findByLabelText('Nombre'), 'Ronda campesina')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Proyecto: El registro elegido no existe o es de otro proyecto.')).toBeInTheDocument()
+    expect(screen.queryByText(/no record with this id|Invalid value/)).not.toBeInTheDocument()
   })
 
   describe('un 412 al cambiar (revisión final, I2)', () => {

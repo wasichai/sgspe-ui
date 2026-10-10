@@ -113,7 +113,7 @@ describe('incidentes', () => {
   it('un incidente que no existe lo dice y no ofrece identificar un riesgo', async () => {
     fetch = mockFetch(rutasDeFicha(RELACIONISTA, [{ path: '/objects/incident/records/n1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrirFicha(RELACIONISTA)
-    expect(await screen.findByText('Este incidente no existe o no es de su organización.')).toBeInTheDocument()
+    expect(await screen.findByText('Este incidente no existe o no es de sus proyectos.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Identificar un riesgo desde este incidente' })).not.toBeInTheDocument()
   })
 })

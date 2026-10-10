@@ -3,8 +3,9 @@ import { atributo, useRegistro, useTodos, type Registro } from '../datos/registr
 import { ROL_DE_JEFATURA } from '../config'
 import { hoyEnLima } from '../datos/fechas'
 
-// los proyectos de la persona: los que tienen una asignación activa suya (RF-PRJ-005, RQ-SEC-006). es una comodidad
-// para ordenar y filtrar, no un control de acceso: con la opción A se leen todos los del tenant (security.md §9)
+// las asignaciones de la persona (RF-PRJ-005, RQ-SEC-006), también las vencidas: el servidor se las deja leer (elección 3 de la
+// spec 4.4). sirven para ordenar el selector y para la guarda de UI de la escritura; lo que se lee ya viene acotado por el
+// servidor (alcance por proyecto, ADR-0029), así que el portal no filtra por proyecto lo que lee
 export function useMisAsignaciones() {
   const { user } = useAuth()
   return useTodos('project_assignment', { member_user_id: user?.id, active: true }, Boolean(user))
@@ -35,4 +36,14 @@ export function vigenciaDeAsignacion(asignacion: Registro, hoy: string = hoyEnLi
   if (fin && fin < hoy) return 'vencida'
   if (inicio && inicio > hoy) return 'programada'
   return 'vigente'
+}
+
+// la acción declarada sobre project que exime del alcance de lectura por proyecto (ADR-0029, spec 4.4 §2.1 decisión 2): quien
+// la tiene lee todos los proyectos del tenant. can de core da verdadero a ADMIN, así que ADMIN entra sin caso aparte. es el
+// único lugar del portal que la nombra (boundaries.test.ts)
+const LEE_TODOS_LOS_PROYECTOS = 'READ_ALL_PROJECTS'
+
+export function useLeeTodosLosProyectos(): boolean {
+  const { can } = useAuth()
+  return can('project', LEE_TODOS_LOS_PROYECTOS)
 }

@@ -1,13 +1,11 @@
-import { ApiError } from '@wasichai/core'
 import { useAvailableTransitions } from '@wasichai/workflow'
 import { Alert, cn, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
-import { Cargando, Reservado, Vacio } from '../componentes/Estados'
+import { Cargando, esIlegible, Reservado, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
-import { esQcs } from '../datos/atencion'
 import { CLASE_DE_TIPO, FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS, sinBandeja, useAvisos, type Aviso } from '../datos/avisos'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { destinoDeAviso, rutaParaAbrir } from '../datos/fichas'
@@ -155,9 +153,10 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
   const registro = useRegistro(objeto, id)
   const espera = diasEntre(aviso.publishAt, hoyEnLima())
   const decision = rutaDeDecision(aviso)
-  // nadie borra una QCS (security.md §7.6): su 404 es una confidencial que la cuenta no lee (§9.6). la fila no dice qué es ni de qué
-  // trata, y no ofrece una ficha que solo repetiría «Registro reservado»
-  const reservada = esQcs(objeto) && registro.error instanceof ApiError && registro.error.status === 404
+  // un 404 es un registro que la cuenta no lee: de un proyecto en que no está asignada (ADR-0029), una QCS confidencial (§9.6) o uno
+  // borrado, sin distinguir. la fila no dice qué es ni de qué trata, y no ofrece una ficha que solo repetiría «Registro reservado».
+  // una relectura con 404 sobre una fila ya leída la conserva entera, sin mezclar lo leído con lo reservado
+  const reservada = !registro.data && esIlegible(registro.error)
   return (
     <tr>
       <Td className="text-sm">

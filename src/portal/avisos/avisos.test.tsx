@@ -224,10 +224,12 @@ describe('/r/:object/:recordId', () => {
     expect(ubicacion.actual).toBe('/r/widget/w1')
   })
 
-  it('un registro que ya no existe (404) lo dice, sin reintento, y no salta', async () => {
+  // la bandeja no se filtra por proyecto (spec 4.4 §3.8): un aviso viejo lleva a un registro que ya no se lee
+  it('un registro que la cuenta no lee o que ya no existe (404) es «Registro reservado», sin reintento, y no salta', async () => {
     fetch = mockFetch([{ path: '/objects/commitment/records/c1', status: 404, body: { title: 'Not Found', status: 404 } }])
     montar(<AbrirRegistroPage />, { ruta: '/r/commitment/c1', camino: '/r/:object/:recordId' })
-    expect(await screen.findByText('Este registro ya no existe o no es de su organización.')).toBeInTheDocument()
+    expect(await screen.findByText('Registro reservado')).toBeInTheDocument()
+    expect(screen.getByText(/Su cuenta no lee este registro/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(ubicacion.actual).toBe('/r/commitment/c1')
   })
@@ -236,8 +238,7 @@ describe('/r/:object/:recordId', () => {
     fetch = mockFetch([{ path: '/objects/grievance/records/g9', status: 404, body: { title: 'Not Found', status: 404 } }])
     montar(<AbrirRegistroPage />, { ruta: '/r/grievance/g9', camino: '/r/:object/:recordId' })
     expect(await screen.findByText('Registro reservado')).toBeInTheDocument()
-    expect(screen.getByText(/solo la leen la gestión de quejas, su responsable y quien la recibió/)).toBeInTheDocument()
-    expect(screen.queryByText('Este registro ya no existe o no es de su organización.')).not.toBeInTheDocument()
+    expect(screen.getByText(/Su cuenta no lee este registro/)).toBeInTheDocument()
     expect(ubicacion.actual).toBe('/r/grievance/g9')
   })
 

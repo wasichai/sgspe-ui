@@ -9,7 +9,7 @@ import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
 import { Campo } from './Campo'
 import { EstadoChip } from './EstadoChip'
-import { Cargando, Consulta, ErrorDeCarga, ExplicacionDeColumna, NoDisponible, Restringido, ThConExplicacion } from './Estados'
+import { Cargando, Consulta, ErrorDeCarga, esIlegible, ExplicacionDeColumna, NoDisponible, NoEsDeSusProyectos, Restringido, ThConExplicacion } from './Estados'
 import { KpiCard } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
@@ -207,6 +207,24 @@ describe('Consulta (revisión final, I1)', () => {
     expect(document.getElementById(noDisponible.getAttribute('aria-describedby')!)).toHaveTextContent(/No tiene una asignación vigente/)
     expect(screen.getAllByRole('button', { name: 'Reintentar' })).toHaveLength(1)
   })
+
+  it('con noExiste={<NoEsDeSusProyectos />}, un 404 dice que no existe o no es de sus proyectos, sin reintento ni el detalle', async () => {
+    montar(
+      <Consulta consulta={consulta(undefined, new ErrorDeSgspe(404, 'Record r9 does not exist', [], null))} noExiste={<NoEsDeSusProyectos />}>
+        {() => null}
+      </Consulta>
+    )
+    expect(await screen.findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
+  })
+
+  it('esIlegible es un 404 de la API y nada más', () => {
+    expect(esIlegible(new ErrorDeSgspe(404, 'x', [], null))).toBe(true)
+    expect(esIlegible(new ErrorDeSgspe(403, 'x', [], null))).toBe(false)
+    expect(esIlegible(new Error('sin red'))).toBe(false)
+    expect(esIlegible(null)).toBe(false)
+  })
 })
 
 describe('celdas de tabla restringidas', () => {
@@ -394,6 +412,14 @@ describe('errores con varias violaciones', () => {
     montar(<ErrorDeCarga error={new ErrorDeSgspe(409, 'x', [{ field: '', message: 'HAS_DEPENDENTS' }], null)} />)
     expect(await screen.findByText('No se puede borrar: otros registros dependen de este. Bórrelos o cámbielos primero.')).toBeInTheDocument()
     expect(screen.queryByText(/\(\)/)).not.toBeInTheDocument()
+  })
+
+  // wasichai 0.6.0 (RelationTargets) responde así una RELATION a un registro que la cuenta no lee: con el alcance por proyecto,
+  // también uno de otro proyecto (spec 4.4 §3.6). el texto en inglés y el detail nunca llegan a la pantalla
+  it('el 400 de una relación a un registro que no se lee dice su texto, no el inglés de wasichai', async () => {
+    montar(<ErrorDeCarga error={new ErrorDeSgspe(400, "Invalid value for 'project'", [{ field: 'project', message: 'no record with this id' }], null)} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('El registro elegido no existe o es de otro proyecto.')
+    expect(screen.queryByText(/no record with this id|Invalid value/)).not.toBeInTheDocument()
   })
 })
 

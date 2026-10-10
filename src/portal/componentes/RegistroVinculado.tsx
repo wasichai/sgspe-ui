@@ -1,11 +1,9 @@
-import { ApiError } from '@wasichai/core'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { esQcs } from '../datos/atencion'
 import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
 import { texto, useRegistro, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
-import { Cargando, NoDisponible, Reservado } from './Estados'
+import { Cargando, esIlegible, esProhibido, NoDisponible, Reservado } from './Estados'
 import { FalloDeLectura } from './LecturaConEstados'
 
 // el nombre de un registro vinculado: su código y su título, nombre o titular; sin ninguno, un texto (nunca su id)
@@ -15,19 +13,18 @@ export function useRotuloDeRegistro(): (registro: Registro) => string {
 }
 
 // un vínculo a otro registro (la queja de origen de un compromiso, el origen de una tarea, el riesgo de una alerta): lo lee como
-// quien mira y enlaza su ficha. una QCS confidencial que la cuenta no lee responde 404 (RecordReadScope, security.md §9.6): se dice
-// «Registro reservado», sin enlace ni datos; nadie borra una QCS, así que su 404 no es un registro borrado. un 404 de otro objeto es
-// un registro que ya no existe; un 403, «No disponible»; otro fallo, con su reintento. sin id no dibuja nada
+// quien mira y enlaza su ficha. un destino que responde 404 es «Registro reservado», sin enlace ni datos: wasichai responde igual
+// por un registro de un proyecto en que la cuenta no está asignada (alcance por proyecto, ADR-0029), por una QCS confidencial que
+// no lee (ADR-0028) y por uno borrado, y el portal no los distingue (spec 4.4 §3.6 y §3.12). un 403, «No disponible»; otro fallo,
+// con su reintento. sin id no dibuja nada
 export function RegistroVinculado({ objeto, id, rotulo }: { objeto: string; id: string | null | undefined; rotulo?: (registro: Registro) => string }) {
-  const { t } = useTranslation(NS)
   const registro = useRegistro(objeto, id ?? undefined)
   const rotuloPorDefecto = useRotuloDeRegistro()
   if (!id) return null
   if (registro.isPending) return <Cargando compacto />
   if (registro.isError && !registro.data) {
-    const estado = registro.error instanceof ApiError ? registro.error.status : null
-    if (estado === 404) return esQcs(objeto) ? <Reservado /> : <span className="text-sg-text-muted">{t('piezas.vinculado.noExiste')}</span>
-    if (estado === 403) return <NoDisponible enLista />
+    if (esIlegible(registro.error)) return <Reservado />
+    if (esProhibido(registro.error)) return <NoDisponible enLista />
     return <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
   }
   const r = registro.data as Registro

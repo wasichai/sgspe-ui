@@ -1,7 +1,7 @@
 // S40 · la ficha de riesgo (F4): su nivel, sus revisiones, medidas e impactos, y lo que lo alimenta
 export const ES_FICHA_RIESGO = {
   volver: 'Volver a los riesgos',
-  noExiste: 'Este riesgo no existe o no es de su organización.',
+  noExiste: 'Este riesgo no existe o no es de sus proyectos.',
   puntaje: '{{p}} × {{i}} = {{s}}',
   proxima: 'Próxima revisión: {{fecha}}',
   responsable: 'Responsable',
@@ -88,7 +88,7 @@ export const ES_FICHA_RIESGO = {
 
 export const EN_FICHA_RIESGO: typeof ES_FICHA_RIESGO = {
   volver: 'Back to risks',
-  noExiste: 'This risk does not exist or is not from your organization.',
+  noExiste: 'This risk does not exist or is not in your projects.',
   puntaje: '{{p}} × {{i}} = {{s}}',
   proxima: 'Next review: {{fecha}}',
   responsable: 'Owner',

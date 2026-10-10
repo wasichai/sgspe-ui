@@ -3,7 +3,7 @@
 export const ES_FICHA_CONSULTA = {
   consulta: {
     titulo: 'Consulta {{codigo}}',
-    noExiste: 'Esta consulta no existe o es confidencial y su cuenta no la lee.',
+    noExiste: 'Esta consulta no existe, no es de sus proyectos o es confidencial y su cuenta no la lee.',
     responder: 'Escribir la respuesta',
     responderTitulo: 'Responder la consulta',
     responderAyuda:
@@ -11,7 +11,7 @@ export const ES_FICHA_CONSULTA = {
   },
   solicitud: {
     titulo: 'Solicitud {{codigo}}',
-    noExiste: 'Esta solicitud no existe o es confidencial y su cuenta no la lee.',
+    noExiste: 'Esta solicitud no existe, no es de sus proyectos o es confidencial y su cuenta no la lee.',
     sinPlazo: 'Las solicitudes no tienen plazo de respuesta.',
     campos: {
       request_medium: 'Cómo se pidió',
@@ -45,7 +45,7 @@ export const ES_FICHA_CONSULTA = {
 export const EN_FICHA_CONSULTA: typeof ES_FICHA_CONSULTA = {
   consulta: {
     titulo: 'Inquiry {{codigo}}',
-    noExiste: 'This inquiry does not exist, or it is confidential and your account cannot read it.',
+    noExiste: 'This inquiry does not exist, is not in your projects, or is confidential and your account cannot read it.',
     responder: 'Write the answer',
     responderTitulo: 'Answer the inquiry',
     responderAyuda:
@@ -53,7 +53,7 @@ export const EN_FICHA_CONSULTA: typeof ES_FICHA_CONSULTA = {
   },
   solicitud: {
     titulo: 'Request {{codigo}}',
-    noExiste: 'This request does not exist, or it is confidential and your account cannot read it.',
+    noExiste: 'This request does not exist, is not in your projects, or is confidential and your account cannot read it.',
     sinPlazo: 'Requests have no response deadline.',
     campos: {
       request_medium: 'How it was requested',

@@ -87,6 +87,13 @@ describe('fronteras de la interfaz', () => {
     expect(hallazgos(IMPORTACION_INTERNA)).toEqual([])
   })
 
+  // quién lee todos los proyectos lo decide una sola pieza (useLeeTodosLosProyectos): la acción declarada no se pregunta suelta
+  // en las pantallas, como un rol no se nombra (spec 4.4 §3.12)
+  it('la acción de leer todos los proyectos solo se nombra en contexto/proyectos.ts', () => {
+    const lugares = hallazgos(/(?<![A-Za-z0-9_])READ_ALL_PROJECTS(?![A-Za-z0-9_])/).map((h) => h.split(':')[0])
+    expect([...new Set(lugares)]).toEqual(['portal/contexto/proyectos.ts'])
+  })
+
   it('los vigías reconocen lo prohibido y dejan pasar lo permitido', () => {
     const rol = (line: string) => ROL.test(sinComentario(line))
     expect(rol("user.roles.includes('AUDITOR')")).toBe(true)

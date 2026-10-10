@@ -12,7 +12,7 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
-import { Cargando, Consulta, Restringido } from '../componentes/Estados'
+import { Cargando, Consulta, Restringido, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { descriptorDe, tamanoPe } from '../datos/archivos'
@@ -40,7 +40,12 @@ import { FormularioDeEvidencia } from './FormularioDeEvidencia'
 export function FichaEvidenciaPage() {
   const { documentId = '' } = useParams()
   const evidencia = useRegistro('evidence', documentId)
-  return <Consulta consulta={evidencia}>{(e) => <Ficha evidencia={e} />}</Consulta>
+  // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
+  return (
+    <Consulta consulta={evidencia} noExiste={<NoEsDeSusProyectos />}>
+      {(e) => <Ficha evidencia={e} />}
+    </Consulta>
+  )
 }
 
 function Ficha({ evidencia }: { evidencia: Registro }) {
