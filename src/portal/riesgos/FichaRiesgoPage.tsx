@@ -22,6 +22,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { atributo, texto, usePuedeEditar, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { Dato } from '../atencion/comunesDeFicha'
 import { useRevisarRiesgo } from './comandos'
 import { Impactos } from './ImpactosPage'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
@@ -277,15 +278,6 @@ function columnasDeMedidas(t: (clave: string) => string) {
         )
     }
   ]
-}
-
-function Dato({ termino, children }: { termino: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-sg-caption text-sg-text-muted">{termino}</dt>
-      <dd className="whitespace-pre-line">{children}</dd>
-    </div>
-  )
 }
 
 function Resumen({ riesgo }: { riesgo: Registro }) {

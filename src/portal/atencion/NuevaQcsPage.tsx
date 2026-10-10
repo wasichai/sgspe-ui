@@ -13,7 +13,7 @@ import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuari
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones, useProyecto } from '../contexto/proyectos'
 import { esQcs, OBJETOS_DE_QCS, rutaDeQcs, SEVERIDADES_GRAVES, type ObjetoDeQcs } from '../datos/atencion'
-import { instanteDeLima } from '../datos/fechas'
+import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
 import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
@@ -26,24 +26,6 @@ import { NS } from '../i18n'
 // restringido y solo se ofrece si la definición la trae. el alta es requiresReason: pide motivo, y va con la Idempotency-Key
 // nativa (useCrear): un reintento tras un corte no registra dos veces
 const PLAZOS_POR_DEFECTO = { grievance_ack_days: 5, grievance_resolution_days: 30, inquiry_response_days: 15 }
-
-// la hora de Lima de ahora, como la escribe un datetime-local (AAAA-MM-DDTHH:mm)
-export function ahoraEnLima(ahora: Date = new Date()): string {
-  const p = Object.fromEntries(
-    new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Lima',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23'
-    })
-      .formatToParts(ahora)
-      .map((x) => [x.type, x.value])
-  )
-  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
-}
 
 export function NuevaQcsPage() {
   const { t } = useTranslation(NS)
