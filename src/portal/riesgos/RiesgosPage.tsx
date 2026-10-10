@@ -237,7 +237,7 @@ function MapaDeCalor({
                     )}
                   >
                     <span className="block text-sm font-semibold tabular-nums">{numeroPe(n)}</span>
-                    <span className="block text-[10px]">{nivel}</span>
+                    <span className="block text-sg-caption">{nivel}</span>
                   </button>
                 </td>
               )
