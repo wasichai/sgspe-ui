@@ -105,6 +105,54 @@ describe('atributosDeEscritura', () => {
     expect(atributosDeEscritura('stakeholder', STAKEHOLDER, { inclusion_reason: '' }, registro).inclusion_reason).toBeNull()
   })
 
+  // plan 4.2a: los vínculos que solo escriben sus comandos (la reclasificación y la aceptación) y la clave de origen que solo escribe
+  // la plataforma: fijarlos, cambiarlos o vaciarlos es 403, también con un PUT que los omite. al cambiar viajan tal como se leyeron
+  // aunque el formulario traiga otro valor; al crear no viajan nunca
+  const SOLICITUD: ObjectDefinition = {
+    ...STAKEHOLDER,
+    id: 'o-req',
+    name: 'stakeholder_request',
+    fields: [
+      campo('description'),
+      campo('created_commitment', { type: 'RELATION' }),
+      campo('reclassified_from_grievance', { type: 'RELATION' }),
+      campo('reclassified_from_inquiry', { type: 'RELATION' })
+    ]
+  }
+  const solicitud: Registro = {
+    ...registro,
+    id: 'r1',
+    attributes: { description: 'Calaminas', created_commitment: 'c9', reclassified_from_grievance: 'g0', reclassified_from_inquiry: null }
+  }
+
+  it('los vínculos de solo comando viajan tal como se leyeron, aunque el formulario los cambie o los vacíe', () => {
+    expect(
+      atributosDeEscritura(
+        'stakeholder_request',
+        SOLICITUD,
+        { description: 'Calaminas y clavos', created_commitment: '', reclassified_from_grievance: 'g7', reclassified_from_inquiry: 'i3' },
+        solicitud
+      )
+    ).toEqual({ description: 'Calaminas y clavos', created_commitment: 'c9', reclassified_from_grievance: 'g0', reclassified_from_inquiry: null })
+  })
+
+  it('al crear, los vínculos de solo comando no viajan', () => {
+    expect(
+      atributosDeEscritura('stakeholder_request', SOLICITUD, { description: 'Calaminas', created_commitment: 'c9', reclassified_from_grievance: 'g0' })
+    ).toEqual({
+      description: 'Calaminas'
+    })
+  })
+
+  it('la clave de origen de una tarea escribible para el rol viaja tal como se leyó', () => {
+    const TAREA: ObjectDefinition = { ...STAKEHOLDER, id: 'o-task', name: 'task', fields: [campo('assignee_user_id'), campo('generator_key')] }
+    const tarea: Registro = { ...registro, id: 't1', attributes: { assignee_user_id: null, generator_key: 'escalation:grievance:abc:2026-10-09:2' } }
+    expect(atributosDeEscritura('task', TAREA, { assignee_user_id: 'u-1', generator_key: null }, tarea)).toEqual({
+      assignee_user_id: 'u-1',
+      generator_key: 'escalation:grievance:abc:2026-10-09:2'
+    })
+  })
+
   it('una geometría nunca va en attributes', () => {
     const conGeometria = { ...STAKEHOLDER, fields: [...STAKEHOLDER.fields, campo('location', { type: 'GEOMETRY' })] }
     expect(atributosDeEscritura('stakeholder', conGeometria, { location: { type: 'Point' } })).toEqual({})

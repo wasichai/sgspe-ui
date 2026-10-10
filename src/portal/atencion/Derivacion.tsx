@@ -14,7 +14,8 @@ import { useDerivarPregunta } from './comandos'
 // crear), el código de la QCS que nace, qué plantea (la pregunta, para que se pueda ajustar), su categoría y el motivo. el servidor
 // pone el proyecto, la interacción y la pregunta de origen, el canal REUNION y la recepción igual al momento de la reunión, y marca
 // la pregunta con referred_at: queda atendida para el cierre sin que la regla lea la QCS, que puede ser confidencial. un reintento
-// repite la misma Idempotency-Key; una pregunta que otra persona ya derivó dice ALREADY_REFERRED con su texto
+// repite la misma Idempotency-Key; una pregunta que otra persona ya derivó dice ALREADY_REFERRED con su texto, y una ya respondida
+// (STATE_MISMATCH sobre record, plan 4.2a) lo dice distinto de la interacción fuera de estado (sobre engagement)
 export function DialogoDeDerivacion({
   pregunta,
   destinos,
@@ -94,7 +95,7 @@ export function DialogoDeDerivacion({
           {derivar.isError ? (
             <AvisoDeConflicto
               error={derivar.error}
-              propios={{ STATE_MISMATCH: t('relacionamiento.derivacion.fueraDeEstado') }}
+              propios={{ STATE_MISMATCH: t('relacionamiento.derivacion.fueraDeEstado'), 'STATE_MISMATCH:record': t('relacionamiento.derivacion.yaRespondida') }}
               releer={async () => alDerivar()}
               alRecargar={() => derivar.reset()}
             />

@@ -33,6 +33,7 @@ export const ES_FICHA_CONSULTA = {
       moneda: 'Moneda',
       falta: 'Este dato es obligatorio',
       montoInvalido: 'Escriba un número de hasta 15 dígitos enteros y 4 decimales',
+      respondidaInvalida: 'La fecha y hora de la respuesta no es válida: corríjala.',
       confirmar: 'Aceptar y crear',
       confirmando: 'Aceptando…'
     }
@@ -74,6 +75,7 @@ export const EN_FICHA_CONSULTA: typeof ES_FICHA_CONSULTA = {
       moneda: 'Currency',
       falta: 'This value is required',
       montoInvalido: 'Type a number with up to 15 integer digits and 4 decimals',
+      respondidaInvalida: 'The date and time of the answer is not valid: correct it.',
       confirmar: 'Accept and create',
       confirmando: 'Accepting…'
     }

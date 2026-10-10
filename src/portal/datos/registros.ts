@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { useAuth, useObjectDefinition, type FieldMeta, type ObjectDefinition, type RecordItem } from '@wasichai/core'
 import { useRef } from 'react'
 import { enviarComando, esClaveReusada, type Esperar } from './comandos'
-import { esDerivado } from './derivados'
+import { esDeComando, esDerivado } from './derivados'
 import { nuevaClave, usePedir, type Pedido } from './http'
 
 // los registros por la API genérica de wasichai (api.md §2): la forma { id, createdAt, updatedAt, state, attributes,
@@ -136,16 +136,22 @@ const vacioANulo = (valor: unknown) => (valor === '' ? null : valor)
 // lee, la religión de un perfil de localidad para el relacionista) y no viaja aunque el formulario la nombre; un rol con
 // "u" (todos los campos de solo lectura) no manda ningún campo de negocio. los derivados se omiten: DerivedFieldsKeeper
 // (plan 2.2) les devuelve el valor guardado y DerivedFieldsGuard solo rechaza un valor distinto. al crear no hay GET: van
-// los campos que la persona puede escribir y que el formulario trae
+// los campos que la persona puede escribir y que el formulario trae. los de solo comando (CAMPOS_DE_COMANDO, plan 4.2a) viajan al
+// cambiar tal como se leyeron y nunca al crear
 export function atributosDeEscritura(objeto: string, definicion: ObjectDefinition, cambios: Record<string, unknown>, base?: Registro): Record<string, unknown> {
   const salida: Record<string, unknown> = {}
   for (const campo of definicion.fields) {
     if (!campo.editable || esGeometria(campo) || esDerivado(objeto, campo.name)) continue
     if (base) {
       if (!(campo.name in base.attributes)) continue
+      // un campo de solo comando (CAMPOS_DE_COMANDO) viaja tal como se leyó, aunque el formulario traiga otro valor
+      if (esDeComando(objeto, campo.name)) {
+        salida[campo.name] = base.attributes[campo.name]
+        continue
+      }
       // un valor undefined (un opcional que el formulario no registró) no es un cambio: sale lo leído
       salida[campo.name] = cambios[campo.name] !== undefined ? vacioANulo(cambios[campo.name]) : base.attributes[campo.name]
-    } else if (cambios[campo.name] !== undefined) salida[campo.name] = vacioANulo(cambios[campo.name])
+    } else if (cambios[campo.name] !== undefined && !esDeComando(objeto, campo.name)) salida[campo.name] = vacioANulo(cambios[campo.name])
   }
   return salida
 }
@@ -153,7 +159,7 @@ export function atributosDeEscritura(objeto: string, definicion: ObjectDefinitio
 // si la persona puede escribir al menos un campo de negocio del objeto. un rol con "u" (security.md §7.1) tiene UPDATE
 // con todos los campos de solo lectura: aplica transiciones y vincula, pero no se le ofrece un formulario de edición
 export const escribeAlgunCampo = (objeto: string, definicion: ObjectDefinition | undefined): boolean =>
-  definicion?.fields.some((f) => f.editable && !esGeometria(f) && !esDerivado(objeto, f.name)) ?? false
+  definicion?.fields.some((f) => f.editable && !esGeometria(f) && !esDerivado(objeto, f.name) && !esDeComando(objeto, f.name)) ?? false
 
 // UPDATE sobre el objeto y al menos un campo escribible: la condición para ofrecer "Editar"
 export function usePuedeEditar(objeto: string): boolean {

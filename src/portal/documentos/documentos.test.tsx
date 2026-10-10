@@ -291,6 +291,28 @@ describe('S46 · ficha de evidencia', () => {
     expect(red.a('PATCH', '/sgspe/evidence/ev1')).toHaveLength(2)
   })
 
+  // plan 4.2a: una evidencia vinculada a una QCS confidencial no baja a una clasificación no restringida (409 sobre classification)
+  it('bajar la clasificación de una evidencia de una QCS confidencial lo dice junto a la clasificación, sin el código', async () => {
+    fetch = mockFetch(rutasDeFicha())
+    red = espiarRed([
+      {
+        method: 'PATCH',
+        path: '/sgspe/evidence/ev1',
+        responder: () => problema(409, 'no restringida', [{ field: 'classification', message: 'EVIDENCE_NOT_RESTRICTED' }])
+      }
+    ])
+    abrirFicha()
+    await userEvent.click(await screen.findByRole('button', { name: 'Cambiar datos o clasificación' }))
+    const panel = await screen.findByRole('dialog')
+    await userEvent.selectOptions(within(panel).getByLabelText('Clasificación'), 'INTERNA')
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Ya no tiene datos personales')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
+    const texto = 'Una evidencia vinculada a una QCS confidencial es CONFIDENCIAL o de DATOS PERSONALES: no se vincula ni baja a otra clasificación.'
+    await waitFor(() => expect(within(panel).getByLabelText('Clasificación')).toHaveAccessibleDescription(texto))
+    expect(within(panel).queryByText('EVIDENCE_NOT_RESTRICTED')).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('una versión nueva lleva replaces con el id de esta evidencia', async () => {
     fetch = mockFetch(rutasDeFicha())
     red = espiarRed([

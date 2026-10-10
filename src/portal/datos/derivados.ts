@@ -55,3 +55,17 @@ export const CAMPOS_DERIVADOS: Readonly<Record<string, readonly string[]>> = {
 }
 
 export const esDerivado = (objeto: string, campo: string): boolean => CAMPOS_DERIVADOS[objeto]?.includes(campo) ?? false
+
+// los campos que solo escriben los comandos de SGSPE o la plataforma (plan 4.2a): los vínculos de reclasificación de las tres QCS y el
+// compromiso que crea la aceptación de una solicitud, y la clave de origen de una tarea o de una alerta. la API genérica responde 403
+// (COMMAND_ONLY o GENERATOR_KEY_PLATFORM_ONLY sobre el campo) a quien los fija, cambia o vacía, también con un PUT que los omite;
+// reenviarlos tal como se leyeron no es cambiarlos. el portal los devuelve como los leyó y nunca los manda al crear
+export const CAMPOS_DE_COMANDO: Readonly<Record<string, readonly string[]>> = {
+  grievance: ['reclassified_from_inquiry', 'reclassified_from_request'],
+  inquiry: ['reclassified_from_grievance', 'reclassified_from_request'],
+  stakeholder_request: ['created_commitment', 'reclassified_from_grievance', 'reclassified_from_inquiry'],
+  task: ['generator_key'],
+  early_warning: ['generator_key']
+}
+
+export const esDeComando = (objeto: string, campo: string): boolean => CAMPOS_DE_COMANDO[objeto]?.includes(campo) ?? false

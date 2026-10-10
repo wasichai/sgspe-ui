@@ -447,6 +447,29 @@ describe('S23 · ficha de interacción', () => {
     expect(screen.queryByRole('button', { name: 'Responder' })).not.toBeInTheDocument()
   })
 
+  // plan 4.2a: una pregunta ya respondida responde STATE_MISMATCH sobre record; la interacción fuera de estado, sobre engagement
+  it.each([
+    ['record', 'Esa pregunta ya fue respondida: solo se deriva una pregunta pendiente. Recargue para verla.'],
+    ['engagement', 'La interacción ya no está realizada sin cerrar: solo se derivan preguntas de una reunión realizada y sin cerrar.']
+  ])('un 409 STATE_MISMATCH sobre %s lo dice con el texto de ese caso', async (campo, texto) => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, CON_QCS, [definicionDeConsulta, definicionDeQueja, ...rutas()])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/engagement-questions/q1/referral',
+        responder: () => problema(409, 'fuera de estado', [{ field: campo, message: 'STATE_MISMATCH' }])
+      }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Preguntas' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Derivar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Derivar la pregunta' })
+    await userEvent.type(within(dialogo).getByLabelText('Código de la QCS'), 'Q-031')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'reclamo')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Derivar' }))
+    expect(await within(dialogo).findByText(texto)).toBeInTheDocument()
+    expect(screen.queryByText('STATE_MISMATCH')).not.toBeInTheDocument()
+  })
+
   it('una pregunta que otra persona ya derivó lo dice con su texto, nunca con el código', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, CON_QCS, [definicionDeConsulta, definicionDeQueja, ...rutas()])
     red = espiarRed([

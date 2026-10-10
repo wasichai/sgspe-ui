@@ -435,6 +435,9 @@ function EditarEvidencia({ evidencia, alCerrar }: { evidencia: Registro; alCerra
   const bajaRestringida = CLASIFICACIONES_RESTRINGIDAS.includes(texto(vigente, 'classification')) && !CLASIFICACIONES_RESTRINGIDAS.includes(clasificacion)
   const opciones = (campo: string) => campoDe(definicion.data, campo)?.enumOptions ?? []
   const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(guardar.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
+  // un error que ya se dice junto a su control no se repite en el aviso
+  const soloDeCampos =
+    Object.keys(delServidor).length > 0 && Object.keys(delServidor).every((c) => (EDITABLES as readonly string[]).includes(c) || c === 'reason')
   const enviar = handleSubmit((v) => {
     if (cambiaClasificacion && v.motivo.trim() === '') {
       setError('motivo', { type: 'manual', message: t('comun.motivoFalta') })
@@ -507,7 +510,7 @@ function EditarEvidencia({ evidencia, alCerrar }: { evidencia: Registro; alCerra
           </>
         ) : null}
         {bajaRestringida ? <p className="text-sg-caption text-sg-warning">{t('documentos.ficha.bajaRestringida')}</p> : null}
-        {guardar.isError ? (
+        {guardar.isError && !soloDeCampos ? (
           <AvisoDeConflicto error={guardar.error} releer={() => releer(['record', 'evidence', evidencia.id])} alRecargar={() => guardar.reset()} />
         ) : null}
       </form>

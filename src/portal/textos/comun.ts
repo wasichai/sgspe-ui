@@ -192,7 +192,13 @@ export const ES_COMUN = {
     MEASURE_OWNER_REQUIRED: 'Para mitigar hace falta al menos una medida con responsable.',
     RESIDUAL_ASSESSMENT_REQUIRED: 'Para monitorear hace falta al menos una revisión residual.',
     HUMAN_DECISION_REQUIRED: 'Confirmar o descartar una alerta lo decide una persona, nunca una cuenta de servicio.',
-    EVIDENCE_NOT_RESTRICTED: 'A una QCS confidencial solo se vinculan evidencias CONFIDENCIAL o de DATOS PERSONALES.'
+    EVIDENCE_NOT_RESTRICTED: 'Una evidencia vinculada a una QCS confidencial es CONFIDENCIAL o de DATOS PERSONALES: no se vincula ni baja a otra clasificación.'
+  },
+  // el texto de un código que dice otra cosa según su campo (plan 4.2a; componentes/errores.ts)
+  codigosEnCampo: {
+    vinculoDeComando:
+      'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.',
+    qcsNoLeida: 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.'
   },
   errores: {
     '400': 'Revise los datos marcados.',
@@ -387,7 +393,13 @@ export const EN_COMUN: typeof ES_COMUN = {
     MEASURE_OWNER_REQUIRED: 'Mitigating needs at least one measure with an owner.',
     RESIDUAL_ASSESSMENT_REQUIRED: 'Monitoring needs at least one residual review.',
     HUMAN_DECISION_REQUIRED: 'A person confirms or dismisses an alert, never a service account.',
-    EVIDENCE_NOT_RESTRICTED: 'Only CONFIDENCIAL or DATOS PERSONALES evidence is linked to a confidential grievance, inquiry or request.'
+    EVIDENCE_NOT_RESTRICTED:
+      'Evidence linked to a confidential grievance, inquiry or request is CONFIDENCIAL or DATOS PERSONALES: it is not linked or lowered to another classification.'
+  },
+  codigosEnCampo: {
+    vinculoDeComando:
+      'Only reclassification and acceptance write the link to the reclassified record or to the created commitment: reload and save again without changing it.',
+    qcsNoLeida: 'Your account cannot read that grievance, inquiry or request (it may be confidential): nothing is linked to it.'
   },
   errores: {
     '400': 'Check the highlighted data.',

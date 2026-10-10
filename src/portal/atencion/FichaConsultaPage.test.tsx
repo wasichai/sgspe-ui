@@ -141,6 +141,36 @@ describe('S57 · ficha de solicitud', () => {
     expect(aceptar.cabeceras.get('Idempotency-Key')).toBeTruthy()
   })
 
+  // plan 4.2a: un respondedAt mal formado es un 400 sobre respondedAt (con el texto libre de la validación): se dice junto a su
+  // control, con el texto del portal, y un dato del compromiso que el servidor rechaza, junto al suyo
+  it('un 400 sobre respondedAt o sobre un dato del compromiso se dice junto a su control', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholder-requests/r1/accept',
+        responder: () =>
+          problema(400, 'datos inválidos', [
+            { field: 'respondedAt', message: 'Invalid date-time value' },
+            { field: 'code', message: 'Ya existe un compromiso con ese código' }
+          ])
+      }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta a la solicitud'), 'Sí')
+    await userEvent.type(within(dialogo).getByLabelText('Código del compromiso'), 'COM-010')
+    await userEvent.type(within(dialogo).getByLabelText('Monto'), '100')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'comité')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    const fecha = within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima)')
+    await waitFor(() => expect(fecha).toHaveAccessibleDescription('La fecha y hora de la respuesta no es válida: corríjala.'))
+    expect(within(dialogo).getByLabelText('Código del compromiso')).toHaveAccessibleDescription('Ya existe un compromiso con ese código')
+    expect(within(dialogo).queryByText('Invalid date-time value')).not.toBeInTheDocument()
+    expect(within(dialogo).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('otra persona ya la decidió: STATE_MISMATCH dice su texto en el diálogo', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed([

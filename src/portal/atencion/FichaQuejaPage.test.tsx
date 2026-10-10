@@ -6,7 +6,7 @@ import { baseDeAtencion, DEF_QUEJA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA, 
 import { WF_COMPROMISO } from '../../test/compromisos'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { permisos } from '../../test/portal'
-import { espiarRed, type Red } from '../../test/red'
+import { espiarRed, problema, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaQuejaPage } from './FichaQuejaPage'
 
@@ -168,6 +168,63 @@ describe('S36 · ficha de queja', () => {
     expect(cambio.cabeceras.get('If-Match')).toBe(`"${QUEJA.updatedAt}"`)
     expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''severidad%20revisada")
     expect(cambio.cuerpo).toMatchObject({ attributes: { resolution: 'Se limpió el canal' } })
+  })
+
+  // plan 4.2a: reclassified_from_* lo escribe solo la reclasificación (403 COMMAND_ONLY al fijarlo, cambiarlo o vaciarlo, también con
+  // un PUT que lo omite): la edición genérica lo devuelve tal como se leyó, con el vacío como vacío
+  const RECLASIFICADA_DE = '7d3c6a52-1b2e-4f00-9a00-000000000001'
+  const reclasificada = {
+    ...QUEJA,
+    attributes: { ...QUEJA.attributes, resolution: null, reclassified_from_inquiry: RECLASIFICADA_DE, reclassified_from_request: null }
+  }
+  const definicionReclasificada = definicion('grievance', [
+    ['resolution', { type: 'LONG_TEXT' }],
+    'response',
+    ['reclassified_from_inquiry', { type: 'RELATION', relationTarget: 'inquiry' }],
+    ['reclassified_from_request', { type: 'RELATION', relationTarget: 'stakeholder_request' }]
+  ])
+  const editarReclasificada = async () => {
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Editar el caso' })
+    await userEvent.type(within(drawer).getByLabelText('Motivo del cambio (obligatorio)'), 'resolución escrita')
+    await userEvent.type(await within(drawer).findByLabelText(/^resolution/), 'Se limpió el canal')
+    await userEvent.click(await within(drawer).findByRole('button', { name: /guardar|save/i }))
+    return drawer
+  }
+
+  it('editar una queja reclasificada devuelve su vínculo de reclasificación tal como se leyó', async () => {
+    fetch = mockFetch(
+      rutas(reclasificada, [
+        { path: '/metadata/objects/grievance', body: definicionReclasificada },
+        { method: 'PUT', path: '/objects/grievance/records/g1', body: reclasificada }
+      ])
+    )
+    red = espiarRed()
+    await editarReclasificada()
+    await waitFor(() => expect(red!.a('PUT', '/objects/grievance/records/g1')).toHaveLength(1))
+    const [cambio] = red.a('PUT', '/objects/grievance/records/g1')
+    expect(cambio.cuerpo).toEqual({
+      attributes: { resolution: 'Se limpió el canal', reclassified_from_inquiry: RECLASIFICADA_DE, reclassified_from_request: null }
+    })
+  })
+
+  it('un 403 COMMAND_ONLY sobre el vínculo de reclasificación se dice con su texto, nunca con el código', async () => {
+    fetch = mockFetch(rutas(reclasificada, [{ path: '/metadata/objects/grievance', body: definicionReclasificada }]))
+    red = espiarRed([
+      {
+        method: 'PUT',
+        path: '/objects/grievance/records/g1',
+        responder: () => problema(403, 'solo comando', [{ field: 'reclassified_from_inquiry', message: 'COMMAND_ONLY' }])
+      }
+    ])
+    const drawer = await editarReclasificada()
+    expect(
+      await within(drawer).findByText(
+        'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText('COMMAND_ONLY')).not.toBeInTheDocument()
   })
 
   it('quien solo lee no edita ni reclasifica', async () => {

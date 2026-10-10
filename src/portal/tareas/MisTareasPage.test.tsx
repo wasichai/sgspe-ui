@@ -175,6 +175,43 @@ describe('S47 · mis tareas', () => {
     expect(within(tabla).getByRole('link', { name: 'Riesgo' })).toHaveAttribute('href', '/r/social_risk/k1')
   })
 
+  // plan 4.2a: el escalamiento de nivel 2 de una QCS confidencial no lleva vínculo a la QCS, sino un título genérico: la lista dice
+  // «—» en el origen, la ficha no ofrece «Ver origen» y tomarla devuelve su clave tal como se leyó
+  it('el escalamiento de nivel 2 de una QCS confidencial, sin origen, se lista, se abre y se toma sin enlace roto', async () => {
+    const NIVEL_2 = registro(
+      't7',
+      {
+        project: 'p1',
+        title: 'QCS confidencial vencida en Proyecto Norte',
+        assignee_user_id: null,
+        assignee_user_email: null,
+        commitment: null,
+        generator_key: 'escalation:grievance:9f2c41:2026-10-09:2'
+      },
+      { state: 'open', updatedAt: '2026-10-09T05:00:00Z' }
+    )
+    fetch = mockFetch(rutas([{ path: '/objects/task/records', body: pagina([NIVEL_2]) }]))
+    red = espiarRed([{ method: 'PUT', path: '/objects/task/records/t7', responder: () => jsonResponse(NIVEL_2) }])
+    montar(<MisTareasPage />, {
+      ruta: '/projects/p1/tasks?view=paraTomar',
+      camino: '/projects/:projectId/tasks',
+      usuario: GESTORA,
+      permisos: EQUIPO_DE_COMPROMISOS
+    })
+    const tabla = await screen.findByRole('table')
+    const fila = within(tabla).getByRole('button', { name: 'Abrir QCS confidencial vencida en Proyecto Norte' }).closest('tr')!
+    expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
+    expect(fila.querySelectorAll('td')[1]).toHaveTextContent('—')
+    await userEvent.click(within(fila).getByRole('button', { name: 'Abrir QCS confidencial vencida en Proyecto Norte' }))
+    const drawer = await screen.findByRole('dialog')
+    expect(within(drawer).queryByRole('link')).not.toBeInTheDocument()
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Tomar la tarea' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/task/records/t7')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/task/records/t7')[0].cuerpo).toMatchObject({
+      attributes: { assignee_user_id: 'u-cmm', commitment: null, generator_key: 'escalation:grievance:9f2c41:2026-10-09:2' }
+    })
+  })
+
   it('mientras carga no dice que no hay tareas, y si falla lo dice con reintento', async () => {
     let fallar: () => void = () => {}
     const respuesta = new Promise<Response>((resolver) => {
