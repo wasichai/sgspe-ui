@@ -62,7 +62,7 @@ export const ES_FICHA_QUEJA = {
       ayuda: 'Puede marcarla porque la recibió, es su responsable o gestiona las quejas.',
       titulo: '¿Marcar la {{tipo}} como confidencial?',
       texto:
-        'Sus colegas sin acceso dejarán de verla en listas, tableros y reportes: solo la leerán la gestión de quejas, su responsable, quien la recibió y, si es una queja grave, quien aprueba su resolución. Quitar la marca después lo decide solo la gestión de quejas.',
+        'Sus colegas sin acceso dejarán de verla en listas, tableros y reportes: solo la leerán la gestión de quejas, su responsable, quien la recibió y, si es una queja grave, quien aprueba su resolución. Sus tareas automáticas abiertas pasan a ser genéricas, sin vínculo con ella. Quitar la marca después lo decide solo la gestión de quejas.',
       confirmar: 'Marcar como confidencial',
       marcando: 'Marcando…'
     }
@@ -131,7 +131,7 @@ export const EN_FICHA_QUEJA: typeof ES_FICHA_QUEJA = {
       ayuda: 'You can mark it because you received it, own it or manage grievances.',
       titulo: 'Mark the {{tipo}} as confidential?',
       texto:
-        'Colleagues without access will stop seeing it in lists, dashboards and reports: only grievance management, its owner, whoever received it and, for a serious grievance, the approver of its resolution will read it. Only grievance management can remove the mark later.',
+        'Colleagues without access will stop seeing it in lists, dashboards and reports: only grievance management, its owner, whoever received it and, for a serious grievance, the approver of its resolution will read it. Its open automatic tasks become generic, not linked to it. Only grievance management can remove the mark later.',
       confirmar: 'Mark as confidential',
       marcando: 'Marking…'
     }
