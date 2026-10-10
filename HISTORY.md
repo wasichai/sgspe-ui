@@ -4,7 +4,8 @@ La entrada más reciente va primero. El diseño y los ADR están en el repositor
 
 ## 2026-10-10 — `@wasichai/*` 0.6.0
 
-- Los diez paquetes (nueve de la app y `@wasichai/testing`) pasan de 0.5.1 a 0.6.0 (`maplibre-gl` sigue en 6.10.0; React y los demás pares no cambian).
+- Los diez paquetes (nueve de la app y `@wasichai/testing`) pasan de 0.5.1 a 0.6.0 (`maplibre-gl` sigue en 6.10.0;
+  React y los demás pares no cambian).
 - Huso fijo: `DynamicForm` lee y escribe los DATETIME en la hora de Lima (`ZONA_DE_LIMA`, `datos/fechas.ts`), sea cual sea
   el huso del navegador: `FormularioDeRegistro` lo pasa como `timeZone` y lo usa al comparar lo cambiado, y el portal y
   `/admin` lo fijan en `config.timeZone`. Las 10:00 tecleadas viajan como 15:00Z. Se cierra la brecha de F4 (UPS-27).
