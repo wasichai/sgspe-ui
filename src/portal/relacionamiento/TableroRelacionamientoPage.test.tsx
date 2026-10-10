@@ -66,7 +66,16 @@ describe('tablero de relacionamiento', () => {
               value: 78,
               breakdowns: [{ by: 'topic', rows: Array.from({ length: 12 }, (_, i) => ({ key: `t${i}`, label: `Tema ${i}`, value: 12 - i })) }]
             },
-            { code: 'KPI-ENG-05', label: 'Inquietudes resueltas', available: true, value: 75, numerator: 3, denominator: 4, unit: '%' }
+            {
+              code: 'KPI-ENG-05',
+              label: 'Inquietudes resueltas',
+              available: true,
+              value: 75,
+              numerator: 3,
+              denominator: 4,
+              unit: '%',
+              confidentialHidden: true
+            }
           ]
         }
       }
@@ -87,6 +96,10 @@ describe('tablero de relacionamiento', () => {
         .map((c) => c.textContent)
     ).toEqual(['2026-10', '3', '2'])
     expect(screen.getByText('3 / 4 · %')).toBeInTheDocument()
+    // F4: las preguntas derivadas a QCS confidenciales que la cuenta no lee no cuentan, y la cifra lo dice
+    expect(within(screen.getAllByRole('region', { name: 'Inquietudes resueltas' }).at(-1)!).getByRole('note')).toHaveTextContent(
+      'no incluye las QCS confidenciales'
+    )
   })
 
   it('400 TOO_MANY_RECORDS deja el tablero en «acote los filtros» con los filtros a la vista', async () => {

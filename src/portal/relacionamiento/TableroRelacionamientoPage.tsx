@@ -1,6 +1,7 @@
 import { Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { KpiCard } from '../componentes/KpiCard'
+import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { desglose, useTablero } from '../datos/indicadores'
 import { NS, numeroPe } from '../i18n'
 import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, indicadorDe, SerieConMeta, useFiltrosDeTablero, Zona } from '../tableros/comunes'
@@ -65,7 +66,8 @@ export function TableroRelacionamientoPage() {
                 }
               </Zona>
               <Zona titulo={t('relacionamiento.zonas.resueltas')} indicador={ind('KPI-ENG-05')}>
-                {(i) => <KpiCard titulo={i.label} indicador={i} />}
+                {/* F4: una pregunta derivada a una QCS confidencial que la cuenta no lee no cuenta como absuelta, y la cifra lo dice */}
+                {(i) => <KpiCard titulo={i.label} indicador={i} notas={<NotaDeConfidenciales oculta={i.confidentialHidden} />} />}
               </Zona>
               <Zona titulo={t('relacionamiento.zonas.temas')} indicador={ind('KPI-ENG-04')}>
                 {(i) => <Barras titulo={t('relacionamiento.zonas.temas')} filas={diezYOtros(desglose(i, 'topic'), t('tableros.otros'))} />}
