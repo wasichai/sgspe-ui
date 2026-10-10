@@ -107,6 +107,36 @@ export const ES_P360 = {
       riesgos:
         'El puntaje es probabilidad por impacto, de 1 a 25. Un cambio de umbrales no recalcula los niveles guardados: los cambia la revisión siguiente de cada riesgo.'
     },
+    ayuda: {
+      interest_threshold:
+        'Puntaje de interés (de 1 a 5) desde el cual un grupo de interés cuenta con interés alto en la matriz de poder e interés. Puede llevar decimales.',
+      power_threshold:
+        'Puntaje de poder (de 1 a 5) desde el cual un grupo de interés cuenta con poder alto en la matriz de poder e interés. Puede llevar decimales.',
+      stakeholder_review_days:
+        'Días calendario que pasan antes de que la evaluación de un grupo de interés se considere vencida y toque evaluarlo de nuevo. Número entero.',
+      inactivity_days: 'Días calendario sin contacto con un grupo de interés tras los cuales el sistema crea una tarea de seguimiento. Número entero.',
+      meetings_per_month_target:
+        'Cantidad de reuniones que el proyecto se propone realizar cada mes; los tableros de relacionamiento la comparan con las realizadas, salvo que un plan de relacionamiento vigente fije la suya. Número entero.',
+      policy_minutes_only_formal_types:
+        'Activada: solo los tipos formales de interacción necesitan un acta aprobada. Desactivada: toda interacción la necesita.',
+      policy_activation_preconditions:
+        'Activada: para activar el proyecto hacen falta el CRS de trabajo y una parte con rol de cliente u operador. Desactivada: se puede activar sin ellos.',
+      grievance_ack_days:
+        'Días hábiles (de lunes a viernes, sin feriados nacionales) para acusar recibo de una queja, contados desde el día siguiente a la recepción. De 1 a 365.',
+      grievance_resolution_days: 'Días calendario para resolver una queja desde su recepción. De 1 a 365.',
+      inquiry_response_days: 'Días calendario para responder una consulta desde su recepción. De 1 a 365.',
+      policy_high_severity_requires_approver:
+        'Activada: una queja de severidad alta o crítica solo la resuelve una persona con permiso de aprobar. Desactivada: la resuelve quien la atiende.',
+      risk_review_days: 'Días calendario entre una revisión de un riesgo y la siguiente, salvo que el riesgo tenga su propia cadencia. De 1 a 365.',
+      risk_medium_min_score: 'Puntaje (probabilidad por impacto, de 1 a 25) desde el que un riesgo pasa a nivel medio. Debe ser menor que el del nivel alto.',
+      risk_high_min_score:
+        'Puntaje (probabilidad por impacto, de 1 a 25) desde el que un riesgo pasa a nivel alto. Debe estar entre el del nivel medio y el del crítico.',
+      risk_critical_min_score:
+        'Puntaje (probabilidad por impacto, de 1 a 25) desde el que un riesgo pasa a nivel crítico. Debe ser mayor que el del nivel alto.'
+    },
+    porDefecto: 'Por defecto: {{valor}}.',
+    activada: 'activada',
+    desactivada: 'desactivada',
     fueraDeRango: 'Escriba un número entero de {{min}} a {{max}}.',
     umbralesEnOrden: 'Los umbrales deben crecer: medio menor que alto y alto menor que crítico.'
   }
@@ -219,6 +249,31 @@ export const EN_P360: typeof ES_P360 = {
         'Acknowledgement counts business days (Monday to Friday, without holidays) from the day after reception; resolution and answer, calendar days. A change does not recompute deadlines already set.',
       riesgos: 'The score is probability times impact, from 1 to 25. A threshold change does not recompute stored levels: the next review of each risk does.'
     },
+    ayuda: {
+      interest_threshold: 'Interest score (1 to 5) from which a stakeholder counts as high interest in the power and interest matrix. May have decimals.',
+      power_threshold: 'Power score (1 to 5) from which a stakeholder counts as high power in the power and interest matrix. May have decimals.',
+      stakeholder_review_days: 'Calendar days before a stakeholder assessment is considered overdue and it is time to assess again. Whole number.',
+      inactivity_days: 'Calendar days without contact with a stakeholder after which the system creates a follow-up task. Whole number.',
+      meetings_per_month_target:
+        'Number of meetings the project aims to hold each month; the engagement dashboards compare it with those held, unless a plan in force sets its own. Whole number.',
+      policy_minutes_only_formal_types: 'On: only the formal engagement types need approved minutes. Off: every engagement needs them.',
+      policy_activation_preconditions:
+        'On: activating the project requires the working CRS and a party with a client or operator role. Off: it can be activated without them.',
+      grievance_ack_days:
+        'Business days (Monday to Friday, without national holidays) to acknowledge a grievance, counted from the day after reception. From 1 to 365.',
+      grievance_resolution_days: 'Calendar days to resolve a grievance from its reception. From 1 to 365.',
+      inquiry_response_days: 'Calendar days to answer an inquiry from its reception. From 1 to 365.',
+      policy_high_severity_requires_approver:
+        'On: a high or critical severity grievance can only be resolved by a person allowed to approve. Off: whoever handles it resolves it.',
+      risk_review_days: 'Calendar days between one review of a risk and the next, unless the risk has its own cadence. From 1 to 365.',
+      risk_medium_min_score: 'Score (probability times impact, 1 to 25) from which a risk reaches the medium level. Must be lower than the high level.',
+      risk_high_min_score:
+        'Score (probability times impact, 1 to 25) from which a risk reaches the high level. Must be between the medium and critical levels.',
+      risk_critical_min_score: 'Score (probability times impact, 1 to 25) from which a risk reaches the critical level. Must be higher than the high level.'
+    },
+    porDefecto: 'Default: {{valor}}.',
+    activada: 'on',
+    desactivada: 'off',
     fueraDeRango: 'Type a whole number from {{min}} to {{max}}.',
     umbralesEnOrden: 'Thresholds must grow: medium lower than high and high lower than critical.'
   }
