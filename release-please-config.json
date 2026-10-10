@@ -7,7 +7,7 @@
             "package-name": "sgspe-ui",
             "changelog-path": "CHANGELOG.md",
             "bump-minor-pre-major": true,
-            "release-as": "0.1.0"
+            "release-as": "1.0.0"
         }
     }
 }
