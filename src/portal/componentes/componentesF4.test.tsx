@@ -194,6 +194,23 @@ describe('registros simples', () => {
     expect(screen.queryByRole('button', { name: 'Nueva regla' })).not.toBeInTheDocument()
   })
 
+  it('quien solo lee y la metadata falla ve el fallo con «Reintentar», que vuelve a pedirla', async () => {
+    fetch = mockFetch([lista(), asignacion('u-relacionista'), { path: '/metadata/objects/early_warning_rule', body: DEF_REGLA }])
+    let fallos = 1
+    red = espiarRed([
+      {
+        path: '/metadata/objects/early_warning_rule',
+        responder: () => (fallos-- > 0 ? problema(500, 'falla') : new Response(JSON.stringify(DEF_REGLA), { headers: { 'Content-Type': 'application/json' } }))
+      }
+    ])
+    abrir(RELACIONISTA, RELACIONES_EN_RIESGOS)
+    await userEvent.click(await screen.findByRole('button', { name: 'Señales de conflicto' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Reglas' })
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Reintentar' }))
+    expect(await within(drawer).findByText('CONTEO DE SEÑALES')).toBeInTheDocument()
+    expect(red.a('GET', '/metadata/objects/early_warning_rule').length).toBeGreaterThanOrEqual(2)
+  })
+
   it('mientras la lista carga no dice que está vacía; vacía lo dice', async () => {
     fetch = mockFetch([lista([]), asignacion('u-srm'), { path: '/metadata/objects/early_warning_rule', body: DEF_REGLA }])
     abrir()

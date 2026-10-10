@@ -29,7 +29,8 @@ export function DialogoDeReclasificacion({ objeto, registro, alCerrar }: { objet
   const releer = useReleer()
   const reclasificar = useReclasificar(objeto)
   const destinos = OBJETOS_DE_QCS.filter((o) => o !== objeto && can(o, 'CREATE'))
-  const [destino, setDestino] = useState<ObjetoDeQcs | undefined>(destinos[0])
+  const [elegido, setDestino] = useState<ObjetoDeQcs | undefined>()
+  const destino = elegido ?? destinos[0]
   const [codigo, setCodigo] = useState('')
   const [motivo, setMotivo] = useState('')
   const [intentado, setIntentado] = useState(false)
