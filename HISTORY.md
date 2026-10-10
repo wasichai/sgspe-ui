@@ -2,6 +2,19 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-10 — `@wasichai/*` 0.6.0
+
+- Los diez paquetes (nueve de la app y `@wasichai/testing`) pasan de 0.5.1 a 0.6.0 (`maplibre-gl` sigue en 6.10.0; React y los demás pares no cambian).
+- Huso fijo: `DynamicForm` lee y escribe los DATETIME en la hora de Lima (`ZONA_DE_LIMA`, `datos/fechas.ts`), sea cual sea
+  el huso del navegador: `FormularioDeRegistro` lo pasa como `timeZone` y lo usa al comparar lo cambiado, y el portal y
+  `/admin` lo fijan en `config.timeZone`. Las 10:00 tecleadas viajan como 15:00Z. Se cierra la brecha de F4 (UPS-27).
+- Motivo de cambio: core 0.6.0 dibuja su propio «Motivo» en `DynamicForm` cuando el objeto es `requiresReason`. El portal ya
+  lo pide en cada pantalla que abre el formulario y lo manda en `X-Change-Reason`, así que `prepararDefinicion` apaga el de
+  core y no se pide dos veces. Las transiciones del portal siguen por `transiciones/`; `/admin` usa los diálogos de core
+  (registro, borrado, vínculo y transición), que ahora sí piden el motivo de los objetos `requiresReason`.
+- El huso propio de un campo (`timeZone` en la metadata, ADR-063 y ADR-064 de wasichai) requiere un backend posterior a
+  wasichai 0.6.0: el editor de objetos de `/admin` lo ofrece, pero SGSPE no lo usa.
+
 ## 2026-10-10 — Releases con GitHub Actions
 
 - `release-please.yml`, `release-please-config.json` y `.release-please-manifest.json`, como en wasichai-ui: un PR de
@@ -21,8 +34,9 @@ La entrada más reciente va primero. El diseño y los ADR están en el repositor
   `confidentialHidden` en tableros, indicadores y reporte, sin conteo.
 - sgspe#14: la huella SHA-256 de una evidencia restringida se reserva a quien la descarga, y toda ruta del portal codifica
   sus ids, con una prueba que lo vigila.
-- Brecha conocida: los campos DATETIME que edita `FormularioDeRegistro` usan el huso del navegador, porque `DynamicForm` de
-  `@wasichai/core` no admite un huso fijo; las altas de QCS, aceptar y la revisión de riesgo sí usan la hora de Lima.
+- Brecha conocida (resuelta con `@wasichai/*` 0.6.0, ver arriba): los campos DATETIME que edita `FormularioDeRegistro` usaban
+  el huso del navegador, porque `DynamicForm` de `@wasichai/core` 0.5.1 no admitía un huso fijo; las altas de QCS, aceptar y
+  la revisión de riesgo ya usaban la hora de Lima.
 - Pruebas: 1271 unitarias en 90 archivos (201 más que las 1070 de F3) y 13 extremo a extremo (3 nuevas).
 
 ## 2026-10-09 — Capacidades de tenant desde `/me/permissions` (UPS-06)

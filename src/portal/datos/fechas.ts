@@ -1,3 +1,7 @@
+// el huso de toda fecha con hora del portal y de /admin: DynamicForm lee y escribe en él los DATETIME (core 0.6.0), sea
+// cual sea el huso del navegador
+export const ZONA_DE_LIMA = 'America/Lima'
+
 // la fecha de negocio es la de Lima (UTC-5, sin horario de verano): a las 19:00 de Lima ya es "mañana" en UTC. devuelve
 // AAAA-MM-DD, que se compara como texto con las fechas de la API (start_date, end_date…)
 export const hoyEnLima = (ahora: Date = new Date()): string =>

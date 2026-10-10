@@ -4,6 +4,7 @@ import { createRegistry, resolveConfig, WasichaiProviders, type AuthUser, type C
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { client } from '../portal/api'
+import { ZONA_DE_LIMA } from '../portal/datos/fechas'
 import { crearI18n, IDIOMAS } from '../portal/i18n'
 import { RELACIONISTA } from './portal'
 
@@ -29,7 +30,7 @@ export function montar(
   { ruta = '/', camino = '*', usuario = RELACIONISTA, permisos = { admin: true, objects: {} } }: OpcionesDeMontaje = {}
 ) {
   localStorage.setItem('sgspe.token', 't')
-  const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS })
+  const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS, timeZone: ZONA_DE_LIMA })
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <WasichaiProviders
