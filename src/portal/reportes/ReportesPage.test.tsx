@@ -29,10 +29,10 @@ afterEach(() => {
 const rutas = [
   {
     path: '/objects/project/records',
-    body: pagina([registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }), registro('p2', { code: 'PRJ-02', name: 'Antamina Norte' })])
+    body: pagina([registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }), registro('p2', { code: 'PRJ-02', name: 'Wayra Norte' })])
   },
   { path: '/objects/project/records/p1', body: registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa' }, { state: 'active' }) },
-  { path: '/objects/project/records/p2', body: registro('p2', { code: 'PRJ-02', name: 'Antamina Norte' }, { state: 'active' }) },
+  { path: '/objects/project/records/p2', body: registro('p2', { code: 'PRJ-02', name: 'Wayra Norte' }, { state: 'active' }) },
   { path: '/objects/project/workflow', body: workflow('project', [['active', 'Activo']]) },
   { path: '/objects/project_assignment/records', body: pagina([registro('a', { project: 'p1', active: true, member_user_id: 'u-smg' })]) },
   {
@@ -201,7 +201,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
     const selector = within(seccion).getByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() => expect(within(selector).getByRole('option', { name: 'PRJ-02 · Antamina Norte' })).toBeInTheDocument())
+    await waitFor(() => expect(within(selector).getByRole('option', { name: 'PRJ-02 · Wayra Norte' })).toBeInTheDocument())
     await userEvent.selectOptions(selector, 'p2')
     await userEvent.click(screen.getByRole('button', { name: 'Exportar XLSX' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
@@ -220,7 +220,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
     const delaPagina = within(seccion).getByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() => expect(within(delaPagina).getByRole('option', { name: 'PRJ-02 · Antamina Norte' })).toBeInTheDocument())
+    await waitFor(() => expect(within(delaPagina).getByRole('option', { name: 'PRJ-02 · Wayra Norte' })).toBeInTheDocument())
     await userEvent.selectOptions(delaPagina, '')
     expect(delaPagina).toHaveValue('')
     // el conmutador del shell (el primer combobox «Proyecto») cambia el proyecto de la URL
