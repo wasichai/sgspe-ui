@@ -24,6 +24,8 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
   cambia, se copia de nuevo y se verifica con `cmp`.
 - Pruebas primero, con Vitest, Testing Library y `mockFetch` de `@wasichai/testing`; usuarios ficticios `@sgspe.test`.
 - Conventional Commits en español; `git add` con rutas explícitas.
+- Los releases los arma release-please desde esos commits (`release-please.yml`): el tipo (`feat`, `fix`, `!`) decide la
+  versión, y `version` de `package.json`, `CHANGELOG.md` y `.release-please-manifest.json` no se editan a mano.
 - Una fecha con hora que el portal escribe es la de Lima (`ahoraEnLima`, `datos/fechas.ts`).
 - Toda escritura del portal pasa por `src/portal/datos` (`useCrear`, `useActualizar`, `usePedir`): manda `If-Match` con la
   versión leída, se arma con la forma del GET y los permisos de quien llama (`atributosDeEscritura`), nunca con el modelo,
