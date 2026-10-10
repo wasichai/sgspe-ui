@@ -6,6 +6,8 @@ import { pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { archivoXlsx, espiarRed, problema, type Red } from '../../test/red'
+import { DEF_QUEJA, WF_CONSULTA, WF_QUEJA, WF_SOLICITUD } from '../../test/atencion'
+import { DEF_RIESGO, WF_RIESGO } from '../../test/riesgos'
 
 let fetch: FetchMock | null = null
 let red: Red | null = null
@@ -445,5 +447,164 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       expect(await screen.findByRole('region', { name: 'Registro de grupos de interés' })).toBeInTheDocument()
       expect(screen.queryByRole('region', { name: 'Matriz de compromisos' })).not.toBeInTheDocument()
     })
+  })
+})
+
+// F4 (api.md §4.13, deliverables.md §10): el registro de quejas, consultas y solicitudes con EXPORT sobre los tres objetos y la
+// matriz de riesgos con EXPORT sobre social_risk, cada uno con sus filtros, lo que lleva cada nivel y su propia clave
+describe('F4 · registro de quejas, consultas y solicitudes', () => {
+  const qcs = ['READ', 'EXPORT']
+  const conRegistro = (extra: Record<string, string[]> = {}) =>
+    permisos({ project: ['READ'], export_log: ['READ'], grievance: qcs, inquiry: qcs, stakeholder_request: qcs, ...extra })
+  const rutasDeAtencion = [
+    ...rutas,
+    { path: '/objects/grievance/workflow', body: WF_QUEJA },
+    { path: '/objects/inquiry/workflow', body: WF_CONSULTA },
+    { path: '/objects/stakeholder_request/workflow', body: WF_SOLICITUD },
+    { path: '/metadata/objects/grievance', body: DEF_QUEJA }
+  ]
+  const exportar = () => espiarRed([{ method: 'POST', path: '/sgspe/exports/attention-register', responder: () => archivoXlsx('registro-de-qcs.xlsx') }])
+
+  it('exporta con el proyecto, el periodo, los tipos, los estados, el canal, la categoría y las reclasificadas, con su propia clave', async () => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conRegistro(), rutasDeAtencion)
+    red = exportar()
+    const seccion = await screen.findByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })
+    await userEvent.type(within(seccion).getByLabelText('Recibidas desde'), '2026-09-01')
+    await userEvent.type(within(seccion).getByLabelText('Recibidas hasta'), '2026-09-30')
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: 'Quejas' }))
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: 'Consultas' }))
+    // «Recibida» existe en los tres workflows: se manda una vez
+    await userEvent.click(await within(seccion).findByRole('checkbox', { name: 'Queja · Recibida' }))
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: 'Consulta · Recibida' }))
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: 'Queja · En atención' }))
+    await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Canal' }), 'REUNION')
+    await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Categoría' }), 'EMPLEO')
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: /registros originales que se reclasificaron/ }))
+    await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Nivel de divulgación' }), 'EXTERNO')
+    expect(within(seccion).getByText(/Ninguna QCS confidencial sale en este nivel/)).toBeInTheDocument()
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar el registro' }))
+    expect(await within(seccion).findByText('Confirme la lista de verificación para una salida fuera de la organización')).toBeInTheDocument()
+    expect(red.a('POST', '/sgspe/exports/attention-register')).toHaveLength(0)
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: /Revisé que el registro puede salir/ }))
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar el registro' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/attention-register')).toHaveLength(1))
+    const [llamada] = red.a('POST', '/sgspe/exports/attention-register')
+    expect(llamada.cuerpo).toEqual({
+      filters: {
+        project: ['p1'],
+        periodStart: '2026-09-01',
+        periodEnd: '2026-09-30',
+        type: ['grievance', 'inquiry'],
+        state: ['received', 'in_action'],
+        channel: 'REUNION',
+        category: 'EMPLEO',
+        includeReclassified: true
+      },
+      disclosureLevel: 'EXTERNO',
+      checklistConfirmed: true
+    })
+    expect(llamada.cabeceras.get('Idempotency-Key')).toBeTruthy()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('sin filtros manda las listas vacías y las reclasificadas en falso', async () => {
+    fetch = abrirPortal('/reports', GERENCIA_SOCIAL, conRegistro(), rutasDeAtencion)
+    red = exportar()
+    const seccion = await screen.findByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar el registro' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/attention-register')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/exports/attention-register')[0].cuerpo).toEqual({
+      filters: { project: [], type: [], state: [], includeReclassified: false },
+      disclosureLevel: 'INTERNO',
+      checklistConfirmed: false
+    })
+  })
+
+  it('PUBLICO dice si el conteo incluye las confidenciales según lo que la cuenta lee', async () => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conRegistro(), rutasDeAtencion)
+    const seccion = await screen.findByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })
+    await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Nivel de divulgación' }), 'PUBLICO')
+    expect(within(seccion).getByText(/solo incluye las QCS confidenciales que su cuenta puede leer/)).toBeInTheDocument()
+    expect(within(seccion).getByText(/«reservado»/)).toBeInTheDocument()
+  })
+
+  it('con la lectura de todas las confidenciales, PUBLICO dice que el conteo las incluye', async () => {
+    const todas = ['READ', 'EXPORT', 'READ_CONFIDENTIAL']
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conRegistro({ grievance: todas, inquiry: todas, stakeholder_request: todas }), rutasDeAtencion)
+    const seccion = await screen.findByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })
+    await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Nivel de divulgación' }), 'PUBLICO')
+    expect(within(seccion).getByText(/el conteo las incluye/)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['filters.state', 'ya no es un estado de queja, consulta o solicitud'],
+    ['filters.periodEnd', 'la fecha final no puede ser anterior a la inicial'],
+    ['filters.channel', 'Uno de los filtros no es válido.']
+  ])('INVALID_FILTER sobre %s dice su texto', async (campo, texto) => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conRegistro(), rutasDeAtencion)
+    red = espiarRed([
+      { method: 'POST', path: '/sgspe/exports/attention-register', responder: () => problema(400, 'filtro', [{ field: campo, message: 'INVALID_FILTER' }]) }
+    ])
+    const seccion = await screen.findByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar el registro' }))
+    expect(await within(seccion).findByText(new RegExp(texto.replace('.', '\\.')))).toBeInTheDocument()
+  })
+
+  it('sin EXPORT sobre alguno de los tres objetos no se ofrece: un registro con un tipo de menos engañaría', async () => {
+    fetch = abrirPortal(
+      '/projects/p1/reports',
+      GERENCIA_SOCIAL,
+      permisos({ project: ['READ'], export_log: ['READ'], grievance: qcs, inquiry: qcs, stakeholder_request: ['READ'] }),
+      rutasDeAtencion
+    )
+    expect(await screen.findByRole('heading', { name: 'Reportes', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })).not.toBeInTheDocument()
+  })
+})
+
+describe('F4 · matriz de riesgos', () => {
+  const conMatriz = permisos({ project: ['READ'], export_log: ['READ'], social_risk: ['READ', 'EXPORT'] })
+  const rutasDeRiesgos = [...rutas, { path: '/objects/social_risk/workflow', body: WF_RIESGO }, { path: '/metadata/objects/social_risk', body: DEF_RIESGO }]
+
+  it('exporta con los estados, las categorías, los niveles y los cerrados; PUBLICO exige la lista de verificación', async () => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conMatriz, rutasDeRiesgos)
+    red = espiarRed([{ method: 'POST', path: '/sgspe/exports/risk-register', responder: () => archivoXlsx('matriz-de-riesgos.xlsx') }])
+    const seccion = await screen.findByRole('region', { name: 'Matriz de riesgos' })
+    await userEvent.click(await within(seccion).findByRole('checkbox', { name: 'En mitigación' }))
+    await userEvent.click(await within(seccion).findByRole('checkbox', { name: 'AMBIENTAL' }))
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: 'CRITICO' }))
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: /Incluir los riesgos cerrados/ }))
+    await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Nivel de divulgación' }), 'PUBLICO')
+    expect(within(seccion).getByText(/Cuenta solo los riesgos activos/)).toBeInTheDocument()
+    await userEvent.click(within(seccion).getByRole('checkbox', { name: /Revisé que la matriz de riesgos puede salir/ }))
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar la matriz de riesgos' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/exports/risk-register')).toHaveLength(1))
+    const [llamada] = red.a('POST', '/sgspe/exports/risk-register')
+    expect(llamada.cuerpo).toEqual({
+      filters: { project: ['p1'], state: ['mitigating'], category: ['AMBIENTAL'], riskLevel: ['CRITICO'], includeClosed: true },
+      disclosureLevel: 'PUBLICO',
+      checklistConfirmed: true
+    })
+    expect(llamada.cabeceras.get('Idempotency-Key')).toBeTruthy()
+  })
+
+  it('TOO_MANY_RECORDS dice su texto propio', async () => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conMatriz, rutasDeRiesgos)
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/exports/risk-register',
+        responder: () => problema(400, 'tope', [{ field: 'filters.project', message: 'TOO_MANY_RECORDS' }])
+      }
+    ])
+    const seccion = await screen.findByRole('region', { name: 'Matriz de riesgos' })
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar la matriz de riesgos' }))
+    expect(await within(seccion).findByText(/La matriz de riesgos no cabe en un solo archivo/)).toBeInTheDocument()
+  })
+
+  it('sin EXPORT sobre riesgos no se ofrece la matriz de riesgos', async () => {
+    fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], export_log: ['READ'], social_risk: ['READ'] }), rutasDeRiesgos)
+    expect(await screen.findByRole('heading', { name: 'Reportes', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Matriz de riesgos' })).not.toBeInTheDocument()
   })
 })

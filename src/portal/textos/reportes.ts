@@ -36,7 +36,7 @@ export const ES_REPORTES = {
   historialAyuda: 'Las últimas exportaciones de la organización (o del proyecto elegido), con quién las hizo.',
   historialVacio: 'Todavía no hay exportaciones registradas.',
   columnas: { fecha: 'Fecha', quien: 'Exportó', objeto: 'Objeto', nivel: 'Nivel', filas: 'Filas' },
-  otrasLlegan: 'El registro de QCS y de riesgos llega en F4 y los entregables en F8.',
+  otrasLlegan: 'Los entregables llegan en F8.',
   // F3: la matriz de compromisos (api.md §4.13, deliverables.md §10)
   matriz: {
     titulo: 'Matriz de compromisos',
@@ -66,6 +66,71 @@ export const ES_REPORTES = {
       INVALID_FILTER: 'Uno de los estados elegidos ya no es un estado de compromiso: recargue la página.',
       TOO_MANY_RECORDS:
         'La matriz no cabe en un solo archivo: elija un proyecto, una campaña o menos estados. Si ya acotó los filtros, puede que un compromiso tenga más de 200 solicitantes o una entrega más de 200 evidencias, y eso no se resuelve filtrando: avise a la administración.'
+    }
+  },
+  // F4: el registro de quejas, consultas y solicitudes y la matriz de riesgos (api.md §4.13, deliverables.md §10)
+  atencion: {
+    titulo: 'Registro de quejas, consultas y solicitudes',
+    ayuda:
+      'XLSX con las quejas, consultas y solicitudes del periodo, una hoja por tipo y un resumen. Cada planteamiento cuenta una vez aunque se haya reclasificado.',
+    niveles: {
+      INTERNO: 'Uso interno: todos los campos que su cuenta lee, con las confidenciales que su cuenta puede leer',
+      EXTERNO: 'Externo: sin QCS confidenciales, sin texto libre, sin persona, sin quién la recibió ni responsable',
+      PUBLICO: 'Público: solo conteos por tipo, estado, canal y categoría'
+    },
+    externoAyuda:
+      'Ninguna QCS confidencial sale en este nivel, aunque su cuenta la lea. No salen las descripciones, respuestas ni resoluciones, ni la persona que plantea, quién la recibió o su responsable; el grupo de interés se cita por su código GI-. Una hoja «Notas» lo dice.',
+    publicoAyuda:
+      'Las hojas traen todas las combinaciones de tipo con estado, canal y categoría. Todo conteo menor que 5, el cero incluido, sale como «reservado», y también la celda que permitiría despejarlo restando.',
+    publicoConConfidenciales: 'Su cuenta lee todas las QCS confidenciales: el conteo las incluye, y la hoja «Notas» lo dice.',
+    publicoSinConfidenciales:
+      'El conteo solo incluye las QCS confidenciales que su cuenta puede leer, y la hoja «Notas» lo dice. Para el total, pida la salida a la gestión de quejas.',
+    checklist: 'Revisé que el registro puede salir con este nivel: sin datos que identifiquen a quien plantea y sin casos que no deban divulgarse',
+    desde: 'Recibidas desde',
+    hasta: 'Recibidas hasta',
+    periodoAyuda: 'Fechas de recepción en la hora de Lima. Sin fechas, todo el historial.',
+    tipos: 'Tipos',
+    tiposAyuda: 'Sin ninguno marcado, los tres.',
+    estados: 'Estados',
+    estadosAyuda: 'Sin ninguno marcado, todos los estados.',
+    estadosCargando: 'Leyendo los estados…',
+    canal: 'Canal',
+    categoria: 'Categoría',
+    todos: 'Todos',
+    todas: 'Todas',
+    reclasificadas: 'Incluir también los registros originales que se reclasificaron',
+    exportar: 'Exportar el registro',
+    errores: {
+      TOO_MANY_RECORDS: 'El registro no cabe en un solo archivo: elija un proyecto o un periodo más corto.',
+      INVALID_FILTER_ESTADOS: 'Uno de los estados elegidos ya no es un estado de queja, consulta o solicitud: recargue la página.',
+      INVALID_FILTER_PERIODO: 'El periodo no es válido: la fecha final no puede ser anterior a la inicial.'
+    }
+  },
+  riesgos: {
+    titulo: 'Matriz de riesgos',
+    ayuda: 'XLSX con la matriz de riesgos con su última revisión, y en INTERNO también las revisiones, las medidas y los impactos potenciales.',
+    niveles: {
+      INTERNO: 'Uso interno: las hojas «Matriz», «Revisiones», «Medidas» e «Impactos» con todos los campos que su cuenta lee',
+      EXTERNO: 'Externo: sin texto libre ni correos, con los grupos de interés por código GI- y las medidas contadas en la matriz',
+      PUBLICO: 'Público: solo conteos de riesgos activos por nivel y categoría y por tratamiento y nivel'
+    },
+    externoAyuda:
+      'No salen la fuente del riesgo, la razón del tratamiento, los controles, las fuentes de monitoreo, el motivo de cierre ni las notas de las revisiones, ni el correo de responsables y revisores. Cada grupo de interés se cita por su código GI-.',
+    publicoAyuda:
+      'Cuenta solo los riesgos activos, nunca los cerrados, sobre todas las combinaciones. Todo conteo menor que 5, el cero incluido, sale como «reservado», y también la celda que permitiría despejarlo restando.',
+    checklist: 'Revisé que la matriz de riesgos puede salir con este nivel: sin riesgos ni nombres que no deban divulgarse',
+    estados: 'Estados',
+    estadosAyuda: 'Sin ninguno marcado, todos los estados.',
+    estadosCargando: 'Leyendo los estados…',
+    categorias: 'Categorías',
+    categoriasAyuda: 'Sin ninguna marcada, todas.',
+    nivelesDeRiesgo: 'Niveles de riesgo',
+    nivelesAyuda: 'Sin ninguno marcado, todos los niveles.',
+    cerrados: 'Incluir los riesgos cerrados (en el público nunca se cuentan)',
+    exportar: 'Exportar la matriz de riesgos',
+    errores: {
+      TOO_MANY_RECORDS: 'La matriz de riesgos no cabe en un solo archivo: elija un proyecto o acote los filtros.',
+      INVALID_FILTER: 'Uno de los filtros elegidos ya no es válido: recargue la página.'
     }
   }
 }
@@ -104,7 +169,7 @@ export const EN_REPORTES: typeof ES_REPORTES = {
   historialAyuda: 'The latest exports of the organization (or of the chosen project), with who made them.',
   historialVacio: 'No exports have been recorded yet.',
   columnas: { fecha: 'Date', quien: 'Exported by', objeto: 'Object', nivel: 'Level', filas: 'Rows' },
-  otrasLlegan: 'The grievance and risk registers arrive in F4 and the deliverables in F8.',
+  otrasLlegan: 'The deliverables arrive in F8.',
   matriz: {
     titulo: 'Commitment matrix',
     ayuda:
@@ -132,6 +197,70 @@ export const EN_REPORTES: typeof ES_REPORTES = {
       INVALID_FILTER: 'One of the chosen statuses is no longer a commitment status: reload the page.',
       TOO_MANY_RECORDS:
         'The matrix does not fit in one file: pick a project, a campaign or fewer statuses. If the filters are already narrow, a commitment may have more than 200 requesters or a delivery more than 200 evidences, and filtering does not solve that: tell the administration.'
+    }
+  },
+  atencion: {
+    titulo: 'Grievances, inquiries and requests register',
+    ayuda:
+      'XLSX with the grievances, inquiries and requests of the period, one sheet per type and a summary. Each case counts once even if it was reclassified.',
+    niveles: {
+      INTERNO: 'Internal use: every field your account reads, with the confidential ones your account can read',
+      EXTERNO: 'External: no confidential cases, no free text, no person, no receiver or owner',
+      PUBLICO: 'Public: only counts by type, status, channel and category'
+    },
+    externoAyuda:
+      'No confidential case leaves at this level, even if your account reads it. Descriptions, responses and resolutions do not leave, nor the person who raised it, who received it or its owner; the stakeholder is cited by its GI- code. A «Notas» sheet says so.',
+    publicoAyuda:
+      'The sheets carry every combination of type with status, channel and category. Every count under 5, zero included, shows as “reservado”, and so does the cell that would reveal it by subtraction.',
+    publicoConConfidenciales: 'Your account reads every confidential case: the count includes them, and the «Notas» sheet says so.',
+    publicoSinConfidenciales:
+      'The count only includes the confidential cases your account can read, and the «Notas» sheet says so. For the total, ask grievance management for the output.',
+    checklist: 'I checked the register can leave with this level: no data that identifies who raised a case and no cases that must not be disclosed',
+    desde: 'Received from',
+    hasta: 'Received until',
+    periodoAyuda: 'Reception dates in Lima time. Without dates, the whole history.',
+    tipos: 'Types',
+    tiposAyuda: 'With none checked, the three.',
+    estados: 'Statuses',
+    estadosAyuda: 'With none checked, every status.',
+    estadosCargando: 'Reading the statuses…',
+    canal: 'Channel',
+    categoria: 'Category',
+    todos: 'All',
+    todas: 'All',
+    reclasificadas: 'Also include the original records that were reclassified',
+    exportar: 'Export the register',
+    errores: {
+      TOO_MANY_RECORDS: 'The register does not fit in one file: pick a project or a shorter period.',
+      INVALID_FILTER_ESTADOS: 'One of the chosen statuses is no longer a grievance, inquiry or request status: reload the page.',
+      INVALID_FILTER_PERIODO: 'The period is not valid: the end date cannot be earlier than the start date.'
+    }
+  },
+  riesgos: {
+    titulo: 'Risk matrix',
+    ayuda: 'XLSX with the risk matrix and its last review and, in INTERNO, also the reviews, measures and potential impacts.',
+    niveles: {
+      INTERNO: 'Internal use: the «Matriz», «Revisiones», «Medidas» and «Impactos» sheets with every field your account reads',
+      EXTERNO: 'External: no free text or emails, stakeholders by GI- code and measures counted in the matrix',
+      PUBLICO: 'Public: only counts of active risks by level and category and by treatment and level'
+    },
+    externoAyuda:
+      'The risk source, treatment rationale, controls, monitoring sources, closing reason and review notes do not leave, nor the emails of owners and reviewers. Each stakeholder is cited by its GI- code.',
+    publicoAyuda:
+      'It counts only active risks, never closed ones, over every combination. Every count under 5, zero included, shows as “reservado”, and so does the cell that would reveal it by subtraction.',
+    checklist: 'I checked the risk matrix can leave with this level: no risks or names that must not be disclosed',
+    estados: 'Statuses',
+    estadosAyuda: 'With none checked, every status.',
+    estadosCargando: 'Reading the statuses…',
+    categorias: 'Categories',
+    categoriasAyuda: 'With none checked, all of them.',
+    nivelesDeRiesgo: 'Risk levels',
+    nivelesAyuda: 'With none checked, every level.',
+    cerrados: 'Include closed risks (the public output never counts them)',
+    exportar: 'Export the risk matrix',
+    errores: {
+      TOO_MANY_RECORDS: 'The risk matrix does not fit in one file: pick a project or narrow the filters.',
+      INVALID_FILTER: 'One of the chosen filters is no longer valid: reload the page.'
     }
   }
 }
