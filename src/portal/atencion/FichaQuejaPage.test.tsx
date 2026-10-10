@@ -133,12 +133,17 @@ describe('S36 · ficha de queja', () => {
         }
       ])
     )
+    // un vínculo que carga o falla dibuja bloques: ningún <p> puede envolverlo (aviso de React «cannot be a descendant of <p>»)
+    const avisos = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     abrir()
     const deDonde = await screen.findByRole('region', { name: 'De dónde viene' })
     expect(await within(deDonde).findByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     expect(await within(deDonde).findByText('Registro reservado')).toBeInTheDocument()
     const genero = screen.getByRole('region', { name: 'Qué alimenta y qué generó' })
     expect(await within(genero).findByRole('link', { name: 'COM-7 · Limpieza del canal' })).toHaveAttribute('href', '/projects/p1/commitments/c7')
+    const anidados = avisos.mock.calls.filter((llamada) => /cannot be a descendant of <p>|cannot contain a nested/.test(llamada.join(' ')))
+    avisos.mockRestore()
+    expect(anidados).toEqual([])
   })
 
   it('editar manda el cambio con el motivo y la versión leída', async () => {

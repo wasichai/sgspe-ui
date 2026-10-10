@@ -216,9 +216,9 @@ function QueGenero({ queja }: { queja: Registro }) {
     <section aria-label={t('fichaQueja.comun.queGenero')} className="space-y-1">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaQueja.comun.queGenero')}</h2>
       {vinculos.map(([campo, objeto, etiqueta]) => (
-        <p key={campo}>
+        <div key={campo}>
           {t(`fichaQueja.comun.${etiqueta}`)}: <RegistroVinculado objeto={objeto} id={atributo<string>(queja, campo)} />
-        </p>
+        </div>
       ))}
       <h3 className="font-medium">{t('fichaQueja.comun.compromisos')}</h3>
       {compromisos.isPending ? (
