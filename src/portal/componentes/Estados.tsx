@@ -67,6 +67,18 @@ export function Consulta<T>({ consulta, noExiste, children }: { consulta: UseQue
 // un 403: la cuenta no lee eso (security.md §7.9), así que se dice «no disponible» y no un error que invite a reintentar
 export const esProhibido = (error: unknown): boolean => error instanceof ApiError && error.status === 403
 
+// un registro que la cuenta no lee responde 404, igual que uno que no existe: el alcance de lectura por proyecto (ADR-0029) y
+// el de las QCS confidenciales (ADR-0028) lo ocultan así, y el portal no distingue «no existe» de «no es de sus proyectos»
+// (spec 4.4 §3.6)
+export const esIlegible = (error: unknown): boolean => error instanceof ApiError && error.status === 404
+
+// lo que dibuja la ficha de un registro que responde 404 (el noExiste de Consulta): que no existe o no es de sus proyectos, sin
+// distinguir y sin un «Reintentar» que no sirve
+export function NoEsDeSusProyectos() {
+  const { t } = useTranslation(NS)
+  return <Alert tone="warning">{t('comun.errores.404')}</Alert>
+}
+
 // el botón de ayuda y el motivo que despliega: el motivo está siempre en el DOM (oculto a la vista) con el id que otros
 // elementos referencian por aria-describedby. el botón mide al menos 24 px (WCAG 2.5.8) y tiene su propio foco visible
 function AyudaDelMotivo({ id, motivo }: { id: string; motivo: string }) {
@@ -120,8 +132,9 @@ export function Restringido({ describedPor }: { describedPor?: string }) {
   )
 }
 
-// el vínculo a una QCS confidencial que quien mira no lee (ASM-095, screens.md §8): wasichai responde 404 por ella (security.md
-// §9.6), así que se dice «Registro reservado», sin enlace ni datos, con el motivo a mano
+// el vínculo a un registro que quien mira no lee: de un proyecto en que no está asignado (ADR-0029), una QCS confidencial
+// (ASM-095) o uno borrado. wasichai responde 404 por los tres y el portal no los distingue: «Registro reservado», sin enlace ni
+// datos, con el motivo a mano
 export function Reservado({ describedPor }: { describedPor?: string }) {
   const { t } = useTranslation(NS)
   return (

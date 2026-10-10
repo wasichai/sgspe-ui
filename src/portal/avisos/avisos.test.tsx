@@ -236,7 +236,7 @@ describe('/r/:object/:recordId', () => {
     fetch = mockFetch([{ path: '/objects/grievance/records/g9', status: 404, body: { title: 'Not Found', status: 404 } }])
     montar(<AbrirRegistroPage />, { ruta: '/r/grievance/g9', camino: '/r/:object/:recordId' })
     expect(await screen.findByText('Registro reservado')).toBeInTheDocument()
-    expect(screen.getByText(/solo la leen la gestión de quejas, su responsable y quien la recibió/)).toBeInTheDocument()
+    expect(screen.getByText(/Su cuenta no lee este registro/)).toBeInTheDocument()
     expect(screen.queryByText('Este registro ya no existe o no es de su organización.')).not.toBeInTheDocument()
     expect(ubicacion.actual).toBe('/r/grievance/g9')
   })
