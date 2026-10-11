@@ -46,6 +46,32 @@ export const ES_FICHA_APORTE = {
     titulo: 'Trazabilidad',
     solicitud: 'Solicitud de origen',
     sinSolicitud: 'No nace de una solicitud que su cuenta lea.'
+  },
+  antes: {
+    titulo: 'Antes de aprobar',
+    ayuda: 'Las reglas de «{{accion}}» corren aquí sin escribir nada: lo que bloquea, lo que advierte y lo que cumple, antes de decidir.',
+    aprobar: 'Aprobar',
+    comprobando: 'Comprobando las reglas de la aprobación…',
+    filas: {
+      items: 'Ítems y tipo de aporte',
+      tope: 'Tope de la campaña',
+      manoDeObra: 'Sin mano de obra',
+      donaciones: 'Donación no monetaria',
+      prioridad: 'Tema priorizado del proyecto',
+      sinergia: 'Acuerdo de sinergia vigente',
+      quienAprueba: 'Quién aprueba'
+    },
+    situaciones: { cumple: 'Cumple', bloquea: 'Bloquea', advierte: 'Advierte', noAplica: 'No se evalúa' },
+    otras: 'Otras reglas',
+    sinergiaNoSeJustifica: 'La sinergia sin un acuerdo vigente no se cubre con la justificación: vincule un acuerdo activo y no vencido.',
+    justificacion: {
+      titulo: 'Justificación de la desviación',
+      sin: 'Sin justificación.',
+      pide: 'El aporte se aparta de los lineamientos del proyecto: escriba una justificación para poder aprobarlo. Una sola justificación cubre todos los lineamientos incumplidos.',
+      escribir: 'Escribir la justificación',
+      cambiar: 'Cambiar la justificación',
+      ayuda: 'Diga por qué el aporte se aparta de los lineamientos. Desde la aprobación ya no cambia.'
+    }
   }
 }
 
@@ -95,5 +121,31 @@ export const EN_FICHA_APORTE: typeof ES_FICHA_APORTE = {
     titulo: 'Traceability',
     solicitud: 'Originating request',
     sinSolicitud: 'It does not come from a request your account reads.'
+  },
+  antes: {
+    titulo: 'Before approving',
+    ayuda: 'The rules of «{{accion}}» run here without writing anything: what blocks, what warns and what complies, before deciding.',
+    aprobar: 'Approve',
+    comprobando: 'Checking the approval rules…',
+    filas: {
+      items: 'Items and contribution type',
+      tope: 'Campaign cap',
+      manoDeObra: 'No labour',
+      donaciones: 'Non-monetary donation',
+      prioridad: 'Prioritised project topic',
+      sinergia: 'Current synergy agreement',
+      quienAprueba: 'Who approves'
+    },
+    situaciones: { cumple: 'Complies', bloquea: 'Blocks', advierte: 'Warns', noAplica: 'Not assessed' },
+    otras: 'Other rules',
+    sinergiaNoSeJustifica: 'A synergy without a current agreement is not covered by the justification: link an active, unexpired agreement.',
+    justificacion: {
+      titulo: 'Deviation justification',
+      sin: 'No justification.',
+      pide: 'The contribution departs from the project guidelines: write a justification to approve it. One justification covers all unmet guidelines.',
+      escribir: 'Write the justification',
+      cambiar: 'Change the justification',
+      ayuda: 'Say why the contribution departs from the guidelines. After approval it no longer changes.'
+    }
   }
 }
