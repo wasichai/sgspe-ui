@@ -1,14 +1,14 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Tabs, Textarea } from '@wasichai/ui'
 import { useAvailableTransitions } from '@wasichai/workflow'
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Consulta } from '../componentes/Estados'
+import { Consulta, esIlegible } from '../componentes/Estados'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Historia } from '../componentes/Historia'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
@@ -114,15 +114,23 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
   const transiciones = useAvailableTransitions('stakeholder_request', solicitud.id)
   const [aceptando, setAceptando] = useState(false)
   // lo que la cuenta puede crear al aceptar (spec F5 §2.2): COMMITMENT_MANAGER acepta pero no crea aportes. el aporte se ofrece solo
-  // si el tenant tiene el modelo de F5 (ADMIN lo puede todo, y un tenant de F4 responde 404 por su definición)
-  const definicionDelAporte = useDefinicion(can('social_contribution', 'CREATE') ? 'social_contribution' : undefined)
+  // si el tenant tiene el modelo de F5 (ADMIN lo puede todo, y un tenant de F4 responde 404 por su definición). mientras la definición
+  // no llega no se ofrece aceptar (el rótulo no cambia después); solo un 404 es «sin aportes»: otro error se dice y se reintenta
+  const creaAportes = can('social_contribution', 'CREATE')
+  const definicionDelAporte = useDefinicion(creaAportes ? 'social_contribution' : undefined)
+  const aporteSinResolver = creaAportes && definicionDelAporte.isPending
+  const aporteConError = creaAportes && definicionDelAporte.isError && !esIlegible(definicionDelAporte.error)
   const opciones: ObjetoQueNace[] = [
     ...(can('commitment', 'CREATE') ? (['commitment'] as const) : []),
     ...(definicionDelAporte.data ? (['social_contribution'] as const) : [])
   ]
   // aceptar es de comando: no es un botón de transición, pero GET …/transitions dice si el rol de quien mira la puede dar
   const acepta =
-    escribe && opciones.length > 0 && solicitud.state === 'under_evaluation' && (transiciones.data ?? []).some((tr) => tr.name === 'accept' && tr.allowed)
+    escribe &&
+    !aporteSinResolver &&
+    opciones.length > 0 &&
+    solicitud.state === 'under_evaluation' &&
+    (transiciones.data ?? []).some((tr) => tr.name === 'accept' && tr.allowed)
   const textoDelBoton =
     opciones.length > 1
       ? t('fichaConsulta.solicitud.aceptar.botonElegir')
@@ -148,6 +156,14 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
           <>
             <p className="text-sg-caption text-sg-text-muted">{t('fichaConsulta.solicitud.sinPlazo')}</p>
             {solicitud.state === 'under_evaluation' ? <p className="text-sg-caption text-sg-text-muted">{t('fichaConsulta.solicitud.declinarAyuda')}</p> : null}
+            {escribe && aporteConError && solicitud.state === 'under_evaluation' ? (
+              <Alert tone="warning">
+                <p>{t('fichaConsulta.solicitud.aceptar.aporteSinDefinicion')}</p>
+                <Button size="sm" variant="secondary" className="mt-2" onClick={() => void definicionDelAporte.refetch()}>
+                  {t('comun.reintentar')}
+                </Button>
+              </Alert>
+            ) : null}
           </>
         }
         resumen={
@@ -326,6 +342,9 @@ function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Reg
   })
   const [pagador, setPagador] = useState<Registro | null>(null)
   const [intentado, setIntentado] = useState(false)
+  // el error de quién paga, asociado a su buscador como los de Campo
+  const idErrorDelPagador = `${useId()}-pagador`
+  const errorDelPagador = intentado && !pagador ? t('fichaConsulta.solicitud.aceptar.falta') : delServidor.payer_organization
   const cambiar = (campo: keyof typeof valores) => (e: { target: { value: string } }) => setValores((v) => ({ ...v, [campo]: e.target.value }))
   const instante = instanteDeLima(valores.respondida)
   const falta = (campo: keyof typeof valores) => (intentado && valores[campo].trim() === '' ? t('fichaConsulta.solicitud.aceptar.falta') : undefined)
@@ -418,13 +437,17 @@ function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Reg
                     etiqueta={t('fichaConsulta.solicitud.aceptar.pagador')}
                     rotulo={(r) => texto(r, 'name')}
                     alElegir={setPagador}
+                    describidoPor={errorDelPagador ? idErrorDelPagador : undefined}
+                    invalido={Boolean(errorDelPagador)}
                   />
                 )}
-                {intentado && !pagador ? (
-                  <p className="text-sg-caption text-sg-danger">{t('fichaConsulta.solicitud.aceptar.falta')}</p>
-                ) : delServidor.payer_organization ? (
-                  <p className="text-sg-caption text-sg-danger">{delServidor.payer_organization}</p>
-                ) : null}
+                <div aria-live="polite">
+                  {errorDelPagador ? (
+                    <p id={idErrorDelPagador} className="text-sg-caption text-sg-danger">
+                      {errorDelPagador}
+                    </p>
+                  ) : null}
+                </div>
               </div>
               <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.tipo')} error={delServidor.contribution_type}>
                 {(p) => <SelectNativo {...p} value={valores.tipo} opciones={tipos} onChange={cambiar('tipo')} />}

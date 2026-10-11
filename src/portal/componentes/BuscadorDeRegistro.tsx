@@ -12,13 +12,18 @@ export function BuscadorDeRegistro({
   etiqueta,
   rotulo,
   filtros = {},
-  alElegir
+  alElegir,
+  describidoPor,
+  invalido
 }: {
   objeto: string
   etiqueta: string
   rotulo: (registro: Registro) => string
   filtros?: Parametros
   alElegir: (registro: Registro) => void
+  // el error o la ayuda de la pantalla que describe el buscador (aria-describedby) y si su valor falta o no vale
+  describidoPor?: string
+  invalido?: boolean
 }) {
   const { t } = useTranslation(NS)
   const [q, setQ] = useState('')
@@ -26,7 +31,16 @@ export function BuscadorDeRegistro({
   const lista = resultados.data?.content ?? []
   return (
     <div className="space-y-1">
-      <input type="search" aria-label={etiqueta} placeholder={etiqueta} value={q} onChange={(e) => setQ(e.target.value)} className={CONTROL} />
+      <input
+        type="search"
+        aria-label={etiqueta}
+        aria-describedby={describidoPor}
+        aria-invalid={invalido || undefined}
+        placeholder={etiqueta}
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        className={CONTROL}
+      />
       {q.trim().length >= 2 ? (
         lista.length === 0 ? (
           <p className="text-sg-caption text-sg-text-muted">{resultados.isPending ? t('comun.cargando') : t('comun.sinResultados')}</p>

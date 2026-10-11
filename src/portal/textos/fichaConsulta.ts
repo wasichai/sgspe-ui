@@ -50,7 +50,8 @@ export const ES_FICHA_CONSULTA = {
       condiciones: 'Condiciones',
       pagador: 'Quién paga',
       cambiarPagador: 'Cambiar',
-      tipo: 'Tipo de aporte (opcional)'
+      tipo: 'Tipo de aporte (opcional)',
+      aporteSinDefinicion: 'No se pudo saber si su cuenta puede crear el aporte: por ahora solo se ofrece el compromiso.'
     }
   },
   subirCarta: 'Subir carta firmada',
@@ -107,7 +108,8 @@ export const EN_FICHA_CONSULTA: typeof ES_FICHA_CONSULTA = {
       condiciones: 'Conditions',
       pagador: 'Payer',
       cambiarPagador: 'Change',
-      tipo: 'Contribution type (optional)'
+      tipo: 'Contribution type (optional)',
+      aporteSinDefinicion: 'It could not be determined whether your account can create the contribution: for now only the commitment is offered.'
     }
   },
   subirCarta: 'Upload the signed letter',
