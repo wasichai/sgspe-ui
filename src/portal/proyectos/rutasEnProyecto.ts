@@ -23,6 +23,10 @@ import { TableroCompromisosPage } from '../compromisos/TableroCompromisosPage'
 import { BibliotecaPage } from '../documentos/BibliotecaPage'
 import { FichaEvidenciaPage } from '../documentos/FichaEvidenciaPage'
 import { MisTareasPage } from '../tareas/MisTareasPage'
+import { FichaAportePage } from '../inversion/FichaAportePage'
+import { FichaProgramaPage } from '../inversion/FichaProgramaPage'
+import { ProgramasPage } from '../inversion/ProgramasPage'
+import { TableroInversionPage } from '../inversion/TableroInversionPage'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
 import type { ClaveDeSeccion, Par } from '../shell/navTree'
 import { FichaGrupoPage } from '../grupos/FichaGrupoPage'
@@ -42,7 +46,7 @@ import { EquipoYParametrosPage } from './EquipoYParametrosPage'
 import { MapaDelProyectoPage } from './MapaDelProyectoPage'
 import { ResumenPage } from './ResumenPage'
 
-// las rutas bajo /projects/:projectId que aporta cada módulo de F2 a F4, relativas al proyecto (screens.md §3 a §7 y §11). las
+// las rutas bajo /projects/:projectId que aporta cada módulo de F2 a F5, relativas al proyecto (screens.md §3 a §7 y §11). las
 // de otra sección (grupos de interés, relacionamiento, compromisos, documentos, tareas, reportes) se guardan además con los
 // permisos de esa sección
 export interface RutaEnProyecto {
@@ -106,5 +110,10 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'risks/incidents/:incidentId', seccion: 'risks', Pantalla: IncidentesDesdeRiesgos },
   { ruta: 'risks/:riskId', seccion: 'risks', Pantalla: FichaRiesgoPage },
   { ruta: 'incidents', seccion: 'risks', Pantalla: IncidentesPage },
-  { ruta: 'incidents/:incidentId', seccion: 'risks', Pantalla: FichaIncidentePage }
+  { ruta: 'incidents/:incidentId', seccion: 'risks', Pantalla: FichaIncidentePage },
+  // F5: programas e inversión social (S42, S43, S44 y el tablero de inversión). programs/dashboard gana a programs/:programId
+  { ruta: 'programs', seccion: 'programs', Pantalla: ProgramasPage },
+  { ruta: 'programs/dashboard', seccion: 'programs', Pantalla: TableroInversionPage },
+  { ruta: 'programs/:programId', seccion: 'programs', Pantalla: FichaProgramaPage },
+  { ruta: 'contributions/:contributionId', seccion: 'programs', Pantalla: FichaAportePage }
 ]

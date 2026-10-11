@@ -1,9 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { CallerPermissions } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeAtencion, CONSULTA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, SOLICITUD } from '../../test/atencion'
 import { DEF_COMPROMISO, WF_COMPROMISO } from '../../test/compromisos'
+import { APORTE, DEF_APORTE, EMPRESA, EQUIPO_DE_INVERSION, INVERSION } from '../../test/inversion'
 import { definicion, montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { FichaConsultaPage, FichaSolicitudPage } from './FichaConsultaPage'
@@ -206,5 +208,243 @@ describe('S57 · ficha de solicitud', () => {
     expect(await screen.findByRole('link', { name: 'COM-010 · Calaminas' })).toHaveAttribute('href', '/projects/p1/commitments/c9')
     expect(await screen.findByRole('button', { name: 'Cerrar sin ejecución' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Aceptar y crear el compromiso' })).not.toBeInTheDocument()
+  })
+})
+
+// F5 (spec §3.7 y §2.2): aceptar una solicitud crea el compromiso o el aporte que la cuenta puede crear; con los dos, se elige. el
+// aporte nace en requested con lo mínimo de su alta y sus ítems se cargan en S44
+describe('S57 · aceptar como aporte', () => {
+  const ACEPTADA_COMO_APORTE = registro('r1', { ...SOLICITUD.attributes, created_contribution: 'a1' }, { state: 'accepted' })
+  const conAportes: CallerPermissions = {
+    ...EQUIPO_DE_QUEJAS,
+    objects: { ...EQUIPO_DE_QUEJAS.objects, commitment: ['READ', 'CREATE'], social_contribution: ['READ', 'CREATE'], organization: ['READ'] }
+  }
+  const abrir = (permisos = conAportes, usuario = GESTORA_DE_QUEJAS) =>
+    montar(<FichaSolicitudPage />, { ruta: '/projects/p1/requests/r1', camino: '/projects/:projectId/requests/:requestId', usuario, permisos })
+  const rutas = (extra: MockRoute[] = []): MockRoute[] => [
+    ...extra,
+    { path: '/objects/stakeholder_request/records/r1', body: SOLICITUD },
+    transiciones('stakeholder_request', 'r1', [
+      ['accept', 'Aceptar'],
+      ['decline', 'Declinar']
+    ]),
+    { path: '/metadata/objects/social_contribution', body: DEF_APORTE },
+    { path: /^\/objects\/organization\/records\?/, body: pagina([EMPRESA]) },
+    ...comunes('stakeholder_request', 'r1')
+  ]
+
+  it('con los dos, «Aceptar…» pregunta qué se crea; el aporte manda su propósito, condiciones, quién paga y moneda, y abre su ficha', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-10T02:30:00Z'))
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholder-requests/r1/accept',
+        responder: () =>
+          new Response(
+            JSON.stringify({
+              request: { ...SOLICITUD, state: 'accepted' },
+              contribution: registro('a9', { project: 'p1', code: 'AP-010' }, { state: 'requested' })
+            }),
+            {
+              status: 201
+            }
+          )
+      }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un aporte social' }))
+    expect(within(dialogo).getByLabelText('Propósito declarado')).toHaveValue('Calaminas para el local comunal')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    expect(within(dialogo).getAllByText('Este dato es obligatorio').length).toBeGreaterThanOrEqual(3)
+    expect(red.a('POST', '/sgspe/stakeholder-requests/r1/accept')).toHaveLength(0)
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta a la solicitud'), 'Se apoyará con las calaminas')
+    await userEvent.type(within(dialogo).getByLabelText('Código del aporte'), 'AP-010')
+    await userEvent.type(within(dialogo).getByLabelText('Condiciones'), 'Entrega con acta firmada')
+    await userEvent.type(within(dialogo).getByLabelText('Quién paga'), 'Empr')
+    await userEvent.click(await within(dialogo).findByRole('button', { name: 'Empresa Ejemplo S.A.' }))
+    await userEvent.selectOptions(within(dialogo).getByLabelText('Tipo de aporte (opcional)'), 'APOYO EN ESPECIE')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'aprobada en comité')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/contributions/a9'))
+    const [aceptar] = red.a('POST', '/sgspe/stakeholder-requests/r1/accept')
+    expect(aceptar.cuerpo).toEqual({
+      creates: 'social_contribution',
+      response: 'Se apoyará con las calaminas',
+      respondedAt: '2026-10-10T02:30:00.000Z',
+      attributes: {
+        code: 'AP-010',
+        declared_purpose: 'Calaminas para el local comunal',
+        conditions: 'Entrega con acta firmada',
+        currency: 'PEN',
+        payer_organization: 'o3',
+        contribution_type: 'APOYO EN ESPECIE'
+      }
+    })
+    expect(aceptar.cabeceras.get('If-Match')).toBe(`"${SOLICITUD.updatedAt}"`)
+    expect(aceptar.cabeceras.get('Idempotency-Key')).toBeTruthy()
+  })
+
+  it('sin CREATE sobre los aportes solo ofrece el compromiso; quien solo crea aportes, el aporte; un tenant sin aportes no lo ofrece', async () => {
+    fetch = mockFetch(rutas())
+    const { unmount } = abrir({ ...EQUIPO_DE_QUEJAS, objects: { ...EQUIPO_DE_QUEJAS.objects, commitment: ['READ', 'CREATE'] } })
+    expect(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aceptar…' })).not.toBeInTheDocument()
+    unmount()
+    const soloAportes = abrir(EQUIPO_DE_INVERSION, INVERSION)
+    expect(await screen.findByRole('button', { name: 'Aceptar y crear el aporte' })).toBeInTheDocument()
+    soloAportes.unmount()
+    fetch.restore()
+    // ADMIN puede todo, pero un tenant de F4 no tiene social_contribution (404 en su definición): solo el compromiso
+    fetch = mockFetch(rutas([{ path: '/metadata/objects/social_contribution', status: 404, body: { title: 'Not Found', status: 404 } }]))
+    abrir({ admin: true, objects: {} })
+    expect(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aceptar…' })).not.toBeInTheDocument()
+  })
+
+  it('una aceptada como aporte enlaza su aporte; uno que la cuenta no lee es «Registro reservado»', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/stakeholder_request/records/r1', body: ACEPTADA_COMO_APORTE },
+        { path: '/objects/social_contribution/records/a1', body: APORTE }
+      ])
+    )
+    const { unmount } = abrir()
+    expect(await screen.findByRole('link', { name: 'AP-001' })).toHaveAttribute('href', '/projects/p1/contributions/a1')
+    unmount()
+    fetch.restore()
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/stakeholder_request/records/r1', body: ACEPTADA_COMO_APORTE },
+        { path: '/objects/social_contribution/records/a1', status: 404, body: { title: 'Not Found', status: 404 } }
+      ])
+    )
+    abrir()
+    expect(await screen.findByText('Registro reservado')).toBeInTheDocument()
+  })
+
+  it('mientras no se sabe si hay aportes no ofrece aceptar; un error que no es 404 se dice y se reintenta, no quita el aporte en silencio', async () => {
+    fetch = mockFetch(rutas())
+    let soltar: () => void = () => {}
+    red = espiarRed([
+      {
+        path: '/metadata/objects/social_contribution',
+        responder: () => new Promise<Response>((r) => (soltar = () => r(new Response(JSON.stringify(DEF_APORTE), { status: 200 }))))
+      }
+    ])
+    const { unmount } = abrir()
+    expect(await screen.findByRole('button', { name: 'Declinar' })).toBeInTheDocument()
+    await waitFor(() => expect(red?.a('GET', '/metadata/objects/social_contribution')).toHaveLength(1))
+    expect(screen.queryByRole('button', { name: 'Aceptar y crear el compromiso' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aceptar…' })).not.toBeInTheDocument()
+    soltar()
+    expect(await screen.findByRole('button', { name: 'Aceptar…' })).toBeInTheDocument()
+    unmount()
+    red.restaurar()
+    let veces = 0
+    red = espiarRed([
+      {
+        path: '/metadata/objects/social_contribution',
+        responder: () =>
+          ++veces === 1
+            ? new Response(JSON.stringify({ title: 'Internal Server Error', status: 500 }), { status: 500 })
+            : new Response(JSON.stringify(DEF_APORTE), { status: 200 })
+      }
+    ])
+    abrir()
+    const aviso = await screen.findByText('No se pudo saber si su cuenta puede crear el aporte: por ahora solo se ofrece el compromiso.')
+    expect(screen.getByRole('button', { name: 'Aceptar y crear el compromiso' })).toBeInTheDocument()
+    await userEvent.click(within(aviso.closest('[role="status"]') as HTMLElement).getByRole('button', { name: 'Reintentar' }))
+    expect(await screen.findByRole('button', { name: 'Aceptar…' })).toBeInTheDocument()
+    expect(screen.queryByText('No se pudo saber si su cuenta puede crear el aporte: por ahora solo se ofrece el compromiso.')).not.toBeInTheDocument()
+  })
+
+  it('el error de quién paga se asocia a su buscador', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un aporte social' }))
+    const buscador = within(dialogo).getByRole('searchbox', { name: 'Quién paga' })
+    expect(buscador).not.toHaveAttribute('aria-invalid')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    expect(buscador).toHaveAttribute('aria-invalid', 'true')
+    expect(buscador).toHaveAccessibleDescription('Este dato es obligatorio')
+  })
+
+  it('con los dos, volver a «Un compromiso» manda creates commitment y solo los datos del compromiso', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-10T02:30:00Z'))
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholder-requests/r1/accept',
+        responder: () =>
+          new Response(JSON.stringify({ request: { ...SOLICITUD, state: 'accepted' }, commitment: registro('c9', { project: 'p1', code: 'COM-011' }) }), {
+            status: 201
+          })
+      }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un aporte social' }))
+    await userEvent.type(within(dialogo).getByLabelText('Código del aporte'), 'AP-011')
+    await userEvent.type(within(dialogo).getByLabelText('Condiciones'), 'Entrega con acta firmada')
+    await userEvent.selectOptions(within(dialogo).getByLabelText('Tipo de aporte (opcional)'), 'DONACION')
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un compromiso' }))
+    expect(within(dialogo).queryByLabelText('Condiciones')).not.toBeInTheDocument()
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta a la solicitud'), 'Se atenderá como compromiso')
+    await userEvent.clear(within(dialogo).getByLabelText('Código del compromiso'))
+    await userEvent.type(within(dialogo).getByLabelText('Código del compromiso'), 'COM-011')
+    await userEvent.type(within(dialogo).getByLabelText('Monto'), '300')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'aprobada en comité')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments/c9'))
+    const [aceptar] = red.a('POST', '/sgspe/stakeholder-requests/r1/accept')
+    expect(aceptar.cuerpo).toEqual({
+      creates: 'commitment',
+      response: 'Se atenderá como compromiso',
+      respondedAt: '2026-10-10T02:30:00.000Z',
+      attributes: { code: 'COM-011', title: 'Calaminas para el local comunal', amount: '300', currency: 'PEN' }
+    })
+  })
+
+  it('cambiar lo que se crea es otra acción: el envío siguiente lleva otra Idempotency-Key', async () => {
+    fetch = mockFetch(rutas())
+    let intentos = 0
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholder-requests/r1/accept',
+        responder: () =>
+          ++intentos === 1
+            ? problema(503, 'caído')
+            : new Response(JSON.stringify({ request: { ...SOLICITUD, state: 'accepted' }, commitment: registro('c9', { project: 'p1', code: 'COM-012' }) }), {
+                status: 201
+              })
+      }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta a la solicitud'), 'Se atenderá')
+    await userEvent.type(within(dialogo).getByLabelText('Código del compromiso'), 'COM-012')
+    await userEvent.type(within(dialogo).getByLabelText('Monto'), '300')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'aprobada en comité')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholder-requests/r1/accept')).toHaveLength(1))
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un aporte social' }))
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un compromiso' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholder-requests/r1/accept')).toHaveLength(2))
+    const [primero, segundo] = red.a('POST', '/sgspe/stakeholder-requests/r1/accept').map((l) => l.cabeceras.get('Idempotency-Key'))
+    expect(primero).toBeTruthy()
+    expect(segundo).toBeTruthy()
+    expect(segundo).not.toBe(primero)
   })
 })

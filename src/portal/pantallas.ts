@@ -5,6 +5,7 @@ import { CompromisosRutas } from './compromisos/CompromisosRutas'
 import { DocumentosRutas } from './documentos/DocumentosRutas'
 import { FichaActorPage } from './grupos/FichaActorPage'
 import { GruposRutas } from './grupos/GruposRutas'
+import { ProgramasRutas } from './inversion/ProgramasRutas'
 import { ProyectosRutas } from './proyectos/ProyectosRutas'
 import { RelacionamientoRutas } from './relacionamiento/RelacionamientoRutas'
 import { ReportesRutas } from './reportes/ReportesRutas'
@@ -26,6 +27,7 @@ export const PANTALLAS: Partial<Record<ClaveDeSeccion, ComponentType>> = {
   commitments: CompromisosRutas,
   attention: AtencionRutas,
   risks: RiesgosRutas,
+  programs: ProgramasRutas,
   documents: DocumentosRutas,
   tasks: TareasRutas,
   reports: ReportesRutas

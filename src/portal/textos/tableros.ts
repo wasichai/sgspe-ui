@@ -49,7 +49,9 @@ export const ES_TABLEROS = {
     areaOfInfluence: 'área de influencia',
     explorationCampaign: 'campaña de exploración',
     scope: 'ámbito',
-    owner: 'responsable'
+    owner: 'responsable',
+    program: 'programa',
+    year: 'año'
   },
   // 400 TOO_MANY_RECORDS: la lectura acotada no recorta la cifra, pide acotar (dashboards.md §6.2)
   acotar: {
@@ -106,7 +108,9 @@ export const EN_TABLEROS: typeof ES_TABLEROS = {
     areaOfInfluence: 'area of influence',
     explorationCampaign: 'exploration campaign',
     scope: 'scope',
-    owner: 'owner'
+    owner: 'owner',
+    program: 'program',
+    year: 'year'
   },
   acotar: {
     titulo: 'Narrow the filters',

@@ -188,7 +188,7 @@ export async function definicionDe(cliente: QueryClient, pedir: Pedido, objeto: 
   return cliente.ensureQueryData({ queryKey: ['objects', objeto], queryFn: () => pedir<ObjectDefinition>(`/metadata/objects/${objeto}`) })
 }
 
-// refresca las listas y los vínculos; con id, también lo de ese registro. conRegistro=false deja quieto ['record', …]
+// refresca las listas y los vínculos; con id, también lo de ese registro (con su consulta en seco). conRegistro=false deja quieto ['record', …]
 // cuando quien llama ya lo puso con setQueryData (la relectura de una actualización)
 function invalidar(cliente: QueryClient, objeto: string, id?: string, conRegistro = true) {
   void cliente.invalidateQueries({ queryKey: ['records', objeto] })
@@ -197,6 +197,8 @@ function invalidar(cliente: QueryClient, objeto: string, id?: string, conRegistr
     if (conRegistro) void cliente.invalidateQueries({ queryKey: ['record', objeto, id] })
     void cliente.invalidateQueries({ queryKey: ['transitions', objeto, id] })
     void cliente.invalidateQueries({ queryKey: ['history', objeto, id] })
+    // la consulta en seco depende de los datos del registro: fijar un campo que bloqueaba deja de bloquear sin recargar
+    void cliente.invalidateQueries({ queryKey: ['transition-check', objeto, id] })
   }
 }
 

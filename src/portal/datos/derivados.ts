@@ -51,20 +51,24 @@ export const CAMPOS_DERIVADOS: Readonly<Record<string, readonly string[]>> = {
     'residual_level',
     'next_review_date',
     'review_status'
-  ]
+  ],
+  // F5 (plan 5.1): el total de un aporte (ContributionTotalsListener) y el presupuesto total de un programa en su moneda
+  // (ProgramTotalsListener)
+  social_contribution: ['total_amount'],
+  social_program: ['total_budget']
 }
 
 export const esDerivado = (objeto: string, campo: string): boolean => CAMPOS_DERIVADOS[objeto]?.includes(campo) ?? false
 
 // los campos que solo escriben los comandos de SGSPE o la plataforma (plan 4.2a): los vínculos de reclasificación de las tres QCS y el
-// compromiso que crea la aceptación de una solicitud, la clave de origen de una tarea o de una alerta y, desde el plan 4.2b, la regla y
+// compromiso o el aporte que crea la aceptación de una solicitud, la clave de origen de una tarea o de una alerta y, desde el plan 4.2b, la regla y
 // la hora de detección de una alerta. la API genérica responde 403 (COMMAND_ONLY, GENERATOR_KEY_PLATFORM_ONLY o PLATFORM_ONLY sobre el
 // campo) a quien los fija, cambia o vacía, también con un PUT que los omite; reenviarlos tal como se leyeron no es cambiarlos. el
 // portal los devuelve como los leyó y nunca los manda al crear (una alerta manual nace sin hora y SGSPE le pone la del alta)
 export const CAMPOS_DE_COMANDO: Readonly<Record<string, readonly string[]>> = {
   grievance: ['reclassified_from_inquiry', 'reclassified_from_request'],
   inquiry: ['reclassified_from_grievance', 'reclassified_from_request'],
-  stakeholder_request: ['created_commitment', 'reclassified_from_grievance', 'reclassified_from_inquiry'],
+  stakeholder_request: ['created_commitment', 'created_contribution', 'reclassified_from_grievance', 'reclassified_from_inquiry'],
   task: ['generator_key'],
   early_warning: ['generator_key', 'early_warning_rule', 'detected_at']
 }

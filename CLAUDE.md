@@ -62,6 +62,13 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
   registro ya leído. Una cifra o una lista de QCS con
   `confidentialHidden` lleva `NotaDeConfidenciales`, sin conteo. La huella SHA-256 de una evidencia, como su nombre, solo para
   quien la descarga.
+- El dinero de BC-10 se suma con `datos/inversion.ts` (`sumaPorMoneda`, `totalDeItems`, `porcentaje`), en diezmilésimos exactos y
+  por moneda: nunca entre monedas (ASM-063) ni en coma flotante, y un monto que no vino es «—», nunca cero. El total de un aporte
+  que se aprobará es la suma de sus ítems, como la juzga el servidor; `total_amount` y `total_budget` son derivados.
+- Una lista hija que ya no cambia (los ítems de un aporte fuera de `requested`) se dibuja con `RegistrosSimples` y `congelado`; un
+  valor propuesto en un alta (la moneda, el año de Lima) va en `iniciales`, porque wasichai no aplica `defaultValue` (UPS-15).
+- «Antes de aprobar» lee la consulta en seco con `inversion/lineamientos.ts`: una regla nueva de la aprobación de un aporte suma
+  su código a una fila de `CODIGOS` o cae en «Otras reglas».
 - Toda ruta del portal codifica con `encodeURIComponent` el id o el proyecto que lleva; `src/portal/enlacesCodificados.test.ts`
   lo vigila en cada fuente.
 - `src/portal/textosSinCodigos.test.ts` vigila que ningún texto de interfaz lleve códigos de error ni identificadores de

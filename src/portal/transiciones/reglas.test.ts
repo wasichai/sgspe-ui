@@ -96,3 +96,33 @@ describe('reglas de transición de F4', () => {
     expect(esDerivado('social_risk', 'review_every_days')).toBe(false)
   })
 })
+// F5: el aporte es requiresReason (WF-P); el programa pide motivo al devolver, suspender y cancelar (WF-G, TransitionReasonGuard)
+describe('reglas de transición de F5', () => {
+  it.each([
+    ['social_contribution', 'approve'],
+    ['social_contribution', 'approve_direct'],
+    ['social_contribution', 'register_delivery'],
+    ['social_program', 'return_to_draft'],
+    ['social_program', 'suspend'],
+    ['social_program', 'cancel_draft'],
+    ['social_program', 'cancel_pending_approval'],
+    ['social_program', 'cancel_planned'],
+    ['social_program', 'cancel_suspended']
+  ])('%s · %s exige motivo', (objeto, transicion) => {
+    expect(exigeMotivo(objeto, transicion)).toBe(true)
+  })
+
+  it.each([
+    ['social_program', 'submit'],
+    ['social_program', 'approve'],
+    ['social_program', 'start_execution'],
+    ['social_program', 'close']
+  ])('%s · %s no lo exige', (objeto, transicion) => {
+    expect(exigeMotivo(objeto, transicion)).toBe(false)
+  })
+
+  it('WF-G y WF-P no tienen transiciones de comando: todas son botones', () => {
+    expect(esDeComando('social_contribution', 'register_delivery')).toBe(false)
+    expect(esDeComando('social_program', 'approve')).toBe(false)
+  })
+})

@@ -1,5 +1,5 @@
 // S57 · la ficha de consulta y la de solicitud (F4): responder o derivar una consulta; evaluar, aceptar creando el compromiso o
-// declinar una solicitud; la carta firmada
+// el aporte (F5) o declinar una solicitud; la carta firmada
 export const ES_FICHA_CONSULTA = {
   consulta: {
     titulo: 'Consulta {{codigo}}',
@@ -16,7 +16,8 @@ export const ES_FICHA_CONSULTA = {
     campos: {
       request_medium: 'Cómo se pidió',
       requested_resource: 'Qué se pide',
-      created_commitment: 'Compromiso creado'
+      created_commitment: 'Compromiso creado',
+      created_contribution: 'Aporte creado'
     },
     declinarAyuda: 'Declinar pide la respuesta y cuándo se comunicó: guárdelas con «Editar» antes de aplicar «Declinar».',
     aceptar: {
@@ -35,7 +36,22 @@ export const ES_FICHA_CONSULTA = {
       montoInvalido: 'Escriba un número de hasta 15 dígitos enteros y 4 decimales',
       respondidaInvalida: 'La fecha y hora de la respuesta no es válida: corríjala.',
       confirmar: 'Aceptar y crear',
-      confirmando: 'Aceptando…'
+      confirmando: 'Aceptando…',
+      botonAporte: 'Aceptar y crear el aporte',
+      botonElegir: 'Aceptar…',
+      queSeCrea: '¿Qué se crea?',
+      unCompromiso: 'Un compromiso',
+      unAporte: 'Un aporte social',
+      descripcionAporte:
+        'Aceptar es responderla: se guarda la respuesta, nace el aporte en «Solicitado» (sus ítems se cargan en su ficha antes de aprobarlo) y la solicitud se cierra sola cuando el aporte se cierre.',
+      aporte: 'El aporte que nace',
+      codigoDelAporte: 'Código del aporte',
+      proposito: 'Propósito declarado',
+      condiciones: 'Condiciones',
+      pagador: 'Quién paga',
+      cambiarPagador: 'Cambiar',
+      tipo: 'Tipo de aporte (opcional)',
+      aporteSinDefinicion: 'No se pudo saber si su cuenta puede crear el aporte: por ahora solo se ofrece el compromiso.'
     }
   },
   subirCarta: 'Subir carta firmada',
@@ -58,7 +74,8 @@ export const EN_FICHA_CONSULTA: typeof ES_FICHA_CONSULTA = {
     campos: {
       request_medium: 'How it was requested',
       requested_resource: 'What is requested',
-      created_commitment: 'Created commitment'
+      created_commitment: 'Created commitment',
+      created_contribution: 'Created contribution'
     },
     declinarAyuda: 'Declining needs the response and when it was communicated: save them with «Edit» before applying «Decline».',
     aceptar: {
@@ -77,7 +94,22 @@ export const EN_FICHA_CONSULTA: typeof ES_FICHA_CONSULTA = {
       montoInvalido: 'Type a number with up to 15 integer digits and 4 decimals',
       respondidaInvalida: 'The date and time of the answer is not valid: correct it.',
       confirmar: 'Accept and create',
-      confirmando: 'Accepting…'
+      confirmando: 'Accepting…',
+      botonAporte: 'Accept and create the contribution',
+      botonElegir: 'Accept…',
+      queSeCrea: 'What is created?',
+      unCompromiso: 'A commitment',
+      unAporte: 'A social contribution',
+      descripcionAporte:
+        'Accepting is answering it: the response is saved, the contribution is born «Requested» (its items are added in its record before approval) and the request closes by itself when the contribution closes.',
+      aporte: 'The contribution that is born',
+      codigoDelAporte: 'Contribution code',
+      proposito: 'Declared purpose',
+      condiciones: 'Conditions',
+      pagador: 'Payer',
+      cambiarPagador: 'Change',
+      tipo: 'Contribution type (optional)',
+      aporteSinDefinicion: 'It could not be determined whether your account can create the contribution: for now only the commitment is offered.'
     }
   },
   subirCarta: 'Upload the signed letter',

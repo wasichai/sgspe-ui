@@ -6,6 +6,8 @@ import { definicion, montar } from '../test/montar'
 import { FichaAcuerdoPage } from './acuerdos/FichaAcuerdoPage'
 import { FichaEvidenciaPage } from './documentos/FichaEvidenciaPage'
 import { FichaGrupoPage } from './grupos/FichaGrupoPage'
+import { FichaAportePage } from './inversion/FichaAportePage'
+import { FichaProgramaPage } from './inversion/FichaProgramaPage'
 import { AreaDeInfluenciaPage } from './proyectos/AreaDeInfluenciaPage'
 import { EditorDeActaPage } from './relacionamiento/EditorDeActaPage'
 import { FichaInteraccionPage } from './relacionamiento/FichaInteraccionPage'
@@ -44,7 +46,9 @@ const FICHAS: [string, ComponentType, string, string, MockRoute[]][] = [
   ],
   ['aprobación', AprobacionPage, '/tasks/approvals/commitment/r9', '/tasks/approvals/:object/:recordId', []],
   ['área de influencia', AreaDeInfluenciaPage, '/projects/p1/areas/r9', '/projects/:projectId/areas/:areaId', []],
-  ['visita de campo', VisitaDeCampoPage, '/projects/p1/field-visits/r9', '/projects/:projectId/field-visits/:visitId', []]
+  ['visita de campo', VisitaDeCampoPage, '/projects/p1/field-visits/r9', '/projects/:projectId/field-visits/:visitId', []],
+  ['programa', FichaProgramaPage, '/projects/p1/programs/r9', '/projects/:projectId/programs/:programId', []],
+  ['aporte', FichaAportePage, '/projects/p1/contributions/r9', '/projects/:projectId/contributions/:contributionId', []]
 ]
 
 describe('fichas de un registro que la cuenta no lee', () => {

@@ -4,7 +4,7 @@ export interface Parametro {
   campo: string
   tipo: 'numero' | 'politica'
   porDefecto: number | boolean
-  grupo: 'grupos' | 'relacionamiento' | 'proyecto' | 'quejas' | 'riesgos'
+  grupo: 'grupos' | 'relacionamiento' | 'proyecto' | 'quejas' | 'riesgos' | 'inversion'
   // el rango entero que el servidor acepta (ProjectWriteGuard, plan 4.2a: 400 OUT_OF_RANGE fuera de él)
   rango?: { min: number; max: number }
 }
@@ -33,6 +33,19 @@ export const PARAMETROS_F4: readonly Parametro[] = [
   { campo: 'risk_medium_min_score', tipo: 'numero', porDefecto: 5, grupo: 'riesgos', rango: PUNTAJE },
   { campo: 'risk_high_min_score', tipo: 'numero', porDefecto: 10, grupo: 'riesgos', rango: PUNTAJE },
   { campo: 'risk_critical_min_score', tipo: 'numero', porDefecto: 15, grupo: 'riesgos', rango: PUNTAJE }
+]
+
+// los lineamientos de apoyo y la aprobación interna (database-model.md, project): existen desde F3 y se ven desde F5, cuando los
+// juzgan las guardas de aportes y programas. gobiernan la vía directa (P7, G4, D8), el tope de la campaña (P1, D7), las tres
+// desviaciones que se justifican (P2 y P3) y la sinergia (P6, G3). todas valen activadas por defecto; solo si el modelo del tenant
+// las trae se muestran
+export const PARAMETROS_INVERSION: readonly Parametro[] = [
+  { campo: 'policy_internal_approval', tipo: 'politica', porDefecto: true, grupo: 'inversion' },
+  { campo: 'policy_cap_blocks_approval', tipo: 'politica', porDefecto: true, grupo: 'inversion' },
+  { campo: 'policy_no_paid_labor', tipo: 'politica', porDefecto: true, grupo: 'inversion' },
+  { campo: 'policy_non_monetary_donations', tipo: 'politica', porDefecto: true, grupo: 'inversion' },
+  { campo: 'policy_synergy_requires_agreement', tipo: 'politica', porDefecto: true, grupo: 'inversion' },
+  { campo: 'policy_priority_warning', tipo: 'politica', porDefecto: true, grupo: 'inversion' }
 ]
 
 export const UMBRALES_DE_RIESGO = ['risk_medium_min_score', 'risk_high_min_score', 'risk_critical_min_score'] as const
