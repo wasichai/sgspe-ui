@@ -106,7 +106,9 @@ export const APORTE = registro(
     has_institutional_synergy: false,
     payer_organization: 'o3',
     recipient_organization: 'o2',
-    exploration_campaign: 'camp1'
+    exploration_campaign: 'camp1',
+    // el GET trae toda clave que la cuenta lee, también las vacías (atributosDeEscritura no manda una clave que no vino)
+    guideline_deviation_justification: null
   },
   { state: 'requested', updatedAt: '2026-10-05T15:00:00.123456Z' }
 )

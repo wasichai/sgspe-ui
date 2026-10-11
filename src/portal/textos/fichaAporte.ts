@@ -11,7 +11,7 @@ export const ES_FICHA_APORTE = {
   motivoAyuda: 'El aporte guarda el motivo de cada cambio.',
   terminosCongelados:
     'Desde la aprobación no cambian la moneda, el tipo, el tema, la campaña, la sinergia, el acuerdo ni la justificación: un cambio es otro aporte.',
-  pestanas: { resumen: 'Resumen', evidencias: 'Evidencias', actividad: 'Actividad' },
+  pestanas: { resumen: 'Resumen', entrega: 'Entrega', evidencias: 'Evidencias', actividad: 'Actividad' },
   sinActividad: 'Sin actividad registrada',
   paraQue: {
     titulo: 'Para qué y para quién',
@@ -72,6 +72,46 @@ export const ES_FICHA_APORTE = {
       cambiar: 'Cambiar la justificación',
       ayuda: 'Diga por qué el aporte se aparta de los lineamientos. Desde la aprobación ya no cambia.'
     }
+  },
+  entrega: {
+    titulo: 'Entrega',
+    registrar: 'Registrar entrega',
+    registrarTitulo: 'Registrar la entrega del aporte',
+    corregir: 'Corregir',
+    corregirTitulo: 'Corregir la entrega del aporte',
+    ayuda: 'Guardar la entrega no cambia el estado del aporte: después viene «Registrar entrega» con sus requisitos.',
+    unaVez: 'Un aporte se entrega una sola vez: lo que se entrega en partes son aportes distintos.',
+    actaFuera: 'El acta de recepción se imprime fuera del sistema, se firma en la entrega y se sube como evidencia ACTA DE RECEPCION.',
+    sinEntrega: 'El aporte todavía no tiene su entrega.',
+    antesDeAdquirir: 'La entrega se registra cuando el aporte está adquirido.',
+    congelada: 'El aporte ya se entregó o se anuló: su entrega y sus evidencias no cambian.',
+    guardada: 'Entrega guardada.',
+    yaExiste: 'La entrega ya existe: no se guarda otra. Cierre este panel para verla; las evidencias que subió se vinculan desde su tarjeta.',
+    subirActa: 'Subir acta de recepción firmada',
+    evidencias: 'Evidencias de la entrega',
+    evidenciasAyuda: 'Suba el acta de recepción, la foto y el comprobante: se vinculan a la entrega al guardarla.',
+    faltan: 'Faltan: {{tipos}}',
+    completas: 'Están las tres evidencias que pide la entrega.',
+    errores: { estado: 'El aporte ya no está adquirido: recargue para ver su estado.' },
+    requisitos: {
+      titulo: 'Lo que pide «Registrar entrega»',
+      conformidad: 'Conformidad dada',
+      quienes: 'Quiénes dieron la conformidad',
+      lista: 'Lista',
+      falta: 'Falta',
+      noLee: 'Su cuenta no lo lee'
+    },
+    comprobantes: {
+      titulo: 'Comprobantes',
+      nuevo: 'Nuevo comprobante',
+      vacio: 'Sin comprobantes estructurados',
+      ayuda: 'Los datos del comprobante son opcionales; el escaneo se sube como evidencia COMPROBANTE.',
+      tipo: 'Tipo',
+      sinTipo: 'Sin tipo',
+      emisor: 'Emisor',
+      fecha: 'Fecha',
+      monto: 'Monto'
+    }
   }
 }
 
@@ -86,7 +126,7 @@ export const EN_FICHA_APORTE: typeof ES_FICHA_APORTE = {
   motivoAyuda: 'The contribution keeps the reason for each change.',
   terminosCongelados:
     'After approval the currency, type, topic, campaign, synergy, agreement and justification do not change: a change is another contribution.',
-  pestanas: { resumen: 'Summary', evidencias: 'Evidence', actividad: 'Activity' },
+  pestanas: { resumen: 'Summary', entrega: 'Delivery', evidencias: 'Evidence', actividad: 'Activity' },
   sinActividad: 'No recorded activity',
   paraQue: {
     titulo: 'What for and for whom',
@@ -146,6 +186,46 @@ export const EN_FICHA_APORTE: typeof ES_FICHA_APORTE = {
       escribir: 'Write the justification',
       cambiar: 'Change the justification',
       ayuda: 'Say why the contribution departs from the guidelines. After approval it no longer changes.'
+    }
+  },
+  entrega: {
+    titulo: 'Delivery',
+    registrar: 'Record delivery',
+    registrarTitulo: 'Record the contribution delivery',
+    corregir: 'Correct',
+    corregirTitulo: 'Correct the contribution delivery',
+    ayuda: 'Saving the delivery does not change the contribution state: «Record delivery» with its requirements comes next.',
+    unaVez: 'A contribution is delivered once: what is delivered in parts are separate contributions.',
+    actaFuera: 'The receipt certificate is printed outside the system, signed at the delivery and uploaded as ACTA DE RECEPCION evidence.',
+    sinEntrega: 'The contribution has no delivery yet.',
+    antesDeAdquirir: 'The delivery is recorded once the contribution is procured.',
+    congelada: 'The contribution was already delivered or voided: its delivery and evidence do not change.',
+    guardada: 'Delivery saved.',
+    yaExiste: 'The delivery already exists: another is not saved. Close this panel to see it; the evidence you uploaded is linked from its card.',
+    subirActa: 'Upload the signed receipt certificate',
+    evidencias: 'Delivery evidence',
+    evidenciasAyuda: 'Upload the receipt certificate, the photo and the voucher: they are linked to the delivery when it is saved.',
+    faltan: 'Missing: {{tipos}}',
+    completas: 'The three pieces of evidence the delivery asks for are here.',
+    errores: { estado: 'The contribution is no longer procured: reload to see its state.' },
+    requisitos: {
+      titulo: 'What «Record delivery» asks for',
+      conformidad: 'Conformity given',
+      quienes: 'Who gave conformity',
+      lista: 'Ready',
+      falta: 'Missing',
+      noLee: 'Your account does not read it'
+    },
+    comprobantes: {
+      titulo: 'Vouchers',
+      nuevo: 'New voucher',
+      vacio: 'No structured vouchers',
+      ayuda: 'The voucher data is optional; the scan is uploaded as COMPROBANTE evidence.',
+      tipo: 'Type',
+      sinTipo: 'No type',
+      emisor: 'Issuer',
+      fecha: 'Date',
+      monto: 'Amount'
     }
   }
 }

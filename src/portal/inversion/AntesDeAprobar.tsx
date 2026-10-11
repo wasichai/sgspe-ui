@@ -35,12 +35,22 @@ export function AntesDeAprobar({ aporte, escribe }: { aporte: Registro; escribe:
   const elegida = propias.find((x) => x.name === 'approve') ?? propias.find((x) => x.name === 'approve_direct')
   const transicion = elegida?.name ?? 'approve'
   const accion = elegida?.label ?? t('fichaAporte.antes.aprobar')
-  const comprobacion = useComprobacion('social_contribution', aporte.id, transiciones.isPending ? null : transicion)
+  // sin las transiciones leídas no se sabe qué aprobación consultar: un error se dice, no se consulta «Aprobar» a ciegas
+  const comprobacion = useComprobacion('social_contribution', aporte.id, transiciones.isPending || transiciones.isError ? null : transicion)
   const proyecto = useProyecto(texto(aporte, 'project'))
   const textoDe = useTextoDeAviso('social_contribution')
   const dicho = (a: Aviso) => textoDe(a, { name: transicion, label: accion }).texto ?? t('transiciones.reglaSinTexto')
+  // el panel se dibuja cuando se sabe qué aprobación consulta: antes diría «Aprobar» a quien solo aprueba sin revisión interna
+  if (transiciones.isPending) return <Cargando compacto etiqueta={t('fichaAporte.antes.comprobando')} />
+  if (transiciones.isError && !transiciones.data)
+    return (
+      <section aria-label={t('fichaAporte.antes.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <h2 className="font-semibold">{t('fichaAporte.antes.titulo')}</h2>
+        <FalloDeLectura error={transiciones.error} alReintentar={() => void transiciones.refetch()} />
+      </section>
+    )
   let cuerpo
-  if (transiciones.isPending || comprobacion.isPending || proyecto.isPending) cuerpo = <Cargando compacto etiqueta={t('fichaAporte.antes.comprobando')} />
+  if (comprobacion.isPending || proyecto.isPending) cuerpo = <Cargando compacto etiqueta={t('fichaAporte.antes.comprobando')} />
   else if (comprobacion.isError) cuerpo = <FalloDeLectura error={comprobacion.error} alReintentar={() => void comprobacion.refetch()} />
   else if (proyecto.isError && !proyecto.data) cuerpo = <FalloDeLectura error={proyecto.error} alReintentar={() => void proyecto.refetch()} />
   else {
@@ -82,8 +92,6 @@ export function AntesDeAprobar({ aporte, escribe }: { aporte: Registro; escribe:
       </>
     )
   }
-  // el panel se dibuja cuando se sabe qué aprobación consulta: antes diría «Aprobar» a quien solo aprueba sin revisión interna
-  if (transiciones.isPending) return <Cargando compacto etiqueta={t('fichaAporte.antes.comprobando')} />
   return (
     <section aria-label={t('fichaAporte.antes.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
       <h2 className="font-semibold">{t('fichaAporte.antes.titulo')}</h2>
@@ -98,7 +106,9 @@ function Justificacion({ aporte, escribe, pide }: { aporte: Registro; escribe: b
   const cliente = useQueryClient()
   const definicion = useDefinicion('social_contribution')
   const puedeEditar = usePuedeEditar('social_contribution')
-  const edita = escribe && puedeEditar && puedeEscribir(definicion.data, 'guideline_deviation_justification')
+  // la clave que el GET no trajo es un campo que la cuenta no lee: el PUT no la mandaría (atributosDeEscritura)
+  const edita =
+    escribe && puedeEditar && puedeEscribir(definicion.data, 'guideline_deviation_justification') && 'guideline_deviation_justification' in aporte.attributes
   const actual = texto(aporte, 'guideline_deviation_justification')
   const [abierto, setAbierto] = useState(false)
   const [motivo, setMotivo] = useState('')

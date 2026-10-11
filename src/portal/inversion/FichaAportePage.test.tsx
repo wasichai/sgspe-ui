@@ -136,7 +136,20 @@ describe('S44 · ficha del aporte', () => {
     fetch = mockFetch(rutas(APORTE, [{ path: '/objects/contribution_item/records', body: pagina([roto]) }]))
     abrir()
     expect(await screen.findByText('Hay montos de ítems que no son válidos y no se suman: corríjalos.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Estantes de madera' })).toBeInTheDocument()
     expect(screen.queryByText(/^Total que se aprobará/)).not.toBeInTheDocument()
+    // la barra del tope no dice «Este aporte S/ 0.00» ni un «Queda» inflado: no se dibuja
+    expect(screen.queryByRole('region', { name: 'Tope de apoyo social de la campaña' })).not.toBeInTheDocument()
+  })
+
+  it('con un ítem válido y otro ilegible no dice una suma parcial como total ni dibuja el tope', async () => {
+    const roto = { ...ITEM_BIEN, attributes: { ...ITEM_BIEN.attributes, line_amount: 'abc' } }
+    fetch = mockFetch(rutas(APORTE, [{ path: '/objects/contribution_item/records', body: pagina([roto, ITEM_SERVICIO]) }]))
+    abrir()
+    expect(await screen.findByText('Hay montos de ítems que no son válidos y no se suman: corríjalos.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Transporte a la institución' })).toBeInTheDocument()
+    expect(screen.queryByText(/^Total que se aprobará/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Tope de apoyo social de la campaña' })).not.toBeInTheDocument()
   })
 
   it('quien aprueba lee el aporte sin «Editar», «Nuevo ítem» ni «Borrar»', async () => {
