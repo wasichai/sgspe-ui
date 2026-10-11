@@ -19,6 +19,9 @@ export interface FormularioDeRegistroProps {
   registro?: Registro
   // relaciones o valores fijos del alta: no se muestran
   fijos?: Record<string, unknown>
+  // valores propuestos en el alta (la moneda PEN, el año en curso de Lima): se ven y se pueden cambiar. wasichai no aplica
+  // defaultValue (UPS-15); al cambiar un registro no se usan
+  iniciales?: Record<string, unknown>
   // los campos que se muestran, en su orden; sin la lista, todos los legibles
   campos?: readonly string[]
   motivo?: string
@@ -83,7 +86,16 @@ export function cambiosRespectoDe(definicion: ObjectDefinition, abierto: Registr
   return Object.fromEntries(Object.entries(enviados).filter(([campo, valor]) => !mismoValor(valor, iniciales[campo])))
 }
 
-export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, campos, motivo, alGuardar, alCancelar }: FormularioDeRegistroProps) {
+export function FormularioDeRegistro({
+  objeto,
+  registro,
+  fijos = SIN_FIJOS,
+  iniciales = SIN_FIJOS,
+  campos,
+  motivo,
+  alGuardar,
+  alCancelar
+}: FormularioDeRegistroProps) {
   const { t } = useTranslation(NS)
   const definicion = useDefinicion(objeto)
   // i18next arma un objeto nuevo en cada llamada con returnObjects: se memoriza para no deshacer el useMemo de la definición
@@ -108,7 +120,7 @@ export function FormularioDeRegistro({ objeto, registro, fijos = SIN_FIJOS, camp
     .map(([nombre, texto]) => [preparada.fields.find((f) => f.name === nombre)?.label, texto] as const)
     .filter(([etiqueta]) => etiqueta)
     .map(([etiqueta, texto]) => `${etiqueta}: ${texto}`)
-  const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: fijos }
+  const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: { ...iniciales, ...fijos } }
   abierto.current ??= registro
   const enviar = ({ attributes }: RecordPayload) => {
     if (registro) {

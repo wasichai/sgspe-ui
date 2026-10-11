@@ -1,28 +1,55 @@
+import { useAuth } from '@wasichai/core'
 import { useTranslation } from 'react-i18next'
-import { Cargando } from '../componentes/Estados'
+import { Cargando, esIlegible } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { aDiezmilesimos, deDiezmilesimos } from '../datos/decimales'
+import { APORTE_COMPROMETIDO } from '../datos/inversion'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
-// la barra del tope de apoyo social de la campaña (screens.md S30, paso 5; D7, RN-INV-003): lo aprobado en la campaña (los
-// compromisos comprometidos de dashboards.md §3.2, en la moneda de la campaña), este compromiso y lo que queda. es una ayuda:
-// la regla la aplica SupportPolicyGuard al aprobar. lo que está en otra moneda no se suma (CAP_OTHER_CURRENCY). los montos se
-// suman en diezmilésimos exactos (datos/decimales): en coma flotante una campaña justo en su tope parecería superarlo
+// la barra del tope de apoyo social de la campaña (screens.md S30, paso 5, y S44; D7, P1, RN-INV-003): lo aprobado en la campaña,
+// este registro y lo que queda. desde F5 lo aprobado son los compromisos comprometidos (dashboards.md §3.2) y los aportes
+// comprometidos (approved, procured, delivered y closed, elección 6), en la moneda de la campaña; el registro que se aprueba
+// (excluir) no se cuenta dos veces. es una ayuda: la regla la aplican SupportPolicyGuard y ContributionCapRule al aprobar. lo que
+// está en otra moneda no se suma (CAP_OTHER_CURRENCY). los montos se suman en diezmilésimos exactos (datos/decimales): en coma
+// flotante una campaña justo en su tope parecería superarlo. quien no lee los aportes no los ve sumados y se le dice; un tenant
+// sin el modelo de F5 responde 404 por social_contribution (aunque ADMIN lo pida): no hay aportes que sumar
 export const COMPROMETIDOS: readonly string[] = ['approved', 'in_progress', 'blocked', 'fulfilled', 'verified', 'closed']
 
-export function BarraDelTope({ campana, monto, moneda }: { campana: Registro; monto: string | null; moneda: string }) {
+export function BarraDelTope({
+  campana,
+  monto,
+  moneda,
+  excluir,
+  de = 'compromiso'
+}: {
+  campana: Registro
+  monto: string | null
+  moneda: string
+  excluir?: string
+  de?: 'compromiso' | 'aporte'
+}) {
   const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const leeAportes = can('social_contribution', 'READ')
   const compromisos = useTodos('commitment', { exploration_campaign: campana.id })
+  const aportes = useTodos('social_contribution', { exploration_campaign: campana.id }, leeAportes)
   const limite = aDiezmilesimos(atributo(campana, 'social_support_cap'))
   const monedaDelTope = texto(campana, 'currency') || 'PEN'
   if (limite === null) return <p className="text-sm text-sg-text-muted">{t('nuevoCompromiso.tope.sinTope')}</p>
-  if (compromisos.isPending) return <Cargando compacto etiqueta={t('nuevoCompromiso.tope.leyendo')} />
+  if (compromisos.isPending || (leeAportes && aportes.isPending)) return <Cargando compacto etiqueta={t('nuevoCompromiso.tope.leyendo')} />
   if (compromisos.isError && !compromisos.data) return <FalloDeLectura error={compromisos.error} alReintentar={() => void compromisos.refetch()} />
-  const aprobado = compromisos.data
-    .filter((c) => COMPROMETIDOS.includes(c.state ?? '') && (texto(c, 'currency') || 'PEN') === monedaDelTope)
-    .reduce((suma, c) => suma + (aDiezmilesimos(atributo(c, 'amount')) ?? 0n), 0n)
+  if (leeAportes && aportes.isError && !aportes.data && !esIlegible(aportes.error))
+    return <FalloDeLectura error={aportes.error} alReintentar={() => void aportes.refetch()} />
+  const enLaMoneda = (r: Registro) => (texto(r, 'currency') || 'PEN') === monedaDelTope
+  // un monto vacío o ilegible (un derivado que el listener aún no pone al día) no se cuenta como cero: se omite y se dice
+  const montos = (registros: Registro[], estados: readonly string[], campo: string) =>
+    registros.filter((r) => r.id !== excluir && estados.includes(r.state ?? '') && enLaMoneda(r)).map((r) => aDiezmilesimos(atributo(r, campo)))
+  const cuentan = [...montos(compromisos.data, COMPROMETIDOS, 'amount'), ...montos(aportes.data ?? [], APORTE_COMPROMETIDO, 'total_amount')]
+  const legibles = cuentan.filter((m): m is bigint => m !== null)
+  const ilegibles = cuentan.length - legibles.length
+  const aprobado = legibles.reduce((total, m) => total + m, 0n)
   const este = moneda === monedaDelTope && monto !== null ? (aDiezmilesimos(monto) ?? 0n) : 0n
   const queda = limite - aprobado - este
   // el ancho de la barra es solo dibujo: en centésimas de punto porcentual, acotado entre 0 y 100
@@ -47,7 +74,7 @@ export function BarraDelTope({ campana, monto, moneda }: { campana: Registro; mo
           <dd className="tabular-nums">{dicho(aprobado)}</dd>
         </div>
         <div>
-          <dt className="text-sg-caption text-sg-text-muted">{t('nuevoCompromiso.tope.este')}</dt>
+          <dt className="text-sg-caption text-sg-text-muted">{t(de === 'aporte' ? 'nuevoCompromiso.tope.esteAporte' : 'nuevoCompromiso.tope.este')}</dt>
           <dd className="tabular-nums">{dicho(este)}</dd>
         </div>
         <div>
@@ -56,9 +83,11 @@ export function BarraDelTope({ campana, monto, moneda }: { campana: Registro; mo
         </div>
       </dl>
       {moneda !== monedaDelTope ? <p className="text-sg-caption">{t('nuevoCompromiso.tope.otraMoneda', { moneda: monedaDelTope })}</p> : null}
+      {ilegibles > 0 ? <p className="text-sg-caption text-sg-warning">{t('nuevoCompromiso.tope.sinMonto', { count: ilegibles })}</p> : null}
+      {!leeAportes ? <p className="text-sg-caption text-sg-text-muted">{t('nuevoCompromiso.tope.sinAportes')}</p> : null}
       {queda < 0n ? (
         <p role="alert" className="text-sg-caption text-sg-warning">
-          {t('nuevoCompromiso.tope.supera')}
+          {t(de === 'aporte' ? 'nuevoCompromiso.tope.superaAporte' : 'nuevoCompromiso.tope.supera')}
         </p>
       ) : null}
     </section>

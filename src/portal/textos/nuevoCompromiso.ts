@@ -58,7 +58,13 @@ export const ES_NUEVO_COMPROMISO = {
     supera:
       'Este compromiso supera el tope de la campaña. Si la política del proyecto bloquea lo que supera el tope, solo lo aprueba el nivel superior con permiso para superarlo.',
     otraMoneda: 'La campaña está en {{moneda}}: lo que está en otra moneda no se suma a su tope.',
-    leyendo: 'Leyendo lo aprobado en la campaña…'
+    leyendo: 'Leyendo lo aprobado en la campaña…',
+    esteAporte: 'Este aporte',
+    superaAporte:
+      'Este aporte supera el tope de la campaña. Si la política del proyecto bloquea lo que supera el tope, solo lo aprueba quien tiene permiso para superarlo.',
+    sinAportes: 'Lo aprobado no incluye los aportes: su cuenta no los lee.',
+    sinMonto_one: '{{count}} registro sin monto legible no se suma.',
+    sinMonto_other: '{{count}} registros sin monto legible no se suman.'
   },
   revision: {
     lista: 'Lo que pide el envío a aprobación',
@@ -137,7 +143,13 @@ export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
     supera:
       'This commitment exceeds the campaign cap. If the project policy blocks what exceeds the cap, only the senior level with permission to exceed it can approve it.',
     otraMoneda: 'The campaign is in {{moneda}}: amounts in another currency are not added to its cap.',
-    leyendo: 'Reading what was approved in the campaign…'
+    leyendo: 'Reading what was approved in the campaign…',
+    esteAporte: 'This contribution',
+    superaAporte:
+      'This contribution exceeds the campaign cap. If the project policy blocks what exceeds the cap, only someone allowed to exceed it can approve it.',
+    sinAportes: 'What was approved does not include the contributions: your account does not read them.',
+    sinMonto_one: '{{count}} record without a readable amount is not added.',
+    sinMonto_other: '{{count}} records without a readable amount are not added.'
   },
   revision: {
     lista: 'What submitting for approval needs',
