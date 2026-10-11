@@ -26,7 +26,8 @@ import { CampanaDelProyecto, PartesDelProyecto } from './EquipoYPartes'
 import { FormularioDeAsignacion } from './FormularioDeAsignacion'
 import { useNombresDeRol } from './usuarios'
 import { ParametroNumerico } from './ParametroNumerico'
-import { PARAMETROS_F2, PARAMETROS_F4, problemasDeParametros, vigente, type Parametro } from './parametros'
+import { TemasPriorizados } from './TemasPriorizados'
+import { PARAMETROS_F2, PARAMETROS_F4, PARAMETROS_INVERSION, problemasDeParametros, vigente, type Parametro } from './parametros'
 
 // S11 · equipo y parámetros del proyecto (screens.md §3): asignaciones con su vigencia (una vencida no da escritura,
 // RQ-SEC-006), campañas con su tope y lo ejecutado por moneda (ASM-063), partes y concesiones, y los parámetros de F2 con
@@ -256,9 +257,21 @@ function PartesYConcesiones({ proyecto, editable }: { proyecto: string; editable
   )
 }
 
+// los parámetros y, desde F5, los temas priorizados para aportes (project_priority_topic): los vincula quien edita el proyecto con
+// UPDATE sobre topic (security.md §5.6)
 function Parametros({ proyecto, editable }: { proyecto: string; editable: boolean }) {
+  const { can } = useAuth()
   const consulta = useProyecto(proyecto)
-  return <Consulta consulta={consulta}>{(p) => <FormularioDeParametros proyecto={p} editable={editable} />}</Consulta>
+  return (
+    <Consulta consulta={consulta}>
+      {(p) => (
+        <div className="space-y-4">
+          <FormularioDeParametros proyecto={p} editable={editable} />
+          <TemasPriorizados proyecto={p.id} editable={editable && can('topic', 'UPDATE')} />
+        </div>
+      )}
+    </Consulta>
+  )
 }
 
 // el formulario guarda solo lo que la persona cambió, sobre lo leído: lo demás se muestra con el registro vigente, así que un
@@ -273,8 +286,8 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
   const [intento, setIntento] = useState(false)
   // el texto de cada campo numérico: si un refetch cambia el registro y el campo se vuelve a pintar, no pierde lo tecleado
   const textos = useRef<Record<string, string>>({})
-  // los de F4 solo si el modelo del tenant ya los tiene (un tenant de F3 no los ve)
-  const parametros = [...PARAMETROS_F2, ...PARAMETROS_F4.filter((p) => campoDe(definicion.data, p.campo) !== undefined)]
+  // los de F4 y F5 solo si el modelo del tenant ya los tiene (un tenant de F3 no los ve)
+  const parametros = [...PARAMETROS_F2, ...[...PARAMETROS_F4, ...PARAMETROS_INVERSION].filter((p) => campoDe(definicion.data, p.campo) !== undefined)]
   const grupos = [...new Set(parametros.map((p) => p.grupo))]
   const valorDe = (p: Parametro) => (p.campo in tecleados ? tecleados[p.campo] : vigente(proyecto.attributes, p))
   const cambios = Object.fromEntries(
@@ -323,7 +336,9 @@ function FormularioDeParametros({ proyecto, editable }: { proyecto: Registro; ed
       {grupos.map((grupo) => (
         <fieldset key={grupo} className="space-y-2 rounded-sg-lg border border-sg-border p-4">
           <legend className="px-1 font-medium">{t(`p360.parametros.grupos.${grupo}`)}</legend>
-          {grupo === 'quejas' || grupo === 'riesgos' ? <p className="text-sg-caption text-sg-text-muted">{t(`p360.parametros.ayudas.${grupo}`)}</p> : null}
+          {grupo === 'quejas' || grupo === 'riesgos' || grupo === 'inversion' ? (
+            <p className="text-sg-caption text-sg-text-muted">{t(`p360.parametros.ayudas.${grupo}`)}</p>
+          ) : null}
           {parametros
             .filter((p) => p.grupo === grupo)
             .map((p) => {

@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
@@ -9,7 +9,7 @@ import { espiarRed, problema, type Red } from '../../test/red'
 import { useDefinicion } from '../datos/registros'
 import { PartesDelProyecto } from './EquipoYPartes'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
-import { PARAMETROS_F2, PARAMETROS_F4, problemasDeParametros } from './parametros'
+import { PARAMETROS_F2, PARAMETROS_F4, PARAMETROS_INVERSION, problemasDeParametros } from './parametros'
 
 let fetch: FetchMock | null = null
 let red: Red | null = null
@@ -750,5 +750,86 @@ describe('partes del proyecto', () => {
     montar(<PartesDelProyecto proyecto="p1" editable={false} />, { permisos: permisos({ project_party: ['READ'] }) })
     expect(await screen.findByText(/CLIENTE · No disponible/)).toBeInTheDocument()
     expect(screen.queryByText(/9b1d7e2a/)).not.toBeInTheDocument()
+  })
+})
+
+// F5 (spec §2.1 decisión 3, §3.1): los seis lineamientos de apoyo y de aprobación, solo si el modelo del tenant los tiene, y los temas
+// priorizados del proyecto (project_priority_topic), con UPDATE sobre project y sobre topic
+describe('S11 · lineamientos de apoyo y temas priorizados', () => {
+  const POLITICAS = PARAMETROS_INVERSION.map((p) => p.campo)
+  const CON_F5 = definicion('project', [
+    ['interest_threshold', { type: 'DECIMAL' }],
+    'name',
+    ...POLITICAS.map((c): [string, Record<string, unknown>] => [c, { type: 'BOOLEAN' }])
+  ])
+  const AGUA = registro('tp1', { name: 'Agua y saneamiento' })
+  const EDUCACION = registro('tp2', { name: 'Educación' })
+  const CON_TEMAS = permisos({ ...PAD.objects, topic: ['READ', 'UPDATE'] })
+  const conF5 = (temas = [AGUA]) => [
+    { path: '/metadata/objects/project', body: CON_F5 },
+    { path: '/objects/project/records/p1', body: { ...P1, attributes: { ...P1.attributes, ...Object.fromEntries(POLITICAS.map((c) => [c, null])) } } },
+    { path: '/objects/project/records/p1/related/project_priority_topic', body: pagina(temas) },
+    { path: /^\/objects\/topic\/records\?/, body: pagina([EDUCACION]) },
+    ...rutas()
+  ]
+
+  it('los seis lineamientos dicen qué controlan y su valor por defecto; apagar uno se guarda con la versión leída', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, conF5())
+    red = espiarRed()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByRole('group', { name: 'Inversión social y aprobaciones' })).toBeInTheDocument()
+    expect(PARAMETROS_INVERSION).toHaveLength(6)
+    for (const p of PARAMETROS_INVERSION) {
+      const texto = document.getElementById(`param-${p.campo}-ayuda`)!.textContent!
+      expect(texto.length, p.campo).toBeGreaterThan(30)
+      expect(texto, p.campo).toContain('Por defecto: activada')
+      expect(texto, p.campo).not.toMatch(/[A-Z]{2,}-\d|[a-z]+_[a-z_]+/)
+    }
+    const manoDeObra = screen.getByLabelText(/No financiar mano de obra/)
+    expect(manoDeObra).toBeChecked()
+    await userEvent.click(manoDeObra)
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar parámetros' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/project/records/p1')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/project/records/p1')[0].cuerpo).toMatchObject({ attributes: { policy_no_paid_labor: false } })
+  })
+
+  it('los temas priorizados se listan, se agregan con el buscador y se quitan', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, CON_TEMAS, conF5())
+    red = espiarRed([
+      { method: 'POST', path: '/objects/project/records/p1/related/project_priority_topic', responder: () => jsonResponse({}, 201) },
+      { method: 'DELETE', path: '/objects/project/records/p1/related/project_priority_topic/tp1', responder: () => jsonResponse({}) }
+    ])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const temas = await screen.findByRole('region', { name: 'Temas priorizados para aportes' })
+    expect(await within(temas).findByText('Agua y saneamiento')).toBeInTheDocument()
+    await userEvent.type(within(temas).getByLabelText('Agregar un tema priorizado'), 'Edu')
+    await userEvent.click(await within(temas).findByRole('button', { name: 'Educación' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/project/records/p1/related/project_priority_topic')).toHaveLength(1))
+    expect(red.a('POST', '/objects/project/records/p1/related/project_priority_topic')[0].cuerpo).toEqual({ otherId: 'tp2' })
+    await userEvent.click(within(temas).getByRole('button', { name: 'Quitar Agua y saneamiento' }))
+    await waitFor(() => expect(red!.a('DELETE', '/objects/project/records/p1/related/project_priority_topic/tp1')).toHaveLength(1))
+  })
+
+  it('sin UPDATE sobre los temas se ven sin agregar ni quitar', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, conF5())
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    const temas = await screen.findByRole('region', { name: 'Temas priorizados para aportes' })
+    expect(await within(temas).findByText('Agua y saneamiento')).toBeInTheDocument()
+    expect(within(temas).queryByRole('button', { name: /^Quitar/ })).not.toBeInTheDocument()
+    expect(within(temas).queryByLabelText('Agregar un tema priorizado')).not.toBeInTheDocument()
+  })
+
+  it('sin temas priorizados dice que la prioridad no se evalúa', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, CON_TEMAS, conF5([]))
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByText('El proyecto no tiene temas priorizados: la prioridad de los aportes no se evalúa.')).toBeInTheDocument()
+  })
+
+  it('un tenant sin F5 no ve los lineamientos ni los temas priorizados', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, CON_TEMAS, rutas())
+    await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
+    expect(await screen.findByText('Umbral de interés', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Inversión social y aprobaciones' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Temas priorizados para aportes' })).not.toBeInTheDocument())
   })
 })
