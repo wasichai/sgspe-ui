@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
+import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Consulta } from '../componentes/Estados'
@@ -20,14 +21,14 @@ import { campoDe, texto, useDefinicion, usePuedeEditar, useRegistro, type Regist
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
-import { useAceptarSolicitud } from './comandos'
+import { useAceptarSolicitud, type ObjetoQueNace } from './comandos'
 import { AvisoDeConfidencial, Dato, DatosDelCaso, DeDondeViene, EditarQcs, MarcasDeQcs, PlazoQueCorre } from './comunesDeFicha'
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
 
 // S57 · fichas de consulta y de solicitud (screens.md §8, WF-E2 y WF-E3): la misma anatomía que la queja (S36) con su propio
 // ciclo. una consulta se responde o se deriva (las dos transiciones piden la respuesta y cuándo se comunicó, que se escriben antes
-// con «Escribir la respuesta»); una solicitud se evalúa y se acepta creando el compromiso en un solo comando (aceptar es
-// responderla, api.md §4.6; el aporte social llega en F5) o se declina con respuesta. las dos se reclasifican y suben su carta
+// con «Escribir la respuesta»); una solicitud se evalúa y se acepta creando el compromiso o, desde F5, el aporte en un solo
+// comando (aceptar es responderla, api.md §4.6) o se declina con respuesta. las dos se reclasifican y suben su carta
 // firmada como evidencia CARTA (ASM-098). un 404 puede ser una QCS confidencial que la cuenta no lee: el texto no dice cuál
 const EDITABLES_COMUNES = [
   'category',
@@ -112,12 +113,22 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
   const escribe = useEscribeEnProyecto(texto(solicitud, 'project'))
   const transiciones = useAvailableTransitions('stakeholder_request', solicitud.id)
   const [aceptando, setAceptando] = useState(false)
+  // lo que la cuenta puede crear al aceptar (spec F5 §2.2): COMMITMENT_MANAGER acepta pero no crea aportes. el aporte se ofrece solo
+  // si el tenant tiene el modelo de F5 (ADMIN lo puede todo, y un tenant de F4 responde 404 por su definición)
+  const definicionDelAporte = useDefinicion(can('social_contribution', 'CREATE') ? 'social_contribution' : undefined)
+  const opciones: ObjetoQueNace[] = [
+    ...(can('commitment', 'CREATE') ? (['commitment'] as const) : []),
+    ...(definicionDelAporte.data ? (['social_contribution'] as const) : [])
+  ]
   // aceptar es de comando: no es un botón de transición, pero GET …/transitions dice si el rol de quien mira la puede dar
   const acepta =
-    escribe &&
-    can('commitment', 'CREATE') &&
-    solicitud.state === 'under_evaluation' &&
-    (transiciones.data ?? []).some((tr) => tr.name === 'accept' && tr.allowed)
+    escribe && opciones.length > 0 && solicitud.state === 'under_evaluation' && (transiciones.data ?? []).some((tr) => tr.name === 'accept' && tr.allowed)
+  const textoDelBoton =
+    opciones.length > 1
+      ? t('fichaConsulta.solicitud.aceptar.botonElegir')
+      : opciones[0] === 'social_contribution'
+        ? t('fichaConsulta.solicitud.aceptar.botonAporte')
+        : t('fichaConsulta.solicitud.aceptar.boton')
   return (
     <>
       <Ficha
@@ -129,7 +140,7 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
         acciones={
           acepta ? (
             <Button size="sm" onClick={() => setAceptando(true)}>
-              {t('fichaConsulta.solicitud.aceptar.boton')}
+              {textoDelBoton}
             </Button>
           ) : null
         }
@@ -145,13 +156,20 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
             <Dato termino={t('fichaConsulta.solicitud.campos.created_commitment')}>
               {texto(solicitud, 'created_commitment') ? <RegistroVinculado objeto="commitment" id={texto(solicitud, 'created_commitment')} /> : '—'}
             </Dato>
+            <Dato termino={t('fichaConsulta.solicitud.campos.created_contribution')}>
+              {texto(solicitud, 'created_contribution') ? (
+                <RegistroVinculado objeto="social_contribution" id={texto(solicitud, 'created_contribution')} />
+              ) : (
+                '—'
+              )}
+            </Dato>
             <div className="sm:col-span-2">
               <Dato termino={t('fichaConsulta.solicitud.campos.requested_resource')}>{texto(solicitud, 'requested_resource') || '—'}</Dato>
             </div>
           </>
         }
       />
-      {aceptando ? <DialogoDeAceptacion solicitud={solicitud} alCerrar={() => setAceptando(false)} /> : null}
+      {aceptando ? <DialogoDeAceptacion solicitud={solicitud} opciones={opciones} alCerrar={() => setAceptando(false)} /> : null}
     </>
   )
 }
@@ -263,13 +281,25 @@ function Ficha({
 }
 
 // los campos del cuerpo de la aceptación que tienen control en el diálogo
-const CAMPOS_DE_ACEPTACION = ['response', 'respondedAt', 'code', 'title', 'amount', 'currency']
+const CAMPOS_DE_ACEPTACION = [
+  'response',
+  'respondedAt',
+  'code',
+  'title',
+  'amount',
+  'currency',
+  'declared_purpose',
+  'conditions',
+  'payer_organization',
+  'contribution_type'
+]
 
-// aceptar la solicitud creando el compromiso (POST /api/sgspe/stakeholder-requests/{id}/accept): la respuesta y cuándo se comunicó,
-// los datos mínimos del compromiso que nace en borrador (código, título, monto y moneda; el resto se completa en su ficha antes de
-// enviarlo a aprobación) y el motivo. un reintento repite la misma Idempotency-Key: no nacen dos compromisos. un 400 sobre la
-// respuesta, su fecha (respondedAt mal formado, plan 4.2a) o un dato del compromiso se dice junto a su control; el resto, en el aviso
-function DialogoDeAceptacion({ solicitud, alCerrar }: { solicitud: Registro; alCerrar: () => void }) {
+// aceptar la solicitud creando el compromiso o el aporte (POST /api/sgspe/stakeholder-requests/{id}/accept): la respuesta y cuándo se
+// comunicó, lo que nace y el motivo. el compromiso nace en borrador con lo mínimo de su alta (código, título, monto y moneda); el
+// aporte nace en requested con lo mínimo del suyo (código, propósito, condiciones, quién paga y moneda; el tipo es opcional hasta
+// aprobar) y sus ítems se cargan en su ficha (S44). con las dos opciones, «¿Qué se crea?». un reintento repite la misma
+// Idempotency-Key: no nacen dos. un 400 sobre un dato se dice junto a su control; el resto, en el aviso
+function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Registro; opciones: ObjetoQueNace[]; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const navegar = useNavigate()
   const releer = useReleer()
@@ -277,8 +307,11 @@ function DialogoDeAceptacion({ solicitud, alCerrar }: { solicitud: Registro; alC
   const erroresDeCampo = useErroresDeCampo()
   const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(aceptar.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
   const soloDeCampos = Object.keys(delServidor).length > 0 && Object.keys(delServidor).every((c) => CAMPOS_DE_ACEPTACION.includes(c))
-  const definicion = useDefinicion('commitment')
+  const [crea, setCrea] = useState<ObjetoQueNace>(opciones[0] ?? 'commitment')
+  const esAporte = crea === 'social_contribution'
+  const definicion = useDefinicion(crea)
   const monedas = campoDe(definicion.data, 'currency')?.enumOptions ?? ['PEN']
+  const tipos = campoDe(definicion.data, 'contribution_type')?.enumOptions ?? []
   const [valores, setValores] = useState({
     respuesta: texto(solicitud, 'response'),
     respondida: ahoraEnLima(),
@@ -286,37 +319,63 @@ function DialogoDeAceptacion({ solicitud, alCerrar }: { solicitud: Registro; alC
     titulo: texto(solicitud, 'requested_resource'),
     monto: '',
     moneda: 'PEN',
+    proposito: texto(solicitud, 'requested_resource'),
+    condiciones: '',
+    tipo: '',
     motivo: ''
   })
+  const [pagador, setPagador] = useState<Registro | null>(null)
   const [intentado, setIntentado] = useState(false)
   const cambiar = (campo: keyof typeof valores) => (e: { target: { value: string } }) => setValores((v) => ({ ...v, [campo]: e.target.value }))
   const instante = instanteDeLima(valores.respondida)
   const falta = (campo: keyof typeof valores) => (intentado && valores[campo].trim() === '' ? t('fichaConsulta.solicitud.aceptar.falta') : undefined)
   const montoMal = intentado && valores.monto.trim() !== '' && !esMontoValido(valores.monto)
-  const listo =
-    ['respuesta', 'codigo', 'titulo', 'monto', 'motivo'].every((c) => valores[c as keyof typeof valores].trim() !== '') &&
-    instante !== '' &&
-    esMontoValido(valores.monto)
+  const requeridos: (keyof typeof valores)[] = esAporte
+    ? ['respuesta', 'codigo', 'proposito', 'condiciones', 'motivo']
+    : ['respuesta', 'codigo', 'titulo', 'monto', 'motivo']
+  const listo = requeridos.every((c) => valores[c].trim() !== '') && instante !== '' && (esAporte ? pagador !== null : esMontoValido(valores.monto))
   const confirmar = () => {
     setIntentado(true)
     if (!listo) return
+    const atributos = esAporte
+      ? {
+          code: valores.codigo.trim(),
+          declared_purpose: valores.proposito.trim(),
+          conditions: valores.condiciones.trim(),
+          currency: valores.moneda,
+          payer_organization: pagador?.id,
+          ...(valores.tipo ? { contribution_type: valores.tipo } : {})
+        }
+      : { code: valores.codigo.trim(), title: valores.titulo.trim(), amount: normalizarMonto(valores.monto), currency: valores.moneda }
     aceptar.mutate(
+      { solicitud, crea, respuesta: valores.respuesta.trim(), respondidaEn: instante, atributos, motivo: valores.motivo.trim() },
       {
-        solicitud,
-        respuesta: valores.respuesta.trim(),
-        respondidaEn: instante,
-        atributos: { code: valores.codigo.trim(), title: valores.titulo.trim(), amount: normalizarMonto(valores.monto), currency: valores.moneda },
-        motivo: valores.motivo.trim()
-      },
-      { onSuccess: ({ commitment }) => navegar(rutaDeFicha('commitment', commitment) ?? '/commitments') }
+        onSuccess: ({ commitment, contribution }) => {
+          const nacido = esAporte ? contribution : commitment
+          navegar((nacido && rutaDeFicha(crea, nacido)) ?? '/attention')
+        }
+      }
     )
   }
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && alCerrar()}>
       <DialogContent className="max-w-lg">
         <DialogTitle className="text-sg-h3 font-semibold">{t('fichaConsulta.solicitud.aceptar.titulo')}</DialogTitle>
-        <DialogDescription className="text-sm text-sg-text-secondary">{t('fichaConsulta.solicitud.aceptar.descripcion')}</DialogDescription>
+        <DialogDescription className="text-sm text-sg-text-secondary">
+          {t(esAporte ? 'fichaConsulta.solicitud.aceptar.descripcionAporte' : 'fichaConsulta.solicitud.aceptar.descripcion')}
+        </DialogDescription>
         <div className="mt-4 max-h-[60vh] space-y-3 overflow-y-auto">
+          {opciones.length > 1 ? (
+            <fieldset className="space-y-1">
+              <legend className="text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.queSeCrea')}</legend>
+              {opciones.map((o) => (
+                <label key={o} className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="crea" value={o} checked={crea === o} onChange={() => setCrea(o)} />
+                  {t(o === 'commitment' ? 'fichaConsulta.solicitud.aceptar.unCompromiso' : 'fichaConsulta.solicitud.aceptar.unAporte')}
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
           <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.respuesta')} error={falta('respuesta') ?? delServidor.response}>
             {(p) => <Textarea {...p} value={valores.respuesta} maxLength={4000} onChange={cambiar('respuesta')} />}
           </Campo>
@@ -332,24 +391,68 @@ function DialogoDeAceptacion({ solicitud, alCerrar }: { solicitud: Registro; alC
           >
             {(p) => <Input {...p} type="datetime-local" value={valores.respondida} onChange={cambiar('respondida')} />}
           </Campo>
-          <fieldset className="space-y-3">
-            <legend className="text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.compromiso')}</legend>
-            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.codigo')} error={falta('codigo') ?? delServidor.code}>
-              {(p) => <Input {...p} value={valores.codigo} maxLength={60} onChange={cambiar('codigo')} />}
-            </Campo>
-            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.tituloDelCompromiso')} error={falta('titulo') ?? delServidor.title}>
-              {(p) => <Input {...p} value={valores.titulo} maxLength={300} onChange={cambiar('titulo')} />}
-            </Campo>
-            <Campo
-              etiqueta={t('fichaConsulta.solicitud.aceptar.monto')}
-              error={falta('monto') ?? (montoMal ? t('fichaConsulta.solicitud.aceptar.montoInvalido') : delServidor.amount)}
-            >
-              {(p) => <Input {...p} inputMode="decimal" value={valores.monto} onChange={cambiar('monto')} />}
-            </Campo>
-            <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.moneda')} error={delServidor.currency}>
-              {(p) => <SelectNativo {...p} vacio={false} value={valores.moneda} opciones={monedas} onChange={cambiar('moneda')} />}
-            </Campo>
-          </fieldset>
+          {esAporte ? (
+            <fieldset className="space-y-3">
+              <legend className="text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.aporte')}</legend>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.codigoDelAporte')} error={falta('codigo') ?? delServidor.code}>
+                {(p) => <Input {...p} value={valores.codigo} maxLength={60} onChange={cambiar('codigo')} />}
+              </Campo>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.proposito')} error={falta('proposito') ?? delServidor.declared_purpose}>
+                {(p) => <Textarea {...p} value={valores.proposito} maxLength={4000} onChange={cambiar('proposito')} />}
+              </Campo>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.condiciones')} error={falta('condiciones') ?? delServidor.conditions}>
+                {(p) => <Textarea {...p} value={valores.condiciones} maxLength={4000} onChange={cambiar('condiciones')} />}
+              </Campo>
+              <div className="space-y-1">
+                <span className="block text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.pagador')}</span>
+                {pagador ? (
+                  <p className="flex items-center gap-2 text-sm">
+                    {texto(pagador, 'name')}
+                    <button type="button" className="text-sg-caption text-sg-primary-text underline" onClick={() => setPagador(null)}>
+                      {t('fichaConsulta.solicitud.aceptar.cambiarPagador')}
+                    </button>
+                  </p>
+                ) : (
+                  <BuscadorDeRegistro
+                    objeto="organization"
+                    etiqueta={t('fichaConsulta.solicitud.aceptar.pagador')}
+                    rotulo={(r) => texto(r, 'name')}
+                    alElegir={setPagador}
+                  />
+                )}
+                {intentado && !pagador ? (
+                  <p className="text-sg-caption text-sg-danger">{t('fichaConsulta.solicitud.aceptar.falta')}</p>
+                ) : delServidor.payer_organization ? (
+                  <p className="text-sg-caption text-sg-danger">{delServidor.payer_organization}</p>
+                ) : null}
+              </div>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.tipo')} error={delServidor.contribution_type}>
+                {(p) => <SelectNativo {...p} value={valores.tipo} opciones={tipos} onChange={cambiar('tipo')} />}
+              </Campo>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.moneda')} error={delServidor.currency}>
+                {(p) => <SelectNativo {...p} vacio={false} value={valores.moneda} opciones={monedas} onChange={cambiar('moneda')} />}
+              </Campo>
+            </fieldset>
+          ) : (
+            <fieldset className="space-y-3">
+              <legend className="text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.compromiso')}</legend>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.codigo')} error={falta('codigo') ?? delServidor.code}>
+                {(p) => <Input {...p} value={valores.codigo} maxLength={60} onChange={cambiar('codigo')} />}
+              </Campo>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.tituloDelCompromiso')} error={falta('titulo') ?? delServidor.title}>
+                {(p) => <Input {...p} value={valores.titulo} maxLength={300} onChange={cambiar('titulo')} />}
+              </Campo>
+              <Campo
+                etiqueta={t('fichaConsulta.solicitud.aceptar.monto')}
+                error={falta('monto') ?? (montoMal ? t('fichaConsulta.solicitud.aceptar.montoInvalido') : delServidor.amount)}
+              >
+                {(p) => <Input {...p} inputMode="decimal" value={valores.monto} onChange={cambiar('monto')} />}
+              </Campo>
+              <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.moneda')} error={delServidor.currency}>
+                {(p) => <SelectNativo {...p} vacio={false} value={valores.moneda} opciones={monedas} onChange={cambiar('moneda')} />}
+              </Campo>
+            </fieldset>
+          )}
           <Campo etiqueta={t('comun.motivoObligatorio')} error={intentado && valores.motivo.trim() === '' ? t('comun.motivoFalta') : undefined}>
             {(p) => <Textarea {...p} value={valores.motivo} maxLength={500} onChange={cambiar('motivo')} />}
           </Campo>
