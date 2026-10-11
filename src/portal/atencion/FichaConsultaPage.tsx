@@ -314,7 +314,7 @@ const CAMPOS_DE_ACEPTACION = [
 // comunicó, lo que nace y el motivo. el compromiso nace en borrador con lo mínimo de su alta (código, título, monto y moneda); el
 // aporte nace en requested con lo mínimo del suyo (código, propósito, condiciones, quién paga y moneda; el tipo es opcional hasta
 // aprobar) y sus ítems se cargan en su ficha (S44). con las dos opciones, «¿Qué se crea?». un reintento repite la misma
-// Idempotency-Key: no nacen dos. un 400 sobre un dato se dice junto a su control; el resto, en el aviso
+// Idempotency-Key: no nacen dos; cambiar lo que se crea la renueva. un 400 sobre un dato se dice junto a su control; el resto, en el aviso
 function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Registro; opciones: ObjetoQueNace[]; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const navegar = useNavigate()
@@ -389,7 +389,17 @@ function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Reg
               <legend className="text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.queSeCrea')}</legend>
               {opciones.map((o) => (
                 <label key={o} className="flex items-center gap-2 text-sm">
-                  <input type="radio" name="crea" value={o} checked={crea === o} onChange={() => setCrea(o)} />
+                  <input
+                    type="radio"
+                    name="crea"
+                    value={o}
+                    checked={crea === o}
+                    onChange={() => {
+                      // crear otra cosa es otra acción: otro cuerpo no reusa la Idempotency-Key del envío anterior
+                      if (o !== crea) aceptar.nuevaAccion()
+                      setCrea(o)
+                    }}
+                  />
                   {t(o === 'commitment' ? 'fichaConsulta.solicitud.aceptar.unCompromiso' : 'fichaConsulta.solicitud.aceptar.unAporte')}
                 </label>
               ))}
