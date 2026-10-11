@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/wasichai/sgspe-ui/compare/v1.0.0...v1.1.0) (2026-10-10)
+
+
+### Features
+
+* **portal:** el descriptor de una evidencia restringida llega sin nombre ni huella (UPS-24) ([40a2dc4](https://github.com/wasichai/sgspe-ui/commit/40a2dc4aed650b6d2c8535b10e459d8f94b3302c))
+* **portal:** el descriptor de una evidencia restringida llega sin nombre ni huella (UPS-24) ([c614ba0](https://github.com/wasichai/sgspe-ui/commit/c614ba086e7651a074320f8dde2469a9ac7db19a))
+
 ## [1.0.0](https://github.com/wasichai/sgspe-ui/compare/v0.1.0...v1.0.0) (2026-10-10)
 
 
