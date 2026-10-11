@@ -129,6 +129,34 @@ describe('S43 · ficha del programa', () => {
     expect(await within(alta).findByLabelText(/^currency/)).toHaveTextContent('PEN')
   })
 
+  it('si el tope de lectura corta los presupuestos, los totales por moneda no se presentan como completos', async () => {
+    const muchos = Array.from({ length: 1000 }, (_, i) => ({ ...PRESUPUESTO_2026, id: `b${i}` }))
+    fetch = mockFetch(rutas(PROGRAMA, [{ path: '/objects/program_budget/records', body: pagina(muchos, { nextCursor: 'c2' }) }]))
+    abrir()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Presupuesto' }))
+    expect(
+      await screen.findByText('La lista de presupuestos llegó al tope de lectura: los totales por moneda no se calculan porque podría faltar alguno.')
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Totales por moneda' })).not.toBeInTheDocument()
+  })
+
+  it('un programa por aprobar no muestra el ejecutado ni el avance de sus presupuestos, como S42 y el tablero', async () => {
+    fetch = mockFetch(rutas({ ...PROGRAMA, state: 'pending_approval' }))
+    abrir()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Presupuesto' }))
+    const anios = await screen.findByRole('table', { name: 'Presupuesto por año' })
+    const fila2026 = within(anios).getByRole('button', { name: '2026' }).closest('tr') as HTMLElement
+    expect(within(fila2026).getByText('S/ 80,000.00')).toBeInTheDocument()
+    expect(within(fila2026).getByText('Por aprobar')).toBeInTheDocument()
+    expect(within(fila2026).queryByText('S/ 20,000.00')).not.toBeInTheDocument()
+    expect(within(fila2026).queryByText('25 %')).not.toBeInTheDocument()
+    const totales = screen.getByRole('table', { name: 'Totales por moneda' })
+    const pen = within(totales).getByText(/^PEN/).closest('tr') as HTMLElement
+    expect(within(pen).queryByText('S/ 20,000.00')).not.toBeInTheDocument()
+    expect(within(pen).queryByText('25 %')).not.toBeInTheDocument()
+    expect(screen.getByText('Los programas por aprobar no cuentan en lo ejecutado ni en el avance.')).toBeInTheDocument()
+  })
+
   it('con socio y la política de sinergia activa, en borrador avisa que aprobar o planificar exige el acuerdo con el socio', async () => {
     fetch = mockFetch(rutas(registro('sp1', PROGRAMA.attributes, { state: 'draft' }), [transiciones([['submit', 'Enviar a aprobación']])]))
     abrir()

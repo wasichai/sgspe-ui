@@ -15,6 +15,8 @@ export const ES_TABLERO_INVERSION = {
   programas: {
     deMoneda: 'Programas en {{moneda}}',
     tablaDeMoneda: 'Presupuestos de programas en {{moneda}}',
+    sinMoneda: 'Programas sin moneda',
+    tablaSinMoneda: 'Presupuestos de programas sin moneda',
     programa: 'Programa',
     anio: 'Año',
     asignado: 'Asignado',
@@ -59,6 +61,8 @@ export const EN_TABLERO_INVERSION: typeof ES_TABLERO_INVERSION = {
   programas: {
     deMoneda: 'Programs in {{moneda}}',
     tablaDeMoneda: 'Program budgets in {{moneda}}',
+    sinMoneda: 'Programs with no currency',
+    tablaSinMoneda: 'Program budgets with no currency',
     programa: 'Program',
     anio: 'Year',
     asignado: 'Allocated',

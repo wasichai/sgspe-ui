@@ -127,7 +127,8 @@ function FiltrosDeInversion({ proyecto }: { proyecto?: string }) {
   )
 }
 
-const moneda = (f: FilaDeDesglose): string => (typeof f.currency === 'string' && f.currency ? f.currency : '—')
+// la moneda de una fila; vacía si no vino: esas filas van aparte, sin prefijo de moneda (nunca «— 1,234.00») ni sumadas a otra
+const moneda = (f: FilaDeDesglose): string => (typeof f.currency === 'string' && f.currency ? f.currency : '')
 
 // KPI-INV-02: por programa, año y moneda, lo asignado y lo ejecutado registrado (decisión 4); una figura por moneda, con su tabla
 function ProgramasPorAnio({ indicador }: { indicador: Indicador }) {
@@ -146,7 +147,8 @@ function ProgramasPorAnio({ indicador }: { indicador: Indicador }) {
 
 function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; filas: FilaDeDesglose[] }) {
   const { t } = useTranslation(NS)
-  const titulo = t('tableroInversion.programas.deMoneda', { moneda: enMoneda })
+  const titulo = enMoneda ? t('tableroInversion.programas.deMoneda', { moneda: enMoneda }) : t('tableroInversion.programas.sinMoneda')
+  const codigo = enMoneda || null
   const porAprobar = programaPorAprobar
   const nombre = (f: FilaDeDesglose) => `${f.label ?? f.key} ${String(f.year ?? '')}`.trim()
   const opciones = useMemo(
@@ -172,12 +174,12 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
           columnas: [t('tableroInversion.programas.programa'), t('tableroInversion.programas.asignado'), t('tableroInversion.programas.ejecutado')],
           filas: filas.map((f) => [
             nombre(f),
-            montoPe(f.allocated, enMoneda),
-            porAprobar(f) ? t('tableroInversion.programas.porAprobar') : montoPe(f.executed, enMoneda)
+            montoPe(f.allocated, codigo),
+            porAprobar(f) ? t('tableroInversion.programas.porAprobar') : montoPe(f.executed, codigo)
           ])
         }}
       />
-      <Table aria-label={t('tableroInversion.programas.tablaDeMoneda', { moneda: enMoneda })}>
+      <Table aria-label={enMoneda ? t('tableroInversion.programas.tablaDeMoneda', { moneda: enMoneda }) : t('tableroInversion.programas.tablaSinMoneda')}>
         <thead>
           <tr>
             <Th scope="col">{t('tableroInversion.programas.programa')}</Th>
@@ -195,8 +197,8 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
               <tr key={f.key}>
                 <Td className="text-sm">{f.label ?? f.key}</Td>
                 <Td className="text-sm tabular-nums">{String(f.year ?? '—')}</Td>
-                <Td className="text-sm tabular-nums">{montoPe(f.allocated, enMoneda)}</Td>
-                <Td className="text-sm tabular-nums">{porAprobar(f) ? t('tableroInversion.programas.porAprobar') : montoPe(f.executed, enMoneda)}</Td>
+                <Td className="text-sm tabular-nums">{montoPe(f.allocated, codigo)}</Td>
+                <Td className="text-sm tabular-nums">{porAprobar(f) ? t('tableroInversion.programas.porAprobar') : montoPe(f.executed, codigo)}</Td>
                 <Td className="text-sm tabular-nums">{porAprobar(f) || avance === null ? '—' : `${numeroPe(avance)} %`}</Td>
               </tr>
             )
@@ -240,10 +242,10 @@ function Consolidado({ indicador }: { indicador: Indicador }) {
         {filas.map((f) => (
           <tr key={f.key}>
             <Th scope="row">{f.label ?? String(f.project ?? f.key)}</Th>
-            <Td>{moneda(f)}</Td>
+            <Td>{moneda(f) || t('inversion.cifras.monedaFaltante')}</Td>
             {columnas.map((c) => (
               <Td key={c} className="tabular-nums">
-                {montoPe(f[c], moneda(f))}
+                {montoPe(f[c], moneda(f) || null)}
               </Td>
             ))}
           </tr>

@@ -39,6 +39,7 @@ export const ES_FICHA_APORTE = {
     aprobado: 'Total aprobado: {{monto}}',
     actualizando: 'El total guardado del aporte se está poniendo al día con sus ítems.',
     invalidos: 'Hay montos de ítems que no son válidos y no se suman: corríjalos.',
+    truncados: 'La lista de ítems llegó al tope de lectura: el total no se calcula porque podría faltar algún ítem.',
     congelados: 'El aporte ya salió de «Solicitado»: sus ítems no cambian. Un cambio es otro aporte.',
     congeladosAlBorrar: 'Otra persona aprobó el aporte mientras tanto: sus ítems ya no cambian.'
   },
@@ -154,6 +155,7 @@ export const EN_FICHA_APORTE: typeof ES_FICHA_APORTE = {
     aprobado: 'Approved total: {{monto}}',
     actualizando: 'The stored total of the contribution is catching up with its items.',
     invalidos: 'Some item amounts are not valid and are not added: correct them.',
+    truncados: 'The item list reached the read limit: the total is not calculated because some item may be missing.',
     congelados: 'The contribution is no longer «Requested»: its items do not change. A change is another contribution.',
     congeladosAlBorrar: 'Someone else approved the contribution meanwhile: its items no longer change.'
   },

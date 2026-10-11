@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   APORTE,
@@ -114,6 +114,33 @@ describe('S44 · ficha del aporte', () => {
     expect(within(drawer).queryByLabelText(/^contribution_type/)).not.toBeInTheDocument()
   })
 
+  it('al guardar «Editar» (fijar el tipo) vuelve a consultar en seco: «Aprobar» deja de estar bloqueado sin recargar', async () => {
+    const sinTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: null } }
+    const conTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: 'DONACION' }, updatedAt: '2026-10-05T16:00:00Z' }
+    fetch = mockFetch(rutas(sinTipo, [{ method: 'PUT', path: '/objects/social_contribution/records/a1', body: conTipo }]))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        responder: () =>
+          jsonResponse(
+            red!.a('PUT', '/objects/social_contribution/records/a1').length > 0
+              ? { allowed: true, blocking: [], warnings: [] }
+              : { allowed: false, blocking: [{ code: 'FIELD_REQUIRED', message: 'Falta el tipo de aporte.', field: 'contribution_type' }], warnings: [] }
+          )
+      }
+    ])
+    abrir()
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar sin revisión interna' })
+    await waitFor(() => expect(aprobar).toBeDisabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Editar el aporte' })
+    await userEvent.selectOptions(selectNativo(await within(drawer).findByLabelText(/^contribution_type/)), 'DONACION')
+    await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/social_contribution/records/a1')).toHaveLength(1))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar sin revisión interna' })).toBeEnabled())
+  })
+
   it('un ITEMS_FROZEN al borrar (otra persona aprobó mientras tanto) dice su texto', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed([
@@ -148,6 +175,15 @@ describe('S44 · ficha del aporte', () => {
     abrir()
     expect(await screen.findByText('Hay montos de ítems que no son válidos y no se suman: corríjalos.')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Transporte a la institución' })).toBeInTheDocument()
+    expect(screen.queryByText(/^Total que se aprobará/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Tope de apoyo social de la campaña' })).not.toBeInTheDocument()
+  })
+
+  it('si el tope de lectura corta los ítems, el total que se aprobará no se dice como completo ni se dibuja el tope', async () => {
+    const muchos = Array.from({ length: 1000 }, (_, i) => ({ ...ITEM_BIEN, id: `it${i}` }))
+    fetch = mockFetch(rutas(APORTE, [{ path: '/objects/contribution_item/records', body: pagina(muchos, { nextCursor: 'c2' }) }]))
+    abrir()
+    expect(await screen.findByText('La lista de ítems llegó al tope de lectura: el total no se calcula porque podría faltar algún ítem.')).toBeInTheDocument()
     expect(screen.queryByText(/^Total que se aprobará/)).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Tope de apoyo social de la campaña' })).not.toBeInTheDocument()
   })

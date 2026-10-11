@@ -6,6 +6,7 @@ import { APORTE, baseDeInversion, EQUIPO_DE_INVERSION, INVERSION } from '../../t
 import { definicion, montar, pagina, registro } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
+import { useComprobacion } from '../transiciones/api'
 import { EntregaDelAporte } from './EntregaDelAporte'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
@@ -155,6 +156,40 @@ describe('S44 · entrega del aporte', () => {
     expect(estadoDe('Conformidad dada')).toContain('Lista')
     expect(estadoDe('Quiénes dieron la conformidad')).toContain('Su cuenta no lo lee')
     expect(screen.getByRole('button', { name: 'Subir acta de recepción firmada' })).toBeInTheDocument()
+  })
+
+  it('quitar una evidencia de la entrega vuelve a consultar en seco «Registrar entrega» del aporte', async () => {
+    fetch = mockFetch(
+      rutas(
+        [ENTREGA],
+        [
+          { method: 'DELETE', path: '/sgspe/evidence/ev2/links/delivery/dl9', status: 204 },
+          { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } }
+        ]
+      )
+    )
+    red = espiarRed()
+    // el botón de la transición vive en el encabezado de S44; aquí basta su consulta en seco montada junto a la entrega
+    function ConsultaDeEntrega() {
+      useComprobacion('social_contribution', 'a1', 'register_delivery')
+      return null
+    }
+    montar(
+      <>
+        <EntregaDelAporte aporte={ADQUIRIDO} escribe />
+        <ConsultaDeEntrega />
+      </>,
+      { usuario: INVERSION, permisos: EQUIPO_DE_INVERSION }
+    )
+    const consultas = () => red!.a('POST', '/sgspe/transition-checks').length
+    await waitFor(() => expect(consultas()).toBe(1))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desvincular Evidencia FOTO' }))
+    const dialogo = await screen.findByRole('dialog')
+    const motivo = within(dialogo).queryByLabelText('Motivo (obligatorio)')
+    if (motivo) await userEvent.type(motivo, 'No corresponde')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Desvincular la evidencia' }))
+    await waitFor(() => expect(red!.a('DELETE', '/sgspe/evidence/ev2/links/delivery/dl9')).toHaveLength(1))
+    await waitFor(() => expect(consultas()).toBe(2))
   })
 
   it('desde Entregado la entrega y sus evidencias no cambian: sin Corregir ni subir, y lo dice', async () => {

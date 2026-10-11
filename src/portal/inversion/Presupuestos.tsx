@@ -7,11 +7,13 @@ import { RegistrosSimples, type ColumnaSimple } from '../componentes/RegistrosSi
 import { anioEnLima, MONEDA_POR_DEFECTO, porcentaje, sumaPorMoneda } from '../datos/inversion'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
+import { PROGRAMA_POR_APROBAR } from './cifras'
 
 // el presupuesto de un programa (screens.md S43, decisión 4, ASM-063): un registro por año con lo asignado y el ejecutado
 // registrado a mano en su moneda, y su avance; los totales se suman por moneda, nunca entre monedas. total_budget (derivado,
 // ProgramTotalsListener) es el total solo en la moneda del programa; sin ella, no se calcula. un presupuesto nuevo propone el año en
-// curso de Lima y la moneda del programa
+// curso de Lima y la moneda del programa. un programa por aprobar no muestra ejecución ni avance (como S42 y el tablero), y con la
+// lista cortada por el tope de lectura los totales no se dicen: podría faltar algún presupuesto
 const CAMPOS = ['budget_year', 'currency', 'allocated_amount', 'executed_amount']
 
 export function Presupuestos({ programa }: { programa: Registro }) {
@@ -23,6 +25,7 @@ export function Presupuestos({ programa }: { programa: Registro }) {
   const iniciales = useMemo(() => ({ budget_year: anioEnLima(), currency: monedaDelPrograma || MONEDA_POR_DEFECTO }), [monedaDelPrograma])
   const presupuestos = useTodosConTope('program_budget', filtros)
   const vacio = (valor: unknown) => valor === null || valor === undefined || valor === ''
+  const porAprobar = PROGRAMA_POR_APROBAR.includes(programa.state ?? '')
   const columnas: ColumnaSimple[] = [
     { id: 'anio', encabezado: t('fichaPrograma.presupuesto.columnas.anio'), celda: (r) => texto(r, 'budget_year') },
     { id: 'moneda', encabezado: t('fichaPrograma.presupuesto.columnas.moneda'), celda: (r) => texto(r, 'currency') || '—' },
@@ -35,19 +38,23 @@ export function Presupuestos({ programa }: { programa: Registro }) {
       id: 'ejecutado',
       encabezado: t('fichaPrograma.presupuesto.columnas.ejecutado'),
       celda: (r) =>
-        vacio(atributo(r, 'executed_amount')) ? t('fichaPrograma.presupuesto.sinRegistrar') : montoPe(atributo(r, 'executed_amount'), atributo(r, 'currency'))
+        porAprobar
+          ? t('inversion.cifras.porAprobar')
+          : vacio(atributo(r, 'executed_amount'))
+            ? t('fichaPrograma.presupuesto.sinRegistrar')
+            : montoPe(atributo(r, 'executed_amount'), atributo(r, 'currency'))
     },
     {
       id: 'avance',
       encabezado: t('fichaPrograma.presupuesto.columnas.avance'),
       celda: (r) => {
-        const avance = porcentaje(atributo(r, 'executed_amount'), atributo(r, 'allocated_amount'))
+        const avance = porAprobar ? null : porcentaje(atributo(r, 'executed_amount'), atributo(r, 'allocated_amount'))
         return avance === null ? '—' : `${numeroPe(avance)} %`
       }
     }
   ]
   const asignado = sumaPorMoneda(presupuestos.data ?? [], 'allocated_amount')
-  const ejecutado = sumaPorMoneda(presupuestos.data ?? [], 'executed_amount')
+  const ejecutado = sumaPorMoneda(porAprobar ? [] : (presupuestos.data ?? []), 'executed_amount')
   const ejecutadoEn = (moneda: string) => ejecutado.sumas.find((s) => s.moneda === moneda)?.total ?? null
   return (
     <div className="space-y-3 pt-3 text-sm">
@@ -66,7 +73,10 @@ export function Presupuestos({ programa }: { programa: Registro }) {
         alCambiar={() => void cliente.invalidateQueries({ queryKey: ['record', 'social_program', programa.id] })}
       />
       <p className="text-sg-caption text-sg-text-muted">{t('fichaPrograma.presupuesto.ayuda')}</p>
-      {asignado.sumas.length > 0 ? (
+      {porAprobar ? <p className="text-sg-caption text-sg-text-muted">{t('inversion.cifras.porAprobarNota')}</p> : null}
+      {presupuestos.truncado ? (
+        <p className="text-sg-caption text-sg-warning">{t('fichaPrograma.presupuesto.totalesTruncados')}</p>
+      ) : asignado.sumas.length > 0 ? (
         <section aria-label={t('fichaPrograma.presupuesto.totales')} className="space-y-2">
           <h3 className="font-medium">{t('fichaPrograma.presupuesto.totales')}</h3>
           <Table aria-label={t('fichaPrograma.presupuesto.totales')}>

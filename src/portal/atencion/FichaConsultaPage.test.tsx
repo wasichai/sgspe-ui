@@ -413,4 +413,38 @@ describe('S57 · aceptar como aporte', () => {
       attributes: { code: 'COM-011', title: 'Calaminas para el local comunal', amount: '300', currency: 'PEN' }
     })
   })
+
+  it('cambiar lo que se crea es otra acción: el envío siguiente lleva otra Idempotency-Key', async () => {
+    fetch = mockFetch(rutas())
+    let intentos = 0
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholder-requests/r1/accept',
+        responder: () =>
+          ++intentos === 1
+            ? problema(503, 'caído')
+            : new Response(JSON.stringify({ request: { ...SOLICITUD, state: 'accepted' }, commitment: registro('c9', { project: 'p1', code: 'COM-012' }) }), {
+                status: 201
+              })
+      }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta a la solicitud'), 'Se atenderá')
+    await userEvent.type(within(dialogo).getByLabelText('Código del compromiso'), 'COM-012')
+    await userEvent.type(within(dialogo).getByLabelText('Monto'), '300')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'aprobada en comité')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholder-requests/r1/accept')).toHaveLength(1))
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un aporte social' }))
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un compromiso' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholder-requests/r1/accept')).toHaveLength(2))
+    const [primero, segundo] = red.a('POST', '/sgspe/stakeholder-requests/r1/accept').map((l) => l.cabeceras.get('Idempotency-Key'))
+    expect(primero).toBeTruthy()
+    expect(segundo).toBeTruthy()
+    expect(segundo).not.toBe(primero)
+  })
 })
