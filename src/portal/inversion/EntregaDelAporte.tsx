@@ -289,9 +289,14 @@ function EntregaDrawer({
     if (campo === 'motivo') return t('comun.motivoFalta')
     return undefined
   }
-  // otra persona ya registró la entrega: se relee la lista, que la mostrará al cerrar el drawer
+  // otra persona ya registró la entrega: se relee la lista, que la mostrará al cerrar el drawer, y no se ofrece guardar otra (las
+  // evidencias subidas aquí no quedaron vinculadas: se vinculan desde la tarjeta de la entrega registrada). si la relectura falla,
+  // la lista dice su propio error
+  const [yaExiste, setYaExiste] = useState(false)
   const alFallar = (e: unknown) => {
-    if (codigoDelError(e) === 'DELIVERY_EXISTS') void releer(['records', 'delivery'])
+    if (codigoDelError(e) !== 'DELIVERY_EXISTS') return
+    setYaExiste(true)
+    releer(['records', 'delivery']).catch(() => {})
   }
   const guardar = handleSubmit((v) => {
     if (!lista) return
@@ -319,7 +324,7 @@ function EntregaDrawer({
             {t('comun.cancelar')}
           </Button>
           {lista ? (
-            <Button type="submit" form="entrega-de-aporte" disabled={comando.isPending} aria-busy={comando.isPending}>
+            <Button type="submit" form="entrega-de-aporte" disabled={comando.isPending || yaExiste} aria-busy={comando.isPending}>
               {comando.isPending ? t('entregas.guardando') : t('entregas.guardar')}
             </Button>
           ) : null}
@@ -364,6 +369,7 @@ function EntregaDrawer({
           <Campo etiqueta={t('comun.motivoObligatorio')} error={error('motivo') ?? delServidor.reason}>
             {(p) => <Textarea {...p} {...register('motivo')} maxLength={500} />}
           </Campo>
+          {yaExiste ? <p className="text-sg-caption text-sg-warning">{t('fichaAporte.entrega.yaExiste')}</p> : null}
           {comando.isError && !Object.keys(delServidor).some((c) => delFormulario.includes(c)) ? (
             <AvisoDeConflicto
               error={comando.error}

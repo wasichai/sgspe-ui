@@ -278,7 +278,8 @@ function ItemsDelAporte({ aporte }: { aporte: Registro }) {
       {solicitud && total !== null && derivado !== null && derivado !== aDiezmilesimos(total) ? (
         <p className="text-sg-caption text-sg-text-muted">{t('fichaAporte.items.actualizando')}</p>
       ) : null}
-      {solicitud && texto(aporte, 'exploration_campaign') && items.data ? <TopeDeLaCampana aporte={aporte} total={total} /> : null}
+      {/* con un monto ilegible el tope no se dibuja: diría «Este aporte S/ 0.00» y un «Queda» inflado; la alerta dice por qué */}
+      {solicitud && texto(aporte, 'exploration_campaign') && items.data && invalidos === 0 ? <TopeDeLaCampana aporte={aporte} total={total} /> : null}
     </div>
   )
 }

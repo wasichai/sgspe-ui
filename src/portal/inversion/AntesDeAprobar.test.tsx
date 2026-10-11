@@ -121,4 +121,30 @@ describe('S44 · antes de aprobar', () => {
     expect(red.a('POST', '/sgspe/transition-checks')[0].cuerpo).toMatchObject({ transition: 'approve' })
     expect(screen.queryByRole('button', { name: /justificación/ })).not.toBeInTheDocument()
   })
+
+  it('si no se pudieron leer las transiciones lo dice y no consulta en seco a ciegas', async () => {
+    fetch = mockFetch([
+      { path: '/objects/social_contribution/records/a1/transitions', status: 500, body: { title: 'Error', status: 500 } },
+      ...rutas(APORTE, [])
+    ])
+    red = consultaEnSeco({ allowed: true, blocking: [], warnings: [] })
+    montar(<AntesDeAprobar aporte={APORTE} escribe />, { usuario: INVERSION, permisos: EQUIPO_DE_INVERSION })
+    expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(screen.queryByText(/Las reglas de «Aprobar» corren aquí/)).not.toBeInTheDocument()
+    expect(red.a('POST', '/sgspe/transition-checks')).toHaveLength(0)
+  })
+
+  it('sin la justificación en lo leído (campo que la cuenta no lee) no ofrece escribirla', async () => {
+    const { guideline_deviation_justification: _sinClave, ...atributos } = APORTE.attributes
+    const sinClave = { ...APORTE, attributes: atributos }
+    fetch = mockFetch(rutas(sinClave, [transicion('approve_direct', 'Aprobar sin revisión interna')]))
+    red = consultaEnSeco({
+      allowed: false,
+      blocking: [{ code: 'MONETARY_DONATION', message: 'Una DONACION con DINERO', field: 'contribution_item' }],
+      warnings: []
+    })
+    montar(<AntesDeAprobar aporte={sinClave} escribe />, { usuario: INVERSION, permisos: EQUIPO_DE_INVERSION })
+    expect(await screen.findByText(/escriba una justificación para poder aprobarlo/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Escribir la justificación' })).not.toBeInTheDocument()
+  })
 })

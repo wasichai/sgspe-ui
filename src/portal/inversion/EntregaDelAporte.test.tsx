@@ -135,6 +135,9 @@ describe('S44 · entrega del aporte', () => {
       await within(panel).findByText('Este aporte ya tiene su entrega: un aporte se entrega una sola vez. Corrija la entrega registrada.')
     ).toBeInTheDocument()
     await waitFor(() => expect(red!.a('GET', '/objects/delivery/records').length).toBeGreaterThan(lecturas))
+    // otra entrega no se guarda: «Guardar entrega» se apaga y se dice dónde se vinculan las evidencias subidas
+    expect(within(panel).getByRole('button', { name: 'Guardar entrega' })).toBeDisabled()
+    expect(within(panel).getByText(/las evidencias que subió se vinculan desde su tarjeta/)).toBeInTheDocument()
   })
 
   it('la entrega registrada se ve con sus requisitos; no se ofrece otra; lo que la cuenta no lee dice «Restringido»', async () => {
