@@ -311,7 +311,8 @@ function Trazabilidad({ aporte }: { aporte: Registro }) {
     <section aria-label={t('fichaAporte.trazabilidad.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaAporte.trazabilidad.titulo')}</h2>
       {leeSolicitudes ? (
-        <p>
+        // un div, no un <p>: «Cargando» y el aviso de fallo ya son párrafos o bloques
+        <div>
           {t('fichaAporte.trazabilidad.solicitud')}:{' '}
           {solicitudes.isPending ? (
             <Cargando compacto />
@@ -324,7 +325,7 @@ function Trazabilidad({ aporte }: { aporte: Registro }) {
           ) : (
             t('fichaAporte.trazabilidad.sinSolicitud')
           )}
-        </p>
+        </div>
       ) : null}
     </section>
   )
