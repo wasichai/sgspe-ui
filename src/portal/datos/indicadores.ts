@@ -69,6 +69,11 @@ export interface FiltrosDeIndicador {
   // devuelven en ignoredFilters
   explorationCampaign?: string
   owner?: string
+  // F5: los filtros propios del tablero de inversión (spec F5 §3.9, plan 5.2b): un programa y un año presupuestal (la campaña es
+  // explorationCampaign, el filtro común). solo los acepta el tablero investment; los KPI-INV que no los aplican los devuelven en
+  // ignoredFilters
+  program?: string
+  year?: string
   breakdown?: string
 }
 
