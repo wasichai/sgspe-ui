@@ -26,6 +26,9 @@ const COMUNIDAD = definicion('community', [
   ['registered_members_count', { label: 'Comuneros inscritos', type: 'INTEGER' }]
 ])
 
+// el select nativo oculto que acompaña al combobox de un Select de Radix (el control de un ENUM en DynamicForm)
+const selectNativo = (combobox: HTMLElement) => combobox.parentElement!.querySelector('select')!
+
 describe('FormularioDeRegistro', () => {
   it('no muestra ni manda derivados ni geometrías', async () => {
     fetch = mockFetch([
@@ -350,5 +353,43 @@ describe('FormularioDeRegistro', () => {
     await userEvent.type(await screen.findByLabelText(/^Nombre/), 'CC Tunas Pampa')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Revise los datos')
+  })
+
+  // UPS-15: wasichai no aplica defaultValue. los iniciales se proponen y se ven; los fijos viajan ocultos
+  it('en el alta propone los iniciales (se ven y se pueden cambiar) y manda los fijos ocultos', async () => {
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/program_budget',
+        body: definicion('program_budget', [
+          ['budget_year', { label: 'Año', type: 'INTEGER' }],
+          ['currency', { label: 'Moneda', type: 'ENUM', enumOptions: ['PEN', 'USD'] }],
+          ['allocated_amount', { label: 'Asignado', type: 'DECIMAL' }],
+          // como texto: el formulario de wasichai exige un UUID en un campo RELATION (decisión 29 del plan 4.3)
+          'social_program'
+        ])
+      },
+      { method: 'POST', path: '/objects/program_budget/records', status: 201, body: registro('b9', { social_program: 'sp1' }) }
+    ])
+    red = espiarRed()
+    montar(
+      <FormularioDeRegistro
+        objeto="program_budget"
+        fijos={{ social_program: 'sp1' }}
+        iniciales={{ budget_year: 2026, currency: 'PEN' }}
+        campos={['budget_year', 'currency', 'allocated_amount']}
+      />
+    )
+    expect(await screen.findByLabelText(/^Año/)).toHaveDisplayValue('2026')
+    // un ENUM de DynamicForm es un Select de Radix: el combobox dice la opción y el select nativo oculto la cambia
+    expect(screen.getByLabelText(/^Moneda/)).toHaveTextContent('PEN')
+    expect(screen.queryByLabelText(/social_program/)).not.toBeInTheDocument()
+    await userEvent.selectOptions(selectNativo(screen.getByLabelText(/^Moneda/)), 'USD')
+    expect(screen.getByLabelText(/^Moneda/)).toHaveTextContent('USD')
+    await userEvent.type(screen.getByLabelText(/^Asignado/), '1500')
+    await userEvent.click(screen.getByRole('button', { name: /guardar|save/i }))
+    await waitFor(() => expect(red!.a('POST', '/objects/program_budget/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/program_budget/records')[0].cuerpo).toMatchObject({
+      attributes: { budget_year: 2026, currency: 'USD', social_program: 'sp1' }
+    })
   })
 })

@@ -19,7 +19,9 @@ import { RegistroVinculado } from './RegistroVinculado'
 // medidas; screens.md S58 a S61 y S40): la lista del alcance con tope (avisa si recorta), «+ Nuevo» para quien crea y escribe en
 // el proyecto, y un drawer por registro con el formulario de la metadata (FormularioDeRegistro: If-Match, derivados fuera, un 412
 // con «Recargar») o sus datos en solo lectura, y «Borrar» para quien borra. un borrado rechazado (HAS_DEPENDENTS) se dice con su
-// texto o con el propio de la pantalla. el registro abierto puede venir de la ruta (abierto y alAbrir) o vivir en la pantalla
+// texto o con el propio de la pantalla. el registro abierto puede venir de la ruta (abierto y alAbrir) o vivir en la pantalla.
+// desde F5, también los hijos de un aporte y de un programa, con valores propuestos (iniciales), una lista que ya no cambia
+// (congelado) y lo que la pantalla deja viejo al escribir (alCambiar)
 export interface ColumnaSimple {
   id: string
   encabezado: string
@@ -46,6 +48,13 @@ export interface RegistrosSimplesProps {
   ayuda?: ReactNode
   // lo que se dice al rechazar un borrado, por código
   mensajesAlBorrar?: MensajesPropios
+  // valores propuestos en el alta (FormularioDeRegistro.iniciales)
+  iniciales?: Record<string, unknown>
+  // por qué la lista ya no cambia (los ítems de un aporte fuera de requested): sin «Nuevo», sin formulario y sin «Borrar», con
+  // este texto a la vista. el servidor lo juzga igual (ITEMS_FROZEN): esto solo no ofrece lo que rechazaría
+  congelado?: string
+  // tras crear, cambiar o borrar: lo que la pantalla deja viejo además de la lista (el total de un aporte, su consulta en seco)
+  alCambiar?: () => void
 }
 
 const NUEVO = '__nuevo__'
@@ -59,7 +68,7 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
   const [propio, setPropio] = useState<string | null>(null)
   const abierto = props.alAbrir ? (props.abierto ?? null) : propio
   const abrir = props.alAbrir ?? setPropio
-  const crea = escribe && can(objeto, 'CREATE')
+  const crea = escribe && can(objeto, 'CREATE') && !props.congelado
   const registro = abierto && abierto !== NUEVO ? lista.data?.find((r) => r.id === abierto) : undefined
   return (
     <section aria-label={titulo} className="space-y-3">
@@ -71,6 +80,7 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
           </Button>
         ) : null}
       </div>
+      {props.congelado ? <p className="text-sm text-sg-text-muted">{props.congelado}</p> : null}
       {lista.truncado ? <Alert tone="warning">{t('piezas.registros.truncado', { n: numeroPe(lista.data?.length ?? 0) })}</Alert> : null}
       {lista.isPending ? (
         <Cargando compacto />
@@ -113,7 +123,17 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
       <Drawer titulo={abierto === NUEVO ? textoNuevo : titulo} abierto={abierto === NUEVO || registro !== undefined} alCerrar={() => abrir(null)}>
         {props.ayuda}
         {abierto === NUEVO ? (
-          <FormularioDeRegistro objeto={objeto} fijos={props.fijos} campos={props.campos} alGuardar={() => abrir(null)} alCancelar={() => abrir(null)} />
+          <FormularioDeRegistro
+            objeto={objeto}
+            fijos={props.fijos}
+            iniciales={props.iniciales}
+            campos={props.campos}
+            alGuardar={() => {
+              props.alCambiar?.()
+              abrir(null)
+            }}
+            alCancelar={() => abrir(null)}
+          />
         ) : registro ? (
           <DelRegistro key={registro.id} {...props} registro={registro} escribe={escribe} alCerrar={() => abrir(null)} />
         ) : null}
@@ -128,18 +148,24 @@ function DelRegistro({
   registro,
   escribe,
   mensajesAlBorrar,
+  congelado,
+  alCambiar,
   alCerrar
 }: RegistrosSimplesProps & { registro: Registro; escribe: boolean; alCerrar: () => void }) {
   const { can } = useAuth()
-  const edita = usePuedeEditar(objeto) && escribe
+  const edita = usePuedeEditar(objeto) && escribe && !congelado
+  const terminar = () => {
+    alCambiar?.()
+    alCerrar()
+  }
   return (
     <div className="space-y-4">
       {edita ? (
-        <FormularioDeRegistro objeto={objeto} registro={registro} campos={campos} alGuardar={alCerrar} alCancelar={alCerrar} />
+        <FormularioDeRegistro objeto={objeto} registro={registro} campos={campos} alGuardar={terminar} alCancelar={alCerrar} />
       ) : (
         <SoloLectura objeto={objeto} campos={campos} registro={registro} />
       )}
-      {escribe && can(objeto, 'DELETE') ? <Borrar objeto={objeto} registro={registro} propios={mensajesAlBorrar} alBorrar={alCerrar} /> : null}
+      {escribe && !congelado && can(objeto, 'DELETE') ? <Borrar objeto={objeto} registro={registro} propios={mensajesAlBorrar} alBorrar={terminar} /> : null}
     </div>
   )
 }
