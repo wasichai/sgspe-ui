@@ -2,7 +2,7 @@ import { Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { montoPe } from '../componentes/Monto'
 import { aDiezmilesimos, deDiezmilesimos } from '../datos/decimales'
-import { desglose, type Indicador } from '../datos/indicadores'
+import { desglose, type FilaDeDesglose, type Indicador } from '../datos/indicadores'
 import { porcentaje } from '../datos/inversion'
 import { NS, numeroPe } from '../i18n'
 
@@ -65,55 +65,97 @@ export function CampanasFrenteAlTope({ indicador }: { indicador: Indicador }) {
   )
 }
 
+// un programa por aprobar (o en borrador) no tiene ejecución que mostrar: el `state` de cada fila de KPI-INV-02 (InvestmentKpis,
+// plan 5.2b) lo dice. S42 y el tablero usan el mismo criterio
+export const PROGRAMA_POR_APROBAR: readonly string[] = ['draft', 'pending_approval']
+export const programaPorAprobar = (f: FilaDeDesglose): boolean => PROGRAMA_POR_APROBAR.includes(String(f.state ?? ''))
+
+// un monto que vino pero no se puede leer: se omite de toda suma y se dice, nunca cuenta como cero. uno que no vino no es ilegible
+const esIlegible = (valor: unknown): boolean => valor !== null && valor !== undefined && valor !== '' && aDiezmilesimos(valor) === null
+
 // KPI-INV-02 de un año, sumado por moneda (S42): lo asignado y lo ejecutado registrado a mano (decisión 4). una moneda sin ningún
-// ejecutado registrado dice «—», no cero
+// ejecutado registrado dice «—», no cero. lo asignado de un programa por aprobar se suma; su ejecución no, y el avance se mide
+// solo contra lo asignado de los programas que ejecutan. un monto ilegible se omite y se cuenta aparte
 export function PresupuestoPorMoneda({ indicador, anio }: { indicador: Indicador; anio: number }) {
   const { t } = useTranslation(NS)
-  const porMoneda = new Map<string, { asignado: bigint; ejecutado: bigint | null }>()
+  const porMoneda = new Map<string, { asignado: bigint; asignadoQueEjecuta: bigint; ejecutado: bigint | null }>()
+  let ilegibles = 0
+  let hayPorAprobar = false
   for (const f of desglose(indicador, 'program').filter((x) => cifraDe(x.year) === anio)) {
     const clave = moneda(f.currency) ?? '—'
-    const actual = porMoneda.get(clave) ?? { asignado: 0n, ejecutado: null }
+    const actual = porMoneda.get(clave) ?? { asignado: 0n, asignadoQueEjecuta: 0n, ejecutado: null }
+    const porAprobar = programaPorAprobar(f)
+    if (porAprobar) hayPorAprobar = true
     const asignado = aDiezmilesimos(f.allocated)
-    const ejecutado = aDiezmilesimos(f.executed)
+    const ejecutado = porAprobar ? null : aDiezmilesimos(f.executed)
+    if (esIlegible(f.allocated)) ilegibles++
+    if (!porAprobar && esIlegible(f.executed)) ilegibles++
+    if (asignado === null && ejecutado === null) continue
     porMoneda.set(clave, {
       asignado: actual.asignado + (asignado ?? 0n),
+      asignadoQueEjecuta: actual.asignadoQueEjecuta + (porAprobar ? 0n : (asignado ?? 0n)),
       ejecutado: ejecutado === null ? actual.ejecutado : (actual.ejecutado ?? 0n) + ejecutado
     })
   }
-  if (porMoneda.size === 0) return <p className="text-sm text-sg-text-muted">{t('inversion.cifras.sinPresupuesto', { anio })}</p>
+  const notas = (
+    <>
+      {ilegibles > 0 ? <p className="text-sg-caption text-sg-warning">{t('inversion.cifras.ilegibles', { n: numeroPe(ilegibles) })}</p> : null}
+      {hayPorAprobar ? <p className="text-sg-caption text-sg-text-muted">{t('inversion.cifras.porAprobarNota')}</p> : null}
+    </>
+  )
+  if (porMoneda.size === 0)
+    return (
+      <div className="space-y-1">
+        <p className="text-sm text-sg-text-muted">{t('inversion.cifras.sinPresupuesto', { anio })}</p>
+        {notas}
+      </div>
+    )
   return (
-    <Table aria-label={t('inversion.cifras.presupuesto', { anio })}>
-      <thead>
-        <tr>
-          <Th scope="col">{t('inversion.cifras.moneda')}</Th>
-          <Th scope="col">{t('inversion.cifras.asignado')}</Th>
-          <Th scope="col">{t('inversion.cifras.ejecutadoColumna')}</Th>
-          <Th scope="col">{t('inversion.cifras.avance')}</Th>
-        </tr>
-      </thead>
-      <tbody>
-        {[...porMoneda].map(([m, { asignado, ejecutado }]) => {
-          const avance = ejecutado === null ? null : porcentaje(deDiezmilesimos(ejecutado), deDiezmilesimos(asignado))
-          return (
-            <tr key={m}>
-              <Th scope="row">{m}</Th>
-              <Td className="tabular-nums">{montoPe(deDiezmilesimos(asignado), m)}</Td>
-              <Td className="tabular-nums">{ejecutado === null ? '—' : montoPe(deDiezmilesimos(ejecutado), m)}</Td>
-              <Td className="tabular-nums">{avance === null ? '—' : `${numeroPe(avance)} %`}</Td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </Table>
+    <div className="space-y-1">
+      <Table aria-label={t('inversion.cifras.presupuesto', { anio })}>
+        <thead>
+          <tr>
+            <Th scope="col">{t('inversion.cifras.moneda')}</Th>
+            <Th scope="col">{t('inversion.cifras.asignado')}</Th>
+            <Th scope="col">{t('inversion.cifras.ejecutadoColumna')}</Th>
+            <Th scope="col">{t('inversion.cifras.avance')}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...porMoneda].map(([m, { asignado, asignadoQueEjecuta, ejecutado }]) => {
+            const avance = ejecutado === null ? null : porcentaje(deDiezmilesimos(ejecutado), deDiezmilesimos(asignadoQueEjecuta))
+            return (
+              <tr key={m}>
+                <Th scope="row">{m}</Th>
+                <Td className="tabular-nums">{montoPe(deDiezmilesimos(asignado), m)}</Td>
+                <Td className="tabular-nums">{ejecutado === null ? '—' : montoPe(deDiezmilesimos(ejecutado), m)}</Td>
+                <Td className="tabular-nums">{avance === null ? '—' : `${numeroPe(avance)} %`}</Td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </Table>
+      {notas}
+    </div>
   )
 }
 
-// el presupuesto (allocated) o el ejecutado (executed) de un programa en un año, una cifra por moneda: «S/ 80,000.00 · US$ 5,000.00»
-export function presupuestoDelPrograma(indicador: Indicador | undefined, programa: string, anio: number, campo: 'allocated' | 'executed'): string {
+// el presupuesto (allocated) o el ejecutado (executed) de un programa en un año, una cifra por moneda: «S/ 80,000.00 · US$ 5,000.00».
+// un monto ilegible se dice con `textos.ilegible` en su lugar (nunca se omite en silencio); la ejecución de un programa por aprobar
+// no se muestra: si todas sus filas lo están, se dice `textos.porAprobar`
+export function presupuestoDelPrograma(
+  indicador: Indicador | undefined,
+  programa: string,
+  anio: number,
+  campo: 'allocated' | 'executed',
+  textos?: { ilegible: string; porAprobar: string }
+): string {
   if (!indicador?.available) return '—'
-  const cifras = desglose(indicador, 'program')
-    .filter((f) => f.program === programa && cifraDe(f.year) === anio && aDiezmilesimos(f[campo]) !== null)
-    .map((f) => montoPe(f[campo], moneda(f.currency)))
+  const delAnio = desglose(indicador, 'program').filter((f) => f.program === programa && cifraDe(f.year) === anio)
+  if (campo === 'executed' && delAnio.length > 0 && delAnio.every(programaPorAprobar)) return textos?.porAprobar ?? '—'
+  const cifras = delAnio
+    .filter((f) => campo === 'allocated' || !programaPorAprobar(f))
+    .flatMap((f) => (aDiezmilesimos(f[campo]) !== null ? [montoPe(f[campo], moneda(f.currency))] : esIlegible(f[campo]) && textos ? [textos.ilegible] : []))
   return cifras.length > 0 ? cifras.join(' · ') : '—'
 }
 

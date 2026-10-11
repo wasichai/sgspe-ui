@@ -245,4 +245,12 @@ describe('tablero de inversión social', () => {
     expect(screen.queryByLabelText('Campaña')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Programa')).not.toBeInTheDocument()
   })
+  it('el programa y el año sin elegir dicen «Todos»; si los programas no se pueden leer, lo dice en lugar de un select vacío', async () => {
+    fetch = mockFetch(rutas([{ path: '/objects/social_program/records', status: 403, body: { title: 'Forbidden', status: 403 } }]))
+    abrir('/projects/p1/programs/dashboard', '/projects/:projectId/programs/dashboard')
+    const filtros = await screen.findByRole('group', { name: 'Filtros de inversión' })
+    expect(within(screen.getByLabelText('Año')).getByRole('option', { name: 'Todos' })).toHaveValue('')
+    expect(await within(filtros).findByText('No disponible')).toBeInTheDocument()
+    expect(within(filtros).queryByLabelText('Programa')).not.toBeInTheDocument()
+  })
 })

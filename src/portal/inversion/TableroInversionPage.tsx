@@ -11,7 +11,7 @@ import { Grafico } from '../graficos/Grafico'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero, Zona } from '../tableros/comunes'
-import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe } from './cifras'
+import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, programaPorAprobar } from './cifras'
 
 // el tablero de inversión social (screens.md §12, dashboards.md §5.10, spec F5 §3.9): GET /api/sgspe/dashboards/investment en una
 // llamada con los filtros del tablero (la campaña es explorationCampaign, el filtro común, que FiltrosDeTablero ofrece con
@@ -19,7 +19,6 @@ import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe } from './cifras'
 // proyecto). los cuatro KPI-INV en su orden. los montos se dicen en su moneda y nunca se suman entre monedas (ASM-063):
 // las barras de programas van en una figura por moneda. un programa por aprobar no muestra ejecución. un indicador que la cuenta no
 // lee dice «no disponible», nunca cero; 400 TOO_MANY_RECORDS es «acote los filtros»
-const POR_APROBAR = ['draft', 'pending_approval']
 const FILTROS = ['program', 'year'] as const
 
 function useFiltrosDeInversion(): FiltrosDeIndicador {
@@ -79,7 +78,8 @@ export function TableroInversionPage() {
 }
 
 // el programa del proyecto del contexto y el año presupuestal (los cinco anteriores y los cinco siguientes al de hoy en
-// Lima, dentro de 2000 a 2100): se escriben en la URL, como los demás filtros del tablero
+// Lima, dentro de 2000 a 2100): se escriben en la URL, como los demás filtros del tablero. sin elegir dicen
+// «Todos»; si los programas no se pueden leer (403 o fallo), se dice «No disponible» en lugar de un select vacío
 function FiltrosDeInversion({ proyecto }: { proyecto?: string }) {
   const { t } = useTranslation(NS)
   const [busqueda, fijar] = useSearchParams()
@@ -95,18 +95,29 @@ function FiltrosDeInversion({ proyecto }: { proyecto?: string }) {
   const control = (clave: (typeof FILTROS)[number], etiqueta: string, opciones: { valor: string; etiqueta: string }[]) => (
     <label className="space-y-1">
       <span className="block text-sg-label">{etiqueta}</span>
-      <SelectNativo value={busqueda.get(clave) ?? ''} onChange={(e) => cambiar(clave, e.target.value)} opciones={opciones} />
+      <SelectNativo
+        value={busqueda.get(clave) ?? ''}
+        onChange={(e) => cambiar(clave, e.target.value)}
+        vacio={false}
+        opciones={[{ valor: '', etiqueta: t('tableroInversion.todos') }, ...opciones]}
+      />
     </label>
   )
   return (
     <div role="group" aria-label={t('tableroInversion.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-      {proyecto
-        ? control(
-            'program',
-            t('tableroInversion.programa'),
-            (programas.data ?? []).map((p) => ({ valor: p.id, etiqueta: `${texto(p, 'code')} · ${texto(p, 'name')}` }))
-          )
-        : null}
+      {proyecto && programas.isError && !programas.data ? (
+        // un 403 o una lectura fallida de los programas no deja un select vacío: lo dice
+        <div className="space-y-1">
+          <span className="block text-sg-label">{t('tableroInversion.programa')}</span>
+          <p className="text-sg-text-muted">{t('comun.noDisponible')}</p>
+        </div>
+      ) : proyecto ? (
+        control(
+          'program',
+          t('tableroInversion.programa'),
+          (programas.data ?? []).map((p) => ({ valor: p.id, etiqueta: `${texto(p, 'code')} · ${texto(p, 'name')}` }))
+        )
+      ) : null}
       {control(
         'year',
         t('tableroInversion.anio'),
@@ -136,7 +147,7 @@ function ProgramasPorAnio({ indicador }: { indicador: Indicador }) {
 function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; filas: FilaDeDesglose[] }) {
   const { t } = useTranslation(NS)
   const titulo = t('tableroInversion.programas.deMoneda', { moneda: enMoneda })
-  const porAprobar = (f: FilaDeDesglose) => POR_APROBAR.includes(String(f.state ?? ''))
+  const porAprobar = programaPorAprobar
   const nombre = (f: FilaDeDesglose) => `${f.label ?? f.key} ${String(f.year ?? '')}`.trim()
   const opciones = useMemo(
     () => ({

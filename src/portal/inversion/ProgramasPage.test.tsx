@@ -230,4 +230,62 @@ describe('S42 · programas e inversión', () => {
     expect(screen.queryByRole('button', { name: 'Nuevo aporte' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo programa' })).not.toBeInTheDocument()
   })
+  it('un programa por aprobar no muestra ejecución ni avance, y un monto ilegible no se suma: se dice', async () => {
+    const porAprobar = {
+      ...TABLERO,
+      indicators: TABLERO.indicators.map((i) =>
+        i.code === 'KPI-INV-02'
+          ? {
+              ...i,
+              breakdowns: [
+                {
+                  by: 'program',
+                  rows: [
+                    {
+                      key: 'sp1:2026:PEN',
+                      program: 'sp1',
+                      label: 'PS-001',
+                      year: 2026,
+                      currency: 'PEN',
+                      allocated: '80000',
+                      executed: '0',
+                      percent: 0,
+                      state: 'pending_approval'
+                    },
+                    {
+                      key: 'sp1:2026:USD',
+                      program: 'sp1',
+                      label: 'PS-001',
+                      year: 2026,
+                      currency: 'USD',
+                      allocated: 'abc',
+                      executed: null,
+                      percent: null,
+                      state: 'pending_approval'
+                    }
+                  ]
+                }
+              ]
+            }
+          : i
+      )
+    }
+    fetch = mockFetch(rutas([{ path: '/sgspe/dashboards/investment', body: porAprobar }]))
+    abrir()
+    const presupuesto = await screen.findByRole('table', { name: 'Presupuesto de programas 2026' })
+    const pen = within(presupuesto).getByText('PEN').closest('tr') as HTMLElement
+    expect(within(pen).getByText('S/ 80,000.00')).toBeInTheDocument()
+    expect(within(pen).queryByText('S/ 0.00')).not.toBeInTheDocument()
+    expect(within(pen).queryByText('0 %')).not.toBeInTheDocument()
+    // el monto ilegible en USD se omite (no hay fila de USD en cero) y se dice
+    expect(within(presupuesto).queryByText('USD')).not.toBeInTheDocument()
+    const zona = screen.getByRole('region', { name: 'Presupuesto de programas 2026' })
+    expect(within(zona).getByText('Montos que no se pueden leer y no se suman: 1.')).toBeInTheDocument()
+    expect(within(zona).getByText('Los programas por aprobar no cuentan en lo ejecutado ni en el avance.')).toBeInTheDocument()
+    const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
+    const fila = (await within(programas).findByRole('link', { name: 'PS-001 · Programa Ejemplo de agua segura' })).closest('tr') as HTMLElement
+    expect(within(fila).getByText('S/ 80,000.00 · monto ilegible')).toBeInTheDocument()
+    expect(within(fila).getByText('Por aprobar')).toBeInTheDocument()
+    expect(within(fila).queryByText('S/ 0.00')).not.toBeInTheDocument()
+  })
 })

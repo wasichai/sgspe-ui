@@ -137,6 +137,7 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
   const nombreDelProyecto = useNombreDelProyecto()
   const anio = anioEnLima()
   const presupuesto = indicadorDe(indicadores, 'KPI-INV-02')
+  const textosDeMonto = { ilegible: t('inversion.cifras.ilegible'), porAprobar: t('inversion.cifras.porAprobar') }
   const beneficiarios = indicadorDe(indicadores, 'KPI-INV-04')
   const alcanzados = (programa: string) => {
     const fila = beneficiarios?.available ? desglose(beneficiarios, 'program').find((f) => f.key === programa) : undefined
@@ -187,8 +188,8 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
                   <Td>
                     <EstadoChip objeto="social_program" estado={p.state} />
                   </Td>
-                  <Td className="text-sm tabular-nums">{presupuestoDelPrograma(presupuesto, p.id, anio, 'allocated')}</Td>
-                  <Td className="text-sm tabular-nums">{presupuestoDelPrograma(presupuesto, p.id, anio, 'executed')}</Td>
+                  <Td className="text-sm tabular-nums">{presupuestoDelPrograma(presupuesto, p.id, anio, 'allocated', textosDeMonto)}</Td>
+                  <Td className="text-sm tabular-nums">{presupuestoDelPrograma(presupuesto, p.id, anio, 'executed', textosDeMonto)}</Td>
                   <Td className="text-sm tabular-nums">{alcanzados(p.id)}</Td>
                 </tr>
               ))}
