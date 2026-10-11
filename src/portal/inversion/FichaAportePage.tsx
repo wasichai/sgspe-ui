@@ -22,6 +22,7 @@ import { atributo, texto, usePuedeEditar, useRegistro, useRegistros, useTodosCon
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { AntesDeAprobar } from './AntesDeAprobar'
 
 // S44 · aporte social (screens.md §10, WF-P, spec F5 §3.3): la anatomía de design-system.md §6.1 con las transiciones del rol (toda
 // transición lleva motivo: requiresReason; aprobar, adquirir, entregar y cerrar se comprueban antes con transition-checks), «Para qué
@@ -137,6 +138,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
         <Tabs label={titulo} tabs={pestanas} />
         {/* en teléfono, «Antes de aprobar» sube antes de los ítems (screens.md S44, Responsive) */}
         <aside className="order-first space-y-4 lg:order-none">
+          {solicitud ? <AntesDeAprobar aporte={aporte} escribe={escribe} /> : null}
           <Trazabilidad aporte={aporte} />
         </aside>
       </div>
