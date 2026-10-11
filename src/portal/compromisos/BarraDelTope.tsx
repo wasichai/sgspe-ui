@@ -43,11 +43,13 @@ export function BarraDelTope({
   if (leeAportes && aportes.isError && !aportes.data && !esIlegible(aportes.error))
     return <FalloDeLectura error={aportes.error} alReintentar={() => void aportes.refetch()} />
   const enLaMoneda = (r: Registro) => (texto(r, 'currency') || 'PEN') === monedaDelTope
-  const suma = (registros: Registro[], estados: readonly string[], campo: string) =>
-    registros
-      .filter((r) => r.id !== excluir && estados.includes(r.state ?? '') && enLaMoneda(r))
-      .reduce((total, r) => total + (aDiezmilesimos(atributo(r, campo)) ?? 0n), 0n)
-  const aprobado = suma(compromisos.data, COMPROMETIDOS, 'amount') + suma(aportes.data ?? [], APORTE_COMPROMETIDO, 'total_amount')
+  // un monto vacío o ilegible (un derivado que el listener aún no pone al día) no se cuenta como cero: se omite y se dice
+  const montos = (registros: Registro[], estados: readonly string[], campo: string) =>
+    registros.filter((r) => r.id !== excluir && estados.includes(r.state ?? '') && enLaMoneda(r)).map((r) => aDiezmilesimos(atributo(r, campo)))
+  const cuentan = [...montos(compromisos.data, COMPROMETIDOS, 'amount'), ...montos(aportes.data ?? [], APORTE_COMPROMETIDO, 'total_amount')]
+  const legibles = cuentan.filter((m): m is bigint => m !== null)
+  const ilegibles = cuentan.length - legibles.length
+  const aprobado = legibles.reduce((total, m) => total + m, 0n)
   const este = moneda === monedaDelTope && monto !== null ? (aDiezmilesimos(monto) ?? 0n) : 0n
   const queda = limite - aprobado - este
   // el ancho de la barra es solo dibujo: en centésimas de punto porcentual, acotado entre 0 y 100
@@ -81,6 +83,7 @@ export function BarraDelTope({
         </div>
       </dl>
       {moneda !== monedaDelTope ? <p className="text-sg-caption">{t('nuevoCompromiso.tope.otraMoneda', { moneda: monedaDelTope })}</p> : null}
+      {ilegibles > 0 ? <p className="text-sg-caption text-sg-warning">{t('nuevoCompromiso.tope.sinMonto', { count: ilegibles })}</p> : null}
       {!leeAportes ? <p className="text-sg-caption text-sg-text-muted">{t('nuevoCompromiso.tope.sinAportes')}</p> : null}
       {queda < 0n ? (
         <p role="alert" className="text-sg-caption text-sg-warning">

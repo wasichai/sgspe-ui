@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { selectNativo } from '../../test/formulario'
 import { definicion, montar, registro } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useRegistro } from '../datos/registros'
@@ -25,9 +26,6 @@ const COMUNIDAD = definicion('community', [
   ['territory', { label: 'Territorio', type: 'GEOMETRY' }],
   ['registered_members_count', { label: 'Comuneros inscritos', type: 'INTEGER' }]
 ])
-
-// el select nativo oculto que acompaña al combobox de un Select de Radix (el control de un ENUM en DynamicForm)
-const selectNativo = (combobox: HTMLElement) => combobox.parentElement!.querySelector('select')!
 
 describe('FormularioDeRegistro', () => {
   it('no muestra ni manda derivados ni geometrías', async () => {

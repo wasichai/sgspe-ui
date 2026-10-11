@@ -120,9 +120,10 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
           </Table>
         </div>
       )}
-      <Drawer titulo={abierto === NUEVO ? textoNuevo : titulo} abierto={abierto === NUEVO || registro !== undefined} alCerrar={() => abrir(null)}>
+      {/* el alta pedida por la ruta (abierto='__nuevo__') solo se abre para quien crea: una lista congelada no la ofrece */}
+      <Drawer titulo={abierto === NUEVO ? textoNuevo : titulo} abierto={(abierto === NUEVO && crea) || registro !== undefined} alCerrar={() => abrir(null)}>
         {props.ayuda}
-        {abierto === NUEVO ? (
+        {abierto === NUEVO && crea ? (
           <FormularioDeRegistro
             objeto={objeto}
             fijos={props.fijos}

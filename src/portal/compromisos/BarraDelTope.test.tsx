@@ -83,4 +83,29 @@ describe('BarraDelTope', () => {
     expect(within(tope).getByText('Queda').nextElementSibling).toHaveTextContent(/^S\/ 10,000\.00$/)
     expect(screen.queryByText(/no incluye los aportes/)).not.toBeInTheDocument()
   })
+
+  // restricción «Dinero»: un monto vacío o ilegible no se cuenta como cero en silencio: se omite y se dice
+  it('un compromiso o un aporte comprometido sin monto legible no se suma y la barra lo dice', async () => {
+    fetch = mockFetch([
+      { path: '/objects/commitment/records', body: pagina([comprometido('c1', '10000'), comprometido('c2', '')]) },
+      {
+        path: '/objects/social_contribution/records',
+        body: pagina([
+          registro('a1', { project: 'p1', exploration_campaign: 'camp1', total_amount: 'mil', currency: 'PEN' }, { state: 'approved' }),
+          registro('a2', { project: 'p1', exploration_campaign: 'camp1', total_amount: null, currency: 'PEN' }, { state: 'requested' })
+        ])
+      }
+    ])
+    const campana = registro('camp1', { project: 'p1', name: 'Campaña 2026', social_support_cap: '20000', currency: 'PEN' })
+    montar(<BarraDelTope campana={campana} monto="0" moneda="PEN" />)
+    const tope = await screen.findByRole('region', { name: 'Tope de apoyo social de la campaña' })
+    expect(within(tope).getByText('Aprobado en la campaña').nextElementSibling).toHaveTextContent(/^S\/ 10,000\.00$/)
+    // el aporte solicitado no cumple el filtro: no cuenta entre los ilegibles
+    expect(within(tope).getByText('2 registros sin monto legible no se suman.')).toBeInTheDocument()
+  })
+
+  it('con todos los montos legibles no dice nada de montos ilegibles', async () => {
+    const tope = await barra('20000', ['10000'], '0')
+    expect(within(tope).queryByText(/sin monto legible/)).not.toBeInTheDocument()
+  })
 })

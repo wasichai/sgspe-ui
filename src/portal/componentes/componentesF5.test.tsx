@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { P1 } from '../../test/compromisos'
+import { selectNativo } from '../../test/formulario'
 import { DEF_ITEM, EQUIPO_DE_INVERSION, INVERSION, ITEM_BIEN, WF_APORTE, WF_PROGRAMA } from '../../test/inversion'
 import { montar, pagina, registro } from '../../test/montar'
 import { aparienciaDe } from './apariencias'
@@ -62,7 +63,7 @@ describe('registros simples de F5', () => {
     { path: '/objects/project/records/p1', body: P1 },
     { path: '/metadata/objects/contribution_item', body: DEF_ITEM }
   ]
-  const abrir = (props: { congelado?: string; alCambiar?: () => void } = {}) =>
+  const abrir = (props: { congelado?: string; alCambiar?: () => void; abierto?: string | null; alAbrir?: (id: string | null) => void } = {}) =>
     montar(
       <RegistrosSimples
         objeto="contribution_item"
@@ -91,6 +92,14 @@ describe('registros simples de F5', () => {
     expect(screen.queryByRole('button', { name: 'Nuevo ítem' })).not.toBeInTheDocument()
   })
 
+  it('congelado no abre el alta aunque la ruta la pida (abierto="__nuevo__")', async () => {
+    fetch = mockFetch(rutas())
+    abrir({ congelado: 'El aporte ya salió de «Solicitado»: sus ítems no cambian.', abierto: '__nuevo__', alAbrir: vi.fn() })
+    expect(await screen.findByRole('button', { name: 'Estantes de madera' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Nuevo ítem' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^description/)).not.toBeInTheDocument()
+  })
+
   it('alCambiar corre tras crear y tras borrar', async () => {
     fetch = mockFetch([
       ...rutas(),
@@ -102,13 +111,7 @@ describe('registros simples de F5', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Nuevo ítem' }))
     const alta = await screen.findByRole('dialog', { name: 'Nuevo ítem' })
     await userEvent.type(await within(alta).findByLabelText(/^description/), 'Cuadernos')
-    // un ENUM de DynamicForm es un Select de Radix: la opción se elige en su select nativo oculto
-    await userEvent.selectOptions(
-      within(alta)
-        .getByLabelText(/^item_kind/)
-        .parentElement!.querySelector('select')!,
-      'BIEN'
-    )
+    await userEvent.selectOptions(selectNativo(within(alta).getByLabelText(/^item_kind/)), 'BIEN')
     await userEvent.type(within(alta).getByLabelText(/^line_amount/), '80')
     await userEvent.click(within(alta).getByRole('button', { name: /guardar|save/i }))
     await waitFor(() => expect(alCambiar).toHaveBeenCalledTimes(1))
