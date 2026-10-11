@@ -7,7 +7,7 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { useMensajeDeError } from '../componentes/errores'
-import { Cargando, ExplicacionDeColumna, Restringido, Vacio } from '../componentes/Estados'
+import { Cargando, Restringido, ThConExplicacion, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { descriptorDe, tamanoPe } from '../datos/archivos'
 import { rutaDeFicha } from '../datos/fichas'
@@ -83,10 +83,15 @@ export function EvidenciasDelRegistro({
               <tr>
                 <Th scope="col">{t('evidencias.columnas.evidencia')}</Th>
                 <Th scope="col">{t('evidencias.columnas.tipo')}</Th>
-                <Th scope="col">
-                  {t('evidencias.columnas.clasificacion')}
-                  <ExplicacionDeColumna id={explicacion} tipo="restringido" soloLectores />
-                </Th>
+                {/* la explicación «su rol no la lee» solo existe si alguna celda la usa, y no entra en el nombre de la columna
+                    (ThConExplicacion): una clasificación leída no se anuncia como restringida */}
+                {evidencias.data.content.some((e) => !('classification' in e.attributes)) ? (
+                  <ThConExplicacion explicacion={explicacion} tipo="restringido" soloLectores>
+                    {t('evidencias.columnas.clasificacion')}
+                  </ThConExplicacion>
+                ) : (
+                  <Th scope="col">{t('evidencias.columnas.clasificacion')}</Th>
+                )}
                 <Th scope="col">{t('evidencias.columnas.tamano')}</Th>
                 <Th scope="col">{t('evidencias.columnas.fecha')}</Th>
                 <Th scope="col">{t('evidencias.columnas.acciones')}</Th>
