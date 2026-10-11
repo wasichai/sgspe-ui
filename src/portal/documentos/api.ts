@@ -33,7 +33,9 @@ export const DESTINOS_DE_EVIDENCIA: readonly string[] = [
   'stakeholder_request',
   'social_risk',
   'incident',
-  'media_mention'
+  'media_mention',
+  'social_contribution',
+  'social_program'
 ]
 
 // el tope de un archivo de evidencia: 20 MB de 1024 × 1024 bytes, el mismo de wasichai.files.max-bytes (P52). más grande, el

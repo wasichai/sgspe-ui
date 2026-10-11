@@ -38,6 +38,10 @@ import { EN_INCIDENTES } from './incidentes'
 import { EN_REGISTROS_DE_ALERTA } from './registrosDeAlerta'
 import { EN_REGLAS_DE_ALERTA } from './reglasDeAlerta'
 import { EN_TABLERO_RIESGOS } from './tableroRiesgos'
+import { EN_INVERSION } from './inversion'
+import { EN_FICHA_PROGRAMA } from './fichaPrograma'
+import { EN_FICHA_APORTE } from './fichaAporte'
+import { EN_TABLERO_INVERSION } from './tableroInversion'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
@@ -84,6 +88,11 @@ export const EN: Textos = {
   registrosDeAlerta: EN_REGISTROS_DE_ALERTA,
   reglasDeAlerta: EN_REGLAS_DE_ALERTA,
   tableroRiesgos: EN_TABLERO_RIESGOS,
+  // F5: programas e inversión social
+  inversion: EN_INVERSION,
+  fichaPrograma: EN_FICHA_PROGRAMA,
+  fichaAporte: EN_FICHA_APORTE,
+  tableroInversion: EN_TABLERO_INVERSION,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',

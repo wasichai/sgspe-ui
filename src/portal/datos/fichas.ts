@@ -47,6 +47,11 @@ export function rutaDeFicha(objeto: string, registro: Registro): string | null {
     case 'early_warning_rule':
       // una regla del tenant (sin proyecto) vive en la lista global de reglas
       return proyecto ? `/projects/${encodeURIComponent(proyecto)}/risks/rules` : '/risks/rules'
+    // F5: un programa (S43) y un aporte (S44) bajo su proyecto. sus hijos no tienen ruta: se ven en la ficha de su padre
+    case 'social_program':
+      return enProyecto(`programs/${idEnRuta}`)
+    case 'social_contribution':
+      return enProyecto(`contributions/${idEnRuta}`)
     default:
       return null
   }

@@ -8,12 +8,22 @@ export const MOTIVO_OBLIGATORIO: Readonly<Record<string, readonly string[]>> = {
   commitment_candidate: ['reject', 'mark_duplicate'],
   task: ['cancel_open', 'cancel_in_progress', 'cancel_blocked'],
   // F4: descartar una alerta (WF-J)
-  early_warning: ['dismiss']
+  early_warning: ['dismiss'],
+  // F5: devolver, suspender y cancelar un programa (WF-G)
+  social_program: ['return_to_draft', 'suspend', 'cancel_draft', 'cancel_pending_approval', 'cancel_planned', 'cancel_suspended']
 }
 
 // los objetos requiresReason con workflow: toda transición lleva motivo (ASM-058). F3: WF-D y WF-I; F4: las tres QCS (WF-E1, WF-E2
-// y WF-E3) y el riesgo (WF-F)
-export const MOTIVO_EN_TODAS: readonly string[] = ['commitment', 'agreement', 'grievance', 'inquiry', 'stakeholder_request', 'social_risk']
+// y WF-E3) y el riesgo (WF-F); F5: el aporte (WF-P)
+export const MOTIVO_EN_TODAS: readonly string[] = [
+  'commitment',
+  'agreement',
+  'grievance',
+  'inquiry',
+  'stakeholder_request',
+  'social_risk',
+  'social_contribution'
+]
 
 // las transiciones de comando (workflows.md, «Transiciones de comando»): solo las aplica su endpoint, así que no son
 // botones de transición; cada una tiene su pantalla (la evaluación, S20; la aprobación del área, S10; aceptar un candidato y
