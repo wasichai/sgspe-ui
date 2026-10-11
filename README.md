@@ -48,6 +48,11 @@ el idioma:
   su vínculo dice «Registro reservado» (`RegistroVinculado`) y una cifra que no la cuenta lo dice sin conteo
   (`NotaDeConfidenciales`). La huella SHA-256 de una evidencia se reserva, como su nombre, a quien la descarga, y toda ruta
   del portal codifica sus ids (`enlacesCodificados.test.ts`, sgspe#14).
+- **F5 · programas e inversión social** (`src/portal/inversion/`): S42 «Programas e inversión» (`/programs` y
+  `/projects/:projectId/programs`), S43 ficha de programa (presupuesto por año y moneda con el ejecutado manual, indicadores y
+  mediciones, iniciativas, hitos, beneficiarios), S44 aporte social (ítems solo en «Solicitado», «Antes de aprobar», la única
+  entrega con sus tres evidencias), el tablero de inversión (`/programs/dashboard`), aceptar una solicitud como aporte (S57),
+  los lineamientos de apoyo y los temas priorizados (S11) y las aprobaciones de programas y aportes (S48).
 - **Alcance por proyecto (plan 4.4b):** el servidor acota la lectura a los proyectos de cada cuenta (ADR-0029). El selector
   ofrece «Todos los proyectos» a quien los lee todos (`useLeeTodosLosProyectos`) y avisa a una cuenta sin asignaciones; un
   registro que responde 404 no se distingue de uno inexistente (`NoEsDeSusProyectos` en una ficha, «Registro reservado» en
