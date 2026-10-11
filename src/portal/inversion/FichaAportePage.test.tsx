@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   APORTE,
@@ -112,6 +112,33 @@ describe('S44 · ficha del aporte', () => {
     expect(await within(drawer).findByLabelText(/^occasion/)).toBeInTheDocument()
     expect(within(drawer).queryByLabelText(/^currency/)).not.toBeInTheDocument()
     expect(within(drawer).queryByLabelText(/^contribution_type/)).not.toBeInTheDocument()
+  })
+
+  it('al guardar «Editar» (fijar el tipo) vuelve a consultar en seco: «Aprobar» deja de estar bloqueado sin recargar', async () => {
+    const sinTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: null } }
+    const conTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: 'DONACION' }, updatedAt: '2026-10-05T16:00:00Z' }
+    fetch = mockFetch(rutas(sinTipo, [{ method: 'PUT', path: '/objects/social_contribution/records/a1', body: conTipo }]))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        responder: () =>
+          jsonResponse(
+            red!.a('PUT', '/objects/social_contribution/records/a1').length > 0
+              ? { allowed: true, blocking: [], warnings: [] }
+              : { allowed: false, blocking: [{ code: 'FIELD_REQUIRED', message: 'Falta el tipo de aporte.', field: 'contribution_type' }], warnings: [] }
+          )
+      }
+    ])
+    abrir()
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar sin revisión interna' })
+    await waitFor(() => expect(aprobar).toBeDisabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Editar el aporte' })
+    await userEvent.selectOptions(selectNativo(await within(drawer).findByLabelText(/^contribution_type/)), 'DONACION')
+    await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/social_contribution/records/a1')).toHaveLength(1))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar sin revisión interna' })).toBeEnabled())
   })
 
   it('un ITEMS_FROZEN al borrar (otra persona aprobó mientras tanto) dice su texto', async () => {

@@ -201,7 +201,7 @@ export function useRegistrarEvidencia() {
   })
   const comando = useComando<Registro, { alta: AltaDeEvidencia; descriptor: DescriptorDeArchivo }>(
     ({ alta, descriptor }) => ({ ruta: '/sgspe/evidence', json: cuerpoDeEvidencia(alta, descriptor), motivo: alta.motivo }),
-    { invalidar: () => [['records', 'evidence'], ['related']] }
+    { invalidar: () => [['records', 'evidence'], ['related'], ['transition-check']] }
   )
   return {
     registrar: async (alta: AltaDeEvidencia): Promise<Registro | null> => {
@@ -242,10 +242,12 @@ export function useRegistrarEvidencia() {
 }
 
 // vincular y desvincular (api.md §4.9): CR si el destino es requiresReason; sin IK
+// (registrar, vincular y desvincular vuelven a consultar en seco: una evidencia puede ser lo que pide una transición, como el
+// acta de «Registrar entrega» de un aporte)
 export function useVincularEvidencia() {
   return useComando<void, { evidencia: string; vinculo: Vinculo; motivo?: string }>(
     ({ evidencia, vinculo, motivo }) => ({ ruta: `/sgspe/evidence/${evidencia}/links`, json: vinculo, motivo }),
-    { conClave: false, invalidar: (_r, { evidencia }) => [['related'], ['record', 'evidence', evidencia]] }
+    { conClave: false, invalidar: (_r, { evidencia }) => [['related'], ['record', 'evidence', evidencia], ['transition-check']] }
   )
 }
 
@@ -257,7 +259,7 @@ export function useDesvincularEvidencia() {
       json: undefined,
       motivo
     }),
-    { conClave: false, invalidar: (_r, { evidencia }) => [['related'], ['record', 'evidence', evidencia]] }
+    { conClave: false, invalidar: (_r, { evidencia }) => [['related'], ['record', 'evidence', evidencia], ['transition-check']] }
   )
 }
 
