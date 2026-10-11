@@ -8,7 +8,8 @@ import { diaPe, NS, numeroPe } from '../i18n'
 
 // las iniciativas, los hitos y los grupos beneficiarios de un programa (screens.md S43, spec F5 §3.6): listas con su formulario
 // (RegistrosSimples) para su dueño (SOCIAL_INVESTMENT_MANAGER, elección 15) y en solo lectura para los demás. el grupo de una
-// iniciativa de otro programa lo rechaza el servidor (409 PROGRAM_MISMATCH, con su texto); una iniciativa con grupos no se borra
+// iniciativa de otro programa lo rechaza el servidor (409 PROGRAM_MISMATCH, con su texto); borrar una iniciativa con grupos los deja sin
+// iniciativa (relación opcional, decisión 27): no hay error que decir
 
 // un hito: alcanzado si tiene fecha alcanzada; atrasado si su fecha prevista es anterior a hoy en Lima; si no, previsto. F5 no mide
 // hitos (JOB-01 no los escala, spec §1): lo marca el portal
@@ -120,7 +121,10 @@ export function Beneficiarios({ programa }: { programa: Registro }) {
         textoNuevo={t('fichaPrograma.beneficiarios.nuevo')}
         textoVacio={t('fichaPrograma.beneficiarios.vacio')}
       />
-      {grupos.data && grupos.data.length > 0 ? (
+      {/* con la lectura cortada por el tope, el total no sería el del programa: se dice en lugar de sumarlo */}
+      {grupos.truncado ? (
+        <p className="text-sg-caption text-sg-warning">{t('fichaPrograma.beneficiarios.totalesTruncados')}</p>
+      ) : grupos.data && grupos.data.length > 0 ? (
         <p className="font-medium">
           {t('fichaPrograma.beneficiarios.totales', { alcanzados: numeroPe(suma('reached_count')), meta: numeroPe(suma('target_count')) })}
         </p>

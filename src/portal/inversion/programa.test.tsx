@@ -132,6 +132,16 @@ describe('S43 · hijos del programa', () => {
     expect(await within(drawer).findByText(/La iniciativa elegida es de otro programa: elija una de este programa\./)).toBeInTheDocument()
   })
 
+  it('si el tope de lectura corta los grupos, el total de beneficiarios no se presenta como completo', async () => {
+    const muchos = Array.from({ length: 1000 }, (_, i) => registro(`bg${i}`, { social_program: 'sp1', name: `Grupo ${i}`, target_count: 1, reached_count: 1 }))
+    fetch = mockFetch(rutas([{ path: '/objects/beneficiary_group/records', body: pagina(muchos, { nextCursor: 'c2' }) }]))
+    montar(<Beneficiarios programa={PROGRAMA} />, como)
+    expect(
+      await screen.findByText('La lista llegó al tope de lectura: el total de beneficiarios no se calcula porque podría faltar algún grupo.')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/^Alcanzados: /)).not.toBeInTheDocument()
+  })
+
   it('la ficha del programa ofrece los indicadores, las iniciativas e hitos y los beneficiarios en sus pestañas', async () => {
     fetch = mockFetch(
       rutas([

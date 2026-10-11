@@ -77,7 +77,8 @@ export const ES_FICHA_PROGRAMA = {
     nuevo: 'Nuevo grupo',
     vacio: 'El programa no tiene grupos beneficiarios',
     columnas: { nombre: 'Grupo', iniciativa: 'Iniciativa', localidad: 'Localidad', meta: 'Previstos', alcanzados: 'Alcanzados' },
-    totales: 'Alcanzados: {{alcanzados}} de {{meta}} previstos.'
+    totales: 'Alcanzados: {{alcanzados}} de {{meta}} previstos.',
+    totalesTruncados: 'La lista llegó al tope de lectura: el total de beneficiarios no se calcula porque podría faltar algún grupo.'
   }
 }
 
@@ -158,6 +159,7 @@ export const EN_FICHA_PROGRAMA: typeof ES_FICHA_PROGRAMA = {
     nuevo: 'New group',
     vacio: 'The program has no beneficiary groups',
     columnas: { nombre: 'Group', iniciativa: 'Initiative', localidad: 'Locality', meta: 'Planned', alcanzados: 'Reached' },
-    totales: 'Reached: {{alcanzados}} of {{meta}} planned.'
+    totales: 'Reached: {{alcanzados}} of {{meta}} planned.',
+    totalesTruncados: 'The list reached the read limit: the beneficiary total is not calculated because some group may be missing.'
   }
 }

@@ -81,6 +81,10 @@ describe('S43 · ficha del programa', () => {
     const usd = within(totales).getAllByText(/^USD/)[0].closest('tr') as HTMLElement
     expect(within(usd).getByText(/10,000\.00/)).toBeInTheDocument()
     expect(within(usd).getAllByText('—').length).toBeGreaterThanOrEqual(1)
+    // la fila PEN suma solo los PEN: 80,000, nunca 90,000 con el presupuesto en USD
+    const pen = within(totales).getByText(/^PEN/).closest('tr') as HTMLElement
+    expect(within(pen).getByText('S/ 80,000.00')).toBeInTheDocument()
+    expect(within(totales).queryByText(/90,000/)).not.toBeInTheDocument()
     expect(screen.getByText('Los presupuestos en otra moneda no se suman al total del programa en PEN: se muestran aparte.')).toBeInTheDocument()
   })
 
@@ -108,6 +112,21 @@ describe('S43 · ficha del programa', () => {
     const [cambio] = red.a('PUT', '/objects/program_budget/records/b1')
     expect(String((cambio.cuerpo as { attributes: Record<string, unknown> }).attributes.executed_amount)).toBe('30000')
     expect(cambio.cabeceras.get('If-Match')).toBe(`"${PRESUPUESTO_2026.updatedAt}"`)
+  })
+
+  it('un programa sin moneda no tiene total ni moneda del programa; un presupuesto nuevo propone PEN', async () => {
+    const { currency: _sinMoneda, ...sinMoneda } = PROGRAMA.attributes
+    fetch = mockFetch(rutas(registro('sp1', sinMoneda)))
+    abrir()
+    expect(await screen.findByText('El programa no tiene moneda: su total no se calcula.')).toBeInTheDocument()
+    expect(screen.queryByText(/^Total del programa/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Presupuesto' }))
+    const totales = await screen.findByRole('table', { name: 'Totales por moneda' })
+    expect(within(totales).queryByText(/moneda del programa/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/no se suman al total del programa/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo presupuesto' }))
+    const alta = await screen.findByRole('dialog', { name: 'Nuevo presupuesto' })
+    expect(await within(alta).findByLabelText(/^currency/)).toHaveTextContent('PEN')
   })
 
   it('con socio y la política de sinergia activa, en borrador avisa que aprobar o planificar exige el acuerdo con el socio', async () => {
