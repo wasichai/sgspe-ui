@@ -230,9 +230,10 @@ function ItemsDelAporte({ aporte }: { aporte: Registro }) {
   const moneda = monedaDe(aporte)
   const solicitud = enSolicitud(aporte)
   const suma = totalDeItems(items.data ?? [], moneda)
-  // con un monto inválido la suma está incompleta (o es un cero que no es real): no se dice como total, se dicen los inválidos
+  // con un monto inválido la suma está incompleta (o es un cero que no es real): no se dice como total, se dicen los inválidos. con
+  // la lectura cortada por el tope, tampoco: podría faltar algún ítem (como los beneficiarios de S43)
   const invalidos = suma.invalidos
-  const total = invalidos > 0 ? null : suma.total
+  const total = invalidos > 0 || items.truncado ? null : suma.total
   const derivado = aDiezmilesimos(atributo(aporte, 'total_amount'))
   const columnas: ColumnaSimple[] = [
     { id: 'descripcion', encabezado: t('fichaAporte.items.columnas.descripcion'), celda: (r) => texto(r, 'description') },
@@ -275,11 +276,14 @@ function ItemsDelAporte({ aporte }: { aporte: Registro }) {
         </p>
       ) : null}
       {invalidos > 0 ? <Alert tone="warning">{t('fichaAporte.items.invalidos')}</Alert> : null}
+      {items.truncado ? <Alert tone="warning">{t('fichaAporte.items.truncados')}</Alert> : null}
       {solicitud && total !== null && derivado !== null && derivado !== aDiezmilesimos(total) ? (
         <p className="text-sg-caption text-sg-text-muted">{t('fichaAporte.items.actualizando')}</p>
       ) : null}
-      {/* con un monto ilegible el tope no se dibuja: diría «Este aporte S/ 0.00» y un «Queda» inflado; la alerta dice por qué */}
-      {solicitud && texto(aporte, 'exploration_campaign') && items.data && invalidos === 0 ? <TopeDeLaCampana aporte={aporte} total={total} /> : null}
+      {/* con un monto ilegible o la lista cortada el tope no se dibuja: diría «Este aporte S/ 0.00» y un «Queda» inflado; la alerta dice por qué */}
+      {solicitud && texto(aporte, 'exploration_campaign') && items.data && invalidos === 0 && !items.truncado ? (
+        <TopeDeLaCampana aporte={aporte} total={total} />
+      ) : null}
     </div>
   )
 }

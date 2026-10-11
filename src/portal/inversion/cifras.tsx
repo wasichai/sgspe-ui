@@ -82,7 +82,8 @@ export function PresupuestoPorMoneda({ indicador, anio }: { indicador: Indicador
   let ilegibles = 0
   let hayPorAprobar = false
   for (const f of desglose(indicador, 'program').filter((x) => cifraDe(x.year) === anio)) {
-    const clave = moneda(f.currency) ?? '—'
+    // sin moneda, su propio grupo (clave vacía), nunca sumado a otra moneda ni escrito «— 1,234.00»
+    const clave = moneda(f.currency) ?? ''
     const actual = porMoneda.get(clave) ?? { asignado: 0n, asignadoQueEjecuta: 0n, ejecutado: null }
     const porAprobar = programaPorAprobar(f)
     if (porAprobar) hayPorAprobar = true
@@ -126,9 +127,9 @@ export function PresupuestoPorMoneda({ indicador, anio }: { indicador: Indicador
             const avance = ejecutado === null ? null : porcentaje(deDiezmilesimos(ejecutado), deDiezmilesimos(asignadoQueEjecuta))
             return (
               <tr key={m}>
-                <Th scope="row">{m}</Th>
-                <Td className="tabular-nums">{montoPe(deDiezmilesimos(asignado), m)}</Td>
-                <Td className="tabular-nums">{ejecutado === null ? '—' : montoPe(deDiezmilesimos(ejecutado), m)}</Td>
+                <Th scope="row">{m || t('inversion.cifras.monedaFaltante')}</Th>
+                <Td className="tabular-nums">{montoPe(deDiezmilesimos(asignado), m || null)}</Td>
+                <Td className="tabular-nums">{ejecutado === null ? '—' : montoPe(deDiezmilesimos(ejecutado), m || null)}</Td>
                 <Td className="tabular-nums">{avance === null ? '—' : `${numeroPe(avance)} %`}</Td>
               </tr>
             )

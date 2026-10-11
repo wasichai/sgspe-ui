@@ -179,6 +179,15 @@ describe('S44 · ficha del aporte', () => {
     expect(screen.queryByRole('region', { name: 'Tope de apoyo social de la campaña' })).not.toBeInTheDocument()
   })
 
+  it('si el tope de lectura corta los ítems, el total que se aprobará no se dice como completo ni se dibuja el tope', async () => {
+    const muchos = Array.from({ length: 1000 }, (_, i) => ({ ...ITEM_BIEN, id: `it${i}` }))
+    fetch = mockFetch(rutas(APORTE, [{ path: '/objects/contribution_item/records', body: pagina(muchos, { nextCursor: 'c2' }) }]))
+    abrir()
+    expect(await screen.findByText('La lista de ítems llegó al tope de lectura: el total no se calcula porque podría faltar algún ítem.')).toBeInTheDocument()
+    expect(screen.queryByText(/^Total que se aprobará/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Tope de apoyo social de la campaña' })).not.toBeInTheDocument()
+  })
+
   it('quien aprueba lee el aporte sin «Editar», «Nuevo ítem» ni «Borrar»', async () => {
     // APPROVER tiene «u» sobre social_contribution: UPDATE para transicionar, con todos los campos de solo lectura
     const soloLectura = { ...DEF_APORTE, fields: DEF_APORTE.fields.map((f) => ({ ...f, editable: false })) }

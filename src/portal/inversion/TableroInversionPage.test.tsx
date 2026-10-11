@@ -203,6 +203,75 @@ describe('tablero de inversión social', () => {
     expect(within(fila).queryByText('S/ 0.00')).not.toBeInTheDocument()
   })
 
+  it('un monto sin moneda se dice sin prefijo de moneda y aparte: nunca «— 1,234.00» ni sumado a otra moneda', async () => {
+    const sinMoneda = {
+      ...TABLERO,
+      indicators: TABLERO.indicators.map((i) =>
+        i.code === 'KPI-INV-02'
+          ? {
+              ...i,
+              breakdowns: [
+                {
+                  by: 'program',
+                  rows: [
+                    ...(i.breakdowns?.[0].rows ?? []),
+                    {
+                      key: 'sp4:2026:',
+                      program: 'sp4',
+                      label: 'PS-004 · Programa sin moneda',
+                      year: 2026,
+                      currency: null,
+                      allocated: '1234',
+                      executed: '34',
+                      percent: 3,
+                      state: 'executing'
+                    }
+                  ]
+                }
+              ]
+            }
+          : i.code === 'KPI-INV-03'
+            ? {
+                ...i,
+                breakdowns: [
+                  ...(i.breakdowns ?? []).filter((b) => b.by !== 'project'),
+                  {
+                    by: 'project',
+                    rows: [
+                      {
+                        key: 'p1:',
+                        project: 'p1',
+                        label: 'PRY-1',
+                        currency: null,
+                        executed: '1234',
+                        commitments: '0',
+                        contributions: '1234',
+                        programs: '0',
+                        budget: '0',
+                        cap: '0'
+                      }
+                    ]
+                  }
+                ]
+              }
+            : i
+      )
+    }
+    fetch = mockFetch(rutas([{ path: '/sgspe/dashboards/investment', body: sinMoneda }]))
+    abrir()
+    const tabla = await screen.findByRole('table', { name: 'Presupuestos de programas sin moneda' })
+    expect(screen.getByRole('figure', { name: 'Programas sin moneda' })).toBeInTheDocument()
+    const fila = within(tabla).getByText('PS-004 · Programa sin moneda').closest('tr') as HTMLElement
+    expect(within(fila).getByText('1,234.00')).toBeInTheDocument()
+    // lo de PEN no lo suma
+    const pen = screen.getByRole('table', { name: 'Presupuestos de programas en PEN' })
+    expect(within(pen).queryByText('PS-004 · Programa sin moneda')).not.toBeInTheDocument()
+    const consolidado = screen.getByRole('table', { name: 'Inversión ejecutada por proyecto y moneda' })
+    expect(within(consolidado).getByText('Sin moneda')).toBeInTheDocument()
+    expect(within(consolidado).getAllByText('1,234.00')).toHaveLength(2)
+    expect(screen.queryByText(/^— \d/)).not.toBeInTheDocument()
+  })
+
   it('en un proyecto, la campaña, el programa y el año viajan como filtros; un filtro que un indicador no aplica se dice', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed()

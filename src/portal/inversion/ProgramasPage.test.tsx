@@ -230,6 +230,46 @@ describe('S42 · programas e inversión', () => {
     expect(screen.queryByRole('button', { name: 'Nuevo aporte' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo programa' })).not.toBeInTheDocument()
   })
+  it('un presupuesto sin moneda se dice aparte y sin prefijo de moneda: nunca «— 1,234.00» ni sumado a otra moneda', async () => {
+    const sinMoneda = {
+      ...TABLERO,
+      indicators: TABLERO.indicators.map((i) =>
+        i.code === 'KPI-INV-02'
+          ? {
+              ...i,
+              breakdowns: [
+                {
+                  by: 'program',
+                  rows: [
+                    ...(i.breakdowns?.[0].rows ?? []),
+                    {
+                      key: 'sp4:2026:',
+                      program: 'sp4',
+                      label: 'PS-004',
+                      year: 2026,
+                      currency: null,
+                      allocated: '1234',
+                      executed: null,
+                      percent: null,
+                      state: 'executing'
+                    }
+                  ]
+                }
+              ]
+            }
+          : i
+      )
+    }
+    fetch = mockFetch(rutas([{ path: '/sgspe/dashboards/investment', body: sinMoneda }]))
+    abrir()
+    const presupuesto = await screen.findByRole('table', { name: 'Presupuesto de programas 2026' })
+    const fila = within(presupuesto).getByText('Sin moneda').closest('tr') as HTMLElement
+    expect(within(fila).getByText('1,234.00')).toBeInTheDocument()
+    const pen = within(presupuesto).getByText('PEN').closest('tr') as HTMLElement
+    expect(within(pen).getByText('S/ 80,000.00')).toBeInTheDocument()
+    expect(within(presupuesto).queryByText(/^— \d/)).not.toBeInTheDocument()
+  })
+
   it('un programa por aprobar no muestra ejecución ni avance, y un monto ilegible no se suma: se dice', async () => {
     const porAprobar = {
       ...TABLERO,
