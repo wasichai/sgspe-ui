@@ -94,20 +94,39 @@ export const ES_P360 = {
     risk_medium_min_score: 'Puntaje desde el que un riesgo es MEDIO',
     risk_high_min_score: 'Puntaje desde el que un riesgo es ALTO',
     risk_critical_min_score: 'Puntaje desde el que un riesgo es CRITICO',
+    policy_internal_approval: 'Aprobación interna con segregación de funciones',
+    policy_cap_blocks_approval: 'El tope de la campaña bloquea la aprobación',
+    policy_no_paid_labor: 'No financiar mano de obra',
+    policy_non_monetary_donations: 'Donaciones no monetarias',
+    policy_synergy_requires_agreement: 'Las sinergias exigen un acuerdo vigente',
+    policy_priority_warning: 'Advertir si un aporte no atiende los temas priorizados',
     grupos: {
       grupos: 'Grupos de interés',
       relacionamiento: 'Relacionamiento',
       proyecto: 'Proyecto',
       quejas: 'Quejas, consultas y solicitudes',
-      riesgos: 'Riesgos'
+      riesgos: 'Riesgos',
+      inversion: 'Inversión social y aprobaciones'
     },
     ayudas: {
       quejas:
         'El acuse cuenta días hábiles (de lunes a viernes, sin feriados) desde el día siguiente a la recepción; la resolución y la respuesta, días calendario. Un cambio no recalcula los plazos ya puestos.',
       riesgos:
-        'El puntaje es probabilidad por impacto, de 1 a 25. Un cambio de umbrales no recalcula los niveles guardados: los cambia la revisión siguiente de cada riesgo.'
+        'El puntaje es probabilidad por impacto, de 1 a 25. Un cambio de umbrales no recalcula los niveles guardados: los cambia la revisión siguiente de cada riesgo.',
+      inversion:
+        'Los lineamientos se evalúan al aprobar un aporte: uno incumplido exige una justificación, que los cubre todos. La sinergia sin acuerdo vigente no se justifica.'
     },
     ayuda: {
+      policy_internal_approval:
+        'Activada: compromisos, aportes y programas pasan por la aprobación de otra persona. Desactivada: se permite la vía directa sin revisión interna.',
+      policy_cap_blocks_approval:
+        'Activada: una aprobación que supera el tope de apoyo social de la campaña se bloquea, salvo para quien tiene permiso para superarlo. Desactivada: solo advierte.',
+      policy_no_paid_labor: 'Activada: un aporte con ítems de mano de obra se aparta de los lineamientos y exige una justificación para aprobarse.',
+      policy_non_monetary_donations: 'Activada: una donación con ítems de dinero se aparta de los lineamientos y exige una justificación para aprobarse.',
+      policy_synergy_requires_agreement:
+        'Activada: un aporte con sinergia institucional, o un programa con socio, se aprueba solo con un acuerdo activo y no vencido. La justificación no lo reemplaza.',
+      policy_priority_warning:
+        'Activada: un aporte cuyo tema no es uno de los temas priorizados del proyecto, ni desciende de uno, se aparta de los lineamientos y exige una justificación.',
       interest_threshold:
         'Puntaje de interés (de 1 a 5) desde el cual un grupo de interés cuenta con interés alto en la matriz de poder e interés. Puede llevar decimales.',
       power_threshold:
@@ -139,6 +158,13 @@ export const ES_P360 = {
     desactivada: 'desactivada',
     fueraDeRango: 'Escriba un número entero de {{min}} a {{max}}.',
     umbralesEnOrden: 'Los umbrales deben crecer: medio menor que alto y alto menor que crítico.'
+  },
+  temas: {
+    titulo: 'Temas priorizados para aportes',
+    ayuda: 'Un aporte cumple la prioridad si su tema es uno de estos o desciende de uno. Sin temas priorizados, la prioridad no se evalúa.',
+    vacio: 'El proyecto no tiene temas priorizados: la prioridad de los aportes no se evalúa.',
+    agregar: 'Agregar un tema priorizado',
+    quitarDe: 'Quitar {{tema}}'
   }
 }
 
@@ -237,19 +263,38 @@ export const EN_P360: typeof ES_P360 = {
     risk_medium_min_score: 'Score from which a risk is MEDIO',
     risk_high_min_score: 'Score from which a risk is ALTO',
     risk_critical_min_score: 'Score from which a risk is CRITICO',
+    policy_internal_approval: 'Internal approval with segregation of duties',
+    policy_cap_blocks_approval: 'The campaign cap blocks approval',
+    policy_no_paid_labor: 'Do not fund labour',
+    policy_non_monetary_donations: 'Non-monetary donations',
+    policy_synergy_requires_agreement: 'Synergies need a current agreement',
+    policy_priority_warning: 'Warn when a contribution does not serve the prioritised topics',
     grupos: {
       grupos: 'Stakeholders',
       relacionamiento: 'Engagement',
       proyecto: 'Project',
       quejas: 'Grievances, inquiries and requests',
-      riesgos: 'Risks'
+      riesgos: 'Risks',
+      inversion: 'Social investment and approvals'
     },
     ayudas: {
       quejas:
         'Acknowledgement counts business days (Monday to Friday, without holidays) from the day after reception; resolution and answer, calendar days. A change does not recompute deadlines already set.',
-      riesgos: 'The score is probability times impact, from 1 to 25. A threshold change does not recompute stored levels: the next review of each risk does.'
+      riesgos: 'The score is probability times impact, from 1 to 25. A threshold change does not recompute stored levels: the next review of each risk does.',
+      inversion:
+        'The guidelines are assessed when approving a contribution: an unmet one needs a justification, which covers them all. A synergy without a current agreement is not justified.'
     },
     ayuda: {
+      policy_internal_approval:
+        'On: commitments, contributions and programs go through another person’s approval. Off: the direct path without internal review is allowed.',
+      policy_cap_blocks_approval:
+        'On: an approval that exceeds the campaign social support cap is blocked, except for whoever may exceed it. Off: it only warns.',
+      policy_no_paid_labor: 'On: a contribution with labour items departs from the guidelines and needs a justification to be approved.',
+      policy_non_monetary_donations: 'On: a donation with money items departs from the guidelines and needs a justification to be approved.',
+      policy_synergy_requires_agreement:
+        'On: a contribution with institutional synergy, or a program with a partner, is approved only with an active, unexpired agreement. The justification does not replace it.',
+      policy_priority_warning:
+        'On: a contribution whose topic is not one of the project’s prioritised topics, nor descends from one, departs from the guidelines and needs a justification.',
       interest_threshold: 'Interest score (1 to 5) from which a stakeholder counts as high interest in the power and interest matrix. May have decimals.',
       power_threshold: 'Power score (1 to 5) from which a stakeholder counts as high power in the power and interest matrix. May have decimals.',
       stakeholder_review_days: 'Calendar days before a stakeholder assessment is considered overdue and it is time to assess again. Whole number.',
@@ -276,5 +321,12 @@ export const EN_P360: typeof ES_P360 = {
     desactivada: 'off',
     fueraDeRango: 'Type a whole number from {{min}} to {{max}}.',
     umbralesEnOrden: 'Thresholds must grow: medium lower than high and high lower than critical.'
+  },
+  temas: {
+    titulo: 'Prioritised topics for contributions',
+    ayuda: 'A contribution meets the priority if its topic is one of these or descends from one. Without prioritised topics, the priority is not assessed.',
+    vacio: 'The project has no prioritised topics: the priority of contributions is not assessed.',
+    agregar: 'Add a prioritised topic',
+    quitarDe: 'Remove {{tema}}'
   }
 }
