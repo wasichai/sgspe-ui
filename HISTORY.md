@@ -2,6 +2,23 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-11 — Fase 5: portal de programas e inversión social (plan 5.3)
+
+- La sección «Programas sociales» pasa a disponible: S42 con las cifras del tablero `investment` (tope de cada campaña con lo
+  comprometido y lo ejecutado, presupuesto del año por moneda, beneficiarios por fuente sin sumar), programas y aportes del
+  alcance y sus altas; el tablero de inversión con KPI-INV-01 a 04.
+- S44: los ítems solo en «Solicitado» con el total que se aprobará (la suma exacta de sus montos); «Antes de aprobar» con la
+  consulta en seco de la aprobación del rol leída fila por fila; la justificación que cubre los lineamientos y la sinergia que no
+  se justifica; la única entrega con conformidad y sus tres evidencias por su comando (`Idempotency-Key`, `If-Match`, motivo);
+  congelada desde «Entregado».
+- S43: el presupuesto por año y moneda con el ejecutado registrado a mano, los indicadores con su última medición y su historial
+  sin corrección, las iniciativas, los hitos atrasados en la fecha de Lima y los grupos beneficiarios.
+- S57 acepta una solicitud como aporte para quien lo puede crear; S11 muestra los seis lineamientos y los temas priorizados; S48
+  lista las aprobaciones de programas y aportes; `BarraDelTope` suma los aportes comprometidos.
+- Un monto ilegible se omite y se dice, nunca cuenta como cero; un programa por aprobar no muestra ejecución; una lista cortada
+  por el tope de lectura no da totales; la consulta en seco se relee al editar el registro o cambiar sus evidencias.
+- Pruebas: 1467 en 103 archivos de Vitest y 19 recorridos de Playwright.
+
 ## 2026-10-11 — UPS-24: el servidor oculta el nombre y la huella
 
 - El servidor entrega el descriptor de una evidencia restringida sin `name` ni `sha256` (solo `id`, `contentType` y `size`) a
