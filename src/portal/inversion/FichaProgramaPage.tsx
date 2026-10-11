@@ -17,6 +17,8 @@ import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro }
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { Beneficiarios, IniciativasEHitos } from './HijosDelPrograma'
+import { Indicadores } from './Indicadores'
 import { Presupuestos } from './Presupuestos'
 
 // S43 · ficha de programa (screens.md §10, WF-G, spec F5 §3.6): encabezado con estado, socio y convenio de sinergia; las
@@ -65,6 +67,9 @@ function Ficha({ programa }: { programa: Registro }) {
   const pestanas: { id: string; label: string; render: () => ReactNode }[] = [
     { id: 'resumen', label: t('fichaPrograma.pestanas.resumen'), render: () => <Resumen programa={programa} /> },
     { id: 'presupuesto', label: t('fichaPrograma.pestanas.presupuesto'), render: () => <Presupuestos programa={programa} /> },
+    { id: 'indicadores', label: t('fichaPrograma.pestanas.indicadores'), render: () => <Indicadores programa={programa} escribe={escribe} /> },
+    { id: 'iniciativas', label: t('fichaPrograma.pestanas.iniciativas'), render: () => <IniciativasEHitos programa={programa} /> },
+    { id: 'beneficiarios', label: t('fichaPrograma.pestanas.beneficiarios'), render: () => <Beneficiarios programa={programa} /> },
     {
       id: 'evidencias',
       label: t('fichaPrograma.pestanas.evidencias'),
