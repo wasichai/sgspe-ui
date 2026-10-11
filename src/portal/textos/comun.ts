@@ -228,7 +228,9 @@ export const ES_COMUN = {
       'El vínculo con la QCS reclasificada o con el compromiso o el aporte creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.',
     qcsNoLeida: 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.',
     // el 400 de wasichai sobre una relación cuyo destino la cuenta no lee: no existe o es de otro proyecto (spec 4.4 §3.6)
-    registroNoLegible: 'El registro elegido no existe o es de otro proyecto.'
+    registroNoLegible: 'El registro elegido no existe o es de otro proyecto.',
+    // DELIVERY_FROZEN sobre el aporte: su entrega, una evidencia o un comprobante de un aporte entregado o anulado
+    aporteEntregado: 'El aporte ya se entregó o se anuló: su entrega, sus evidencias y sus comprobantes no cambian.'
   },
   errores: {
     '400': 'Revise los datos marcados.',
@@ -453,7 +455,8 @@ export const EN_COMUN: typeof ES_COMUN = {
     vinculoDeComando:
       'Only reclassification and acceptance write the link to the reclassified record or to the created commitment or contribution: reload and save again without changing it.',
     qcsNoLeida: 'Your account cannot read that grievance, inquiry or request (it may be confidential): nothing is linked to it.',
-    registroNoLegible: 'The chosen record does not exist or belongs to another project.'
+    registroNoLegible: 'The chosen record does not exist or belongs to another project.',
+    aporteEntregado: 'The contribution was already delivered or voided: its delivery, its evidence and its vouchers do not change.'
   },
   errores: {
     '400': 'Check the highlighted data.',

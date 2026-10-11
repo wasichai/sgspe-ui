@@ -109,6 +109,21 @@ describe('estados comunes', () => {
     expect(screen.queryByText(codigo)).not.toBeInTheDocument()
   })
 
+  // DELIVERY_FROZEN sobre el aporte (una entrega, una evidencia o un comprobante de un aporte entregado o anulado) habla del aporte;
+  // sobre un compromiso, de sus entregas
+  it.each([
+    ['social_contribution', 'El aporte ya se entregó o se anuló: su entrega, sus evidencias y sus comprobantes no cambian.'],
+    ['attributes.social_contribution', 'El aporte ya se entregó o se anuló: su entrega, sus evidencias y sus comprobantes no cambian.'],
+    [
+      'commitment',
+      'El compromiso ya está cumplido o cancelado: sus entregas no cambian. Si está cumplido (no verificado ni cerrado), devuélvalo a ejecución para corregirlas.'
+    ]
+  ])('un 409 DELIVERY_FROZEN sobre %s dice el texto de su objeto', async (campo, texto) => {
+    montar(<ErrorDeCarga error={new ErrorDeSgspe(409, 'Congelado', [{ field: campo, message: 'DELIVERY_FROZEN' }], null)} />)
+    expect(await screen.findByText(texto)).toBeInTheDocument()
+    expect(screen.queryByText('DELIVERY_FROZEN')).not.toBeInTheDocument()
+  })
+
   it('HAS_DEPENDENTS no nombra el campo de la API; un código que el portal no conoce muestra el detail si no delata un código', async () => {
     montar(
       <>

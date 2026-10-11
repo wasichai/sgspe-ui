@@ -26,6 +26,10 @@ export const TERMINOS_APROBADOS: readonly string[] = [
 // procured (elección 10)
 export const enSolicitud = (aporte: Registro): boolean => aporte.state === 'requested'
 export const entregaAbierta = (aporte: Registro): boolean => aporte.state === 'procured'
+// los comprobantes (receipt) se cargan hasta la entrega: desde delivered, o anulado, el servidor rechaza su alta, su cambio y su
+// baja con DELIVERY_FROZEN sobre social_contribution (InvestmentWriteGuard)
+export const COMPROBANTES_CONGELADOS: readonly string[] = ['delivered', 'closed', 'rejected', 'cancelled']
+export const comprobantesCongelados = (aporte: Registro): boolean => COMPROBANTES_CONGELADOS.includes(String(aporte.state ?? ''))
 
 // las tres evidencias de la entrega (P8), con el valor ENUM de evidence_type tal como se guarda
 export const EVIDENCIAS_DE_ENTREGA = ['ACTA DE RECEPCION', 'FOTO', 'COMPROBANTE'] as const
