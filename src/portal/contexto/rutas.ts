@@ -20,6 +20,8 @@ const GLOBAL_A_PROYECTO: [RegExp, string][] = [
   [/^\/attention\/dashboard/, 'attention/dashboard'],
   [/^\/attention\/report/, 'attention/report'],
   [/^\/attention/, 'attention'],
+  [/^\/programs\/dashboard/, 'programs/dashboard'],
+  [/^\/programs/, 'programs'],
   [/^\/risks\/register/, 'risks/register'],
   [/^\/risks\/rules/, 'risks/rules'],
   [/^\/risks/, 'risks/dashboard']
@@ -41,12 +43,27 @@ const PROYECTO_A_GLOBAL: [RegExp, string][] = [
   [/^attention\/dashboard/, '/attention/dashboard'],
   [/^attention\/report/, '/attention/report'],
   [/^(attention|grievances|inquiries|requests)/, '/attention'],
+  [/^programs\/dashboard/, '/programs/dashboard'],
+  [/^(programs|contributions)/, '/programs'],
   [/^risks\/rules/, '/risks/rules'],
   [/^risks\/dashboard/, '/risks'],
   [/^(risks|incidents)/, '/risks/register']
 ]
 
-const SECCIONES_DE_PROYECTO = ['overview', 'map', 'settings', 'reports', 'commitments', 'agreements', 'documents', 'tasks', 'attention', 'risks', 'incidents']
+const SECCIONES_DE_PROYECTO = [
+  'overview',
+  'map',
+  'settings',
+  'reports',
+  'commitments',
+  'agreements',
+  'documents',
+  'tasks',
+  'attention',
+  'risks',
+  'incidents',
+  'programs'
+]
 
 export function rutaEquivalente(pathname: string, proyecto: string | null): string {
   const enProyecto = /^\/projects\/([^/]+)\/?(.*)$/.exec(pathname)
@@ -66,6 +83,8 @@ export function rutaEquivalente(pathname: string, proyecto: string | null): stri
     if (primera === 'risks' && segunda === 'incidents') return `${base}/incidents`
     if (primera === 'risks' && ['register', 'dashboard', 'warnings', 'mentions', 'signals', 'impacts', 'rules'].includes(segunda ?? ''))
       return `${base}/risks/${segunda}`
+    if (primera === 'programs' && segunda === 'dashboard') return `${base}/programs/dashboard`
+    if (primera === 'contributions') return `${base}/programs`
     if (primera === 'field-visits') return `${base}/engagements`
     if (primera === 'areas') return `${base}/map`
     return `${base}/${primera && (SECCIONES_DE_PROYECTO.includes(primera) || ['stakeholders', 'engagements'].includes(primera)) ? primera : 'overview'}`

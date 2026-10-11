@@ -23,6 +23,7 @@ const PESTANAS = [
   'agreements',
   'attention',
   'risks',
+  'programs',
   'documents',
   'tasks',
   'settings',
@@ -38,6 +39,7 @@ const SECCION_DE_PESTANA: Partial<Record<(typeof PESTANAS)[number], ClaveDeSecci
   agreements: 'commitments',
   attention: 'attention',
   risks: 'risks',
+  programs: 'programs',
   documents: 'documents',
   tasks: 'tasks',
   reports: 'reports'
