@@ -23,6 +23,7 @@ import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { AntesDeAprobar } from './AntesDeAprobar'
+import { EntregaDelAporte } from './EntregaDelAporte'
 
 // S44 · aporte social (screens.md §10, WF-P, spec F5 §3.3): la anatomía de design-system.md §6.1 con las transiciones del rol (toda
 // transición lleva motivo: requiresReason; aprobar, adquirir, entregar y cerrar se comprueban antes con transition-checks), «Para qué
@@ -89,6 +90,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
   const titulo = t('fichaAporte.titulo', { codigo: texto(aporte, 'code') })
   const pestanas: { id: string; label: string; render: () => ReactNode }[] = [
     { id: 'resumen', label: t('fichaAporte.pestanas.resumen'), render: () => <Resumen aporte={aporte} /> },
+    { id: 'entrega', label: t('fichaAporte.pestanas.entrega'), render: () => <EntregaDelAporte aporte={aporte} escribe={escribe} /> },
     {
       id: 'evidencias',
       label: t('fichaAporte.pestanas.evidencias'),
