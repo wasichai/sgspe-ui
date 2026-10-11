@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { APROBADORA, baseDeCompromisos, C1 } from '../../test/compromisos'
+import { APORTE, PERMISOS_DE_APROBACION, PROGRAMA } from '../../test/inversion'
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -415,5 +416,55 @@ describe('S31 · aprobación de compromiso', () => {
     const resumen = screen.getByRole('region', { name: 'El compromiso' })
     expect(await within(resumen).findByText('No disponible')).toBeInTheDocument()
     expect(within(resumen).queryByText('…')).not.toBeInTheDocument()
+  })
+})
+
+// F5 (spec §3.8): el aviso de aprobación de un aporte llega al alta y el de un programa al enviarlo; los dos se deciden en su ficha
+describe('S48 · aprobaciones de programas y aportes', () => {
+  it('dicen su monto, si se puede decidir con la razón, y «Revisar» lleva a su ficha', async () => {
+    fetch = mockFetch([
+      {
+        path: '/auth/me/notifications',
+        body: {
+          content: [aviso('n1', 'social_contribution', 'a1'), aviso('n2', 'social_program', 'sp1')],
+          page: 0,
+          size: 200,
+          totalElements: 2,
+          totalPages: 1
+        }
+      },
+      { path: '/objects/social_contribution/records/a1', body: APORTE },
+      { path: '/objects/social_program/records/sp1', body: { ...PROGRAMA, state: 'pending_approval' } },
+      { path: /^\/objects\/(social_contribution|social_program)\/records\/[a-z0-9]+\/transitions/, body: [APROBAR] }
+    ])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        responder: (l) => {
+          const { recordId } = l.cuerpo as { recordId: string }
+          return jsonResponse(
+            recordId === 'a1'
+              ? { allowed: false, blocking: [{ code: 'SEGREGATION_OF_DUTIES', message: 'Usted registró este aporte (P5)', field: 'record' }], warnings: [] }
+              : { allowed: true, blocking: [], warnings: [] }
+          )
+        }
+      }
+    ])
+    montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: PERMISOS_DE_APROBACION })
+    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    const aporte = (await within(tabla).findByText('AP-001')).closest('tr') as HTMLElement
+    expect(within(aporte).getByText('Aprobación de aporte')).toBeInTheDocument()
+    expect(within(aporte).getByText('S/ 1,750.50')).toBeInTheDocument()
+    expect(
+      await within(aporte).findByText(
+        'No: Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.'
+      )
+    ).toBeInTheDocument()
+    expect(within(aporte).getByRole('link', { name: 'Revisar' })).toHaveAttribute('href', '/r/social_contribution/a1')
+    const programa = (await within(tabla).findByText('PS-001 · Programa Ejemplo de agua segura')).closest('tr') as HTMLElement
+    expect(within(programa).getByText('Aprobación de programa')).toBeInTheDocument()
+    expect(await within(programa).findByText('Sí')).toBeInTheDocument()
+    expect(within(programa).getByRole('link', { name: 'Revisar' })).toHaveAttribute('href', '/r/social_program/sp1')
   })
 })
