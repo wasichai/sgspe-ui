@@ -222,7 +222,7 @@ describe('S36 · ficha de queja', () => {
     const drawer = await editarReclasificada()
     expect(
       await within(drawer).findByText(
-        'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
+        'El vínculo con la QCS reclasificada o con el compromiso o el aporte creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
       )
     ).toBeInTheDocument()
     expect(screen.queryByText('COMMAND_ONLY')).not.toBeInTheDocument()

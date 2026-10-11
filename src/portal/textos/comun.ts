@@ -161,14 +161,16 @@ export const ES_COMUN = {
     DEPENDENCY_CYCLE: 'Esa dependencia cerraría un ciclo entre compromisos.',
     DEPENDENCY_GRAPH_TOO_LARGE: 'Hay demasiadas dependencias encadenadas para comprobar esta: simplifique la cadena.',
     STAKEHOLDER_REQUIRED: 'Falta al menos un grupo de interés solicitante.',
-    SEGREGATION_OF_DUTIES: 'Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.',
+    SEGREGATION_OF_DUTIES:
+      'Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.',
     SENIOR_APPROVAL_REQUIRED:
       'Este paso lo decide un nivel superior: el compromiso nace de una mesa de diálogo o de solicitantes que lo exigen, o la queja es ALTA o CRITICA y la resuelve quien aprueba.',
-    INTERNAL_APPROVAL_REQUIRED: 'El proyecto exige la aprobación interna: envíe el compromiso a aprobación.',
-    SUPPORT_CAP_EXCEEDED: 'Aprobar este compromiso supera el tope de apoyo social de la campaña.',
+    INTERNAL_APPROVAL_REQUIRED: 'El proyecto exige la aprobación interna: envíelo a aprobación en lugar de la vía directa.',
+    SUPPORT_CAP_EXCEEDED: 'Aprobarlo supera el tope de apoyo social de la campaña (lo aprobado en compromisos y aportes).',
     CAP_OTHER_CURRENCY: 'La campaña tiene montos en otra moneda que no se suman a su tope.',
     DELIVERY_REQUIRED: 'Falta una entrega con conformidad y con quiénes la dieron.',
-    EVIDENCE_REQUIRED: 'A la entrega con conformidad le falta la evidencia que pide su tipo de recurso (acta y foto, o acta, carta u otro).',
+    EVIDENCE_REQUIRED:
+      'A la entrega le falta la evidencia que se exige: en un compromiso, la de su tipo de recurso (acta y foto, o acta, carta u otro); en un aporte, el acta de recepción, la foto y el comprobante.',
     FIELD_NOT_READABLE: 'Su rol no puede leer un dato que esta regla necesita revisar.',
     BLOCKING_DEPENDENCY: 'Una dependencia bloqueante sigue abierta.',
     DELIVERY_FROZEN:
@@ -196,7 +198,7 @@ export const ES_COMUN = {
     CONFIDENTIAL_MARK_FORBIDDEN:
       'Solo quien la recibió, su responsable o la gestión de quejas pueden marcarla como confidencial: pídaselo a una de esas personas.',
     CONFORMITY_GIVEN: 'El reclamante ya dio su conformidad: la queja no se reabre.',
-    INVALID_TARGET: 'Ese destino no es válido: elija otro tipo de QCS o, al aceptar una solicitud, un compromiso.',
+    INVALID_TARGET: 'Ese destino no es válido: elija otro tipo de QCS o, al aceptar una solicitud, un compromiso o un aporte.',
     ALREADY_REFERRED: 'Esta pregunta ya se derivó a una QCS.',
     ASSESSMENT_OUT_OF_ORDER: 'La fecha de la revisión es anterior a la última revisión del mismo tipo: elija una fecha igual o posterior.',
     FIRST_ASSESSMENT_NOT_RESIDUAL: 'La primera revisión de un riesgo no puede ser residual.',
@@ -204,12 +206,26 @@ export const ES_COMUN = {
     MEASURE_OWNER_REQUIRED: 'Para mitigar hace falta al menos una medida con responsable.',
     RESIDUAL_ASSESSMENT_REQUIRED: 'Para monitorear hace falta al menos una revisión residual.',
     HUMAN_DECISION_REQUIRED: 'Confirmar o descartar una alerta lo decide una persona, nunca una cuenta de servicio.',
-    EVIDENCE_NOT_RESTRICTED: 'Una evidencia vinculada a una QCS confidencial es CONFIDENCIAL o de DATOS PERSONALES: no se vincula ni baja a otra clasificación.'
+    EVIDENCE_NOT_RESTRICTED:
+      'Una evidencia vinculada a una QCS confidencial es CONFIDENCIAL o de DATOS PERSONALES: no se vincula ni baja a otra clasificación.',
+    // F5: aportes y programas (spec F5 §3.3 a §3.6; api.md §3.3)
+    ITEMS_REQUIRED: 'Cargue al menos un ítem antes de aprobar el aporte.',
+    ITEMS_FROZEN: 'El aporte ya salió de «Solicitado»: sus ítems no cambian. Un cambio es otro aporte: anule este y registre uno nuevo.',
+    CONTRIBUTION_FROZEN: 'Ese dato lo juzgó la aprobación y ya no cambia. Un cambio es otro aporte: anule este y registre uno nuevo.',
+    DELIVERY_EXISTS: 'Este aporte ya tiene su entrega: un aporte se entrega una sola vez. Corrija la entrega registrada.',
+    FIELD_NOT_ALLOWED: 'Ese dato no va en este registro: quítelo y vuelva a guardar.',
+    PROGRAM_MISMATCH: 'La iniciativa elegida es de otro programa: elija una de este programa.',
+    PAID_LABOR: 'El aporte incluye mano de obra, que los lineamientos del proyecto no financian: justifíquelo o quite ese ítem.',
+    MONETARY_DONATION: 'Una donación con dinero se aparta de los lineamientos del proyecto: justifíquelo o cambie el ítem.',
+    PRIORITY_NOT_MET: 'El tema del aporte no está entre los temas priorizados del proyecto: justifíquelo o elija otro tema.',
+    PRIORITIES_NOT_CONFIGURED: 'El proyecto no tiene temas priorizados: la prioridad del aporte no se evaluó.',
+    SYNERGY_AGREEMENT_REQUIRED:
+      'Una sinergia exige un acuerdo vigente (activo y no vencido) y, en un programa con socio, que el socio sea parte del acuerdo. La justificación no lo reemplaza.'
   },
   // el texto de un código que dice otra cosa según su campo (plan 4.2a; componentes/errores.ts)
   codigosEnCampo: {
     vinculoDeComando:
-      'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.',
+      'El vínculo con la QCS reclasificada o con el compromiso o el aporte creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.',
     qcsNoLeida: 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.',
     // el 400 de wasichai sobre una relación cuyo destino la cuenta no lee: no existe o es de otro proyecto (spec 4.4 §3.6)
     registroNoLegible: 'El registro elegido no existe o es de otro proyecto.'
@@ -375,14 +391,16 @@ export const EN_COMUN: typeof ES_COMUN = {
     DEPENDENCY_CYCLE: 'That dependency would close a cycle between commitments.',
     DEPENDENCY_GRAPH_TOO_LARGE: 'Too many chained dependencies to check this one: simplify the chain.',
     STAKEHOLDER_REQUIRED: 'At least one requesting stakeholder is missing.',
-    SEGREGATION_OF_DUTIES: 'By segregation of duties, whoever recorded the commitment does not approve it and its owner does not verify it.',
+    SEGREGATION_OF_DUTIES:
+      'By segregation of duties, whoever recorded a commitment, a contribution or a program does not approve it, and the owner of a commitment does not verify it.',
     SENIOR_APPROVAL_REQUIRED:
       'A higher level decides this step: the commitment comes from a dialogue table or from requesters that need it, or the grievance is ALTA or CRITICA and the approver resolves it.',
-    INTERNAL_APPROVAL_REQUIRED: 'The project requires internal approval: submit the commitment for approval.',
-    SUPPORT_CAP_EXCEEDED: 'Approving this commitment exceeds the campaign’s social support cap.',
+    INTERNAL_APPROVAL_REQUIRED: 'The project requires internal approval: submit it for approval instead of the direct path.',
+    SUPPORT_CAP_EXCEEDED: 'Approving it exceeds the campaign’s social support cap (what was approved in commitments and contributions).',
     CAP_OTHER_CURRENCY: 'The campaign has amounts in another currency that are not added to its cap.',
     DELIVERY_REQUIRED: 'A delivery with conformity and who gave it is missing.',
-    EVIDENCE_REQUIRED: 'The delivery with conformity lacks the evidence its resource type asks for (minutes and photo, or minutes, letter or other).',
+    EVIDENCE_REQUIRED:
+      'The delivery lacks the required evidence: for a commitment, the one its resource type asks for (minutes and photo, or minutes, letter or other); for a contribution, the receipt certificate, the photo and the voucher.',
     FIELD_NOT_READABLE: 'Your role cannot read a value this rule needs to check.',
     BLOCKING_DEPENDENCY: 'A blocking dependency is still open.',
     DELIVERY_FROZEN:
@@ -408,7 +426,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     CONFIDENTIAL_RECEIVER_REQUIRED: 'Whoever records a confidential grievance, inquiry or request receives it: record it again from your account.',
     CONFIDENTIAL_MARK_FORBIDDEN: 'Only whoever received it, its owner or grievance management can mark it as confidential: ask one of them.',
     CONFORMITY_GIVEN: 'The complainant already gave conformity: the grievance is not reopened.',
-    INVALID_TARGET: 'That target is not valid: pick another type or, when accepting a request, a commitment.',
+    INVALID_TARGET: 'That target is not valid: pick another type or, when accepting a request, a commitment or a contribution.',
     ALREADY_REFERRED: 'This question was already referred.',
     ASSESSMENT_OUT_OF_ORDER: 'The review date is earlier than the last review of the same kind: pick the same date or a later one.',
     FIRST_ASSESSMENT_NOT_RESIDUAL: 'The first review of a risk cannot be residual.',
@@ -417,11 +435,23 @@ export const EN_COMUN: typeof ES_COMUN = {
     RESIDUAL_ASSESSMENT_REQUIRED: 'Monitoring needs at least one residual review.',
     HUMAN_DECISION_REQUIRED: 'A person confirms or dismisses an alert, never a service account.',
     EVIDENCE_NOT_RESTRICTED:
-      'Evidence linked to a confidential grievance, inquiry or request is CONFIDENCIAL or DATOS PERSONALES: it is not linked or lowered to another classification.'
+      'Evidence linked to a confidential grievance, inquiry or request is CONFIDENCIAL or DATOS PERSONALES: it is not linked or lowered to another classification.',
+    ITEMS_REQUIRED: 'Add at least one item before approving the contribution.',
+    ITEMS_FROZEN: 'The contribution is no longer «Requested»: its items do not change. A change is another contribution: void this one and record a new one.',
+    CONTRIBUTION_FROZEN: 'The approval judged this value and it no longer changes. A change is another contribution: void this one and record a new one.',
+    DELIVERY_EXISTS: 'This contribution already has its delivery: a contribution is delivered once. Correct the recorded delivery.',
+    FIELD_NOT_ALLOWED: 'That value does not belong in this record: remove it and save again.',
+    PROGRAM_MISMATCH: 'The chosen initiative belongs to another program: pick one of this program.',
+    PAID_LABOR: 'The contribution includes labour, which the project guidelines do not fund: justify it or remove that item.',
+    MONETARY_DONATION: 'A donation with money departs from the project guidelines: justify it or change the item.',
+    PRIORITY_NOT_MET: 'The contribution topic is not among the project’s prioritised topics: justify it or pick another topic.',
+    PRIORITIES_NOT_CONFIGURED: 'The project has no prioritised topics: the contribution priority was not assessed.',
+    SYNERGY_AGREEMENT_REQUIRED:
+      'A synergy needs a current agreement (active and not expired) and, for a program with a partner, the partner as a party to it. The justification does not replace it.'
   },
   codigosEnCampo: {
     vinculoDeComando:
-      'Only reclassification and acceptance write the link to the reclassified record or to the created commitment: reload and save again without changing it.',
+      'Only reclassification and acceptance write the link to the reclassified record or to the created commitment or contribution: reload and save again without changing it.',
     qcsNoLeida: 'Your account cannot read that grievance, inquiry or request (it may be confidential): nothing is linked to it.',
     registroNoLegible: 'The chosen record does not exist or belongs to another project.'
   },

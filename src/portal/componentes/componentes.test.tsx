@@ -68,7 +68,10 @@ describe('estados comunes', () => {
     ['NOT_ASSIGNED', 'No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.'],
     ['NOT_OWN_RECORD', 'Solo quien registró este dato puede cambiarlo: su cuenta no edita registros de otras personas.'],
     ['ACTION_REQUIRED', 'Su cuenta no tiene la acción que este paso exige (aprobar, verificar, emitir un documento o descargar lo restringido).'],
-    ['SEGREGATION_OF_DUTIES', 'Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.'],
+    [
+      'SEGREGATION_OF_DUTIES',
+      'Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.'
+    ],
     ['PERSON_REQUIRED', 'Esta decisión la toma una persona, no una cuenta de servicio.'],
     ['PROJECT_MISMATCH', 'El registro elegido es de otro proyecto: un registro solo se vincula con lo de su proyecto.'],
     ['EVIDENCE_FILE_IN_USE', 'Ese archivo ya es de otra evidencia: elíjalo de nuevo para subirlo otra vez, o reemplace esa evidencia con una versión nueva.'],
@@ -91,12 +94,12 @@ describe('estados comunes', () => {
     [
       'COMMAND_ONLY',
       'reclassified_from_inquiry',
-      'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
+      'El vínculo con la QCS reclasificada o con el compromiso o el aporte creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
     ],
     [
       'COMMAND_ONLY',
       'created_commitment',
-      'El vínculo con la QCS reclasificada o con el compromiso creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
+      'El vínculo con la QCS reclasificada o con el compromiso o el aporte creado lo escriben solo la reclasificación y la aceptación: recargue y vuelva a guardar sin cambiarlo.'
     ],
     ['OBJECT_NOT_READABLE', 'grievance', 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.'],
     ['OBJECT_NOT_READABLE', 'stakeholder_request', 'Su cuenta no puede leer esa queja, consulta o solicitud (puede ser confidencial): no se le vincula nada.']

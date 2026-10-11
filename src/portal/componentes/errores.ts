@@ -21,11 +21,12 @@ const claveDeEstado = (estado: number): string => `comun.errores.${ESTADOS_CON_T
 const detalleVisible = (texto: string | undefined | null): string | null => (texto && !tieneCodigos(texto) ? texto : null)
 
 // lo que una pantalla dice distinto de un código, por ejemplo con la acción que ofrece: { MEMBERS_REQUIRED: '…' }. una clave
-// «CÓDIGO:campo» gana sobre «CÓDIGO» cuando el mismo código dice otra cosa según el campo (STATE_MISMATCH sobre record o engagement)
+// «CÓDIGO:campo» gana sobre «CÓDIGO» cuando el mismo código dice otra cosa según el campo (STATE_MISMATCH sobre record o engagement).
+// una clave con el estado HTTP ('409') dice una respuesta de ese estado que no trae código
 export type MensajesPropios = Partial<Record<string, string>>
 
 const QCS = new Set(['grievance', 'inquiry', 'stakeholder_request'])
-const campoDeComando = (campo: string) => /^(attributes\.)?(reclassified_from_|created_commitment$)/.test(campo)
+const campoDeComando = (campo: string) => /^(attributes\.)?(reclassified_from_|created_commitment$|created_contribution$)/.test(campo)
 
 // la violación que wasichai 0.6.0 pone sobre un campo RELATION cuyo destino la cuenta no lee o no existe (RelationTargets, D30 de
 // wasichai): con el alcance por proyecto (ADR-0029) es también un registro de otro proyecto. llega como texto libre en inglés, sin
@@ -67,6 +68,10 @@ export function useMensajeDeError(): (error: unknown, propios?: MensajesPropios)
       else dichos.add(detalleVisible(error.message) ?? t(claveDeEstado(error.status)))
     }
     if (dichos.size > 0) return [...dichos].join(' ')
+    // una respuesta sin código (un 409 de wasichai, sin violaciones con código) se dice con el texto propio de su estado, si la
+    // pantalla lo da: { '409': '…' }
+    const propioDelEstado = propios[String(error.status)]
+    if (propioDelEstado) return propioDelEstado
     if (CON_DETALLE.has(error.status) && detalleVisible(error.message)) return error.message
     const clave = String(error.status)
     return ESTADOS_CON_TEXTO.includes(clave) ? t(`comun.errores.${clave}`) : detalleVisible(error.message) || t('comun.errores.red')

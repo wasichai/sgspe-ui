@@ -38,6 +38,10 @@ import { ES_INCIDENTES } from './incidentes'
 import { ES_REGISTROS_DE_ALERTA } from './registrosDeAlerta'
 import { ES_REGLAS_DE_ALERTA } from './reglasDeAlerta'
 import { ES_TABLERO_RIESGOS } from './tableroRiesgos'
+import { ES_INVERSION } from './inversion'
+import { ES_FICHA_PROGRAMA } from './fichaPrograma'
+import { ES_FICHA_APORTE } from './fichaAporte'
+import { ES_TABLERO_INVERSION } from './tableroInversion'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
@@ -84,6 +88,11 @@ export const ES = {
   registrosDeAlerta: ES_REGISTROS_DE_ALERTA,
   reglasDeAlerta: ES_REGLAS_DE_ALERTA,
   tableroRiesgos: ES_TABLERO_RIESGOS,
+  // F5: programas e inversión social
+  inversion: ES_INVERSION,
+  fichaPrograma: ES_FICHA_PROGRAMA,
+  fichaAporte: ES_FICHA_APORTE,
+  tableroInversion: ES_TABLERO_INVERSION,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',

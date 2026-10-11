@@ -112,7 +112,9 @@ describe('S48 · aprobaciones', () => {
     expect(within(fila).getByText('S/ 25,000.00')).toBeInTheDocument()
     expect(within(fila).getByText('3 días')).toBeInTheDocument()
     expect(
-      await within(fila).findByText('No: Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.')
+      await within(fila).findByText(
+        'No: Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.'
+      )
     ).toBeInTheDocument()
     expect(within(fila).getByRole('link', { name: 'Revisar' })).toHaveAttribute('href', '/tasks/approvals/commitment/c1')
     const otra = (await within(tabla).findByText('C-007 · Botiquín')).closest('tr') as HTMLElement
@@ -308,7 +310,9 @@ describe('S31 · aprobación de compromiso', () => {
     expect(await screen.findByRole('link', { name: 'Mesa de diálogo de agosto · MESA DE DIALOGO' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     const reglasDelPanel = screen.getByRole('complementary', { name: 'Reglas' })
     expect(
-      await within(reglasDelPanel).findByText('Por segregación de funciones, quien registró el compromiso no lo aprueba y su responsable no lo verifica.')
+      await within(reglasDelPanel).findByText(
+        'Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.'
+      )
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Confirmar la decisión' })).toBeDisabled()
     await userEvent.click(screen.getByRole('radio', { name: 'Devolver a borrador' }))

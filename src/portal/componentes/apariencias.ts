@@ -12,6 +12,7 @@ import {
   Handshake,
   Inbox,
   Lock,
+  Package,
   Pause,
   Play,
   Search,
@@ -21,7 +22,7 @@ import {
   type LucideIcon
 } from 'lucide-react'
 
-// el sistema de estados de design-system.md §4.1 para los workflows de F2 a F4: cada estado con su tono y su ícono, nunca solo
+// el sistema de estados de design-system.md §4.1 para los workflows de F2 a F5: cada estado con su tono y su ícono, nunca solo
 // color. la etiqueta sale de la metadata del workflow (español, CON-051); aquí solo el tono
 export type Tono = 'neutral' | 'info' | 'progress' | 'success' | 'warning' | 'danger' | 'final'
 
@@ -159,6 +160,28 @@ export const APARIENCIAS: Record<string, Record<string, Apariencia>> = {
     under_review: a('info', Search),
     responding: a('progress', Play),
     closed: a('final', Lock)
+  },
+  // WF-G
+  social_program: {
+    draft: a('neutral', CircleDashed),
+    pending_approval: a('info', Clock),
+    planned: a('info', CircleCheck),
+    executing: a('progress', Play),
+    monitoring: a('info', Eye),
+    evaluation: a('info', Search),
+    suspended: a('warning', Pause),
+    closed: a('final', Lock),
+    cancelled: a('final', X)
+  },
+  // WF-P
+  social_contribution: {
+    requested: a('neutral', Inbox),
+    approved: a('info', CircleCheck),
+    procured: a('progress', Package),
+    delivered: a('success', Check),
+    closed: a('final', Lock),
+    rejected: a('final', Ban),
+    cancelled: a('final', X)
   }
 }
 
