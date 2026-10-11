@@ -95,8 +95,9 @@ export function Presupuestos({ programa }: { programa: Registro }) {
               })}
             </tbody>
           </Table>
-          {asignado.sumas.some((s) => s.moneda !== monedaDelPrograma) ? (
-            <p className="text-sg-caption text-sg-warning">{t('fichaPrograma.presupuesto.otrasMonedas', { moneda: monedaDelPrograma || '—' })}</p>
+          {/* sin moneda del programa no hay total con el cual comparar: el Resumen ya dice que no se calcula */}
+          {monedaDelPrograma !== '' && asignado.sumas.some((s) => s.moneda !== monedaDelPrograma) ? (
+            <p className="text-sg-caption text-sg-warning">{t('fichaPrograma.presupuesto.otrasMonedas', { moneda: monedaDelPrograma })}</p>
           ) : null}
           {asignado.invalidos + ejecutado.invalidos > 0 ? <p className="text-sg-caption text-sg-warning">{t('fichaPrograma.presupuesto.invalidos')}</p> : null}
         </section>
