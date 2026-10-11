@@ -200,6 +200,16 @@ describe('S44 · ficha del aporte', () => {
     expect(within(await screen.findByRole('dialog', { name: 'Ítems' })).queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
   })
 
+  it('mientras busca la solicitud de origen, «Cargando» no queda dentro de un párrafo (un <p> no contiene otro)', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([{ path: '/objects/stakeholder_request/records', responder: () => new Promise<Response>(() => {}) }])
+    abrir()
+    const trazabilidad = await screen.findByRole('region', { name: 'Trazabilidad' })
+    const cargando = await within(trazabilidad).findByRole('status')
+    expect(cargando.parentElement?.closest('p')).toBeNull()
+    expect(within(trazabilidad).getByText(/Solicitud de origen/)).toBeInTheDocument()
+  })
+
   it('un aporte que no existe o que la cuenta no lee (404) lo dice sin distinguir y sin «Reintentar»', async () => {
     fetch = mockFetch(rutas(APORTE, [{ path: '/objects/social_contribution/records/a1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrir()

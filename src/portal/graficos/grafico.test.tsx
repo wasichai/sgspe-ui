@@ -30,6 +30,22 @@ describe('GraficoImpl', () => {
     expect(grupo.querySelector('div[aria-label]')?.getAttribute('aria-label')).toMatch(/\S/)
   })
 
+  it('con la descripción de la pantalla, el texto accesible es ese, sin el NaN que ECharts diría de una barra null', async () => {
+    const opciones = {
+      ...OPCIONES,
+      aria: { label: { description: 'Reuniones al mes. 2026-09: 1; 2026-10: sin dato.' } },
+      series: [{ type: 'bar', data: [1, null] }]
+    }
+    render(
+      <div style={{ width: 400 }}>
+        <GraficoImpl etiqueta="Reuniones al mes" opciones={opciones} />
+      </div>
+    )
+    const grupo = screen.getByRole('group', { name: 'Reuniones al mes' })
+    await waitFor(() => expect(grupo.querySelector('svg')).not.toBeNull())
+    expect(grupo.querySelector('div[aria-label]')?.getAttribute('aria-label')).toBe('Reuniones al mes. 2026-09: 1; 2026-10: sin dato.')
+  })
+
   it('al desmontar libera la instancia de ECharts y deja de observar el tamaño', async () => {
     const observadores: { observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = []
     vi.stubGlobal(
@@ -77,6 +93,11 @@ describe('opcionesConTema', () => {
     expect(r.yAxis.splitLine.lineStyle.color).toBe('#abcdef')
     expect(r.tooltip).toMatchObject({ trigger: 'axis', backgroundColor: '#333333' })
     expect(r.legend.textStyle.color).toBe('#444444')
+  })
+
+  it('la descripción accesible que la pantalla da se suma al aria del tema sin apagarlo', () => {
+    const r = opcionesConTema({ aria: { label: { description: 'Programas: uno por aprobar' } }, series: [] }) as Record<string, any>
+    expect(r.aria).toEqual({ enabled: true, decal: { show: true }, label: { description: 'Programas: uno por aprobar' } })
   })
 
   it('no agrega un tooltip ni una leyenda que la pantalla no pidió', () => {

@@ -311,6 +311,31 @@ describe('evidencias de un registro', () => {
     expect(screen.queryByText(/padron-de-comuneros/)).not.toBeInTheDocument()
   })
 
+  it('con todas las clasificaciones leídas, el encabezado «Clasificación» no dice que el rol no la lee', async () => {
+    fetch = mockFetch([
+      { path: '/metadata/objects/evidence', body: DEF_EVIDENCIA },
+      { path: '/objects/commitment/records/c1/related/evidence_commitment', body: pagina([PUBLICA, CONFIDENCIAL]) }
+    ])
+    montar(<EvidenciasDelRegistro objeto="commitment" registro={COMPROMISO} escribe={false} />, {
+      permisos: permisos({ commitment: ['READ'], evidence: ['READ'] })
+    })
+    const tabla = await screen.findByRole('table', { name: 'Evidencias' })
+    expect(within(tabla).getByRole('columnheader', { name: 'Clasificación' })).toBeInTheDocument()
+    expect(within(tabla).queryByText('Su rol no puede leer este dato')).not.toBeInTheDocument()
+    expect(within(tabla).getByText('CONFIDENCIAL')).toBeInTheDocument()
+  })
+
+  it('una clasificación ilegible lo explica en su celda; el nombre del encabezado sigue siendo «Clasificación»', async () => {
+    fetch = mockFetch(base())
+    montar(<EvidenciasDelRegistro objeto="commitment" registro={COMPROMISO} escribe={false} />, {
+      permisos: permisos({ commitment: ['READ'], evidence: ['READ'] })
+    })
+    const tabla = await screen.findByRole('table', { name: 'Evidencias' })
+    expect(within(tabla).getByRole('columnheader', { name: 'Clasificación' })).toBeInTheDocument()
+    const fila = within(tabla).getByRole('link', { name: 'Foto' }).closest('tr') as HTMLElement
+    expect(within(fila).getByText('Restringido').closest('[aria-describedby]')).toHaveAccessibleDescription(/Su rol no puede leer este dato/)
+  })
+
   it('con DOWNLOAD_RESTRICTED la CONFIDENCIAL se descarga; desvincular de un compromiso pide motivo', async () => {
     fetch = mockFetch(base([{ method: 'DELETE', path: '/sgspe/evidence/ev2/links/commitment/c1', status: 204 }]))
     red = espiarRed()

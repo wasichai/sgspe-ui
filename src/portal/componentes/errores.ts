@@ -34,11 +34,14 @@ const campoDeComando = (campo: string) => /^(attributes\.)?(reclassified_from_|c
 const SIN_REGISTRO = 'no record with this id'
 
 // el texto propio de un código sobre un campo (plan 4.2a), si lo tiene: COMMAND_ONLY sobre un vínculo que solo escriben la
-// reclasificación y la aceptación no es una transición de comando, y OBJECT_NOT_READABLE sobre una QCS es una que la cuenta no lee
+// reclasificación y la aceptación no es una transición de comando, OBJECT_NOT_READABLE sobre una QCS es una que la cuenta no lee
+// y DELIVERY_FROZEN sobre social_contribution es el de un aporte, no el de un compromiso
 const claveEnCampo = (codigo: string, campo: string | undefined): string | null => {
   if (!campo) return null
   if (codigo === 'COMMAND_ONLY' && campoDeComando(campo)) return 'comun.codigosEnCampo.vinculoDeComando'
   if (codigo === 'OBJECT_NOT_READABLE' && QCS.has(campo)) return 'comun.codigosEnCampo.qcsNoLeida'
+  // DELIVERY_FROZEN dice las entregas de un compromiso; sobre el aporte, su entrega, sus evidencias y sus comprobantes
+  if (codigo === 'DELIVERY_FROZEN' && /^(attributes\.)?social_contribution$/.test(campo)) return 'comun.codigosEnCampo.aporteEntregado'
   return null
 }
 

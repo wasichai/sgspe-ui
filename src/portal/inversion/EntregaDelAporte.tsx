@@ -15,7 +15,7 @@ import { montoPe } from '../componentes/Monto'
 import { RegistrosSimples, type ColumnaSimple } from '../componentes/RegistrosSimples'
 import { hoyEnLima } from '../datos/fechas'
 import { codigoDelError } from '../datos/http'
-import { entregaAbierta, EVIDENCIAS_DE_ENTREGA, monedaDe } from '../datos/inversion'
+import { comprobantesCongelados, entregaAbierta, EVIDENCIAS_DE_ENTREGA, monedaDe } from '../datos/inversion'
 import { atributo, puedeEscribir, texto, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
@@ -77,7 +77,7 @@ export function EntregaDelAporte({ aporte, escribe }: { aporte: Registro; escrib
           {t('fichaAporte.entrega.guardada')}
         </p>
       ) : null}
-      {entrega ? <Requisitos entrega={entrega} /> : null}
+      {entrega ? <Requisitos entrega={entrega} abierta={abierta} /> : null}
       <Comprobantes aporte={aporte} />
       {drawer ? (
         <EntregaDrawer
@@ -144,7 +144,7 @@ function TarjetaDeEntrega({ entrega, proyecto, escribe, alCorregir }: { entrega:
 
 // lo que pide «Registrar entrega» (P8): la conformidad dada, quiénes la dieron (restringido: quien no lo lee no puede aplicar la
 // transición, FIELD_NOT_READABLE) y una evidencia de cada tipo vinculada a la entrega. la consulta en seco del botón lo confirma
-function Requisitos({ entrega }: { entrega: Registro }) {
+function Requisitos({ entrega, abierta }: { entrega: Registro; abierta: boolean }) {
   const { t } = useTranslation(NS)
   const evidencias = useEvidenciasDe('delivery', entrega.id)
   const tipos = new Set((evidencias.data?.content ?? []).map((e) => texto(e, 'evidence_type')))
@@ -157,6 +157,7 @@ function Requisitos({ entrega }: { entrega: Registro }) {
   return (
     <section aria-label={t('fichaAporte.entrega.requisitos.titulo')} className="space-y-1 rounded-sg-md border border-sg-border p-3">
       <h3 className="font-medium">{t('fichaAporte.entrega.requisitos.titulo')}</h3>
+      {abierta ? <p className="text-sg-caption text-sg-text-muted">{t('fichaAporte.entrega.comprobanteAntes')}</p> : null}
       <ul className="space-y-1">
         {filas.map(([etiqueta, listo]) => (
           <li key={etiqueta} className="flex justify-between gap-2">
@@ -186,7 +187,7 @@ function Requisitos({ entrega }: { entrega: Registro }) {
 }
 
 // el comprobante estructurado (receipt, opcional, spec §2.2): su escaneo es la evidencia COMPROBANTE. ninguna regla lo compara con
-// el total aprobado
+// el total aprobado. desde delivered, o anulado, no cambia (DELIVERY_FROZEN): sin alta, edición ni baja, y se dice por qué
 function Comprobantes({ aporte }: { aporte: Registro }) {
   const { t } = useTranslation(NS)
   const moneda = monedaDe(aporte)
@@ -215,6 +216,7 @@ function Comprobantes({ aporte }: { aporte: Registro }) {
       textoNuevo={t('fichaAporte.entrega.comprobantes.nuevo')}
       textoVacio={t('fichaAporte.entrega.comprobantes.vacio')}
       ayuda={<p className="text-sg-caption text-sg-text-muted">{t('fichaAporte.entrega.comprobantes.ayuda')}</p>}
+      congelado={comprobantesCongelados(aporte) ? t('fichaAporte.entrega.comprobantes.congelados') : undefined}
     />
   )
 }
@@ -335,6 +337,7 @@ function EntregaDrawer({
       {!lista && definicion.isError ? <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
       {lista ? (
         <form id="entrega-de-aporte" className="space-y-3" onSubmit={(e) => void guardar(e)}>
+          <p className="text-sg-caption text-sg-text-muted">{t('fichaAporte.entrega.comprobanteAntes')}</p>
           {escribible('delivery_date') ? (
             <Campo etiqueta={t('entregas.campos.delivery_date')} error={error('delivery_date')}>
               {(p) => <Input {...p} type="date" {...register('delivery_date')} />}

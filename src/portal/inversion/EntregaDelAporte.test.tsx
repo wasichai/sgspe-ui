@@ -46,6 +46,12 @@ const DEF_EVIDENCIA = definicion('evidence', [
 ])
 const evidencia = (id: string, tipo: string) => registro(id, { title: `Evidencia ${tipo}`, evidence_type: tipo, classification: 'INTERNA' })
 
+const COMPROBANTE = registro(
+  'rc1',
+  { social_contribution: 'a1', receipt_type: 'FACTURA', issuer_name: 'Ferretería Ejemplo', amount: '1750.50', currency: 'PEN' },
+  { updatedAt: '2026-10-09T21:00:00Z' }
+)
+
 const rutas = (entregas: Registro[] = [], extra: MockRoute[] = []): MockRoute[] => [
   ...extra,
   ...baseDeInversion(),
@@ -198,6 +204,75 @@ describe('S44 · entrega del aporte', () => {
     expect(await screen.findByText('El aporte ya se entregó o se anuló: su entrega y sus evidencias no cambian.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Corregir' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Subir acta de recepción firmada' })).not.toBeInTheDocument()
+  })
+
+  it.each(['delivered', 'closed', 'rejected', 'cancelled'])(
+    'en %s los comprobantes no cambian: sin alta, edición ni baja, y lo dice en «Comprobantes»',
+    async (estado) => {
+      fetch = mockFetch(rutas([ENTREGA], [{ path: '/objects/receipt/records', body: pagina([COMPROBANTE]) }]))
+      montar(<EntregaDelAporte aporte={{ ...ADQUIRIDO, state: estado }} escribe />, {
+        usuario: INVERSION,
+        permisos: { ...EQUIPO_DE_INVERSION, objects: { ...EQUIPO_DE_INVERSION.objects, receipt: ['READ', 'CREATE', 'UPDATE', 'DELETE'] } }
+      })
+      const comprobantes = await screen.findByRole('region', { name: 'Comprobantes' })
+      expect(
+        within(comprobantes).getByText(
+          'El aporte ya se entregó o se anuló: su comprobante ya no cambia. El escaneo sigue siendo la evidencia COMPROBANTE de la entrega.'
+        )
+      ).toBeInTheDocument()
+      expect(within(comprobantes).queryByRole('button', { name: 'Nuevo comprobante' })).not.toBeInTheDocument()
+      await userEvent.click(await within(comprobantes).findByRole('button', { name: 'FACTURA' }))
+      const drawer = await screen.findByRole('dialog', { name: 'Comprobantes' })
+      expect(await within(drawer).findByText('Ferretería Ejemplo')).toBeInTheDocument()
+      expect(within(drawer).queryByRole('button', { name: /guardar|save/i })).not.toBeInTheDocument()
+      expect(within(drawer).queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
+    }
+  )
+
+  it('en Adquirido ofrece «Nuevo comprobante» y avisa, en los requisitos y al registrar, que el comprobante se carga antes', async () => {
+    fetch = mockFetch(rutas([ENTREGA]))
+    abrir()
+    const comprobantes = await screen.findByRole('region', { name: 'Comprobantes' })
+    expect(await within(comprobantes).findByRole('button', { name: 'Nuevo comprobante' })).toBeInTheDocument()
+    expect(within(comprobantes).queryByText(/su comprobante ya no cambia/)).not.toBeInTheDocument()
+    const aviso = 'Los datos del comprobante se cargan antes de «Registrar entrega»: desde que el aporte se entrega ya no cambian.'
+    expect(within(screen.getByRole('region', { name: 'Lo que pide «Registrar entrega»' })).getByText(aviso)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Corregir' }))
+    expect(within(await screen.findByRole('dialog', { name: 'Corregir la entrega del aporte' })).getByText(aviso)).toBeInTheDocument()
+  })
+
+  it('al registrar la entrega también avisa que el comprobante se carga antes', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar entrega' }))
+    const panel = await screen.findByRole('dialog', { name: 'Registrar la entrega del aporte' })
+    expect(
+      within(panel).getByText('Los datos del comprobante se cargan antes de «Registrar entrega»: desde que el aporte se entrega ya no cambian.')
+    ).toBeInTheDocument()
+  })
+
+  it('un DELIVERY_FROZEN al guardar un comprobante (otra persona entregó el aporte) habla del aporte, no del compromiso', async () => {
+    fetch = mockFetch(rutas([], [{ path: '/objects/receipt/records', body: pagina([COMPROBANTE]) }]))
+    red = espiarRed([
+      {
+        method: 'PUT',
+        path: '/objects/receipt/records/rc1',
+        responder: () => problema(409, 'congelado', [{ field: 'social_contribution', message: 'DELIVERY_FROZEN' }])
+      }
+    ])
+    abrir()
+    const comprobantes = await screen.findByRole('region', { name: 'Comprobantes' })
+    await userEvent.click(await within(comprobantes).findByRole('button', { name: 'FACTURA' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Comprobantes' })
+    const emisor = await within(drawer).findByLabelText(/^issuer_name/)
+    await userEvent.clear(emisor)
+    await userEvent.type(emisor, 'Ferretería Otra')
+    await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/receipt/records/rc1')).toHaveLength(1))
+    expect(
+      await within(drawer).findByText(/El aporte ya se entregó o se anuló: su entrega, sus evidencias y sus comprobantes no cambian\./)
+    ).toBeInTheDocument()
+    expect(within(drawer).queryByText(/compromiso/)).not.toBeInTheDocument()
   })
 
   it('antes de adquirir no ofrece registrar y dice cuándo se registra', async () => {

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeInversion, CAMPANA, EQUIPO_DE_INVERSION, INVERSION, PROGRAMA } from '../../test/inversion'
 import { montar, pagina } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
+import { opcionesRecibidas } from '../../test/graficoFalso'
 import { TableroInversionPage } from './TableroInversionPage'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
@@ -201,6 +202,22 @@ describe('tablero de inversión social', () => {
     const fila = within(tabla).getByText('PS-003 · Programa Ejemplo por aprobar').closest('tr') as HTMLElement
     expect(within(fila).getByText('Por aprobar')).toBeInTheDocument()
     expect(within(fila).queryByText('S/ 0.00')).not.toBeInTheDocument()
+  })
+
+  it('en el gráfico, un programa por aprobar no tiene barra de ejecutado (null, nunca NaN) y el texto accesible dice «Por aprobar»', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await screen.findByRole('table', { name: 'Presupuestos de programas en PEN' })
+    const opciones = opcionesRecibidas.get('Programas en PEN') as {
+      series: { data: unknown[] }[]
+      aria: { label: { description: string } }
+    }
+    expect(opciones.series[1].data).toEqual([20000, null])
+    expect(opciones.series.flatMap((s) => s.data).some((v) => typeof v === 'number' && Number.isNaN(v))).toBe(false)
+    const descripcion = opciones.aria.label.description
+    expect(descripcion).toContain('PS-003 · Programa Ejemplo por aprobar 2026: Asignado S/ 10,000.00, Ejecutado registrado Por aprobar')
+    expect(descripcion).toContain('PS-001 · Programa Ejemplo de agua segura 2026: Asignado S/ 80,000.00, Ejecutado registrado S/ 20,000.00')
+    expect(descripcion).not.toMatch(/NaN/)
   })
 
   it('un monto sin moneda se dice sin prefijo de moneda y aparte: nunca «— 1,234.00» ni sumado a otra moneda', async () => {
