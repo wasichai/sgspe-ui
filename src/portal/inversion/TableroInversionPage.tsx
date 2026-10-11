@@ -7,6 +7,7 @@ import { montoPe } from '../componentes/Monto'
 import { desglose, useTablero, type FilaDeDesglose, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { anioEnLima } from '../datos/inversion'
 import { texto, useTodos } from '../datos/registros'
+import { descripcionDeDatos } from '../graficos/descripcion'
 import { Grafico } from '../graficos/Grafico'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
@@ -151,8 +152,16 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
   const codigo = enMoneda || null
   const porAprobar = programaPorAprobar
   const nombre = (f: FilaDeDesglose) => `${f.label ?? f.key} ${String(f.year ?? '')}`.trim()
+  // la tabla «Ver datos» y el texto accesible del gráfico dicen lo mismo: un programa por aprobar no tiene barra de ejecutado (null,
+  // que ECharts no dibuja) y su descripción dice «Por aprobar», no el NaN que ECharts diría de esa barra
+  const datos = {
+    columnas: [t('tableroInversion.programas.programa'), t('tableroInversion.programas.asignado'), t('tableroInversion.programas.ejecutado')],
+    filas: filas.map((f) => [nombre(f), montoPe(f.allocated, codigo), porAprobar(f) ? t('tableroInversion.programas.porAprobar') : montoPe(f.executed, codigo)])
+  }
+  const descripcion = descripcionDeDatos(titulo, datos)
   const opciones = useMemo(
     () => ({
+      aria: { label: { description: descripcion } },
       grid: { left: 60, right: 16, top: 24, bottom: 48 },
       legend: {},
       tooltip: { trigger: 'axis' },
@@ -163,22 +172,11 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
         { type: 'bar', name: t('tableroInversion.programas.ejecutado'), data: filas.map((f) => (porAprobar(f) ? null : cifraDe(f.executed))) }
       ]
     }),
-    [JSON.stringify(filas), t]
+    [JSON.stringify(filas), t, descripcion]
   )
   return (
     <div className="space-y-2">
-      <Grafico
-        etiqueta={titulo}
-        opciones={opciones}
-        datos={{
-          columnas: [t('tableroInversion.programas.programa'), t('tableroInversion.programas.asignado'), t('tableroInversion.programas.ejecutado')],
-          filas: filas.map((f) => [
-            nombre(f),
-            montoPe(f.allocated, codigo),
-            porAprobar(f) ? t('tableroInversion.programas.porAprobar') : montoPe(f.executed, codigo)
-          ])
-        }}
-      />
+      <Grafico etiqueta={titulo} opciones={opciones} datos={datos} />
       <Table aria-label={enMoneda ? t('tableroInversion.programas.tablaDeMoneda', { moneda: enMoneda }) : t('tableroInversion.programas.tablaSinMoneda')}>
         <thead>
           <tr>

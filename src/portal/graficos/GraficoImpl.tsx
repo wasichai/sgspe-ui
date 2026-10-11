@@ -48,6 +48,8 @@ export function opcionesConTema(opciones: Objeto): Objeto {
       opciones.tooltip
     )
   }
+  // la descripción accesible propia de una pantalla (aria.label.description) se suma al aria del tema: no lo apaga ni quita el decal
+  if (esObjeto(opciones.aria)) resultado.aria = fusionar(temaDelGrafico().aria, opciones.aria)
   if (esObjeto(opciones.legend)) resultado.legend = fusionar({ textStyle: { color: colorDe('--sg-text-secondary') } }, opciones.legend)
   return resultado
 }
