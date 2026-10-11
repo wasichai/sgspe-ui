@@ -46,32 +46,42 @@ export function useReclasificar(objeto: ObjetoDeQcs) {
   )
 }
 
+// lo que nace al aceptar una solicitud: un compromiso (F4) o, desde F5, un aporte social en requested (spec F5 §3.7)
+export type ObjetoQueNace = 'commitment' | 'social_contribution'
+
 export interface Aceptacion {
   request: Registro
-  commitment: Registro
+  // uno de los dos, según lo que nació
+  commitment?: Registro
+  contribution?: Registro
 }
 
 export interface PedidoDeAceptacion {
   solicitud: Registro
+  // lo que nace; sin él, un compromiso (las llamadas de F4)
+  crea?: ObjetoQueNace
   // la respuesta a la solicitud y cuándo se comunicó (aceptar es responderla, api.md §4.6)
   respuesta: string
   respondidaEn: string
-  // los valores del compromiso que nace en draft (sin el proyecto, que es el de la solicitud)
+  // los valores del registro que nace (sin el proyecto, que es el de la solicitud)
   atributos: Record<string, unknown>
   motivo: string
 }
 
-// POST /api/sgspe/stakeholder-requests/{id}/accept → 201 { request, commitment }: en F4 crea solo un compromiso (el aporte
-// social llega en F5: creates distinto de commitment es 400 INVALID_TARGET)
+// POST /api/sgspe/stakeholder-requests/{id}/accept → 201 { request, commitment } o { request, contribution }: crea el compromiso en
+// draft o el aporte en requested con el proyecto de la solicitud, guarda created_commitment o created_contribution y aplica accept.
+// creates distinto de commitment y social_contribution es 400 INVALID_TARGET
 export function useAceptarSolicitud() {
   return useComando<Aceptacion, PedidoDeAceptacion>(
-    ({ solicitud, respuesta, respondidaEn, atributos, motivo }) => ({
+    ({ solicitud, crea = 'commitment', respuesta, respondidaEn, atributos, motivo }) => ({
       ruta: `/sgspe/stakeholder-requests/${encodeURIComponent(solicitud.id)}/accept`,
-      json: { creates: 'commitment', response: respuesta, respondedAt: respondidaEn, attributes: atributos },
+      json: { creates: crea, response: respuesta, respondedAt: respondidaEn, attributes: atributos },
       version: solicitud.updatedAt,
       motivo
     }),
-    { invalidar: (_r, { solicitud }) => [...registroDe('stakeholder_request', solicitud.id), ['records', 'commitment'], ...cifras()] }
+    {
+      invalidar: (_r, { solicitud, crea = 'commitment' }) => [...registroDe('stakeholder_request', solicitud.id), ['records', crea], ...cifras()]
+    }
   )
 }
 
