@@ -20,15 +20,19 @@ import { useTextoDeAviso } from '../transiciones/avisos'
 // quién le toca decidir. «¿Puede decidir?» pregunta GET …/transitions y transition-checks por la aprobación de su rol (D4,
 // D5, D7 dicen por qué no). «Escalamientos» son los avisos de plazo (sgspe.deadlines). la decisión de un compromiso se toma
 // en S31 (/tasks/approvals/commitment/:recordId); las de otros objetos, en su ficha
-// approve_direct no está: sale de draft, y los avisos de aprobación existen solo en pending_approval (ApprovalNotices los
+// approve_direct de un compromiso no está: sale de draft, y sus avisos existen solo en pending_approval (ApprovalNotices los
 // resuelve al salir de ese estado), así que nunca llega a esta bandeja ni a las decisiones de S31
+// desde F5, el programa (approve, WF-G) y el aporte (approve y approve_direct, WF-P): el aviso del aporte llega al alta y vive
+// mientras esté en requested (ApprovalNoticeListener lo resuelve al salir), así que approve_direct también se decide desde aquí
 // desde F4, la queja ALTA o CRITICA que resuelve quien aprueba (resolve_high_severity, decisión 8): su aviso llega con la misma
 // fuente y la decisión se toma en la ficha de la queja (S36)
 export const APROBACIONES_DE: Readonly<Record<string, readonly string[]>> = {
   commitment: ['approve', 'approve_senior'],
   project: ['approve'],
   engagement: ['approve_minutes'],
-  grievance: ['resolve_high_severity']
+  grievance: ['resolve_high_severity'],
+  social_program: ['approve'],
+  social_contribution: ['approve', 'approve_direct']
 }
 // los avisos que son escalamientos: los de plazo (QCS, compromisos, tareas, la revisión vencida de un riesgo y el aviso genérico de
 // una QCS confidencial, sin enlace) y los de un riesgo que sube de nivel
@@ -44,8 +48,19 @@ export function useAprobacionesPendientes() {
   return { avisos, pendientes, truncado: (avisos.data?.totalPages ?? 1) > 1 }
 }
 
-export const rutaDeDecision = (aviso: Aviso): string | null =>
-  aviso.link?.object === 'commitment' && aviso.link.recordId ? `/tasks/approvals/commitment/${encodeURIComponent(aviso.link.recordId)}` : null
+// la decisión de un compromiso se toma en S31; la de un programa (S43) y la de un aporte (S44), en su ficha, con sus reglas a la
+// vista: «Revisar» lleva por /r/… (lee el registro como quien mira y salta a su ficha con el proyecto puesto)
+const DECIDEN_EN_SU_FICHA: readonly string[] = ['social_program', 'social_contribution']
+export const rutaDeDecision = (aviso: Aviso): string | null => {
+  const objeto = aviso.link?.object
+  const id = aviso.link?.recordId
+  if (!objeto || !id) return null
+  if (objeto === 'commitment') return `/tasks/approvals/commitment/${encodeURIComponent(id)}`
+  return DECIDEN_EN_SU_FICHA.includes(objeto) ? rutaParaAbrir(objeto, id) : null
+}
+
+// el monto de lo que se decide, en su moneda: el de un compromiso y el total de un aporte (lo que se aprobará)
+const MONTO_DE: Readonly<Record<string, string>> = { commitment: 'amount', social_contribution: 'total_amount' }
 
 export function AprobacionesPage() {
   const { t } = useTranslation(NS)
@@ -174,7 +189,7 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
       </Td>
       <Td className="text-sm">{reservada ? '—' : t(`aprobaciones.objetos.${objeto}`, { defaultValue: aviso.title })}</Td>
       <Td className="text-sm tabular-nums">
-        {registro.data && objeto === 'commitment' ? montoPe(atributo(registro.data, 'amount'), atributo(registro.data, 'currency')) : '—'}
+        {registro.data && MONTO_DE[objeto] ? montoPe(atributo(registro.data, MONTO_DE[objeto]), atributo(registro.data, 'currency')) : '—'}
       </Td>
       <Td className="text-sm">{espera === null || espera <= 0 ? t('aprobaciones.hoy') : t('aprobaciones.dias', { n: espera })}</Td>
       <Td className="text-sm">{registro.data ? <PuedeDecidir objeto={objeto} id={id} /> : '—'}</Td>
