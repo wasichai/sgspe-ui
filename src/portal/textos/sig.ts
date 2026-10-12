@@ -22,7 +22,29 @@ export const ES_SIG = {
   posturaNoDisponible: 'Postura: No disponible',
   totalNoDisponible: 'Grupos de interés: No disponible',
   aportes_one: '{{monto}} ({{count, number}} aporte)',
-  aportes_other: '{{monto}} ({{count, number}} aportes)'
+  aportes_other: '{{monto}} ({{count, number}} aportes)',
+  calor: {
+    titulo: 'Mapa de calor',
+    ninguno: 'Sin mapa de calor',
+    objetos: {
+      grievance: 'Quejas',
+      inquiry: 'Consultas',
+      stakeholder_request: 'Solicitudes',
+      engagement: 'Interacciones',
+      incident: 'Incidentes',
+      early_warning_signal: 'Señales de alerta'
+    },
+    tabla: 'Concentración por localidad',
+    localidad: 'Localidad',
+    cantidad: 'Registros',
+    menos: 'Menos',
+    mas: 'Más',
+    periodo: 'Periodo contado: del {{desde}} al {{hasta}}.',
+    truncado: 'Hay más lugares que los que caben en la respuesta: la lista y el mapa están incompletos. Acote el proyecto o el periodo.',
+    incompleto: 'La lista puede estar incompleta: su cuenta no lee algunos datos de ubicación.',
+    sinCeldas: 'No hay registros con localidad o comunidad en el periodo.',
+    sinLocalidad: 'Los registros sin localidad ni comunidad no cuentan: se ven en Calidad de datos.'
+  }
 }
 
 export const EN_SIG: typeof ES_SIG = {
@@ -46,5 +68,27 @@ export const EN_SIG: typeof ES_SIG = {
   posturaNoDisponible: 'Stance: Not available',
   totalNoDisponible: 'Stakeholders: Not available',
   aportes_one: '{{monto}} ({{count, number}} contribution)',
-  aportes_other: '{{monto}} ({{count, number}} contributions)'
+  aportes_other: '{{monto}} ({{count, number}} contributions)',
+  calor: {
+    titulo: 'Heat map',
+    ninguno: 'No heat map',
+    objetos: {
+      grievance: 'Grievances',
+      inquiry: 'Inquiries',
+      stakeholder_request: 'Requests',
+      engagement: 'Engagements',
+      incident: 'Incidents',
+      early_warning_signal: 'Warning signals'
+    },
+    tabla: 'Concentration by locality',
+    localidad: 'Locality',
+    cantidad: 'Records',
+    menos: 'Fewer',
+    mas: 'More',
+    periodo: 'Period counted: from {{desde}} to {{hasta}}.',
+    truncado: 'There are more places than fit in the response: the list and the map are incomplete. Narrow the project or the period.',
+    incompleto: 'The list may be incomplete: your account cannot read some location data.',
+    sinCeldas: 'There are no records with a locality or community in the period.',
+    sinLocalidad: 'Records without a locality or community are not counted: they show up in Data quality.'
+  }
 }

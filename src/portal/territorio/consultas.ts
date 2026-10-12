@@ -126,8 +126,9 @@ export interface Celda {
 }
 
 // el periodo que contó el servidor viaja siempre (sin pedirlo, los 12 meses que terminan hoy en Lima); truncated, más celdas
-// que limit. no trae confidentialHidden (hueco H2 del plan 6.3)
+// que limit. confidentialHidden viaja con of en QCS cuando se ocultan confidenciales (plan 6.2c); un backend anterior no lo trae
 export interface Concentracion {
+  confidentialHidden?: boolean
   available: boolean
   missingFields?: string[]
   truncated: boolean

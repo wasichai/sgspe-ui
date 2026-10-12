@@ -14,6 +14,7 @@ import {
   CAPA_LYR_23,
   CAPA_NO_ENCONTRADA,
   CAPACIDADES_WMS,
+  CONCENTRACION,
   coleccion,
   EQUIPO_SIG
 } from '../../test/sig'
@@ -192,7 +193,7 @@ describe('S12 · filtros, leyenda y captura', () => {
     }
   })
 
-  it('la leyenda dice las capas encendidas; Gestión no se ofrece sin contenido; «Capturar PNG» está a mano', async () => {
+  it('la leyenda dice las capas encendidas; Gestión solo ofrece el calor sin capas; «Capturar PNG» está a mano', async () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
     const leyenda = await screen.findByRole('region', { name: 'Leyenda' })
     expect(
@@ -203,7 +204,7 @@ describe('S12 · filtros, leyenda y captura', () => {
     expect(screen.getByRole('checkbox', { name: /Concesiones mineras/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Capturar PNG' })).toBeInTheDocument()
     await waitFor(() => expect(fetch!.calls.filter((l) => l.path.startsWith('/sgspe/territory/layers/LYR-19')).length).toBe(1))
-    expect(within(await capas()).queryByRole('group', { name: 'Gestión' })).not.toBeInTheDocument()
+    expect(within(await within(await capas()).findByRole('group', { name: 'Gestión' })).queryAllByRole('checkbox')).toEqual([])
   })
 })
 
@@ -212,7 +213,7 @@ describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
     await waitFor(() => expect(fetch!.calls.some((l) => l.path.startsWith('/sgspe/territory/layers/LYR-19'))).toBe(true))
     await screen.findByRole('button', { name: 'Comunidad Ejemplo' })
-    expect(within(await capas()).queryByRole('group', { name: 'Gestión' })).not.toBeInTheDocument()
+    expect(within(await within(await capas()).findByRole('group', { name: 'Gestión' })).queryAllByRole('checkbox')).toEqual([])
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -332,5 +333,52 @@ describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
     await userEvent.click(await within(await capas()).findByRole('checkbox', { name: /Interacciones, visitas y observaciones/ }))
     expect(await within(await capas()).findByText('Una fecha del periodo no es válida: revise las fechas.')).toBeInTheDocument()
     expect(within(await capas()).queryByText(/fuera del rango/)).not.toBeInTheDocument()
+  })
+})
+
+describe('S12 · mapa de calor', () => {
+  it('elegir el objeto lo pone en la URL, pide la concentración con el proyecto y el periodo, y la dibuja y la lista', async () => {
+    fetch = abrirPortal('/territory?project=p1&periodStart=2026-07-01', ANALISTA_SIG, EQUIPO_SIG, [
+      ...rutas(),
+      { path: '/sgspe/territory/concentration', body: { ...CONCENTRACION, confidentialHidden: true } }
+    ])
+    red = espiarRed()
+    const control = await screen.findByRole('region', { name: 'Capas' })
+    const selector = within(control).getByLabelText('Mapa de calor')
+    expect(within(selector).queryByRole('option', { name: 'Consultas' })).not.toBeInTheDocument()
+    await userEvent.selectOptions(selector, 'grievance')
+    await waitFor(() => expect(rutaActual()).toContain('heat=grievance'))
+    expect(await screen.findByTestId('calor')).toHaveTextContent('2')
+    expect(screen.getByTestId('calor')).toHaveAttribute('data-maximo', '5')
+    expect(red.a('GET', '/sgspe/territory/concentration')[0].ruta).toBe('/sgspe/territory/concentration?of=grievance&project=p1&periodStart=2026-07-01')
+    const tabla = screen.getByRole('table', { name: 'Concentración por localidad' })
+    expect(
+      within(tabla)
+        .getAllByRole('row')
+        .slice(1)
+        .map((r) => r.textContent)
+    ).toEqual(['Localidad Ejemplo5', 'Otra Localidad Ejemplo2'])
+    expect(screen.getByRole('note')).toHaveTextContent(/confidenciales/)
+    expect(screen.getByText(/sin localidad ni comunidad no cuentan/)).toBeInTheDocument()
+    expect(screen.getByText('Periodo contado: del 2025-10-11 al 2026-10-10.')).toBeInTheDocument()
+  })
+
+  it('sin confidentialHidden no hay nota; truncated y available:false lo dicen', async () => {
+    fetch = abrirPortal('/territory?heat=grievance', ANALISTA_SIG, EQUIPO_SIG, [
+      ...rutas(),
+      { path: '/sgspe/territory/concentration', body: { ...CONCENTRACION, truncated: true, available: false, missingFields: ['locality.location'] } }
+    ])
+    expect(await screen.findByText(/Hay más lugares que los que caben/)).toBeInTheDocument()
+    expect(screen.getByText(/puede estar incompleta/)).toBeInTheDocument()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+
+  it('sin permiso sobre el objeto la tabla dice «No disponible» y el mapa no dibuja calor', async () => {
+    fetch = abrirPortal('/territory?heat=grievance', ANALISTA_SIG, EQUIPO_SIG, [
+      ...rutas(),
+      { path: '/sgspe/territory/concentration', status: 403, body: { title: 'Forbidden', status: 403 } }
+    ])
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByTestId('calor')).not.toBeInTheDocument()
   })
 })

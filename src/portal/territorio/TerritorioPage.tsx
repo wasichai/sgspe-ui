@@ -1,6 +1,6 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
@@ -15,11 +15,13 @@ import { NS } from '../i18n'
 import { destinoDe, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, dibujoDe } from '../mapa/capas'
+import { capaDeCalor, SelectorDeCalor, TablaDeCalor } from '../mapa/Calor'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
 import { Leyenda } from '../mapa/Leyenda'
 import { Mapa } from '../mapa/Mapa'
 import { useWms } from '../mapa/wms'
 import { AgregadosDelMapa } from './AgregadosDelMapa'
+import { OBJETOS_DE_CALOR, useConcentracion, type ObjetoDeCalor } from './consultas'
 import { DESTINOS, importaA } from './importacion'
 
 // S12 · mapa territorial (screens.md §4, spec F6 §3.7): las capas públicas por WMS del proxy (nombradas por su GetCapabilities) y
@@ -40,9 +42,20 @@ export function TerritorioPage() {
   const { can } = useAuth()
   const navegar = useNavigate()
   const paso = useSiguientePaso()
-  const [busqueda] = useSearchParams()
+  const [busqueda, fijar] = useSearchParams()
   const proyecto = busqueda.get('project') ?? undefined
   const periodo = { periodStart: busqueda.get('periodStart') ?? undefined, periodEnd: busqueda.get('periodEnd') ?? undefined }
+  const pedido = busqueda.get('heat')
+  const objetoDeCalor = (OBJETOS_DE_CALOR as readonly string[]).includes(pedido ?? '') ? (pedido as ObjetoDeCalor) : null
+  const concentracion = useConcentracion(objetoDeCalor, { project: proyecto, ...periodo })
+  // la misma capa mientras no cambien los datos: el mapa la vuelve a dibujar cuando cambia su identidad
+  const calor = useMemo(() => (objetoDeCalor ? capaDeCalor(concentracion.data) : null), [objetoDeCalor, concentracion.data])
+  const elegirCalor = (valor: ObjetoDeCalor | null) => {
+    const siguiente = new URLSearchParams(busqueda)
+    if (valor) siguiente.set('heat', valor)
+    else siguiente.delete('heat')
+    fijar(siguiente, { replace: true })
+  }
   const [encendidas, setEncendidas] = useState(() => new Set<string>(['LYR-02', 'LYR-05']))
   const [encuadre, setEncuadre] = useState<Encuadre | null>(null)
   const [creando, setCreando] = useState(false)
@@ -131,6 +144,7 @@ export function TerritorioPage() {
             ids={ids}
             encendidas={encendidas}
             estados={estados}
+            gestion={<SelectorDeCalor valor={objetoDeCalor} alCambiar={elegirCalor} />}
             alCambiar={(id, si) => {
               const siguiente = new Set(encendidas)
               if (si) siguiente.add(id)
@@ -153,6 +167,7 @@ export function TerritorioPage() {
                 seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) || capa(e.id)!.grupo === 'gestion',
                 invisible: servicio.porWms.has(e.id)
               }))}
+            calor={calor}
             wms={servicio.wms}
             alFallarWms={servicio.alFallar}
             alSeleccionar={(id, capaId, objeto) => abrir(objeto ?? capa(capaId)?.objeto ?? '', id)}
@@ -164,6 +179,7 @@ export function TerritorioPage() {
               {t(`mapa.avisos.${aviso}`)}
             </p>
           ) : null}
+          {objetoDeCalor ? <TablaDeCalor objeto={objetoDeCalor} consulta={concentracion} /> : null}
         </div>
         <div className="space-y-3">
           <nav aria-label={t('mapa.lugares')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
