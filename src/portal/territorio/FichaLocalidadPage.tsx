@@ -3,7 +3,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, Tabs } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Cargando, Consulta, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
@@ -11,6 +11,7 @@ import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Rastro } from '../contexto/Rastro'
 import {
   atributo,
+  puedeEscribir,
   puedeLeer,
   texto,
   useDefinicion,
@@ -23,6 +24,7 @@ import {
 } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { Dato, TrabajarEnProyecto } from './comunes'
+import { EditorDeGeometria } from './EditorDeGeometria'
 
 // S14 · ficha de localidad y línea base social (screens.md §4): el lugar con datos fechados y su confiabilidad. cada perfil
 // es una foto: un dato nuevo es otro perfil. las cifras se comparan con el perfil anterior y una ausente dice "no disponible
@@ -61,6 +63,14 @@ function Ficha({ localidad }: { localidad: Registro }) {
   const padre = useRegistro('locality', idPadre)
   const distrito = useRegistro('administrative_unit', idDistrito)
   const [editando, setEditando] = useState(false)
+  const { can } = useAuth()
+  const definicion = useDefinicion('locality')
+  const [busqueda] = useSearchParams()
+  // la ubicación y el límite se editan con su revisión previa (spec F6 §3.6): UPDATE sobre la localidad y solo los campos
+  // escribibles
+  const geometrias = ['location', 'boundary'].filter((c) => puedeEscribir(definicion.data, c))
+  const editaGeometria = can('locality', 'UPDATE') && geometrias.length > 0
+  const [dibujando, setDibujando] = useState(false)
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Rastro />
@@ -96,6 +106,11 @@ function Ficha({ localidad }: { localidad: Registro }) {
               {t('territorio.editar')}
             </Button>
           ) : null}
+          {editaGeometria ? (
+            <Button size="sm" variant="secondary" onClick={() => setDibujando(true)}>
+              {t('edicionDeGeometria.abrir')}
+            </Button>
+          ) : null}
         </div>
       </header>
       <Tabs
@@ -111,6 +126,17 @@ function Ficha({ localidad }: { localidad: Registro }) {
       />
       <Drawer titulo={t('territorio.editar')} abierto={editando} alCerrar={() => setEditando(false)}>
         <FormularioDeRegistro objeto="locality" registro={localidad} alGuardar={() => setEditando(false)} alCancelar={() => setEditando(false)} />
+      </Drawer>
+      <Drawer titulo={t('edicionDeGeometria.titulo')} abierto={dibujando} alCerrar={() => setDibujando(false)}>
+        {dibujando ? (
+          <EditorDeGeometria
+            objeto="locality"
+            registro={localidad}
+            campos={geometrias}
+            proyecto={busqueda.get('project') ?? undefined}
+            alTerminar={() => setDibujando(false)}
+          />
+        ) : null}
       </Drawer>
     </article>
   )
