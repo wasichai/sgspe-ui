@@ -112,6 +112,68 @@ describe('edición de geometrías', () => {
     expect(within(screen.getByRole('group', { name: 'Territorio' })).getByRole('button', { name: 'Dibujar un cuadrado de prueba' })).toBeInTheDocument()
   })
 
+  it('una reparación de otro tipo que el del campo no se ofrece ni se guarda', async () => {
+    // un lazo en locality.boundary (POLYGON) se repara en un MultiPolygon de dos partes que no cabe en el tipo del campo: el
+    // servidor la devuelve cruda (GeometryChecks) y el portal no la guarda
+    const dosPartes = {
+      type: 'MultiPolygon',
+      coordinates: [
+        [
+          [
+            [-78.501, -7.901],
+            [-78.5, -7.9],
+            [-78.501, -7.899],
+            [-78.501, -7.901]
+          ]
+        ],
+        [
+          [
+            [-78.499, -7.901],
+            [-78.499, -7.899],
+            [-78.5, -7.9],
+            [-78.499, -7.901]
+          ]
+        ]
+      ]
+    }
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/locality',
+        body: definicion('locality', ['name', ['boundary', { type: 'GEOMETRY', geometry: { type: 'POLYGON', srid: 4326 } }]])
+      },
+      {
+        method: 'POST',
+        path: '/sgspe/territory/geometry-checks',
+        body: { ...REVISION_LAZO, normalized: LAZO, repaired: dosPartes, areaHaBefore: 4.9, areaHaAfter: 2.45 }
+      },
+      { method: 'PUT', path: '/objects/locality/records/l1', body: LOCALIDAD }
+    ])
+    red = espiarRed()
+    montar(<EditorDeGeometria objeto="locality" registro={LOCALIDAD} campos={['boundary']} alTerminar={vi.fn()} />, {
+      usuario: ANALISTA_SIG,
+      permisos: EQUIPO_SIG
+    })
+    await userEvent.click(await screen.findByRole('button', { name: 'Dibujar un lazo de prueba' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Revisar' }))
+    expect(await screen.findByText('La geometría no es válida.')).toBeInTheDocument()
+    expect(screen.getByText('La reparación automática cambia el tipo de la geometría y no se puede guardar: corrija el dibujo.')).toBeInTheDocument()
+    expect(screen.queryByText(/La reparación propuesta cambia el área/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Guardar/ })).not.toBeInTheDocument()
+    expect(red.a('PUT', '/objects/locality/records/l1')).toEqual([])
+  })
+
+  it('el dibujo no va en una caja de altura fija y «Revisar» queda debajo de él', async () => {
+    // GeometryField trae su propia altura (cabecera, mapa y ayuda): una caja más baja lo desborda y tapa «Revisar»
+    fetch = mockFetch(rutas(REVISION_LAZO))
+    editar()
+    const dibujo = await screen.findByRole('group', { name: 'Territorio' })
+    const revisar = screen.getByRole('button', { name: 'Revisar' })
+    for (let caja = dibujo.parentElement; caja && caja !== document.body; caja = caja.parentElement) {
+      expect(caja.className).not.toMatch(/(^|\s)(h|max-h)-/)
+    }
+    expect(dibujo.compareDocumentPosition(revisar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('sin dibujo no se revisa', async () => {
     fetch = mockFetch(rutas(REVISION_LAZO))
     editar()
@@ -126,13 +188,15 @@ describe('edición de geometrías', () => {
       {
         method: 'POST',
         path: '/sgspe/territory/geometry-checks',
-        responder: () => problema(400, 'La geometría tiene demasiados vértices.', [{ field: 'geometry', message: 'La geometría tiene demasiados vértices.' }])
+        // el detail y el texto libre de errors[] distintos: se dice el detail (enmienda 13.3)
+        responder: () => problema(400, 'La geometría tiene demasiados vértices.', [{ field: 'geometry', message: 'too many vertices' }])
       }
     ])
     const terminar = editar()
     await userEvent.click(await screen.findByRole('button', { name: 'Dibujar un lazo de prueba' }))
     await userEvent.click(screen.getByRole('button', { name: 'Revisar' }))
     expect(await screen.findByText('La geometría tiene demasiados vértices.')).toBeInTheDocument()
+    expect(screen.queryByText(/too many vertices/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Guardar/ })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(terminar).toHaveBeenCalled()

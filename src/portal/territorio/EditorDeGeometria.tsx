@@ -103,13 +103,15 @@ function Edicion({
   const guardarCon = (forma: Geometria) => guardar.mutate({ registro, cambios: {}, geometrias: { [campo]: forma } }, { onSuccess: alTerminar })
   const bloqueado = (fuera && !confirmada) || guardar.isPending
   const area = (ha: number | null) => (ha === null ? '—' : numeroPe(ha))
+  // la reparación vuelve cruda si no se puede llevar al tipo del campo (GeometryChecks: un lazo en un POLYGON se repara en un
+  // MultiPolygon de dos partes): solo se ofrece la que es del tipo del campo; la otra no se guarda
+  const reparacion = revision?.repaired && revision.repaired.type.toUpperCase() === tipo.toUpperCase() ? revision.repaired : null
   return (
     <div className="space-y-3">
-      <div className="h-72">
-        <Suspense fallback={<Cargando />}>
-          <Dibujo etiqueta={t(`edicionDeGeometria.campos.${campo}`)} tipo={tipo} srid={srid} valor={geometria} alCambiar={cambiar} />
-        </Suspense>
-      </div>
+      {/* sin altura fija: GeometryField trae la suya (cabecera, mapa y ayuda) y «Revisar» queda siempre debajo */}
+      <Suspense fallback={<Cargando />}>
+        <Dibujo etiqueta={t(`edicionDeGeometria.campos.${campo}`)} tipo={tipo} srid={srid} valor={geometria} alCambiar={cambiar} />
+      </Suspense>
       <Button
         variant="secondary"
         disabled={!geometria || revisar.isPending}
@@ -133,8 +135,10 @@ function Edicion({
             <Alert tone="warning" title={t('edicionDeGeometria.invalida')}>
               {/* el motivo ya viene en español del servidor: se dice tal cual (enmienda 13.2) */}
               {revision.reason ? <p>{t('edicionDeGeometria.motivo', { motivo: revision.reason })}</p> : null}
-              {revision.repaired ? (
+              {reparacion ? (
                 <p>{t('edicionDeGeometria.reparacion', { antes: area(revision.areaHaBefore), despues: area(revision.areaHaAfter) })}</p>
+              ) : revision.repaired ? (
+                <p>{t('edicionDeGeometria.reparacionDeOtroTipo')}</p>
               ) : (
                 <p>{t('edicionDeGeometria.sinReparacion')}</p>
               )}
@@ -153,8 +157,8 @@ function Edicion({
               {guardar.isPending ? t('edicionDeGeometria.guardando') : t('edicionDeGeometria.guardar')}
             </Button>
           ) : null}
-          {revision.typeMatches && !revision.valid && revision.repaired ? (
-            <Button disabled={bloqueado} aria-busy={guardar.isPending} onClick={() => revision.repaired && guardarCon(revision.repaired)}>
+          {revision.typeMatches && !revision.valid && reparacion ? (
+            <Button disabled={bloqueado} aria-busy={guardar.isPending} onClick={() => guardarCon(reparacion)}>
               {guardar.isPending ? t('edicionDeGeometria.guardando') : t('edicionDeGeometria.guardarReparacion')}
             </Button>
           ) : null}

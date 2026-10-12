@@ -13,6 +13,7 @@ export const ES_EDICION_DE_GEOMETRIA = {
   motivo: 'Motivo: {{motivo}}',
   reparacion: 'La reparación propuesta cambia el área de {{antes}} ha a {{despues}} ha.',
   sinReparacion: 'No hay una reparación automática: corrija el dibujo.',
+  reparacionDeOtroTipo: 'La reparación automática cambia el tipo de la geometría y no se puede guardar: corrija el dibujo.',
   tipo: 'La geometría dibujada no es del tipo que pide este dato: dibuje {{tipo}}.',
   tipos: {
     POINT: 'un punto',
@@ -46,6 +47,7 @@ export const EN_EDICION_DE_GEOMETRIA: typeof ES_EDICION_DE_GEOMETRIA = {
   motivo: 'Reason: {{motivo}}',
   reparacion: 'The proposed repair changes the area from {{antes}} ha to {{despues}} ha.',
   sinReparacion: 'There is no automatic repair: fix the drawing.',
+  reparacionDeOtroTipo: 'The automatic repair changes the kind of geometry and cannot be saved: fix the drawing.',
   tipo: 'The drawn geometry is not the kind this field needs: draw {{tipo}}.',
   tipos: {
     POINT: 'a point',
