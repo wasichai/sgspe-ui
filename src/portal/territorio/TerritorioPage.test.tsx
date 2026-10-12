@@ -260,12 +260,13 @@ describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
     const resumen = await screen.findByRole('region', { name: 'Grupos de interés por localidad' })
     expect(within(resumen).getByRole('listitem')).toHaveTextContent('Localidad Ejemplo · 6 grupos de interés · A FAVOR: 3 · NEUTRAL: 1 · Sin dato: 2')
     await waitFor(() => expect(red!.a('GET', '/sgspe/territory/layers/LYR-17').some((l) => l.ruta.includes('periodStart=2026-01-01'))).toBe(true))
-    // es un lugar, nunca una persona: elegirlo lleva a la ficha de la localidad
+    // es un lugar, nunca una persona: elegirlo abre la ficha contextual de la localidad (decisión 11)
     const punto = within(screen.getByRole('list', { name: 'Mapa territorial' }))
       .getAllByRole('button', { name: 'Localidad Ejemplo' })
       .find((b) => b.dataset.capa === 'LYR-17')!
     await userEvent.click(punto)
-    await waitFor(() => expect(rutaActual()).toBe('/territory/localities/l1'))
+    await waitFor(() => expect(rutaActual()).toBe('/territory?periodStart=2026-01-01&selected=locality%3Al1'))
+    expect(await screen.findByRole('complementary', { name: 'Ficha del lugar' })).toBeInTheDocument()
   })
 
   it('sin la postura, LYR-17 dice «No disponible» en la postura y deja el total', async () => {

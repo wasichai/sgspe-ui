@@ -81,8 +81,22 @@ export function useFichaTerritorial(objeto: 'locality' | 'community', id: string
 
 export type ObjetoDeZona = 'locality' | 'community' | 'administrative_unit' | 'area_of_influence'
 
+// los nueve objetos cuyos registros se piden por zona (of de ZoneCriterion): otro valor es 400 INVALID_OF
+export const OBJETOS_DE_LA_ZONA = [
+  'engagement',
+  'commitment',
+  'grievance',
+  'inquiry',
+  'stakeholder_request',
+  'social_risk',
+  'incident',
+  'early_warning_signal',
+  'stakeholder'
+] as const
+export type ObjetoConsultableDeZona = (typeof OBJETOS_DE_LA_ZONA)[number]
+
 // los objetos de la zona sin fecha (ZoneTargets): con periodo, el servidor responde 400 PERIOD_NOT_APPLICABLE, así que no se manda
-export const OBJETOS_SIN_PERIODO: readonly string[] = ['stakeholder', 'social_risk']
+export const OBJETOS_SIN_PERIODO: readonly ObjetoConsultableDeZona[] = ['stakeholder', 'social_risk']
 
 // la página de wasichai sin nextCursor, más available: false (con missingFields) si el filtro de la zona usa un campo que la
 // cuenta no lee: la lista puede estar incompleta (un aviso, nunca «sin registros»)
@@ -93,7 +107,7 @@ export type RegistrosDeZona = Pagina & { available: boolean; missingFields?: str
 export function useRegistrosDeLaZona(
   zona: ObjetoDeZona,
   id: string | null,
-  of: string | null,
+  of: ObjetoConsultableDeZona | null,
   filtros: { periodStart?: string; periodEnd?: string; page?: number } = {}
 ) {
   const pedir = usePedir()

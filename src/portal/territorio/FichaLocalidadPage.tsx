@@ -25,6 +25,7 @@ import {
 import { NS, numeroPe } from '../i18n'
 import { Dato, TrabajarEnProyecto } from './comunes'
 import { EditorDeGeometria } from './EditorDeGeometria'
+import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 
 // S14 · ficha de localidad y línea base social (screens.md §4): el lugar con datos fechados y su confiabilidad. cada perfil
 // es una foto: un dato nuevo es otro perfil. las cifras se comparan con el perfil anterior y una ausente dice "no disponible
@@ -120,7 +121,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
           {
             id: 'registros',
             label: t('territorio.pestanas.registros'),
-            render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('territorio.registrosLlegan')}</p>
+            render: () => <RegistrosDeLaZona zona="locality" id={localidad.id} />
           }
         ]}
       />

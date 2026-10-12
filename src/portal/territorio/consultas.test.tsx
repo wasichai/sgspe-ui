@@ -20,6 +20,7 @@ import {
 import {
   fichaDe,
   filasDe,
+  OBJETOS_DE_LA_ZONA,
   useAnalisis,
   useCalidad,
   useConcentracion,
@@ -99,6 +100,24 @@ describe('consultas de F6', () => {
     montar(<Sonda usar={() => useRegistrosDeLaZona('community', 'c1', 'commitment', { periodStart: '2026-07-01', page: 1 })} />)
     await waitFor(() => expect(consultas()).toHaveLength(1))
     expect(consultas()[0].ruta).toBe('/sgspe/territory/zones/community/c1/records?of=commitment&periodStart=2026-07-01&page=1&size=25')
+  })
+
+  // ZoneCriterion: nueve objetos, y of no admite otro (400 INVALID_OF); el tipo lo impide antes de pedir
+  it('of es uno de los nueve objetos de ZoneCriterion', () => {
+    expect([...OBJETOS_DE_LA_ZONA].sort()).toEqual([
+      'commitment',
+      'early_warning_signal',
+      'engagement',
+      'grievance',
+      'incident',
+      'inquiry',
+      'social_risk',
+      'stakeholder',
+      'stakeholder_request'
+    ])
+    // @ts-expect-error: project no es un objeto de la zona
+    const usar = () => useRegistrosDeLaZona('locality', 'l1', 'project')
+    expect(usar).toBeTypeOf('function')
   })
 
   // ZoneQueries: un grupo de interés o un riesgo no tienen fecha; con periodo, 400 PERIOD_NOT_APPLICABLE

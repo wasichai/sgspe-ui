@@ -22,14 +22,17 @@ import { Mapa } from '../mapa/Mapa'
 import { useWms } from '../mapa/wms'
 import { AgregadosDelMapa } from './AgregadosDelMapa'
 import { OBJETOS_DE_CALOR, useConcentracion, type ObjetoDeCalor } from './consultas'
+import { FichaContextual } from './FichaContextual'
 import { DESTINOS, importaA } from './importacion'
+import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 
 // S12 · mapa territorial (screens.md §4, spec F6 §3.7): las capas públicas por WMS del proxy (nombradas por su GetCapabilities) y
 // el resto por GeoJSON; los lugares con ficha se siguen pidiendo por GeoJSON, invisibles sobre la tesela, para elegirlos y para la
 // lista de lugares visibles, su alternativa de teclado. si GeoServer no responde (503), el WMS se apaga y esas capas vuelven al
 // GeoJSON de F2, con un aviso. el grupo Gestión ofrece las capas LYR-17 a LYR-24 que el backend sirve (plan 6.2c; las que
 // responden 404 no se ofrecen) con el periodo, y sus agregados por localidad en texto. filtros de proyecto y periodo en la URL,
-// leyenda de la paleta compartida y «Capturar PNG». "Nueva comunidad" es el flujo 2
+// leyenda de la paleta compartida y «Capturar PNG». elegir un lugar (?selected=) abre su ficha contextual con KPI-TER-01 y sus
+// registros bajo el mapa. "Nueva comunidad" es el flujo 2
 const FICHA: Record<string, string> = { community: 'communities', locality: 'localities' }
 // las capas cuyos lugares tienen ficha (decisión 7 del plan 6.3)
 const SELECCIONABLES = new Set(['LYR-02', 'LYR-03', 'LYR-05'])
@@ -56,6 +59,17 @@ export function TerritorioPage() {
     else siguiente.delete('heat')
     fijar(siguiente, { replace: true })
   }
+  // el lugar elegido (decisión 11 del plan 6.3): abre la ficha contextual y, bajo el mapa, sus registros; «Abrir la ficha» de la
+  // ficha lleva a S13 o S14
+  const [objetoElegido, idElegido = null] = busqueda.get('selected')?.split(':') ?? []
+  const elegido: { objeto: 'locality' | 'community'; id: string } | null =
+    (objetoElegido === 'locality' || objetoElegido === 'community') && idElegido ? { objeto: objetoElegido, id: idElegido } : null
+  const elegir = (objeto: string, id: string | null) => {
+    const siguiente = new URLSearchParams(busqueda)
+    if (id && FICHA[objeto]) siguiente.set('selected', `${objeto}:${id}`)
+    else siguiente.delete('selected')
+    fijar(siguiente, { replace: true })
+  }
   const [encendidas, setEncendidas] = useState(() => new Set<string>(['LYR-02', 'LYR-05']))
   const [encuadre, setEncuadre] = useState<Encuadre | null>(null)
   const [creando, setCreando] = useState(false)
@@ -77,8 +91,8 @@ export function TerritorioPage() {
   const estados = [...estadosBasicos, ...estadosDeGestion]
   const sufijo = proyecto ? `?project=${encodeURIComponent(proyecto)}` : ''
   const rutaDe = (objeto: string, id: string) => (FICHA[objeto] ? `/territory/${FICHA[objeto]}/${encodeURIComponent(id)}${sufijo}` : null)
-  // los lugares con ficha de las capas de lugares, sin repetir (una localidad puede estar en dos capas); elegir un elemento lleva a
-  // su lugar
+  // los lugares con ficha de las capas de lugares, sin repetir (una localidad puede estar en dos capas); elegir un elemento abre
+  // la ficha contextual de su lugar
   const lugares = new Map<string, { id: string; objeto: string; nombre: string }>()
   for (const estado of estadosBasicos)
     for (const f of estado.datos?.features ?? []) {
@@ -93,9 +107,10 @@ export function TerritorioPage() {
   // acotado: la consulta sigue la vista del mapa, así que un mapa vacío solo dice que la vista lo está. con capas por WMS, el mapa
   // no está vacío aunque el GeoJSON lo esté
   const aviso = servicio.wms.length > 0 ? null : avisoDelMapa(estados, true)
-  // un lugar lleva a su ficha (S13, S14); un registro de una capa de gestión, a la suya por /r/, que la busca con su proyecto
+  // un lugar abre su ficha contextual; un registro de una capa de gestión lleva a su ficha por /r/, que la busca con su proyecto
   const abrir = (objeto: string, id: string) => {
-    const ruta = rutaDe(objeto, id) ?? (objeto ? rutaParaAbrir(objeto, id) : null)
+    if (FICHA[objeto]) return elegir(objeto, id)
+    const ruta = objeto ? rutaParaAbrir(objeto, id) : null
     if (ruta) navegar(ruta, { state: paso(t('mapa.mapaTerritorial')) })
   }
   const descargar = () => {
@@ -170,6 +185,7 @@ export function TerritorioPage() {
             calor={calor}
             wms={servicio.wms}
             alFallarWms={servicio.alFallar}
+            seleccion={elegido?.id ?? null}
             alSeleccionar={(id, capaId, objeto) => abrir(objeto ?? capa(capaId)?.objeto ?? '', id)}
             alMoverVista={setEncuadre}
             alCapturar={(f) => (capturar.current = f)}
@@ -180,8 +196,19 @@ export function TerritorioPage() {
             </p>
           ) : null}
           {objetoDeCalor ? <TablaDeCalor objeto={objetoDeCalor} consulta={concentracion} /> : null}
+          {elegido ? <RegistrosDeLaZona key={`${elegido.objeto}:${elegido.id}`} zona={elegido.objeto} id={elegido.id} periodo={periodo} /> : null}
         </div>
         <div className="space-y-3">
+          {elegido ? (
+            <FichaContextual
+              key={`${elegido.objeto}:${elegido.id}`}
+              objeto={elegido.objeto}
+              id={elegido.id}
+              proyecto={proyecto}
+              periodo={periodo}
+              alCerrar={() => elegir('', null)}
+            />
+          ) : null}
           <nav aria-label={t('mapa.lugares')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
             <h2 className="font-medium">{t('mapa.lugares')}</h2>
             <p className="text-sg-caption text-sg-text-muted">{t('mapa.elegirLugar')}</p>
@@ -207,6 +234,15 @@ export function TerritorioPage() {
                   <Link to={rutaDe(l.objeto, l.id)!} state={paso(t('mapa.mapaTerritorial'))} className="text-sg-primary-text underline">
                     {l.nombre || t('territorio.sinNombre')}
                   </Link>
+                  {/* la alternativa de teclado del clic en el mapa: abre la ficha contextual */}
+                  <button
+                    type="button"
+                    className="ml-2 text-sg-caption text-sg-text-secondary underline"
+                    aria-label={t('fichaTerritorial.verResumen', { nombre: l.nombre || t('territorio.sinNombre') })}
+                    onClick={() => elegir(l.objeto, l.id)}
+                  >
+                    {t('fichaTerritorial.titulo')}
+                  </button>
                 </li>
               ))}
             </ul>

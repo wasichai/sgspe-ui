@@ -59,7 +59,7 @@ const base = [
 ]
 
 describe('S12 · mapa territorial', () => {
-  it('lista los lugares visibles y elegir uno abre su ficha con el rastro', async () => {
+  it('lista los lugares visibles; elegir uno en el mapa abre su ficha contextual y «Abrir la ficha» lleva a S13 con el rastro', async () => {
     fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
       ...base,
       { path: '/sgspe/territory/layers/LYR-02', body: coleccion([['l1', 'locality', 'Tunas']]) },
@@ -71,9 +71,29 @@ describe('S12 · mapa territorial', () => {
     ])
     const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
     expect(await within(lugares).findByRole('link', { name: 'Tunas' })).toHaveAttribute('href', '/territory/localities/l1')
+    expect(within(lugares).getByRole('button', { name: 'Ver resumen de Tunas' })).toBeInTheDocument()
     await userEvent.click(within(screen.getByRole('list', { name: 'Mapa territorial' })).getByRole('button', { name: 'CC Tunas Pampa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory?selected=community%3Ac1'))
+    const panel = await screen.findByRole('complementary', { name: 'Ficha del lugar' })
+    await userEvent.click(within(panel).getByRole('link', { name: 'Abrir la ficha' }))
     await waitFor(() => expect(rutaActual()).toBe('/territory/communities/c1'))
-    expect(await screen.findByRole('link', { name: 'Mapa territorial' })).toHaveAttribute('href', '/territory')
+    expect(await screen.findByRole('link', { name: 'Mapa territorial' })).toHaveAttribute('href', '/territory?selected=community%3Ac1')
+  })
+
+  it('«Ver resumen» abre la ficha del lugar con el teclado y la ficha se cierra', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
+      ...base,
+      { path: '/sgspe/territory/layers/LYR-02', body: coleccion([['l1', 'locality', 'Tunas']]) },
+      { path: '/sgspe/territory/layers/LYR-05', body: coleccion([]) }
+    ])
+    const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    await userEvent.click(await within(lugares).findByRole('button', { name: 'Ver resumen de Tunas' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory?selected=locality%3Al1'))
+    expect(screen.getByRole('list', { name: 'Mapa territorial' })).toHaveAttribute('data-seleccion', 'l1')
+    const panel = await screen.findByRole('complementary', { name: 'Ficha del lugar' })
+    await userEvent.click(within(panel).getByRole('button', { name: 'Cerrar la ficha del lugar' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory'))
+    expect(screen.queryByRole('complementary', { name: 'Ficha del lugar' })).not.toBeInTheDocument()
   })
 
   it('"Nueva comunidad" solo con CREATE sobre community', async () => {
@@ -131,7 +151,7 @@ describe('S12 · mapa territorial', () => {
     expect(within(lugares).queryByText(/Acerque el mapa/)).not.toBeInTheDocument()
   })
 
-  it('un lugar en dos capas sale una vez, uno sin nombre dice "Lugar sin nombre" y un miembro de un área lleva a su lugar', async () => {
+  it('un lugar en dos capas sale una vez, uno sin nombre dice "Lugar sin nombre" y un miembro de un área abre la ficha de su lugar', async () => {
     fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
       ...base,
       {
@@ -157,7 +177,7 @@ describe('S12 · mapa territorial', () => {
     expect(within(lugares).getByRole('link', { name: 'Lugar sin nombre' })).toHaveAttribute('href', '/territory/localities/l2')
     expect(within(lugares).getByRole('link', { name: 'Quinuas' })).toHaveAttribute('href', '/territory/localities/l3')
     await userEvent.click(within(screen.getByRole('list', { name: 'Mapa territorial' })).getByRole('button', { name: 'Quinuas' }))
-    await waitFor(() => expect(rutaActual()).toBe('/territory/localities/l3'))
+    await waitFor(() => expect(rutaActual()).toBe('/territory?selected=locality%3Al3'))
   })
 })
 

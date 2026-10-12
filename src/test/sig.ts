@@ -49,14 +49,28 @@ export const EQUIPO_SIG = permisos({
   export_log: ['CREATE']
 })
 
-// quien lee el territorio sin la postura ni los programas: la ficha dice «No disponible» solo en esas cifras
+// quien lee el territorio y los objetos de las cifras de la ficha, pero no la postura ni los programas del lugar: la ficha dice
+// «No disponible» solo en esas dos cifras (KPI_TER_01_SIN_POSTURA, la pareja coherente). lee stakeholder, pero no su campo
+// stance: un permiso de campo que permisos() no expresa, por eso KPI-STK-02 sale FIELD_NOT_READABLE y no OBJECT_NOT_READABLE.
+// lee social_program y program_budget (KPI-INV-03 los necesita) y no social_initiative ni beneficiary_group: programs no
+// puede ubicar los programas en el lugar y sale OBJECT_NOT_READABLE (TerritorySummary, KpiEvaluation.reason)
 export const LEE_SIN_POSTURA = permisos({
   project: ['READ'],
   project_assignment: ['READ'],
   locality: ['READ'],
   community: ['READ'],
+  stakeholder: ['READ'],
   engagement: ['READ'],
-  commitment: ['READ']
+  commitment: ['READ'],
+  grievance: ['READ'],
+  inquiry: ['READ'],
+  stakeholder_request: ['READ'],
+  social_risk: ['READ'],
+  delivery: ['READ'],
+  social_contribution: ['READ'],
+  exploration_campaign: ['READ'],
+  social_program: ['READ'],
+  program_budget: ['READ']
 })
 
 // geometrías sintéticas: un punto, un cuadrado de unos 200 m y un lazo (polígono que se corta a sí mismo)
@@ -179,7 +193,9 @@ export const KPI_TER_01 = {
   breakdowns: [{ by: 'components', rows: FILAS_DE_LA_FICHA }]
 }
 
-// la misma ficha para quien no lee stance ni social_program: esas filas no tienen cifra (KpiEvaluation, unavailableRow)
+// la misma ficha para LEE_SIN_POSTURA: sin el campo stance, KPI-STK-02 no tiene cifra (FIELD_NOT_READABLE); sin las
+// iniciativas ni los grupos beneficiarios, programs tampoco (OBJECT_NOT_READABLE, solo los campos de esos objetos). las demás
+// cifras siguen disponibles (KpiEvaluation, unavailableRow)
 export const KPI_TER_01_SIN_POSTURA = {
   ...KPI_TER_01,
   breakdowns: [
@@ -202,8 +218,6 @@ export const KPI_TER_01_SIN_POSTURA = {
                 available: false,
                 unavailableReason: 'OBJECT_NOT_READABLE',
                 missingFields: [
-                  'social_program.project',
-                  'social_program.name',
                   'social_initiative.social_program',
                   'social_initiative.locality',
                   'social_initiative.community',
