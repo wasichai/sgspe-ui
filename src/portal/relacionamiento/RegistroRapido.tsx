@@ -38,7 +38,8 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
   const [presentes, setPresentes] = useState<string[]>(() => busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? [])
   const [conteos, setConteos] = useState<Record<Clave, number>>({})
   const [ubicacion, setUbicacion] = useState<Punto | null>(null)
-  const [lugares, setLugares] = useState<{ locality: string; community: string } | null>(null)
+  // lo que «Usar estos lugares» reemplaza: solo lo que locate propone; lo demás conserva el chip de territorio
+  const [lugares, setLugares] = useState<{ locality?: string; community?: string }>({})
   const telefono = useUbicacionDelTelefono()
   const sexos = definicionDeParticipante.fields.find((f) => f.name === 'sex')?.enumOptions ?? []
   const ambitos = definicionDeParticipante.fields.find((f) => f.name === 'participant_scope')?.enumOptions ?? []
@@ -62,8 +63,8 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
           title: `${tipo} · ${hoyEnLima(ahora)}`,
           description: nota,
           held_at: ahora.toISOString(),
-          locality: lugares ? lugares.locality : territory?.kind === 'locality' ? territory.id : '',
-          community: lugares ? lugares.community : territory?.kind === 'community' ? territory.id : '',
+          locality: lugares.locality ?? (territory?.kind === 'locality' ? territory.id : ''),
+          community: lugares.community ?? (territory?.kind === 'community' ? territory.id : ''),
           field_visit: busqueda.get('field_visit') ?? ''
         },
         ubicacion: ubicacion ? { type: 'Point', coordinates: ubicacion } : null,
@@ -121,7 +122,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
         {ubicacion ? (
           <p className="text-sg-caption">{t('relacionamiento.registro.ubicacion', { lat: ubicacion[1].toFixed(5), lon: ubicacion[0].toFixed(5) })}</p>
         ) : null}
-        <LugaresDelPunto punto={ubicacion} alUsar={({ locality, community }) => setLugares({ locality: locality?.id ?? '', community: community?.id ?? '' })} />
+        <LugaresDelPunto punto={ubicacion} alUsar={({ locality, community }) => setLugares({ locality: locality?.id, community: community?.id })} />
         {telefono.sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
       </div>
       <fieldset className="space-y-1">
