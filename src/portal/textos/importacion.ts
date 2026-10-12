@@ -5,8 +5,14 @@ export const ES_IMPORTACION = {
   nadaEscrito: 'Nada se ha escrito todavía.',
   archivo: 'Archivo (XLSX, CSV o GeoJSON)',
   destino: 'Objeto destino',
-  destinos: { project_component: 'Componentes del proyecto', land_parcel: 'Predios', mining_concession: 'Concesiones mineras' },
-  sinDestinos: 'Su cuenta no puede crear ni cambiar componentes, predios ni concesiones.',
+  destinos: {
+    project_component: 'Componentes del proyecto',
+    land_parcel: 'Predios',
+    mining_concession: 'Concesiones mineras',
+    community: 'Territorio comunal',
+    environmental_feature: 'Elementos ambientales'
+  },
+  sinDestinos: 'Su cuenta no puede crear ni cambiar componentes, predios, concesiones, comunidades ni elementos ambientales.',
   proyecto: 'Proyecto de la importación',
   crs: 'CRS de origen',
   crsAyuda: 'Obligatorio y sin valor por defecto silencioso: se propone el CRS de trabajo del proyecto y usted lo confirma. PSAD56 se acepta solo como origen.',
@@ -15,6 +21,8 @@ export const ES_IMPORTACION = {
   columnasAyuda: 'El nombre de cada columna tal como está en el archivo; en un GeoJSON, el de la propiedad del código.',
   columna: {
     code: 'Código',
+    name: 'Nombre',
+    featureType: 'Columna del tipo de elemento',
     easting: 'Este',
     northing: 'Norte',
     elevation: 'Cota',
@@ -50,9 +58,41 @@ export const ES_IMPORTACION = {
   difiere:
     'Lo escrito no coincide con la vista previa: alguien registró o cambió códigos del archivo entre la vista previa y la confirmación. Los registros llevan el motivo «importación {{id}}».',
   previsto: 'previsto: {{n}}',
+  // F6 (spec §3.4): los formatos que lee el servidor, la capa de un archivo de varias, el CRS que declara el archivo y los
+  // destinos nuevos
+  archivoF6: 'Archivo',
+  formatosDisponibles: 'Formatos: {{formatos}}.',
+  nombresDeFormato: {
+    xlsx: 'XLSX',
+    csv: 'CSV',
+    geojson: 'GeoJSON',
+    zip: 'Shapefile o FileGDB (ZIP)',
+    kml: 'KML',
+    kmz: 'KMZ',
+    gpkg: 'GeoPackage',
+    gpx: 'GPX'
+  },
+  formatoNoDisponible: 'El servidor no puede leer {{formato}} todavía.',
+  formatoDesconocido: 'Ese tipo de archivo no se importa.',
+  soloVectorial: 'Este destino se importa desde un archivo con geometrías (GeoJSON, Shapefile, KML, KMZ, GeoPackage, FileGDB o GPX).',
+  soloPoligonos: 'Solo polígonos: los puntos y las líneas del archivo llegan como filas inválidas, igual que una fila sin código.',
+  destinoSinModelo: 'Su organización todavía no tiene ese destino: elija otro.',
+  crsFijo: 'Los archivos KML, KMZ y GPX están siempre en EPSG 4326.',
+  capa: 'Capa del archivo',
+  capaOpcion: '{{nombre}} · {{tipo}} · {{n}} elementos',
+  capaLeida: 'Capa leída: {{capa}}',
+  leerArchivo: 'Leer el archivo',
+  leerArchivoAyuda: 'El servidor lee sus capas y el CRS que declara, sin escribir nada; usted elige la capa y confirma el CRS.',
+  crsDelArchivo: 'Propuesto por el archivo: {{crs}}. Confírmelo o elija otro.',
+  tipoFijo: 'Tipo de elemento para todas las filas',
+  tipoFalta: 'Indique la columna del tipo de elemento o un tipo para todas las filas.',
+  crsDetectado: 'El archivo declara {{detectado}}; la vista previa usa {{elegido}}.',
+  crsDetectadoIgual: 'El archivo declara {{detectado}}, el mismo CRS de la vista previa.',
+  usarCrsDetectado: 'Usar el CRS del archivo',
   // lo que la importación dice distinto de un código (api.md §3.3 y §4.2)
   errores: {
-    NOT_ASSIGNED: 'No tiene una asignación vigente a este proyecto: solo quien está asignado importa componentes o concesiones.'
+    NOT_ASSIGNED: 'No tiene una asignación vigente a este proyecto: solo quien está asignado importa componentes o concesiones.',
+    FORMAT_NOT_SUPPORTED: 'Este destino necesita polígonos: importe un GeoJSON, Shapefile, KML, KMZ, GeoPackage o FileGDB.'
   }
 }
 
@@ -62,8 +102,14 @@ export const EN_IMPORTACION: typeof ES_IMPORTACION = {
   nadaEscrito: 'Nothing has been written yet.',
   archivo: 'File (XLSX, CSV or GeoJSON)',
   destino: 'Target object',
-  destinos: { project_component: 'Project components', land_parcel: 'Land parcels', mining_concession: 'Mining concessions' },
-  sinDestinos: 'Your account cannot create or change components, parcels or concessions.',
+  destinos: {
+    project_component: 'Project components',
+    land_parcel: 'Land parcels',
+    mining_concession: 'Mining concessions',
+    community: 'Communal territory',
+    environmental_feature: 'Environmental features'
+  },
+  sinDestinos: 'Your account cannot create or change components, parcels, concessions, communities or environmental features.',
   proyecto: 'Import project',
   crs: 'Source CRS',
   crsAyuda: 'Required and never a silent default: the project working CRS is proposed and you confirm it. PSAD56 is accepted only as a source.',
@@ -72,6 +118,8 @@ export const EN_IMPORTACION: typeof ES_IMPORTACION = {
   columnasAyuda: 'Each column name as it is in the file; in a GeoJSON, the property holding the code.',
   columna: {
     code: 'Code',
+    name: 'Name',
+    featureType: 'Feature type column',
     easting: 'Easting',
     northing: 'Northing',
     elevation: 'Elevation',
@@ -107,7 +155,37 @@ export const EN_IMPORTACION: typeof ES_IMPORTACION = {
   difiere:
     'What was written does not match the preview: someone recorded or changed codes of the file between the preview and the confirmation. The records carry the reason “importación {{id}}”.',
   previsto: 'expected: {{n}}',
+  archivoF6: 'File',
+  formatosDisponibles: 'Formats: {{formatos}}.',
+  nombresDeFormato: {
+    xlsx: 'XLSX',
+    csv: 'CSV',
+    geojson: 'GeoJSON',
+    zip: 'Shapefile or FileGDB (ZIP)',
+    kml: 'KML',
+    kmz: 'KMZ',
+    gpkg: 'GeoPackage',
+    gpx: 'GPX'
+  },
+  formatoNoDisponible: 'The server cannot read {{formato}} yet.',
+  formatoDesconocido: 'That kind of file is not imported.',
+  soloVectorial: 'This target is imported from a file with geometries (GeoJSON, Shapefile, KML, KMZ, GeoPackage, FileGDB or GPX).',
+  soloPoligonos: 'Polygons only: points and lines in the file come back as invalid rows, as does a row without a code.',
+  destinoSinModelo: 'Your organization does not have that target yet: choose another one.',
+  crsFijo: 'KML, KMZ and GPX files are always in EPSG 4326.',
+  capa: 'File layer',
+  capaOpcion: '{{nombre}} · {{tipo}} · {{n}} features',
+  capaLeida: 'Layer read: {{capa}}',
+  leerArchivo: 'Read the file',
+  leerArchivoAyuda: 'The server reads its layers and the CRS it declares, without writing anything; you choose the layer and confirm the CRS.',
+  crsDelArchivo: 'Proposed by the file: {{crs}}. Confirm it or choose another.',
+  tipoFijo: 'Feature type for every row',
+  tipoFalta: 'Give the feature type column or one type for every row.',
+  crsDetectado: 'The file declares {{detectado}}; the preview uses {{elegido}}.',
+  crsDetectadoIgual: 'The file declares {{detectado}}, the same CRS as the preview.',
+  usarCrsDetectado: 'Use the file CRS',
   errores: {
-    NOT_ASSIGNED: 'You have no current assignment to this project: only assigned people import components or concessions.'
+    NOT_ASSIGNED: 'You have no current assignment to this project: only assigned people import components or concessions.',
+    FORMAT_NOT_SUPPORTED: 'This target needs polygons: import a GeoJSON, Shapefile, KML, KMZ, GeoPackage or FileGDB.'
   }
 }
