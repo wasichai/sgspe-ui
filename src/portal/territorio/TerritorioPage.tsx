@@ -12,6 +12,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { rutaParaAbrir } from '../datos/fichas'
 import { texto } from '../datos/registros'
 import { NS } from '../i18n'
+import { useTableroDisponible } from '../tableros/comunes'
 import { destinoDe, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, dibujoDe } from '../mapa/capas'
@@ -48,6 +49,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const navegar = useNavigate()
+  const conTablero = useTableroDisponible('territory')
   const paso = useSiguientePaso()
   const [busqueda, fijar] = useSearchParams()
   const proyecto = busqueda.get('project') ?? undefined
@@ -132,6 +134,18 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{modo === 'tablero' ? t('tableroTerritorial.titulo') : t('mapa.mapaTerritorial')}</h1>
         <div className="flex flex-wrap gap-2">
+          {modo === 'tablero' ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/territory${sufijo}`}>{t('tableroTerritorial.irAlMapa')}</Link>
+            </Button>
+          ) : conTablero ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/territory/dashboard${sufijo}`}>{t('tableroTerritorial.irAlTablero')}</Link>
+            </Button>
+          ) : null}
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/territory/quality">{t('calidad.titulo')}</Link>
+          </Button>
           <Button variant="secondary" size="sm" onClick={descargar}>
             {t('mapa.capturar')}
           </Button>
