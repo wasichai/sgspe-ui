@@ -9,7 +9,7 @@ import { useSiguientePaso } from '../contexto/Rastro'
 import { NS } from '../i18n'
 import { destinoDe, idDeElemento, useCapas, type Encuadre } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
-import { CAPAS_TERRITORIALES, capa } from '../mapa/capas'
+import { CAPAS_TERRITORIALES, capa, dibujoDe } from '../mapa/capas'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
 import { Mapa } from '../mapa/Mapa'
 import { DESTINOS, importaA } from './importacion'
@@ -85,7 +85,7 @@ export function TerritorioPage() {
             etiqueta={t('mapa.mapaTerritorial')}
             capas={estados
               .filter((e) => e.datos)
-              .map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) }))}
+              .map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, ...dibujoDe(e.id), seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) }))}
             alSeleccionar={(id, capaId, objeto) => abrir(objeto ?? capa(capaId)?.objeto ?? '', id)}
             alMoverVista={setEncuadre}
           />

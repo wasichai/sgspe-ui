@@ -8,7 +8,9 @@ import { montar } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { destinoDe, esMiembro, useCapas, type Coleccion, type EstadoDeCapa } from './api'
 import { ControlDeCapas } from './ControlDeCapas'
+import { Leyenda } from './Leyenda'
 import { Mapa } from './Mapa'
+import { estiloDeCapa } from './paleta'
 
 vi.mock('maplibre-gl', () => import('../../test/maplibre'))
 
@@ -192,5 +194,20 @@ describe('Mapa', () => {
     } finally {
       error.mockRestore()
     }
+  })
+})
+
+describe('Leyenda', () => {
+  it('dice cada capa encendida con su nombre y su color de la paleta; sin capas no se dibuja', () => {
+    const { rerender } = montar(<Leyenda ids={['LYR-05', 'LYR-01']} />)
+    const leyenda = screen.getByRole('region', { name: 'Leyenda' })
+    expect(
+      within(leyenda)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent)
+    ).toEqual(['Territorio comunal', 'Límites administrativos'])
+    expect(within(leyenda).getAllByRole('listitem')[0].querySelector('[data-color]')).toHaveAttribute('data-color', estiloDeCapa('LYR-05').color)
+    rerender(<Leyenda ids={[]} />)
+    expect(screen.queryByRole('region', { name: 'Leyenda' })).not.toBeInTheDocument()
   })
 })

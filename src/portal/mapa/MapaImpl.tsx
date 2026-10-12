@@ -194,14 +194,14 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
         type: 'fill',
         source: capa.id,
         filter: propios(POLIGONOS),
-        paint: { 'fill-color': color, 'fill-opacity': 0.15 }
+        paint: { 'fill-color': colorDe(capa.colorDeRelleno ?? capa.color), 'fill-opacity': capa.relleno ?? 0.15 }
       })
       instancia.addLayer({
         id: `${capa.id}-linea`,
         type: 'line',
         source: capa.id,
         filter: propios(LINEAS),
-        paint: { 'line-color': color, 'line-width': ['case', elegido(seleccion), 2.5, 1.2] }
+        paint: { 'line-color': color, 'line-width': ['case', elegido(seleccion), 2.5, 1.2], ...(capa.trazo ? { 'line-dasharray': capa.trazo } : {}) }
       })
       instancia.addLayer({
         id: `${capa.id}-punto`,
@@ -304,7 +304,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
       for (const capa of capas) {
         if (!dibujadas.current.has(capa.id)) continue
         const color = colorDe(capa.color)
-        instancia.setPaintProperty(`${capa.id}-relleno`, 'fill-color', color)
+        instancia.setPaintProperty(`${capa.id}-relleno`, 'fill-color', colorDe(capa.colorDeRelleno ?? capa.color))
         instancia.setPaintProperty(`${capa.id}-linea`, 'line-color', color)
         instancia.setPaintProperty(`${capa.id}-punto`, 'circle-color', color)
         instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-color', colorDe('--sg-surface'))

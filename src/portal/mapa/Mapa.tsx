@@ -14,6 +14,10 @@ export interface CapaDibujada {
   id: string
   datos: Coleccion
   color: string
+  // la opacidad del relleno, su color si no es el de la línea y el trazo discontinuo de la paleta; sin ellos, 0.15 y línea continua
+  relleno?: number
+  colorDeRelleno?: string
+  trazo?: number[]
   seleccionable: boolean
   // la capa trae miembros de áreas de influencia (LYR-13): se dibujan aparte, con trazo discontinuo
   miembros?: boolean

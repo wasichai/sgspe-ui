@@ -2,11 +2,13 @@
 export const ES_SIG = {
   titulo: 'Mapa',
   sinMapaBase: 'Sin mapa base',
-  sinFondo: 'Sin fondo'
+  sinFondo: 'Sin fondo',
+  leyenda: 'Leyenda'
 }
 
 export const EN_SIG: typeof ES_SIG = {
   titulo: 'Map',
   sinMapaBase: 'No base map',
-  sinFondo: 'No background'
+  sinFondo: 'No background',
+  leyenda: 'Legend'
 }

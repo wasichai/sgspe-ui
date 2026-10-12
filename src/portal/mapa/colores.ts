@@ -8,7 +8,9 @@ const leer = (variable: string): string | null => {
   return /^#|^rgb/.test(valor) ? valor : null
 }
 
+// un color de la paleta (hex) se usa tal cual; un token --sg-* se lee del tema activo
 export function colorDe(variable: string): string {
+  if (/^#[0-9a-f]{3,8}$/i.test(variable)) return variable
   if (typeof document === 'undefined') return 'gray'
   return leer(variable) ?? leer(TOKEN_DE_RESPALDO) ?? 'gray'
 }

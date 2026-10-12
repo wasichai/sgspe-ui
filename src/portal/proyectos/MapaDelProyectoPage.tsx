@@ -9,7 +9,7 @@ import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { idDeElemento, useCapas, type Encuadre, type EstadoDeCapa } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
-import { CAPAS, capa } from '../mapa/capas'
+import { CAPAS, capa, dibujoDe } from '../mapa/capas'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
 import { Mapa } from '../mapa/Mapa'
 import { aUtm, zonaDe } from '../mapa/utm'
@@ -71,7 +71,7 @@ export function MapaDelProyectoPage() {
   }
   const dibujadas = estados
     .filter((e) => e.datos)
-    .map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, seleccionable: true, miembros: capa(e.id)!.miembros }))
+    .map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, ...dibujoDe(e.id), seleccionable: true, miembros: capa(e.id)!.miembros }))
   const aviso = avisoDelMapa(estados, encuadre !== null)
   // el elemento elegido (en una tabla o por la URL) no está dibujado: su capa está apagada o bloqueada, o cae fuera de la vista
   const cargando = estados.some((e) => e.cargando)

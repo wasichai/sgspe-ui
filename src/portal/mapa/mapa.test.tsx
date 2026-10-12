@@ -242,6 +242,18 @@ describe('MapaImpl', () => {
       window.matchMedia = original
     }
   })
+
+  it('un color hex de la paleta se pinta tal cual, con su relleno y su trazo discontinuo', async () => {
+    render(<MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-01', datos: localidades, color: '#5f5a6b', relleno: 0, trazo: [6, 3], seleccionable: false }]} />)
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    const relleno = mapa.capas.find((c) => c.id === 'LYR-01-relleno')!
+    const linea = mapa.capas.find((c) => c.id === 'LYR-01-linea')!
+    expect(relleno.paint['fill-color']).toBe('#5f5a6b')
+    expect(relleno.paint['fill-opacity']).toBe(0)
+    expect(linea.paint['line-dasharray']).toEqual([6, 3])
+    expect(colorDe('#5f5a6b')).toBe('#5f5a6b')
+  })
 })
 
 // la barra de coordenadas en el CRS de trabajo: comparado con las fórmulas de Snyder (1987), calculadas aparte
