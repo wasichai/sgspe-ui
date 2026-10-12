@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cargarMapas, Map as Falso } from '../../test/maplibre'
 import { colorDe } from './colores'
 import { aUtm, zonaDe } from './utm'
-import MapaImpl, { estiloBase } from './MapaImpl'
+import MapaImpl, { estiloDe } from './MapaImpl'
 import type { Coleccion } from './api'
 
 vi.mock('maplibre-gl', () => import('../../test/maplibre'))
@@ -35,8 +35,26 @@ const localidades: Coleccion = {
 }
 
 describe('MapaImpl', () => {
-  it('sin mapa base configurado, el fondo es el token apagado y no pide teselas externas', () => {
-    expect(estiloBase()).toEqual({ version: 8, sources: {}, layers: [{ id: 'fondo', type: 'background', paint: { 'background-color': '#e8ebe3' } }] })
+  it('sin mapa base el fondo es el token apagado; un ráster y un estilo se dibujan como los da el servidor', () => {
+    expect(estiloDe({ type: 'none' }, '#e8ebe3')).toEqual({
+      version: 8,
+      sources: {},
+      layers: [{ id: 'fondo', type: 'background', paint: { 'background-color': '#e8ebe3' } }]
+    })
+    expect(estiloDe({ type: 'style', url: 'https://mapas.example/estilo.json' }, '#e8ebe3')).toBe('https://mapas.example/estilo.json')
+    expect(estiloDe({ type: 'raster', tiles: ['https://t.example/{z}/{x}/{y}.png'], attribution: '© Ejemplo' }, '#e8ebe3')).toEqual({
+      version: 8,
+      sources: { basemap: { type: 'raster', tiles: ['https://t.example/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© Ejemplo' } },
+      layers: [
+        { id: 'fondo', type: 'background', paint: { 'background-color': '#e8ebe3' } },
+        { id: 'basemap', type: 'raster', source: 'basemap' }
+      ]
+    })
+  })
+
+  it('el mapa se crea con el estilo de su prop basemap', async () => {
+    render(<MapaImpl etiqueta="Mapa" capas={[]} basemap={{ type: 'style', url: 'https://mapas.example/estilo.json' }} />)
+    expect(Falso.todos[0].opciones.style).toBe('https://mapas.example/estilo.json')
   })
 
   it('dibuja cada capa con su color de token, encuadra todo y la selección engrosa el borde', async () => {

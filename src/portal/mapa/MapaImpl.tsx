@@ -9,11 +9,12 @@ import {
   type MapLayerMouseEvent,
   type StyleSpecification
 } from 'maplibre-gl'
+import type { BasemapSpec } from '@wasichai/gis'
 import { useEffect, useRef, useState } from 'react'
-import { ESTILO_DEL_MAPA_BASE } from '../config'
 import { destinoDe, idDeElemento, MIEMBRO, type Coleccion } from './api'
 import { alCambiarTema, colorDe } from './colores'
 import type { MapaProps } from './Mapa'
+import { SIN_MAPA_BASE } from './mapaBase'
 import { trabajadorDelMapa } from './trabajador'
 
 // el mapa MapLibre de MapaProps: una fuente GeoJSON por capa con tres dibujos (relleno, línea y punto), la selección con
@@ -27,9 +28,26 @@ const ES_MIEMBRO: ExpressionSpecification = ['==', ['get', '__object'], MIEMBRO]
 const NO_ES_MIEMBRO: ExpressionSpecification = ['!=', ['get', '__object'], MIEMBRO]
 const DE_MIEMBROS = ['miembro-relleno', 'miembro-linea', 'miembro-punto'] as const
 
-// sin mapa base configurado: el fondo apagado del token --sg-map-ground, sin teselas externas (ASM-048, UPS-13)
-export const estiloBase = (): StyleSpecification | string =>
-  ESTILO_DEL_MAPA_BASE || { version: 8, sources: {}, layers: [{ id: 'fondo', type: 'background', paint: { 'background-color': colorDe('--sg-map-ground') } }] }
+// el estilo MapLibre del fondo (spec F6 §3.3): un estilo del proveedor tal cual; un ráster sobre el fondo apagado; sin mapa base,
+// solo el fondo apagado del token --sg-map-ground, sin teselas externas (ASM-048)
+export function estiloDe(basemap: BasemapSpec, fondo: string): StyleSpecification | string {
+  if (basemap.type === 'style') return basemap.url
+  const apagado = { id: 'fondo', type: 'background' as const, paint: { 'background-color': fondo } }
+  if (basemap.type === 'none') return { version: 8, sources: {}, layers: [apagado] }
+  return {
+    version: 8,
+    sources: {
+      basemap: {
+        type: 'raster',
+        tiles: basemap.tiles,
+        tileSize: basemap.tileSize ?? 256,
+        ...(basemap.attribution ? { attribution: basemap.attribution } : {}),
+        ...(basemap.maxzoom ? { maxzoom: basemap.maxzoom } : {})
+      }
+    },
+    layers: [apagado, { id: 'basemap', type: 'raster', source: 'basemap' }]
+  }
+}
 
 // lo elegido: el registro o el miembro que dibuja ese lugar
 const elegido = (seleccion: string | null | undefined): ExpressionSpecification => [
@@ -70,7 +88,7 @@ const identidad = (datos: Coleccion): number => {
   return numero
 }
 
-export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, alMoverVista, alMoverCursor, alCapturar }: MapaProps) {
+export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, alMoverVista, alMoverCursor, alCapturar, basemap = SIN_MAPA_BASE }: MapaProps) {
   const contenedor = useRef<HTMLDivElement>(null)
   const mapa = useRef<MapLibreMap | null>(null)
   const [listo, setListo] = useState(false)
@@ -95,7 +113,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     if (trabajador) setWorkerUrl(trabajador)
     const instancia = new MapLibreMap({
       container: contenedor.current,
-      style: estiloBase(),
+      style: estiloDe(basemap, colorDe('--sg-map-ground')),
       center: [-75.5, -9.5],
       zoom: 5,
       attributionControl: { compact: true },
@@ -281,8 +299,8 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     return alCambiarTema(() => {
       const instancia = mapa.current
       if (!instancia) return
-      // el fondo del estilo propio (sin mapa base del despliegue) y el trazo de los puntos también son tokens
-      if (!ESTILO_DEL_MAPA_BASE) instancia.setPaintProperty('fondo', 'background-color', colorDe('--sg-map-ground'))
+      // el fondo apagado (si el estilo no es del proveedor) y el trazo de los puntos también son tokens
+      if (basemap.type !== 'style') instancia.setPaintProperty('fondo', 'background-color', colorDe('--sg-map-ground'))
       for (const capa of capas) {
         if (!dibujadas.current.has(capa.id)) continue
         const color = colorDe(capa.color)

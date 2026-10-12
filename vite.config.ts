@@ -5,9 +5,10 @@ import { defineConfig } from 'vitest/config'
 import { contentSecurityPolicy } from './csp.ts'
 
 const api = process.env.WASICHAI_API_URL ?? 'http://localhost:8094'
-// configuración por despliegue (no código de src/): el rol de la jefatura del proyecto (ASM-080) y el estilo del mapa base
-// (gis.md §6.4). el rol se lee de aquí para que ningún fuente del portal nombre un rol (RQ-SEC-005, boundaries.test.ts)
+// configuración por despliegue (no código de src/): el rol de la jefatura del proyecto (ASM-080). el rol se lee de aquí para que ningún fuente del portal nombre un rol (RQ-SEC-005, boundaries.test.ts)
 const rolJefatura = process.env.SGSPE_ROL_JEFATURA ?? 'PROJECT_MANAGER'
+// el mapa base ya no se compila (spec F6 elección 9: llega por /map/settings); SGSPE_MAPA_BASE es la lista de URL del estilo y de
+// los hosts que nombra, que solo abre la CSP
 const mapaBase = process.env.SGSPE_MAPA_BASE ?? ''
 // la CSP de security.md §3.2 en modo de solo informe (ADR-0020): en desarrollo la manda Vite; en producción, el proxy
 const csp = { 'Content-Security-Policy-Report-Only': contentSecurityPolicy(readFileSync('index.html', 'utf8'), mapaBase) }
@@ -25,8 +26,7 @@ export function partirEnChunks(id: string): string | undefined {
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
-    __SGSPE_ROL_JEFATURA__: JSON.stringify(rolJefatura),
-    __SGSPE_MAPA_BASE__: JSON.stringify(mapaBase)
+    __SGSPE_ROL_JEFATURA__: JSON.stringify(rolJefatura)
   },
   server: { port: 5182, strictPort: true, proxy: { '/api': api }, headers: csp },
   preview: { port: 5182, strictPort: true, proxy: { '/api': api }, headers: csp },
