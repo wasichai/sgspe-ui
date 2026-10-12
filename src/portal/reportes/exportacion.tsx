@@ -27,7 +27,24 @@ export function useProyectoElegido() {
   return { proyecto, elegir: (id: string) => setElegido({ valor: id, desde: delaUrl }) }
 }
 
-export function useExportacion({ ruta, filtros, nombre }: { ruta: string; filtros: () => Record<string, unknown>; nombre: string }) {
+// extra suma las claves propias de una exportación al cuerpo (la geográfica: object, geometry, format y coordinates, spec F6
+// §3.5); aceptar cambia el Accept (la geográfica entrega varios formatos) y conClave = false no manda Idempotency-Key (la
+// geográfica no crea registros de negocio y el servidor la ignora, api.md §4.2)
+export function useExportacion({
+  ruta,
+  filtros,
+  nombre,
+  extra,
+  aceptar = ACEPTAR_REPORTE,
+  conClave = true
+}: {
+  ruta: string
+  filtros: () => Record<string, unknown>
+  nombre: string | (() => string)
+  extra?: () => Record<string, unknown>
+  aceptar?: string
+  conClave?: boolean
+}) {
   const pedir = usePedir()
   const cliente = useQueryClient()
   const [nivel, setNivel] = useState('INTERNO')
@@ -38,12 +55,12 @@ export function useExportacion({ ruta, filtros, nombre }: { ruta: string; filtro
     // una clave por exportación pedida: una segunda de la misma sesión no se confunde con un reintento de la primera (§3.5)
     mutationFn: () =>
       pedir.archivo(ruta, {
-        json: { filters: filtros(), disclosureLevel: nivel, checklistConfirmed: externo ? checklist : false },
-        clave: nuevaClave(),
-        aceptar: ACEPTAR_REPORTE
+        json: { ...(extra?.() ?? {}), filters: filtros(), disclosureLevel: nivel, checklistConfirmed: externo ? checklist : false },
+        clave: conClave ? nuevaClave() : null,
+        aceptar
       }),
     onSuccess: (archivo) => {
-      guardarArchivo(archivo, nombre)
+      guardarArchivo(archivo, typeof nombre === 'function' ? nombre() : nombre)
       void cliente.invalidateQueries({ queryKey: ['records', 'export_log'] })
     }
   })

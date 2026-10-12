@@ -14,6 +14,8 @@ import { ControlDeCapas } from '../mapa/ControlDeCapas'
 import { Leyenda } from '../mapa/Leyenda'
 import { Mapa } from '../mapa/Mapa'
 import { aUtm, zonaDe } from '../mapa/utm'
+import { DialogoDeExportacion } from '../territorio/DialogoDeExportacion'
+import { capasExportables } from '../territorio/exportacion'
 import { importaA } from '../territorio/importacion'
 import { AnalisisDelProyecto } from './AnalisisDelProyecto'
 
@@ -64,6 +66,7 @@ export function MapaDelProyectoPage() {
   const escuchaDelCursor = useRef<EscuchaDelCursor | null>(null)
   const alMoverCursor = useCallback((punto: [number, number] | null) => escuchaDelCursor.current?.(punto), [])
   const capturar = useRef<() => string | null>(() => null)
+  const [exportando, setExportando] = useState(false)
   const estados = useCapas([...encendidas], { project: projectId, bbox: encuadre })
   const [objetoElegido, seleccion = null] = busqueda.get('selected')?.split(':') ?? []
   const elegir = (objeto: string, id: string) => {
@@ -101,6 +104,11 @@ export function MapaDelProyectoPage() {
           <Button variant="secondary" size="sm" onClick={descargar}>
             {t('mapa.capturar')}
           </Button>
+          {capasExportables(can).length > 0 ? (
+            <Button variant="secondary" size="sm" onClick={() => setExportando(true)}>
+              {t('exportacionGeografica.abrir')}
+            </Button>
+          ) : null}
           {importaA(can, 'project_component') ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/territory/imports/new?project=${encodeURIComponent(projectId)}`}>{t('mapa.importar')}</Link>
@@ -185,6 +193,7 @@ export function MapaDelProyectoPage() {
         ]}
       />
       <AnalisisDelProyecto proyecto={projectId} alResaltar={resaltar} />
+      <DialogoDeExportacion abierto={exportando} alCerrar={() => setExportando(false)} proyecto={projectId} capaInicial="LYR-10" />
     </section>
   )
 }

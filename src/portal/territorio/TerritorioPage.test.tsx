@@ -206,6 +206,29 @@ describe('S12 · filtros, leyenda y captura', () => {
     await waitFor(() => expect(fetch!.calls.filter((l) => l.path.startsWith('/sgspe/territory/layers/LYR-19')).length).toBe(1))
     expect(within(await within(await capas()).findByRole('group', { name: 'Gestión' })).queryAllByRole('checkbox')).toEqual([])
   })
+  it('«Exportar» abre el diálogo con el territorio comunal y el proyecto del filtro (spec §3.5)', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:x')
+    URL.revokeObjectURL = vi.fn()
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    fetch = abrirPortal('/territory?project=p1', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/exports',
+        responder: () => new Response('{}', { headers: { 'Content-Disposition': 'attachment; filename="community-interno.gpkg"' } })
+      }
+    ])
+    await userEvent.click(await screen.findByRole('button', { name: 'Exportar' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Exportar una capa' })
+    expect(within(dialogo).getByRole('combobox', { name: 'Capa' })).toHaveValue('LYR-05')
+    await userEvent.selectOptions(within(dialogo).getByRole('combobox', { name: 'Formato' }), 'gpkg')
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'UTM del proyecto' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Exportar' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/territory/exports')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/territory/exports')[0].cuerpo).toMatchObject({ object: 'community', coordinates: 'UTM', filters: { project: ['p1'] } })
+    await waitFor(() => expect(clic).toHaveBeenCalled())
+    clic.mockRestore()
+  })
 })
 
 describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
