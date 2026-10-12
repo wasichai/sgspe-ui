@@ -11,9 +11,11 @@ import { idDeElemento, useCapas, type Encuadre, type EstadoDeCapa } from '../map
 import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS, capa, dibujoDe } from '../mapa/capas'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
+import { Leyenda } from '../mapa/Leyenda'
 import { Mapa } from '../mapa/Mapa'
 import { aUtm, zonaDe } from '../mapa/utm'
 import { importaA } from '../territorio/importacion'
+import { AnalisisDelProyecto } from './AnalisisDelProyecto'
 
 // S09 · mapa del proyecto (screens.md §3, flujo 16): las dieciséis capas básicas por grupo, capturar PNG, importar, la
 // barra de coordenadas en el CRS de trabajo y la tabla sincronizada: elegir en el mapa o en la tabla fija ?selected=. un
@@ -69,6 +71,11 @@ export function MapaDelProyectoPage() {
     siguiente.set('selected', `${objeto}:${id}`)
     fijar(siguiente, { replace: true })
   }
+  // una fila del análisis: enciende la capa del registro y lo elige (decisión 14 del plan 6.3)
+  const resaltar = (objeto: string, id: string, capaId: string | null) => {
+    if (capaId) setEncendidas((antes) => (antes.has(capaId) ? antes : new Set([...antes, capaId])))
+    elegir(objeto, id)
+  }
   const dibujadas = estados
     .filter((e) => e.datos)
     .map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, ...dibujoDe(e.id), seleccionable: true, miembros: capa(e.id)!.miembros }))
@@ -102,17 +109,20 @@ export function MapaDelProyectoPage() {
         </div>
       </div>
       <div className="grid gap-3 lg:grid-cols-[260px_1fr]">
-        <ControlDeCapas
-          ids={IDS}
-          encendidas={encendidas}
-          estados={estados}
-          alCambiar={(id, si) => {
-            const siguiente = new Set(encendidas)
-            if (si) siguiente.add(id)
-            else siguiente.delete(id)
-            setEncendidas(siguiente)
-          }}
-        />
+        <div className="space-y-3">
+          <ControlDeCapas
+            ids={IDS}
+            encendidas={encendidas}
+            estados={estados}
+            alCambiar={(id, si) => {
+              const siguiente = new Set(encendidas)
+              if (si) siguiente.add(id)
+              else siguiente.delete(id)
+              setEncendidas(siguiente)
+            }}
+          />
+          <Leyenda ids={IDS.filter((id) => encendidas.has(id))} />
+        </div>
         <div className="space-y-1">
           <Mapa
             etiqueta={t('mapa.mapaDelProyecto')}
@@ -174,6 +184,7 @@ export function MapaDelProyectoPage() {
           }
         ]}
       />
+      <AnalisisDelProyecto proyecto={projectId} alResaltar={resaltar} />
     </section>
   )
 }

@@ -1,8 +1,90 @@
 // el panel «Análisis» de S09 (spec §3.7, gis.md §5.3)
 export const ES_ANALISIS_DEL_PROYECTO = {
-  titulo: 'Análisis'
+  titulo: 'Análisis',
+  pestanas: {
+    predios: 'Predios afectados',
+    comunal: 'Territorio comunal',
+    sensibles: 'Elementos sensibles',
+    buffer: 'Localidades en el buffer',
+    concesiones: 'Territorios de las concesiones',
+    conflictos: 'Conflictos cercanos'
+  },
+  columnas: {
+    componente: 'Componente',
+    tipo: 'Tipo',
+    predio: 'Predio',
+    tenencia: 'Tenencia',
+    titulares: 'Titulares',
+    areaHa: 'Área afectada (ha)',
+    longitudM: 'Longitud (m)',
+    comunidad: 'Comunidad',
+    elemento: 'Elemento',
+    distanciaM: 'Distancia (m)',
+    localidad: 'Localidad',
+    concesion: 'Concesión',
+    territorio: 'Territorio',
+    registro: 'Registro',
+    distanciaKm: 'Distancia (km)',
+    mapa: 'Mapa'
+  },
+  verEnMapa: 'Ver {{nombre}} en el mapa',
+  ver: 'Ver',
+  buffer: 'Buffer (m)',
+  bufferFuera: 'Indique entre 1 y 20 000 metros.',
+  distancia: 'Distancia (km)',
+  distanciaFuera: 'Indique entre 0.1 y 50 kilómetros.',
+  sensiblesAyuda: 'Zonas de protección, fuentes de agua, sitios sagrados y restos arqueológicos a esa distancia de los componentes.',
+  incompleta: 'Su cuenta no lee una parte de estos datos: la tabla puede estar incompleta.',
+  recortada: 'Se muestran las primeras {{n}} filas: hay más resultados de los que caben en una consulta.',
+  vacio: 'No hay resultados para este proyecto.',
+  sinTitulares: 'Sin titulares registrados',
+  demasiados: 'Hay demasiados registros para calcular esta tabla.',
+  demasiadasEnBuffer: 'Hay demasiadas localidades en el buffer: indique menos metros.',
+  demasiadosCercanos: 'Hay demasiados registros a esa distancia: indique menos kilómetros.',
+  objetos: { community: 'Comunidad', community_sector: 'Sector comunal', locality: 'Localidad' }
 }
 
 export const EN_ANALISIS_DEL_PROYECTO: typeof ES_ANALISIS_DEL_PROYECTO = {
-  titulo: 'Analysis'
+  titulo: 'Analysis',
+  pestanas: {
+    predios: 'Affected parcels',
+    comunal: 'Communal land',
+    sensibles: 'Sensitive features',
+    buffer: 'Localities in the buffer',
+    concesiones: 'Concession territories',
+    conflictos: 'Nearby conflicts'
+  },
+  columnas: {
+    componente: 'Component',
+    tipo: 'Type',
+    predio: 'Parcel',
+    tenencia: 'Tenure',
+    titulares: 'Holders',
+    areaHa: 'Affected area (ha)',
+    longitudM: 'Length (m)',
+    comunidad: 'Community',
+    elemento: 'Feature',
+    distanciaM: 'Distance (m)',
+    localidad: 'Locality',
+    concesion: 'Concession',
+    territorio: 'Territory',
+    registro: 'Record',
+    distanciaKm: 'Distance (km)',
+    mapa: 'Map'
+  },
+  verEnMapa: 'Show {{nombre}} on the map',
+  ver: 'Show',
+  buffer: 'Buffer (m)',
+  bufferFuera: 'Give between 1 and 20,000 meters.',
+  distancia: 'Distance (km)',
+  distanciaFuera: 'Give between 0.1 and 50 kilometers.',
+  sensiblesAyuda: 'Protection zones, water sources, sacred sites and archaeological remains within that distance of the components.',
+  incompleta: 'Your account cannot read part of this data: the table may be incomplete.',
+  recortada: 'Showing the first {{n}} rows: there are more results than fit in one query.',
+  vacio: 'There are no results for this project.',
+  sinTitulares: 'No holders recorded',
+  demasiados: 'There are too many records to calculate this table.',
+  demasiadasEnBuffer: 'There are too many localities in the buffer: give fewer meters.',
+  demasiadosCercanos: 'There are too many records within that distance: give fewer kilometers.',
+  objetos: { community: 'Community', community_sector: 'Community sector', locality: 'Locality' }
 }
