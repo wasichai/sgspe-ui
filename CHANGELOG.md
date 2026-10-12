@@ -1,5 +1,51 @@
 # Changelog
 
+## [2.0.0](https://github.com/wasichai/sgspe-ui/compare/v1.1.0...v2.0.0) (2026-10-12)
+
+
+### Features
+
+* **portal:** bases de F6, contrato de las consultas espaciales ([48bce76](https://github.com/wasichai/sgspe-ui/commit/48bce7600de19ea821e8fb3a1578976d2afc134c))
+* **portal:** capas WMS por el proxy, calor y clic en el mapa ([0035f66](https://github.com/wasichai/sgspe-ui/commit/0035f662c81cf108b03e0e98b0d69ce42226259e))
+* **portal:** edición de geometrías con validación previa en S13 y S14 ([aff2f74](https://github.com/wasichai/sgspe-ui/commit/aff2f7445a083cb78207bc24e0bf8aa021eeb083))
+* **portal:** exportación geográfica con niveles por capa desde S12 y S09 ([ff79349](https://github.com/wasichai/sgspe-ui/commit/ff7934952274cbe2866dd783847a68b2809f49e5))
+* **portal:** Fase 5, programas e inversión social ([#22](https://github.com/wasichai/sgspe-ui/issues/22)) ([2599b94](https://github.com/wasichai/sgspe-ui/commit/2599b9487ff981c37ea85bb274a5d0cba4a8c8e0))
+* **portal:** Fase 6, SIG avanzado (plan 6.3) ([7188115](https://github.com/wasichai/sgspe-ui/commit/71881152c93e643bf133882cba5b499abc4bde87))
+* **portal:** ficha contextual de S12 con KPI-TER-01 y registros de la zona ([d342d74](https://github.com/wasichai/sgspe-ui/commit/d342d7409350f8f9cc19292e39e9a0b61b539f4a))
+* **portal:** importación por GDAL, capa, CRS detectado y destinos nuevos en S15 ([9a0ae0e](https://github.com/wasichai/sgspe-ui/commit/9a0ae0e170572b139a83a1349d2a4aaa78b27552))
+* **portal:** lugares del punto con locate en S24 y en el registro rápido ([4e17077](https://github.com/wasichai/sgspe-ui/commit/4e17077e6f514610d493eaf56ac49690ed67032b))
+* **portal:** mapa base de la organización por /map/settings ([838899d](https://github.com/wasichai/sgspe-ui/commit/838899d218d47e7ddecb0dc1c9cf617ab7eb2bcc))
+* **portal:** mapa de calor en S12 ([8a6e6f6](https://github.com/wasichai/sgspe-ui/commit/8a6e6f634be41fd31df36d1f0b1978e6be9197b6))
+* **portal:** paleta compartida con GeoServer y leyenda del mapa ([7a0eafd](https://github.com/wasichai/sgspe-ui/commit/7a0eafd0a33cd2777e2b691346f794f2ef739fa7))
+* **portal:** panel Análisis de S09 con las seis consultas espaciales ([5cbd7ee](https://github.com/wasichai/sgspe-ui/commit/5cbd7ee9225bf969d7144023d56cd67bb87ad74b))
+* **portal:** rutas del tablero territorial y de la calidad de datos ([25c4bb6](https://github.com/wasichai/sgspe-ui/commit/25c4bb6310ac7939766a730781cf9100ca299f82))
+* **portal:** S12 con capas WMS por el proxy y vuelta al GeoJSON ([3b704bd](https://github.com/wasichai/sgspe-ui/commit/3b704bd9e301153a1ff9df90c7236b7af182c60e))
+* **portal:** S63, calidad de datos geográficos ([d2d52cf](https://github.com/wasichai/sgspe-ui/commit/d2d52cf34ed141007aeb8e31eb1d8b934c9928ed))
+* **portal:** sugerencias del cálculo y resumen del área en S10 ([1858835](https://github.com/wasichai/sgspe-ui/commit/1858835952db5bc805a453ed76c7b6fcd537bf5a))
+* **portal:** tablero territorial con KPI-TER-02 a 04 ([9c452f0](https://github.com/wasichai/sgspe-ui/commit/9c452f0205093984583b2af1344b6a9a9b2e2e57))
+
+
+### Bug Fixes
+
+* **portal:** capas del mapa con la vista fijada y tablas de S09 acotadas ([6cae744](https://github.com/wasichai/sgspe-ui/commit/6cae7441fd34c2dea4eb37ba4084b4f87a20cf84))
+* **portal:** el buffer de S10 solo acepta enteros y el resumen se oculta con 404 ([3975a8e](https://github.com/wasichai/sgspe-ui/commit/3975a8e4151ea27fd6d6555a720dc8e15e79a2fd))
+* **portal:** el gráfico de KPI-INV-02 no dice NaN de un programa por aprobar ([e0ffaad](https://github.com/wasichai/sgspe-ui/commit/e0ffaade232b5e8371f34e5efccafda1222e1b5c))
+* **portal:** hallazgos menores de la revisión final del plan 6.3 ([464361c](https://github.com/wasichai/sgspe-ui/commit/464361cb25cbf070433f2594a0aff91482ab2070))
+* **portal:** la clasificación de las evidencias no se dice restringida si se lee ([f621e02](https://github.com/wasichai/sgspe-ui/commit/f621e0257f79e9491c37942b6795be5be58704fd))
+* **portal:** la lista incompleta de la zona nombra campos por su etiqueta ([b36a293](https://github.com/wasichai/sgspe-ui/commit/b36a29344fe41b63a0960202c06ccc85f90416e7))
+* **portal:** la reparación de otro tipo no se guarda y el dibujo no tapa «Revisar» ([953eeb5](https://github.com/wasichai/sgspe-ui/commit/953eeb5272b2004906de405f122086006028771a))
+* **portal:** la solicitud de origen del aporte no anida un párrafo en otro ([cef2f02](https://github.com/wasichai/sgspe-ui/commit/cef2f02d1999164c76a94cae931b8681b40614e4))
+* **portal:** lo que encontró el recorrido de F5 ([293b73e](https://github.com/wasichai/sgspe-ui/commit/293b73ef62d3132d9b8d5fa836a59e40f6e0f942))
+* **portal:** los comprobantes del aporte no cambian desde «Entregado» ([a82f258](https://github.com/wasichai/sgspe-ui/commit/a82f25844244020970086b0c8932f197a17a7839))
+* **portal:** S12 sondea una sola capa de gestión y no inventa ceros ([b8dd988](https://github.com/wasichai/sgspe-ui/commit/b8dd9886136aad2d65fbb8dd3752ade67354229f))
+* **portal:** S15 dice que la organización no tiene los destinos de F6, no que faltan permisos ([4e8c029](https://github.com/wasichai/sgspe-ui/commit/4e8c0290973178435fe23f0bfbc5abcc80532fd1))
+* **portal:** usar los lugares del punto no pisa lo que locate no propone ([04150b7](https://github.com/wasichai/sgspe-ui/commit/04150b775af6339d49c2cdac74389df24b306890))
+
+
+### Miscellaneous Chores
+
+* fija la versión 2.0.0 del release de F5 y F6 ([f76724b](https://github.com/wasichai/sgspe-ui/commit/f76724b41c1f67b5817714bbcd3822f4880579da))
+
 ## [1.1.0](https://github.com/wasichai/sgspe-ui/compare/v1.0.0...v1.1.0) (2026-10-10)
 
 
