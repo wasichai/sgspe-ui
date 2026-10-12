@@ -22,6 +22,7 @@ import { Mapa } from '../mapa/Mapa'
 import { useWms } from '../mapa/wms'
 import { AgregadosDelMapa } from './AgregadosDelMapa'
 import { OBJETOS_DE_CALOR, useConcentracion, type ObjetoDeCalor } from './consultas'
+import { EstadisticasTerritoriales } from './EstadisticasTerritoriales'
 import { FichaContextual } from './FichaContextual'
 import { DESTINOS, importaA } from './importacion'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
@@ -32,7 +33,8 @@ import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 // GeoJSON de F2, con un aviso. el grupo Gestión ofrece las capas LYR-17 a LYR-24 que el backend sirve (plan 6.2c; las que
 // responden 404 no se ofrecen) con el periodo, y sus agregados por localidad en texto. filtros de proyecto y periodo en la URL,
 // leyenda de la paleta compartida y «Capturar PNG». elegir un lugar (?selected=) abre su ficha contextual con KPI-TER-01 y sus
-// registros bajo el mapa. "Nueva comunidad" es el flujo 2
+// registros bajo el mapa. "Nueva comunidad" es el flujo 2. en modo tablero (/territory/dashboard, dashboards.md §5.9) suma
+// KPI-TER-02 a 04 del proyecto elegido
 const FICHA: Record<string, string> = { community: 'communities', locality: 'localities' }
 // las capas cuyos lugares tienen ficha (decisión 7 del plan 6.3)
 const SELECCIONABLES = new Set(['LYR-02', 'LYR-03', 'LYR-05'])
@@ -40,7 +42,7 @@ const DE_GESTION = CAPAS_DE_GESTION.map((c) => c.id)
 // la capa que dice si el backend sirve las de gestión: de registros (los compromisos), no un agregado, que sale caro sondear
 const SONDA_DE_GESTION = 'LYR-19'
 
-export function TerritorioPage() {
+export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } = {}) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const navegar = useNavigate()
@@ -125,7 +127,7 @@ export function TerritorioPage() {
   return (
     <section className="mx-auto max-w-[1440px] space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('mapa.mapaTerritorial')}</h1>
+        <h1 className="text-sg-h1 font-semibold">{modo === 'tablero' ? t('tableroTerritorial.titulo') : t('mapa.mapaTerritorial')}</h1>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={descargar}>
             {t('mapa.capturar')}
@@ -258,6 +260,13 @@ export function TerritorioPage() {
           <AgregadosDelMapa estados={estadosDeGestion} />
         </div>
       </div>
+      {modo === 'tablero' ? (
+        proyecto ? (
+          <EstadisticasTerritoriales proyecto={proyecto} periodo={periodo} />
+        ) : (
+          <Alert tone="notice">{t('tableroTerritorial.eligeProyecto')}</Alert>
+        )
+      ) : null}
       <Drawer titulo={t('mapa.nuevaComunidad')} abierto={creando} alCerrar={() => setCreando(false)}>
         <FormularioDeRegistro
           objeto="community"

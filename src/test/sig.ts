@@ -398,6 +398,47 @@ export const TABLERO_TERRITORIAL = {
   ]
 }
 
+// el mismo tablero con KPI-TER-04 disponible (TerritoryKpis.kt:68-79): tenureType con SIN TENENCIA (parcela sin tenencia; nunca
+// PROPIEDAD DE LA EMPRESA, que excluye) y componentType con SIN DATO; KPI-TER-02 con el aviso de una superficie que falta. con el
+// periodo pedido (plan 6.2c), KPI-TER-02 a 04 lo declaran en ignoredFilters
+export const TABLERO_TERRITORIAL_COMPLETO = {
+  ...TABLERO_TERRITORIAL,
+  indicators: [
+    { ...TABLERO_TERRITORIAL.indicators[0], warnings: ['Una versión del área no tiene superficie y no se sumó.'] },
+    TABLERO_TERRITORIAL.indicators[1],
+    {
+      code: 'KPI-TER-04',
+      label: 'Componentes sobre tierras comunales o privadas',
+      available: true,
+      value: 4,
+      unit: 'componentes',
+      breakdowns: [
+        {
+          by: 'tenureType',
+          rows: [
+            { key: 'COMUNAL', value: 2 },
+            { key: 'PROPIEDAD', value: 1 },
+            { key: 'SIN TENENCIA', value: 1 }
+          ]
+        },
+        {
+          by: 'componentType',
+          rows: [
+            { key: 'MINA', value: 3 },
+            { key: 'SIN DATO', value: 1 }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+export const TABLERO_TERRITORIAL_CON_PERIODO = {
+  ...TABLERO_TERRITORIAL_COMPLETO,
+  filters: { project: ['p1'], periodStart: '2026-07-01' },
+  indicators: TABLERO_TERRITORIAL_COMPLETO.indicators.map((i) => ({ ...i, ignoredFilters: ['periodStart', 'periodEnd'] }))
+}
+
 // lo que toda pantalla de F6 pregunta: proyectos, asignaciones y, sin F6 en el backend, /map/settings y GetCapabilities en 404
 export const baseDeSig = (): MockRoute[] => [
   { path: '/objects/project/records', body: pagina([PROYECTO_UTM]) },
