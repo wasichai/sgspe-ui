@@ -14,8 +14,8 @@ export class Map {
   // una prueba lo enciende para simular un navegador sin WebGL: MapLibre lanza al crear el mapa
   static fallar = false
   opciones: Record<string, unknown>
-  fuentes = new globalThis.Map<string, { data: unknown; setData: (d: unknown) => void }>()
-  capas: { id: string; type: string; paint: Record<string, unknown> }[] = []
+  fuentes = new globalThis.Map<string, { data: unknown; opciones: Record<string, unknown>; setData: (d: unknown) => void }>()
+  capas: { id: string; type: string; paint: Record<string, unknown>; antes?: string }[] = []
   manejadores: Record<string, ((...args: unknown[]) => void)[]> = {}
   fitBounds = vi.fn()
   setPaintProperty = vi.fn()
@@ -34,8 +34,8 @@ export class Map {
     for (const m of this.manejadores[clave] ?? []) m(...args)
   }
   addControl() {}
-  addSource(id: string, fuente: { data: unknown }) {
-    const registro = { data: fuente.data, setData: (d: unknown) => (registro.data = d) }
+  addSource(id: string, fuente: Record<string, unknown>) {
+    const registro = { data: fuente.data, opciones: fuente, setData: (d: unknown) => (registro.data = d) }
     this.fuentes.set(id, registro)
   }
   getSource(id: string) {
@@ -44,8 +44,9 @@ export class Map {
   removeSource(id: string) {
     this.fuentes.delete(id)
   }
-  addLayer(capa: { id: string; type: string; paint: Record<string, unknown> }) {
-    this.capas.push(capa)
+  // antes: la capa sobre la que se inserta (MapLibre la dibuja debajo de esa)
+  addLayer(capa: { id: string; type: string; paint: Record<string, unknown> }, antes?: string) {
+    this.capas.push({ ...capa, antes })
   }
   removeLayer(id: string) {
     this.capas = this.capas.filter((c) => c.id !== id)

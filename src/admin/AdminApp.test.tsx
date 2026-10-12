@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -35,6 +35,12 @@ async function signIn() {
 }
 
 describe('admin', () => {
+  // spec F6 elección 9: /admin arma el mismo mapa base que el portal después del login, para GeometryField y el componente MAP
+  it('después del login pide el mapa base de la organización', async () => {
+    await signIn()
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path === '/sgspe/map/settings')).toBe(true))
+  })
+
   it('inicia sesión con el admin sembrado y guarda la sesión bajo sgspe.*', async () => {
     await signIn()
     expect(screen.getAllByText('SGSPE').length).toBeGreaterThan(0)

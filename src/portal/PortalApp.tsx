@@ -11,6 +11,7 @@ import { AvisosPage } from './avisos/AvisosPage'
 import { parametrosDe, PorRuta } from './componentes/PorRuta'
 import { RequireSession } from './auth/RequireSession'
 import { idiomaHtmlModule } from '../idiomaHtml'
+import { mapaBaseModule } from './mapa/mapaBase'
 import { crearI18n, IDIOMAS, NS } from './i18n'
 import { InicioPage } from './pages/InicioPage'
 import { PANTALLAS, RUTAS_ADICIONALES } from './pantallas'
@@ -89,13 +90,13 @@ const rutas = () =>
   )
 
 // el portal: los proveedores de core, como /admin, así que la sesión, el tema y el idioma son los mismos. sin módulos de starters:
-// el portal dibuja sus propias pantallas. el único módulo es idiomaHtmlModule: core 0.5.1 ya escribe <html lang> con el
-// código de i18n (`es`), y el módulo lo vuelve a es-PE después de él (WCAG 3.1.1). los DATETIME de un DynamicForm, en la hora de
-// Lima (ZONA_DE_LIMA, core 0.6.0)
+// el portal dibuja sus propias pantallas. dos módulos propios, solo con proveedores: idiomaHtmlModule (core escribe <html lang> con
+// el código de i18n, `es`, y el módulo lo vuelve a es-PE, WCAG 3.1.1) y mapaBaseModule (el mapa base de la organización tras el
+// login, spec F6 elección 9). los DATETIME de un DynamicForm, en la hora de Lima (ZONA_DE_LIMA, core 0.6.0)
 export function PortalApp() {
   const [app] = useState(() => {
     const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS, timeZone: ZONA_DE_LIMA })
-    const registry = createRegistry([idiomaHtmlModule()])
+    const registry = createRegistry([idiomaHtmlModule(), mapaBaseModule()])
     const i18n = crearI18n(registry.modules)
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry, refetchOnWindowFocus: false } } })
     return { config, registry, i18n, queryClient, router: createBrowserRouter(rutas()) }

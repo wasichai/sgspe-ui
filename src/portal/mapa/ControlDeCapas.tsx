@@ -47,7 +47,7 @@ export function ControlDeCapas({
                       checked={encendidas.has(c.id) && !bloqueada}
                       onChange={(e) => alCambiar(c.id, e.target.checked)}
                     />
-                    <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: `var(${c.color})` }} aria-hidden />
+                    <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: c.color }} aria-hidden />
                     <span>{t(`mapa.capasNombre.${c.id}`)}</span>
                     {bloqueada || c.sensible ? (
                       <Lock aria-label={bloqueada ? t('mapa.bloqueada') : t('mapa.sensible')} className="size-3.5 text-sg-text-muted" />

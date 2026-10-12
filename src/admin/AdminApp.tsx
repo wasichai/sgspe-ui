@@ -7,6 +7,7 @@ import { pagesModule } from '@wasichai/pages'
 import { viewsModule } from '@wasichai/views'
 import { workflowModule } from '@wasichai/workflow'
 import { idiomaHtmlModule } from '../idiomaHtml'
+import { mapaBaseModule } from '../portal/mapa/mapaBase'
 import { ZONA_DE_LIMA } from '../portal/datos/fechas'
 
 // la configuración de /admin. storagePrefix 'sgspe' es el del portal: un solo login, el mismo tema y el mismo idioma, y
@@ -26,7 +27,7 @@ export const configDeAdministracion: WasichaiConfig = {
 
 // /admin: core más los módulos de los starters que corre sgspe (views, forms y pages desde F1; gis y workflow desde
 // F2; documents y automation desde F3, con la página imprimible de un documento emitido en /admin/documents/:id/print);
-// nunca un módulo sin su starter ni agentModule() (ADR-0024). gis recibe el worker de MapLibre que fija main.tsx
+// nunca un módulo sin su starter ni agentModule() (ADR-0024). gis recibe el worker de MapLibre que fija main.tsx; mapaBaseModule, después de gis, le da el mapa base de la organización (spec F6 elección 9)
 export function AdminApp({ trabajadorDelMapa }: { trabajadorDelMapa?: string } = {}) {
   return (
     <WasichaiApp
@@ -37,6 +38,7 @@ export function AdminApp({ trabajadorDelMapa }: { trabajadorDelMapa?: string } =
         pagesModule(),
         workflowModule(),
         gisModule({ workerUrl: trabajadorDelMapa }),
+        mapaBaseModule(),
         documentsModule(),
         automationModule(),
         idiomaHtmlModule()
