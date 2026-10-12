@@ -1,7 +1,10 @@
+import { act, waitFor } from '@testing-library/react'
 import { wmsTileUrl, WMS_TILE_SIZE } from '@wasichai/gis'
 import { describe, expect, it } from 'vitest'
+import { montar } from '../../test/montar'
+import { espiarRed, problema } from '../../test/red'
 import { CAPACIDADES_WMS } from '../../test/sig'
-import { CAPAS_WMS, firmaDeWms, leerCapacidades, urlDeWms } from './wms'
+import { CAPAS_WMS, firmaDeWms, leerCapacidades, urlDeWms, useWms } from './wms'
 
 // spec F6 §3.3 y gis.md §6.2: las capas públicas por el proxy; el portal no conoce tablas físicas: lee el GetCapabilities del
 // proxy (WMS 1.3.0 con espacio de nombres por defecto, WmsCapabilities) y reconoce cada capa por su estilo sgspe-lyr-NN o
@@ -84,5 +87,110 @@ describe('WMS por el proxy', () => {
     expect(firmaDeWms(() => null, 'https://sgspe.example')('https://sgspe.example/api/sgspe/territory/wms')).toEqual({
       url: 'https://sgspe.example/api/sgspe/territory/wms'
     })
+  })
+})
+
+const CAPACIDADES = '/sgspe/territory/wms?service=WMS&version=1.1.1&request=GetCapabilities'
+const xml = () => new Response(CAPACIDADES_WMS, { headers: { 'Content-Type': 'application/vnd.ogc.wms_xml' } })
+
+// el WMS de una pantalla: las encendidas que el GetCapabilities publica; una tesela con 503 apaga todo (GeoServer caído) y una con
+// 403 o 422 saca solo su capa. un 503 del propio GetCapabilities (el proxy no pudo armar la lista blanca) es caído desde el inicio
+// (enmienda 5.1 del plan 6.3); un 404 (backend sin F6) o un 403 es GeoJSON sin aviso
+describe('useWms', () => {
+  let actual: ReturnType<typeof useWms> | null = null
+  function Sonda({ encendidas }: { encendidas: string[] }) {
+    actual = useWms(encendidas)
+    return null
+  }
+
+  it('sirve por WMS las encendidas publicadas; un 503 lo apaga todo y un 403 saca solo esa capa', async () => {
+    const red = espiarRed([{ path: '/sgspe/territory/wms', responder: xml }])
+    try {
+      montar(<Sonda encendidas={['LYR-01', 'LYR-05', 'LYR-06']} />)
+      await waitFor(() => expect(actual!.wms.map((w) => w.id)).toEqual(['LYR-01', 'LYR-05']))
+      expect([...actual!.porWms]).toEqual(['LYR-01', 'LYR-05'])
+      expect(actual!.wms[1].url).toBe(
+        `${window.location.origin}/api/sgspe/territory/wms?service=WMS&version=1.1.1&request=GetMap&layers=t_community__territory&styles=sgspe-lyr-05`
+      )
+      act(() => actual!.alFallar('LYR-01', 403))
+      expect(actual!.wms.map((w) => w.id)).toEqual(['LYR-05'])
+      act(() => actual!.alFallar('LYR-05', 503))
+      expect(actual!.wms).toEqual([])
+      expect(actual!.porWms.size).toBe(0)
+      expect(actual!.caido).toBe(true)
+      act(() => actual!.reintentar())
+      expect(actual!.wms.map((w) => w.id)).toEqual(['LYR-05'])
+      expect(actual!.caido).toBe(false)
+      expect(red.a('GET', '/sgspe/territory/wms').map((l) => l.ruta)).toEqual([CAPACIDADES])
+    } finally {
+      red.restaurar()
+    }
+  })
+
+  it('una tesela sin estado (corte de red) también apaga el WMS; un 422 saca solo su capa', async () => {
+    const red = espiarRed([{ path: '/sgspe/territory/wms', responder: xml }])
+    try {
+      montar(<Sonda encendidas={['LYR-02', 'LYR-05']} />)
+      await waitFor(() => expect(actual!.wms.map((w) => w.id)).toEqual(['LYR-02', 'LYR-05']))
+      act(() => actual!.alFallar('LYR-02', 422))
+      expect(actual!.wms.map((w) => w.id)).toEqual(['LYR-05'])
+      expect(actual!.caido).toBe(false)
+      act(() => actual!.alFallar('LYR-05', null))
+      expect(actual!.caido).toBe(true)
+    } finally {
+      red.restaurar()
+    }
+  })
+
+  it('un 503 del GetCapabilities deja el WMS caído desde el inicio, y «Reintentar» vuelve a pedirlo', async () => {
+    let respuestas = 0
+    const red = espiarRed([
+      {
+        path: '/sgspe/territory/wms',
+        responder: () => (++respuestas === 1 ? problema(503, 'GeoServer no responde', [{ field: 'wms', message: 'GEOSERVER_UNAVAILABLE' }]) : xml())
+      }
+    ])
+    try {
+      montar(<Sonda encendidas={['LYR-05']} />)
+      await waitFor(() => expect(actual!.caido).toBe(true))
+      expect(actual!.wms).toEqual([])
+      act(() => actual!.reintentar())
+      await waitFor(() => expect(actual!.wms.map((w) => w.id)).toEqual(['LYR-05']))
+      expect(actual!.caido).toBe(false)
+      expect(red.a('GET', '/sgspe/territory/wms').map((l) => l.ruta)).toEqual([CAPACIDADES, CAPACIDADES])
+    } finally {
+      red.restaurar()
+    }
+  })
+
+  it('un 404 (backend sin F6) o un 403 del GetCapabilities es GeoJSON sin aviso', async () => {
+    for (const estado of [404, 403]) {
+      const red = espiarRed([{ path: '/sgspe/territory/wms', responder: () => problema(estado, 'No') }])
+      try {
+        const { unmount } = montar(<Sonda encendidas={['LYR-05']} />)
+        await waitFor(() => expect(red.a('GET', '/sgspe/territory/wms')).toHaveLength(1))
+        await act(async () => {})
+        expect(actual!.wms).toEqual([])
+        expect(actual!.caido).toBe(false)
+        unmount()
+      } finally {
+        red.restaurar()
+      }
+    }
+  })
+
+  it('un GetCapabilities sin capas reconocidas es GeoJSON sin aviso', async () => {
+    const vacio =
+      '<?xml version="1.0"?><WMS_Capabilities version="1.3.0" xmlns="http://www.opengis.net/wms"><Capability><Layer><Title>SGSPE</Title></Layer></Capability></WMS_Capabilities>'
+    const red = espiarRed([{ path: '/sgspe/territory/wms', responder: () => new Response(vacio) }])
+    try {
+      montar(<Sonda encendidas={['LYR-05']} />)
+      await waitFor(() => expect(red.a('GET', '/sgspe/territory/wms')).toHaveLength(1))
+      await act(async () => {})
+      expect(actual!.wms).toEqual([])
+      expect(actual!.caido).toBe(false)
+    } finally {
+      red.restaurar()
+    }
   })
 })

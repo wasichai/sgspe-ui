@@ -14,10 +14,11 @@ import { atributo, leerTodos, puedeEscribir, texto, useDefinicion, useRegistro, 
 import { NS, numeroPe } from '../i18n'
 import { Dato, TrabajarEnProyecto, useRegistrosPorId } from './comunes'
 import { EditorDeGeometria } from './EditorDeGeometria'
+import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 
 // S13 · ficha de comunidad (screens.md §4, flujos 2 y 17): quién es la comunidad (registros, vida orgánica, sectores y la
-// organización que la representa con sus cargos), sus grupos de interés y las áreas que la incluyen. las cifras del lugar
-// (KPI-TER-01) llegan en F6. cada consulta auxiliar dice si carga o falló: nunca una lista vacía en su lugar
+// organización que la representa con sus cargos), sus grupos de interés y las áreas que la incluyen. los registros del lugar
+// salen de su zona (F6). cada consulta auxiliar dice si carga o falló: nunca una lista vacía en su lugar
 const HA = (v: unknown) => (v === null || v === undefined ? '—' : `${numeroPe(Number(v))} ha`)
 
 export function FichaComunidadPage() {
@@ -79,7 +80,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
             {
               id: 'registros',
               label: t('territorio.pestanas.registros'),
-              render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('territorio.registrosLlegan')}</p>
+              render: () => <RegistrosDeLaZona zona="community" id={comunidad.id} />
             },
             {
               id: 'documentos',

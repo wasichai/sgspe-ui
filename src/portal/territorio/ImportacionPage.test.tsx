@@ -700,7 +700,7 @@ describe('S15 · formatos por GDAL y destinos nuevos (F6)', () => {
     const vista = red.a('POST', '/sgspe/territory/imports')[1]
     expect(vista.formulario?.get('sourceCrs')).toBe('EPSG 32718')
     expect(vista.formulario?.get('layer')).toBe('sondajes')
-    expect(screen.getByText('El archivo declara EPSG 32718, el mismo CRS de la vista previa.')).toBeInTheDocument()
+    expect(await screen.findByText('El archivo declara EPSG 32718, el mismo CRS de la vista previa.')).toBeInTheDocument()
   })
 
   it('el CRS que declara el archivo se propone: «Usar el CRS del archivo» repite la vista previa con él', async () => {

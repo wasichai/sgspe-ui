@@ -1,3 +1,9 @@
+import { useQuery } from '@tanstack/react-query'
+import { ApiError } from '@wasichai/core'
+import { useState } from 'react'
+import { usePedir } from '../datos/http'
+import type { CapaWms } from './Mapa'
+
 // las capas públicas por el proxy WMS de SGSPE (spec F6 §3.3, gis.md §6.2): GeoServer nunca recibe una petición del navegador
 // sin pasar por /api/sgspe/territory/wms. el portal no conoce las tablas físicas: lee el GetCapabilities del proxy (WMS 1.3.0,
 // armado con la lista blanca de la organización) y reconoce cada capa por su estilo sgspe-lyr-NN o sgspe-lyr-NN-<variante>
@@ -55,5 +61,61 @@ export function firmaDeWms(token: () => string | null, origen: string) {
     const delProxy = url === proxy || url.startsWith(`${proxy}?`)
     const valor = delProxy ? token() : null
     return valor ? { url, headers: { Authorization: `Bearer ${valor}` } } : { url }
+  }
+}
+
+const CAPACIDADES = '/sgspe/territory/wms?service=WMS&version=1.1.1&request=GetCapabilities'
+
+// GeoServer caído o vencido (spec elección 10): 503 GEOSERVER_UNAVAILABLE del proxy, un 502 o 504 de un intermediario o una
+// tesela sin estado (un corte)
+const CAIDO = new Set([0, 502, 503, 504])
+
+// las capas de la lista blanca del proxy, de su GetCapabilities (spec §3.3). el proxy lo arma con las capas que GeoServer
+// publica: si no responde, 503 (WmsProxy.kt), y entonces el WMS está caído desde el inicio (enmienda 5.1 del plan 6.3). un 404
+// (backend sin F6), un 403, un corte o una lista vacía dejan todo por GeoJSON, sin aviso
+export function useCapasPublicadas() {
+  const pedir = usePedir()
+  return useQuery({
+    queryKey: ['wms-capabilities'],
+    queryFn: async () => {
+      const { blob } = await pedir.archivo(CAPACIDADES)
+      return leerCapacidades(await blob.text())
+    },
+    staleTime: 5 * 60_000,
+    retry: false
+  })
+}
+
+const caidoAlPedir = (error: unknown): boolean => error instanceof ApiError && CAIDO.has(error.status)
+
+// las capas encendidas que se dibujan por WMS: las publicadas, mientras GeoServer responda y el proxy no rechace la capa. una
+// tesela con 503 (o sin estado) apaga todas (decisión 9 del plan 6.3); un 403 o un 422 saca solo esa. un 503 del GetCapabilities
+// es caído desde el inicio. reintentar vuelve a probar el WMS y, si el que falló fue el GetCapabilities, lo vuelve a pedir
+export function useWms(encendidas: readonly string[]): {
+  wms: CapaWms[]
+  porWms: ReadonlySet<string>
+  caido: boolean
+  alFallar: (id: string, estado: number | null) => void
+  reintentar: () => void
+} {
+  const publicadas = useCapasPublicadas()
+  const [teselasCaidas, setTeselasCaidas] = useState(false)
+  const [excluidas, setExcluidas] = useState<ReadonlySet<string>>(() => new Set())
+  const caido = teselasCaidas || caidoAlPedir(publicadas.error)
+  const porCapa = new Map<string, CapaPublicada[]>()
+  for (const c of publicadas.data ?? []) porCapa.set(c.capa, [...(porCapa.get(c.capa) ?? []), c])
+  const servidas = caido ? [] : encendidas.filter((id) => porCapa.has(id) && !excluidas.has(id))
+  return {
+    wms: servidas.map((id) => ({ id, url: urlDeWms(porCapa.get(id)!) })),
+    porWms: new Set(servidas),
+    caido,
+    alFallar: (id, estado) => {
+      if (estado === null || CAIDO.has(estado)) setTeselasCaidas(true)
+      else setExcluidas((x) => (x.has(id) ? x : new Set([...x, id])))
+    },
+    reintentar: () => {
+      setTeselasCaidas(false)
+      if (publicadas.isError) void publicadas.refetch()
+    }
   }
 }

@@ -135,9 +135,12 @@ export function diezYOtros(filas: { key: string; label?: string; value: number |
   return [...ordenadas.slice(0, 10), { nombre: otros, valor: resto.length === 0 ? null : resto.reduce((s, f) => s + (f.valor ?? 0), 0) }]
 }
 
+// lo que las notas leen de un indicador o de una fila de KPI-TER-01 (ComponenteDeFicha): sus filtros ignorados y sus avisos
+type NotasDe = Pick<Indicador, 'ignoredFilters' | 'warnings'>
+
 // los filtros pedidos que el indicador no aplica (ignoredFilters, ruling P27): se dicen, para que la cifra no se lea como
 // filtrada por ellos. sin filtros ignorados no dibuja nada
-export function FiltrosIgnorados({ indicador }: { indicador: Indicador | undefined }) {
+export function FiltrosIgnorados({ indicador }: { indicador: NotasDe | undefined }) {
   const { t } = useTranslation(NS)
   const ignorados = indicador?.ignoredFilters ?? []
   if (ignorados.length === 0) return null
@@ -152,7 +155,7 @@ export function FiltrosIgnorados({ indicador }: { indicador: Indicador | undefin
 // los avisos de un indicador (warnings, api.md §4.11): textos del servidor que dicen que la cifra está incompleta o que algo no
 // se sumó (una moneda distinta de la de la campaña, reprogramaciones excluidas). se dicen como texto, nunca como marcado, y
 // nunca se callan. sin avisos no dibuja nada
-export function AvisosDeIndicador({ indicador }: { indicador: Indicador | undefined }) {
+export function AvisosDeIndicador({ indicador }: { indicador: NotasDe | undefined }) {
   const { t } = useTranslation(NS)
   const avisos = indicador?.warnings ?? []
   if (avisos.length === 0) return null
@@ -167,7 +170,7 @@ export function AvisosDeIndicador({ indicador }: { indicador: Indicador | undefi
 
 // lo que acompaña a una cifra para que no se lea de más: los filtros que no aplica y sus avisos. lo usan las zonas y las
 // tarjetas de un tablero
-export function NotasDeIndicador({ indicador }: { indicador: Indicador | undefined }) {
+export function NotasDeIndicador({ indicador }: { indicador: NotasDe | undefined }) {
   return (
     <>
       <FiltrosIgnorados indicador={indicador} />
