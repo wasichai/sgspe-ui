@@ -126,6 +126,24 @@ test('las teselas WMS van por el proxy del mismo origen con el token, y nada sal
   expect(externas).toEqual([])
 })
 
+// revisión final del plan 6.3, m1: con MapLibre de verdad, cada capa GeoJSON se pide una sola vez al abrir el mapa, con la vista que
+// el mapa muestra (el Perú entero sin un proyecto con geometrías), y nunca sin bbox; la sonda de gestión, con su encuadre vacío
+test('al abrir el mapa territorial cada capa GeoJSON se pide una vez y con bbox', async ({ page }) => {
+  await prepararF6(page)
+  const capas: string[] = []
+  page.on('request', (r) => {
+    if (r.url().includes('/api/sgspe/territory/layers/')) capas.push(decodeURIComponent(r.url().split('/api/sgspe/territory/layers/')[1]))
+  })
+  await page.goto('/territory')
+  const mapa = page.getByRole('region', { name: 'Mapa territorial' })
+  await expect(page.getByRole('navigation', { name: 'Lugares visibles' }).getByRole('link', { name: 'Tunas', exact: true })).toBeVisible()
+  await expect(mapa).toHaveAttribute('data-reposo', 'si')
+  expect(capas.filter((c) => c.startsWith('LYR-19'))).toEqual(['LYR-19?bbox=0,0,0,0'])
+  const geojson = capas.filter((c) => !c.startsWith('LYR-19'))
+  expect(geojson.map((c) => c.split('?')[0]).sort()).toEqual(['LYR-02', 'LYR-05'])
+  for (const c of geojson) expect(c).toMatch(/[?&]bbox=-?\d+\.\d{3},-?\d+\.\d{3},-?\d+\.\d{3},-?\d+\.\d{3}$/)
+})
+
 for (const wms of ['teselas503', 'capacidades503'] as const) {
   test(`si GeoServer no responde (${wms}), el mapa avisa y las capas siguen por la API`, async ({ page }) => {
     await prepararF6(page, { wms })

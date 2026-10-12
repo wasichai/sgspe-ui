@@ -6,14 +6,14 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
-import { useProyectos } from '../contexto/proyectos'
+import { useProyecto, useProyectos } from '../contexto/proyectos'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
 import { rutaParaAbrir } from '../datos/fichas'
 import { texto } from '../datos/registros'
 import { NS } from '../i18n'
 import { useTableroDisponible } from '../tableros/comunes'
-import { destinoDe, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
+import { destinoDe, encuadreDeGeometrias, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, dibujoDe } from '../mapa/capas'
 import { capaDeCalor, SelectorDeCalor, TablaDeCalor } from '../mapa/Calor'
@@ -78,6 +78,15 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   }
   const [encendidas, setEncendidas] = useState(() => new Set<string>(['LYR-02', 'LYR-05']))
   const [encuadre, setEncuadre] = useState<Encuadre | null>(null)
+  // el mapa abre sobre el proyecto del filtro (su ubicación y su área de interés) o sobre el Perú entero, y recién con esa vista
+  // se piden las capas: nunca sin bbox (revisión final del plan 6.3, m1)
+  const delFiltro = useProyecto(proyecto)
+  const geometrias = delFiltro.data?.geometries
+  const esperandoProyecto = Boolean(proyecto) && delFiltro.isPending
+  const vistaInicial = useMemo(
+    () => (esperandoProyecto ? ('esperar' as const) : proyecto ? encuadreDeGeometrias([geometrias?.location, geometrias?.interest_area]) : null),
+    [esperandoProyecto, proyecto, geometrias]
+  )
   const [creando, setCreando] = useState(false)
   const [exportando, setExportando] = useState(false)
   const capturar = useRef<() => string | null>(() => null)
@@ -89,11 +98,11 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   // las de F2 no tienen fecha
   const estadosBasicos = useCapas(
     basicas.filter((id) => !servicio.porWms.has(id) || SELECCIONABLES.has(id)),
-    { project: proyecto, bbox: encuadre }
+    { project: proyecto, bbox: encuadre, porVista: true }
   )
   const estadosDeGestion = useCapas(
     disponibles.filter((id) => encendidas.has(id)),
-    { project: proyecto, ...periodo, bbox: encuadre }
+    { project: proyecto, ...periodo, bbox: encuadre, porVista: true }
   )
   const estados = [...estadosBasicos, ...estadosDeGestion]
   const sufijo = proyecto ? `?project=${encodeURIComponent(proyecto)}` : ''
@@ -212,6 +221,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
             seleccion={elegido?.id ?? null}
             alSeleccionar={(id, capaId, objeto) => abrir(objeto ?? capa(capaId)?.objeto ?? '', id)}
             alMoverVista={setEncuadre}
+            vistaInicial={vistaInicial}
             alCapturar={(f) => (capturar.current = f)}
           />
           {aviso ? (

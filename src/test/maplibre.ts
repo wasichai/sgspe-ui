@@ -54,6 +54,12 @@ export class Map {
   getBounds() {
     return { getWest: () => -78, getSouth: () => -9, getEast: () => -77, getNorth: () => -8 }
   }
+  getCenter() {
+    return { lng: -77.5, lat: -8.5 }
+  }
+  getZoom() {
+    return 9
+  }
   getCanvas() {
     const lienzo = document.createElement('canvas')
     lienzo.toDataURL = () => 'data:image/png;base64,AAAA'

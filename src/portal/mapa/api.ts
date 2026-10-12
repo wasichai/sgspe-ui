@@ -61,9 +61,38 @@ export function destinoDe(propiedades: Record<string, unknown> | null | undefine
 // poco el mapa no pida la capa de nuevo y la vista nunca quede recortada en el borde
 const redondear = (b: Encuadre | null) => (b ? b.map((v, i) => ((i < 2 ? Math.floor(v * 1000) : Math.ceil(v * 1000)) / 1000).toFixed(3)).join(',') : undefined)
 
+// el Perú entero (con su mar territorial cercano): la vista con la que abre un mapa que acota sus capas por la vista cuando la
+// pantalla no conoce un encuadre propio, y la que se usa si el mapa no se puede mostrar (sin WebGL)
+export const PERU: Encuadre = [-81.4, -18.4, -68.6, 0.1]
+
+// la vista abarca todo el encuadre: con el Perú entero a la vista, un mapa vacío no lo está por la vista
+export const abarca = (vista: Encuadre, encuadre: Encuadre): boolean =>
+  vista[0] <= encuadre[0] && vista[1] <= encuadre[1] && vista[2] >= encuadre[2] && vista[3] >= encuadre[3]
+
+// el encuadre de unas geometrías (de un registro: la ubicación y el área de interés de un proyecto), o null si no hay ninguna
+export function encuadreDeGeometrias(geometrias: readonly ({ coordinates: unknown } | null | undefined)[]): Encuadre | null {
+  let [oeste, sur, este, norte] = [Infinity, Infinity, -Infinity, -Infinity]
+  const visitar = (valor: unknown): void => {
+    if (!Array.isArray(valor)) return
+    if (typeof valor[0] === 'number' && typeof valor[1] === 'number') {
+      oeste = Math.min(oeste, valor[0])
+      sur = Math.min(sur, valor[1])
+      este = Math.max(este, valor[0])
+      norte = Math.max(norte, valor[1])
+      return
+    }
+    for (const v of valor) visitar(v)
+  }
+  for (const g of geometrias) visitar(g?.coordinates)
+  return Number.isFinite(oeste) ? [oeste, sur, este, norte] : null
+}
+
 export interface FiltrosDeCapa {
   project?: string
   bbox?: Encuadre | null
+  // las capas siguen la vista del mapa (S09 y S12): sin vista todavía (bbox null) no se pide nada, ni una lectura sin bbox que a
+  // volumen trae la capa casi entera (revisión final del plan 6.3, m1); las capas quedan cargando hasta que el mapa informa
+  porVista?: boolean
   // el periodo de las capas de gestión (AAAA-MM-DD); las de F2 no tienen fecha y no lo reciben (Layers.kt)
   periodStart?: string
   periodEnd?: string
@@ -92,7 +121,7 @@ export function useCapas(ids: readonly string[], filtros: FiltrosDeCapa): Estado
       queryFn: () => pedir<Coleccion>(`/sgspe/territory/layers/${id}?${busqueda}`),
       staleTime: 60_000,
       retry: false,
-      enabled: !sinPermiso.current.ids.has(id)
+      enabled: !sinPermiso.current.ids.has(id) && !(filtros.porVista && !filtros.bbox)
     }))
   })
   return ids.map((id, i) => {

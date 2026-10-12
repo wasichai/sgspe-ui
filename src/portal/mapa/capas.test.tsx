@@ -96,6 +96,31 @@ describe('useCapas', () => {
     expect(red.a('GET', '/sgspe/territory/layers/LYR-02')[1].ruta).toContain('bbox=-77.500%2C-8.500%2C-77.200%2C-8.200')
   })
 
+  // revisión final del plan 6.3, m1: las capas que siguen la vista no se piden sin ella, ni sin bbox
+  it('con porVista no pide nada hasta que hay vista, y la capa queda cargando', async () => {
+    fetch = mockFetch([])
+    red = espiarRed([{ path: /\/sgspe\/territory\/layers\/LYR-02/, responder: () => Response.json(coleccion(2)) }])
+    function PorVista() {
+      const [bbox, setBbox] = useState<[number, number, number, number] | null>(null)
+      const [estado] = useCapas(['LYR-02'], { project: 'p1', bbox, porVista: true })
+      return (
+        <div>
+          <button onClick={() => setBbox(ENCUADRE_2)}>vista</button>
+          <p>{`cargando:${estado.cargando}|datos:${estado.datos ? estado.datos.features.length : '-'}`}</p>
+        </div>
+      )
+    }
+    montar(<PorVista />)
+    expect(screen.getByText('cargando:true|datos:-')).toBeInTheDocument()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(red.a('GET', '/sgspe/territory/layers/LYR-02')).toEqual([])
+    await userEvent.click(screen.getByRole('button', { name: 'vista' }))
+    await screen.findByText('cargando:false|datos:2')
+    expect(red.a('GET', '/sgspe/territory/layers/LYR-02').map((l) => l.ruta)).toEqual([
+      '/sgspe/territory/layers/LYR-02?project=p1&bbox=-77.500%2C-8.500%2C-77.200%2C-8.200'
+    ])
+  })
+
   it('un 403 deja la capa bloqueada y no se vuelve a pedir al mover el mapa; al cambiar de proyecto sí', async () => {
     fetch = mockFetch([])
     red = espiarRed([
@@ -191,6 +216,53 @@ describe('Mapa', () => {
       render(<p>fuera</p>)
       montar(<Mapa etiqueta="Mapa" capas={[]} />)
       expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo mostrar el mapa')
+    } finally {
+      error.mockRestore()
+    }
+  })
+
+  it('«Sin fondo» vuelve a crear el mapa en la misma cámara: no salta a los datos ni pide las capas de otra vista', async () => {
+    const mover = vi.fn()
+    const capas = [{ id: 'LYR-02', datos: coleccion(2), color: '--sg-data-1', seleccionable: true }]
+    montar(<Mapa etiqueta="Mapa" capas={capas} basemap={{ type: 'style', url: 'https://mapas.example/estilo.json' }} alMoverVista={mover} />)
+    await screen.findByRole('region', { name: 'Mapa' })
+    await act(async () => cargarMapas())
+    const [primero] = Falso.todos
+    expect(mover).toHaveBeenCalledTimes(1)
+    act(() => primero.emitir('moveend'))
+    const vistas = mover.mock.calls.length
+    await userEvent.click(screen.getByRole('button', { name: 'Sin fondo' }))
+    await waitFor(() => expect(Falso.todos).toHaveLength(2))
+    const segundo = Falso.todos[1]
+    expect(segundo.opciones).toMatchObject({ center: [-77.5, -8.5], zoom: 9, style: expect.objectContaining({ version: 8 }) })
+    await act(async () => segundo.emitir('load'))
+    expect(segundo.fitBounds).not.toHaveBeenCalled()
+    expect(mover).toHaveBeenCalledTimes(vistas + 1)
+    expect(mover).toHaveBeenLastCalledWith(mover.mock.calls[vistas - 1][0])
+  })
+
+  it('sin WebGL informa la vista inicial, para que las capas se pidan igual para la lista que acompaña al mapa', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    Falso.fallar = true
+    try {
+      const mover = vi.fn()
+      montar(<Mapa etiqueta="Mapa" capas={[]} alMoverVista={mover} vistaInicial={[-78.4, -8.5, -78, -8]} />)
+      expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo mostrar el mapa')
+      await waitFor(() => expect(mover).toHaveBeenCalledWith([-78.4, -8.5, -78, -8]))
+      expect(mover).toHaveBeenCalledTimes(1)
+    } finally {
+      error.mockRestore()
+    }
+  })
+
+  it('sin WebGL ni encuadre de la pantalla, informa el Perú entero', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    Falso.fallar = true
+    try {
+      const mover = vi.fn()
+      montar(<Mapa etiqueta="Mapa" capas={[]} alMoverVista={mover} />)
+      await screen.findByRole('alert')
+      await waitFor(() => expect(mover).toHaveBeenCalledWith([-81.4, -18.4, -68.6, 0.1]))
     } finally {
       error.mockRestore()
     }

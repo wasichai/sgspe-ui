@@ -12,9 +12,9 @@ import {
 } from 'maplibre-gl'
 import { WMS_TILE_SIZE, wmsTileUrl, type BasemapSpec } from '@wasichai/gis'
 import { useEffect, useRef, useState } from 'react'
-import { destinoDe, idDeElemento, MIEMBRO, type Coleccion } from './api'
+import { destinoDe, encuadreDeGeometrias, idDeElemento, MIEMBRO, PERU, type Coleccion, type Encuadre } from './api'
 import { alCambiarTema, colorDe } from './colores'
-import type { CapaDibujada, MapaProps } from './Mapa'
+import type { CapaDibujada, MapaImplProps } from './Mapa'
 import { SIN_MAPA_BASE } from './mapaBase'
 import { trabajadorDelMapa } from './trabajador'
 
@@ -82,26 +82,19 @@ function pintarVisibilidad(instancia: MapLibreMap, capa: CapaDibujada, seleccion
   instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-opacity', o.bordeDelPunto)
 }
 
+const limites = ([oeste, sur, este, norte]: Encuadre): [[number, number], [number, number]] => [
+  [oeste, sur],
+  [este, norte]
+]
+
 function encuadreDe(colecciones: Coleccion[]): [[number, number], [number, number]] | null {
-  let [oeste, sur, este, norte] = [Infinity, Infinity, -Infinity, -Infinity]
-  const visitar = (valor: unknown): void => {
-    if (!Array.isArray(valor)) return
-    if (typeof valor[0] === 'number' && typeof valor[1] === 'number') {
-      oeste = Math.min(oeste, valor[0])
-      sur = Math.min(sur, valor[1])
-      este = Math.max(este, valor[0])
-      norte = Math.max(norte, valor[1])
-      return
-    }
-    for (const v of valor) visitar(v)
-  }
-  for (const c of colecciones) for (const e of c.features) visitar(e.geometry?.coordinates)
-  return Number.isFinite(oeste)
-    ? [
-        [oeste, sur],
-        [este, norte]
-      ]
-    : null
+  const encuadre = encuadreDeGeometrias(colecciones.flatMap((c) => c.features.map((e) => e.geometry)))
+  return encuadre ? limites(encuadre) : null
+}
+
+const vistaDe = (instancia: MapLibreMap): Encuadre => {
+  const b = instancia.getBounds()
+  return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]
 }
 
 // cada colección tiene un número propio: la clave de los efectos cambia cuando llega otra, aunque tenga los mismos
@@ -127,16 +120,19 @@ export default function MapaImpl({
   alFallarWms,
   calor,
   alPulsar,
-  firmar
-}: MapaProps) {
+  firmar,
+  vistaInicial,
+  camaraPrevia,
+  alMoverCamara
+}: MapaImplProps) {
   const contenedor = useRef<HTMLDivElement>(null)
   const mapa = useRef<MapLibreMap | null>(null)
   const [listo, setListo] = useState(false)
   // en reposo: MapLibre terminó de pedir y dibujar (idle) y no hay datos en camino. lo lee e2e/hilo.spec.ts para afirmar que no
   // se pidió nada externo sin esperar un plazo fijo
   const [reposo, setReposo] = useState(false)
-  const ultimo = useRef({ alSeleccionar, alMoverVista, alMoverCursor, alFallarWms, alPulsar, firmar })
-  ultimo.current = { alSeleccionar, alMoverVista, alMoverCursor, alFallarWms, alPulsar, firmar }
+  const ultimo = useRef({ alSeleccionar, alMoverVista, alMoverCursor, alFallarWms, alPulsar, firmar, alMoverCamara })
+  ultimo.current = { alSeleccionar, alMoverVista, alMoverCursor, alFallarWms, alPulsar, firmar, alMoverCamara }
   // las capas WMS puestas (con la URL de su fuente) y las capas GeoJSON dibujadas invisibles
   const conWms = useRef(new globalThis.Map<string, string>())
   const invisibles = useRef(new Set<string>())
@@ -149,16 +145,25 @@ export default function MapaImpl({
   // los datos que cada fuente tiene puestos y la selección sobre la que ya se encuadró
   const puestos = useRef(new globalThis.Map<string, Coleccion>())
   const encuadradoA = useRef<string | null>(null)
+  // la vista ya se fijó (la inicial o la cámara del mapa anterior) y se informa al moverse; antes, ninguna vista se informa
+  const fijada = useRef(false)
+  // el mapa nació con la cámara del anterior («Sin fondo» o el mapa base que llega): no se vuelve a encuadrar
+  const desdeCamara = useRef(false)
 
   useEffect(() => {
     if (!contenedor.current) return
     const trabajador = trabajadorDelMapa()
     if (trabajador) setWorkerUrl(trabajador)
+    // otro fondo vuelve a crear el mapa (Mapa.tsx): nace donde estaba el anterior, sin saltar al encuadre de los datos ni pedir
+    // las capas de otra vista
+    const previa = camaraPrevia?.() ?? null
+    desdeCamara.current = previa !== null
+    encuadrado.current = previa !== null
     const instancia = new MapLibreMap({
       container: contenedor.current,
       style: estiloDe(basemap, colorDe('--sg-map-ground')),
-      center: [-75.5, -9.5],
-      zoom: 5,
+      center: previa?.centro ?? [-75.5, -9.5],
+      zoom: previa?.zoom ?? 5,
       attributionControl: { compact: true },
       canvasContextAttributes: { preserveDrawingBuffer: true },
       // el token de wasichai solo a las teselas del proxy (firmaDeWms); lo demás sale tal cual
@@ -181,14 +186,14 @@ export default function MapaImpl({
     instancia.on('load', () => {
       if (mapa.current !== instancia) return
       const informar = () => {
-        const b = instancia.getBounds()
-        ultimo.current.alMoverVista?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])
+        const centro = instancia.getCenter()
+        ultimo.current.alMoverCamara?.({ centro: [centro.lng, centro.lat], zoom: instancia.getZoom() })
+        if (fijada.current) ultimo.current.alMoverVista?.(vistaDe(instancia))
       }
       instancia.on('moveend', informar)
       instancia.on('mousemove', (e) => ultimo.current.alMoverCursor?.([e.lngLat.lng, e.lngLat.lat]))
       instancia.on('mouseout', () => ultimo.current.alMoverCursor?.(null))
       instancia.on('click', (e: MapMouseEvent) => ultimo.current.alPulsar?.([e.lngLat.lng, e.lngLat.lat]))
-      informar()
       setListo(true)
     })
     const redimensionar = new ResizeObserver(() => instancia.resize())
@@ -213,11 +218,27 @@ export default function MapaImpl({
       invisibles.current.clear()
       encuadrado.current = false
       encuadradoA.current = null
+      fijada.current = false
       // StrictMode monta, desmonta y monta de nuevo: la instancia nueva vuelve a cargar y a dibujar sus capas
       setListo(false)
     }
     // un mapa por montaje: las funciones nuevas se leen de `ultimo`
   }, [])
+
+  // la vista de un mapa que acota sus capas por la vista (alMoverVista): sus datos dependen de la vista, así que no se encuadra a
+  // ellos. se fija una sola vez, cuando la pantalla la sabe: el encuadre que da (con su vista más cercana en zoom 12), el Perú
+  // entero sin él o, si nació con la cámara del mapa anterior, esa misma. recién entonces se informa, y las capas se piden una vez
+  // con la vista que el mapa muestra (revisión final del plan 6.3, m1)
+  const claveDeLaVista = JSON.stringify(vistaInicial ?? null)
+  useEffect(() => {
+    const instancia = mapa.current
+    if (!instancia || !listo || fijada.current || vistaInicial === 'esperar') return
+    fijada.current = true
+    if (!ultimo.current.alMoverVista) return
+    encuadrado.current = true
+    if (!desdeCamara.current) instancia.fitBounds(limites(vistaInicial ?? PERU), { padding: 24, maxZoom: 12, duration: 0 })
+    ultimo.current.alMoverVista(vistaDe(instancia))
+  }, [listo, claveDeLaVista])
 
   // las capas: se agregan las nuevas, se actualizan sus datos y se quitan las que se apagaron
   const clave = capas.map((c) => `${c.id}:${identidad(c.datos)}:${c.invisible ? 1 : 0}`).join('|')
@@ -329,7 +350,8 @@ export default function MapaImpl({
       if (capa.invisible) invisibles.current.add(capa.id)
       dibujadas.current.add(capa.id)
     }
-    if (!encuadrado.current) {
+    // un mapa sin vista propia se encuadra a sus datos la primera vez que llegan
+    if (!encuadrado.current && !ultimo.current.alMoverVista) {
       const encuadre = encuadreDe(capas.map((c) => c.datos))
       if (encuadre) {
         instancia.fitBounds(encuadre, { padding: 48, maxZoom: 15, duration: 0 })

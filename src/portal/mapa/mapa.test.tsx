@@ -154,6 +154,74 @@ describe('MapaImpl', () => {
     expect(mover).toHaveBeenCalledWith([-78, -9, -77, -8])
   })
 
+  // revisión final del plan 6.3, m1: sin vista fijada no se informa nada (las capas no se piden sin bbox ni con la vista del Perú
+  // que el encuadre va a cambiar), y un mapa que sigue la vista no se encuadra a sus datos, que dependen de ella
+  it('un mapa que sigue la vista espera la de la pantalla, se encuadra a ella, la informa una vez y no salta a sus datos', async () => {
+    const mover = vi.fn()
+    const capa = (datos: Coleccion) => [{ id: 'LYR-02', datos, color: '--sg-data-1', seleccionable: true }]
+    const { rerender } = render(<MapaImpl etiqueta="Mapa" capas={[]} alMoverVista={mover} vistaInicial="esperar" />)
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    // mientras la pantalla no sabe la vista, moverse tampoco informa
+    mapa.emitir('moveend')
+    expect(mover).not.toHaveBeenCalled()
+    expect(mapa.fitBounds).not.toHaveBeenCalled()
+    rerender(<MapaImpl etiqueta="Mapa" capas={[]} alMoverVista={mover} vistaInicial={[-78.4, -8.5, -78, -8]} />)
+    expect(mapa.fitBounds).toHaveBeenCalledTimes(1)
+    expect(mapa.fitBounds).toHaveBeenCalledWith(
+      [
+        [-78.4, -8.5],
+        [-78, -8]
+      ],
+      expect.objectContaining({ maxZoom: 12, duration: 0 })
+    )
+    expect(mover).toHaveBeenCalledTimes(1)
+    expect(mover).toHaveBeenCalledWith([-78, -9, -77, -8])
+    // llegan las capas de esa vista y otra vista inicial: ni se encuadra a los datos ni se vuelve a fijar
+    rerender(<MapaImpl etiqueta="Mapa" capas={capa(localidades)} alMoverVista={mover} vistaInicial={[-70, -10, -69, -9]} />)
+    expect(mapa.fitBounds).toHaveBeenCalledTimes(1)
+    expect(mover).toHaveBeenCalledTimes(1)
+    // después, cada movimiento informa su vista
+    mapa.emitir('moveend')
+    expect(mover).toHaveBeenCalledTimes(2)
+  })
+
+  it('sin encuadre de la pantalla, un mapa que sigue la vista abre sobre el Perú entero', async () => {
+    const mover = vi.fn()
+    render(<MapaImpl etiqueta="Mapa" capas={[]} alMoverVista={mover} vistaInicial={null} />)
+    await act(async () => cargarMapas())
+    expect(Falso.todos[0].fitBounds).toHaveBeenCalledWith(
+      [
+        [-81.4, -18.4],
+        [-68.6, 0.1]
+      ],
+      expect.objectContaining({ duration: 0 })
+    )
+    expect(mover).toHaveBeenCalledTimes(1)
+  })
+
+  it('nace en la cámara del mapa anterior: no se encuadra a sus datos e informa esa misma vista', async () => {
+    const mover = vi.fn()
+    const camara = vi.fn()
+    render(
+      <MapaImpl
+        etiqueta="Mapa"
+        capas={[{ id: 'LYR-02', datos: localidades, color: '--sg-data-1', seleccionable: true }]}
+        alMoverVista={mover}
+        vistaInicial={[-78.4, -8.5, -78, -8]}
+        camaraPrevia={() => ({ centro: [-77.5, -8.5], zoom: 9 })}
+        alMoverCamara={camara}
+      />
+    )
+    const [mapa] = Falso.todos
+    expect(mapa.opciones).toMatchObject({ center: [-77.5, -8.5], zoom: 9 })
+    await act(async () => cargarMapas())
+    expect(mapa.fitBounds).not.toHaveBeenCalled()
+    expect(mover).toHaveBeenCalledWith([-78, -9, -77, -8])
+    mapa.emitir('moveend')
+    expect(camara).toHaveBeenCalledWith({ centro: [-77.5, -8.5], zoom: 9 })
+  })
+
   // una capa recortada al tope (truncated) trae siempre el mismo conteo: al acercar, los datos nuevos deben dibujarse
   it('cambia los datos de la fuente cuando llega otra colección con el mismo conteo', async () => {
     const igual = (x: number): Coleccion => ({

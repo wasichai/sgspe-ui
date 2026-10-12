@@ -8,23 +8,25 @@ import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, type Red } from '../../test/red'
 
-// el doble del mapa, más lo que el mapa real informa: la vista (que acota las capas con un bbox) y el cursor
+// el doble del mapa, más lo que el mapa real informa: la vista (que acota las capas con un bbox) y el cursor. el doble de
+// mapaFalso informa la vista inicial una vez fijada (la del proyecto o el Perú entero); con doble.vista, la vista que muestra es esa
 const doble = vi.hoisted(() => ({
   vista: null as [number, number, number, number] | null,
   moverVista: null as ((vista: [number, number, number, number]) => void) | null,
-  moverCursor: null as ((punto: [number, number] | null) => void) | null
+  moverCursor: null as ((punto: [number, number] | null) => void) | null,
+  vistaInicial: undefined as unknown
 }))
 vi.mock('../mapa/Mapa', async () => {
   const { Mapa: Falso } = await import('../../test/mapaFalso')
   return {
     Mapa: (props: Parameters<typeof Falso>[0]) => {
       const { alMoverVista, alMoverCursor } = props
+      doble.vistaInicial = props.vistaInicial
       useEffect(() => {
         doble.moverCursor = alMoverCursor ?? null
         doble.moverVista = alMoverVista ?? null
-        if (doble.vista) alMoverVista?.(doble.vista)
       }, [alMoverVista, alMoverCursor])
-      return <Falso {...props} />
+      return <Falso {...props} vistaInicial={props.vistaInicial === 'esperar' ? 'esperar' : (doble.vista ?? props.vistaInicial)} />
     }
   }
 })
@@ -35,6 +37,7 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   doble.vista = doble.moverCursor = doble.moverVista = null
+  doble.vistaInicial = undefined
 })
 afterEach(() => {
   red?.restaurar()
@@ -82,6 +85,109 @@ describe('S09 · mapa del proyecto', () => {
     await waitFor(() => expect(red!.a('GET', '/sgspe/territory/layers/LYR-10').length).toBeGreaterThan(0))
     expect(red.a('GET', '/sgspe/territory/layers/LYR-10')[0].ruta).toContain('project=p1')
     expect(red.a('GET', '/sgspe/territory/layers/LYR-14')).toHaveLength(0)
+  })
+
+  // revisión final del plan 6.3, m1: ninguna lectura sin bbox ni con una vista que el encuadre va a cambiar
+  it('abre sobre la ubicación y el área de interés del proyecto y pide cada capa una sola vez, con esa vista', async () => {
+    const proyecto = registro(
+      'p1',
+      { code: 'PRJ-01', name: 'Pukaqaqa', working_crs: 'EPSG 32717' },
+      {
+        state: 'active',
+        geometries: {
+          location: { type: 'Point', coordinates: [-78.2, -8.3] },
+          interest_area: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [-78.5, -8.6],
+                [-78, -8.6],
+                [-78, -8.1],
+                [-78.5, -8.6]
+              ]
+            ]
+          }
+        }
+      }
+    )
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ'] }), [
+      { path: '/objects/project/records/p1', body: proyecto },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await screen.findByRole('button', { name: 'SDJ-001' })
+    expect(doble.vistaInicial).toEqual([-78.5, -8.6, -78, -8.1])
+    const capas = red.a('GET', /^\/sgspe\/territory\/layers\//)
+    expect(capas.map((l) => l.ruta.split('?')[0]).sort()).toEqual([
+      '/sgspe/territory/layers/LYR-02',
+      '/sgspe/territory/layers/LYR-05',
+      '/sgspe/territory/layers/LYR-09',
+      '/sgspe/territory/layers/LYR-10',
+      '/sgspe/territory/layers/LYR-13'
+    ])
+    for (const l of capas) expect(l.ruta).toContain('bbox=-78.500%2C-8.600%2C-78.000%2C-8.100')
+  })
+
+  it('mientras el proyecto no llega no pide ninguna capa', async () => {
+    let liberar: (() => void) | null = null
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), rutas())
+    red = espiarRed([
+      {
+        path: '/objects/project/records/p1',
+        responder: async () => {
+          await new Promise<void>((r) => (liberar = r))
+          return Response.json(registro('p1', { code: 'PRJ-01', working_crs: 'EPSG 32717' }, { state: 'active' }))
+        }
+      }
+    ])
+    await screen.findByRole('list', { name: 'Mapa del proyecto' })
+    await waitFor(() => expect(liberar).not.toBeNull())
+    expect(doble.vistaInicial).toBe('esperar')
+    expect(red.a('GET', /^\/sgspe\/territory\/layers\//)).toEqual([])
+    await act(async () => liberar?.())
+    // sin geometrías, el Perú entero
+    await waitFor(() => expect(red!.a('GET', '/sgspe/territory/layers/LYR-10')).toHaveLength(1))
+    expect(doble.vistaInicial).toBeNull()
+    expect(red.a('GET', '/sgspe/territory/layers/LYR-10')[0].ruta).toContain('bbox=-82.000%2C-19.000%2C-68.000%2C1.000')
+  })
+
+  // revisión final del plan 6.3, I1: con cientos de componentes, el panel «Análisis» no queda a cientos de filas
+  it('las tablas de componentes y de predios tienen su propio scroll, y «Análisis» sigue bajo ellas', async () => {
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ'] }), [
+      {
+        path: '/objects/project_component/records',
+        body: pagina(Array.from({ length: 300 }, (_, i) => registro(`pc${i}`, { code: `SDJ-${String(i).padStart(3, '0')}`, component_type: 'SONDAJE' })))
+      },
+      ...rutas()
+    ])
+    const tabla = await screen.findByRole('table', { name: 'Componentes' })
+    await waitFor(() => expect(within(tabla).getAllByRole('row')).toHaveLength(301))
+    expect(tabla.closest('div.overflow-y-auto')).toHaveClass('max-h-[420px]')
+    expect(screen.getByRole('region', { name: 'Análisis' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Predios' }))
+    expect((await screen.findByRole('table', { name: 'Predios' })).closest('div.overflow-y-auto')).toHaveClass('max-h-[420px]')
+  })
+
+  it('la tabla de componentes dice que carga o que falló, en lugar de quedar vacía', async () => {
+    let liberar: (() => void) | null = null
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ'] }), rutas())
+    red = espiarRed([
+      {
+        path: '/objects/project_component/records',
+        responder: async () => {
+          await new Promise<void>((r) => (liberar = r))
+          // un 4xx no se reintenta (PortalApp)
+          return new Response(JSON.stringify({ title: 'Bad Request', status: 400 }), { status: 400 })
+        }
+      }
+    ])
+    const panel = await screen.findByRole('tabpanel', { name: 'Componentes' })
+    expect(await within(panel).findByText('Cargando…')).toBeInTheDocument()
+    expect(within(panel).queryByRole('table', { name: 'Componentes' })).not.toBeInTheDocument()
+    await waitFor(() => expect(liberar).not.toBeNull())
+    await act(async () => liberar?.())
+    expect(await within(panel).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('table', { name: 'Componentes' })).not.toBeInTheDocument()
   })
 
   it('una capa sin permiso queda con candado y su razón', async () => {
@@ -239,7 +345,7 @@ describe('S09 · mapa del proyecto', () => {
         {
           path: '/sgspe/territory/layers/LYR-14',
           responder: (l) =>
-            l.ruta.includes('bbox=')
+            l.ruta.includes('bbox=-70.000')
               ? new Response(JSON.stringify({ title: 'Error', status: 500 }), { status: 500 })
               : new Response(JSON.stringify(coleccion('land_parcel', [['lp1', { code: 'PRE-001', tenure_type: 'PROPIO' }]])))
         }

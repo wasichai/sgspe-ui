@@ -53,6 +53,38 @@ const sinGestion = (...salvo: string[]): MockRoute[] =>
 const listaWms = () => screen.findByRole('list', { name: 'Mapa territorial · WMS' })
 const capas = () => screen.findByRole('region', { name: 'Capas' })
 
+// revisión final del plan 6.3, m1: las capas se piden una vez con la vista que el mapa muestra, nunca sin bbox
+describe('S12 · la vista inicial', () => {
+  const geojson = () => red!.a('GET', /^\/sgspe\/territory\/layers\/LYR-0/)
+
+  it('sin proyecto, el mapa abre sobre el Perú entero y las capas se piden con esa vista', async () => {
+    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())
+    red = espiarRed()
+    await waitFor(() => expect(geojson().length).toBeGreaterThan(0))
+    for (const l of geojson()) expect(l.ruta).toContain('bbox=-82.000%2C-19.000%2C-68.000%2C1.000')
+  })
+
+  it('con proyecto, abre sobre su ubicación y su área de interés, y la sonda de gestión sigue con su encuadre vacío', async () => {
+    fetch = abrirPortal('/territory?project=p1', ANALISTA_SIG, EQUIPO_SIG, [
+      {
+        path: '/objects/project/records/p1',
+        body: {
+          id: 'p1',
+          state: 'active',
+          attributes: { code: 'PRJ-01', name: 'Proyecto Ejemplo A', working_crs: 'EPSG 32717' },
+          geometries: { location: { type: 'Point', coordinates: [-78.2, -8.3] }, interest_area: null }
+        }
+      },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await waitFor(() => expect(geojson().length).toBeGreaterThan(0))
+    for (const l of geojson()) expect(l.ruta).toMatch(/project=p1.*bbox=-78\.200%2C-8\.300%2C-78\.200%2C-8\.300/)
+    await waitFor(() => expect(red!.a('GET', '/sgspe/territory/layers/LYR-19').length).toBeGreaterThan(0))
+    expect(red.a('GET', '/sgspe/territory/layers/LYR-19').map((l) => l.ruta)).toEqual(['/sgspe/territory/layers/LYR-19?bbox=0%2C0%2C0%2C0'])
+  })
+})
+
 describe('S12 · capas por WMS', () => {
   it('las capas públicas van por WMS y los lugares con ficha se siguen eligiendo sobre la tesela', async () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())

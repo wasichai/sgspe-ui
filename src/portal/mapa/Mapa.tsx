@@ -1,10 +1,10 @@
 import { useApiClient } from '@wasichai/core'
 import type { BasemapSpec } from '@wasichai/gis'
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LimiteDeError } from '../componentes/LimiteDeError'
 import { NS } from '../i18n'
-import type { Coleccion, Encuadre } from './api'
+import { PERU, type Coleccion, type Encuadre } from './api'
 import { SIN_MAPA_BASE, useAtribucionDelMapa, useMapaBase } from './mapaBase'
 import { firmaDeWms } from './wms'
 
@@ -63,7 +63,22 @@ export interface MapaProps {
   alPulsar?: (punto: [number, number]) => void
   // la firma de las peticiones de MapLibre (transformRequest); la pone Mapa con el token de la sesión
   firmar?: (url: string) => { url: string; headers?: Record<string, string> }
+  // la vista con la que abre un mapa que acota sus capas por la vista (alMoverVista): un encuadre que la pantalla ya conoce (la
+  // ubicación y el área de interés del proyecto), null o ausente para el Perú entero, o 'esperar' mientras la pantalla aún no lo
+  // sabe. ese mapa no se encuadra a sus datos, que dependen de la vista, e informa la vista solo una vez fijada
+  vistaInicial?: Encuadre | null | 'esperar'
   className?: string
+}
+
+// el centro y el zoom del mapa: el que se vuelve a crear con otro fondo nace en la misma cámara
+export interface Camara {
+  centro: [number, number]
+  zoom: number
+}
+
+export interface MapaImplProps extends MapaProps {
+  camaraPrevia?: () => Camara | null
+  alMoverCamara?: (camara: Camara) => void
 }
 
 const MapaImpl = lazy(() => import('./MapaImpl'))
@@ -78,12 +93,27 @@ export function Mapa({ className, basemap, ...props }: MapaProps) {
   const cliente = useApiClient()
   // el token de la sesión solo para las teselas del proxy (firmaDeWms); se lee en cada petición, así sigue al token vigente
   const firmar = useMemo(() => firmaDeWms(() => cliente.getToken(), window.location.origin), [cliente])
+  const camara = useRef<Camara | null>(null)
+  const camaraPrevia = useCallback(() => camara.current, [])
+  const alMoverCamara = useCallback((c: Camara) => {
+    camara.current = c
+  }, [])
+  // sin mapa (sin WebGL, o el trozo de MapLibre no bajó) nadie informa la vista: se informa la inicial, para que las capas se
+  // pidan igual y la lista o la tabla que acompaña al mapa, su alternativa accesible, tenga qué mostrar
+  const [fallo, setFallo] = useState(false)
+  const respaldo = useRef(false)
+  const { alMoverVista, vistaInicial } = props
+  useEffect(() => {
+    if (!fallo || respaldo.current || !alMoverVista || vistaInicial === 'esperar') return
+    respaldo.current = true
+    alMoverVista(vistaInicial ?? PERU)
+  }, [fallo, alMoverVista, vistaInicial])
   return (
     <div className={className ?? 'relative h-[480px] w-full overflow-hidden rounded-sg-lg border border-sg-border bg-sg-surface-sunken'}>
-      <LimiteDeError mensaje={t('mapa.fallo')}>
+      <LimiteDeError mensaje={t('mapa.fallo')} alFallar={() => setFallo(true)}>
         <Suspense fallback={<p className="p-4 text-sm text-sg-text-muted">{t('mapa.cargando')}</p>}>
-          {/* otro fondo vuelve a crear el mapa: llega una vez por sesión o al elegir «Sin fondo» */}
-          <MapaImpl key={JSON.stringify(fondo)} {...props} basemap={fondo} firmar={firmar} />
+          {/* otro fondo vuelve a crear el mapa (llega una vez por sesión o al elegir «Sin fondo»), en la misma cámara */}
+          <MapaImpl key={JSON.stringify(fondo)} {...props} basemap={fondo} firmar={firmar} camaraPrevia={camaraPrevia} alMoverCamara={alMoverCamara} />
         </Suspense>
       </LimiteDeError>
       <div className="absolute left-2 top-2 flex items-center gap-2">

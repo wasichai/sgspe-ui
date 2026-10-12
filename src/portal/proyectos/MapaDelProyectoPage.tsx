@@ -1,13 +1,15 @@
 import { useAuth } from '@wasichai/core'
 import { Button, cn, Table, Tabs, Td, Th } from '@wasichai/ui'
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
+import { Cargando } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useProyecto } from '../contexto/proyectos'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
-import { idDeElemento, useCapas, type Encuadre, type EstadoDeCapa } from '../mapa/api'
+import { abarca, encuadreDeGeometrias, idDeElemento, PERU, useCapas, type Encuadre, type EstadoDeCapa } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS, capa, dibujoDe } from '../mapa/capas'
 import { ControlDeCapas } from '../mapa/ControlDeCapas'
@@ -21,10 +23,13 @@ import { AnalisisDelProyecto } from './AnalisisDelProyecto'
 
 // S09 · mapa del proyecto (screens.md §3, flujo 16): las dieciséis capas básicas por grupo, capturar PNG, importar, la
 // barra de coordenadas en el CRS de trabajo y la tabla sincronizada: elegir en el mapa o en la tabla fija ?selected=. un
-// miembro de un área (LYR-13) elige el lugar que dibuja, y una localidad o una comunidad elegida ofrece abrir su ficha
+// miembro de un área (LYR-13) elige el lugar que dibuja, y una localidad o una comunidad elegida ofrece abrir su ficha. las tablas
+// de las pestañas tienen su propio scroll: con cientos de componentes o predios, el panel «Análisis» sigue a la vista bajo ellas
+// (revisión final del plan 6.3, I1)
 const IDS = CAPAS.map((c) => c.id)
 const FICHA: Record<string, string> = { community: 'communities', locality: 'localities' }
 const PREDIOS = ['LYR-14', 'LYR-15']
+const CON_SCROLL = 'max-h-[420px] overflow-y-auto'
 
 type EscuchaDelCursor = (punto: [number, number] | null) => void
 
@@ -67,7 +72,14 @@ export function MapaDelProyectoPage() {
   const alMoverCursor = useCallback((punto: [number, number] | null) => escuchaDelCursor.current?.(punto), [])
   const capturar = useRef<() => string | null>(() => null)
   const [exportando, setExportando] = useState(false)
-  const estados = useCapas([...encendidas], { project: projectId, bbox: encuadre })
+  // el mapa abre sobre la ubicación y el área de interés del proyecto (o el Perú entero, sin ellas) y recién entonces se piden
+  // las capas, una vez y con esa vista: nunca sin bbox (revisión final del plan 6.3, m1)
+  const geometrias = proyecto.data?.geometries
+  const vistaInicial = useMemo(
+    () => (proyecto.isPending ? ('esperar' as const) : encuadreDeGeometrias([geometrias?.location, geometrias?.interest_area])),
+    [proyecto.isPending, geometrias]
+  )
+  const estados = useCapas([...encendidas], { project: projectId, bbox: encuadre, porVista: true })
   const [objetoElegido, seleccion = null] = busqueda.get('selected')?.split(':') ?? []
   const elegir = (objeto: string, id: string) => {
     const siguiente = new URLSearchParams(busqueda)
@@ -82,7 +94,8 @@ export function MapaDelProyectoPage() {
   const dibujadas = estados
     .filter((e) => e.datos)
     .map((e) => ({ id: e.id, datos: e.datos!, color: capa(e.id)!.color, ...dibujoDe(e.id), seleccionable: true, miembros: capa(e.id)!.miembros }))
-  const aviso = avisoDelMapa(estados, encuadre !== null)
+  // con el Perú entero a la vista, un mapa vacío es un proyecto sin geometrías; con una vista más chica, solo la vista lo está
+  const aviso = avisoDelMapa(estados, encuadre !== null && !abarca(encuadre, PERU))
   // el elemento elegido (en una tabla o por la URL) no está dibujado: su capa está apagada o bloqueada, o cae fuera de la vista
   const cargando = estados.some((e) => e.cargando)
   const enElMapa = !!seleccion && dibujadas.some((d) => d.datos.features.some((e) => idDeElemento(e) === seleccion || e.properties.__targetId === seleccion))
@@ -138,6 +151,7 @@ export function MapaDelProyectoPage() {
             seleccion={seleccion}
             alSeleccionar={(id, capaId, objeto) => elegir(objeto ?? capa(capaId)?.objeto ?? 'record', id)}
             alMoverVista={setEncuadre}
+            vistaInicial={vistaInicial}
             alMoverCursor={alMoverCursor}
             alCapturar={(f) => (capturar.current = f)}
           />
@@ -203,8 +217,11 @@ function Componentes({ proyecto, seleccion, alElegir }: { proyecto: string; sele
   // la versión vigente de cada componente: las reemplazadas se ven en su ficha (gis.md §2.4, RQ-GIS-010)
   const componentes = useTodos('project_component', { project: proyecto, sort: 'code', dir: 'asc' })
   const vigentes = (componentes.data ?? []).filter((c) => atributo(c, 'superseded') !== true)
+  // nunca una tabla vacía por una lectura que no terminó o que falló
+  if (componentes.isPending) return <Cargando compacto />
+  if (componentes.isError && !componentes.data) return <FalloDeLectura error={componentes.error} alReintentar={() => void componentes.refetch()} />
   return (
-    <>
+    <div className={CON_SCROLL}>
       <Table aria-label={t('mapa.tabla.componentes')}>
         <thead>
           <tr>
@@ -234,7 +251,7 @@ function Componentes({ proyecto, seleccion, alElegir }: { proyecto: string; sele
         </tbody>
       </Table>
       {componentes.isSuccess && vigentes.length === 0 ? <p className="pt-2 text-sm text-sg-text-muted">{t('comun.vacio')}</p> : null}
-    </>
+    </div>
   )
 }
 
@@ -315,35 +332,42 @@ function Predios({
   })
   return (
     <>
-      <Table aria-label={t('mapa.tabla.predios')}>
-        <thead>
-          <tr>
-            {(['codigo', 'tenencia', 'area'] as const).map((c) => (
-              <Th key={c} scope="col">
-                {t(`mapa.columnas.${c}`)}
-              </Th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {elementos.map((e) => {
-            const id = idDeElemento(e)
-            return (
-              <tr key={id} aria-selected={id === seleccion} className={id === seleccion ? 'bg-sg-primary-soft' : 'cursor-pointer'} onClick={() => alElegir(id)}>
-                <Td className="font-sg-mono text-sg-caption">
-                  <BotonDeFila alElegir={() => alElegir(id)}>{String(e.properties.code ?? t('mapa.predioSinCodigo'))}</BotonDeFila>
-                </Td>
-                <Td className="text-sm">{String(e.properties.tenure_type ?? '')}</Td>
-                <Td className="text-sm">
-                  {e.properties.calculated_area_ha === undefined || e.properties.calculated_area_ha === null
-                    ? '—'
-                    : numeroPe(Number(e.properties.calculated_area_ha))}
-                </Td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </Table>
+      <div className={CON_SCROLL}>
+        <Table aria-label={t('mapa.tabla.predios')}>
+          <thead>
+            <tr>
+              {(['codigo', 'tenencia', 'area'] as const).map((c) => (
+                <Th key={c} scope="col">
+                  {t(`mapa.columnas.${c}`)}
+                </Th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {elementos.map((e) => {
+              const id = idDeElemento(e)
+              return (
+                <tr
+                  key={id}
+                  aria-selected={id === seleccion}
+                  className={id === seleccion ? 'bg-sg-primary-soft' : 'cursor-pointer'}
+                  onClick={() => alElegir(id)}
+                >
+                  <Td className="font-sg-mono text-sg-caption">
+                    <BotonDeFila alElegir={() => alElegir(id)}>{String(e.properties.code ?? t('mapa.predioSinCodigo'))}</BotonDeFila>
+                  </Td>
+                  <Td className="text-sm">{String(e.properties.tenure_type ?? '')}</Td>
+                  <Td className="text-sm">
+                    {e.properties.calculated_area_ha === undefined || e.properties.calculated_area_ha === null
+                      ? '—'
+                      : numeroPe(Number(e.properties.calculated_area_ha))}
+                  </Td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </Table>
+      </div>
       {notas.map((nota) => (
         <p key={nota} role="status" className="pt-2 text-sm text-sg-text-muted">
           {nota}
