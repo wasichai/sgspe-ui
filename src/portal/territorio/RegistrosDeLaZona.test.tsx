@@ -1,8 +1,8 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { montar, pagina, registro } from '../../test/montar'
+import { definicion, montar, pagina, registro } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { espiarRed, type Red } from '../../test/red'
 import { ANALISTA_SIG } from '../../test/sig'
@@ -71,16 +71,34 @@ describe('registros de la zona', () => {
     await waitFor(() => expect(consultas().map((l) => l.ruta)).toContain('/sgspe/territory/zones/community/c1/records?of=stakeholder&size=25'))
   })
 
-  it('una lista incompleta lo avisa con lo que falta leer, nunca como completa', async () => {
-    fetch = mockFetch([
-      {
-        path: '/sgspe/territory/zones/locality/l1/records',
-        body: { ...pagina([]), available: false, missingFields: ['commitment.locality'] }
-      }
-    ])
+  // missingFields son rutas <of>.<campo> de la API (TerritoryZones): se dicen con la etiqueta del campo, nunca con la ruta
+  const incompleta = { path: '/sgspe/territory/zones/locality/l1/records', body: { ...pagina([]), available: false, missingFields: ['commitment.locality'] } }
+
+  it('una lista incompleta lo avisa con la etiqueta del campo que falta leer, nunca con su nombre de la API', async () => {
+    fetch = mockFetch([incompleta, { path: '/metadata/objects/commitment', body: definicion('commitment', [['locality', { label: 'Localidad' }]]) }])
     montar(<RegistrosDeLaZona zona="locality" id="l1" />, { usuario: ANALISTA_SIG, permisos: permisos({ commitment: ['READ'] }) })
-    expect(await screen.findByText('La lista puede estar incompleta: falta leer commitment.locality.')).toBeInTheDocument()
+    expect(await screen.findByText('La lista puede estar incompleta: su cuenta no lee «Localidad» de estos registros.')).toBeInTheDocument()
+    expect(screen.queryByText(/commitment\.locality/)).not.toBeInTheDocument()
     expect(screen.queryByText('No hay registros de este tipo en el lugar.')).not.toBeInTheDocument()
+  })
+
+  it('si el campo no se puede nombrar (sin definición o sin el campo), el aviso es general y no nombra la ruta', async () => {
+    fetch = mockFetch([incompleta, { path: '/metadata/objects/commitment', body: definicion('commitment', ['title']) }])
+    montar(<RegistrosDeLaZona zona="locality" id="l1" />, { usuario: ANALISTA_SIG, permisos: permisos({ commitment: ['READ'] }) })
+    expect(await screen.findByText('La lista puede estar incompleta: su cuenta no lee algunos datos de lugar de estos registros.')).toBeInTheDocument()
+    expect(screen.queryByText(/commitment\.locality/)).not.toBeInTheDocument()
+    cleanup()
+    fetch.restore()
+    fetch = mockFetch([incompleta])
+    montar(<RegistrosDeLaZona zona="locality" id="l1" />, { usuario: ANALISTA_SIG, permisos: permisos({ commitment: ['READ'] }) })
+    expect(await screen.findByText('La lista puede estar incompleta: su cuenta no lee algunos datos de lugar de estos registros.')).toBeInTheDocument()
+  })
+
+  it('un 404 sin código (backend sin F6) dice «No disponible», no un error con «Reintentar»', async () => {
+    fetch = mockFetch([])
+    montar(<RegistrosDeLaZona zona="locality" id="l1" />, { usuario: ANALISTA_SIG, permisos: permisos({ commitment: ['READ'] }) })
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 
   it('pagina con «Siguiente» y manda page desde la segunda', async () => {

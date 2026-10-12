@@ -196,7 +196,15 @@ export function TerritorioPage() {
             </p>
           ) : null}
           {objetoDeCalor ? <TablaDeCalor objeto={objetoDeCalor} consulta={concentracion} /> : null}
-          {elegido ? <RegistrosDeLaZona key={`${elegido.objeto}:${elegido.id}`} zona={elegido.objeto} id={elegido.id} periodo={periodo} /> : null}
+          {/* la clave suma el periodo: con otro periodo la lista vuelve a su primera página */}
+          {elegido ? (
+            <RegistrosDeLaZona
+              key={`${elegido.objeto}:${elegido.id}:${periodo.periodStart ?? ''}:${periodo.periodEnd ?? ''}`}
+              zona={elegido.objeto}
+              id={elegido.id}
+              periodo={periodo}
+            />
+          ) : null}
         </div>
         <div className="space-y-3">
           {elegido ? (
@@ -241,7 +249,7 @@ export function TerritorioPage() {
                     aria-label={t('fichaTerritorial.verResumen', { nombre: l.nombre || t('territorio.sinNombre') })}
                     onClick={() => elegir(l.objeto, l.id)}
                   >
-                    {t('fichaTerritorial.titulo')}
+                    {t('fichaTerritorial.verResumenCorto')}
                   </button>
                 </li>
               ))}

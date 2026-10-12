@@ -251,7 +251,7 @@ function Cifra({ componente: c }: { componente: ComponenteDeFicha }) {
       <h4 className="text-sg-caption text-sg-text-muted">{titulo}</h4>
       {valor}
       {c.available ? <NotaDeConfidenciales oculta={c.confidentialHidden} /> : null}
-      <NotasDeIndicador indicador={c as unknown as Indicador} />
+      <NotasDeIndicador indicador={c} />
     </section>
   )
 }
