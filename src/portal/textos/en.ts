@@ -42,6 +42,15 @@ import { EN_INVERSION } from './inversion'
 import { EN_FICHA_PROGRAMA } from './fichaPrograma'
 import { EN_FICHA_APORTE } from './fichaAporte'
 import { EN_TABLERO_INVERSION } from './tableroInversion'
+import { EN_SIG } from './sig'
+import { EN_FICHA_TERRITORIAL } from './fichaTerritorial'
+import { EN_TABLERO_TERRITORIAL } from './tableroTerritorial'
+import { EN_ANALISIS_DEL_PROYECTO } from './analisisDelProyecto'
+import { EN_SUGERENCIAS } from './sugerencias'
+import { EN_EXPORTACION_GEOGRAFICA } from './exportacionGeografica'
+import { EN_EDICION_DE_GEOMETRIA } from './edicionDeGeometria'
+import { EN_UBICAR } from './ubicar'
+import { EN_CALIDAD } from './calidad'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
@@ -93,6 +102,16 @@ export const EN: Textos = {
   fichaPrograma: EN_FICHA_PROGRAMA,
   fichaAporte: EN_FICHA_APORTE,
   tableroInversion: EN_TABLERO_INVERSION,
+  // F6: SIG avanzado
+  sig: EN_SIG,
+  fichaTerritorial: EN_FICHA_TERRITORIAL,
+  tableroTerritorial: EN_TABLERO_TERRITORIAL,
+  analisisDelProyecto: EN_ANALISIS_DEL_PROYECTO,
+  sugerencias: EN_SUGERENCIAS,
+  exportacionGeografica: EN_EXPORTACION_GEOGRAFICA,
+  edicionDeGeometria: EN_EDICION_DE_GEOMETRIA,
+  ubicar: EN_UBICAR,
+  calidad: EN_CALIDAD,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',

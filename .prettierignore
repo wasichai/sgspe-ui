@@ -1,2 +1,5 @@
 # copia exacta de docs/ux/tokens.css del repositorio sgspe: se compara con diff, no se reformatea
 src/theme/tokens.css
+
+# copia exacta de model/styles/palette.json del repositorio sgspe: se compara con su huella y con el original
+src/portal/mapa/paleta.json

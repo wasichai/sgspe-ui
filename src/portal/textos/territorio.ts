@@ -6,7 +6,6 @@ export const ES_TERRITORIO = {
   capasBloqueadas: 'Hay capas que su cuenta no puede ver: la lista no las incluye.',
   editar: 'Editar',
   pestanas: { resumen: 'Resumen', registros: 'Registros del lugar', lineaBase: 'Línea base', documentos: 'Documentos' },
-  registrosLlegan: 'Los registros del lugar (compromisos, QCS, riesgos) y sus cifras llegan con la ficha contextual, en F6.',
   documentosLlegan: 'Las evidencias y documentos llegan en F3.',
   comunidad: {
     partidasPorVerificar: 'PARTIDAS POR VERIFICAR',
@@ -81,7 +80,6 @@ export const EN_TERRITORIO: typeof ES_TERRITORIO = {
   capasBloqueadas: 'Some layers are not visible to your account: the list does not include them.',
   editar: 'Edit',
   pestanas: { resumen: 'Overview', registros: 'Records of the place', lineaBase: 'Baseline', documentos: 'Documents' },
-  registrosLlegan: 'The records of the place (commitments, grievances, risks) and its figures arrive with the context card, in F6.',
   documentosLlegan: 'Evidence and documents arrive in F3.',
   comunidad: {
     partidasPorVerificar: 'REGISTRY RECORDS TO VERIFY',

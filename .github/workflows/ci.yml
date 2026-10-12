@@ -25,6 +25,15 @@ jobs:
       NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # spec F6 §3.3: src/portal/mapa/paleta.json es copia de model/styles/palette.json de sgspe (repositorio público); la
+      # prueba de la paleta compara los bytes con este checkout
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: wasichai/sgspe
+          ref: main
+          path: .sgspe
+          sparse-checkout: model/styles
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '26'
@@ -35,6 +44,9 @@ jobs:
       - run: yarn lint
       - run: yarn typecheck
       - run: yarn test
+        env:
+          SGSPE_REPO: .sgspe
+          SGSPE_PALETA_OBLIGATORIA: 'true'
       - run: yarn build
       # las pruebas extremo a extremo de F2 (ASM-066): chromium de Playwright sobre vite preview, con la API simulada
       - run: npx playwright install --with-deps chromium

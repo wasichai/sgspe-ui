@@ -15,7 +15,10 @@ export class ErrorDeSgspe extends ApiError {
     message: string,
     violations: FieldViolation[],
     readonly correlationId: string | null,
-    readonly reintentarEn: number | null = null
+    readonly reintentarEn: number | null = null,
+    // el JSON Problem entero: sus extensiones (layers[] de LAYER_REQUIRED, spec F6 §3.4) no caben en detail ni en errors[].
+    // null si el cuerpo no era un objeto JSON
+    readonly cuerpo: Record<string, unknown> | null = null
   ) {
     super(status, message, violations)
   }
@@ -98,20 +101,27 @@ function cabeceras(cliente: ApiClient, opciones: OpcionesDePedido): Headers {
 // Retry-After en segundos; una fecha HTTP o un valor ilegible no cuentan (el portal espera lo que fija comandos.ts)
 export const segundosDeEspera = (valor: string | null): number | null => (valor && /^\d+$/.test(valor.trim()) ? Number(valor.trim()) : null)
 
-async function fallo(respuesta: Response): Promise<ErrorDeSgspe> {
-  const texto = await respuesta.text()
-  let cuerpo: { detail?: string; title?: string; errors?: FieldViolation[] } | null = null
+type CuerpoProblem = { detail?: string; title?: string; errors?: FieldViolation[] } & Record<string, unknown>
+
+// el cuerpo de un error como objeto JSON; un texto, una lista o un JSON roto no cuentan
+function cuerpoProblem(texto: string): CuerpoProblem | null {
   try {
-    cuerpo = texto ? JSON.parse(texto) : null
+    const json: unknown = texto ? JSON.parse(texto) : null
+    return json && typeof json === 'object' && !Array.isArray(json) ? (json as CuerpoProblem) : null
   } catch {
-    cuerpo = null
+    return null
   }
+}
+
+async function fallo(respuesta: Response): Promise<ErrorDeSgspe> {
+  const cuerpo = cuerpoProblem(await respuesta.text())
   return new ErrorDeSgspe(
     respuesta.status,
     cuerpo?.detail ?? cuerpo?.title ?? respuesta.statusText,
     cuerpo?.errors ?? [],
     respuesta.headers.get('X-Correlation-Id'),
-    segundosDeEspera(respuesta.headers.get('Retry-After'))
+    segundosDeEspera(respuesta.headers.get('Retry-After')),
+    cuerpo
   )
 }
 

@@ -27,11 +27,14 @@ import {
 } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { Mapa } from '../mapa/Mapa'
+import { ResumenDelArea } from './ResumenDelArea'
+import { SugerenciasDelArea } from './SugerenciasDelArea'
 
 // S10 · área de influencia (screens.md §3, WF-O): versiones, criterios, miembros con su comparación frente a la vigente,
 // alta de miembros en borrador y aprobación por POST /api/sgspe/areas-of-influence/{id}/approve (If-Match y motivo, que
 // siempre se pide). una versión aprobada o reemplazada no cambia sus miembros (TerritoryWriteGuard: FROZEN_MEMBERS): se
-// crea una versión nueva. dos aprobaciones a la vez se serializan en el servidor: la segunda recibe 412 o STATE_MISMATCH
+// crea una versión nueva. dos aprobaciones a la vez se serializan en el servidor: la segunda recibe 412 o STATE_MISMATCH.
+// desde F6, el resumen del área y las sugerencias del cálculo, que solo se aceptan una por una en borrador
 type TipoDeMiembro = 'locality' | 'community' | 'administrative_unit'
 const TIPOS: TipoDeMiembro[] = ['locality', 'community', 'administrative_unit']
 
@@ -140,6 +143,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
             : `${numeroPe(Number(atributo(area, 'calculated_area_ha')))} ha`}
         </p>
       </section>
+      <ResumenDelArea area={area.id} />
       {!borrador ? <Alert tone="notice">{t('areas.congelada', { estado: (etiquetas[area.state ?? ''] ?? area.state ?? '').toLowerCase() })}</Alert> : null}
       {versiones.isError && !versiones.data ? <FalloDeLectura error={versiones.error} alReintentar={() => void versiones.refetch()} /> : null}
       {miembros.isError && !miembros.data ? <FalloDeLectura error={miembros.error} alReintentar={() => void miembros.refetch()} /> : null}
@@ -172,6 +176,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
       </Table>
       {miembros.isPending ? <Cargando /> : null}
       {borrador && escribeEnElProyecto && can('area_of_influence_member', 'CREATE') ? <AgregarMiembro area={area.id} /> : null}
+      <SugerenciasDelArea area={area.id} editable={borrador && escribeEnElProyecto && can('area_of_influence_member', 'CREATE')} />
       <Mapa etiqueta={t('areas.mapa')} className="relative h-72 w-full overflow-hidden rounded-sg-lg border border-sg-border" capas={capasDelMapa} />
       {aprobando && borrador ? (
         <DialogoDeAprobacion

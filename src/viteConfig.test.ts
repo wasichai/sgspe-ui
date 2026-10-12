@@ -27,15 +27,16 @@ describe('vite.config', () => {
     expect(config.preview?.proxy).toEqual({ '/api': 'http://otro-backend.test:9000' })
   })
 
-  // ASM-080 y gis.md §6.4: la jefatura y el mapa base son configuración del despliegue, no literales de src/
-  it('define el rol de la jefatura y el mapa base, con sus valores por defecto', async () => {
+  // ASM-080: la jefatura es configuración del despliegue; el mapa base ya no se compila (spec F6 elección 9): llega por
+  // /map/settings, y SGSPE_MAPA_BASE solo abre la CSP
+  it('define el rol de la jefatura, con su valor por defecto, y ya no el mapa base', async () => {
     vi.stubEnv('SGSPE_ROL_JEFATURA', undefined)
     vi.stubEnv('SGSPE_MAPA_BASE', undefined)
     const config = await cargar(undefined)
-    expect(config.define).toEqual({ __SGSPE_ROL_JEFATURA__: JSON.stringify('PROJECT_MANAGER'), __SGSPE_MAPA_BASE__: JSON.stringify('') })
+    expect(config.define).toEqual({ __SGSPE_ROL_JEFATURA__: JSON.stringify('PROJECT_MANAGER') })
   })
 
-  it('SGSPE_ROL_JEFATURA y SGSPE_MAPA_BASE los cambian', async () => {
+  it('SGSPE_ROL_JEFATURA lo cambia y SGSPE_MAPA_BASE abre la CSP', async () => {
     vi.stubEnv('SGSPE_ROL_JEFATURA', 'OTRO_ROL')
     vi.stubEnv('SGSPE_MAPA_BASE', 'https://mapas.example/estilo.json')
     const config = await cargar(undefined)

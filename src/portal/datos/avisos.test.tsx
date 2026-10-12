@@ -244,3 +244,13 @@ describe('bandeja y destinos', () => {
     expect(rutaDeFicha('commitment', registro('c/1', { project: 'p 1' }))).toBe('/projects/p%201/commitments/c%2F1')
   })
 })
+
+describe('rutaDeFicha en F6', () => {
+  it('una localidad, una comunidad y un componente tienen ficha; un predio no', () => {
+    expect(rutaDeFicha('locality', registro('l1', {}))).toBe('/territory/localities/l1')
+    expect(rutaDeFicha('community', registro('c1', {}))).toBe('/territory/communities/c1')
+    expect(rutaDeFicha('project_component', registro('pc1', { project: 'p1' }))).toBe('/projects/p1/map?selected=project_component:pc1')
+    expect(rutaDeFicha('project_component', registro('pc1', {}))).toBeNull()
+    expect(rutaDeFicha('land_parcel', registro('lp1', {}))).toBeNull()
+  })
+})

@@ -59,7 +59,7 @@ const base = [
 ]
 
 describe('S12 · mapa territorial', () => {
-  it('lista los lugares visibles y elegir uno abre su ficha con el rastro', async () => {
+  it('lista los lugares visibles; elegir uno en el mapa abre su ficha contextual y «Abrir la ficha» lleva a S13 con el rastro', async () => {
     fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
       ...base,
       { path: '/sgspe/territory/layers/LYR-02', body: coleccion([['l1', 'locality', 'Tunas']]) },
@@ -71,9 +71,53 @@ describe('S12 · mapa territorial', () => {
     ])
     const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
     expect(await within(lugares).findByRole('link', { name: 'Tunas' })).toHaveAttribute('href', '/territory/localities/l1')
+    // el nombre accesible contiene el texto visible (WCAG 2.5.3)
+    expect(within(lugares).getByRole('button', { name: 'Ver resumen de Tunas' })).toHaveTextContent('Ver resumen')
     await userEvent.click(within(screen.getByRole('list', { name: 'Mapa territorial' })).getByRole('button', { name: 'CC Tunas Pampa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory?selected=community%3Ac1'))
+    const panel = await screen.findByRole('complementary', { name: 'Ficha del lugar' })
+    await userEvent.click(within(panel).getByRole('link', { name: 'Abrir la ficha' }))
     await waitFor(() => expect(rutaActual()).toBe('/territory/communities/c1'))
-    expect(await screen.findByRole('link', { name: 'Mapa territorial' })).toHaveAttribute('href', '/territory')
+    expect(await screen.findByRole('link', { name: 'Mapa territorial' })).toHaveAttribute('href', '/territory?selected=community%3Ac1')
+  })
+
+  it('con otro periodo, los registros del lugar vuelven a su primera página', async () => {
+    fetch = abrirPortal('/territory?selected=locality%3Al1', RELACIONISTA, permisos({ ...LEE_TERRITORIO.objects, commitment: ['READ'] }), [
+      ...base,
+      { path: /^\/sgspe\/territory\/layers\//, body: coleccion([]) },
+      {
+        path: '/sgspe/territory/zones/locality/l1/records',
+        body: { ...pagina([registro('cm1', { project: 'p1', code: 'C-001' })], { totalPages: 3, totalElements: 60 }), available: true }
+      }
+    ])
+    red = espiarRed()
+    const registros = await screen.findByRole('region', { name: 'Registros del lugar' })
+    await userEvent.click(await within(registros).findByRole('button', { name: 'Siguiente' }))
+    expect(await within(registros).findByText('Página 2 de 3')).toBeInTheDocument()
+    await userEvent.type(within(screen.getByRole('group', { name: 'Filtros del mapa' })).getByLabelText('Desde'), '2026-07-01')
+    await waitFor(() => expect(rutaActual()).toContain('periodStart=2026-07-01'))
+    await waitFor(() =>
+      expect(red!.a('GET', '/sgspe/territory/zones/locality/l1/records').map((l) => l.ruta)).toContain(
+        '/sgspe/territory/zones/locality/l1/records?of=commitment&periodStart=2026-07-01&size=25'
+      )
+    )
+    expect(await within(screen.getByRole('region', { name: 'Registros del lugar' })).findByText('Página 1 de 3')).toBeInTheDocument()
+  })
+
+  it('«Ver resumen» abre la ficha del lugar con el teclado y la ficha se cierra', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
+      ...base,
+      { path: '/sgspe/territory/layers/LYR-02', body: coleccion([['l1', 'locality', 'Tunas']]) },
+      { path: '/sgspe/territory/layers/LYR-05', body: coleccion([]) }
+    ])
+    const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    await userEvent.click(await within(lugares).findByRole('button', { name: 'Ver resumen de Tunas' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory?selected=locality%3Al1'))
+    expect(screen.getByRole('list', { name: 'Mapa territorial' })).toHaveAttribute('data-seleccion', 'l1')
+    const panel = await screen.findByRole('complementary', { name: 'Ficha del lugar' })
+    await userEvent.click(within(panel).getByRole('button', { name: 'Cerrar la ficha del lugar' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory'))
+    expect(screen.queryByRole('complementary', { name: 'Ficha del lugar' })).not.toBeInTheDocument()
   })
 
   it('"Nueva comunidad" solo con CREATE sobre community', async () => {
@@ -131,7 +175,7 @@ describe('S12 · mapa territorial', () => {
     expect(within(lugares).queryByText(/Acerque el mapa/)).not.toBeInTheDocument()
   })
 
-  it('un lugar en dos capas sale una vez, uno sin nombre dice "Lugar sin nombre" y un miembro de un área lleva a su lugar', async () => {
+  it('un lugar en dos capas sale una vez, uno sin nombre dice "Lugar sin nombre" y un miembro de un área abre la ficha de su lugar', async () => {
     fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
       ...base,
       {
@@ -157,7 +201,7 @@ describe('S12 · mapa territorial', () => {
     expect(within(lugares).getByRole('link', { name: 'Lugar sin nombre' })).toHaveAttribute('href', '/territory/localities/l2')
     expect(within(lugares).getByRole('link', { name: 'Quinuas' })).toHaveAttribute('href', '/territory/localities/l3')
     await userEvent.click(within(screen.getByRole('list', { name: 'Mapa territorial' })).getByRole('button', { name: 'Quinuas' }))
-    await waitFor(() => expect(rutaActual()).toBe('/territory/localities/l3'))
+    await waitFor(() => expect(rutaActual()).toBe('/territory?selected=locality%3Al3'))
   })
 })
 
@@ -321,6 +365,23 @@ describe('Editar y agregar', () => {
     { path: /^\/objects\/(locality_profile|school|health_facility|road_access|festivity)\/records$/, body: pagina([]) },
     { path: /\/related\//, body: pagina([]) }
   ]
+
+  // la pestaña «Registros del lugar» de S13 y S14 son los registros de su zona (F6)
+  it('la pestaña «Registros del lugar» de la comunidad y de la localidad lista los registros de su zona', async () => {
+    const cuenta = permisos({ ...LEE_TERRITORIO.objects, commitment: ['READ'] })
+    const registros = (zona: string, id: string) => ({
+      path: `/sgspe/territory/zones/${zona}/${id}/records`,
+      body: { ...pagina([registro('cm1', { project: 'p1', code: 'C-001', title: 'Reservorio' })]), available: true }
+    })
+    fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, cuenta, [...comunidad(['name']), registros('community', 'c1')])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Registros del lugar' }))
+    expect(await screen.findByRole('link', { name: 'C-001 · Reservorio' })).toHaveAttribute('href', '/projects/p1/commitments/cm1')
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/territory/localities/l1', RELACIONISTA, cuenta, [...localidad(['name']), registros('locality', 'l1')])
+    await userEvent.click(await screen.findByRole('tab', { name: 'Registros del lugar' }))
+    expect(await screen.findByRole('link', { name: 'C-001 · Reservorio' })).toHaveAttribute('href', '/projects/p1/commitments/cm1')
+  })
 
   it('la comunidad ofrece "Editar" con UPDATE y un campo escribible, y abre su formulario', async () => {
     fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, comunidad(['name']))

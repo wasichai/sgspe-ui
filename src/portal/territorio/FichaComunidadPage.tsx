@@ -3,20 +3,22 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, Tabs } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { Cargando, Consulta, ErrorDeCarga } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { Rastro } from '../contexto/Rastro'
 import { usePedir } from '../datos/http'
-import { atributo, leerTodos, texto, useRegistro, useTodos, usePuedeEditar, type Registro } from '../datos/registros'
+import { atributo, leerTodos, puedeEscribir, texto, useDefinicion, useRegistro, useTodos, usePuedeEditar, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { Dato, TrabajarEnProyecto, useRegistrosPorId } from './comunes'
+import { EditorDeGeometria } from './EditorDeGeometria'
+import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 
 // S13 · ficha de comunidad (screens.md §4, flujos 2 y 17): quién es la comunidad (registros, vida orgánica, sectores y la
-// organización que la representa con sus cargos), sus grupos de interés y las áreas que la incluyen. las cifras del lugar
-// (KPI-TER-01) llegan en F6. cada consulta auxiliar dice si carga o falló: nunca una lista vacía en su lugar
+// organización que la representa con sus cargos), sus grupos de interés y las áreas que la incluyen. los registros del lugar
+// salen de su zona (F6). cada consulta auxiliar dice si carga o falló: nunca una lista vacía en su lugar
 const HA = (v: unknown) => (v === null || v === undefined ? '—' : `${numeroPe(Number(v))} ha`)
 
 export function FichaComunidadPage() {
@@ -29,6 +31,12 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
   const { t } = useTranslation(NS)
   const puedeEditar = usePuedeEditar('community')
   const [editando, setEditando] = useState(false)
+  const { can } = useAuth()
+  const definicion = useDefinicion('community')
+  const [busqueda] = useSearchParams()
+  // el territorio se edita con su revisión previa (spec F6 §3.6): UPDATE sobre la comunidad y el campo escribible
+  const editaGeometria = can('community', 'UPDATE') && puedeEscribir(definicion.data, 'territory')
+  const [dibujando, setDibujando] = useState(false)
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Rastro />
@@ -56,6 +64,11 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
               {t('territorio.editar')}
             </Button>
           ) : null}
+          {editaGeometria ? (
+            <Button size="sm" variant="secondary" onClick={() => setDibujando(true)}>
+              {t('edicionDeGeometria.abrir')}
+            </Button>
+          ) : null}
         </div>
       </header>
       {atributo(comunidad, 'registry_records_unverified') ? <Alert tone="warning">{t('territorio.comunidad.partidasAyuda')}</Alert> : null}
@@ -67,7 +80,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
             {
               id: 'registros',
               label: t('territorio.pestanas.registros'),
-              render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('territorio.registrosLlegan')}</p>
+              render: () => <RegistrosDeLaZona zona="community" id={comunidad.id} />
             },
             {
               id: 'documentos',
@@ -80,6 +93,17 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
       </div>
       <Drawer titulo={t('territorio.editar')} abierto={editando} alCerrar={() => setEditando(false)}>
         <FormularioDeRegistro objeto="community" registro={comunidad} alGuardar={() => setEditando(false)} alCancelar={() => setEditando(false)} />
+      </Drawer>
+      <Drawer titulo={t('edicionDeGeometria.titulo')} abierto={dibujando} alCerrar={() => setDibujando(false)}>
+        {dibujando ? (
+          <EditorDeGeometria
+            objeto="community"
+            registro={comunidad}
+            campos={['territory']}
+            proyecto={busqueda.get('project') ?? undefined}
+            alTerminar={() => setDibujando(false)}
+          />
+        ) : null}
       </Drawer>
     </article>
   )

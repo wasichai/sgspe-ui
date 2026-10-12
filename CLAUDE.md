@@ -16,8 +16,9 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
   conserva su idioma original.
 - Ningún nombre de rol en `src/` fuera de las pruebas: se decide con `useAuth().isAdmin` y los permisos de
   `/api/auth/me/permissions` (`src/boundaries.test.ts`). `@wasichai/*` se importa solo por la raíz de cada paquete.
-- `/admin` registra solo los módulos de los starters instalados en `sgspe` y nunca `agentModule()`; el único módulo propio
-  es `idiomaHtmlModule` (`src/idiomaHtml.ts`), que no aporta pantallas: solo sigue `<html lang>`, que core no toca.
+- `/admin` registra solo los módulos de los starters instalados en `sgspe` y nunca `agentModule()`; los módulos propios son
+  `idiomaHtmlModule` (`src/idiomaHtml.ts`, sigue `<html lang>`, que core no toca) y `mapaBaseModule` (`portal/mapa/mapaBase.tsx`,
+  el mapa base de la organización tras el login, después de `gisModule`). Ninguno aporta pantallas.
 - Una sección nueva se registra en `src/portal/pantallas.ts` con su pantalla; sin pantalla no se dibuja. Un inicio por rol
   se registra en `src/portal/inicios.ts` con los permisos que lo ofrecen.
 - Colores, tipografía, radios y sombras solo con los tokens `sg-*` de `src/theme/tokens.css`; si `docs/ux/tokens.css`
@@ -74,10 +75,20 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
 - `src/portal/textosSinCodigos.test.ts` vigila que ningún texto de interfaz lleve códigos de error ni identificadores de
   requisitos (RF, RN, UPS…): esos viven en la documentación, no ante la persona usuaria.
 - Una pantalla de proyecto se registra en `proyectos/rutasEnProyecto.ts` con la `seccion` cuya guarda le corresponde.
-- MapLibre y ECharts no se importan fuera de `mapa/MapaImpl.tsx` y `graficos/GraficoImpl.tsx`/`echarts.ts`: las pantallas
-  usan `Mapa` y `Grafico`, diferidos. Las pruebas de pantalla usan `src/test/mapaFalso.tsx` y `src/test/graficoFalso.tsx`.
-- El rol de la jefatura y el mapa base son configuración del despliegue (`SGSPE_ROL_JEFATURA`, `SGSPE_MAPA_BASE`), nunca
-  literales de `src/`.
+- MapLibre y ECharts no se importan fuera de `mapa/MapaImpl.tsx` y `graficos/GraficoImpl.tsx`/`echarts.ts`, ni `GeometryField`
+  fuera de `mapa/Dibujo.tsx`: las pantallas usan `Mapa`, `Dibujo` y `Grafico`, diferidos. Las pruebas de pantalla usan
+  `src/test/mapaFalso.tsx`, `src/test/dibujoFalso.tsx` y `src/test/graficoFalso.tsx`.
+- El rol de la jefatura es configuración del despliegue (`SGSPE_ROL_JEFATURA`), nunca un literal de `src/`. El mapa base llega
+  por `GET /api/sgspe/map/settings` (`useMapaBase`): ningún fuente escribe una URL de teselas o de estilo, y sin respuesta el
+  fondo es «Sin mapa base». `SGSPE_MAPA_BASE` solo abre la CSP de `yarn csp`.
+- Las capas públicas del mapa van por el proxy WMS de SGSPE (`mapa/wms.ts`): el portal nombra cada capa por el estilo
+  `sgspe-lyr-NN` del `GetCapabilities`, firma con el token solo las teselas del proxy del mismo origen (`firmaDeWms`) y, ante un
+  `503`, vuelve al GeoJSON.
+- `src/portal/mapa/paleta.json` es copia exacta de `model/styles/palette.json` de `sgspe` (prettier no la toca): `paleta.test.ts`
+  compara su huella y, en la CI, sus bytes con el original; si la paleta cambia en `sgspe`, se copia de nuevo y se actualiza la
+  huella.
+- Las consultas de F6 viven en `territorio/consultas.ts` con la forma de las respuestas de 6.2a y 6.2b: una pantalla no pide un
+  endpoint de `/api/sgspe/territory/**` por su cuenta.
 - `yarn format && yarn lint && yarn typecheck && yarn test && yarn build && yarn e2e` antes de cada commit.
 - Instalar con `yarn install`: el token de lectura de GitHub Packages vive en `~/.npmrc`, no en el repositorio, y la CI lo
   recibe de `setup-node` (`PACKAGES_TOKEN`). Ningún token en archivos del repositorio.

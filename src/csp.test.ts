@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { bootScript, contentSecurityPolicy, origenDelMapa, scriptHash } from '../csp'
+import { bootScript, contentSecurityPolicy, origenesDelMapa, scriptHash } from '../csp'
 import html from '../index.html?raw'
 import config from '../vite.config'
 
@@ -40,20 +40,24 @@ describe('CSP', () => {
     expect(config.preview?.headers?.['Content-Security-Policy-Report-Only']).toBe(contentSecurityPolicy(html))
   })
 
-  // gis.md §6.4: el mapa base es configurable por despliegue; su origen, y solo su origen, entra en img-src y connect-src
-  it('el proveedor del mapa base entra en img-src y connect-src', () => {
-    const policy = contentSecurityPolicy(html, 'https://mapas.example/estilos/apagado.json')
-    expect(policy).toContain("img-src 'self' data: blob: https://mapas.example")
-    expect(policy).toContain("connect-src 'self' https://mapas.example")
+  // gis.md §6.4 y README de @wasichai/gis («Content-Security-Policy»): el estilo y los hosts que nombra entran en img-src y
+  // connect-src; SGSPE_MAPA_BASE es una lista de URL separadas por espacios que solo lee yarn csp
+  it('cada proveedor de la lista entra en img-src y connect-src, sin rutas ni repetidos', () => {
+    const policy = contentSecurityPolicy(
+      html,
+      'https://mapas.example/estilos/apagado.json https://teselas.example/{z}/{x}/{y}.pbf https://mapas.example/sprite'
+    )
+    expect(policy).toContain("img-src 'self' data: blob: https://mapas.example https://teselas.example")
+    expect(policy).toContain("connect-src 'self' https://mapas.example https://teselas.example")
     expect(policy).not.toContain('/estilos/')
   })
 
   it.each(['', '/estilos/local.json', 'http://inseguro.example/estilo.json', 'javascript:alert(1)'])('%j no agrega ningún origen', (mapa) => {
-    expect(origenDelMapa(mapa)).toBeNull()
+    expect(origenesDelMapa(mapa)).toEqual([])
     expect(contentSecurityPolicy(html, mapa)).toBe(contentSecurityPolicy(html))
   })
 
   it('una URL https mal formada falla nombrando SGSPE_MAPA_BASE', () => {
-    expect(() => origenDelMapa('https://')).toThrow(/SGSPE_MAPA_BASE/)
+    expect(() => origenesDelMapa('https://bien.example/a https://')).toThrow(/SGSPE_MAPA_BASE/)
   })
 })
