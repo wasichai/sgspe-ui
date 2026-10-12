@@ -2,6 +2,23 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-12 — Fase 6: portal del SIG avanzado (plan 6.3)
+
+- El mapa base de la organización llega por `/map/settings` y lo comparten el portal, `GeometryField` y `/admin`
+  (`gisModule({ basemap })` tras el login); sin respuesta, «Sin mapa base». `SGSPE_MAPA_BASE` queda solo para la CSP de `yarn csp`.
+  La paleta de las capas es la de los SLD.
+- S12: capas por grupo, las públicas por el proxy WMS con el token en `transformRequest` y vuelta al GeoJSON ante un `503`,
+  filtros de proyecto y periodo, leyenda, mapa de calor, captura PNG, ficha contextual con KPI-TER-01 y registros de la zona; el
+  tablero territorial con KPI-TER-02 a 04. Sin proyecto, S12 abre sobre todo el Perú y S09 sobre la ubicación y el área de
+  interés: así nunca se piden las capas sin una vista acotada.
+- S09 con el panel «Análisis»; S10 con las sugerencias del cálculo y el resumen; S15 con los formatos por GDAL, la capa, el CRS
+  detectado como propuesta y los destinos comunidad y elemento ambiental; la exportación geográfica con niveles por capa; la
+  validación de geometrías en S13 y S14; los lugares del punto en S24; S63 calidad de datos.
+- Residuales aceptados: cuando llega el mapa base (una vez por sesión, tras el login o al recargar) el portal se vuelve a
+  montar y pierde el estado local de la pantalla; el botón «Calidad de datos» de S12 se ofrece siempre, aunque el backend no
+  tenga el plan 6.2b; un tenant pequeño sin proyecto acerca el mapa a mano.
+- Pruebas: 1679 en 119 archivos de Vitest y 25 recorridos de Playwright.
+
 ## 2026-10-11 — Fase 5: portal de programas e inversión social (plan 5.3)
 
 - La sección «Programas sociales» pasa a disponible: S42 con las cifras del tablero `investment` (tope de cada campaña con lo

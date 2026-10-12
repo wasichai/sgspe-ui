@@ -53,6 +53,13 @@ el idioma:
   mediciones, iniciativas, hitos, beneficiarios), S44 aporte social (ítems solo en «Solicitado», «Antes de aprobar», la única
   entrega con sus tres evidencias), el tablero de inversión (`/programs/dashboard`), aceptar una solicitud como aporte (S57),
   los lineamientos de apoyo y los temas priorizados (S11) y las aprobaciones de programas y aportes (S48).
+- **F6 · SIG avanzado** (`src/portal/mapa/`, `src/portal/territorio/`): el mapa base de la organización
+  (`/map/settings`, también en `/admin`), la paleta compartida con GeoServer y su leyenda, S12 con las capas públicas por el
+  proxy WMS (vuelta al GeoJSON ante un `503`), filtros de proyecto y periodo, mapa de calor, captura PNG, ficha contextual con
+  KPI-TER-01 y registros de la zona; el tablero territorial (`/territory/dashboard`), el panel «Análisis» de S09, las
+  sugerencias y el resumen de S10, la importación por GDAL de S15 con sus destinos nuevos, la exportación geográfica con niveles
+  por capa, la validación de geometrías en S13 y S14, los lugares del punto en S24 y la calidad de datos (`/territory/quality`).
+  Sin proyecto, S12 abre sobre todo el Perú (no pide capas sin una vista acotada).
 - **Alcance por proyecto (plan 4.4b):** el servidor acota la lectura a los proyectos de cada cuenta (ADR-0029). El selector
   ofrece «Todos los proyectos» a quien los lee todos (`useLeeTodosLosProyectos`) y avisa a una cuenta sin asignaciones; un
   registro que responde 404 no se distingue de uno inexistente (`NoEsDeSusProyectos` en una ficha, «Registro reservado» en
@@ -66,7 +73,7 @@ el idioma:
   `componentes/errores.ts` lo dice con el texto de `comun.codigos` (o el de la pantalla, o el `detail` si el código es
   nuevo), también junto al campo de un formulario. Nunca se muestra el código crudo.
 - **Mapa y gráficos:** MapLibre 6.10.0 (`src/portal/mapa`) y ECharts 6 (`src/portal/graficos`) bajan con el primer mapa o
-  gráfico; los dos pintan con los tokens del tema.
+  gráfico; ECharts pinta con los tokens del tema; las capas del mapa, con la paleta compartida (`mapa/paleta.json`).
 - **Idioma:** español por defecto e inglés (`src/portal/textos/`), con números y fechas es-PE. La elección se comparte con
   `/admin`: se guarda en `sgspe.lang` y en las preferencias del usuario (`useSetLocale` de core), y `<html lang>` la sigue
   en las dos apps (`es-PE` para el español).
@@ -85,13 +92,10 @@ el idioma:
   lee ninguna variable de entorno, a propósito: Yarn 1 falla si falta la variable que nombra. La CI no lo necesita:
   `setup-node` escribe su propio `.npmrc` con `${NODE_AUTH_TOKEN}`, el secreto `PACKAGES_TOKEN`.
 - Configuración del despliegue, leída por `vite.config.ts` al compilar: `SGSPE_ROL_JEFATURA` (el rol cuyas asignaciones
-  activas son la jefatura del proyecto, ASM-080; por defecto `PROJECT_MANAGER`) y `SGSPE_MAPA_BASE` (la URL de un estilo
-  MapLibre para el mapa base; vacío es el fondo apagado sin teselas externas). `yarn csp` incluye el origen del mapa
-  base.
-- Notas de despliegue: `SGSPE_MAPA_BASE` lleva el mismo valor que `sgspe.map.base-style-url` del `application.yml` del
-  backend en ese despliegue (gis.md §6.4). El mapa base no pasa por el backend en F2, así que nada los sincroniza: quien
-  despliega cambia los dos a la vez, y el proxy de producción permite ese origen en su CSP. La CSP abre solo el origen
-  del estilo: si sus teselas, glifos o sprites vienen de otro origen, la CSP los bloquea y hay que sumarlo a mano.
+  activas son la jefatura del proyecto, ASM-080; por defecto `PROJECT_MANAGER`).
+- El mapa base no se compila: lo da `GET /api/sgspe/map/settings` por organización (`sgspe.map.*` del backend, ASM-125).
+  `SGSPE_MAPA_BASE` es la lista de URL (separadas por espacios) del estilo y de los hosts de sus teselas, glifos y sprites que
+  `yarn csp` abre en `img-src` y `connect-src`: quien despliega la mantiene igual a la configuración del backend.
 - zod corre sin JIT (`src/zodSinJit.ts`, que `main.tsx` importa antes que todo): así no prueba `Function('')`, que la
   CSP sin `unsafe-eval` reportaría en cada pantalla (`e2e/csp.spec.ts`).
 
