@@ -742,6 +742,68 @@ describe('S15 · formatos por GDAL y destinos nuevos (F6)', () => {
     expect(destino).toHaveValue('project_component')
     expect(screen.queryByText(/modelo de F6/)).not.toBeInTheDocument()
   })
+
+  it('una cuenta que solo importa a los destinos de F6, en una organización sin ese modelo, lo dice y no culpa a sus permisos', async () => {
+    // los permisos del relacionista comunitario (model/roles.json): ningún destino de F2
+    const SOLO_F6 = permisos({
+      project: ['READ'],
+      locality: ['READ', 'CREATE', 'UPDATE'],
+      project_component: ['READ'],
+      land_parcel: ['READ'],
+      mining_concession: ['READ'],
+      community: ['READ', 'CREATE', 'UPDATE'],
+      environmental_feature: ['READ', 'CREATE', 'UPDATE']
+    })
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, SOLO_F6, conFormatos())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: () => problema(400, 'Destino inválido', [{ field: 'target', message: 'community se importa con el modelo de F6' }])
+      }
+    ])
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['PK'], 'territorio.kml'))
+    expect(screen.getByRole('combobox', { name: 'Objeto destino' })).toHaveValue('community')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    expect(
+      await screen.findByText('Su organización todavía no tiene ese destino: aún no puede importar comunidades ni elementos ambientales.')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Su cuenta no puede/)).not.toBeInTheDocument()
+  })
+
+  it('al volver de la vista previa, el tipo fijo vuelve a su selector y no al campo de la columna', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, ESCRIBE_TERRITORIO, conFormatos())
+    red = espiarRed()
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'elementos.gpkg'))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Objeto destino' }), 'environmental_feature')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'CRS de origen' }), 'EPSG 32717')
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de elemento para todas las filas' }), 'SITIO SAGRADO')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory/imports/b-1'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Probar con otro CRS' }))
+    expect(await screen.findByRole('combobox', { name: 'Tipo de elemento para todas las filas' })).toHaveValue('SITIO SAGRADO')
+    expect(screen.getByRole('textbox', { name: 'Columna del tipo de elemento' })).toHaveValue('')
+  })
+
+  it('sin F6, FORMAT_NOT_SUPPORTED dice el texto común y no recomienda formatos que ese servidor no lee', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: () => problema(400, 'detalle', [{ field: 'file', message: 'FORMAT_NOT_SUPPORTED' }])
+      }
+    ])
+    await prepararHastaLaVistaPrevia()
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    expect(await screen.findByText('Ese destino no se importa desde una hoja: use un GeoJSON.')).toBeInTheDocument()
+    expect(screen.queryByText(/GeoPackage/)).not.toBeInTheDocument()
+  })
 })
 
 describe('el conteo de filas descartadas', () => {

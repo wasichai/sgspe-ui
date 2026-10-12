@@ -107,8 +107,10 @@ function Preparar() {
   const [crs, setCrs] = useState(previo?.crs ?? '')
   // el CRS que la persona confirmó: la confirmación vale solo mientras ese siga siendo el propuesto (CON-024)
   const [confirmadoEn, setConfirmadoEn] = useState('')
-  const [columnas, setColumnas] = useState<Columnas>(previo?.columnas ?? { code: '' })
-  const [tipoFijo, setTipoFijo] = useState('')
+  // al volver de la vista previa, un tipo fijo (=valor) vuelve a su selector y no al campo de la columna
+  const fijoPrevio = previo?.columnas.featureType?.startsWith('=') ? previo.columnas.featureType.slice(1) : ''
+  const [columnas, setColumnas] = useState<Columnas>(() => (previo ? (fijoPrevio ? { ...previo.columnas, featureType: '' } : previo.columnas) : { code: '' }))
+  const [tipoFijo, setTipoFijo] = useState(fijoPrevio)
   const [capa, setCapa] = useState(previo?.capa ?? '')
   const alFallar = (error: unknown) => {
     if (!destinoSinModelo(error) || !destino || !DESTINOS_VECTORIALES.includes(destino)) return
@@ -159,7 +161,9 @@ function Preparar() {
   const faltaCapa = capasDelArchivo.length > 1 && !capaElegida
 
   if (formatosDelServidor.isPending) return <Cargando />
-  if (destinos.length === 0) return <Alert tone="warning">{t('importacion.sinDestinos')}</Alert>
+  // sin destinos solo porque la organización no tiene el modelo de F6 (la cuenta importa solo a esos): se dice eso, no un
+  // permiso que falta
+  if (destinos.length === 0) return <Alert tone="warning">{sinModeloDeF6 ? t('importacion.sinModeloDeF6') : t('importacion.sinDestinos')}</Alert>
 
   const verPrevia = () => {
     if (!archivo || !destino || !proyecto || !crsPropuesto || !confirmado || faltaTipo || faltaCapa) return
@@ -179,7 +183,11 @@ function Preparar() {
     lectura.mutate({ archivo, destino, proyecto, crs: '', columnas: {} }, { onError: alFallar })
   }
   const describirCapa = (c: CapaDelArchivo) => t('importacion.capaOpcion', { nombre: c.name, tipo: c.geometryType ?? '—', n: c.featureCount ?? '—' })
-  const mensajes = { NOT_ASSIGNED: t('importacion.errores.NOT_ASSIGNED'), FORMAT_NOT_SUPPORTED: t('importacion.errores.FORMAT_NOT_SUPPORTED') }
+  // el texto propio de FORMAT_NOT_SUPPORTED nombra los formatos de GDAL: solo con F6; sin él, el de comun.codigos
+  const mensajes = {
+    NOT_ASSIGNED: t('importacion.errores.NOT_ASSIGNED'),
+    ...(conF6 ? { FORMAT_NOT_SUPPORTED: t('importacion.errores.FORMAT_NOT_SUPPORTED') } : {})
+  }
 
   return (
     <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_1fr]">
@@ -211,7 +219,8 @@ function Preparar() {
                   accept={aceptaDe(formatos)}
                   onChange={(e) => {
                     setArchivo(e.target.files?.[0] ?? null)
-                    // el CRS confirmado y la capa elegida eran de otro archivo
+                    // el CRS elegido y confirmado y la capa eran de otro archivo: así se ve lo que propone el nuevo
+                    setCrs('')
                     setConfirmadoEn('')
                     setCapa('')
                     vistaPrevia.reset()
