@@ -7,6 +7,7 @@ import { definicion, montar, pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
+import { UBICADOS } from '../../test/sig'
 import { EQUIPO, base } from '../../test/relacionamiento'
 import { useGuardarInteraccion } from './guardarInteraccion'
 
@@ -87,6 +88,25 @@ describe('S24 · registrar interacción', () => {
     { method: 'POST', path: '/objects/engagement_question/records', status: 201, body: registro('q', {}) },
     { method: 'POST', path: '/objects/engagement/records/e9/transitions/register_held_unplanned', body: registro('e9', {}, { state: 'held' }) }
   ]
+
+  it('un clic en el mapa del paso «Lugar» propone la localidad y la comunidad, que la persona confirma', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, [
+      { path: '/sgspe/territory/locate', body: UBICADOS },
+      { path: '/objects/locality/records/l1', body: registro('l1', { name: 'Localidad Ejemplo' }) },
+      { path: '/objects/community/records/c1', body: registro('c1', { name: 'Comunidad Ejemplo' }) },
+      ...rutas()
+    ])
+    await screen.findByRole('option', { name: 'ASAMBLEA' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Pulsar en el mapa' }))
+    expect(await screen.findByText('Comunidad Ejemplo')).toBeInTheDocument()
+    expect(screen.getByText('Localidad: —')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar estos lugares' }))
+    expect(await screen.findByText('Localidad: Localidad Ejemplo')).toBeInTheDocument()
+    expect(screen.getByText('Comunidad: Comunidad Ejemplo')).toBeInTheDocument()
+  })
 
   it('un grupo sin nombres representa al menos a una persona y los totales se ven en vivo', async () => {
     fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())

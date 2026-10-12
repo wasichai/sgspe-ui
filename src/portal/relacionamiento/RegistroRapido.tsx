@@ -14,6 +14,7 @@ import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { GuardadoParcial, useGuardarInteraccion, type Participante } from './guardarInteraccion'
 import { conModo } from './modos'
+import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 
 // el modo rápido de campo de S24 (screens.md §6, S55): una sola pantalla con el tipo, la ubicación del teléfono, los
@@ -37,6 +38,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
   const [presentes, setPresentes] = useState<string[]>(() => busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? [])
   const [conteos, setConteos] = useState<Record<Clave, number>>({})
   const [ubicacion, setUbicacion] = useState<Punto | null>(null)
+  const [lugares, setLugares] = useState<{ locality: string; community: string } | null>(null)
   const telefono = useUbicacionDelTelefono()
   const sexos = definicionDeParticipante.fields.find((f) => f.name === 'sex')?.enumOptions ?? []
   const ambitos = definicionDeParticipante.fields.find((f) => f.name === 'participant_scope')?.enumOptions ?? []
@@ -60,8 +62,8 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
           title: `${tipo} · ${hoyEnLima(ahora)}`,
           description: nota,
           held_at: ahora.toISOString(),
-          locality: territory?.kind === 'locality' ? territory.id : '',
-          community: territory?.kind === 'community' ? territory.id : '',
+          locality: lugares ? lugares.locality : territory?.kind === 'locality' ? territory.id : '',
+          community: lugares ? lugares.community : territory?.kind === 'community' ? territory.id : '',
           field_visit: busqueda.get('field_visit') ?? ''
         },
         ubicacion: ubicacion ? { type: 'Point', coordinates: ubicacion } : null,
@@ -119,6 +121,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
         {ubicacion ? (
           <p className="text-sg-caption">{t('relacionamiento.registro.ubicacion', { lat: ubicacion[1].toFixed(5), lon: ubicacion[0].toFixed(5) })}</p>
         ) : null}
+        <LugaresDelPunto punto={ubicacion} alUsar={({ locality, community }) => setLugares({ locality: locality?.id ?? '', community: community?.id ?? '' })} />
         {telefono.sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
       </div>
       <fieldset className="space-y-1">
