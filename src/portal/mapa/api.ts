@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
 import { ApiError } from '@wasichai/core'
 import { usePedir } from '../datos/http'
@@ -113,32 +113,32 @@ export function useCapas(ids: readonly string[], filtros: FiltrosDeCapa): Estado
   })
 }
 
-// el encuadre de la sonda: un punto en el golfo de Guinea (0, 0), lejos del Perú, así que ninguna capa tiene elementos ahí y la
-// respuesta es barata. INVALID_BBOX solo rechaza un mínimo mayor que el máximo (Layers.kt)
+// el encuadre de la sonda: un punto en el golfo de Guinea (0, 0), lejos del Perú, así que la respuesta no trae elementos.
+// INVALID_BBOX solo rechaza un mínimo mayor que el máximo (Layers.kt). no es gratis en la base: en 6.2c, LYR-17 y los aportes de
+// LYR-23 agrupan la tabla entera antes de filtrar por el encuadre, por eso se sondea una capa de registros y no los agregados
 const SIN_LUGARES = '0,0,0,0'
 
-// las capas que el backend sirve: una capa de gestión (LYR-17 a LYR-24) responde 404 LAYER_NOT_FOUND hasta el plan 6.2c (H1 del
-// plan 6.3) y entonces no se ofrece. cada capa se sondea una vez por sesión con un encuadre sin lugares; un 404 la oculta (con o sin
-// código: el de un backend sin la ruta es igual de definitivo) y cualquier otra respuesta la deja ver, porque su lectura dirá su
-// error o su candado al encenderla. mientras la sonda no responde, la capa no se ofrece
-export function useCapasDisponibles(ids: readonly string[]): { disponibles: string[]; cargando: boolean } {
+// las capas de gestión (LYR-17 a LYR-24) llegan juntas con un solo plan del backend (6.2c): hasta entonces layers/{layer}
+// responde 404 LAYER_NOT_FOUND (H1 del plan 6.3) y ninguna se ofrece. se sondea una sola capa de registros (sonda) una vez por
+// sesión; un 404 (con o sin código: el de un backend sin la ruta es igual de definitivo) oculta todas, y cualquier otra respuesta
+// las deja ver todas, porque la lectura de cada una dirá su 403 (candado) o su error al encenderla. mientras la sonda no
+// responde, ninguna se ofrece. la caché no pasa de una cuenta a otra: el cierre de sesión de core vacía el QueryClient
+export function useCapasDisponibles(ids: readonly string[], sonda: string): { disponibles: readonly string[]; cargando: boolean } {
   const pedir = usePedir()
-  const sondas = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: ['layer-probe', id],
-      queryFn: async () => {
-        try {
-          await pedir<Coleccion>(`/sgspe/territory/layers/${id}?${consulta({ bbox: SIN_LUGARES })}`)
-          return true
-        } catch (error) {
-          if (error instanceof ApiError && error.status === 404) return false
-          return true
-        }
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-      retry: false
-    }))
+  const existe = useQuery({
+    queryKey: ['layer-probe', sonda],
+    queryFn: async () => {
+      try {
+        await pedir<Coleccion>(`/sgspe/territory/layers/${sonda}?${consulta({ bbox: SIN_LUGARES })}`)
+        return true
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) return false
+        return true
+      }
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false
   })
-  return { disponibles: ids.filter((_, i) => sondas[i].data === true), cargando: sondas.some((s) => s.isPending) }
+  return { disponibles: existe.data === true ? ids : [], cargando: existe.isPending }
 }

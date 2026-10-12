@@ -24,7 +24,8 @@ export function AgregadosDelMapa({ estados }: { estados: EstadoDeCapa[] }) {
     if (p.__aggregate === 'stakeholder') {
       const posturas = p.byStance as Record<string, number> | null | undefined
       return [
-        t('sig.gruposDeInteres', { count: Number(p.total ?? 0) }),
+        // sin total, «No disponible»: nunca un cero que no se contó
+        typeof p.total === 'number' ? t('sig.gruposDeInteres', { count: p.total }) : t('sig.totalNoDisponible'),
         ...(posturas
           ? Object.entries(posturas).map(([postura, n]) => `${postura === 'SIN DATO' ? t('sig.sinDato') : postura}: ${n}`)
           : [t('sig.posturaNoDisponible')])

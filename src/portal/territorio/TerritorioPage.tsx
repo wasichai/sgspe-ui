@@ -32,6 +32,8 @@ const FICHA: Record<string, string> = { community: 'communities', locality: 'loc
 // las capas cuyos lugares tienen ficha (decisión 7 del plan 6.3)
 const SELECCIONABLES = new Set(['LYR-02', 'LYR-03', 'LYR-05'])
 const DE_GESTION = CAPAS_DE_GESTION.map((c) => c.id)
+// la capa que dice si el backend sirve las de gestión: de registros (los compromisos), no un agregado, que sale caro sondear
+const SONDA_DE_GESTION = 'LYR-19'
 
 export function TerritorioPage() {
   const { t } = useTranslation(NS)
@@ -45,7 +47,7 @@ export function TerritorioPage() {
   const [encuadre, setEncuadre] = useState<Encuadre | null>(null)
   const [creando, setCreando] = useState(false)
   const capturar = useRef<() => string | null>(() => null)
-  const { disponibles } = useCapasDisponibles(DE_GESTION)
+  const { disponibles } = useCapasDisponibles(DE_GESTION, SONDA_DE_GESTION)
   const ids = [...CAPAS_TERRITORIALES, ...disponibles]
   const basicas = CAPAS_TERRITORIALES.filter((id) => encendidas.has(id))
   const servicio = useWms(basicas)
@@ -235,8 +237,16 @@ export function FiltrosDelMapa() {
   const { t } = useTranslation(NS)
   const [busqueda, fijar] = useSearchParams()
   const proyectos = useProyectos()
-  // las fechas tecleadas que no forman un periodo válido: se muestran y se dicen, sin escribirlas en la URL
-  const [borrador, setBorrador] = useState<{ periodStart: string; periodEnd: string; problema: 'periodoAlReves' | 'periodoLargo' } | null>(null)
+  // las fechas tecleadas que no forman un periodo válido: se muestran y se dicen, sin escribirlas en la URL. valen mientras el
+  // periodo de la URL sea el mismo que cuando se teclearon: si cambia por otro camino (atrás, un enlace), mandan las de la URL
+  const enLaUrl = `${busqueda.get('periodStart') ?? ''}|${busqueda.get('periodEnd') ?? ''}`
+  const [tecleado, setBorrador] = useState<{
+    periodStart: string
+    periodEnd: string
+    problema: 'periodoAlReves' | 'periodoLargo'
+    enLaUrl: string
+  } | null>(null)
+  const borrador = tecleado?.enLaUrl === enLaUrl ? tecleado : null
   const fecha = (clave: 'periodStart' | 'periodEnd') => (borrador ? borrador[clave] : (busqueda.get(clave) ?? ''))
   const escribir = (valores: Record<string, string>) => {
     const siguiente = new URLSearchParams(busqueda)
@@ -248,7 +258,7 @@ export function FiltrosDelMapa() {
   const cambiarPeriodo = (clave: 'periodStart' | 'periodEnd', valor: string) => {
     const periodo = { periodStart: fecha('periodStart'), periodEnd: fecha('periodEnd'), [clave]: valor }
     const problema = problemaDelPeriodo(periodo.periodStart, periodo.periodEnd)
-    if (problema) return setBorrador({ ...periodo, problema })
+    if (problema) return setBorrador({ ...periodo, problema, enLaUrl })
     setBorrador(null)
     escribir(periodo)
   }

@@ -20,6 +20,7 @@ export const ES_SIG = {
   gruposDeInteres_other: '{{count, number}} grupos de interés',
   sinDato: 'Sin dato',
   posturaNoDisponible: 'Postura: No disponible',
+  totalNoDisponible: 'Grupos de interés: No disponible',
   aportes_one: '{{monto}} ({{count, number}} aporte)',
   aportes_other: '{{monto}} ({{count, number}} aportes)'
 }
@@ -43,6 +44,7 @@ export const EN_SIG: typeof ES_SIG = {
   gruposDeInteres_other: '{{count, number}} stakeholders',
   sinDato: 'No data',
   posturaNoDisponible: 'Stance: Not available',
+  totalNoDisponible: 'Stakeholders: Not available',
   aportes_one: '{{monto}} ({{count, number}} contribution)',
   aportes_other: '{{monto}} ({{count, number}} contributions)'
 }

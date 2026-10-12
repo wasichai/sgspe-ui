@@ -29,9 +29,13 @@ export function ControlDeCapas({
 }) {
   const { t } = useTranslation(NS)
   const estado = (id: string) => estados.find((e) => e.id === id)
-  // un periodo que el servidor rechaza (400 OUT_OF_RANGE o INVALID_VALUE sobre periodStart o periodEnd) se dice con su texto
-  const textoDelError = (error: unknown) =>
-    codigoDelError(error) && DEL_PERIODO.has(campoDelError(error) ?? '') ? t('mapa.periodoFueraDeRango') : t('mapa.errorDeCapa')
+  // un periodo que el servidor rechaza sobre periodStart o periodEnd se dice con su texto: OUT_OF_RANGE (al revés o de más de 5
+  // años) o INVALID_VALUE (una fecha ilegible, p. ej. de un enlace)
+  const textoDelError = (error: unknown) => {
+    if (!DEL_PERIODO.has(campoDelError(error) ?? '')) return t('mapa.errorDeCapa')
+    const codigo = codigoDelError(error)
+    return codigo === 'OUT_OF_RANGE' ? t('mapa.periodoFueraDeRango') : codigo === 'INVALID_VALUE' ? t('mapa.fechaInvalida') : t('mapa.errorDeCapa')
+  }
   return (
     <section aria-label={t('mapa.capas')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
       {GRUPOS.map((grupo) => {

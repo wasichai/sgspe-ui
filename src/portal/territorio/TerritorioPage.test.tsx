@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock, MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -147,6 +147,26 @@ describe('S12 · filtros, leyenda y captura', () => {
     }
   })
 
+  it('las fechas inválidas tecleadas ceden a la URL si el periodo cambia por otro camino (atrás, un enlace)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-12T15:00:00Z'))
+    try {
+      fetch = abrirPortal('/territory?periodEnd=2026-06-30', ANALISTA_SIG, EQUIPO_SIG, rutas())
+      const filtros = await screen.findByRole('group', { name: 'Filtros del mapa' })
+      await userEvent.type(within(filtros).getByLabelText('Desde'), '2026-07-01')
+      expect(await within(filtros).findByRole('alert')).toBeInTheDocument()
+      act(() => {
+        window.history.pushState({}, '', '/territory?periodStart=2026-01-01&periodEnd=2026-03-31')
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      })
+      await waitFor(() => expect(within(filtros).getByLabelText('Desde')).toHaveValue('2026-01-01'))
+      expect(within(filtros).getByLabelText('Hasta')).toHaveValue('2026-03-31')
+      expect(within(filtros).queryByRole('alert')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('el periodo sigue la regla del servidor: menos de 5 años, el 29 de febrero cae al 28, sin inicio son 12 meses', () => {
     expect(problemaDelPeriodo('', '')).toBeNull()
     expect(problemaDelPeriodo('2024-02-29', '2029-02-27', '2026-10-12')).toBeNull()
@@ -182,25 +202,54 @@ describe('S12 · filtros, leyenda y captura', () => {
     ).toEqual(['Centros poblados y localidades', 'Territorio comunal'])
     expect(screen.getByRole('checkbox', { name: /Concesiones mineras/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Capturar PNG' })).toBeInTheDocument()
-    await waitFor(() => expect(fetch!.calls.filter((l) => l.path.startsWith('/sgspe/territory/layers/LYR-2')).length).toBe(5))
+    await waitFor(() => expect(fetch!.calls.filter((l) => l.path.startsWith('/sgspe/territory/layers/LYR-19')).length).toBe(1))
     expect(within(await capas()).queryByRole('group', { name: 'Gestión' })).not.toBeInTheDocument()
   })
 })
 
 describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
-  it('se listan las que el backend sirve; las que responden 404 LAYER_NOT_FOUND se ocultan sin aviso', async () => {
-    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion('LYR-17', 'LYR-20')))
+  it('un backend sin el plan 6.2c (404 LAYER_NOT_FOUND en la sonda) no ofrece ninguna, sin aviso', async () => {
+    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
+    await waitFor(() => expect(fetch!.calls.some((l) => l.path.startsWith('/sgspe/territory/layers/LYR-19'))).toBe(true))
+    await screen.findByRole('button', { name: 'Comunidad Ejemplo' })
+    expect(within(await capas()).queryByRole('group', { name: 'Gestión' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('con 6.2c se listan las ocho tras una sola sonda barata, de registros y no de un agregado', async () => {
+    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())
     const gestion = await within(await capas()).findByRole('group', { name: 'Gestión' })
     expect(
       within(gestion)
         .getAllByRole('checkbox')
         .map((c) => c.closest('label')!.textContent)
-    ).toEqual(['Grupos de interés por localidad', 'Quejas, consultas y solicitudes'])
-    // la sonda es barata: un encuadre sin lugares, sin proyecto ni periodo
-    expect(fetch.calls.filter((l) => l.path.startsWith('/sgspe/territory/layers/LYR-17')).map((l) => l.path)).toEqual([
-      '/sgspe/territory/layers/LYR-17?bbox=0%2C0%2C0%2C0'
+    ).toEqual([
+      'Grupos de interés por localidad',
+      'Interacciones, visitas y observaciones',
+      'Compromisos',
+      'Quejas, consultas y solicitudes',
+      'Riesgos sociales',
+      'Incidentes, señales y alertas',
+      'Inversión social: iniciativas, aportes y entregas',
+      'Evidencias geolocalizadas'
     ])
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    // un encuadre sin lugares, sin proyecto ni periodo, sobre los compromisos; ninguna otra capa de gestión se pide apagada
+    expect(fetch.calls.filter((l) => /^\/sgspe\/territory\/layers\/LYR-(1[7-9]|2\d)/.test(l.path)).map((l) => l.path)).toEqual([
+      '/sgspe/territory/layers/LYR-19?bbox=0%2C0%2C0%2C0'
+    ])
+  })
+
+  it('un 403 de la sonda deja la lista: la capa sin permiso se bloquea al encenderla', async () => {
+    fetch = abrirPortal(
+      '/territory',
+      ANALISTA_SIG,
+      EQUIPO_SIG,
+      rutas({ path: '/sgspe/territory/layers/LYR-19', status: 403, body: { title: 'Forbidden', status: 403, detail: 'Sin permiso' } })
+    )
+    const gestion = await within(await capas()).findByRole('group', { name: 'Gestión' })
+    await userEvent.click(within(gestion).getByRole('checkbox', { name: /Compromisos/ }))
+    await waitFor(() => expect(within(gestion).getByRole('checkbox', { name: /Compromisos/ })).toBeDisabled())
+    expect(within(gestion).getByRole('checkbox', { name: /Riesgos sociales/ })).toBeEnabled()
   })
 
   it('LYR-17 dibuja un punto por localidad con sus grupos de interés por postura, y lleva el periodo', async () => {
@@ -224,6 +273,18 @@ describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
     const resumen = await screen.findByRole('region', { name: 'Grupos de interés por localidad' })
     expect(within(resumen).getByRole('listitem')).toHaveTextContent('Localidad Ejemplo · 6 grupos de interés · Postura: No disponible')
     expect(within(await capas()).getByText('Su cuenta no puede leer parte de los datos de esta capa.')).toBeInTheDocument()
+  })
+
+  it('sin total, LYR-17 dice «No disponible» y nunca un cero', async () => {
+    const sinTotal = {
+      ...CAPA_LYR_17,
+      features: CAPA_LYR_17.features.map((f) => ({ ...f, properties: { ...f.properties, total: undefined } }))
+    }
+    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas({ path: '/sgspe/territory/layers/LYR-17', body: sinTotal }))
+    await userEvent.click(await within(await capas()).findByRole('checkbox', { name: /Grupos de interés por localidad/ }))
+    const resumen = await screen.findByRole('region', { name: 'Grupos de interés por localidad' })
+    expect(within(resumen).getByRole('listitem')).toHaveTextContent('Localidad Ejemplo · Grupos de interés: No disponible · A FAVOR: 3')
+    expect(within(resumen).getByRole('listitem')).not.toHaveTextContent(/\b0 grupos/)
   })
 
   it('LYR-23 suma los aportes por localidad y moneda, sin mezclar monedas', async () => {
@@ -255,5 +316,21 @@ describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
     )
     await userEvent.click(await within(await capas()).findByRole('checkbox', { name: /Interacciones, visitas y observaciones/ }))
     expect(await within(await capas()).findByText('El periodo elegido está fuera del rango que admite el servidor: revise las fechas.')).toBeInTheDocument()
+  })
+
+  it('una fecha ilegible que el servidor rechaza (INVALID_VALUE) no se dice como «fuera de rango»', async () => {
+    fetch = abrirPortal(
+      '/territory?periodStart=2026-13-45',
+      ANALISTA_SIG,
+      EQUIPO_SIG,
+      rutas({
+        path: /^\/sgspe\/territory\/layers\/LYR-18\?.*period/,
+        status: 400,
+        body: { title: 'Bad Request', status: 400, detail: 'No es una fecha', errors: [{ field: 'periodStart', message: 'INVALID_VALUE' }] }
+      })
+    )
+    await userEvent.click(await within(await capas()).findByRole('checkbox', { name: /Interacciones, visitas y observaciones/ }))
+    expect(await within(await capas()).findByText('Una fecha del periodo no es válida: revise las fechas.')).toBeInTheDocument()
+    expect(within(await capas()).queryByText(/fuera del rango/)).not.toBeInTheDocument()
   })
 })
