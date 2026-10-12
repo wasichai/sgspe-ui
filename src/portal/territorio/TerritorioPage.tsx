@@ -12,6 +12,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { rutaParaAbrir } from '../datos/fichas'
 import { texto } from '../datos/registros'
 import { NS } from '../i18n'
+import { useTableroDisponible } from '../tableros/comunes'
 import { destinoDe, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, dibujoDe } from '../mapa/capas'
@@ -22,7 +23,9 @@ import { Mapa } from '../mapa/Mapa'
 import { useWms } from '../mapa/wms'
 import { AgregadosDelMapa } from './AgregadosDelMapa'
 import { OBJETOS_DE_CALOR, useConcentracion, type ObjetoDeCalor } from './consultas'
+import { DialogoDeExportacion } from './DialogoDeExportacion'
 import { EstadisticasTerritoriales } from './EstadisticasTerritoriales'
+import { capasExportables } from './exportacion'
 import { FichaContextual } from './FichaContextual'
 import { DESTINOS, importaA } from './importacion'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
@@ -46,6 +49,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const navegar = useNavigate()
+  const conTablero = useTableroDisponible('territory')
   const paso = useSiguientePaso()
   const [busqueda, fijar] = useSearchParams()
   const proyecto = busqueda.get('project') ?? undefined
@@ -75,6 +79,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   const [encendidas, setEncendidas] = useState(() => new Set<string>(['LYR-02', 'LYR-05']))
   const [encuadre, setEncuadre] = useState<Encuadre | null>(null)
   const [creando, setCreando] = useState(false)
+  const [exportando, setExportando] = useState(false)
   const capturar = useRef<() => string | null>(() => null)
   const { disponibles } = useCapasDisponibles(DE_GESTION, SONDA_DE_GESTION)
   const ids = [...CAPAS_TERRITORIALES, ...disponibles]
@@ -129,9 +134,26 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{modo === 'tablero' ? t('tableroTerritorial.titulo') : t('mapa.mapaTerritorial')}</h1>
         <div className="flex flex-wrap gap-2">
+          {modo === 'tablero' ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/territory${sufijo}`}>{t('tableroTerritorial.irAlMapa')}</Link>
+            </Button>
+          ) : conTablero ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/territory/dashboard${sufijo}`}>{t('tableroTerritorial.irAlTablero')}</Link>
+            </Button>
+          ) : null}
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/territory/quality">{t('calidad.titulo')}</Link>
+          </Button>
           <Button variant="secondary" size="sm" onClick={descargar}>
             {t('mapa.capturar')}
           </Button>
+          {capasExportables(can).length > 0 ? (
+            <Button variant="secondary" size="sm" onClick={() => setExportando(true)}>
+              {t('exportacionGeografica.abrir')}
+            </Button>
+          ) : null}
           {can('community', 'CREATE') ? (
             <Button size="sm" onClick={() => setCreando(true)}>
               {t('mapa.nuevaComunidad')}
@@ -267,6 +289,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
           <Alert tone="notice">{t('tableroTerritorial.eligeProyecto')}</Alert>
         )
       ) : null}
+      <DialogoDeExportacion abierto={exportando} alCerrar={() => setExportando(false)} proyecto={proyecto} capaInicial="LYR-05" />
       <Drawer titulo={t('mapa.nuevaComunidad')} abierto={creando} alCerrar={() => setCreando(false)}>
         <FormularioDeRegistro
           objeto="community"

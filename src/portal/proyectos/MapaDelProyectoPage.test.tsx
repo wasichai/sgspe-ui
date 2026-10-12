@@ -376,6 +376,25 @@ describe('S09 · mapa del proyecto', () => {
     expect(await screen.findByRole('link', { name: 'Importar' })).toHaveAttribute('href', '/territory/imports/new?project=p1')
   })
 
+  it('«Exportar» solo con EXPORT sobre alguna capa; abre el diálogo con los sondajes del proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ'] }), rutas())
+    await screen.findByRole('heading', { name: 'Mapa del proyecto' })
+    expect(screen.queryByRole('button', { name: 'Exportar' })).not.toBeInTheDocument()
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal(
+      '/projects/p1/map',
+      RELACIONISTA,
+      permisos({ project: ['READ'], project_component: ['READ', 'EXPORT'], export_log: ['CREATE'] }),
+      rutas()
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Exportar' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Exportar una capa' })
+    expect(within(dialogo).getByRole('combobox', { name: 'Capa' })).toHaveValue('LYR-10')
+    expect(within(dialogo).getByRole('combobox', { name: 'Proyecto' })).toHaveValue('p1')
+    expect(within(within(dialogo).getByRole('combobox', { name: 'Nivel de divulgación' })).getAllByRole('option')).toHaveLength(1)
+  })
+
   it('una fila del análisis enciende la capa del registro y lo elige', async () => {
     fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ'], land_parcel: ['READ'] }), [
       {
