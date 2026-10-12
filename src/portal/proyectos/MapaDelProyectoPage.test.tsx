@@ -375,4 +375,42 @@ describe('S09 · mapa del proyecto', () => {
     fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ', 'CREATE', 'UPDATE'] }), rutas())
     expect(await screen.findByRole('link', { name: 'Importar' })).toHaveAttribute('href', '/territory/imports/new?project=p1')
   })
+
+  it('una fila del análisis enciende la capa del registro y lo elige', async () => {
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ'], land_parcel: ['READ'] }), [
+      {
+        path: '/sgspe/territory/projects/p1/component-parcels',
+        body: {
+          available: true,
+          truncated: false,
+          rows: [
+            {
+              component: { id: 'pc1', code: 'SDJ-001', componentType: 'SONDAJE' },
+              parcel: { id: 'lp1', code: 'PR-001', tenureType: 'PROPIEDAD' },
+              holders: [],
+              lengthM: null,
+              areaHa: 0.1
+            }
+          ]
+        }
+      },
+      { path: '/sgspe/territory/layers/LYR-14', body: coleccion('land_parcel', [['lp1', { code: 'PR-001', tenure_type: 'PROPIEDAD' }]]) },
+      ...rutas()
+    ])
+    expect(await screen.findByRole('checkbox', { name: /Predios de propiedad/ })).not.toBeChecked()
+    const analisis = await screen.findByRole('region', { name: 'Análisis' })
+    await userEvent.click(await within(analisis).findByRole('button', { name: 'Ver PR-001 en el mapa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/map?selected=land_parcel%3Alp1'))
+    expect(screen.getByRole('checkbox', { name: /Predios de propiedad/ })).toBeChecked()
+    await waitFor(() => expect(screen.getByRole('list', { name: 'Mapa del proyecto' })).toHaveAttribute('data-seleccion', 'lp1'))
+  })
+
+  it('la leyenda de la paleta acompaña al control de capas y sigue a las encendidas', async () => {
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), rutas())
+    const leyenda = await screen.findByRole('region', { name: 'Leyenda' })
+    expect(within(leyenda).getByText('Pozos programados y sondajes')).toBeInTheDocument()
+    expect(within(leyenda).queryByText(/Predios de propiedad/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox', { name: /Pozos programados/ }))
+    await waitFor(() => expect(within(leyenda).queryByText('Pozos programados y sondajes')).not.toBeInTheDocument())
+  })
 })
