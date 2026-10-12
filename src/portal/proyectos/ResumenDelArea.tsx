@@ -1,6 +1,6 @@
 import { Alert } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Cargando, NoDisponible } from '../componentes/Estados'
+import { Cargando, esIlegible, NoDisponible } from '../componentes/Estados'
 import { NS, numeroPe } from '../i18n'
 import { useResumenDelArea } from '../territorio/consultas'
 
@@ -11,6 +11,8 @@ export function ResumenDelArea({ area }: { area: string }) {
   const { t } = useTranslation(NS)
   const consulta = useResumenDelArea(area)
   const cifra = (v: number | null | undefined, sufijo = '') => (v === null || v === undefined ? <NoDisponible /> : `${numeroPe(v)}${sufijo}`)
+  // un 404 es un backend o un tenant sin F6: la pantalla sigue como en F2, sin resumen
+  if (consulta.isError && esIlegible(consulta.error)) return null
   return (
     <section aria-label={t('sugerencias.resumen.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
       <h2 className="font-medium">{t('sugerencias.resumen.titulo')}</h2>

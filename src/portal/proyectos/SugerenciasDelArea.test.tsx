@@ -78,6 +78,11 @@ describe('S10 · sugerencias del cálculo', () => {
     await userEvent.type(screen.getByLabelText('Buffer (m), opcional'), '00000')
     expect(await screen.findByText('Indique entre 1 y 20 000 metros, o déjelo vacío.')).toBeInTheDocument()
     expect(red.llamadas.slice(antes).filter((l) => l.ruta.includes('bufferM=30000000'))).toEqual([])
+    const campo = screen.getByLabelText('Buffer (m), opcional')
+    await userEvent.clear(campo)
+    await userEvent.type(campo, '1.5')
+    expect(await screen.findByText('Indique entre 1 y 20 000 metros, o déjelo vacío.')).toBeInTheDocument()
+    expect(red.llamadas.some((l) => l.ruta.includes('bufferM=1.5'))).toBe(false)
   })
 
   it('en una versión que no se edita no ofrece aceptar', async () => {

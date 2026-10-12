@@ -19,7 +19,7 @@ export function SugerenciasDelArea({ area, editable }: { area: string; editable:
   const [abierta, setAbierta] = useState(false)
   const [buffer, setBuffer] = useState('')
   const valor = Number(buffer)
-  const valido = buffer.trim() === '' || (Number.isFinite(valor) && valor >= 1 && valor <= 20000)
+  const valido = buffer.trim() === '' || (Number.isInteger(valor) && valor >= 1 && valor <= 20000)
   const consulta = useSugerencias(area, buffer.trim() === '' || !valido ? null : valor, abierta && valido)
   const [aceptando, setAceptando] = useState<Sugerencia | null>(null)
   if (!abierta)
