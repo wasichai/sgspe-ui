@@ -52,6 +52,13 @@ export function rutaDeFicha(objeto: string, registro: Registro): string | null {
       return enProyecto(`programs/${idEnRuta}`)
     case 'social_contribution':
       return enProyecto(`contributions/${idEnRuta}`)
+    // F6: la localidad (S14) y la comunidad (S13) son del tenant; un componente se ve en el mapa de su proyecto, elegido
+    case 'locality':
+      return `/territory/localities/${idEnRuta}`
+    case 'community':
+      return `/territory/communities/${idEnRuta}`
+    case 'project_component':
+      return enProyecto(`map?selected=project_component:${idEnRuta}`)
     default:
       return null
   }

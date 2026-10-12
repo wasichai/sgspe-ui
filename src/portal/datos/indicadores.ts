@@ -124,3 +124,25 @@ export function useCatalogoDeIndicadores() {
 export const sonDemasiadosRegistros = (error: unknown): boolean => codigoDelError(error) === 'TOO_MANY_RECORDS'
 
 export const desglose = (indicador: Indicador | undefined, por: string): FilaDeDesglose[] => indicador?.breakdowns?.find((d) => d.by === por)?.rows ?? []
+
+// F6: KPI-TER-01 no tiene cifra propia; reúne las de la ficha contextual en su desglose components (dashboards.md §4.8,
+// TerritorySummary). cada fila trae key (el código en las de un KPI, que además traen code, label y unit como el indicador
+// suelto) y su propio available. programs y lastActivity no traen label: el título es del portal. lastActivity trae en value
+// la fecha AAAA-MM-DD (o null), no un número
+export interface ComponenteDeFicha {
+  key: string
+  code?: string
+  label?: string
+  available: boolean
+  value?: number | string | null
+  unit?: string
+  breakdowns?: Desglose[]
+  unavailableReason?: string
+  missingFields?: string[]
+  warnings?: string[]
+  ignoredFilters?: string[]
+  confidentialHidden?: boolean
+}
+
+// las filas de KPI-TER-01 vistas con su tipo, en el orden del servidor
+export const componentesDeFicha = (indicador: Indicador | undefined): ComponenteDeFicha[] => desglose(indicador, 'components') as unknown as ComponenteDeFicha[]

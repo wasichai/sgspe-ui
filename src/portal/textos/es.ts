@@ -42,6 +42,15 @@ import { ES_INVERSION } from './inversion'
 import { ES_FICHA_PROGRAMA } from './fichaPrograma'
 import { ES_FICHA_APORTE } from './fichaAporte'
 import { ES_TABLERO_INVERSION } from './tableroInversion'
+import { ES_SIG } from './sig'
+import { ES_FICHA_TERRITORIAL } from './fichaTerritorial'
+import { ES_TABLERO_TERRITORIAL } from './tableroTerritorial'
+import { ES_ANALISIS_DEL_PROYECTO } from './analisisDelProyecto'
+import { ES_SUGERENCIAS } from './sugerencias'
+import { ES_EXPORTACION_GEOGRAFICA } from './exportacionGeografica'
+import { ES_EDICION_DE_GEOMETRIA } from './edicionDeGeometria'
+import { ES_UBICAR } from './ubicar'
+import { ES_CALIDAD } from './calidad'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
@@ -93,6 +102,16 @@ export const ES = {
   fichaPrograma: ES_FICHA_PROGRAMA,
   fichaAporte: ES_FICHA_APORTE,
   tableroInversion: ES_TABLERO_INVERSION,
+  // F6: SIG avanzado
+  sig: ES_SIG,
+  fichaTerritorial: ES_FICHA_TERRITORIAL,
+  tableroTerritorial: ES_TABLERO_TERRITORIAL,
+  analisisDelProyecto: ES_ANALISIS_DEL_PROYECTO,
+  sugerencias: ES_SUGERENCIAS,
+  exportacionGeografica: ES_EXPORTACION_GEOGRAFICA,
+  edicionDeGeometria: ES_EDICION_DE_GEOMETRIA,
+  ubicar: ES_UBICAR,
+  calidad: ES_CALIDAD,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',

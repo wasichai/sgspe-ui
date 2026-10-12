@@ -122,6 +122,46 @@ describe('pedir', () => {
     expect(archivo.nombre).toBe('registro GI.xlsx')
     expect(await archivo.blob.text()).toBe('PK')
   })
+
+  // spec F6 §3.4: LAYER_REQUIRED trae layers[] en el cuerpo Problem; el error conserva el cuerpo entero
+  it('un error conserva el cuerpo Problem entero (layers de LAYER_REQUIRED)', async () => {
+    fetch = mockFetch([])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: () =>
+          new Response(
+            JSON.stringify({
+              title: 'Bad Request',
+              status: 400,
+              errors: [{ field: 'layer', message: 'LAYER_REQUIRED' }],
+              layers: [{ name: 'predios', geometryType: 'Polygon', featureCount: 3, detectedCrs: 'EPSG 32717' }]
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/problem+json' } }
+          )
+      }
+    ])
+    const error = await crearPedido(cliente, vi.fn())('/sgspe/territory/imports', { formulario: new FormData() }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ErrorDeSgspe)
+    expect(codigoDelError(error)).toBe('LAYER_REQUIRED')
+    expect((error as ErrorDeSgspe).cuerpo?.layers).toEqual([{ name: 'predios', geometryType: 'Polygon', featureCount: 3, detectedCrs: 'EPSG 32717' }])
+  })
+
+  it('un cuerpo que no es un objeto JSON no se conserva', async () => {
+    fetch = mockFetch([])
+    red = espiarRed([
+      { path: '/sgspe/territory/imports/formats', responder: () => new Response('Bad Gateway', { status: 502, statusText: 'Bad Gateway' }) },
+      { path: '/sgspe/territory/locate', responder: () => new Response('[1]', { status: 400 }) }
+    ])
+    const pedir = crearPedido(cliente, vi.fn())
+    const texto = (await pedir('/sgspe/territory/imports/formats').catch((e: unknown) => e)) as ErrorDeSgspe
+    expect(texto.cuerpo).toBeNull()
+    expect(texto.message).toBe('Bad Gateway')
+    const lista = (await pedir('/sgspe/territory/locate').catch((e: unknown) => e)) as ErrorDeSgspe
+    expect(lista.cuerpo).toBeNull()
+    expect(lista.violations).toEqual([])
+  })
 })
 
 describe('cabeceras', () => {
