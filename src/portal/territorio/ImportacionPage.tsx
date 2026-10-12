@@ -13,17 +13,33 @@ import { useMisProyectos, useProyectos } from '../contexto/proyectos'
 import { codigoDelError, guardarArchivo } from '../datos/http'
 import { atributo, texto, useDefinicion, useRegistro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
+import { useFormatosDeImportacion } from './consultas'
 import {
+  aceptaDe,
+  capasDelError,
   columnaDeCampo,
   conteosPrevistos,
+  CRS_FIJO,
   decisionesDe,
   DESTINOS,
+  DESTINOS_DE_F2,
+  DESTINOS_VECTORIALES,
+  destinoSinModelo,
+  disponible,
+  eleccionPedida,
+  esVectorial,
+  formatoDe,
+  FORMATOS_DE_F2,
+  FORMATOS_EN_ORDEN,
   importaA,
   filasConDecision,
+  LEE_GDAL,
   nuevaClave,
+  opcionDeCrs,
   useConfirmacion,
   useReporte,
   useVistaPrevia,
+  type CapaDelArchivo,
   type Columnas,
   type Conteos,
   type Decision,
@@ -37,7 +53,9 @@ import {
 // decisiones fila por fila, 4 confirmación. el archivo vive en esta pestaña entre la vista previa y la confirmación (la
 // importación no deja estado en el servidor, ASM-060); sin CRS de origen confirmado no se avanza (RQ-GIS-007, CON-024).
 // los errores dicen el texto de su código (api.md §3.3): IMPORT_CONFLICT ofrece volver a ver la vista previa, IMPORT_BUSY
-// (503) reintentar con la misma clave y SHA256_MISMATCH empezar de nuevo; la confirmación se compara con la vista previa
+// (503) reintentar con la misma clave y SHA256_MISMATCH empezar de nuevo; la confirmación se compara con la vista previa.
+// desde F6, los formatos que lee el servidor (imports/formats; sin GDAL, los de F2), la capa de un archivo de varias, el CRS
+// que declara el archivo como propuesta y los destinos comunidad y elemento ambiental (spec §3.4)
 const COLUMNAS_DE_PUNTOS = ['code', 'easting', 'northing', 'elevation', 'azimuth', 'dip', 'depth', 'drillType', 'latitude', 'longitude'] as const
 
 interface Estado {
@@ -70,37 +88,105 @@ function Preparar() {
   const [busqueda] = useSearchParams()
   const proyectos = useProyectos()
   const mios = useMisProyectos()
+  const formatosDelServidor = useFormatosDeImportacion()
+  // un destino de F6 que el servidor rechazó porque la organización todavía no tiene su modelo: se vuelve a los de F2
+  const [sinModeloDeF6, setSinModeloDeF6] = useState(false)
+  // sin /imports/formats (backend sin F6) se ofrece lo de F2: sus formatos y sus destinos
+  const conF6 = formatosDelServidor.isSuccess
+  const formatos = formatosDelServidor.data?.formats ?? FORMATOS_DE_F2
   const previo = enCursoDe(user?.id)?.pedido
   const [paso, setPaso] = useState(previo ? 1 : 0)
   const [archivo, setArchivo] = useState<File | null>(previo?.archivo ?? null)
-  const destinos = DESTINOS.filter((d) => importaA(can, d))
-  const [destino, setDestino] = useState<Destino | ''>(previo?.destino ?? destinos[0] ?? '')
+  const destinos = (conF6 && !sinModeloDeF6 ? DESTINOS : DESTINOS_DE_F2).filter((d) => importaA(can, d))
+  const [elegido, setDestino] = useState<Destino | ''>(previo?.destino ?? '')
+  // el elegido mientras se ofrezca; si no (todavía no hay formatos, o el servidor no tiene ese destino), el primero
+  const destino: Destino | '' = elegido !== '' && destinos.includes(elegido) ? elegido : (destinos.at(0) ?? '')
   const [proyecto, setProyecto] = useState(previo?.proyecto ?? busqueda.get('project') ?? '')
   const registroDelProyecto = useRegistro('project', proyecto || undefined)
   const definicion = useDefinicion(destino || 'project_component')
   const [crs, setCrs] = useState(previo?.crs ?? '')
-  const [confirmado, setConfirmado] = useState(false)
-  const [columnas, setColumnas] = useState<Columnas>(previo?.columnas ?? { code: '' })
+  // el CRS que la persona confirmó: la confirmación vale solo mientras ese siga siendo el propuesto (CON-024)
+  const [confirmadoEn, setConfirmadoEn] = useState('')
+  // al volver de la vista previa, un tipo fijo (=valor) vuelve a su selector y no al campo de la columna
+  const fijoPrevio = previo?.columnas.featureType?.startsWith('=') ? previo.columnas.featureType.slice(1) : ''
+  const [columnas, setColumnas] = useState<Columnas>(() => (previo ? (fijoPrevio ? { ...previo.columnas, featureType: '' } : previo.columnas) : { code: '' }))
+  const [tipoFijo, setTipoFijo] = useState(fijoPrevio)
+  const [capa, setCapa] = useState(previo?.capa ?? '')
+  const alFallar = (error: unknown) => {
+    if (!destinoSinModelo(error) || !destino || !DESTINOS_VECTORIALES.includes(destino)) return
+    setSinModeloDeF6(true)
+    setConfirmadoEn('')
+    setPaso(0)
+  }
   const vistaPrevia = useVistaPrevia()
+  // «Leer el archivo»: la vista previa sin sourceCrs, que responde 400 con las capas y el CRS que declara cada una
+  const lectura = useVistaPrevia()
   const mensaje = useMensajeDeError()
   const pasos = t('importacion.pasos', { returnObjects: true }) as string[]
   const opcionesDeCrs = definicion.data?.fields.find((f) => f.name === 'source_crs')?.enumOptions ?? []
-  // se propone el CRS de trabajo del proyecto solo si es uno de los orígenes que el servidor acepta; si no, la persona elige
-  const propuesto = crs || texto(registroDelProyecto.data, 'working_crs')
-  const crsPropuesto = opcionesDeCrs.includes(propuesto) ? propuesto : ''
-  const esGeojson = archivo ? /\.(geo)?json$/i.test(archivo.name) : false
+  const tiposDeElemento = definicion.data?.fields.find((f) => f.name === 'feature_type')?.enumOptions ?? []
+  const formato = archivo ? formatoDe(archivo.name) : null
+  const formatoUsable = formato !== null && disponible(formato, formatos)
+  const vectorial = esVectorial(formato)
+  const destinoVectorial = destino !== '' && DESTINOS_VECTORIALES.includes(destino)
+  // KML, KMZ y GPX fijan EPSG 4326
+  const fijo = formato ? CRS_FIJO[formato] : undefined
+  const leidas = capasDelError(lectura.error)
+  const capasDelArchivo = leidas.length > 0 ? leidas : capasDelError(vistaPrevia.error)
+  // con una sola capa, esa; con varias, la que elija la persona
+  const capaDe = (nombre: string) => capasDelArchivo.find((c) => c.name === nombre) ?? (capasDelArchivo.length === 1 ? capasDelArchivo[0] : undefined)
+  const capaElegida = capaDe(capa)
+  // el CRS que declara la capa es una propuesta, como el de trabajo del proyecto: la persona la confirma con la casilla. lo que
+  // la persona eligió gana; si no, el del archivo; si no, el de trabajo del proyecto, solo si es un origen que el servidor acepta
+  const propuestaCon = (laCapa: CapaDelArchivo | undefined) => {
+    const propuesto = fijo ?? (crs || opcionDeCrs(laCapa?.detectedCrs, opcionesDeCrs) || texto(registroDelProyecto.data, 'working_crs'))
+    return opcionesDeCrs.includes(propuesto) ? propuesto : ''
+  }
+  const delArchivo = opcionDeCrs(capaElegida?.detectedCrs, opcionesDeCrs)
+  const crsPropuesto = propuestaCon(capaElegida)
+  const confirmado = confirmadoEn !== '' && confirmadoEn === crsPropuesto
+  // leer el archivo antes de la vista previa solo sirve si su CRS no está fijo: con KML, KMZ y GPX la vista previa ya va con
+  // EPSG 4326 y, si el archivo tiene varias capas, responde LAYER_REQUIRED con ellas
+  const porLeer = formato !== null && LEE_GDAL.has(formato) && !fijo && capasDelArchivo.length === 0
+  const camposDeColumnas: (keyof Columnas)[] = vectorial
+    ? ['code', ...(destinoVectorial ? (['name'] as const) : []), ...(destino === 'environmental_feature' ? (['featureType'] as const) : [])]
+    : [...COLUMNAS_DE_PUNTOS]
+  const columnasQueViajan = (): Columnas => {
+    const llenas: Columnas = Object.fromEntries(Object.entries(columnas).filter(([c, v]) => v && camposDeColumnas.includes(c as keyof Columnas)))
+    // el tipo fijo del formulario viaja como constante (un valor que empieza con =, api.md §4.2)
+    if (destino === 'environmental_feature' && !llenas.featureType && tipoFijo) llenas.featureType = `=${tipoFijo}`
+    return llenas
+  }
+  const faltaTipo = destino === 'environmental_feature' && !columnas.featureType && !tipoFijo
+  const faltaCapa = capasDelArchivo.length > 1 && !capaElegida
 
-  if (destinos.length === 0) return <Alert tone="warning">{t('importacion.sinDestinos')}</Alert>
+  if (formatosDelServidor.isPending) return <Cargando />
+  // sin destinos solo porque la organización no tiene el modelo de F6 (la cuenta importa solo a esos): se dice eso, no un
+  // permiso que falta
+  if (destinos.length === 0) return <Alert tone="warning">{sinModeloDeF6 ? t('importacion.sinModeloDeF6') : t('importacion.sinDestinos')}</Alert>
 
   const verPrevia = () => {
-    if (!archivo || !destino || !proyecto || !crsPropuesto || !confirmado) return
-    const pedido: Pedido = { archivo, destino, proyecto, crs: crsPropuesto, columnas: Object.fromEntries(Object.entries(columnas).filter(([, v]) => v)) }
+    if (!archivo || !destino || !proyecto || !crsPropuesto || !confirmado || faltaTipo || faltaCapa) return
+    const nombreDeCapa = capaElegida?.name ?? capa
+    const pedido: Pedido = { archivo, destino, proyecto, crs: crsPropuesto, columnas: columnasQueViajan(), ...(nombreDeCapa ? { capa: nombreDeCapa } : {}) }
     vistaPrevia.mutate(pedido, {
       onSuccess: (vista) => {
         guardarEnCurso(user?.id, { pedido, vista })
         navegar(`/territory/imports/${encodeURIComponent(vista.importBatchId)}`)
-      }
+      },
+      onError: alFallar
     })
+  }
+  const leer = () => {
+    if (!archivo || !destino || !proyecto) return
+    vistaPrevia.reset()
+    lectura.mutate({ archivo, destino, proyecto, crs: '', columnas: {} }, { onError: alFallar })
+  }
+  const describirCapa = (c: CapaDelArchivo) => t('importacion.capaOpcion', { nombre: c.name, tipo: c.geometryType ?? '—', n: c.featureCount ?? '—' })
+  // el texto propio de FORMAT_NOT_SUPPORTED nombra los formatos de GDAL: solo con F6; sin él, el de comun.codigos
+  const mensajes = {
+    NOT_ASSIGNED: t('importacion.errores.NOT_ASSIGNED'),
+    ...(conF6 ? { FORMAT_NOT_SUPPORTED: t('importacion.errores.FORMAT_NOT_SUPPORTED') } : {})
   }
 
   return (
@@ -113,21 +199,41 @@ function Preparar() {
         <Alert tone="notice">{t('importacion.nadaEscrito')}</Alert>
         {paso === 0 ? (
           <section className="space-y-3" aria-label={pasos[0]}>
-            <Campo etiqueta={t('importacion.archivo')}>
+            {sinModeloDeF6 ? <Alert tone="warning">{t('importacion.destinoSinModelo')}</Alert> : null}
+            <Campo
+              etiqueta={conF6 ? t('importacion.archivoF6') : t('importacion.archivo')}
+              ayuda={
+                conF6
+                  ? t('importacion.formatosDisponibles', {
+                      formatos: FORMATOS_EN_ORDEN.filter((f) => disponible(f, formatos))
+                        .map((f) => t(`importacion.nombresDeFormato.${f}`))
+                        .join(', ')
+                    })
+                  : undefined
+              }
+            >
               {(p) => (
                 <Input
                   {...p}
                   type="file"
-                  accept=".xlsx,.csv,.geojson,.json"
+                  accept={aceptaDe(formatos)}
                   onChange={(e) => {
                     setArchivo(e.target.files?.[0] ?? null)
-                    // el CRS confirmado era el de otro archivo
-                    setConfirmado(false)
+                    // el CRS elegido y confirmado y la capa eran de otro archivo: así se ve lo que propone el nuevo
+                    setCrs('')
+                    setConfirmadoEn('')
+                    setCapa('')
+                    vistaPrevia.reset()
+                    lectura.reset()
                   }}
                 />
               )}
             </Campo>
-            <Campo etiqueta={t('importacion.destino')}>
+            {archivo && formato === null ? <Alert tone="warning">{t('importacion.formatoDesconocido')}</Alert> : null}
+            {archivo && formato !== null && !formatoUsable ? (
+              <Alert tone="warning">{t('importacion.formatoNoDisponible', { formato: t(`importacion.nombresDeFormato.${formato}`) })}</Alert>
+            ) : null}
+            <Campo etiqueta={t('importacion.destino')} ayuda={destinoVectorial ? t('importacion.soloPoligonos') : undefined}>
               {(p) => (
                 <SelectNativo
                   {...p}
@@ -135,12 +241,13 @@ function Preparar() {
                   value={destino}
                   onChange={(e) => {
                     setDestino(e.target.value as Destino)
-                    setConfirmado(false)
+                    setConfirmadoEn('')
                   }}
                   opciones={destinos.map((d) => ({ valor: d, etiqueta: t(`importacion.destinos.${d}`) }))}
                 />
               )}
             </Campo>
+            {archivo && destinoVectorial && formato !== null && !vectorial ? <Alert tone="warning">{t('importacion.soloVectorial')}</Alert> : null}
             <Campo etiqueta={t('importacion.proyecto')}>
               {(p) => (
                 <SelectNativo
@@ -151,7 +258,7 @@ function Preparar() {
                     setProyecto(e.target.value)
                     // otro proyecto propone otro CRS de trabajo: lo que se confirmó era del anterior
                     setCrs('')
-                    setConfirmado(false)
+                    setConfirmadoEn('')
                   }}
                   opciones={(proyectos.data ?? [])
                     .filter((x) => mios.size === 0 || mios.has(x.id))
@@ -161,7 +268,7 @@ function Preparar() {
             </Campo>
             {proyectos.isPending ? <Cargando /> : null}
             {proyectos.isError && !proyectos.data ? <FalloDeLectura error={proyectos.error} alReintentar={() => void proyectos.refetch()} /> : null}
-            <Button disabled={!archivo || !destino || !proyecto} onClick={() => setPaso(1)}>
+            <Button disabled={!archivo || !formatoUsable || !destino || !proyecto || (destinoVectorial && !vectorial)} onClick={() => setPaso(1)}>
               {t('comun.siguiente')}
             </Button>
           </section>
@@ -177,14 +284,48 @@ function Preparar() {
                 <FalloDeLectura error={registroDelProyecto.error} alReintentar={() => void registroDelProyecto.refetch()} />
               )
             ) : null}
-            <Campo etiqueta={t('importacion.crs')} ayuda={t('importacion.crsAyuda')}>
+            {porLeer ? (
+              <div className="space-y-1">
+                <Button variant="secondary" disabled={lectura.isPending || !proyecto} aria-busy={lectura.isPending} onClick={leer}>
+                  {lectura.isPending ? t('importacion.leyendo') : t('importacion.leerArchivo')}
+                </Button>
+                <p className="text-sg-caption text-sg-text-muted">{t('importacion.leerArchivoAyuda')}</p>
+                {lectura.isError && leidas.length === 0 ? <Alert tone="danger">{mensaje(lectura.error, mensajes)}</Alert> : null}
+              </div>
+            ) : null}
+            {/* la capa que pide el servidor (LAYER_REQUIRED, por el campo layer del error) */}
+            {eleccionPedida(lectura.error) === 'layer' ? <Alert tone="notice">{t('comun.codigos.LAYER_REQUIRED')}</Alert> : null}
+            {capasDelArchivo.length === 1 ? (
+              <p className="text-sm text-sg-text-secondary">{t('importacion.capaLeida', { capa: describirCapa(capasDelArchivo[0]) })}</p>
+            ) : null}
+            {capasDelArchivo.length > 1 ? (
+              <Campo etiqueta={t('importacion.capa')}>
+                {(p) => (
+                  <SelectNativo
+                    {...p}
+                    value={capaElegida?.name ?? ''}
+                    onChange={(e) => {
+                      setCapa(e.target.value)
+                      // otra capa puede proponer otro CRS: lo confirmado vale solo si la propuesta no cambia
+                      if (propuestaCon(capaDe(e.target.value)) !== crsPropuesto) setConfirmadoEn('')
+                    }}
+                    opciones={capasDelArchivo.map((c) => ({ valor: c.name, etiqueta: describirCapa(c) }))}
+                  />
+                )}
+              </Campo>
+            ) : null}
+            <Campo
+              etiqueta={t('importacion.crs')}
+              ayuda={fijo ? t('importacion.crsFijo') : delArchivo && !crs ? t('importacion.crsDelArchivo', { crs: delArchivo }) : t('importacion.crsAyuda')}
+            >
               {(p) => (
                 <SelectNativo
                   {...p}
                   value={crsPropuesto}
+                  disabled={Boolean(fijo)}
                   onChange={(e) => {
                     setCrs(e.target.value)
-                    setConfirmado(false)
+                    setConfirmadoEn('')
                   }}
                   opciones={opcionesDeCrs}
                 />
@@ -192,22 +333,27 @@ function Preparar() {
             </Campo>
             {crsPropuesto ? (
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={confirmado} onChange={(e) => setConfirmado(e.target.checked)} />
+                <input type="checkbox" checked={confirmado} onChange={(e) => setConfirmadoEn(e.target.checked ? crsPropuesto : '')} />
                 {t('importacion.confirmoCrs', { crs: crsPropuesto })}
               </label>
             ) : null}
             <fieldset className="grid gap-3 rounded-sg-lg border border-sg-border p-4 md:grid-cols-3">
               <legend className="px-1 text-sm font-medium">{t('importacion.columnas')}</legend>
               <p className="text-sg-caption text-sg-text-muted md:col-span-3">{t('importacion.columnasAyuda')}</p>
-              {(esGeojson ? (['code'] as const) : COLUMNAS_DE_PUNTOS).map((c) => (
+              {camposDeColumnas.map((c) => (
                 <Campo key={c} etiqueta={t(`importacion.columna.${c}`)}>
                   {(p) => <Input {...p} value={columnas[c] ?? ''} onChange={(e) => setColumnas({ ...columnas, [c]: e.target.value })} />}
                 </Campo>
               ))}
+              {destino === 'environmental_feature' ? (
+                <Campo etiqueta={t('importacion.tipoFijo')} error={faltaTipo && confirmado ? t('importacion.tipoFalta') : undefined}>
+                  {(p) => <SelectNativo {...p} value={tipoFijo} onChange={(e) => setTipoFijo(e.target.value)} opciones={tiposDeElemento} />}
+                </Campo>
+              ) : null}
             </fieldset>
             {vistaPrevia.isError ? (
-              <Alert tone="danger">
-                {mensaje(vistaPrevia.error, { NOT_ASSIGNED: t('importacion.errores.NOT_ASSIGNED') })}
+              <Alert tone={capasDelArchivo.length > 0 ? 'notice' : 'danger'}>
+                {mensaje(vistaPrevia.error, mensajes)}
                 {codigoDelError(vistaPrevia.error) === 'IMPORT_BUSY' ? (
                   <Button variant="secondary" size="sm" className="ml-2" onClick={verPrevia}>
                     {t('comun.reintentar')}
@@ -219,7 +365,7 @@ function Preparar() {
               <Button variant="secondary" onClick={() => setPaso(0)}>
                 {t('comun.anterior')}
               </Button>
-              <Button disabled={!crsPropuesto || !confirmado || vistaPrevia.isPending} onClick={verPrevia}>
+              <Button disabled={!crsPropuesto || !confirmado || faltaTipo || faltaCapa || vistaPrevia.isPending} onClick={verPrevia}>
                 {vistaPrevia.isPending ? t('importacion.leyendo') : t('importacion.verPrevia')}
               </Button>
             </div>
@@ -274,17 +420,19 @@ function Revisar({ id }: { id: string }) {
       }
     )
   }
-  // IMPORT_CONFLICT: lo registrado cambió y no se escribió nada; la vista previa se repite con el mismo pedido
-  const previsualizarOtraVez = () =>
-    otraVistaPrevia.mutate(pedido, {
+  // IMPORT_CONFLICT o el CRS del archivo: la vista previa se repite, con el mismo pedido (lo registrado cambió y no se escribió
+  // nada) o con el CRS que declara el archivo
+  const previsualizarCon = (otro: Pedido) =>
+    otraVistaPrevia.mutate(otro, {
       onSuccess: (nueva) => {
-        guardarEnCurso(user?.id, { pedido, vista: nueva })
+        guardarEnCurso(user?.id, { pedido: otro, vista: nueva })
         setDecisiones({})
         setClave(nuevaClave())
         confirmacion.reset()
         navegar(`/territory/imports/${encodeURIComponent(nueva.importBatchId)}`)
       }
     })
+  const previsualizarOtraVez = () => previsualizarCon(pedido)
   const codigo = codigoDelError(confirmacion.error)
   const kpis = [
     ['filas', vista.rows],
@@ -304,8 +452,10 @@ function Revisar({ id }: { id: string }) {
       <div className="space-y-4">
         <Alert tone="notice">{t('importacion.nadaEscrito')}</Alert>
         <p className="font-sg-mono text-sg-caption text-sg-text-muted">
-          {pedido.archivo.name} · {pedido.crs} · SHA-256 {vista.sha256}
+          {pedido.archivo.name}
+          {vista.layer ? ` · ${vista.layer}` : ''} · {pedido.crs} · SHA-256 {vista.sha256}
         </p>
+        <CrsDetectado vista={vista} pedido={pedido} alUsar={(otro) => previsualizarCon({ ...pedido, crs: otro })} ocupado={otraVistaPrevia.isPending} />
         <ul className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {kpis.map(([k, v]) => (
             <li key={k} aria-label={t(`importacion.kpis.${k}`)} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
@@ -448,6 +598,28 @@ function Confirmada({ escrito, previsto, vista, pedido }: { escrito: Resultado; 
         <Link to={`/projects/${encodeURIComponent(pedido.proyecto)}/map`}>{t('importacion.volverAlMapa')}</Link>
       </Button>
     </section>
+  )
+}
+
+// el CRS que declara el archivo (decisión 16 del plan 6.3), siempre un valor del catálogo o null: se muestra como propuesta; si
+// difiere del elegido, «Usar el CRS del archivo» repite la vista previa con él, y ese clic es la confirmación (CON-024)
+function CrsDetectado({ vista, pedido, alUsar, ocupado }: { vista: VistaPrevia; pedido: Pedido; alUsar: (crs: string) => void; ocupado: boolean }) {
+  const { t } = useTranslation(NS)
+  const definicion = useDefinicion(pedido.destino)
+  if (!vista.detectedCrs) return null
+  const opciones = definicion.data?.fields.find((f) => f.name === 'source_crs')?.enumOptions ?? []
+  const opcion = opcionDeCrs(vista.detectedCrs, opciones)
+  if (vista.detectedCrs === pedido.crs)
+    return <p className="text-sm text-sg-text-muted">{t('importacion.crsDetectadoIgual', { detectado: vista.detectedCrs })}</p>
+  return (
+    <Alert tone="warning">
+      {t('importacion.crsDetectado', { detectado: vista.detectedCrs, elegido: pedido.crs })}
+      {opcion ? (
+        <Button variant="secondary" size="sm" className="ml-2" disabled={ocupado} onClick={() => alUsar(opcion)}>
+          {t('importacion.usarCrsDetectado')}
+        </Button>
+      ) : null}
+    </Alert>
   )
 }
 

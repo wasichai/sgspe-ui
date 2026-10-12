@@ -6,6 +6,7 @@ import { definicion, pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { archivoXlsx, espiarRed, problema, type Red } from '../../test/red'
+import { FORMATOS } from '../../test/sig'
 import { crearI18n, NS } from '../i18n'
 import { reiniciarImportacion } from './ImportacionPage'
 
@@ -269,7 +270,9 @@ describe('S15 · importación geoespacial', () => {
 
   it('sin permisos de escritura en ningún destino no se ofrece importar', async () => {
     fetch = abrirPortal('/territory/imports/new', RELACIONISTA, permisos({ project: ['READ'], locality: ['READ'] }), rutas())
-    expect(await screen.findByText('Su cuenta no puede crear ni cambiar componentes, predios ni concesiones.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Su cuenta no puede crear ni cambiar componentes, predios, concesiones, comunidades ni elementos ambientales.')
+    ).toBeInTheDocument()
   })
 
   it.each([
@@ -519,6 +522,287 @@ describe('S15 · importación geoespacial', () => {
     expect(await screen.findByText('No disponible')).toBeInTheDocument()
     expect(screen.queryByText(/No se pudo cargar esta información/)).not.toBeInTheDocument()
     expect(selectorDeProyecto()).toBeDisabled()
+  })
+})
+
+describe('S15 · formatos por GDAL y destinos nuevos (F6)', () => {
+  const ESCRIBE_TERRITORIO = permisos({
+    ...GAN_OBJETOS,
+    community: ['READ', 'CREATE', 'UPDATE'],
+    environmental_feature: ['READ', 'CREATE', 'UPDATE']
+  })
+  const definiciones = [
+    {
+      path: '/metadata/objects/community',
+      body: definicion('community', [['source_crs', { type: 'ENUM', enumOptions: ['EPSG 32717', 'EPSG 32718', 'EPSG 4326'] }]])
+    },
+    {
+      path: '/metadata/objects/environmental_feature',
+      body: definicion('environmental_feature', [
+        ['source_crs', { type: 'ENUM', enumOptions: ['EPSG 32717', 'EPSG 4326'] }],
+        ['feature_type', { type: 'ENUM', enumOptions: ['FUENTE DE AGUA', 'SITIO SAGRADO'] }]
+      ])
+    }
+  ]
+  const conFormatos = (formatos = FORMATOS) => [{ path: '/sgspe/territory/imports/formats', body: formatos }, ...definiciones, ...rutas()]
+  // un 400 con las capas del archivo en el cuerpo Problem (ImportChoiceRequired): LAYER_REQUIRED o el CRS que falta, sin código
+  const conCapas = (error: { field: string; message: string }, layers: unknown[]) =>
+    new Response(JSON.stringify({ title: 'Bad Request', status: 400, detail: 'detalle', errors: [error], layers }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/problem+json' }
+    })
+
+  it('sin el endpoint de formatos (backend sin F6) ofrece los formatos y destinos de F2', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, ESCRIBE_TERRITORIO, [...definiciones, ...rutas()])
+    const archivo = await screen.findByLabelText('Archivo (XLSX, CSV o GeoJSON)')
+    expect(archivo).toHaveAttribute('accept', '.xlsx,.csv,.geojson,.json')
+    expect(within(screen.getByRole('combobox', { name: 'Objeto destino' })).queryByRole('option', { name: 'Territorio comunal' })).not.toBeInTheDocument()
+  })
+
+  it('un KMZ al territorio comunal fija EPSG 4326 y manda el código y el nombre', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, ESCRIBE_TERRITORIO, conFormatos())
+    red = espiarRed()
+    const entrada = await screen.findByLabelText('Archivo')
+    await waitFor(() => expect(entrada).toHaveAttribute('accept', expect.stringContaining('.kmz')))
+    expect(entrada.getAttribute('accept')).toContain('.zip')
+    expect(screen.getByText('Formatos: XLSX, CSV, GeoJSON, Shapefile o FileGDB (ZIP), KML, KMZ, GeoPackage, GPX.')).toBeInTheDocument()
+    await userEvent.upload(entrada, new File(['PK'], 'territorio.kmz', { type: 'application/vnd.google-earth.kmz' }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Objeto destino' }), 'community')
+    // solo polígonos: los puntos y las líneas llegan como filas inválidas (TerritoryImports, destino community)
+    expect(screen.getByText(/^Solo polígonos/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    const crs = await screen.findByRole('combobox', { name: 'CRS de origen' })
+    await waitFor(() => expect(crs).toHaveValue('EPSG 4326'))
+    expect(crs).toBeDisabled()
+    expect(screen.getByText('Los archivos KML, KMZ y GPX están siempre en EPSG 4326.')).toBeInTheDocument()
+    // con el CRS fijo no hace falta leer el archivo antes
+    expect(screen.queryByRole('button', { name: 'Leer el archivo' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'codigo')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nombre' }), 'nombre')
+    expect(screen.queryByRole('textbox', { name: 'Este' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/territory/imports')).toHaveLength(1))
+    const [vista] = red.a('POST', '/sgspe/territory/imports')
+    expect(vista.formulario?.get('target')).toBe('community')
+    expect(vista.formulario?.get('sourceCrs')).toBe('EPSG 4326')
+    expect(vista.formulario?.get('layer')).toBeNull()
+    expect(JSON.parse(String(vista.formulario?.get('columns')))).toEqual({ code: 'codigo', name: 'nombre' })
+  })
+
+  it('un elemento ambiental exige su tipo, por columna o fijo', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, ESCRIBE_TERRITORIO, conFormatos())
+    red = espiarRed()
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'elementos.gpkg'))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Objeto destino' }), 'environmental_feature')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'CRS de origen' }), 'EPSG 32717')
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'cod')
+    expect(screen.getByRole('button', { name: 'Ver la vista previa' })).toBeDisabled()
+    expect(screen.getByText('Indique la columna del tipo de elemento o un tipo para todas las filas.')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de elemento para todas las filas' }), 'FUENTE DE AGUA')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/territory/imports')).toHaveLength(1))
+    expect(JSON.parse(String(red.a('POST', '/sgspe/territory/imports')[0].formulario?.get('columns')))).toEqual({ code: 'cod', featureType: '=FUENTE DE AGUA' })
+  })
+
+  it('un formato que el servidor no puede leer se dice y no deja avanzar', async () => {
+    fetch = abrirPortal(
+      '/territory/imports/new?project=p1',
+      RELACIONISTA,
+      ESCRIBE_TERRITORIO,
+      conFormatos({
+        formats: FORMATOS.formats.map((f) => (f.format === 'gpkg' ? { ...f, available: false } : f))
+      })
+    )
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'capas.gpkg'))
+    expect(await screen.findByText('El servidor no puede leer GeoPackage todavía.')).toBeInTheDocument()
+    expect(screen.getByText(/^Formatos: /)).not.toHaveTextContent('GeoPackage')
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+  })
+
+  it('una hoja de coordenadas no va a un destino de polígonos', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, ESCRIBE_TERRITORIO, conFormatos())
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'puntos.csv', { type: 'text/csv' }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Objeto destino' }), 'environmental_feature')
+    expect(screen.getByText(/Este destino se importa desde un archivo con geometrías/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+  })
+
+  it('un archivo de varias capas pide la capa y repite la vista previa con ella', async () => {
+    let llamadas = 0
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, conFormatos())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: () =>
+          ++llamadas === 1
+            ? conCapas({ field: 'layer', message: 'LAYER_REQUIRED' }, [
+                { name: 'sondajes', geometryType: 'Point', featureCount: 12, detectedCrs: null },
+                { name: 'plataformas', geometryType: 'Polygon', featureCount: 3, detectedCrs: null }
+              ])
+            : new Response(JSON.stringify(VISTA), { headers: { 'Content-Type': 'application/json' } })
+      }
+    ])
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'proyecto.gpkg'))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'CRS de origen' })).toHaveValue('EPSG 32717'))
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'id')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    expect(await screen.findByText('El archivo tiene varias capas: elija cuál importar.')).toBeInTheDocument()
+    expect(screen.queryByText('LAYER_REQUIRED')).not.toBeInTheDocument()
+    // sin capa elegida no se repite
+    expect(screen.getByRole('button', { name: 'Ver la vista previa' })).toBeDisabled()
+    expect(screen.getByRole('option', { name: 'plataformas · Polygon · 3 elementos' })).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Capa del archivo' }), 'plataformas')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory/imports/b-1'))
+    expect(red.a('POST', '/sgspe/territory/imports')[1].formulario?.get('layer')).toBe('plataformas')
+  })
+
+  it('«Leer el archivo» pide sus capas sin CRS y propone el que declara la capa, que hay que confirmar', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, conFormatos())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: (l) =>
+          l.formulario?.get('sourceCrs')
+            ? new Response(JSON.stringify({ ...VISTA, format: 'shp', layer: 'sondajes', detectedCrs: 'EPSG 32718' }))
+            : conCapas({ field: 'sourceCrs', message: 'es obligatorio y sale del catálogo «CRS de origen»' }, [
+                { name: 'sondajes', geometryType: 'Point', featureCount: 12, detectedCrs: 'EPSG 32718' }
+              ])
+      }
+    ])
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'sondajes.zip'))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'CRS de origen' })).toHaveValue('EPSG 32717'))
+    // lo confirmado antes de leer era el CRS de trabajo del proyecto: la propuesta del archivo pide confirmar otra vez
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Leer el archivo' }))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'CRS de origen' })).toHaveValue('EPSG 32718'))
+    const [lectura] = red.a('POST', '/sgspe/territory/imports')
+    expect(lectura.formulario?.get('sourceCrs')).toBeNull()
+    expect(screen.getByText('Propuesto por el archivo: EPSG 32718. Confírmelo o elija otro.')).toBeInTheDocument()
+    expect(screen.getByText('Capa leída: sondajes · Point · 12 elementos')).toBeInTheDocument()
+    // el 400 del CRS que falta no es un error para la persona: es la lectura
+    expect(screen.queryByText(/es obligatorio/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Leer el archivo' })).not.toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Confirmo que las coordenadas del archivo están en EPSG 32718' })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Ver la vista previa' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'id')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory/imports/b-1'))
+    const vista = red.a('POST', '/sgspe/territory/imports')[1]
+    expect(vista.formulario?.get('sourceCrs')).toBe('EPSG 32718')
+    expect(vista.formulario?.get('layer')).toBe('sondajes')
+    expect(screen.getByText('El archivo declara EPSG 32718, el mismo CRS de la vista previa.')).toBeInTheDocument()
+  })
+
+  it('el CRS que declara el archivo se propone: «Usar el CRS del archivo» repite la vista previa con él', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, [
+      { method: 'POST', path: '/sgspe/territory/imports', body: { ...VISTA, format: 'shp', layer: 'sondajes', detectedCrs: 'EPSG 32718' } },
+      ...conFormatos()
+    ])
+    red = espiarRed()
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'sondajes.zip'))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'CRS de origen' })).toHaveValue('EPSG 32717'))
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Código' }), 'id')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    expect(await screen.findByText('El archivo declara EPSG 32718; la vista previa usa EPSG 32717.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar el CRS del archivo' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/territory/imports')).toHaveLength(2))
+    expect(red.a('POST', '/sgspe/territory/imports')[1].formulario?.get('sourceCrs')).toBe('EPSG 32718')
+  })
+
+  it('un destino que la organización todavía no tiene (400 sobre target) vuelve a los destinos de F2', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, ESCRIBE_TERRITORIO, conFormatos())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: () => problema(400, 'Destino inválido', [{ field: 'target', message: 'community se importa con el modelo de F6' }])
+      }
+    ])
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['PK'], 'territorio.kml'))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Objeto destino' }), 'community')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    expect(await screen.findByText('Su organización todavía no tiene ese destino: elija otro.')).toBeInTheDocument()
+    const destino = screen.getByRole('combobox', { name: 'Objeto destino' })
+    expect(within(destino).queryByRole('option', { name: 'Territorio comunal' })).not.toBeInTheDocument()
+    expect(within(destino).queryByRole('option', { name: 'Elementos ambientales' })).not.toBeInTheDocument()
+    expect(destino).toHaveValue('project_component')
+    expect(screen.queryByText(/modelo de F6/)).not.toBeInTheDocument()
+  })
+
+  it('una cuenta que solo importa a los destinos de F6, en una organización sin ese modelo, lo dice y no culpa a sus permisos', async () => {
+    // los permisos del relacionista comunitario (model/roles.json): ningún destino de F2
+    const SOLO_F6 = permisos({
+      project: ['READ'],
+      locality: ['READ', 'CREATE', 'UPDATE'],
+      project_component: ['READ'],
+      land_parcel: ['READ'],
+      mining_concession: ['READ'],
+      community: ['READ', 'CREATE', 'UPDATE'],
+      environmental_feature: ['READ', 'CREATE', 'UPDATE']
+    })
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, SOLO_F6, conFormatos())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: () => problema(400, 'Destino inválido', [{ field: 'target', message: 'community se importa con el modelo de F6' }])
+      }
+    ])
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['PK'], 'territorio.kml'))
+    expect(screen.getByRole('combobox', { name: 'Objeto destino' })).toHaveValue('community')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    expect(
+      await screen.findByText('Su organización todavía no tiene ese destino: aún no puede importar comunidades ni elementos ambientales.')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Su cuenta no puede/)).not.toBeInTheDocument()
+  })
+
+  it('al volver de la vista previa, el tipo fijo vuelve a su selector y no al campo de la columna', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, ESCRIBE_TERRITORIO, conFormatos())
+    red = espiarRed()
+    await userEvent.upload(await screen.findByLabelText('Archivo'), new File(['x'], 'elementos.gpkg'))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Objeto destino' }), 'environmental_feature')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'CRS de origen' }), 'EPSG 32717')
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de elemento para todas las filas' }), 'SITIO SAGRADO')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory/imports/b-1'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Probar con otro CRS' }))
+    expect(await screen.findByRole('combobox', { name: 'Tipo de elemento para todas las filas' })).toHaveValue('SITIO SAGRADO')
+    expect(screen.getByRole('textbox', { name: 'Columna del tipo de elemento' })).toHaveValue('')
+  })
+
+  it('sin F6, FORMAT_NOT_SUPPORTED dice el texto común y no recomienda formatos que ese servidor no lee', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/territory/imports',
+        responder: () => problema(400, 'detalle', [{ field: 'file', message: 'FORMAT_NOT_SUPPORTED' }])
+      }
+    ])
+    await prepararHastaLaVistaPrevia()
+    await userEvent.click(screen.getByRole('checkbox', { name: /Confirmo/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver la vista previa' }))
+    expect(await screen.findByText('Ese destino no se importa desde una hoja: use un GeoJSON.')).toBeInTheDocument()
+    expect(screen.queryByText(/GeoPackage/)).not.toBeInTheDocument()
   })
 })
 
