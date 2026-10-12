@@ -1,37 +1,43 @@
 import { Lock, ZoomIn } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { campoDelError, codigoDelError } from '../datos/http'
 import { NS } from '../i18n'
 import type { EstadoDeCapa } from './api'
-import { CAPAS, GRUPOS } from './capas'
+import { CAPAS, CAPAS_DE_GESTION, GRUPOS } from './capas'
 
-// el MapLayerControl de screens.md S09: las capas en cuatro grupos, con candado en las sensibles y en las que la cuenta no
-// puede ver (con su razón), y el aviso de acercar el mapa en una capa recortada al tope (truncated). es una lista de
-// casillas: se opera con teclado y no depende del mapa
+const TODAS = [...CAPAS, ...CAPAS_DE_GESTION]
+const DEL_PERIODO = new Set(['periodStart', 'periodEnd'])
+
+// el MapLayerControl de screens.md S09 y S12: las capas en cuatro grupos (Gestión son las capas de gestión de S12 que el backend
+// sirve y el calor), con candado en las sensibles y en las que la cuenta no puede ver (con su razón), y el aviso de acercar el
+// mapa en una capa recortada al tope (truncated). una capa encendida dice además si el periodo no la filtra, si la cuenta no lee
+// parte de ella o si se le ocultan QCS confidenciales. es una lista de casillas: se opera con teclado y no depende del mapa
 export function ControlDeCapas({
   ids,
   encendidas,
   estados,
-  alCambiar
+  alCambiar,
+  gestion
 }: {
   ids: readonly string[]
   encendidas: ReadonlySet<string>
   estados: EstadoDeCapa[]
   alCambiar: (id: string, encendida: boolean) => void
+  // el contenido propio del grupo Gestión (el calor de S12); sin él ni capas de gestión en ids, el grupo no se dibuja
+  gestion?: ReactNode
 }) {
   const { t } = useTranslation(NS)
   const estado = (id: string) => estados.find((e) => e.id === id)
+  // un periodo que el servidor rechaza (400 OUT_OF_RANGE o INVALID_VALUE sobre periodStart o periodEnd) se dice con su texto
+  const textoDelError = (error: unknown) =>
+    codigoDelError(error) && DEL_PERIODO.has(campoDelError(error) ?? '') ? t('mapa.periodoFueraDeRango') : t('mapa.errorDeCapa')
   return (
     <section aria-label={t('mapa.capas')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
       {GRUPOS.map((grupo) => {
-        const delGrupo = CAPAS.filter((c) => c.grupo === grupo && ids.includes(c.id))
-        if (grupo === 'gestion')
-          return (
-            <fieldset key={grupo}>
-              <legend className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t(`mapa.grupos.${grupo}`)}</legend>
-              <p className="text-sg-caption text-sg-text-muted">{t('mapa.gestionLlega')}</p>
-            </fieldset>
-          )
-        if (delGrupo.length === 0) return null
+        const delGrupo = TODAS.filter((c) => c.grupo === grupo && ids.includes(c.id))
+        const propio = grupo === 'gestion' ? gestion : null
+        if (delGrupo.length === 0 && !propio) return null
         return (
           <fieldset key={grupo} className="space-y-1">
             <legend className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t(`mapa.grupos.${grupo}`)}</legend>
@@ -60,9 +66,16 @@ export function ControlDeCapas({
                   ) : null}
                   {encendidas.has(c.id) && !bloqueada && estado(c.id)?.error ? (
                     <p role="alert" className="ml-6 text-sg-caption text-sg-danger">
-                      {t('mapa.errorDeCapa')}
+                      {textoDelError(estado(c.id)!.error)}
                     </p>
                   ) : null}
+                  {encendidas.has(c.id) && !bloqueada
+                    ? notasDe(estado(c.id)).map((nota) => (
+                        <p key={nota} className="ml-6 text-sg-caption text-sg-text-muted">
+                          {t(`mapa.notas.${nota}`)}
+                        </p>
+                      ))
+                    : null}
                   {truncada ? (
                     <p role="status" className="ml-6 flex items-center gap-1 text-sg-caption text-sg-warning">
                       <ZoomIn aria-hidden className="size-3.5" />
@@ -72,9 +85,21 @@ export function ControlDeCapas({
                 </div>
               )
             })}
+            {propio}
           </fieldset>
         )
       })}
     </section>
   )
+}
+
+// lo que la respuesta de una capa encendida dice de sí misma (H1 bis del plan 6.3): nunca un vacío que parezca completo
+function notasDe(estado: EstadoDeCapa | undefined): ('incompleta' | 'periodoNoAplicado' | 'confidencialesOcultas')[] {
+  const datos = estado?.datos
+  if (!datos) return []
+  return [
+    ...(datos.available === false ? (['incompleta'] as const) : []),
+    ...((datos.periodNotApplied?.length ?? 0) > 0 ? (['periodoNoAplicado'] as const) : []),
+    ...(datos.confidentialHidden === true ? (['confidencialesOcultas'] as const) : [])
+  ]
 }

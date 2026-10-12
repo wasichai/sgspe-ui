@@ -392,3 +392,82 @@ export const baseDeSig = (): MockRoute[] => [
   { path: '/sgspe/dashboards/indicators', body: [] },
   { path: '/auth/me/notifications/summary', status: 404, body: { title: 'Not Found', status: 404 } }
 ]
+
+// las capas de gestión LYR-17 a LYR-24 llegan con el plan 6.2c (H1 bis del plan 6.3): hasta entonces layers/{layer} responde
+// 404 LAYER_NOT_FOUND (Layers.kt) y S12 la oculta sin aviso
+export const CAPA_NO_ENCONTRADA = {
+  status: 404,
+  body: {
+    title: 'Not Found',
+    status: 404,
+    detail: 'La capa no existe o no está disponible en esta fase',
+    errors: [{ field: 'layer', message: 'LAYER_NOT_FOUND' }]
+  }
+}
+
+// LYR-17: un punto por localidad con los grupos de interés por postura, nunca una persona. byStance es null para quien no lee la
+// postura (entonces available: false y missingFields)
+const agregado = (id: string, name: string, coordenadas: [number, number], extra: Record<string, unknown>) => ({
+  type: 'Feature',
+  id: `${id}:location`,
+  geometry: { type: 'Point', coordinates: coordenadas },
+  properties: { __layer: extra.__layer, __object: 'locality', __id: id, __state: null, name, locality_type: 'CASERIO', ...extra }
+})
+export const CAPA_LYR_17 = {
+  type: 'FeatureCollection',
+  available: true,
+  truncated: false,
+  features: [
+    agregado('l1', 'Localidad Ejemplo', [-78.5, -7.9], {
+      __layer: 'LYR-17',
+      __aggregate: 'stakeholder',
+      total: 6,
+      byStance: { 'A FAVOR': 3, NEUTRAL: 1, 'SIN DATO': 2 }
+    })
+  ]
+}
+export const CAPA_LYR_17_SIN_POSTURA = {
+  ...CAPA_LYR_17,
+  available: false,
+  missingFields: ['stakeholder.stance'],
+  features: [agregado('l1', 'Localidad Ejemplo', [-78.5, -7.9], { __layer: 'LYR-17', __aggregate: 'stakeholder', total: 6, byStance: null })]
+}
+
+// LYR-23: las iniciativas y entregas como registros y los aportes sumados por localidad y moneda
+export const CAPA_LYR_23 = {
+  type: 'FeatureCollection',
+  available: true,
+  truncated: false,
+  features: [
+    {
+      type: 'Feature',
+      id: 'si1:location',
+      geometry: PUNTO,
+      properties: { __layer: 'LYR-23', __object: 'social_initiative', __id: 'si1', __state: 'active', name: 'Iniciativa Ejemplo' }
+    },
+    agregado('l2', 'Otra Localidad Ejemplo', [-78.52, -7.92], {
+      __layer: 'LYR-23',
+      __aggregate: 'social_contribution',
+      contributions: [
+        { currency: 'PEN', count: 3, totalAmount: 1500 },
+        { currency: 'USD', count: 1, totalAmount: 200 }
+      ]
+    })
+  ]
+}
+
+// LYR-20 para quien no ve las QCS confidenciales: lleva confidentialHidden
+export const CAPA_LYR_20 = {
+  type: 'FeatureCollection',
+  available: true,
+  truncated: false,
+  confidentialHidden: true,
+  features: [
+    {
+      type: 'Feature',
+      id: 'g1:locality',
+      geometry: PUNTO,
+      properties: { __layer: 'LYR-20', __object: 'grievance', __id: 'g1', __state: 'registered', code: 'QJ-001', __target: 'locality', __targetId: 'l1' }
+    }
+  ]
+}

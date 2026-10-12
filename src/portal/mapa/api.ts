@@ -20,6 +20,13 @@ export interface Coleccion {
   type: 'FeatureCollection'
   features: Elemento[]
   truncated?: boolean
+  // las capas de gestión (LYR-17 a LYR-24, plan 6.2c; H1 bis del plan 6.3): available es false si quien pide no lee parte de la
+  // capa (missingFields dice qué), periodNotApplied nombra los objetos de la capa que el periodo no filtra y confidentialHidden
+  // (LYR-20) dice que a quien pide se le ocultan QCS confidenciales
+  available?: boolean
+  missingFields?: string[]
+  periodNotApplied?: string[]
+  confidentialHidden?: boolean
 }
 
 export type Encuadre = [number, number, number, number]
@@ -54,16 +61,31 @@ export function destinoDe(propiedades: Record<string, unknown> | null | undefine
 // poco el mapa no pida la capa de nuevo y la vista nunca quede recortada en el borde
 const redondear = (b: Encuadre | null) => (b ? b.map((v, i) => ((i < 2 ? Math.floor(v * 1000) : Math.ceil(v * 1000)) / 1000).toFixed(3)).join(',') : undefined)
 
-export function useCapas(ids: readonly string[], filtros: { project?: string; bbox?: Encuadre | null }): EstadoDeCapa[] {
+export interface FiltrosDeCapa {
+  project?: string
+  bbox?: Encuadre | null
+  // el periodo de las capas de gestión (AAAA-MM-DD); las de F2 no tienen fecha y no lo reciben (Layers.kt)
+  periodStart?: string
+  periodEnd?: string
+}
+
+export function useCapas(ids: readonly string[], filtros: FiltrosDeCapa): EstadoDeCapa[] {
   const pedir = usePedir()
-  const busqueda = consulta({ project: filtros.project, bbox: redondear(filtros.bbox ?? null) })
+  const busqueda = consulta({
+    project: filtros.project,
+    periodStart: filtros.periodStart,
+    periodEnd: filtros.periodEnd,
+    bbox: redondear(filtros.bbox ?? null)
+  })
   // las capas que respondieron 403 en este proyecto: no se piden de nuevo al mover el mapa (un 403 no depende del bbox)
   const sinPermiso = useRef({ project: filtros.project, ids: new Set<string>() })
   if (sinPermiso.current.project !== filtros.project) sinPermiso.current = { project: filtros.project, ids: new Set() }
-  // lo último que respondió cada capa en este proyecto. useQueries crea un observador nuevo por cada clave (el encuadre va en
-  // ella), así que placeholderData/keepPreviousData no conserva nada entre un encuadre y el siguiente: se conserva aquí
-  const ultimos = useRef({ project: filtros.project, datos: new Map<string, Coleccion>() })
-  if (ultimos.current.project !== filtros.project) ultimos.current = { project: filtros.project, datos: new Map() }
+  // lo último que respondió cada capa en este proyecto y periodo. useQueries crea un observador nuevo por cada clave (el encuadre
+  // va en ella), así que placeholderData/keepPreviousData no conserva nada entre un encuadre y el siguiente: se conserva aquí. otro
+  // periodo no conserva nada: lo dibujado sería de otras fechas
+  const alcance = `${filtros.project ?? ''}|${filtros.periodStart ?? ''}|${filtros.periodEnd ?? ''}`
+  const ultimos = useRef({ alcance, datos: new Map<string, Coleccion>() })
+  if (ultimos.current.alcance !== alcance) ultimos.current = { alcance, datos: new Map() }
   const consultas = useQueries({
     queries: ids.map((id) => ({
       queryKey: ['layer', id, filtros.project ?? null, busqueda],
@@ -89,4 +111,34 @@ export function useCapas(ids: readonly string[], filtros: { project?: string; bb
       error: bloqueada ? null : c.error
     }
   })
+}
+
+// el encuadre de la sonda: un punto en el golfo de Guinea (0, 0), lejos del Perú, así que ninguna capa tiene elementos ahí y la
+// respuesta es barata. INVALID_BBOX solo rechaza un mínimo mayor que el máximo (Layers.kt)
+const SIN_LUGARES = '0,0,0,0'
+
+// las capas que el backend sirve: una capa de gestión (LYR-17 a LYR-24) responde 404 LAYER_NOT_FOUND hasta el plan 6.2c (H1 del
+// plan 6.3) y entonces no se ofrece. cada capa se sondea una vez por sesión con un encuadre sin lugares; un 404 la oculta (con o sin
+// código: el de un backend sin la ruta es igual de definitivo) y cualquier otra respuesta la deja ver, porque su lectura dirá su
+// error o su candado al encenderla. mientras la sonda no responde, la capa no se ofrece
+export function useCapasDisponibles(ids: readonly string[]): { disponibles: string[]; cargando: boolean } {
+  const pedir = usePedir()
+  const sondas = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['layer-probe', id],
+      queryFn: async () => {
+        try {
+          await pedir<Coleccion>(`/sgspe/territory/layers/${id}?${consulta({ bbox: SIN_LUGARES })}`)
+          return true
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 404) return false
+          return true
+        }
+      },
+      staleTime: Infinity,
+      gcTime: Infinity,
+      retry: false
+    }))
+  })
+  return { disponibles: ids.filter((_, i) => sondas[i].data === true), cargando: sondas.some((s) => s.isPending) }
 }
