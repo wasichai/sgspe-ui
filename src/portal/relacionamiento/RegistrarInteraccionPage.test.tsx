@@ -7,6 +7,7 @@ import { definicion, montar, pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
+import { UBICADOS } from '../../test/sig'
 import { EQUIPO, base } from '../../test/relacionamiento'
 import { useGuardarInteraccion } from './guardarInteraccion'
 
@@ -87,6 +88,25 @@ describe('S24 · registrar interacción', () => {
     { method: 'POST', path: '/objects/engagement_question/records', status: 201, body: registro('q', {}) },
     { method: 'POST', path: '/objects/engagement/records/e9/transitions/register_held_unplanned', body: registro('e9', {}, { state: 'held' }) }
   ]
+
+  it('un clic en el mapa del paso «Lugar» propone la localidad y la comunidad, que la persona confirma', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, [
+      { path: '/sgspe/territory/locate', body: UBICADOS },
+      { path: '/objects/locality/records/l1', body: registro('l1', { name: 'Localidad Ejemplo' }) },
+      { path: '/objects/community/records/c1', body: registro('c1', { name: 'Comunidad Ejemplo' }) },
+      ...rutas()
+    ])
+    await screen.findByRole('option', { name: 'ASAMBLEA' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Pulsar en el mapa' }))
+    expect(await screen.findByText('Comunidad Ejemplo')).toBeInTheDocument()
+    expect(screen.getByText('Localidad: —')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar estos lugares' }))
+    expect(await screen.findByText('Localidad: Localidad Ejemplo')).toBeInTheDocument()
+    expect(screen.getByText('Comunidad: Comunidad Ejemplo')).toBeInTheDocument()
+  })
 
   it('un grupo sin nombres representa al menos a una persona y los totales se ven en vivo', async () => {
     fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
@@ -224,6 +244,46 @@ describe('S24 · registrar interacción', () => {
     act(() => lectura.ok?.({ coords: { longitude: -78.1, latitude: -8.2 } }))
     expect(await screen.findByText(/-8\.20000/)).toBeInTheDocument()
     expect(screen.queryByText('Obteniendo ubicación…')).not.toBeInTheDocument()
+  })
+
+  it('en el registro rápido, «Usar estos lugares» no pisa con vacío lo que locate no propone', async () => {
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      geolocation: { getCurrentPosition: (ok: (p: unknown) => void) => ok({ coords: { longitude: -78.1, latitude: -8.2 } }) }
+    })
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick&territory=community:c9', RELACIONISTA, EQUIPO, [
+      { path: '/sgspe/territory/locate', body: { ...UBICADOS, community: null } },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'ASAMBLEA' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.click(await screen.findByRole('button', { name: 'Usar la ubicación del teléfono' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Usar estos lugares' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Más FEMENINO · AIDS' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+    expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).toMatchObject({ attributes: { locality: 'l1', community: 'c9' } })
+  })
+
+  it('el punto marcado en el mapa de S24 viaja como ubicación de la interacción', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, [{ path: '/sgspe/territory/locate', body: UBICADOS }, ...rutas()])
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'ASAMBLEA' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '2026-10-06T10:30')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Pulsar en el mapa' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+    expect(JSON.stringify(red.a('POST', '/objects/engagement/records')[0].cuerpo)).toContain('[-78.5,-7.9]')
   })
 
   const TRANSICION = '/objects/engagement/records/e9/transitions/register_held_unplanned'

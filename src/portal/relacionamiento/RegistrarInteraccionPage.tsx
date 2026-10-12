@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useFieldArray, useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -24,6 +24,8 @@ import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { conModo } from './modos'
 import { GuardadoParcial, useGuardarInteraccion, type NuevaInteraccion } from './guardarInteraccion'
 import { RegistroRapido } from './RegistroRapido'
+import { Mapa } from '../mapa/Mapa'
+import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
 
 // S24 · registrar interacción (screens.md §6, flujos 4 y 5): cinco pasos con participantes sin pedir datos personales que
 // no hacen falta (filas de persona o de grupo sin nombres, con personas ≥ 1) y totales en vivo; al final "Guardar como
@@ -143,6 +145,26 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   const v = useWatch({ control }) as Valores
   const localidad = useRegistro('locality', v.locality || undefined)
   const comunidad = useRegistro('community', v.community || undefined)
+  // el punto de la interacción marcado en el mapa del paso «Lugar» (decisión 20 del plan 6.3): propone sus lugares y viaja como
+  // location (si la cuenta la escribe; geometriasDeEscritura lo decide)
+  const [punto, setPunto] = useState<[number, number] | null>(null)
+  const capaDelPunto = useMemo(
+    () =>
+      punto
+        ? [
+            {
+              id: 'punto',
+              color: '--sg-primary',
+              seleccionable: false,
+              datos: {
+                type: 'FeatureCollection' as const,
+                features: [{ type: 'Feature' as const, geometry: { type: 'Point' as const, coordinates: punto }, properties: { __id: 'punto' } }]
+              }
+            }
+          ]
+        : [],
+    [punto]
+  )
   const asistentes = (v.participantes ?? []).filter((p) => p.attended)
   const total = asistentes.reduce((s, p) => s + (Number(p.represented_people_count) || 0), 0)
   const porSexo = (sexo: string) => asistentes.filter((p) => p.sex === sexo).reduce((s, p) => s + (Number(p.represented_people_count) || 0), 0)
@@ -204,6 +226,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
           // abierta desde una visita de campo (S26): la interacción queda en esa visita
           field_visit: busqueda.get('field_visit') ?? ''
         },
+        ubicacion: punto ? { type: 'Point', coordinates: punto } : null,
         grupos: valores.grupos,
         temas: valores.temas,
         participantes: valores.participantes.map(({ tipo, ...p }) => ({
@@ -286,6 +309,24 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                   alElegir={(r) => setValue('community', r.id)}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sg-label font-medium">{t('ubicar.mapa')}</p>
+              <p className="text-sg-caption text-sg-text-muted">{t('ubicar.ayuda')}</p>
+              <Mapa
+                etiqueta={t('ubicar.mapa')}
+                className="relative h-56 w-full overflow-hidden rounded-sg-lg border border-sg-border"
+                capas={capaDelPunto}
+                alPulsar={setPunto}
+              />
+              {punto ? <p className="text-sg-caption">{t('ubicar.punto', { lat: punto[1].toFixed(5), lon: punto[0].toFixed(5) })}</p> : null}
+              <LugaresDelPunto
+                punto={punto}
+                alUsar={({ locality, community }) => {
+                  if (locality) setValue('locality', locality.id)
+                  if (community) setValue('community', community.id)
+                }}
+              />
             </div>
             <fieldset className="space-y-1">
               <legend className="text-sg-label font-medium">{t('relacionamiento.registro.grupos')}</legend>
