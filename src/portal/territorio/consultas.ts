@@ -286,6 +286,7 @@ export function useResumenDelArea(area: string) {
   return useQuery({
     queryKey: ['area-summary', area],
     queryFn: () => pedir<ResumenDelArea>(`/sgspe/areas-of-influence/${encodeURIComponent(area)}/summary`),
+    enabled: Boolean(area),
     retry: false
   })
 }
