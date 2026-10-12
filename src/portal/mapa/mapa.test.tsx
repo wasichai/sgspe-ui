@@ -254,6 +254,131 @@ describe('MapaImpl', () => {
     expect(linea.paint['line-dasharray']).toEqual([6, 3])
     expect(colorDe('#5f5a6b')).toBe('#5f5a6b')
   })
+
+  const URL_WMS = 'https://sgspe.example/api/sgspe/territory/wms?service=WMS&version=1.1.1&request=GetMap&layers=t_c&styles=sgspe-lyr-05'
+
+  it('una capa WMS es un ráster de wmsTileUrl debajo de las capas GeoJSON, y se quita al apagarla', async () => {
+    const { rerender } = render(
+      <MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-02', datos: localidades, color: '#2b5f8f', seleccionable: true }]} wms={[{ id: 'LYR-05', url: URL_WMS }]} />
+    )
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    const fuente = mapa.fuentes.get('wms:LYR-05')!
+    expect(fuente.opciones.type).toBe('raster')
+    expect(fuente.opciones.tileSize).toBe(256)
+    const tesela = (fuente.opciones.tiles as string[])[0]
+    expect(tesela).toContain('bbox={bbox-epsg-3857}')
+    expect(tesela).toContain('layers=t_c')
+    expect(tesela).toContain('styles=sgspe-lyr-05')
+    expect(tesela).toContain('version=1.1.1')
+    expect(mapa.capas.find((c) => c.id === 'wms:LYR-05')).toMatchObject({ type: 'raster', antes: 'LYR-02-relleno' })
+    // otra opacidad se repinta; otra URL rehace la fuente, sin duplicar la capa
+    const capas = [{ id: 'LYR-02', datos: localidades, color: '#2b5f8f', seleccionable: true }]
+    rerender(<MapaImpl etiqueta="Mapa" capas={capas} wms={[{ id: 'LYR-05', url: URL_WMS, opacidad: 0.5 }]} />)
+    expect(mapa.setPaintProperty).toHaveBeenCalledWith('wms:LYR-05', 'raster-opacity', 0.5)
+    rerender(<MapaImpl etiqueta="Mapa" capas={capas} wms={[{ id: 'LYR-05', url: URL_WMS.replace('t_c', 't_d') }]} />)
+    expect((mapa.fuentes.get('wms:LYR-05')!.opciones.tiles as string[])[0]).toContain('layers=t_d')
+    expect(mapa.capas.filter((c) => c.id === 'wms:LYR-05')).toHaveLength(1)
+    rerender(<MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-02', datos: localidades, color: '#2b5f8f', seleccionable: true }]} wms={[]} />)
+    expect(mapa.fuentes.has('wms:LYR-05')).toBe(false)
+    expect(mapa.capas.some((c) => c.id === 'wms:LYR-05')).toBe(false)
+  })
+
+  it('transformRequest firma con la función de la prop y una tesela WMS que falla avisa con su estado', async () => {
+    const firmar = vi.fn((url: string) => ({ url, headers: { Authorization: 'Bearer t' } }))
+    const fallo = vi.fn()
+    render(<MapaImpl etiqueta="Mapa" capas={[]} wms={[{ id: 'LYR-05', url: URL_WMS }]} firmar={firmar} alFallarWms={fallo} />)
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    const transformar = mapa.opciones.transformRequest as (url: string) => unknown
+    expect(transformar(URL_WMS)).toEqual({ url: URL_WMS, headers: { Authorization: 'Bearer t' } })
+    mapa.emitir('error', { sourceId: 'wms:LYR-05', error: { status: 503 } })
+    expect(fallo).toHaveBeenCalledWith('LYR-05', 503)
+    mapa.emitir('error', { sourceId: 'LYR-02', error: { status: 500 } })
+    mapa.emitir('error', { error: new Error('estilo') })
+    expect(fallo).toHaveBeenCalledTimes(1)
+    // un corte de red no trae estado
+    mapa.emitir('error', { sourceId: 'wms:LYR-05', error: new Error('red') })
+    expect(fallo).toHaveBeenLastCalledWith('LYR-05', null)
+  })
+
+  it('sin firma, transformRequest deja la URL tal cual', () => {
+    render(<MapaImpl etiqueta="Mapa" capas={[]} />)
+    const transformar = Falso.todos[0].opciones.transformRequest as (url: string) => unknown
+    expect(transformar('https://mapas.example/estilo.json')).toEqual({ url: 'https://mapas.example/estilo.json' })
+  })
+
+  it('una capa invisible no se ve pero se elige, y muestra el borde de lo elegido', async () => {
+    const elegir = vi.fn()
+    const { rerender } = render(
+      <MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-02', datos: localidades, color: '#2b5f8f', seleccionable: true, invisible: true }]} alSeleccionar={elegir} />
+    )
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    expect(mapa.capas.find((c) => c.id === 'LYR-02-relleno')!.paint['fill-opacity']).toBe(0)
+    expect(mapa.capas.find((c) => c.id === 'LYR-02-punto')!.paint['circle-opacity']).toBe(0)
+    expect(mapa.capas.find((c) => c.id === 'LYR-02-linea')!.paint['line-opacity']).toEqual([
+      'case',
+      ['any', ['==', ['get', '__id'], ''], ['==', ['get', '__targetId'], '']],
+      1,
+      0
+    ])
+    mapa.emitir('click:LYR-02-punto', { features: [{ properties: { __id: 'l1', __object: 'locality' } }] })
+    expect(elegir).toHaveBeenCalledWith('l1', 'LYR-02', 'locality')
+    // la selección repinta el borde de lo elegido en la capa invisible
+    rerender(
+      <MapaImpl
+        etiqueta="Mapa"
+        capas={[{ id: 'LYR-02', datos: localidades, color: '#2b5f8f', seleccionable: true, invisible: true }]}
+        seleccion="l1"
+        alSeleccionar={elegir}
+      />
+    )
+    expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-02-punto', 'circle-stroke-opacity', [
+      'case',
+      ['any', ['==', ['get', '__id'], 'l1'], ['==', ['get', '__targetId'], 'l1']],
+      1,
+      0
+    ])
+    // si el WMS se cae, la misma capa vuelve a verse sin dibujarla de nuevo
+    mapa.setPaintProperty.mockClear()
+    rerender(
+      <MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-02', datos: localidades, color: '#2b5f8f', seleccionable: true }]} seleccion="l1" alSeleccionar={elegir} />
+    )
+    expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-02-relleno', 'fill-opacity', 0.15)
+    expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-02-linea', 'line-opacity', 1)
+    expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-02-punto', 'circle-opacity', 1)
+    expect(mapa.capas.filter((c) => c.id === 'LYR-02-relleno')).toHaveLength(1)
+  })
+
+  it('el calor es una capa heatmap con la rampa de la paleta, pesada por el conteo, debajo de las capas, y se quita sin calor', async () => {
+    const celdas: Coleccion = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-78.5, -7.9] }, properties: { __id: 'l1', count: 5 } }]
+    }
+    const calor = { datos: celdas, maximo: 5, colores: ['#f3eee2', '#a33a2a'] }
+    const capas = [{ id: 'LYR-02', datos: localidades, color: '#2b5f8f', seleccionable: true }]
+    const { rerender } = render(<MapaImpl etiqueta="Mapa" capas={capas} calor={calor} />)
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    const capa = mapa.capas.find((c) => c.id === 'calor')!
+    expect(capa.type).toBe('heatmap')
+    expect(capa.antes).toBe('LYR-02-relleno')
+    expect(capa.paint['heatmap-weight']).toEqual(['interpolate', ['linear'], ['get', 'count'], 0, 0, 5, 1])
+    expect(capa.paint['heatmap-color']).toEqual(['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.5, '#f3eee2', 1, '#a33a2a'])
+    expect(mapa.fuentes.get('calor')!.data).toBe(celdas)
+    rerender(<MapaImpl etiqueta="Mapa" capas={capas} calor={null} />)
+    expect(mapa.capas.some((c) => c.id === 'calor')).toBe(false)
+    expect(mapa.fuentes.has('calor')).toBe(false)
+  })
+
+  it('un clic en el mapa entrega el punto pulsado', async () => {
+    const pulsar = vi.fn()
+    render(<MapaImpl etiqueta="Mapa" capas={[]} alPulsar={pulsar} />)
+    await act(async () => cargarMapas())
+    Falso.todos[0].emitir('click', { lngLat: { lng: -78.5, lat: -7.9 } })
+    expect(pulsar).toHaveBeenCalledWith([-78.5, -7.9])
+  })
 })
 
 // la barra de coordenadas en el CRS de trabajo: comparado con las fórmulas de Snyder (1987), calculadas aparte

@@ -7,13 +7,14 @@ import {
   type ExpressionSpecification,
   type GeoJSONSource,
   type MapLayerMouseEvent,
+  type MapMouseEvent,
   type StyleSpecification
 } from 'maplibre-gl'
-import type { BasemapSpec } from '@wasichai/gis'
+import { WMS_TILE_SIZE, wmsTileUrl, type BasemapSpec } from '@wasichai/gis'
 import { useEffect, useRef, useState } from 'react'
 import { destinoDe, idDeElemento, MIEMBRO, type Coleccion } from './api'
 import { alCambiarTema, colorDe } from './colores'
-import type { MapaProps } from './Mapa'
+import type { CapaDibujada, MapaProps } from './Mapa'
 import { SIN_MAPA_BASE } from './mapaBase'
 import { trabajadorDelMapa } from './trabajador'
 
@@ -56,6 +57,31 @@ const elegido = (seleccion: string | null | undefined): ExpressionSpecification 
   ['==', ['get', '__targetId'], seleccion ?? '']
 ]
 
+// las fuentes y capas WMS llevan este prefijo: el error de una tesela se reconoce por su sourceId
+const PREFIJO_WMS = 'wms:'
+const CALOR = 'calor'
+
+// la opacidad de cada dibujo de una capa: una invisible (decisión 7 del plan 6.3) deja ver solo el borde de lo elegido, sobre
+// la tesela WMS que la dibuja
+const soloLoElegido = (seleccion: string | null | undefined): ExpressionSpecification => ['case', elegido(seleccion), 1, 0]
+function opacidadesDe(capa: CapaDibujada, seleccion: string | null | undefined) {
+  const invisible = capa.invisible === true
+  return {
+    relleno: invisible ? 0 : (capa.relleno ?? 0.15),
+    linea: invisible ? soloLoElegido(seleccion) : 1,
+    punto: invisible ? 0 : 1,
+    bordeDelPunto: invisible ? soloLoElegido(seleccion) : 1
+  }
+}
+
+function pintarVisibilidad(instancia: MapLibreMap, capa: CapaDibujada, seleccion: string | null | undefined) {
+  const o = opacidadesDe(capa, seleccion)
+  instancia.setPaintProperty(`${capa.id}-relleno`, 'fill-opacity', o.relleno)
+  instancia.setPaintProperty(`${capa.id}-linea`, 'line-opacity', o.linea)
+  instancia.setPaintProperty(`${capa.id}-punto`, 'circle-opacity', o.punto)
+  instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-opacity', o.bordeDelPunto)
+}
+
 function encuadreDe(colecciones: Coleccion[]): [[number, number], [number, number]] | null {
   let [oeste, sur, este, norte] = [Infinity, Infinity, -Infinity, -Infinity]
   const visitar = (valor: unknown): void => {
@@ -88,15 +114,32 @@ const identidad = (datos: Coleccion): number => {
   return numero
 }
 
-export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, alMoverVista, alMoverCursor, alCapturar, basemap = SIN_MAPA_BASE }: MapaProps) {
+export default function MapaImpl({
+  etiqueta,
+  capas,
+  seleccion,
+  alSeleccionar,
+  alMoverVista,
+  alMoverCursor,
+  alCapturar,
+  basemap = SIN_MAPA_BASE,
+  wms,
+  alFallarWms,
+  calor,
+  alPulsar,
+  firmar
+}: MapaProps) {
   const contenedor = useRef<HTMLDivElement>(null)
   const mapa = useRef<MapLibreMap | null>(null)
   const [listo, setListo] = useState(false)
   // en reposo: MapLibre terminó de pedir y dibujar (idle) y no hay datos en camino. lo lee e2e/hilo.spec.ts para afirmar que no
   // se pidió nada externo sin esperar un plazo fijo
   const [reposo, setReposo] = useState(false)
-  const ultimo = useRef({ alSeleccionar, alMoverVista, alMoverCursor })
-  ultimo.current = { alSeleccionar, alMoverVista, alMoverCursor }
+  const ultimo = useRef({ alSeleccionar, alMoverVista, alMoverCursor, alFallarWms, alPulsar, firmar })
+  ultimo.current = { alSeleccionar, alMoverVista, alMoverCursor, alFallarWms, alPulsar, firmar }
+  // las capas WMS puestas (con la URL de su fuente) y las capas GeoJSON dibujadas invisibles
+  const conWms = useRef(new globalThis.Map<string, string>())
+  const invisibles = useRef(new Set<string>())
   const dibujadas = useRef(new Set<string>())
   // las capas que dibujan además los miembros de las áreas (LYR-13)
   const conMiembros = useRef(new Set<string>())
@@ -117,12 +160,24 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
       center: [-75.5, -9.5],
       zoom: 5,
       attributionControl: { compact: true },
-      canvasContextAttributes: { preserveDrawingBuffer: true }
+      canvasContextAttributes: { preserveDrawingBuffer: true },
+      // el token de wasichai solo a las teselas del proxy (firmaDeWms); lo demás sale tal cual
+      transformRequest: (url: string) => ultimo.current.firmar?.(url) ?? { url }
     })
     instancia.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     instancia.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
     instancia.on('idle', () => setReposo(true))
     instancia.on('dataloading', () => setReposo(false))
+    // una tesela WMS que falla (GeoServer caído, 503; sin permiso, 403; un parámetro rechazado, 400 o 422): la página decide si
+    // apaga el WMS. el error de una tesela trae sourceId y el AJAXError con su status; el de un estilo, no. una tesela con 404
+    // no llega aquí: MapLibre la calla
+    instancia.on('error', (evento) => {
+      const e = evento as unknown as { sourceId?: string; error?: { status?: unknown } }
+      const fuente = e.sourceId
+      if (!fuente?.startsWith(PREFIJO_WMS)) return
+      const estado = typeof e.error?.status === 'number' ? e.error.status : null
+      ultimo.current.alFallarWms?.(fuente.slice(PREFIJO_WMS.length), estado)
+    })
     instancia.on('load', () => {
       if (mapa.current !== instancia) return
       const informar = () => {
@@ -132,6 +187,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
       instancia.on('moveend', informar)
       instancia.on('mousemove', (e) => ultimo.current.alMoverCursor?.([e.lngLat.lng, e.lngLat.lat]))
       instancia.on('mouseout', () => ultimo.current.alMoverCursor?.(null))
+      instancia.on('click', (e: MapMouseEvent) => ultimo.current.alPulsar?.([e.lngLat.lng, e.lngLat.lat]))
       informar()
       setListo(true)
     })
@@ -153,6 +209,8 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
       conMiembros.current.clear()
       conClic.current.clear()
       puestos.current.clear()
+      conWms.current.clear()
+      invisibles.current.clear()
       encuadrado.current = false
       encuadradoA.current = null
       // StrictMode monta, desmonta y monta de nuevo: la instancia nueva vuelve a cargar y a dibujar sus capas
@@ -162,7 +220,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
   }, [])
 
   // las capas: se agregan las nuevas, se actualizan sus datos y se quitan las que se apagaron
-  const clave = capas.map((c) => `${c.id}:${identidad(c.datos)}`).join('|')
+  const clave = capas.map((c) => `${c.id}:${identidad(c.datos)}:${c.invisible ? 1 : 0}`).join('|')
   useEffect(() => {
     const instancia = mapa.current
     if (!instancia || !listo) return
@@ -174,6 +232,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
       dibujadas.current.delete(id)
       conMiembros.current.delete(id)
       puestos.current.delete(id)
+      invisibles.current.delete(id)
     }
     for (const capa of capas) {
       const color = colorDe(capa.color)
@@ -183,8 +242,15 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
           ;(instancia.getSource(capa.id) as GeoJSONSource).setData(capa.datos as never)
           puestos.current.set(capa.id, capa.datos)
         }
+        // se volvió invisible (llegó el WMS) o visible (el WMS se cayó): se repinta sin dibujarla de nuevo
+        if (invisibles.current.has(capa.id) !== (capa.invisible === true)) {
+          pintarVisibilidad(instancia, capa, seleccion)
+          if (capa.invisible) invisibles.current.add(capa.id)
+          else invisibles.current.delete(capa.id)
+        }
         continue
       }
+      const opacidad = opacidadesDe(capa, seleccion)
       puestos.current.set(capa.id, capa.datos)
       // con miembros, los dibujos de la capa son solo de sus registros y los miembros van en los suyos
       const propios = (filtro: ExpressionSpecification): ExpressionSpecification => (capa.miembros ? ['all', filtro, NO_ES_MIEMBRO] : filtro)
@@ -194,14 +260,19 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
         type: 'fill',
         source: capa.id,
         filter: propios(POLIGONOS),
-        paint: { 'fill-color': colorDe(capa.colorDeRelleno ?? capa.color), 'fill-opacity': capa.relleno ?? 0.15 }
+        paint: { 'fill-color': colorDe(capa.colorDeRelleno ?? capa.color), 'fill-opacity': opacidad.relleno }
       })
       instancia.addLayer({
         id: `${capa.id}-linea`,
         type: 'line',
         source: capa.id,
         filter: propios(LINEAS),
-        paint: { 'line-color': color, 'line-width': ['case', elegido(seleccion), 2.5, 1.2], ...(capa.trazo ? { 'line-dasharray': capa.trazo } : {}) }
+        paint: {
+          'line-color': color,
+          'line-width': ['case', elegido(seleccion), 2.5, 1.2],
+          'line-opacity': opacidad.linea,
+          ...(capa.trazo ? { 'line-dasharray': capa.trazo } : {})
+        }
       })
       instancia.addLayer({
         id: `${capa.id}-punto`,
@@ -211,8 +282,10 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
         paint: {
           'circle-color': color,
           'circle-radius': ['case', elegido(seleccion), 8, 5],
+          'circle-opacity': opacidad.punto,
           'circle-stroke-color': colorDe('--sg-surface'),
-          'circle-stroke-width': 1.5
+          'circle-stroke-width': 1.5,
+          'circle-stroke-opacity': opacidad.bordeDelPunto
         }
       })
       if (capa.miembros) {
@@ -253,6 +326,7 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
           })
         }
       }
+      if (capa.invisible) invisibles.current.add(capa.id)
       dibujadas.current.add(capa.id)
     }
     if (!encuadrado.current) {
@@ -273,6 +347,9 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
         instancia.setPaintProperty(`${id}-${prefijo}linea`, 'line-width', ['case', elegido(seleccion), 2.5, 1.2])
         instancia.setPaintProperty(`${id}-${prefijo}punto`, 'circle-radius', ['case', elegido(seleccion), 8, 5])
       }
+      // una capa invisible muestra solo el borde de lo elegido
+      const capa = invisibles.current.has(id) ? capas.find((c) => c.id === id) : undefined
+      if (capa) pintarVisibilidad(instancia, capa, seleccion)
     }
   }, [listo, seleccion, clave])
 
@@ -292,6 +369,70 @@ export default function MapaImpl({ etiqueta, capas, seleccion, alSeleccionar, al
     encuadradoA.current = seleccion
     instancia.fitBounds(encuadre, { padding: 80, maxZoom: 16, duration: 300 })
   }, [listo, seleccion, clave])
+
+  // la primera capa GeoJSON dibujada: el WMS y el calor van debajo de ella (MapLibre inserta antes de esa capa)
+  const debajoDeLasCapas = (): string | undefined => {
+    const primera = [...dibujadas.current][0]
+    return primera ? `${primera}-relleno` : undefined
+  }
+
+  // las capas WMS: se agregan las nuevas y se quitan las apagadas (o todas, si el WMS se cayó)
+  const claveWms = (wms ?? []).map((w) => `${w.id}:${w.url}:${w.opacidad ?? 1}`).join('|')
+  useEffect(() => {
+    const instancia = mapa.current
+    if (!instancia || !listo) return
+    const vigentes = new globalThis.Map((wms ?? []).map((w) => [w.id, w]))
+    for (const id of [...conWms.current.keys()]) {
+      if (vigentes.has(id)) continue
+      instancia.removeLayer(`${PREFIJO_WMS}${id}`)
+      instancia.removeSource(`${PREFIJO_WMS}${id}`)
+      conWms.current.delete(id)
+    }
+    for (const w of vigentes.values()) {
+      const id = `${PREFIJO_WMS}${w.id}`
+      const puesta = conWms.current.get(w.id)
+      // la misma URL: otra opacidad solo se repinta; otra URL (otras capas publicadas de la misma LYR) rehace la fuente
+      if (puesta === w.url) {
+        instancia.setPaintProperty(id, 'raster-opacity', w.opacidad ?? 1)
+        continue
+      }
+      if (puesta !== undefined) {
+        instancia.removeLayer(id)
+        instancia.removeSource(id)
+      }
+      instancia.addSource(id, { type: 'raster', tiles: [wmsTileUrl(w.url, WMS_TILE_SIZE)], tileSize: WMS_TILE_SIZE })
+      instancia.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': w.opacidad ?? 1 } }, debajoDeLasCapas())
+      conWms.current.set(w.id, w.url)
+    }
+  }, [listo, claveWms, clave])
+
+  // el calor: una capa heatmap pesada por el conteo de cada localidad, con la rampa de la paleta
+  const claveCalor = calor ? `${identidad(calor.datos)}:${calor.maximo}:${calor.colores.join(',')}` : ''
+  useEffect(() => {
+    const instancia = mapa.current
+    if (!instancia || !listo) return
+    if (instancia.getSource(CALOR)) {
+      instancia.removeLayer(CALOR)
+      instancia.removeSource(CALOR)
+    }
+    if (!calor) return
+    const pasos = calor.colores.flatMap((color, i) => [(i + 1) / calor.colores.length, color])
+    instancia.addSource(CALOR, { type: 'geojson', data: calor.datos as never })
+    instancia.addLayer(
+      {
+        id: CALOR,
+        type: 'heatmap',
+        source: CALOR,
+        paint: {
+          'heatmap-weight': ['interpolate', ['linear'], ['get', 'count'], 0, 0, Math.max(1, calor.maximo), 1],
+          'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', ...pasos] as ExpressionSpecification,
+          'heatmap-radius': 32,
+          'heatmap-opacity': 0.8
+        }
+      },
+      debajoDeLasCapas()
+    )
+  }, [listo, claveCalor])
 
   // otro tema repinta las mismas capas con sus tokens
   useEffect(() => {
