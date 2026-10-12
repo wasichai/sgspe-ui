@@ -23,6 +23,7 @@ import {
   useAnalisis,
   useCalidad,
   useConcentracion,
+  useResumenDelArea,
   useFichaTerritorial,
   useRegistrosDeLaZona,
   useRevisarGeometria,
@@ -80,6 +81,7 @@ describe('consultas de F6', () => {
         <Sonda usar={() => useFichaTerritorial('community', null)} />
         <Sonda usar={() => useRegistrosDeLaZona('locality', 'l1', null)} />
         <Sonda usar={() => useConcentracion(null, {})} />
+        <Sonda usar={() => useResumenDelArea('')} />
       </>
     )
     await new Promise((r) => setTimeout(r, 20))
