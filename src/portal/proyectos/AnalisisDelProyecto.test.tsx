@@ -275,4 +275,30 @@ describe('S09 · análisis', () => {
     expect(dos).toHaveTextContent('4.2')
     expect(red.a('GET', `${RUTA}/nearby-conflicts`)[0].ruta).toContain('distanceKm=5')
   })
+
+  // revisión final del plan 6.3, m9: un backend sin el plan 6.2a (404 sin código) deja S09 como en F2
+  it('un 404 sin código oculta el panel; PROJECT_NOT_FOUND, con su código, se dice en la tabla', async () => {
+    fetch = mockFetch([{ path: `${RUTA}/component-parcels`, status: 404, body: { title: 'Not Found', status: 404 } }])
+    red = espiarRed()
+    panel()
+    await waitFor(() => expect(red!.a('GET', `${RUTA}/component-parcels`)).toHaveLength(1))
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Análisis' })).not.toBeInTheDocument())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  // revisión final del plan 6.3, m7: un registro sin etiqueta legible se nombra con un texto, nunca con su id
+  it('un conflicto sin etiqueta se nombra «Registro sin nombre», no con su id', async () => {
+    fetch = mockFetch([
+      sinPredios,
+      {
+        path: `${RUTA}/nearby-conflicts`,
+        body: { items: [{ object: 'incident', id: '5c7e0d4b-0000-4000-8000-000000000001', label: null, distanceM: 2500 }], truncated: false }
+      }
+    ])
+    panel()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Conflictos cercanos' }))
+    const tabla = await screen.findByRole('table', { name: 'Conflictos cercanos' })
+    expect(within(tabla).getByRole('link', { name: 'Registro sin nombre' })).toHaveAttribute('href', '/r/incident/5c7e0d4b-0000-4000-8000-000000000001')
+    expect(within(tabla).queryByText(/5c7e0d4b/)).not.toBeInTheDocument()
+  })
 })

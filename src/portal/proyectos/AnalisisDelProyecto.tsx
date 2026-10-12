@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Campo } from '../componentes/Campo'
 import { useMensajeDeError, type MensajesPropios } from '../componentes/errores'
-import { Cargando, esProhibido, NoDisponible, Restringido } from '../componentes/Estados'
+import { Cargando, esIlegible, esProhibido, NoDisponible, Restringido } from '../componentes/Estados'
 import { rutaParaAbrir } from '../datos/fichas'
+import { codigoDelError } from '../datos/http'
 import { NS, numeroPe } from '../i18n'
 import {
   useAnalisis,
@@ -42,6 +43,10 @@ type Resaltar = (objeto: string, id: string, capa: string | null) => void
 
 export function AnalisisDelProyecto({ proyecto, alResaltar }: { proyecto: string; alResaltar: Resaltar }) {
   const { t } = useTranslation(NS)
+  // la primera pestaña dice si el backend tiene las consultas de F6 (es la misma lectura, no otra): un 404 sin código es un
+  // backend sin el plan 6.2a y la pantalla sigue como en F2, sin el panel. PROJECT_NOT_FOUND trae su código y se dice en la tabla
+  const primera = useAnalisis<PredioAfectado>(proyecto, 'component-parcels')
+  if (primera.isError && esIlegible(primera.error) && !codigoDelError(primera.error)) return null
   return (
     <section aria-label={t('analisisDelProyecto.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="text-sg-h3 font-semibold">{t('analisisDelProyecto.titulo')}</h2>
@@ -169,7 +174,10 @@ function Predios({ proyecto, alResaltar }: { proyecto: string; alResaltar: Resal
           <Td className="tabular-nums">{cifra(x.areaHa)}</Td>
           <Td className="tabular-nums">{cifra(x.lengthM)}</Td>
           <Td>
-            <Ver nombre={x.parcel.code ?? x.parcel.id} alVer={() => alResaltar('land_parcel', x.parcel.id, capaDePredio(x.parcel.tenureType))} />
+            <Ver
+              nombre={x.parcel.code ?? t('analisisDelProyecto.sinNombre')}
+              alVer={() => alResaltar('land_parcel', x.parcel.id, capaDePredio(x.parcel.tenureType))}
+            />
           </Td>
         </tr>
       )}
@@ -194,7 +202,7 @@ function Comunal({ proyecto, alResaltar }: { proyecto: string; alResaltar: Resal
           <Td className="tabular-nums">{cifra(x.lengthM)}</Td>
           <Td>
             <Ver
-              nombre={x.component.code ?? x.component.id}
+              nombre={x.component.code ?? t('analisisDelProyecto.sinNombre')}
               alVer={() => alResaltar('project_component', x.component.id, capaDeComponente(x.component.componentType))}
             />
           </Td>
@@ -276,7 +284,7 @@ function Sensibles({ proyecto, alResaltar }: { proyecto: string; alResaltar: Res
               <Td>{x.feature.featureType ?? '—'}</Td>
               <Td className="tabular-nums">{cifra(x.distanceM)}</Td>
               <Td>
-                <Ver nombre={x.feature.name ?? x.feature.id} alVer={() => alResaltar('environmental_feature', x.feature.id, 'LYR-08')} />
+                <Ver nombre={x.feature.name ?? t('analisisDelProyecto.sinNombre')} alVer={() => alResaltar('environmental_feature', x.feature.id, 'LYR-08')} />
               </Td>
             </tr>
           )}
@@ -306,7 +314,7 @@ function Buffer({ proyecto, alResaltar }: { proyecto: string; alResaltar: Resalt
               <Td>{x.name ?? '—'}</Td>
               <Td>{x.localityType ?? '—'}</Td>
               <Td>
-                <Ver nombre={x.name ?? x.id} alVer={() => alResaltar('locality', x.id, capaDeLocalidad(x.localityType))} />
+                <Ver nombre={x.name ?? t('analisisDelProyecto.sinNombre')} alVer={() => alResaltar('locality', x.id, capaDeLocalidad(x.localityType))} />
               </Td>
             </tr>
           )}
@@ -334,7 +342,7 @@ function Concesiones({ proyecto, alResaltar }: { proyecto: string; alResaltar: R
           </Td>
           <Td className="tabular-nums">{cifra(x.areaHa)}</Td>
           <Td>
-            <Ver nombre={x.name ?? x.id} alVer={() => alResaltar(x.object, x.id, capaDeTerritorio(x.object, x.localityType))} />
+            <Ver nombre={x.name ?? t('analisisDelProyecto.sinNombre')} alVer={() => alResaltar(x.object, x.id, capaDeTerritorio(x.object, x.localityType))} />
           </Td>
         </tr>
       )}
@@ -360,7 +368,7 @@ function Conflictos({ proyecto }: { proyecto: string }) {
               <Td>
                 {/* /r/ lee el registro como quien mira y salta a su ficha, o dice «Registro reservado» */}
                 <Link to={rutaParaAbrir(x.object, x.id)} className="text-sg-primary-text underline">
-                  {x.label ?? x.id}
+                  {x.label ?? t('analisisDelProyecto.sinNombre')}
                 </Link>
               </Td>
               <Td className="tabular-nums">{x.distanceM === null ? '—' : cifra(x.distanceM / 1000)}</Td>

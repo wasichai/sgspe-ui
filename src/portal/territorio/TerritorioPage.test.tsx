@@ -416,7 +416,8 @@ describe('S12 · mapa de calor', () => {
     ).toEqual(['Localidad Ejemplo5', 'Otra Localidad Ejemplo2'])
     expect(screen.getByRole('note')).toHaveTextContent(/confidenciales/)
     expect(screen.getByText(/sin localidad ni comunidad no cuentan/)).toBeInTheDocument()
-    expect(screen.getByText('Periodo contado: del 2025-10-11 al 2026-10-10.')).toBeInTheDocument()
+    // las fechas en es-PE, como el tablero (revisión final, m8)
+    expect(screen.getByText(/^Periodo contado: del 11 oct.? 2025 al 10 oct.? 2026\.$/)).toBeInTheDocument()
   })
 
   it('sin confidentialHidden no hay nota; truncated y available:false lo dicen', async () => {

@@ -56,14 +56,15 @@ export function EstadisticasTerritoriales({ proyecto, periodo }: { proyecto: str
 function Tiles({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const unidad = indicador.unit ? ` ${indicador.unit}` : ''
-  // la categoría tal como se dice: el área por su tipo y versión (nunca el id de la clave), el tipo de miembro y la tenencia
-  // por su texto, y SIN DATO / SIN TENENCIA como etiquetas
+  // la categoría tal como se dice: el área por su tipo y versión (nunca el id de la clave), el tipo de miembro por su texto, la
+  // tenencia y los demás ENUM por su valor guardado, como en el resto del portal (ASM-025), y los marcadores del servidor SIN DATO
+  // y SIN TENENCIA como etiquetas
   const rotulo = (por: string, f: FilaDeDesglose): string => {
     if (por === 'area') return `${String(f.areaType ?? '—')} · v${String(f.versionNumber ?? '—')}`
     if (f.label) return f.label
     if (f.key === 'SIN DATO') return t('tableroTerritorial.sinDato')
+    if (f.key === 'SIN TENENCIA') return t('tableroTerritorial.sinTenencia')
     if (por === 'memberType') return t(`tableroTerritorial.tiposDeMiembro.${f.key}`, { defaultValue: f.key })
-    if (por === 'tenureType') return t(`tableroTerritorial.tenencias.${f.key}`, { defaultValue: f.key })
     return f.key
   }
   return (
@@ -72,7 +73,15 @@ function Tiles({ indicador }: { indicador: Indicador }) {
         {indicador.value === null || indicador.value === undefined ? t('tableroTerritorial.sinCifra') : `${numeroPe(indicador.value)}${unidad}`}
       </p>
       {(indicador.breakdowns ?? []).map((d) => {
-        const titulo = t(`tableroTerritorial.desgloses.${d.by}`, { defaultValue: d.by })
+        const titulo = t(`tableroTerritorial.desgloses.${d.by}`, { defaultValue: t('tableroTerritorial.desgloseGenerico') })
+        // un desglose sin filas lo dice: una tabla con solo su cabecera no distingue la falta de datos de un fallo
+        if (d.rows.length === 0)
+          return (
+            <div key={d.by}>
+              <p className="text-sg-caption text-sg-text-muted">{titulo}</p>
+              <p className="text-sm text-sg-text-muted">{t('tableroTerritorial.sinDatos')}</p>
+            </div>
+          )
         return (
           <Table key={d.by} aria-label={titulo}>
             <caption className="text-left text-sg-caption text-sg-text-muted">{titulo}</caption>

@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
-import { Cargando, esProhibido, NoDisponible } from '../componentes/Estados'
+import { Cargando, esIlegible, esProhibido, NoDisponible } from '../componentes/Estados'
+import { codigoDelError } from '../datos/http'
 import { useCrear, useDefinicion } from '../datos/registros'
 import { NS } from '../i18n'
 import { useSugerencias, type Sugerencia } from '../territorio/consultas'
@@ -39,7 +40,14 @@ export function SugerenciasDelArea({ area, editable }: { area: string; editable:
         </Campo>
       </div>
       {consulta.isPending && valido ? <Cargando /> : null}
-      {consulta.isError ? esProhibido(consulta.error) ? <NoDisponible enLista /> : <Alert tone="danger">{mensaje(consulta.error)}</Alert> : null}
+      {/* un 404 sin código es un backend sin el plan 6.2a: «No disponible», como un 403, y no un error */}
+      {consulta.isError ? (
+        esProhibido(consulta.error) || (esIlegible(consulta.error) && !codigoDelError(consulta.error)) ? (
+          <NoDisponible enLista />
+        ) : (
+          <Alert tone="danger">{mensaje(consulta.error)}</Alert>
+        )
+      ) : null}
       {consulta.data ? (
         <>
           {consulta.data.available === false ? <Alert tone="notice">{t('sugerencias.incompleto')}</Alert> : null}

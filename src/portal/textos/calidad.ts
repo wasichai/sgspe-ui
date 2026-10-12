@@ -49,7 +49,10 @@ export const ES_CALIDAD = {
     social_risk: 'Riesgo',
     incident: 'Incidente'
   },
-  vacio: 'No hay registros con este problema.',
+  // sin un objeto elegido, el servidor omite los objetos que la cuenta no lee enteros: la lista es de los que puede ver
+  vacio: 'No hay registros con este problema entre los que su cuenta puede ver.',
+  actualizando: 'Actualizando…',
+  sinNombre: 'Registro sin nombre',
   anterior: 'Anterior',
   siguiente: 'Siguiente',
   pagina: 'Página {{n}}'
@@ -105,7 +108,9 @@ export const EN_CALIDAD: typeof ES_CALIDAD = {
     social_risk: 'Risk',
     incident: 'Incident'
   },
-  vacio: 'There are no records with this problem.',
+  vacio: 'There are no records with this problem among those your account can see.',
+  actualizando: 'Updating…',
+  sinNombre: 'Unnamed record',
   anterior: 'Previous',
   siguiente: 'Next',
   pagina: 'Page {{n}}'

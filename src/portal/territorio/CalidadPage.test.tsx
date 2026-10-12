@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -95,5 +95,62 @@ describe('S63 · calidad de datos', () => {
     const siguiente = await screen.findByRole('button', { name: 'Siguiente' })
     await userEvent.click(siguiente)
     await waitFor(() => expect(red!.llamadas.some((l) => l.ruta.includes('page=1'))).toBe(true))
+  })
+
+  // revisión final del plan 6.3, m4: una revisión puede tardar segundos; volver a ella no la relanza y otra página no vacía la tabla
+  it('volver a una revisión ya vista no la pide de nuevo, y «Siguiente» deja la página anterior mientras llega la otra', async () => {
+    let liberar: (() => void) | null = null
+    fetch = mockFetch([{ path: '/objects/project/records', body: pagina([PROYECTO_UTM]) }])
+    red = espiarRed([
+      {
+        path: '/sgspe/territory/data-quality',
+        responder: async (l) => {
+          if (l.ruta.includes('page=1')) await new Promise<void>((r) => (liberar = r))
+          return Response.json({ ...CALIDAD_INVALIDAS, check: l.ruta.includes('NO_TERRITORY') ? 'NO_TERRITORY' : 'INVALID', hasNext: true })
+        }
+      }
+    ])
+    abrir()
+    const pedidas = (check: string) => red!.a('GET', '/sgspe/territory/data-quality').filter((l) => l.ruta.includes(`check=${check}`))
+    await screen.findByRole('table', { name: 'Geometrías inválidas' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Sin relación territorial' }))
+    await screen.findByRole('table', { name: 'Sin relación territorial' })
+    // otra revisión no muestra las filas de la anterior como si fueran suyas
+    await userEvent.click(screen.getByRole('tab', { name: 'Geometrías inválidas' }))
+    await screen.findByRole('table', { name: 'Geometrías inválidas' })
+    expect(pedidas('INVALID')).toHaveLength(1)
+    expect(pedidas('NO_TERRITORY')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await waitFor(() => expect(liberar).not.toBeNull())
+    expect(screen.getByRole('status')).toHaveTextContent('Actualizando…')
+    expect(screen.getByRole('table', { name: 'Geometrías inválidas' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('link', { name: 'Comunidad Ejemplo' })).toBeInTheDocument()
+    liberar!()
+    await waitFor(() => expect(screen.queryByText('Actualizando…')).not.toBeInTheDocument())
+  })
+
+  // m6 y m7: la lista vacía se dice entre lo que la cuenta ve, y un registro sin etiqueta no muestra su id
+  it('sin filas lo dice entre lo que la cuenta puede ver; un registro sin etiqueta se nombra con un texto', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([PROYECTO_UTM]) },
+      { path: '/sgspe/territory/data-quality', body: { ...CALIDAD_INVALIDAS, content: [] } }
+    ])
+    abrir()
+    expect(await screen.findByText('No hay registros con este problema entre los que su cuenta puede ver.')).toBeInTheDocument()
+    fetch.restore()
+    cleanup()
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([PROYECTO_UTM]) },
+      {
+        path: '/sgspe/territory/data-quality',
+        body: {
+          ...CALIDAD_INVALIDAS,
+          content: [{ object: 'community', id: '5c7e0d4b-0000-4000-8000-000000000001', label: null, field: 'territory', detail: null }]
+        }
+      }
+    ])
+    abrir()
+    expect(await screen.findByRole('link', { name: 'Registro sin nombre' })).toHaveAttribute('href', '/r/community/5c7e0d4b-0000-4000-8000-000000000001')
+    expect(screen.queryByText(/5c7e0d4b/)).not.toBeInTheDocument()
   })
 })

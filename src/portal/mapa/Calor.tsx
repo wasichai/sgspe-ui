@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { CONTROL } from '../componentes/Campo'
 import { Cargando, ErrorDeCarga, esProhibido, NoDisponible } from '../componentes/Estados'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
-import { NS, numeroPe } from '../i18n'
+import { diaPe, NS, numeroPe } from '../i18n'
 import { OBJETOS_DE_CALOR, type Concentracion, type ObjetoDeCalor } from '../territorio/consultas'
 import type { CapaDeCalor } from './Mapa'
 import { RAMPA_DE_CALOR } from './estilos'
@@ -71,7 +71,7 @@ export function TablaDeCalor({ objeto, consulta }: { objeto: ObjetoDeCalor; cons
       {datos ? (
         <>
           <NotaDeConfidenciales oculta={datos.confidentialHidden} />
-          <p className="text-sg-caption text-sg-text-muted">{t('sig.calor.periodo', { desde: datos.periodStart, hasta: datos.periodEnd })}</p>
+          <p className="text-sg-caption text-sg-text-muted">{t('sig.calor.periodo', { desde: diaPe(datos.periodStart), hasta: diaPe(datos.periodEnd) })}</p>
           {datos.truncated ? (
             <p role="status" className="text-sg-caption text-sg-text-muted">
               {t('sig.calor.truncado')}

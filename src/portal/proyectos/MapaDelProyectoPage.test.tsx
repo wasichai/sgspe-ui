@@ -158,6 +158,7 @@ describe('S09 · mapa del proyecto', () => {
         path: '/objects/project_component/records',
         body: pagina(Array.from({ length: 300 }, (_, i) => registro(`pc${i}`, { code: `SDJ-${String(i).padStart(3, '0')}`, component_type: 'SONDAJE' })))
       },
+      { path: '/sgspe/territory/projects/p1/component-parcels', body: { available: true, truncated: false, rows: [] } },
       ...rutas()
     ])
     const tabla = await screen.findByRole('table', { name: 'Componentes' })
@@ -166,6 +167,19 @@ describe('S09 · mapa del proyecto', () => {
     expect(screen.getByRole('region', { name: 'Análisis' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Predios' }))
     expect((await screen.findByRole('table', { name: 'Predios' })).closest('div.overflow-y-auto')).toHaveClass('max-h-[420px]')
+  })
+
+  // revisión final del plan 6.3, m9: un backend sin el plan 6.2a responde 404 sin código y S09 sigue como en F2
+  it('con un backend sin las consultas de F6, no muestra el panel «Análisis»', async () => {
+    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'], project_component: ['READ'] }), [
+      { path: '/sgspe/territory/projects/p1/component-parcels', status: 404, body: { title: 'Not Found', status: 404 } },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await screen.findByRole('table', { name: 'Componentes' })
+    await waitFor(() => expect(red!.a('GET', '/sgspe/territory/projects/p1/component-parcels')).toHaveLength(1))
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Análisis' })).not.toBeInTheDocument())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('la tabla de componentes dice que carga o que falló, en lugar de quedar vacía', async () => {

@@ -378,12 +378,17 @@ export interface PaginaDeCalidad {
   hasNext: boolean
 }
 
+// una revisión puede tardar varios segundos a volumen (INVALID, STALE_AREA): lo leído vale un minuto, así volver a una pestaña o a
+// una página ya vista no la relanza, y mientras llega otra página o el filtro de otro objeto se sigue viendo la anterior de la
+// misma revisión (isPlaceholderData), nunca la de otra
 export function useCalidad(filtros: { check: Revision; object?: string; project?: string; page: number }) {
   const pedir = usePedir()
   const busqueda = consulta({ check: filtros.check, object: filtros.object, project: filtros.project, page: filtros.page, size: 50 })
   return useQuery({
     queryKey: ['data-quality', busqueda],
     queryFn: () => pedir<PaginaDeCalidad>(`/sgspe/territory/data-quality?${busqueda}`),
+    staleTime: 60_000,
+    placeholderData: (previa) => (previa?.check === filtros.check ? previa : undefined),
     retry: false
   })
 }

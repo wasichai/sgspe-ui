@@ -124,7 +124,40 @@ describe('S10 · sugerencias del cálculo', () => {
   })
 })
 
+// revisión final del plan 6.3, m9: un backend sin el plan 6.2a responde 404 sin código: «No disponible», no un error
+describe('S10 · sugerencias con un backend sin F6', () => {
+  it('un 404 sin código dice «No disponible»', async () => {
+    fetch = mockFetch([{ path: '/sgspe/areas-of-influence/ai1/member-suggestions', status: 404, body: { title: 'Not Found', status: 404 } }])
+    montar(<SugerenciasDelArea area="ai1" editable />, { usuario: ANALISTA_SIG, permisos: EQUIPO_SIG })
+    await userEvent.click(screen.getByRole('button', { name: 'Sugerencias del cálculo' }))
+    expect(await screen.findByText('No disponible')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
 describe('S10 · resumen del área', () => {
+  // revisión final del plan 6.3, m3 y m10: SIN DATO es un marcador del servidor y se traduce; sin localidades, «Ninguna»
+  it('las localidades sin tipo dicen «Sin dato», y sin localidades, «Ninguna»', async () => {
+    fetch = mockFetch([
+      {
+        path: '/sgspe/areas-of-influence/ai1/summary',
+        body: { ...RESUMEN_AREA, localitiesByType: [{ localityType: 'SIN DATO', count: 2 }] }
+      },
+      { path: '/sgspe/areas-of-influence/ai2/summary', body: { ...RESUMEN_AREA, localitiesByType: [] } }
+    ])
+    montar(
+      <>
+        <ResumenDelArea area="ai1" />
+        <ResumenDelArea area="ai2" />
+      </>,
+      { usuario: ANALISTA_SIG, permisos: EQUIPO_SIG }
+    )
+    const [conDato, vacio] = await screen.findAllByRole('region', { name: 'Resumen del área' })
+    expect(await within(conDato).findByText('Sin dato: 2')).toBeInTheDocument()
+    expect(within(conDato).queryByText(/SIN DATO/)).not.toBeInTheDocument()
+    expect(await within(vacio).findByText('Ninguna')).toBeInTheDocument()
+  })
+
   it('dice la superficie, las localidades por tipo y los componentes; una cifra sin dato es «No disponible»', async () => {
     fetch = mockFetch([{ path: '/sgspe/areas-of-influence/ai1/summary', body: RESUMEN_AREA }])
     montar(<ResumenDelArea area="ai1" />, { usuario: ANALISTA_SIG, permisos: EQUIPO_SIG })

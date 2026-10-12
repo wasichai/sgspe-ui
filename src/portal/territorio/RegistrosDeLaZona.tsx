@@ -16,8 +16,9 @@ import { OBJETOS_DE_LA_ZONA, OBJETOS_SIN_PERIODO, useRegistrosDeLaZona, type Obj
 // grupos de interés y los riesgos no tienen fecha: se piden sin el periodo y se dice
 export { OBJETOS_DE_LA_ZONA }
 
-const nombreDe = (r: Registro): string =>
-  [texto(r, 'code'), texto(r, 'title') || texto(r, 'name') || texto(r, 'description').slice(0, 80)].filter(Boolean).join(' · ') || r.id
+// sin código ni título legibles, un texto: nunca el id del registro
+const nombreDe = (r: Registro, sinNombre: string): string =>
+  [texto(r, 'code'), texto(r, 'title') || texto(r, 'name') || texto(r, 'description').slice(0, 80)].filter(Boolean).join(' · ') || sinNombre
 
 export function RegistrosDeLaZona({ zona, id, periodo = {} }: { zona: ObjetoDeZona; id: string; periodo?: { periodStart?: string; periodEnd?: string } }) {
   const { t } = useTranslation(NS)
@@ -72,7 +73,7 @@ export function RegistrosDeLaZona({ zona, id, periodo = {} }: { zona: ObjetoDeZo
                 <tr key={r.id}>
                   <Td>
                     <EnlaceDeFicha objeto={objeto} registro={r}>
-                      {nombreDe(r)}
+                      {nombreDe(r, t('fichaTerritorial.registros.sinNombre'))}
                     </EnlaceDeFicha>
                   </Td>
                   <Td>

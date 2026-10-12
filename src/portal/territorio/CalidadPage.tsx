@@ -131,9 +131,14 @@ export function CalidadPage() {
       {consulta.isPending ? <Cargando /> : null}
       {consulta.isError && esProhibido(consulta.error) ? <NoDisponible enLista /> : null}
       {consulta.isError && !esProhibido(consulta.error) ? <ErrorDeCarga error={consulta.error} alReintentar={() => void consulta.refetch()} /> : null}
+      {consulta.isPlaceholderData ? (
+        <p role="status" aria-busy="true" className="text-sm text-sg-text-muted">
+          {t('calidad.actualizando')}
+        </p>
+      ) : null}
       {consulta.data ? (
         <>
-          <Table aria-label={t(`calidad.revisiones.${revision}`)}>
+          <Table aria-label={t(`calidad.revisiones.${revision}`)} aria-busy={consulta.isPlaceholderData || undefined}>
             <thead>
               <tr>
                 <Th scope="col">{t('calidad.columnas.objeto')}</Th>
@@ -149,10 +154,10 @@ export function CalidadPage() {
                   <Td>
                     {OBJETOS_CON_FICHA.has(f.object) ? (
                       <Link to={rutaParaAbrir(f.object, f.id)} className="text-sg-primary-text underline">
-                        {f.label ?? f.id}
+                        {f.label ?? t('calidad.sinNombre')}
                       </Link>
                     ) : (
-                      (f.label ?? f.id)
+                      (f.label ?? t('calidad.sinNombre'))
                     )}
                   </Td>
                   <Td>{f.field ? t(`calidad.campos.${f.object}.${f.field}`, { defaultValue: f.field }) : '—'}</Td>

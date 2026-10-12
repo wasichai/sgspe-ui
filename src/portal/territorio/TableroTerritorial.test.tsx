@@ -47,12 +47,47 @@ describe('tablero territorial', () => {
     expect(within(miembros).getByRole('row', { name: 'Localidades 5' })).toBeInTheDocument()
     expect(within(miembros).getByRole('row', { name: 'Comunidades 2' })).toBeInTheDocument()
     const componentes = screen.getByRole('region', { name: 'Componentes sobre tierras comunales o privadas' })
+    // la tenencia por su valor guardado, como en S09 (ASM-025); solo los marcadores del servidor se traducen (revisión final, m3)
     expect(within(componentes).getByRole('row', { name: 'Sin tenencia 1' })).toBeInTheDocument()
-    expect(within(componentes).getByRole('row', { name: 'Comunal 2' })).toBeInTheDocument()
+    expect(within(componentes).getByRole('row', { name: 'COMUNAL 2' })).toBeInTheDocument()
+    expect(within(componentes).getByRole('row', { name: 'PROPIEDAD 1' })).toBeInTheDocument()
     expect(within(componentes).getByRole('row', { name: 'Sin dato 1' })).toBeInTheDocument()
     expect(within(componentes).queryByText(/EMPRESA/)).not.toBeInTheDocument()
     expect(screen.getByText(/Calculado el .*2026/)).toBeInTheDocument()
     expect(red.a('GET', '/sgspe/dashboards/territory')).toHaveLength(1)
+  })
+
+  // revisión final del plan 6.3, m5 y m7: un desglose vacío lo dice, y uno que el portal no conoce no muestra su nombre de la API
+  it('un desglose sin filas dice que no hay cifras, y uno desconocido lleva un título genérico', async () => {
+    const [superficie, miembros, componentes] = TABLERO_TERRITORIAL_COMPLETO.indicators
+    fetch = mockFetch([
+      ...baseDeSig(),
+      capas,
+      {
+        path: '/sgspe/dashboards/territory',
+        body: {
+          ...TABLERO_TERRITORIAL_COMPLETO,
+          indicators: [
+            superficie,
+            miembros,
+            {
+              ...componentes,
+              breakdowns: [
+                { by: 'tenureType', rows: [] },
+                { by: 'componentKind', rows: [{ key: 'MINA', value: 3 }] }
+              ]
+            }
+          ]
+        }
+      }
+    ])
+    abrir('/territory/dashboard?project=p1')
+    const zona = await screen.findByRole('region', { name: 'Componentes sobre tierras comunales o privadas' })
+    expect(within(zona).getByText('Por tenencia')).toBeInTheDocument()
+    expect(within(zona).getByText('No hay cifras para este desglose.')).toBeInTheDocument()
+    expect(within(zona).queryByRole('table', { name: 'Por tenencia' })).not.toBeInTheDocument()
+    expect(within(zona).getByRole('table', { name: 'Desglose' })).toBeInTheDocument()
+    expect(within(zona).queryByText('componentKind')).not.toBeInTheDocument()
   })
 
   it('dice «No disponible» donde falta un permiso', async () => {

@@ -19,16 +19,13 @@ export const ES_TABLERO_TERRITORIAL = {
     tenureType: 'Por tenencia',
     componentType: 'Por tipo de componente'
   },
-  // memberType viaja como clave del objeto; los demás, como texto del servidor
+  // un desglose que el portal no conoce todavía
+  desgloseGenerico: 'Desglose',
+  // memberType viaja como clave del objeto; los demás, como el valor guardado (ASM-025), salvo los marcadores del servidor
   tiposDeMiembro: { locality: 'Localidades', community: 'Comunidades', administrative_unit: 'Unidades administrativas' },
-  tenencias: {
-    PROPIEDAD: 'Propiedad',
-    POSESION: 'Posesión',
-    COMUNAL: 'Comunal',
-    'TERRITORIO COMUNAL': 'Territorio comunal',
-    'SIN TENENCIA': 'Sin tenencia'
-  },
+  sinTenencia: 'Sin tenencia',
   sinDato: 'Sin dato',
+  sinDatos: 'No hay cifras para este desglose.',
   sinCifra: '—',
   periodo: 'Periodo pedido: {{rango}}',
   rangoCompleto: '{{desde}} a {{hasta}}',
@@ -58,15 +55,11 @@ export const EN_TABLERO_TERRITORIAL: typeof ES_TABLERO_TERRITORIAL = {
     tenureType: 'By tenure',
     componentType: 'By component type'
   },
+  desgloseGenerico: 'Breakdown',
   tiposDeMiembro: { locality: 'Localities', community: 'Communities', administrative_unit: 'Administrative units' },
-  tenencias: {
-    PROPIEDAD: 'Ownership',
-    POSESION: 'Possession',
-    COMUNAL: 'Communal',
-    'TERRITORIO COMUNAL': 'Communal territory',
-    'SIN TENENCIA': 'No tenure'
-  },
+  sinTenencia: 'No tenure',
   sinDato: 'No data',
+  sinDatos: 'There are no figures for this breakdown.',
   sinCifra: '—',
   periodo: 'Period requested: {{rango}}',
   rangoCompleto: '{{desde}} to {{hasta}}',

@@ -28,10 +28,12 @@ export function ResumenDelArea({ area }: { area: string }) {
             <dd>
               {consulta.data.localitiesByType === null ? (
                 <NoDisponible />
+              ) : consulta.data.localitiesByType.length === 0 ? (
+                t('fichaTerritorial.ninguna')
               ) : (
                 <ul>
                   {consulta.data.localitiesByType.map((l) => (
-                    <li key={l.localityType}>{`${l.localityType}: ${numeroPe(l.count)}`}</li>
+                    <li key={l.localityType}>{`${l.localityType === 'SIN DATO' ? t('sig.sinDato') : l.localityType}: ${numeroPe(l.count)}`}</li>
                   ))}
                 </ul>
               )}

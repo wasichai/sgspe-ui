@@ -131,4 +131,18 @@ describe('registros de la zona', () => {
     montar(<RegistrosDeLaZona zona="community" id="c1" />, { usuario: ANALISTA_SIG, permisos: permisos({ community: ['READ'] }) })
     expect(screen.getByText('Su cuenta no puede leer registros de este lugar.')).toBeInTheDocument()
   })
+
+  // revisión final del plan 6.3, m7: sin código ni título legibles, un texto y nunca el id del registro
+  it('un registro sin código ni título se nombra «Registro sin nombre»', async () => {
+    fetch = mockFetch([
+      {
+        path: '/sgspe/territory/zones/locality/l1/records',
+        body: { ...pagina([registro('5c7e0d4b-0000-4000-8000-000000000001', { project: 'p1' }, { state: 'approved' })]), available: true }
+      }
+    ])
+    montar(<RegistrosDeLaZona zona="locality" id="l1" />, { usuario: ANALISTA_SIG, permisos: permisos({ commitment: ['READ'] }) })
+    const tabla = await screen.findByRole('table', { name: 'Registros del lugar' })
+    expect(await within(tabla).findByRole('link', { name: 'Registro sin nombre' })).toBeInTheDocument()
+    expect(within(tabla).queryByText(/5c7e0d4b/)).not.toBeInTheDocument()
+  })
 })
