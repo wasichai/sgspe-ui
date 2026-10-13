@@ -172,8 +172,9 @@ function FalloDePregunta({ error, alRepetir }: { error: unknown; alRepetir: () =
   const { t } = useTranslation(NS)
   const mensaje = useMensajeDeError()
   const correlacion = correlacionDe(error)
-  // un 403 sin código es el permiso que falta; con código (PERSON_REQUIRED) se dice su texto
-  const sinRol = error instanceof ApiError && error.status === 403 && !codigoDelError(error)
+  // un 403 es el permiso que falta (sin código, como el de AgentHttpGate), salvo PERSON_REQUIRED, que dice su texto: una cuenta
+  // de servicio no pregunta
+  const sinRol = error instanceof ApiError && error.status === 403 && codigoDelError(error) !== 'PERSON_REQUIRED'
   // se repite lo que puede cambiar: el proveedor caído, otra falla del servidor o de la red; nunca la organización sin IA
   const repetible = !(error instanceof ApiError) || (error.status >= 500 && campoDelError(error) !== 'organization')
   return (
