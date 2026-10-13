@@ -42,6 +42,12 @@ const claveEnCampo = (codigo: string, campo: string | undefined): string | null 
   if (codigo === 'OBJECT_NOT_READABLE' && QCS.has(campo)) return 'comun.codigosEnCampo.qcsNoLeida'
   // DELIVERY_FROZEN dice las entregas de un compromiso; sobre el aporte, su entrega, sus evidencias y sus comprobantes
   if (codigo === 'DELIVERY_FROZEN' && /^(attributes\.)?social_contribution$/.test(campo)) return 'comun.codigosEnCampo.aporteEntregado'
+  // F7: la IA sin activar en la organización o sin proveedor (api.md §3.3)
+  if (codigo === 'AI_UNAVAILABLE' && campo === 'organization') return 'comun.codigosEnCampo.iaSinOrganizacion'
+  if (codigo === 'AI_UNAVAILABLE' && campo === 'provider') return 'comun.codigosEnCampo.iaSinProveedor'
+  // F7: AI_INPUT_TOO_LARGE sobre question es la pregunta de AI-05 que pasa sgspe.ai.limits.question-chars (plan 7.2a), no un
+  // documento
+  if (codigo === 'AI_INPUT_TOO_LARGE' && campo === 'question') return 'comun.codigosEnCampo.iaPreguntaLarga'
   return null
 }
 

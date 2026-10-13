@@ -51,6 +51,11 @@ import { EN_EXPORTACION_GEOGRAFICA } from './exportacionGeografica'
 import { EN_EDICION_DE_GEOMETRIA } from './edicionDeGeometria'
 import { EN_UBICAR } from './ubicar'
 import { EN_CALIDAD } from './calidad'
+import { EN_IA } from './ia'
+import { EN_ASISTENTE } from './asistente'
+import { EN_BANDEJA_IA } from './bandejaIa'
+import { EN_ACCIONES_IA } from './accionesIa'
+import { EN_BORRADOR_DE_ACTA } from './borradorDeActa'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
@@ -112,6 +117,12 @@ export const EN: Textos = {
   edicionDeGeometria: EN_EDICION_DE_GEOMETRIA,
   ubicar: EN_UBICAR,
   calidad: EN_CALIDAD,
+  // F7: IA
+  ia: EN_IA,
+  asistente: EN_ASISTENTE,
+  bandejaIa: EN_BANDEJA_IA,
+  accionesIa: EN_ACCIONES_IA,
+  borradorDeActa: EN_BORRADOR_DE_ACTA,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',
