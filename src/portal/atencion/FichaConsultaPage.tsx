@@ -19,6 +19,7 @@ import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
 import { rutaDeFicha } from '../datos/fichas'
 import { campoDe, texto, useDefinicion, usePuedeEditar, useRegistro, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
+import { AccionesDeIa } from '../ia/AccionesDeIa'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarSolicitud, type ObjetoQueNace } from './comandos'
@@ -287,6 +288,7 @@ function Ficha({
           ]}
         />
         <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+          <AccionesDeIa objeto={objeto} registro={qcs} proyecto={proyecto} rotulo={texto(qcs, 'code')} casos={['AI-08']} />
           <DeDondeViene objeto={objeto} qcs={qcs} />
         </aside>
       </div>

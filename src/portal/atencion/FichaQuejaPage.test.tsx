@@ -332,4 +332,12 @@ describe('S36 · marcar confidencial al editar', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('CONFIDENTIAL_MARK_FORBIDDEN')).not.toBeInTheDocument()
   })
+
+  // F7: la ficha ofrece sugerir la clasificación con IA (AI-08) si el servidor tiene la IA y la cuenta escribe en el proyecto
+  it('ofrece sugerir la categoría, la prioridad y el tema con IA', async () => {
+    fetch = mockFetch(rutas(QUEJA, [{ path: '/sgspe/ai/status', body: { enabled: true, providerAvailable: true, useCases: ['AI-08'] } }]))
+    abrir()
+    const conIa = await screen.findByRole('region', { name: 'Con IA' })
+    expect(within(conIa).getByRole('button', { name: 'Sugerir categoría, prioridad y tema' })).toBeInTheDocument()
+  })
 })
