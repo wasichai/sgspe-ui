@@ -1,16 +1,15 @@
-import { useAuth, ApiError } from '@wasichai/core'
-import { Alert, Button } from '@wasichai/ui'
+import { useAuth } from '@wasichai/core'
+import { Button } from '@wasichai/ui'
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { correlacionDe, useMensajeDeError } from '../componentes/errores'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { descriptorDe } from '../datos/archivos'
-import { campoDelError, codigoDelError } from '../datos/http'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useAsistente } from './Asistente'
 import { useCorrida, useEstadoDeIa, type CasoDeIa } from './contrato'
+import { FalloDeCorrida } from './FalloDeCorrida'
 import { MarcaDeIa } from './MarcaDeIa'
 
 // las acciones de IA de una ficha (screens.md §13, decisiones 19 y 20 del plan): la IA lee como la persona y deja sugerencias o
@@ -41,14 +40,6 @@ const ETIQUETAS: Readonly<Record<string, Partial<Record<CasoDeIa, string>>>> = {
   project: { 'AI-07': 'duplicados' }
 }
 
-// se reintenta lo que puede cambiar: el proveedor caído, una corrida sin margen, otra falla del servidor o de la red
-function esRepetible(error: unknown): boolean {
-  if (!(error instanceof ApiError)) return true
-  if (codigoDelError(error) === 'AI_RUN_TRUNCATED') return true
-  if (codigoDelError(error) === 'AI_UNAVAILABLE') return campoDelError(error) === 'provider'
-  return error.status >= 500
-}
-
 export function AccionesDeIa({
   objeto,
   registro,
@@ -75,7 +66,6 @@ export function AccionesDeIa({
   const escribe = useEscribeEnProyecto(proyecto)
   const asistente = useAsistente()
   const corrida = useCorrida()
-  const mensaje = useMensajeDeError()
   const ultimo = useRef<CasoDeIa | null>(null)
   const pendientes = useTodos('ai_suggestion', { target_record_id: registro.id }, !compacta && can('ai_suggestion', 'READ'))
   // sin servidor con F7 o sin IA en la organización: el bloque no aparece (screens.md «Resumen ejecutivo»: «sin IA, la tarjeta no
@@ -95,7 +85,6 @@ export function AccionesDeIa({
   const resultado = corrida.data
   const borrador = resultado?.suggestions.some((s) => texto(s, 'suggestion_kind') === 'BORRADOR DE ACTA') ?? false
   const base = `/projects/${encodeURIComponent(proyecto)}`
-  const correlacion = correlacionDe(corrida.error)
   return (
     <section
       aria-label={t('accionesIa.titulo')}
@@ -155,20 +144,10 @@ export function AccionesDeIa({
         </p>
       ) : null}
       {corrida.isError ? (
-        <Alert tone="danger">
-          <p>{mensaje(corrida.error)}</p>
-          {correlacion ? <p className="font-sg-mono text-sg-caption">{t('comun.correlacion', { id: correlacion })}</p> : null}
-          {esRepetible(corrida.error) && ultimo.current ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="mt-2"
-              onClick={() => corrida.mutate({ caso: ultimo.current!, objetivo: { object: objeto, recordId: registro.id } })}
-            >
-              {t('accionesIa.reintentar')}
-            </Button>
-          ) : null}
-        </Alert>
+        <FalloDeCorrida
+          error={corrida.error}
+          alReintentar={ultimo.current ? () => corrida.mutate({ caso: ultimo.current!, objetivo: { object: objeto, recordId: registro.id } }) : null}
+        />
       ) : null}
       {nPendientes > 0 ? (
         <p className="text-sg-caption">

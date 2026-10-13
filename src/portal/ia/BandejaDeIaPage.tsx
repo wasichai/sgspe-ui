@@ -1,5 +1,5 @@
 import { useQueries } from '@tanstack/react-query'
-import { useAuth } from '@wasichai/core'
+import { ApiError, useAuth } from '@wasichai/core'
 import { Alert } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -34,6 +34,8 @@ function coincide(propuesta: Propuesta, tipo: FiltroDeTipo, origen: FiltroDeOrig
 
 // «no aparece una sugerencia cuyo destino la persona no pueda leer» (ai-architecture.md §9.3): se lee cada destino con la misma
 // clave que useRegistro; un 403 o un 404 la saca de la bandeja. un actor nuevo no tiene destino que leer
+const esIlegible = (error: unknown) => error instanceof ApiError && (error.status === 403 || error.status === 404)
+
 function useDestinosLegibles(propuestas: readonly Propuesta[]) {
   const pedir = usePedir()
   const conDestino = propuestas.filter((p) => p.clase === 'sugerencia' && texto(p.registro, 'target_record_id'))
@@ -44,7 +46,7 @@ function useDestinosLegibles(propuestas: readonly Propuesta[]) {
       return { queryKey: ['record', objeto, id], queryFn: () => pedir<Registro>(`/objects/${objeto}/records/${id}`) }
     })
   })
-  const ilegibles = new Set(conDestino.filter((_, i) => lecturas[i]?.isError).map((p) => p.registro.id))
+  const ilegibles = new Set(conDestino.filter((_, i) => esIlegible(lecturas[i]?.error)).map((p) => p.registro.id))
   return { pendiente: lecturas.some((l) => l.isPending), legible: (p: Propuesta) => !ilegibles.has(p.registro.id) }
 }
 

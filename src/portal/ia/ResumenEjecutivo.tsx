@@ -1,8 +1,7 @@
 import { useAuth } from '@wasichai/core'
-import { Alert, Button } from '@wasichai/ui'
+import { Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -10,6 +9,7 @@ import { texto, useRegistros, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { useAsistente } from './Asistente'
 import { useCorrida, useEstadoDeIa } from './contrato'
+import { FalloDeCorrida } from './FalloDeCorrida'
 import { MarcaDeIa } from './MarcaDeIa'
 import { partirMarcadores, personasCitadas } from './marcadores'
 import { TextoDeIa, useNombresDePersonas } from './TextoDeIa'
@@ -24,7 +24,6 @@ export function ResumenEjecutivo({ proyecto }: { proyecto: Registro }) {
   const escribe = useEscribeEnProyecto(proyecto.id)
   const asistente = useAsistente()
   const corrida = useCorrida()
-  const mensaje = useMensajeDeError()
   const [copiado, setCopiado] = useState<'si' | 'no' | null>(null)
   const lee = can('ai_suggestion', 'READ')
   const activa = estado.data?.enabled === true
@@ -102,7 +101,12 @@ export function ResumenEjecutivo({ proyecto }: { proyecto: Registro }) {
           <p className="text-sg-text-secondary">{t('accionesIa.resumen.vacio')}</p>
         )
       ) : null}
-      {corrida.isError ? <Alert tone="danger">{mensaje(corrida.error)}</Alert> : null}
+      {corrida.isError ? (
+        <FalloDeCorrida
+          error={corrida.error}
+          alReintentar={genera ? () => corrida.mutate({ caso: 'AI-04', objetivo: { object: 'project', recordId: proyecto.id } }) : null}
+        />
+      ) : null}
       {copiado ? (
         <p role="status" className="text-sg-caption">
           {copiado === 'si' ? t('accionesIa.resumen.copiado') : t('accionesIa.resumen.noCopiado')}

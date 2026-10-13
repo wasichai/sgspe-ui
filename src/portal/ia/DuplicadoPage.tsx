@@ -9,6 +9,7 @@ import { useMensajeDeError } from '../componentes/errores'
 import { Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { texto, useDefinicion, useRegistro, type Registro } from '../datos/registros'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { NS } from '../i18n'
 import { useAplicarTransicion } from '../transiciones/api'
 import { useAceptarSugerencia } from './contrato'
@@ -57,6 +58,7 @@ function Comparacion({ sugerencia, proyecto }: { sugerencia: Registro; proyecto:
   const [respuesta, setRespuesta] = useState('')
   const [motivo, setMotivo] = useState('')
   const [intentado, setIntentado] = useState(false)
+  const escribe = useEscribeEnProyecto(proyecto)
   const bandeja = `/projects/${encodeURIComponent(proyecto)}/ai-review`
   const volver = (
     <Link to={bandeja} className="text-sm text-sg-primary-text underline">
@@ -150,7 +152,7 @@ function Comparacion({ sugerencia, proyecto }: { sugerencia: Registro; proyecto:
           </tbody>
         </Table>
       </div>
-      {sugerencia.state === 'proposed' ? (
+      {sugerencia.state === 'proposed' && escribe ? (
         <div className="max-w-xl space-y-3">
           <fieldset className="space-y-1">
             <legend className="text-sg-body-sm font-medium">{t('bandejaIa.duplicado.decision')}</legend>

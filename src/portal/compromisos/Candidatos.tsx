@@ -21,7 +21,7 @@ import { codigoDelError } from '../datos/http'
 import { atributo, campoDe, texto, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { CitaDelCandidato } from '../ia/Cita'
-import { personasCitadas, quedanMarcadores, reidentificar } from '../ia/marcadores'
+import { personasCitadas, quedanMarcadores, recortar, reidentificar } from '../ia/marcadores'
 import { nombresReales, TextoDeIa, useNombresDePersonas } from '../ia/TextoDeIa'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarCandidato, useMarcarDuplicado, useRegistrarCandidato } from './comandosDeCandidatos'
@@ -278,8 +278,8 @@ function Revision({ candidato, propuesto, alCerrar }: { candidato: Registro; pro
   const [intentado, setIntentado] = useState(false)
   const [responsable, setResponsable] = useState<Usuaria | null>(null)
   const ia = atributo(candidato, 'ai_generated') === true
-  // por puntos de código: cortar en 120 unidades UTF-16 puede partir un par sustituto (un emoji)
-  const texto120 = Array.from(propuesto).slice(0, 120).join('')
+  // por puntos de código (no parte un emoji) y sin partir un marcador: si uno cruza el 120 entra entero y el formulario bloquea
+  const texto120 = recortar(propuesto, 120)
   const { register, handleSubmit, formState } = useForm<Aceptacion>({
     resolver: zodResolver(esquemaDeAceptacion),
     defaultValues: {
