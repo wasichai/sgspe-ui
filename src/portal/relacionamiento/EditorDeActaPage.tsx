@@ -22,6 +22,7 @@ import {
   useTodosConTope,
   type Registro
 } from '../datos/registros'
+import { BorradorDeActa } from '../ia/BorradorDeActa'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
@@ -139,6 +140,23 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
     const delOtro = texto(nuevo, 'minutes')
     if (delOtro === texto_) setGuardado(delOtro)
     else if (delOtro !== guardado) setAjena(delOtro)
+  }
+  // la aceptación del borrador de la IA escribió minutes en el servidor (AI-02, decisión 21 del plan 7.3): se relee el acta con
+  // su versión nueva y el editor queda con ese texto, sin un PUT propio
+  const trasInsertarBorrador = async (insertado: string) => {
+    let minutes = insertado
+    try {
+      const nuevo = await cliente.fetchQuery({
+        queryKey: ['record', 'engagement', interaccion.id],
+        queryFn: () => pedir<Registro>(`/objects/engagement/records/${interaccion.id}`),
+        staleTime: 0
+      })
+      minutes = texto(nuevo, 'minutes') || insertado
+    } catch {
+      // la relectura falló: el texto es el aceptado; el próximo guardado dirá si la versión quedó vieja (412, «Recargar»)
+    }
+    setTexto(minutes)
+    setGuardado(minutes)
   }
   const copiar = async () => {
     try {
@@ -366,6 +384,12 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
             )}
           </div>
           <aside className="space-y-2 text-sg-caption text-sg-text-muted">
+            <BorradorDeActa
+              interaccion={interaccion}
+              actual={guardado}
+              listo={editable && !sucio && !enPausa}
+              alInsertado={(minutes) => void trasInsertarBorrador(minutes)}
+            />
             <p>{t('relacionamiento.acta.proponerLlega')}</p>
             <p>{t('relacionamiento.acta.firmada')}</p>
           </aside>
