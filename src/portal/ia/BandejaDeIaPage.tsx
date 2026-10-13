@@ -12,6 +12,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { usePedir } from '../datos/http'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
+import { AceptarSugerencia } from './AceptarSugerencia'
 import { useEstadoDeIa } from './contrato'
 import { TarjetaDeCandidatoEnBandeja, TarjetaDeSugerencia } from './Propuesta'
 import { enLaBandeja, ordenarPropuestas, type Propuesta } from './sugerencias'
@@ -60,6 +61,7 @@ export function BandejaDeIaPage() {
   const [tipo, setTipo] = useState<FiltroDeTipo>('todos')
   const [origen, setOrigen] = useState<FiltroDeOrigen>('todos')
   const [revisando, setRevisando] = useState<string | null>(null)
+  const [aceptando, setAceptando] = useState<string | null>(null)
   const propuestas = ordenarPropuestas([
     ...(sugerencias.data ?? []).filter((s) => s.state === 'proposed' && enLaBandeja(s)).map((registro) => ({ clase: 'sugerencia' as const, registro })),
     ...(candidatos.data ?? []).filter((c) => c.state === 'proposed').map((registro) => ({ clase: 'candidato' as const, registro }))
@@ -71,6 +73,7 @@ export function BandejaDeIaPage() {
   const cargando = (leeSugerencias && sugerencias.isPending) || (leeCandidatos && candidatos.isPending) || destinos.pendiente
   const fallida = [leeSugerencias ? sugerencias : null, leeCandidatos ? candidatos : null].find((c) => c?.isError && !c.data)
   const enRevision = (candidatos.data ?? []).find((c) => c.id === revisando)
+  const enAceptacion = (sugerencias.data ?? []).find((s) => s.id === aceptando)
   return (
     <section aria-label={t('bandejaIa.titulo')} className="space-y-4">
       <header className="space-y-1">
@@ -117,7 +120,7 @@ export function BandejaDeIaPage() {
             <ul aria-label={t('bandejaIa.lista')} className="space-y-3">
               {filtradas.map((p) =>
                 p.clase === 'sugerencia' ? (
-                  <TarjetaDeSugerencia key={p.registro.id} sugerencia={p.registro} proyecto={projectId} />
+                  <TarjetaDeSugerencia key={p.registro.id} sugerencia={p.registro} proyecto={projectId} alAceptar={() => setAceptando(p.registro.id)} />
                 ) : (
                   <TarjetaDeCandidatoEnBandeja
                     key={p.registro.id}
@@ -139,6 +142,7 @@ export function BandejaDeIaPage() {
         </aside>
       </div>
       {enRevision ? <RevisionDeCandidato key={enRevision.id} candidato={enRevision} alCerrar={() => setRevisando(null)} /> : null}
+      {enAceptacion ? <AceptarSugerencia key={enAceptacion.id} sugerencia={enAceptacion} alCerrar={() => setAceptando(null)} /> : null}
     </section>
   )
 }
