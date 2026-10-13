@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import { BandejaDeIaPage } from '../ia/BandejaDeIaPage'
+import { DuplicadoPage } from '../ia/DuplicadoPage'
 import { AcuerdosPage } from '../acuerdos/AcuerdosPage'
 import { AtencionPage } from '../atencion/AtencionPage'
 import { FichaConsultaPage, FichaSolicitudPage } from '../atencion/FichaConsultaPage'
@@ -119,5 +120,6 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'programs/:programId', seccion: 'programs', Pantalla: FichaProgramaPage },
   { ruta: 'contributions/:contributionId', seccion: 'programs', Pantalla: FichaAportePage },
   // F7: la bandeja de revisión de IA (S52), para quien lee las sugerencias o los candidatos
-  { ruta: 'ai-review', seccion: 'projects', seOfreceCon: LEE_PROPUESTAS, Pantalla: BandejaDeIaPage }
+  { ruta: 'ai-review', seccion: 'projects', seOfreceCon: LEE_PROPUESTAS, Pantalla: BandejaDeIaPage },
+  { ruta: 'ai-review/:suggestionId', seccion: 'projects', seOfreceCon: LEE_PROPUESTAS, Pantalla: DuplicadoPage }
 ]
