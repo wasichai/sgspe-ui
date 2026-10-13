@@ -137,10 +137,65 @@ describe('acciones de IA en las fichas', () => {
 
   it('el borrador del acta queda en el editor', async () => {
     const abrir = montarEn(<AccionesDeIa objeto="engagement" registro={INTERACCION} proyecto="p1" rotulo="Asamblea de agosto" casos={['AI-02']} />)
-    red = espiarRed([{ method: 'POST', path: correr, responder: () => jsonResponse({ interaction: null, suggestions: [SUG_BORRADOR], candidates: [] }, 201) }])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: correr,
+        responder: () => jsonResponse({ interaction: 'ai3', interactions: ['ai3'], suggestions: [SUG_BORRADOR], candidates: [] }, 201)
+      }
+    ])
     abrir()
     await userEvent.click(await screen.findByRole('button', { name: 'Redactar el borrador del acta' }))
     expect(await screen.findByText('El borrador quedó listo en el editor del acta.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Abrir el editor del acta' })).toHaveAttribute('href', '/projects/p1/engagements/e1/minutes')
+  })
+
+  // plan 7.2b: con el tope de corridas lleno el servidor responde 503 AI_BUSY con Retry-After; no es el proveedor caído
+  it('la IA ocupada se dice como tal y se reintenta con la misma clave', async () => {
+    const abrir = montarEn(deLaEvidencia)
+    let vez = 0
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: correr,
+        responder: () => {
+          if (++vez > 1) return jsonResponse(CORRIDA_AI03, 201)
+          const r = problema(503, 'x', [{ field: 'useCase', message: 'AI_BUSY' }])
+          r.headers.set('Retry-After', '10')
+          return r
+        }
+      }
+    ])
+    abrir()
+    const conIa = await screen.findByRole('region', { name: 'Con IA' })
+    await userEvent.click(within(conIa).getByRole('button', { name: 'Extraer datos del documento' }))
+    expect(await within(conIa).findByText('La IA está ocupada: reintente en unos segundos.')).toBeInTheDocument()
+    expect(within(conIa).queryByText(/no responde/)).not.toBeInTheDocument()
+    await userEvent.click(within(conIa).getByRole('button', { name: 'Reintentar' }))
+    await waitFor(() => expect(red!.a('POST', correr)).toHaveLength(2))
+    const [primera, segunda] = red.a('POST', correr)
+    expect(segunda.cabeceras.get('Idempotency-Key')).toBe(primera.cabeceras.get('Idempotency-Key'))
+  })
+
+  // plan 7.2c: AI-07 sin pares candidatos no llama al modelo y responde interaction null, sin sugerencias
+  it('una búsqueda de duplicados sin pares dice que no hubo nada que proponer', async () => {
+    const abrir = montarEn(
+      <AccionesDeIa objeto="project" registro={registro('p1', { name: 'Proyecto Ejemplo A' })} proyecto="p1" rotulo="Proyecto" casos={['AI-07']} />
+    )
+    red = espiarRed([
+      { method: 'POST', path: correr, responder: () => jsonResponse({ interaction: null, interactions: [], suggestions: [], candidates: [] }, 201) }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Buscar posibles duplicados' }))
+    expect(await screen.findByText('La IA no encontró nada que proponer.')).toBeInTheDocument()
+    expect(red.a('POST', correr)[0].cuerpo).toEqual({ useCase: 'AI-07', target: { object: 'project', recordId: 'p1' } })
+  })
+
+  // los casos de useCases dependen de los permisos de la cuenta (AiStatus): la ficha ofrece solo los suyos
+  it('ofrece solo los casos que el estado de la IA trae para la cuenta', async () => {
+    montarEn(deLaEvidencia, { ...ESTADO_ACTIVO, useCases: ['AI-01', 'AI-05'] })()
+    const conIa = await screen.findByRole('region', { name: 'Con IA' })
+    expect(within(conIa).getByRole('button', { name: 'Extraer datos del documento' })).toBeInTheDocument()
+    expect(within(conIa).queryByRole('button', { name: 'Detectar posibles compromisos' })).not.toBeInTheDocument()
   })
 })

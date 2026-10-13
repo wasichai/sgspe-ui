@@ -131,4 +131,51 @@ describe('contrato de F7', () => {
     montar(<Mensaje error={con(422, 'AI_INPUT_TOO_LARGE', 'question')} />)
     expect(screen.getByText('La pregunta es demasiado larga para la IA: acórtela y vuelva a preguntar.')).toBeInTheDocument()
   })
+
+  // plan 7.2b: AI_BUSY es el tope de corridas a la vez, no el proveedor caído; y los códigos de la corrida según su campo
+  it('la IA ocupada no se dice como proveedor caído, y los rechazos de la corrida dicen su causa', () => {
+    fetch = mockFetch([])
+    montar(
+      <>
+        <Mensaje error={con(503, 'AI_BUSY', 'useCase')} />
+        <Mensaje error={con(400, 'PROJECT_REQUIRED', 'target')} />
+        <Mensaje error={con(403, 'FIELD_NOT_READABLE', 'person.given_names')} />
+        <Mensaje error={con(400, 'TOO_MANY_RECORDS', 'target')} />
+        <Mensaje error={con(403, 'PERSON_REQUIRED', '')} />
+      </>
+    )
+    expect(screen.getByText('La IA está ocupada: reintente en unos segundos.')).toBeInTheDocument()
+    expect(screen.queryByText('El servicio de IA no responde. Reintente en unos minutos.')).not.toBeInTheDocument()
+    expect(screen.getByText('La IA solo lee documentos de un proyecto: este es de toda la organización.')).toBeInTheDocument()
+    expect(screen.getByText('Su rol no puede leer los nombres de las personas, que la IA necesita para proteger los datos de la fuente.')).toBeInTheDocument()
+    expect(screen.getByText('Hay demasiados registros para buscar posibles duplicados de una vez.')).toBeInTheDocument()
+    expect(screen.getByText('Esta decisión la toma una persona, no una cuenta de servicio.')).toBeInTheDocument()
+  })
+
+  // plan 7.2b: los rechazos de la aceptación según su código y su campo (api.md §4.14)
+  it('los rechazos de la aceptación dicen su causa', () => {
+    fetch = mockFetch([])
+    montar(
+      <>
+        <Mensaje error={con(409, 'SUGGESTION_NOT_ACCEPTABLE', 'suggestion_kind')} />
+        <Mensaje error={con(400, 'PSEUDONYM_NOT_ALLOWED', 'attributes.stakeholder.stakeholder_type')} />
+        <Mensaje error={con(400, 'FIELD_NOT_ALLOWED', 'attributes.field')} />
+        <Mensaje error={con(400, 'DUPLICATE_NOT_FOUND', 'attributes.other_record_id')} />
+        <Mensaje error={con(409, 'PROJECT_MISMATCH', 'attributes.other_record_id')} />
+        <Mensaje error={con(409, 'STATE_MISMATCH', 'attributes.response')} />
+        <Mensaje error={con(403, 'OBJECT_NOT_READABLE', 'target_record_id')} />
+        <Mensaje error={con(400, 'PROJECT_REQUIRED', 'attributes.stakeholder')} />
+      </>
+    )
+    expect(screen.getByText('Esta propuesta no se acepta: solo se rechaza o se marca como duplicada.')).toBeInTheDocument()
+    expect(screen.getByText('Quedan datos reservados por la IA: reemplácelos por los valores reales antes de aceptar.')).toBeInTheDocument()
+    expect(screen.getByText('La propuesta solo permite corregir el valor, no el dato que cambia.')).toBeInTheDocument()
+    expect(screen.getByText('El otro registro del par no existe o su cuenta no lo lee.')).toBeInTheDocument()
+    expect(screen.getByText('El otro registro del par es de otro proyecto: no se marca como duplicado.')).toBeInTheDocument()
+    expect(
+      screen.getByText('La queja ya no se puede rechazar desde su estado: recargue para ver su estado o pida el paso a quien la gestiona.')
+    ).toBeInTheDocument()
+    expect(screen.getByText('El registro de la propuesta no existe o su cuenta no lo lee.')).toBeInTheDocument()
+    expect(screen.getByText('La propuesta no es de un proyecto: no se puede registrar su grupo de interés.')).toBeInTheDocument()
+  })
 })

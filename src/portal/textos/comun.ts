@@ -245,7 +245,11 @@ export const ES_COMUN = {
     AI_UNAVAILABLE: 'La IA no está disponible en este momento.',
     AI_INPUT_TOO_LARGE: 'El documento tiene más texto del que la IA puede leer de una vez: no se guardó ninguna propuesta.',
     AI_NO_TEXT: 'El documento no tiene texto que leer (por ejemplo, un PDF escaneado) o no es PDF ni Word: no se guardó ninguna propuesta.',
-    AI_RUN_TRUNCATED: 'La IA no terminó a tiempo y no guardó ninguna propuesta: reintente o pruebe con un documento más corto.'
+    AI_RUN_TRUNCATED: 'La IA no terminó a tiempo y no guardó ninguna propuesta: reintente o pruebe con un documento más corto.',
+    // plan 7.2b: el tope de corridas a la vez (no es el proveedor caído) y los rechazos de la aceptación (api.md §4.14)
+    AI_BUSY: 'La IA está ocupada: reintente en unos segundos.',
+    SUGGESTION_NOT_ACCEPTABLE: 'Esta propuesta no se acepta: solo se rechaza o se marca como duplicada.',
+    PSEUDONYM_NOT_ALLOWED: 'Quedan datos reservados por la IA: reemplácelos por los valores reales antes de aceptar.'
   },
   // el texto de un código que dice otra cosa según su campo (plan 4.2a; componentes/errores.ts)
   codigosEnCampo: {
@@ -259,7 +263,17 @@ export const ES_COMUN = {
     // F7: AI_UNAVAILABLE según su campo (api.md §3.3), y AI_INPUT_TOO_LARGE sobre la pregunta de AI-05 (plan 7.2a)
     iaSinOrganizacion: 'Su organización no tiene la IA activada.',
     iaSinProveedor: 'El servicio de IA no responde. Reintente en unos minutos.',
-    iaPreguntaLarga: 'La pregunta es demasiado larga para la IA: acórtela y vuelva a preguntar.'
+    iaPreguntaLarga: 'La pregunta es demasiado larga para la IA: acórtela y vuelva a preguntar.',
+    // plan 7.2b: los códigos de la corrida y de la aceptación que dicen otra cosa según su campo (api.md §4.14)
+    iaSinProyecto: 'La IA solo lee documentos de un proyecto: este es de toda la organización.',
+    iaSinNombres: 'Su rol no puede leer los nombres de las personas, que la IA necesita para proteger los datos de la fuente.',
+    iaDemasiados: 'Hay demasiados registros para buscar posibles duplicados de una vez.',
+    iaCampoFijo: 'La propuesta solo permite corregir el valor, no el dato que cambia.',
+    iaOtroNoLegible: 'El otro registro del par no existe o su cuenta no lo lee.',
+    iaOtroDeOtroProyecto: 'El otro registro del par es de otro proyecto: no se marca como duplicado.',
+    iaQuejaNoRechazable: 'La queja ya no se puede rechazar desde su estado: recargue para ver su estado o pida el paso a quien la gestiona.',
+    iaDestinoNoLegible: 'El registro de la propuesta no existe o su cuenta no lo lee.',
+    iaGrupoSinProyecto: 'La propuesta no es de un proyecto: no se puede registrar su grupo de interés.'
   },
   errores: {
     '400': 'Revise los datos marcados.',
@@ -501,7 +515,10 @@ export const EN_COMUN: typeof ES_COMUN = {
     AI_UNAVAILABLE: 'AI is not available right now.',
     AI_INPUT_TOO_LARGE: 'The document has more text than the AI can read at once: no proposal was saved.',
     AI_NO_TEXT: 'The document has no text to read (for instance, a scanned PDF) or is neither PDF nor Word: no proposal was saved.',
-    AI_RUN_TRUNCATED: 'The AI did not finish in time and saved no proposal: retry or try a shorter document.'
+    AI_RUN_TRUNCATED: 'The AI did not finish in time and saved no proposal: retry or try a shorter document.',
+    AI_BUSY: 'The AI is busy: retry in a few seconds.',
+    SUGGESTION_NOT_ACCEPTABLE: 'This proposal cannot be accepted: it can only be rejected or marked as a duplicate.',
+    PSEUDONYM_NOT_ALLOWED: 'Some data reserved by the AI remains: replace it with the real values before accepting.'
   },
   codigosEnCampo: {
     vinculoDeComando:
@@ -511,7 +528,16 @@ export const EN_COMUN: typeof ES_COMUN = {
     aporteEntregado: 'The contribution was already delivered or voided: its delivery, its evidence and its vouchers do not change.',
     iaSinOrganizacion: 'Your organization does not have AI enabled.',
     iaSinProveedor: 'The AI service is not responding. Retry in a few minutes.',
-    iaPreguntaLarga: 'The question is too long for the AI: shorten it and ask again.'
+    iaPreguntaLarga: 'The question is too long for the AI: shorten it and ask again.',
+    iaSinProyecto: 'The AI only reads documents of a project: this one belongs to the whole organization.',
+    iaSinNombres: 'Your role cannot read the names of people, which the AI needs to protect the data of the source.',
+    iaDemasiados: 'There are too many records to look for possible duplicates at once.',
+    iaCampoFijo: 'The proposal only allows correcting the value, not the data it changes.',
+    iaOtroNoLegible: 'The other record of the pair does not exist or your account cannot read it.',
+    iaOtroDeOtroProyecto: 'The other record of the pair belongs to another project: it is not marked as a duplicate.',
+    iaQuejaNoRechazable: 'The grievance can no longer be rejected from its state: reload to see its state or ask whoever manages it.',
+    iaDestinoNoLegible: 'The record of the proposal does not exist or your account cannot read it.',
+    iaGrupoSinProyecto: 'The proposal does not belong to a project: its stakeholder cannot be recorded.'
   },
   errores: {
     '400': 'Check the highlighted data.',

@@ -36,7 +36,7 @@ const montarResumen = (estado: unknown = ESTADO_ACTIVO) => {
       path: '/sgspe/ai/runs',
       responder: () => {
         generado = true
-        return jsonResponse({ interaction: null, suggestions: [NUEVO], candidates: [] }, 201)
+        return jsonResponse({ interaction: 'ai7', interactions: ['ai7'], suggestions: [NUEVO], candidates: [] }, 201)
       }
     }
   ])

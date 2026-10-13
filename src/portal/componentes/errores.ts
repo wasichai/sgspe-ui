@@ -48,7 +48,21 @@ const claveEnCampo = (codigo: string, campo: string | undefined): string | null 
   // F7: AI_INPUT_TOO_LARGE sobre question es la pregunta de AI-05 que pasa sgspe.ai.limits.question-chars (plan 7.2a), no un
   // documento
   if (codigo === 'AI_INPUT_TOO_LARGE' && campo === 'question') return 'comun.codigosEnCampo.iaPreguntaLarga'
-  return null
+  // F7, plan 7.2b: la corrida (target, person.given_names) y la aceptación de una sugerencia (attributes.field,
+  // attributes.other_record_id, attributes.response, target_record_id, attributes.stakeholder; api.md §4.14)
+  return CODIGOS_DE_IA_EN_CAMPO[`${codigo}:${campo}`] ?? null
+}
+
+const CODIGOS_DE_IA_EN_CAMPO: Readonly<Record<string, string>> = {
+  'PROJECT_REQUIRED:target': 'comun.codigosEnCampo.iaSinProyecto',
+  'PROJECT_REQUIRED:attributes.stakeholder': 'comun.codigosEnCampo.iaGrupoSinProyecto',
+  'FIELD_NOT_READABLE:person.given_names': 'comun.codigosEnCampo.iaSinNombres',
+  'TOO_MANY_RECORDS:target': 'comun.codigosEnCampo.iaDemasiados',
+  'FIELD_NOT_ALLOWED:attributes.field': 'comun.codigosEnCampo.iaCampoFijo',
+  'DUPLICATE_NOT_FOUND:attributes.other_record_id': 'comun.codigosEnCampo.iaOtroNoLegible',
+  'PROJECT_MISMATCH:attributes.other_record_id': 'comun.codigosEnCampo.iaOtroDeOtroProyecto',
+  'STATE_MISMATCH:attributes.response': 'comun.codigosEnCampo.iaQuejaNoRechazable',
+  'OBJECT_NOT_READABLE:target_record_id': 'comun.codigosEnCampo.iaDestinoNoLegible'
 }
 
 export function useMensajeDeError(): (error: unknown, propios?: MensajesPropios) => string {
