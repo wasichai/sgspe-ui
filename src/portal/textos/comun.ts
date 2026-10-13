@@ -271,7 +271,7 @@ export const ES_COMUN = {
     iaCampoFijo: 'La propuesta solo permite corregir el valor, no el dato que cambia.',
     iaOtroNoLegible: 'El otro registro del par no existe o su cuenta no lo lee.',
     iaOtroDeOtroProyecto: 'El otro registro del par es de otro proyecto: no se marca como duplicado.',
-    iaQuejaNoRechazable: 'La queja ya no se puede rechazar desde su estado: recargue para ver su estado o pida el paso a quien la gestiona.',
+    iaQuejaNoRechazable: 'La queja ya no se puede rechazar desde su estado: deje la respuesta vacía para solo vincular el duplicado.',
     iaDestinoNoLegible: 'El registro de la propuesta no existe o su cuenta no lo lee.',
     iaGrupoSinProyecto: 'La propuesta no es de un proyecto: no se puede registrar su grupo de interés.'
   },
@@ -535,7 +535,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     iaCampoFijo: 'The proposal only allows correcting the value, not the data it changes.',
     iaOtroNoLegible: 'The other record of the pair does not exist or your account cannot read it.',
     iaOtroDeOtroProyecto: 'The other record of the pair belongs to another project: it is not marked as a duplicate.',
-    iaQuejaNoRechazable: 'The grievance can no longer be rejected from its state: reload to see its state or ask whoever manages it.',
+    iaQuejaNoRechazable: 'The grievance can no longer be rejected from its state: leave the answer empty to only link the duplicate.',
     iaDestinoNoLegible: 'The record of the proposal does not exist or your account cannot read it.',
     iaGrupoSinProyecto: 'The proposal does not belong to a project: its stakeholder cannot be recorded.'
   },
