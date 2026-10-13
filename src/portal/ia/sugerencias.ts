@@ -202,6 +202,7 @@ export function camposQueFaltan(v: ValoresRevisados): string[] {
 export function textosLibres(v: ValoresRevisados): string[] {
   switch (v.fila) {
     case 'clausula':
+      return [v.numero, v.texto]
     case 'borrador':
       return [v.texto]
     case 'organizacion':
