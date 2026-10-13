@@ -6,6 +6,8 @@ export const MOTIVO_OBLIGATORIO: Readonly<Record<string, readonly string[]>> = {
   engagement: ['postpone', 'return_minutes', 'cancel_planned', 'cancel_scheduled', 'cancel_postponed'],
   field_visit: ['cancel'],
   commitment_candidate: ['reject', 'mark_duplicate'],
+  // F7: rechazar y marcar como duplicada una sugerencia de IA (WF-K)
+  ai_suggestion: ['reject', 'mark_duplicate'],
   task: ['cancel_open', 'cancel_in_progress', 'cancel_blocked'],
   // F4: descartar una alerta (WF-J)
   early_warning: ['dismiss'],
@@ -35,6 +37,8 @@ export const DE_COMANDO: Readonly<Record<string, readonly string[]>> = {
   stakeholder: ['assess'],
   area_of_influence: ['approve', 'supersede'],
   commitment_candidate: ['accept', 'mark_duplicate'],
+  // F7: aceptar una sugerencia solo por POST /api/sgspe/ai-suggestions/{id}/accept (CommandTransitionGuard)
+  ai_suggestion: ['accept'],
   grievance: ['close_reclassified_received', 'close_reclassified_acknowledged', 'close_reclassified_in_assessment'],
   inquiry: ['close_reclassified'],
   stakeholder_request: ['accept', 'close_accepted', 'close_reclassified_received', 'close_reclassified_under_evaluation'],

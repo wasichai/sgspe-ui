@@ -240,7 +240,12 @@ export const ES_COMUN = {
     PRIORITY_NOT_MET: 'El tema del aporte no está entre los temas priorizados del proyecto: justifíquelo o elija otro tema.',
     PRIORITIES_NOT_CONFIGURED: 'El proyecto no tiene temas priorizados: la prioridad del aporte no se evaluó.',
     SYNERGY_AGREEMENT_REQUIRED:
-      'Una sinergia exige un acuerdo vigente (activo y no vencido) y, en un programa con socio, que el socio sea parte del acuerdo. La justificación no lo reemplaza.'
+      'Una sinergia exige un acuerdo vigente (activo y no vencido) y, en un programa con socio, que el socio sea parte del acuerdo. La justificación no lo reemplaza.',
+    // F7: la IA (api.md §3.3 y §4.14)
+    AI_UNAVAILABLE: 'La IA no está disponible en este momento.',
+    AI_INPUT_TOO_LARGE: 'El documento tiene más texto del que la IA puede leer de una vez: no se guardó ninguna propuesta.',
+    AI_NO_TEXT: 'El documento no tiene texto que leer (por ejemplo, un PDF escaneado) o no es PDF ni Word: no se guardó ninguna propuesta.',
+    AI_RUN_TRUNCATED: 'La IA no terminó a tiempo y no guardó ninguna propuesta: reintente o pruebe con un documento más corto.'
   },
   // el texto de un código que dice otra cosa según su campo (plan 4.2a; componentes/errores.ts)
   codigosEnCampo: {
@@ -250,7 +255,11 @@ export const ES_COMUN = {
     // el 400 de wasichai sobre una relación cuyo destino la cuenta no lee: no existe o es de otro proyecto (spec 4.4 §3.6)
     registroNoLegible: 'El registro elegido no existe o es de otro proyecto.',
     // DELIVERY_FROZEN sobre el aporte: su entrega, una evidencia o un comprobante de un aporte entregado o anulado
-    aporteEntregado: 'El aporte ya se entregó o se anuló: su entrega, sus evidencias y sus comprobantes no cambian.'
+    aporteEntregado: 'El aporte ya se entregó o se anuló: su entrega, sus evidencias y sus comprobantes no cambian.',
+    // F7: AI_UNAVAILABLE según su campo (api.md §3.3), y AI_INPUT_TOO_LARGE sobre la pregunta de AI-05 (plan 7.2a)
+    iaSinOrganizacion: 'Su organización no tiene la IA activada.',
+    iaSinProveedor: 'El servicio de IA no responde. Reintente en unos minutos.',
+    iaPreguntaLarga: 'La pregunta es demasiado larga para la IA: acórtela y vuelva a preguntar.'
   },
   errores: {
     '400': 'Revise los datos marcados.',
@@ -488,14 +497,21 @@ export const EN_COMUN: typeof ES_COMUN = {
     PRIORITY_NOT_MET: 'The contribution topic is not among the project’s prioritised topics: justify it or pick another topic.',
     PRIORITIES_NOT_CONFIGURED: 'The project has no prioritised topics: the contribution priority was not assessed.',
     SYNERGY_AGREEMENT_REQUIRED:
-      'A synergy needs a current agreement (active and not expired) and, for a program with a partner, the partner as a party to it. The justification does not replace it.'
+      'A synergy needs a current agreement (active and not expired) and, for a program with a partner, the partner as a party to it. The justification does not replace it.',
+    AI_UNAVAILABLE: 'AI is not available right now.',
+    AI_INPUT_TOO_LARGE: 'The document has more text than the AI can read at once: no proposal was saved.',
+    AI_NO_TEXT: 'The document has no text to read (for instance, a scanned PDF) or is neither PDF nor Word: no proposal was saved.',
+    AI_RUN_TRUNCATED: 'The AI did not finish in time and saved no proposal: retry or try a shorter document.'
   },
   codigosEnCampo: {
     vinculoDeComando:
       'Only reclassification and acceptance write the link to the reclassified record or to the created commitment or contribution: reload and save again without changing it.',
     qcsNoLeida: 'Your account cannot read that grievance, inquiry or request (it may be confidential): nothing is linked to it.',
     registroNoLegible: 'The chosen record does not exist or belongs to another project.',
-    aporteEntregado: 'The contribution was already delivered or voided: its delivery, its evidence and its vouchers do not change.'
+    aporteEntregado: 'The contribution was already delivered or voided: its delivery, its evidence and its vouchers do not change.',
+    iaSinOrganizacion: 'Your organization does not have AI enabled.',
+    iaSinProveedor: 'The AI service is not responding. Retry in a few minutes.',
+    iaPreguntaLarga: 'The question is too long for the AI: shorten it and ask again.'
   },
   errores: {
     '400': 'Check the highlighted data.',
