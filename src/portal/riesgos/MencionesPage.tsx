@@ -5,6 +5,7 @@ import { CLASE_DE_TONO, type Tono } from '../componentes/apariencias'
 import { RegistrosSimples } from '../componentes/RegistrosSimples'
 import { texto, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
+import { AccionesDeIa } from '../ia/AccionesDeIa'
 
 // S58 · menciones en medios (screens.md §9): lo que dicen los medios del proyecto, registrado a mano con su tono, para KPI-ENG-07 y
 // 08 y la regla MENCIONES NEGATIVAS de JOB-04. el enlace se muestra como texto con su dominio y se abre en otra pestaña: ni el
@@ -79,6 +80,9 @@ export function MencionesPage() {
         textoNuevo={t('registrosDeAlerta.menciones.nueva')}
         textoVacio={t('registrosDeAlerta.menciones.vacio')}
         ayuda={<p className="text-sg-caption text-sg-text-muted">{t('registrosDeAlerta.menciones.enlaceAyuda')}</p>}
+        delRegistro={(r) => (
+          <AccionesDeIa objeto="media_mention" registro={r} proyecto={projectId} rotulo={texto(r, 'headline')} casos={['AI-08']} contextual={false} />
+        )}
       />
     </section>
   )
