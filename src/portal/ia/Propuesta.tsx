@@ -141,7 +141,7 @@ export function TarjetaDeSugerencia({ sugerencia, proyecto, alAceptar }: { suger
             <Link to={`${base}/engagements/${encodeURIComponent(destinoId)}/minutes`}>{t('bandejaIa.abrirEditor')}</Link>
           </Button>
         ) : null}
-        <BotonesDeTransicion objeto="ai_suggestion" registro={sugerencia} solo={['reject', 'mark_duplicate']} proyecto={proyecto} />
+        <BotonesDeTransicion objeto="ai_suggestion" registro={sugerencia} solo={fila ? ['reject', 'mark_duplicate'] : ['reject']} proyecto={proyecto} />
       </div>
     </li>
   )
