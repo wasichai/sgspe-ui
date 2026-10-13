@@ -139,7 +139,6 @@ export const ES = {
     sinPermisos: 'No se pudieron leer sus permisos',
     sinAcceso: 'Su cuenta no puede abrir «{{seccion}}».',
     preguntar: 'Preguntar',
-    asistentePorLlegar: 'El asistente de IA llega en una próxima fase',
     idioma: 'Idioma',
     idiomaNoGuardado: 'No se pudo guardar el idioma'
   },
