@@ -60,11 +60,14 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
   const aceptar = useAceptarSugerencia()
   const releer = useReleer()
   const erroresDeCampo = useErroresDeCampo()
-  const [v, setV] = useState<ValoresRevisados>(iniciales)
+  const [revisado, setV] = useState<ValoresRevisados>(iniciales)
   const [motivo, setMotivo] = useState('')
   const [intentado, setIntentado] = useState(false)
   const definicion = useDefinicion(texto(sugerencia, 'target_object'))
   const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(aceptar.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
+  // sin permiso para crear grupos de interés el control no se muestra, y el que la IA propuso tampoco se manda
+  const v: ValoresRevisados =
+    'tipoDeGrupo' in revisado && revisado.tipoDeGrupo !== null && !can('stakeholder', 'CREATE') ? { ...revisado, tipoDeGrupo: null } : revisado
   const faltan = camposQueFaltan(v)
   const conMarcadores = textosLibres(v).some(quedanMarcadores)
   // un actor persona nuevo lo acepta quien escribe sus nombres, restringidos (security.md §7.9)
@@ -99,7 +102,7 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
         </>
       }
     >
-      <CamposDeLaFila v={v} alCambiar={setV} definicion={definicion.data} error={error} />
+      <CamposDeLaFila v={revisado} alCambiar={setV} definicion={definicion.data} error={error} />
       {sinNombres ? <Alert tone="notice">{t('bandejaIa.aceptacion.sinNombres')}</Alert> : null}
       {intentado && conMarcadores ? <Alert tone="warning">{t('ia.marcadores.quedan')}</Alert> : null}
       <Campo etiqueta={t('comun.motivoObligatorio')} error={delServidor.reason ?? (intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined)}>

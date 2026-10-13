@@ -173,4 +173,37 @@ describe('S52 · aceptar una sugerencia', () => {
     expect(within(dialogo).getByText(/Reemplace los datos reservados/)).toBeInTheDocument()
     expect(red.a('POST', aceptacion('s10'))).toHaveLength(0)
   })
+
+  it('sin permiso para crear el grupo de interés, no manda el que la IA propuso', async () => {
+    const SUG_ORG = registro(
+      's11',
+      {
+        project: 'p1',
+        suggestion_kind: 'EXTRACCION',
+        target_object: 'organization',
+        suggested_value: JSON.stringify({
+          item: 'actor',
+          kind: 'organization',
+          name: 'Junta Ejemplo',
+          organization_type: 'JUNTA',
+          stakeholder: { stakeholder_type: 'ORGANIZACION COMUNAL' }
+        }),
+        confidence: 0.7,
+        model: 'claude-ejemplo',
+        ai_interaction: 'ai1'
+      },
+      { state: 'proposed', updatedAt: '2026-10-09T18:00:00Z' }
+    )
+    const { montarlo } = montarDrawer(SUG_ORG, permisos({ ...EQUIPO_IA.objects, stakeholder: ['READ'] }))
+    red = espiarRed([{ method: 'POST', path: aceptacion('s11'), responder: aceptada(SUG_ORG) }])
+    montarlo()
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la propuesta' })
+    expect(within(dialogo).queryByText('Crear además su grupo de interés en este proyecto')).not.toBeInTheDocument()
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Junta del anexo')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar' }))
+    await waitFor(() => expect(red!.a('POST', aceptacion('s11'))).toHaveLength(1))
+    expect(red.a('POST', aceptacion('s11'))[0].cuerpo).toEqual({
+      attributes: { item: 'actor', kind: 'organization', name: 'Junta Ejemplo', organization_type: 'JUNTA' }
+    })
+  })
 })

@@ -135,7 +135,8 @@ describe('aceptación de una sugerencia', () => {
     ])
     expect(camposQueFaltan({ fila: 'persona', existente: 'pe1', nombres: '', apellidos: '', sexo: '', localidad: '', tipoDeGrupo: null })).toEqual([])
     expect(camposQueFaltan({ fila: 'clasificacion', campo: 'category', valor: '' })).toEqual(['value'])
-    expect(textosLibres({ fila: 'clausula', numero: '5', texto: 'a [PERSONA]', creaCompromiso: false })).toEqual(['a [PERSONA]'])
+    expect(textosLibres({ fila: 'clausula', numero: '5', texto: 'a [PERSONA]', creaCompromiso: false })).toEqual(['5', 'a [PERSONA]'])
+    expect(textosLibres({ fila: 'clausula', numero: '[CORREO]', texto: 'a', creaCompromiso: false })).toContain('[CORREO]')
     expect(textosLibres({ fila: 'persona', existente: null, nombres: 'Rosa', apellidos: '[PERSONA]', sexo: '', localidad: '', tipoDeGrupo: null })).toEqual([
       'Rosa',
       '[PERSONA]'
