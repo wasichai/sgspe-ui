@@ -1,4 +1,5 @@
 import { atributo, texto, type Registro } from '../datos/registros'
+import { reidentificar } from './marcadores'
 
 // las propuestas de la bandeja S52 (ai-architecture.md §4.2 y §9.3): las sugerencias de IA y los candidatos a compromiso en
 // proposed, y la fila de la lista cerrada de cada sugerencia. la lista es cerrada: lo que no está en una fila no se acepta
@@ -124,5 +125,135 @@ export function filaDe(sugerencia: Registro): Fila | null {
         : null
     default:
       return null
+  }
+}
+
+// lo que la persona revisa antes de aceptar (decisión 15 del plan): la fila con sus valores corregidos. una persona nueva lleva
+// los nombres que escribe quien acepta (la sugerencia solo guarda el marcador); un duplicado de queja lleva la respuesta
+export type ValoresRevisados =
+  | { fila: 'clasificacion'; campo: string; valor: string }
+  | { fila: 'lugar'; campo: string; valor: string }
+  | { fila: 'tema'; valor: string }
+  | { fila: 'fecha'; campo: string; valor: string }
+  | { fila: 'clausula'; numero: string; texto: string; creaCompromiso: boolean }
+  | { fila: 'organizacion'; nombre: string; tipo: string; localidad: string; tipoDeGrupo: string | null }
+  | { fila: 'persona'; existente: string | null; nombres: string; apellidos: string; sexo: string; localidad: string; tipoDeGrupo: string | null }
+  | { fila: 'borrador'; texto: string }
+  | { fila: 'duplicado'; otro: string; respuesta: string | null }
+
+// los textos llegan con las personas legibles ya re-identificadas; lo demás queda como marcador para que la persona lo reemplace
+export function valoresIniciales(fila: Fila, nombres: ReadonlyMap<string, string>): ValoresRevisados | null {
+  switch (fila.fila) {
+    case 'clasificacion':
+    case 'lugar':
+    case 'fecha':
+    case 'tema':
+      return { ...fila }
+    case 'clausula':
+      return { ...fila, texto: reidentificar(fila.texto, nombres) }
+    case 'organizacion':
+      return { ...fila, nombre: reidentificar(fila.nombre, nombres) }
+    case 'persona':
+      return { fila: 'persona', existente: fila.existente, nombres: '', apellidos: '', sexo: '', localidad: fila.localidad, tipoDeGrupo: fila.tipoDeGrupo }
+    case 'borrador':
+      return { fila: 'borrador', texto: reidentificar(fila.texto, nombres) }
+    case 'duplicado':
+      return { fila: 'duplicado', otro: fila.otro, respuesta: null }
+    case 'resumen':
+      return null
+  }
+}
+
+const vacio = (texto: string | null): boolean => !texto || !texto.trim()
+
+// lo obligatorio que falta, con el nombre del campo de la API (así un error del servidor sobre attributes.<campo> cae en el mismo
+// lugar). tipoDeGrupo en null es «sin grupo de interés»; en '' es «con grupo, sin tipo todavía»
+export function camposQueFaltan(v: ValoresRevisados): string[] {
+  const faltan = (pares: [boolean, string][]) => pares.filter(([falta]) => falta).map(([, campo]) => campo)
+  switch (v.fila) {
+    case 'clasificacion':
+    case 'lugar':
+    case 'fecha':
+      return faltan([[vacio(v.valor), 'value']])
+    case 'tema':
+      return faltan([[vacio(v.valor), 'topic']])
+    case 'clausula':
+      return faltan([[vacio(v.texto), 'clause_text']])
+    case 'organizacion':
+      return faltan([
+        [vacio(v.nombre), 'name'],
+        [vacio(v.tipo), 'organization_type'],
+        [v.tipoDeGrupo !== null && vacio(v.tipoDeGrupo), 'stakeholder_type']
+      ])
+    case 'persona':
+      return faltan([
+        [!v.existente && vacio(v.nombres), 'given_names'],
+        [!v.existente && vacio(v.apellidos), 'surnames'],
+        [v.tipoDeGrupo !== null && vacio(v.tipoDeGrupo), 'stakeholder_type']
+      ])
+    case 'borrador':
+      return faltan([[vacio(v.texto), 'minutes']])
+    case 'duplicado':
+      return faltan([[v.respuesta !== null && vacio(v.respuesta), 'response']])
+  }
+}
+
+// los textos libres de lo revisado: ninguno puede llegar a un registro con un marcador (ai-architecture.md §4.2)
+export function textosLibres(v: ValoresRevisados): string[] {
+  switch (v.fila) {
+    case 'clausula':
+    case 'borrador':
+      return [v.texto]
+    case 'organizacion':
+      return [v.nombre]
+    case 'persona':
+      return v.existente ? [] : [v.nombres, v.apellidos]
+    case 'duplicado':
+      return v.respuesta === null ? [] : [v.respuesta]
+    default:
+      return []
+  }
+}
+
+const conGrupo = (tipo: string | null) => (tipo ? { stakeholder: { stakeholder_type: tipo } } : {})
+
+// el cuerpo de POST /api/sgspe/ai-suggestions/{id}/accept: { attributes } con la forma de suggested_value de la fila
+export function cuerpoDeAceptacion(v: ValoresRevisados): Record<string, unknown> {
+  switch (v.fila) {
+    case 'clasificacion':
+      return { field: v.campo, value: v.valor }
+    case 'lugar':
+      return { item: 'place', field: v.campo, value: v.valor }
+    case 'tema':
+      return { item: 'topic', topic: v.valor }
+    case 'fecha':
+      return { item: 'date', field: v.campo, value: v.valor }
+    case 'clausula':
+      return { item: 'clause', clause_number: v.numero, clause_text: v.texto, creates_commitment: v.creaCompromiso }
+    case 'organizacion':
+      return {
+        item: 'actor',
+        kind: 'organization',
+        name: v.nombre.trim(),
+        organization_type: v.tipo,
+        ...(v.localidad ? { locality: v.localidad } : {}),
+        ...conGrupo(v.tipoDeGrupo)
+      }
+    case 'persona':
+      return v.existente
+        ? { item: 'actor', kind: 'person', ...conGrupo(v.tipoDeGrupo) }
+        : {
+            item: 'actor',
+            kind: 'person',
+            given_names: v.nombres.trim(),
+            surnames: v.apellidos.trim(),
+            ...(v.sexo ? { sex: v.sexo } : {}),
+            ...(v.localidad ? { residence_locality: v.localidad } : {}),
+            ...conGrupo(v.tipoDeGrupo)
+          }
+    case 'borrador':
+      return { minutes: v.texto }
+    case 'duplicado':
+      return { other_record_id: v.otro, ...(v.respuesta !== null ? { response: v.respuesta.trim() } : {}) }
   }
 }

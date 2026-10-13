@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CANDIDATO_IA, SUG_ACTOR, SUG_BORRADOR, SUG_CLASIFICACION, SUG_DUPLICADO, SUG_ILEGIBLE, SUG_RESUMEN } from '../../test/ia'
 import { registro } from '../../test/montar'
-import { enLaBandeja, filaDe, ordenarPropuestas, valorLegible } from './sugerencias'
+import { camposQueFaltan, cuerpoDeAceptacion, enLaBandeja, filaDe, ordenarPropuestas, textosLibres, valorLegible, valoresIniciales } from './sugerencias'
 
 // la lista cerrada de ai-architecture.md §4.2 en el portal: cada sugerencia cae en una fila o en ninguna, y la bandeja ordena por
 // confianza y fecha (decisiones 11 y 12 del plan)
@@ -63,5 +63,82 @@ describe('sugerencias de la bandeja', () => {
       { clase: 'candidato', registro: CANDIDATO_IA }
     ]).map((p) => p.registro.id)
     expect(orden).toEqual(['k1', 's9', 's1', 's2', 'k2'])
+  })
+})
+
+// la aceptación (ai-architecture.md §4.2, decisión 15 del plan): la forma de suggested_value de su fila con los valores revisados
+describe('aceptación de una sugerencia', () => {
+  it('arma el cuerpo con la forma de su fila', () => {
+    expect(cuerpoDeAceptacion({ fila: 'clasificacion', campo: 'category', valor: 'EMPLEO' })).toEqual({ field: 'category', value: 'EMPLEO' })
+    expect(cuerpoDeAceptacion({ fila: 'lugar', campo: 'locality', valor: 'l1' })).toEqual({ item: 'place', field: 'locality', value: 'l1' })
+    expect(cuerpoDeAceptacion({ fila: 'tema', valor: 't1' })).toEqual({ item: 'topic', topic: 't1' })
+    expect(cuerpoDeAceptacion({ fila: 'fecha', campo: 'expiry_date', valor: '2027-03-31' })).toEqual({
+      item: 'date',
+      field: 'expiry_date',
+      value: '2027-03-31'
+    })
+    expect(cuerpoDeAceptacion({ fila: 'clausula', numero: '5', texto: 'Contratar un vigía', creaCompromiso: true })).toEqual({
+      item: 'clause',
+      clause_number: '5',
+      clause_text: 'Contratar un vigía',
+      creates_commitment: true
+    })
+    expect(cuerpoDeAceptacion({ fila: 'organizacion', nombre: 'Junta Ejemplo', tipo: 'JUNTA', localidad: '', tipoDeGrupo: 'ORGANIZACION COMUNAL' })).toEqual({
+      item: 'actor',
+      kind: 'organization',
+      name: 'Junta Ejemplo',
+      organization_type: 'JUNTA',
+      stakeholder: { stakeholder_type: 'ORGANIZACION COMUNAL' }
+    })
+    expect(
+      cuerpoDeAceptacion({ fila: 'persona', existente: null, nombres: 'Rosa', apellidos: 'Ejemplo', sexo: '', localidad: 'l1', tipoDeGrupo: null })
+    ).toEqual({
+      item: 'actor',
+      kind: 'person',
+      given_names: 'Rosa',
+      surnames: 'Ejemplo',
+      residence_locality: 'l1'
+    })
+    expect(cuerpoDeAceptacion({ fila: 'persona', existente: 'pe1', nombres: '', apellidos: '', sexo: '', localidad: 'l1', tipoDeGrupo: null })).toEqual({
+      item: 'actor',
+      kind: 'person'
+    })
+    expect(cuerpoDeAceptacion({ fila: 'borrador', texto: '## Acta' })).toEqual({ minutes: '## Acta' })
+    expect(cuerpoDeAceptacion({ fila: 'duplicado', otro: 'g2', respuesta: 'Se atiende en la Q-002' })).toEqual({
+      other_record_id: 'g2',
+      response: 'Se atiende en la Q-002'
+    })
+    expect(cuerpoDeAceptacion({ fila: 'duplicado', otro: 'o2', respuesta: null })).toEqual({ other_record_id: 'o2' })
+  })
+
+  it('prellena con los nombres legibles y deja los nombres de una persona nueva a quien acepta', () => {
+    expect(valoresIniciales(filaDe(SUG_BORRADOR)!, new Map([['pe1', 'Ana Ejemplo']]))).toEqual({
+      fila: 'borrador',
+      texto: '## Acuerdos\n- Ana Ejemplo pidió el reservorio'
+    })
+    expect(valoresIniciales(filaDe(SUG_ACTOR)!, new Map())).toEqual({
+      fila: 'persona',
+      existente: null,
+      nombres: '',
+      apellidos: '',
+      sexo: '',
+      localidad: 'l1',
+      tipoDeGrupo: null
+    })
+    expect(valoresIniciales(filaDe(SUG_RESUMEN)!, new Map())).toBeNull()
+  })
+
+  it('dice qué falta y qué textos no pueden llevar marcadores', () => {
+    expect(camposQueFaltan({ fila: 'persona', existente: null, nombres: '', apellidos: 'Ejemplo', sexo: '', localidad: '', tipoDeGrupo: '' })).toEqual([
+      'given_names',
+      'stakeholder_type'
+    ])
+    expect(camposQueFaltan({ fila: 'persona', existente: 'pe1', nombres: '', apellidos: '', sexo: '', localidad: '', tipoDeGrupo: null })).toEqual([])
+    expect(camposQueFaltan({ fila: 'clasificacion', campo: 'category', valor: '' })).toEqual(['value'])
+    expect(textosLibres({ fila: 'clausula', numero: '5', texto: 'a [PERSONA]', creaCompromiso: false })).toEqual(['a [PERSONA]'])
+    expect(textosLibres({ fila: 'persona', existente: null, nombres: 'Rosa', apellidos: '[PERSONA]', sexo: '', localidad: '', tipoDeGrupo: null })).toEqual([
+      'Rosa',
+      '[PERSONA]'
+    ])
   })
 })
