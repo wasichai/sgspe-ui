@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { CANDIDATO_IA, SUG_ACTOR, SUG_BORRADOR, SUG_CLASIFICACION, SUG_DUPLICADO, SUG_ILEGIBLE, SUG_RESUMEN } from '../../test/ia'
 import { registro } from '../../test/montar'
-import { camposQueFaltan, cuerpoDeAceptacion, enLaBandeja, filaDe, ordenarPropuestas, textosLibres, valorLegible, valoresIniciales } from './sugerencias'
+import {
+  campoDelFormulario,
+  camposQueFaltan,
+  cuerpoDeAceptacion,
+  enLaBandeja,
+  filaDe,
+  ordenarPropuestas,
+  textosLibres,
+  valorLegible,
+  valoresIniciales
+} from './sugerencias'
 
 // la lista cerrada de ai-architecture.md §4.2 en el portal: cada sugerencia cae en una fila o en ninguna, y la bandeja ordena por
 // confianza y fecha (decisiones 11 y 12 del plan)
@@ -28,7 +38,16 @@ describe('sugerencias de la bandeja', () => {
       suggested_value:
         '{"item":"actor","kind":"organization","name":"Junta Ejemplo","organization_type":"JUNTA","stakeholder":{"stakeholder_type":"ORGANIZACION COMUNAL"}}'
     })
-    expect(filaDe(grupo)).toEqual({ fila: 'organizacion', nombre: 'Junta Ejemplo', tipo: 'JUNTA', localidad: '', tipoDeGrupo: 'ORGANIZACION COMUNAL' })
+    expect(filaDe(grupo)).toEqual({
+      fila: 'organizacion',
+      nombre: 'Junta Ejemplo',
+      tipo: 'JUNTA',
+      localidad: '',
+      tipoDeGrupo: 'ORGANIZACION COMUNAL',
+      existente: null
+    })
+    const registrada = con({ ...grupo.attributes, target_record_id: 'o9' })
+    expect(filaDe(registrada)).toMatchObject({ fila: 'organizacion', existente: 'o9' })
   })
 
   it('filaDe rechaza lo que la lista cerrada no permite', () => {
@@ -83,7 +102,19 @@ describe('aceptación de una sugerencia', () => {
       clause_text: 'Contratar un vigía',
       creates_commitment: true
     })
-    expect(cuerpoDeAceptacion({ fila: 'organizacion', nombre: 'Junta Ejemplo', tipo: 'JUNTA', localidad: '', tipoDeGrupo: 'ORGANIZACION COMUNAL' })).toEqual({
+    expect(
+      cuerpoDeAceptacion({
+        fila: 'organizacion',
+        existente: 'o9',
+        nombre: 'Junta Ejemplo',
+        tipo: 'JUNTA',
+        localidad: 'l1',
+        tipoDeGrupo: 'ORGANIZACION COMUNAL'
+      })
+    ).toEqual({ item: 'actor', kind: 'organization', stakeholder: { stakeholder_type: 'ORGANIZACION COMUNAL' } })
+    expect(
+      cuerpoDeAceptacion({ fila: 'organizacion', existente: null, nombre: 'Junta Ejemplo', tipo: 'JUNTA', localidad: '', tipoDeGrupo: 'ORGANIZACION COMUNAL' })
+    ).toEqual({
       item: 'actor',
       kind: 'organization',
       name: 'Junta Ejemplo',
@@ -135,11 +166,30 @@ describe('aceptación de una sugerencia', () => {
     ])
     expect(camposQueFaltan({ fila: 'persona', existente: 'pe1', nombres: '', apellidos: '', sexo: '', localidad: '', tipoDeGrupo: null })).toEqual([])
     expect(camposQueFaltan({ fila: 'clasificacion', campo: 'category', valor: '' })).toEqual(['value'])
+    expect(camposQueFaltan({ fila: 'organizacion', existente: null, nombre: '', tipo: '', localidad: '', tipoDeGrupo: null })).toEqual([
+      'name',
+      'organization_type'
+    ])
+    expect(camposQueFaltan({ fila: 'organizacion', existente: 'o9', nombre: '', tipo: '', localidad: '', tipoDeGrupo: '' })).toEqual(['stakeholder_type'])
+    expect(textosLibres({ fila: 'organizacion', existente: 'o9', nombre: '[PERSONA]', tipo: '', localidad: '', tipoDeGrupo: null })).toEqual([])
     expect(textosLibres({ fila: 'clausula', numero: '5', texto: 'a [PERSONA]', creaCompromiso: false })).toEqual(['5', 'a [PERSONA]'])
     expect(textosLibres({ fila: 'clausula', numero: '[CORREO]', texto: 'a', creaCompromiso: false })).toContain('[CORREO]')
     expect(textosLibres({ fila: 'persona', existente: null, nombres: 'Rosa', apellidos: '[PERSONA]', sexo: '', localidad: '', tipoDeGrupo: null })).toEqual([
       'Rosa',
       '[PERSONA]'
     ])
+  })
+})
+
+// los rechazos del servidor van sobre attributes.<ruta> (api.md §4.14), también dentro de stakeholder: cada ruta cae en su control
+describe('campos de un rechazo de la aceptación', () => {
+  it('lleva cada ruta del servidor a su control', () => {
+    expect(campoDelFormulario('attributes.value')).toBe('value')
+    expect(campoDelFormulario('attributes.stakeholder.stakeholder_type')).toBe('stakeholder_type')
+    expect(campoDelFormulario('attributes.stakeholder')).toBe('stakeholder_type')
+    expect(campoDelFormulario('attributes.residence_locality')).toBe('locality')
+    expect(campoDelFormulario('attributes.clause_number')).toBe('clause_number')
+    expect(campoDelFormulario('reason')).toBe('reason')
+    expect(campoDelFormulario('attributes.field')).toBe('field')
   })
 })

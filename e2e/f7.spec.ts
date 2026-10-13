@@ -95,9 +95,14 @@ async function prepararF7(page: Page): Promise<{ escrituras: Request[] }> {
           ['category', { label: 'Categoría', type: 'ENUM', enumOptions: ['AGUA Y MEDIO AMBIENTE', 'EMPLEO', 'OTRO'] }]
         ])
     ],
-    [/^\/sgspe\/ai-suggestions\/s1\/accept$/, 'POST', () => ({ suggestion: { ...SUGERENCIA, state: 'accepted' }, result: null }), 200],
+    [
+      /^\/sgspe\/ai-suggestions\/s1\/accept$/,
+      'POST',
+      () => ({ suggestion: { ...SUGERENCIA, state: 'accepted' }, result: { ...QUEJA, attributes: { ...QUEJA.attributes, category: 'EMPLEO' } } }),
+      200
+    ],
     [/^\/objects\/evidence\/records\/ev1$/, 'GET', () => ACTA],
-    [/^\/sgspe\/ai\/runs$/, 'POST', () => ({ interaction: null, suggestions: [], candidates: [CANDIDATO] }), 201],
+    [/^\/sgspe\/ai\/runs$/, 'POST', () => ({ interaction: 'ai1', interactions: ['ai1'], suggestions: [], candidates: [CANDIDATO] }), 201],
     [/^\/objects\/[a-z_]+\/records\/[a-z0-9]+\/(transitions|history|documents)$/, 'GET', () => []],
     [/^\/objects\/[a-z_]+\/records\/[a-z0-9]+\/related\//, 'GET', () => pagina([])],
     [/^\/objects\/[a-z_]+\/records$/, 'GET', () => pagina([])]
@@ -158,4 +163,22 @@ test('la ficha de un acta detecta posibles compromisos y lleva a la bandeja', as
   const corrida = escrituras.find((r) => r.url().endsWith('/api/sgspe/ai/runs'))!
   expect(corrida.postDataJSON()).toEqual({ useCase: 'AI-03', target: { object: 'evidence', recordId: 'ev1' } })
   expect(await corrida.headerValue('idempotency-key')).toBeTruthy()
+})
+
+test('con la IA ocupada la ficha lo dice y ofrece reintentar, sin decir que el proveedor no responde', async ({ page }) => {
+  await prepararF7(page)
+  await page.route('**/api/sgspe/ai/runs', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/problem+json',
+      headers: { 'Retry-After': '10' },
+      body: JSON.stringify({ title: 'Service Unavailable', status: 503, detail: 'x', errors: [{ field: 'useCase', message: 'AI_BUSY' }] })
+    })
+  )
+  await page.goto('/projects/p1/documents/ev1')
+  const conIa = page.getByRole('region', { name: 'Con IA' })
+  await conIa.getByRole('button', { name: 'Detectar posibles compromisos' }).click()
+  await expect(conIa.getByText('La IA está ocupada: reintente en unos segundos.')).toBeVisible()
+  await expect(conIa.getByRole('button', { name: 'Reintentar' })).toBeVisible()
+  await expect(conIa.getByText(/no responde/)).toHaveCount(0)
 })

@@ -13,7 +13,7 @@ import { campoDe, puedeEscribir, texto, useDefinicion, type Registro } from '../
 import { NS } from '../i18n'
 import { useAceptarSugerencia } from './contrato'
 import { personasCitadas, quedanMarcadores } from './marcadores'
-import { camposQueFaltan, cuerpoDeAceptacion, filaDe, textosLibres, valoresIniciales, type ValoresRevisados } from './sugerencias'
+import { campoDelFormulario, camposQueFaltan, cuerpoDeAceptacion, filaDe, textosLibres, valoresIniciales, type ValoresRevisados } from './sugerencias'
 import { nombresReales, TextoDeIa, useNombresDePersonas } from './TextoDeIa'
 
 // S52 · aceptar una sugerencia (ai-architecture.md §4.2, decisiones 14 y 15 del plan): los valores que la persona revisa, nunca
@@ -39,12 +39,14 @@ export function AceptarSugerencia({ sugerencia, alCerrar }: { sugerencia: Regist
 const CAMPOS_DEL_FORMULARIO: readonly string[] = [
   'value',
   'topic',
+  'clause_number',
   'clause_text',
   'name',
   'organization_type',
   'given_names',
   'surnames',
   'sex',
+  'locality',
   'stakeholder_type',
   'minutes',
   'response',
@@ -64,7 +66,8 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
   const [motivo, setMotivo] = useState('')
   const [intentado, setIntentado] = useState(false)
   const definicion = useDefinicion(texto(sugerencia, 'target_object'))
-  const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(aceptar.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
+  // los rechazos sobre attributes.<ruta>, también dentro de stakeholder (api.md §4.14), junto a su control
+  const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(aceptar.error)).map(([c, x]) => [campoDelFormulario(c), x]))
   // sin permiso para crear grupos de interés el control no se muestra, y el que la IA propuso tampoco se manda
   const v: ValoresRevisados =
     'tipoDeGrupo' in revisado && revisado.tipoDeGrupo !== null && !can('stakeholder', 'CREATE') ? { ...revisado, tipoDeGrupo: null } : revisado
@@ -75,6 +78,8 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
     v.fila === 'persona' &&
     !v.existente &&
     !(can('person', 'CREATE') && puedeEscribir(definicion.data, 'given_names') && puedeEscribir(definicion.data, 'surnames'))
+  // un actor organización nuevo lo acepta quien puede registrar organizaciones; la ya registrada solo se vincula
+  const sinCrearOrganizacion = v.fila === 'organizacion' && !v.existente && !can('organization', 'CREATE')
   const error = (campo: string) => delServidor[campo] ?? (intentado && faltan.includes(campo) ? t('bandejaIa.aceptacion.obligatorio') : undefined)
   const cerrar = () => {
     aceptar.nuevaAccion()
@@ -82,7 +87,7 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
   }
   const confirmar = () => {
     setIntentado(true)
-    if (faltan.length > 0 || conMarcadores || sinNombres || !motivo.trim()) return
+    if (faltan.length > 0 || conMarcadores || sinNombres || sinCrearOrganizacion || !motivo.trim()) return
     aceptar.mutate({ sugerencia, atributos: cuerpoDeAceptacion(v), motivo: motivo.trim() }, { onSuccess: alCerrar })
   }
   return (
@@ -96,7 +101,7 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
           <Button variant="secondary" onClick={cerrar} disabled={aceptar.isPending}>
             {t('comun.cancelar')}
           </Button>
-          <Button onClick={confirmar} disabled={aceptar.isPending || sinNombres} aria-busy={aceptar.isPending}>
+          <Button onClick={confirmar} disabled={aceptar.isPending || sinNombres || sinCrearOrganizacion} aria-busy={aceptar.isPending}>
             {aceptar.isPending ? t('bandejaIa.aceptacion.aceptando') : t('bandejaIa.aceptacion.confirmar')}
           </Button>
         </>
@@ -104,6 +109,7 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
     >
       <CamposDeLaFila v={revisado} alCambiar={setV} definicion={definicion.data} error={error} />
       {sinNombres ? <Alert tone="notice">{t('bandejaIa.aceptacion.sinNombres')}</Alert> : null}
+      {sinCrearOrganizacion ? <Alert tone="notice">{t('bandejaIa.aceptacion.sinOrganizacion')}</Alert> : null}
       {intentado && conMarcadores ? <Alert tone="warning">{t('ia.marcadores.quedan')}</Alert> : null}
       <Campo etiqueta={t('comun.motivoObligatorio')} error={delServidor.reason ?? (intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined)}>
         {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
@@ -258,7 +264,7 @@ function CamposDeLaFila({
     case 'clausula':
       return (
         <>
-          <Campo etiqueta={t('bandejaIa.aceptacion.numero')}>
+          <Campo etiqueta={t('bandejaIa.aceptacion.numero')} error={error('clause_number')}>
             {(p) => <Input {...p} value={v.numero} onChange={(e) => alCambiar({ ...v, numero: e.target.value })} />}
           </Campo>
           <Campo etiqueta={t('bandejaIa.aceptacion.texto')} error={error('clause_text')}>
@@ -271,7 +277,14 @@ function CamposDeLaFila({
         </>
       )
     case 'organizacion':
-      return (
+      return v.existente ? (
+        <>
+          <p className="text-sm">
+            <span>{t('bandejaIa.aceptacion.organizacionExistente')}</span> <RegistroVinculado objeto="organization" id={v.existente} />
+          </p>
+          {grupo}
+        </>
+      ) : (
         <>
           <Campo etiqueta={t('bandejaIa.aceptacion.nombre')} error={error('name')}>
             {(p) => <Input {...p} value={v.nombre} onChange={(e) => alCambiar({ ...v, nombre: e.target.value })} />}
@@ -291,6 +304,7 @@ function CamposDeLaFila({
             objeto="locality"
             id={v.localidad}
             buscar={t('bandejaIa.aceptacion.buscarLocalidad')}
+            error={error('locality')}
             alElegir={(id) => alCambiar({ ...v, localidad: id })}
           />
           {grupo}
@@ -322,6 +336,7 @@ function CamposDeLaFila({
             objeto="locality"
             id={v.localidad}
             buscar={t('bandejaIa.aceptacion.buscarLocalidad')}
+            error={error('locality')}
             alElegir={(id) => alCambiar({ ...v, localidad: id })}
           />
           {grupo}

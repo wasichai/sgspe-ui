@@ -3,9 +3,19 @@ import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import type { CallerPermissions } from '@wasichai/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { baseDeIa, EQUIPO_IA, ESTADO_ACTIVO, ESTADO_SOLO_DATOS, GERENCIA_IA, RESPUESTA_DOCUMENTOS, SIN_DESCARGA, SIN_EVIDENCIA } from '../../test/ia'
+import {
+  baseDeIa,
+  EQUIPO_IA,
+  ESTADO_ACTIVO,
+  ESTADO_SOLO_DATOS,
+  GERENCIA_IA,
+  RESPUESTA_DOCUMENTOS,
+  SIN_CITA_VALIDA,
+  SIN_DESCARGA,
+  SIN_EVIDENCIA
+} from '../../test/ia'
 import { montar } from '../../test/montar'
-import { espiarRed, type Red } from '../../test/red'
+import { espiarRed, problema, type Red } from '../../test/red'
 import { BotonPreguntar, ProveedorDelAsistente } from './Asistente'
 
 // S05 «Respuesta con citas» (AI-06): sobre los documentos de un proyecto, con cada fuente y su cita solo para quien la descarga;
@@ -21,12 +31,13 @@ afterEach(() => {
 
 const abrirDocumentos = async ({
   respuesta = RESPUESTA_DOCUMENTOS as unknown,
+  responder = null as (() => Response) | null,
   permisos = EQUIPO_IA as CallerPermissions,
   ruta = '/projects/p1/overview',
   estado = ESTADO_ACTIVO as unknown
 } = {}) => {
   fetch = mockFetch(baseDeIa(estado))
-  red = espiarRed([{ method: 'POST', path: '/sgspe/ai/knowledge/questions', responder: () => jsonResponse(respuesta) }])
+  red = espiarRed([{ method: 'POST', path: '/sgspe/ai/knowledge/questions', responder: responder ?? (() => jsonResponse(respuesta)) }])
   montar(
     <ProveedorDelAsistente>
       <BotonPreguntar />
@@ -58,7 +69,23 @@ describe('S05 · preguntar a los documentos', () => {
     await preguntar(panel)
     await userEvent.click(within(panel).getByRole('button', { name: 'Preguntar' }))
     expect(await within(panel).findByText('No encontré documentos que respondan esto.')).toBeInTheDocument()
-    expect(within(panel).queryByText('No hay evidencia.')).not.toBeInTheDocument()
+    expect(within(panel).queryByText(/No hay evidencia/)).not.toBeInTheDocument()
+  })
+
+  it('sin una cita válida, aunque el modelo haya respondido, tampoco muestra la respuesta', async () => {
+    const panel = await abrirDocumentos({ respuesta: SIN_CITA_VALIDA })
+    await preguntar(panel)
+    await userEvent.click(within(panel).getByRole('button', { name: 'Preguntar' }))
+    expect(await within(panel).findByText('No encontré documentos que respondan esto.')).toBeInTheDocument()
+    expect(within(panel).queryByText(/cita que respalde/)).not.toBeInTheDocument()
+  })
+
+  // 7.2c: 404 si quien pregunta no lee el proyecto, sin decir si existe
+  it('un proyecto que la cuenta no lee se dice sin distinguir si existe', async () => {
+    const panel = await abrirDocumentos({ responder: () => problema(404, 'Not Found') })
+    await preguntar(panel)
+    await userEvent.click(within(panel).getByRole('button', { name: 'Preguntar' }))
+    expect(await within(panel).findByText('El proyecto no existe o no es de sus proyectos: elija otro.')).toBeInTheDocument()
   })
 
   it('una fuente citada que no se descarga no muestra la cita', async () => {

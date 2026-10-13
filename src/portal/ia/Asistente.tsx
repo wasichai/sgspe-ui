@@ -9,7 +9,7 @@ import { Drawer } from '../componentes/Drawer'
 import { Cargando } from '../componentes/Estados'
 import { correlacionDe, useMensajeDeError } from '../componentes/errores'
 import { rutaParaAbrir } from '../datos/fichas'
-import { campoDelError } from '../datos/http'
+import { campoDelError, codigoDelError } from '../datos/http'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { AvisoDeIa } from './AvisoDeIa'
@@ -172,12 +172,14 @@ function FalloDePregunta({ error, alRepetir }: { error: unknown; alRepetir: () =
   const { t } = useTranslation(NS)
   const mensaje = useMensajeDeError()
   const correlacion = correlacionDe(error)
-  const sinRol = error instanceof ApiError && error.status === 403
+  // un 403 sin código es el permiso que falta; con código (PERSON_REQUIRED) se dice su texto
+  const sinRol = error instanceof ApiError && error.status === 403 && !codigoDelError(error)
   // se repite lo que puede cambiar: el proveedor caído, otra falla del servidor o de la red; nunca la organización sin IA
   const repetible = !(error instanceof ApiError) || (error.status >= 500 && campoDelError(error) !== 'organization')
   return (
     <Alert tone="danger">
-      <p>{sinRol ? t('ia.sinIa.rol') : mensaje(error)}</p>
+      {/* solo la pregunta a los documentos responde 404: el proyecto no existe o la cuenta no lo lee (api.md §4.14) */}
+      <p>{sinRol ? t('ia.sinIa.rol') : mensaje(error, { '404': t('asistente.proyectoNoLegible') })}</p>
       {correlacion ? <p className="font-sg-mono text-sg-caption">{t('comun.correlacion', { id: correlacion })}</p> : null}
       {repetible ? (
         <Button size="sm" variant="secondary" className="mt-2" onClick={alRepetir}>

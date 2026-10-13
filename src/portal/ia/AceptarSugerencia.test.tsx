@@ -13,7 +13,7 @@ import {
   SUG_ILEGIBLE,
   TRANSICIONES_DE_SUGERENCIA
 } from '../../test/ia'
-import { montar, pagina, registro } from '../../test/montar'
+import { definicion, montar, pagina, registro } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { AceptarSugerencia } from './AceptarSugerencia'
@@ -49,6 +49,27 @@ const SUG_CLAUSULA = registro(
   },
   { state: 'proposed', updatedAt: '2026-10-09T18:00:00Z' }
 )
+// una organización nueva con su grupo de interés propuesto
+const SUG_ORG = registro(
+  's11',
+  {
+    project: 'p1',
+    suggestion_kind: 'EXTRACCION',
+    target_object: 'organization',
+    suggested_value: JSON.stringify({
+      item: 'actor',
+      kind: 'organization',
+      name: 'Junta Ejemplo',
+      organization_type: 'JUNTA',
+      stakeholder: { stakeholder_type: 'ORGANIZACION COMUNAL' }
+    }),
+    confidence: 0.7,
+    model: 'claude-ejemplo',
+    ai_interaction: 'ai1'
+  },
+  { state: 'proposed', updatedAt: '2026-10-09T18:00:00Z' }
+)
+const DEF_GRUPO = definicion('stakeholder', [['stakeholder_type', { label: 'Tipo', type: 'ENUM', enumOptions: ['ORGANIZACION COMUNAL', 'AUTORIDAD'] }]])
 const aceptacion = (id: string) => `/sgspe/ai-suggestions/${id}/accept`
 const aceptada = (s: { id: string }) => () => jsonResponse({ suggestion: { ...s, state: 'accepted' }, result: null })
 
@@ -175,25 +196,6 @@ describe('S52 · aceptar una sugerencia', () => {
   })
 
   it('sin permiso para crear el grupo de interés, no manda el que la IA propuso', async () => {
-    const SUG_ORG = registro(
-      's11',
-      {
-        project: 'p1',
-        suggestion_kind: 'EXTRACCION',
-        target_object: 'organization',
-        suggested_value: JSON.stringify({
-          item: 'actor',
-          kind: 'organization',
-          name: 'Junta Ejemplo',
-          organization_type: 'JUNTA',
-          stakeholder: { stakeholder_type: 'ORGANIZACION COMUNAL' }
-        }),
-        confidence: 0.7,
-        model: 'claude-ejemplo',
-        ai_interaction: 'ai1'
-      },
-      { state: 'proposed', updatedAt: '2026-10-09T18:00:00Z' }
-    )
     const { montarlo } = montarDrawer(SUG_ORG, permisos({ ...EQUIPO_IA.objects, stakeholder: ['READ'] }))
     red = espiarRed([{ method: 'POST', path: aceptacion('s11'), responder: aceptada(SUG_ORG) }])
     montarlo()
@@ -205,5 +207,120 @@ describe('S52 · aceptar una sugerencia', () => {
     expect(red.a('POST', aceptacion('s11'))[0].cuerpo).toEqual({
       attributes: { item: 'actor', kind: 'organization', name: 'Junta Ejemplo', organization_type: 'JUNTA' }
     })
+  })
+
+  // Tarea 7, aparcado hasta 7.2b: con target_record_id el actor es la organización ya registrada; no se escriben su nombre ni su
+  // tipo, y el grupo de interés pedido lleva su tipo. la respuesta trae el grupo aparte (stakeholder)
+  it('una organización ya registrada se acepta sin pedir su nombre ni su tipo, con su grupo de interés', async () => {
+    const SUG_ORG_EXISTENTE = registro(
+      's12',
+      {
+        project: 'p1',
+        suggestion_kind: 'EXTRACCION',
+        target_object: 'organization',
+        target_record_id: 'o9',
+        suggested_value: JSON.stringify({ item: 'actor', kind: 'organization', name: 'Junta Ejemplo', organization_type: 'JUNTA' }),
+        confidence: 0.7,
+        model: 'claude-ejemplo',
+        ai_interaction: 'ai1'
+      },
+      { state: 'proposed', updatedAt: '2026-10-09T18:00:00Z' }
+    )
+    const { montarlo } = montarDrawer(SUG_ORG_EXISTENTE, EQUIPO_IA, [
+      { path: '/objects/organization/records/o9', body: registro('o9', { name: 'Junta Ejemplo del anexo' }) },
+      { path: '/metadata/objects/stakeholder', body: DEF_GRUPO }
+    ])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: aceptacion('s12'),
+        responder: () =>
+          jsonResponse({
+            suggestion: { ...SUG_ORG_EXISTENTE, state: 'accepted' },
+            result: registro('o9', { name: 'Junta Ejemplo del anexo' }),
+            stakeholder: registro('st1', { project: 'p1', organization: 'o9', stakeholder_type: 'ORGANIZACION COMUNAL' })
+          })
+      }
+    ])
+    montarlo()
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la propuesta' })
+    expect(within(dialogo).getByText('Se vincula a la organización ya registrada.')).toBeInTheDocument()
+    expect(within(dialogo).queryByLabelText('Nombre')).not.toBeInTheDocument()
+    expect(within(dialogo).queryByLabelText('Tipo de organización')).not.toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByLabelText('Crear además su grupo de interés en este proyecto'))
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Junta ya registrada')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar' }))
+    expect(within(dialogo).getByText('Este dato es obligatorio')).toBeInTheDocument()
+    expect(red.a('POST', aceptacion('s12'))).toHaveLength(0)
+    await userEvent.selectOptions(within(dialogo).getByLabelText('Tipo de grupo de interés'), 'ORGANIZACION COMUNAL')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar' }))
+    await waitFor(() => expect(red!.a('POST', aceptacion('s12'))).toHaveLength(1))
+    expect(red.a('POST', aceptacion('s12'))[0].cuerpo).toEqual({
+      attributes: { item: 'actor', kind: 'organization', stakeholder: { stakeholder_type: 'ORGANIZACION COMUNAL' } }
+    })
+  })
+
+  it('una organización nueva la acepta solo quien puede registrarla', async () => {
+    const { montarlo } = montarDrawer(SUG_ORG, permisos({ ...EQUIPO_IA.objects, organization: ['READ', 'UPDATE'] }))
+    montarlo()
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la propuesta' })
+    expect(within(dialogo).getByText('Su cuenta no puede registrar organizaciones: esta propuesta la acepta quien sí puede.')).toBeInTheDocument()
+    expect(within(dialogo).getByRole('button', { name: 'Aceptar' })).toBeDisabled()
+  })
+
+  // plan 7.2b: los rechazos sobre attributes.<ruta> van junto a su control, también dentro de stakeholder
+  it('el tipo de grupo que falta se dice junto a su control, aunque venga dentro de stakeholder', async () => {
+    const { montarlo } = montarDrawer(SUG_ORG, EQUIPO_IA, [{ path: '/metadata/objects/stakeholder', body: DEF_GRUPO }])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: aceptacion('s11'),
+        responder: () => problema(400, 'x', [{ field: 'attributes.stakeholder.stakeholder_type', message: 'FIELD_REQUIRED' }])
+      }
+    ])
+    montarlo()
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la propuesta' })
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Junta del anexo')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar' }))
+    const tipo = await within(dialogo).findByLabelText('Tipo de grupo de interés')
+    expect(tipo).toHaveAccessibleDescription('Falta un dato que este paso necesita.')
+  })
+
+  it('un marcador que rechaza el servidor en el número de cláusula se dice junto a ese control', async () => {
+    const otro = montarDrawer(SUG_CLAUSULA)
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: aceptacion('s10'),
+        responder: () => problema(400, 'x', [{ field: 'attributes.clause_number', message: 'PSEUDONYM_NOT_ALLOWED' }])
+      }
+    ])
+    otro.montarlo()
+    const dialogo2 = await screen.findByRole('dialog', { name: 'Aceptar la propuesta' })
+    const texto = within(dialogo2).getByLabelText('Texto de la cláusula')
+    await userEvent.clear(texto)
+    await userEvent.type(texto, 'Contratar un vigía')
+    await userEvent.type(within(dialogo2).getByLabelText('Motivo (obligatorio)'), 'Cláusula 5')
+    await userEvent.click(within(dialogo2).getByRole('button', { name: 'Aceptar' }))
+    await waitFor(() =>
+      expect(within(dialogo2).getByLabelText('Número de la cláusula')).toHaveAccessibleDescription(
+        'Quedan datos reservados por la IA: reemplácelos por los valores reales antes de aceptar.'
+      )
+    )
+  })
+
+  // api.md §4.14: en CLASIFICACION, lugar y fecha se corrige el valor, nunca el campo guardado
+  it('una clasificación solo deja corregir el valor; el campo es el que propuso la IA', async () => {
+    const { montarlo } = montarDrawer(SUG_CLASIFICACION)
+    red = espiarRed([
+      { method: 'POST', path: aceptacion('s1'), responder: () => problema(400, 'x', [{ field: 'attributes.field', message: 'FIELD_NOT_ALLOWED' }]) }
+    ])
+    montarlo()
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la propuesta' })
+    expect(within(dialogo).getAllByRole('combobox')).toHaveLength(1)
+    expect(within(dialogo).getByLabelText('Categoría')).toBeInTheDocument()
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Revisado')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar' }))
+    expect(await within(dialogo).findByText('La propuesta solo permite corregir el valor, no el dato que cambia.')).toBeInTheDocument()
   })
 })

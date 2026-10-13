@@ -188,7 +188,15 @@ function Comparacion({ sugerencia, proyecto }: { sugerencia: Registro; proyecto:
           <Campo etiqueta={t('comun.motivoObligatorio')} error={intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined}>
             {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
           </Campo>
-          {error ? <Alert tone="danger">{mensaje(error, { STATE_MISMATCH: t('bandejaIa.aceptacion.errores.STATE_MISMATCH') })}</Alert> : null}
+          {error ? (
+            <Alert tone="danger">
+              {mensaje(error, {
+                // la queja ya no se rechaza desde su estado (WF-E1) no es la propuesta ya decidida
+                'STATE_MISMATCH:attributes.response': t('comun.codigosEnCampo.iaQuejaNoRechazable'),
+                STATE_MISMATCH: t('bandejaIa.aceptacion.errores.STATE_MISMATCH')
+              })}
+            </Alert>
+          ) : null}
           <Button onClick={confirmar} disabled={enCurso} aria-busy={enCurso}>
             {enCurso ? t('bandejaIa.duplicado.confirmando') : t('bandejaIa.duplicado.confirmar')}
           </Button>

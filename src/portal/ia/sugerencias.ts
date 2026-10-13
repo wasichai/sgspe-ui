@@ -36,7 +36,7 @@ export type Fila =
   | { fila: 'tema'; valor: string }
   | { fila: 'fecha'; campo: string; valor: string }
   | { fila: 'clausula'; numero: string; texto: string; creaCompromiso: boolean }
-  | { fila: 'organizacion'; nombre: string; tipo: string; localidad: string; tipoDeGrupo: string | null }
+  | { fila: 'organizacion'; nombre: string; existente: string | null; tipo: string; localidad: string; tipoDeGrupo: string | null }
   | { fila: 'persona'; nombre: string; existente: string | null; localidad: string; tipoDeGrupo: string | null }
   | { fila: 'borrador'; texto: string }
   | { fila: 'duplicado'; otro: string; razones: string[] }
@@ -100,7 +100,9 @@ export function filaDe(sugerencia: Registro): Fila | null {
           nombre: cadena(v.name),
           tipo: cadena(v.organization_type),
           localidad: cadena(v.locality),
-          tipoDeGrupo: tipoDeGrupo(v.stakeholder)
+          tipoDeGrupo: tipoDeGrupo(v.stakeholder),
+          // con target_record_id se usa la organización ya registrada (api.md §4.14): su nombre y su tipo no se escriben
+          existente: texto(sugerencia, 'target_record_id') || null
         }
       if (v.kind === 'person' && destino === 'person')
         return {
@@ -136,7 +138,7 @@ export type ValoresRevisados =
   | { fila: 'tema'; valor: string }
   | { fila: 'fecha'; campo: string; valor: string }
   | { fila: 'clausula'; numero: string; texto: string; creaCompromiso: boolean }
-  | { fila: 'organizacion'; nombre: string; tipo: string; localidad: string; tipoDeGrupo: string | null }
+  | { fila: 'organizacion'; existente: string | null; nombre: string; tipo: string; localidad: string; tipoDeGrupo: string | null }
   | { fila: 'persona'; existente: string | null; nombres: string; apellidos: string; sexo: string; localidad: string; tipoDeGrupo: string | null }
   | { fila: 'borrador'; texto: string }
   | { fila: 'duplicado'; otro: string; respuesta: string | null }
@@ -181,8 +183,8 @@ export function camposQueFaltan(v: ValoresRevisados): string[] {
       return faltan([[vacio(v.texto), 'clause_text']])
     case 'organizacion':
       return faltan([
-        [vacio(v.nombre), 'name'],
-        [vacio(v.tipo), 'organization_type'],
+        [!v.existente && vacio(v.nombre), 'name'],
+        [!v.existente && vacio(v.tipo), 'organization_type'],
         [v.tipoDeGrupo !== null && vacio(v.tipoDeGrupo), 'stakeholder_type']
       ])
     case 'persona':
@@ -206,7 +208,7 @@ export function textosLibres(v: ValoresRevisados): string[] {
     case 'borrador':
       return [v.texto]
     case 'organizacion':
-      return [v.nombre]
+      return v.existente ? [] : [v.nombre]
     case 'persona':
       return v.existente ? [] : [v.nombres, v.apellidos]
     case 'duplicado':
@@ -232,14 +234,16 @@ export function cuerpoDeAceptacion(v: ValoresRevisados): Record<string, unknown>
     case 'clausula':
       return { item: 'clause', clause_number: v.numero, clause_text: v.texto, creates_commitment: v.creaCompromiso }
     case 'organizacion':
-      return {
-        item: 'actor',
-        kind: 'organization',
-        name: v.nombre.trim(),
-        organization_type: v.tipo,
-        ...(v.localidad ? { locality: v.localidad } : {}),
-        ...conGrupo(v.tipoDeGrupo)
-      }
+      return v.existente
+        ? { item: 'actor', kind: 'organization', ...conGrupo(v.tipoDeGrupo) }
+        : {
+            item: 'actor',
+            kind: 'organization',
+            name: v.nombre.trim(),
+            organization_type: v.tipo,
+            ...(v.localidad ? { locality: v.localidad } : {}),
+            ...conGrupo(v.tipoDeGrupo)
+          }
     case 'persona':
       return v.existente
         ? { item: 'actor', kind: 'person', ...conGrupo(v.tipoDeGrupo) }
@@ -257,4 +261,13 @@ export function cuerpoDeAceptacion(v: ValoresRevisados): Record<string, unknown>
     case 'duplicado':
       return { other_record_id: v.otro, ...(v.respuesta !== null ? { response: v.respuesta.trim() } : {}) }
   }
+}
+
+// el control del formulario de un rechazo del servidor sobre attributes.<ruta> (api.md §4.14): el tipo del grupo de interés vive
+// dentro de stakeholder, y la localidad de residencia de una persona se elige en el mismo control que la de una organización
+export function campoDelFormulario(campo: string): string {
+  const ruta = campo.replace(/^attributes\./, '')
+  if (ruta === 'stakeholder' || ruta.startsWith('stakeholder.')) return 'stakeholder_type'
+  if (ruta === 'residence_locality') return 'locality'
+  return ruta
 }

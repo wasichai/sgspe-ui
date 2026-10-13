@@ -63,6 +63,24 @@ describe('TextoDeIa', () => {
     expect(container.querySelector('img, script, b')).toBeNull()
   })
 
+  // el backend solo quita etiquetas HTML de la salida de la IA: un enlace Markdown con un esquema peligroso nunca es un enlace
+  it.each(['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'data:text/html;base64,PHNjcmlwdD4=', 'vbscript:msgbox(1)'])(
+    'un enlace Markdown a %s se ve como texto, nunca como enlace',
+    (destino) => {
+      fetch = mockFetch([])
+      const { container } = montar(<TextoDeIa markdown texto={`## Fuente\n- [Abrir](${destino})\nVer <${destino}> o ${destino}`} />)
+      expect(container.querySelector('a, [href]')).toBeNull()
+      expect(screen.getByText(`[Abrir](${destino})`)).toBeInTheDocument()
+    }
+  )
+
+  it('un enlace Markdown a una dirección web tampoco se vuelve enlace: la salida de la IA no navega', () => {
+    fetch = mockFetch([])
+    const { container } = montar(<TextoDeIa texto="[Ver](https://ejemplo.test/x)" />)
+    expect(container.querySelector('a, [href]')).toBeNull()
+    expect(screen.getByText('[Ver](https://ejemplo.test/x)')).toBeInTheDocument()
+  })
+
   it('la marca de procedencia dice que es una sugerencia o un resumen de la IA', () => {
     fetch = mockFetch([])
     montar(

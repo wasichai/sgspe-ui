@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEF_COMPROMISO } from '../../test/compromisos'
 import { baseDeIa, CANDIDATO_IA, EQUIPO_IA, GERENCIA_IA } from '../../test/ia'
 import { montar, pagina, registro } from '../../test/montar'
-import { espiarRed, type Red } from '../../test/red'
+import { espiarRed, problema, type Red } from '../../test/red'
 import { Candidatos } from './Candidatos'
 
 // los candidatos de IA en S28 (flujo 7, ai-architecture.md §4.2 y §12.2): el texto y la cita re-identificados, el compromiso
@@ -39,7 +39,7 @@ const CON_MARCADOR_AL_CORTE = registro(
   { state: 'proposed', createdAt: '2026-10-08T13:00:00Z', updatedAt: '2026-10-08T13:00:00Z' }
 )
 
-const montarCandidatos = () => {
+const montarCandidatos = (aceptar: (() => Response) | null = null) => {
   fetch = mockFetch([
     { path: '/objects/commitment_candidate/records', body: pagina([CANDIDATO_IA, CON_RESERVADO, CON_MARCADOR_AL_CORTE]) },
     { path: /^\/objects\/commitment_candidate\/records\/k\d\/transitions$/, body: [] },
@@ -51,7 +51,7 @@ const montarCandidatos = () => {
     {
       method: 'POST',
       path: /^\/sgspe\/commitment-candidates\/k\d\/accept$/,
-      responder: () => jsonResponse({ commitment: registro('c9', { project: 'p1' }, { state: 'draft' }), candidate: CANDIDATO_IA }, 201)
+      responder: aceptar ?? (() => jsonResponse({ commitment: registro('c9', { project: 'p1' }, { state: 'draft' }), candidate: CANDIDATO_IA }, 201))
     }
   ])
   montar(<Candidatos proyecto="p1" />, { usuario: GERENCIA_IA, permisos: EQUIPO_IA })
@@ -124,5 +124,21 @@ describe('S28 · candidatos de IA', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Aceptar y crear borrador' }))
     expect((await within(panel).findAllByText(/Reemplace los datos reservados/)).length).toBeGreaterThan(0)
     expect(red!.a('POST', '/sgspe/commitment-candidates/k4/accept')).toHaveLength(0)
+  })
+
+  // plan 7.2b: el servidor también rechaza un marcador (400 PSEUDONYM_NOT_ALLOWED sobre attributes.<ruta>): va junto a su control
+  it('un marcador que rechaza el servidor se dice junto a su campo', async () => {
+    montarCandidatos(() => problema(400, 'x', [{ field: 'attributes.description', message: 'PSEUDONYM_NOT_ALLOWED' }]))
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Revisar' }))[0])
+    const panel = await screen.findByRole('dialog')
+    await userEvent.type(await within(panel).findByLabelText('Código del compromiso'), 'C-023')
+    await userEvent.type(within(panel).getByLabelText('Monto'), '100')
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Revisado')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Aceptar y crear borrador' }))
+    await waitFor(() =>
+      expect(within(panel).getByLabelText('Descripción')).toHaveAccessibleDescription(
+        'Quedan datos reservados por la IA: reemplácelos por los valores reales antes de aceptar.'
+      )
+    )
   })
 })

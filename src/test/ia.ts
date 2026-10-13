@@ -231,9 +231,17 @@ export const RESPUESTA_DOCUMENTOS = {
   citations: [{ evidenceId: 'ev1', chunkIndex: 2, quote: '[PERSONA:pe1] pidió un reservorio para el anexo' }],
   interaction: 'ai10'
 }
-export const SIN_EVIDENCIA = { answer: 'No hay evidencia.', citations: [], interaction: null }
-// POST /api/sgspe/ai/runs de AI-03 sobre el acta
-export const CORRIDA_AI03 = { interaction: INTERACCION_IA, suggestions: [], candidates: [CANDIDATO_IA] }
+// sin fragmento que pase los filtros no se llama al modelo: sin citas e interaction null (KnowledgeAnswers.noEvidence de 7.2c)
+export const SIN_EVIDENCIA = {
+  answer: 'No hay evidencia sobre esto en los documentos del proyecto que usted puede leer.',
+  citations: [],
+  interaction: null
+}
+// el modelo respondió pero ninguna cita valió: sin citas y con su interaction (KnowledgeAnswers de 7.2c)
+export const SIN_CITA_VALIDA = { answer: 'No encontré en los documentos una cita que respalde una respuesta.', citations: [], interaction: 'ai11' }
+// POST /api/sgspe/ai/runs de AI-03 sobre el acta (RunAnswer de 7.2b): el id de la ai_interaction de la primera llamada, los de
+// todas, y lo guardado como lo devuelve la API genérica
+export const CORRIDA_AI03 = { interaction: 'ai1', interactions: ['ai1'], suggestions: [], candidates: [CANDIDATO_IA] }
 
 // lo que toda pantalla de F7 pregunta: el estado de la IA, el proyecto y su asignación vigente, el workflow de WF-K, las
 // personas, el acta, las interacciones de IA, las quejas y sus definiciones
