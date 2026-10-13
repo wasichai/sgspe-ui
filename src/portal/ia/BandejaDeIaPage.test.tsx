@@ -106,6 +106,8 @@ describe('S52 · bandeja de revisión de IA', () => {
     const ilegible = await tarjeta('Extracción', 1)
     expect(within(ilegible).getByText('Esta propuesta no se puede leer: solo puede rechazarse.')).toBeInTheDocument()
     expect(await within(ilegible).findByRole('button', { name: 'Rechazar' })).toBeInTheDocument()
+    expect(within(ilegible).queryByRole('button', { name: 'Marcar como duplicada' })).not.toBeInTheDocument()
+    expect(within(await tarjeta('Clasificación')).getByRole('button', { name: 'Marcar como duplicada' })).toBeInTheDocument()
   })
 
   it('el duplicado se compara lado a lado y el borrador de acta se decide en su editor', async () => {
