@@ -10,15 +10,19 @@ import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
+import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuario'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Restringido, Vacio } from '../componentes/Estados'
+import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError } from '../datos/http'
 import { atributo, campoDe, texto, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
+import { CitaDelCandidato } from '../ia/Cita'
+import { personasCitadas, quedanMarcadores, reidentificar } from '../ia/marcadores'
+import { nombresReales, TextoDeIa, useNombresDePersonas } from '../ia/TextoDeIa'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarCandidato, useMarcarDuplicado, useRegistrarCandidato } from './comandosDeCandidatos'
 
@@ -100,10 +104,10 @@ function TarjetaDeCandidato({ candidato, alRevisar }: { candidato: Registro; alR
             : t('compromisos.candidatos.humano')}
         </span>
       </div>
-      <p>{texto(candidato, 'proposed_text')}</p>
-      <p className="text-sg-caption">
-        {t('compromisos.candidatos.cita')}: {'evidence_quote' in candidato.attributes ? texto(candidato, 'evidence_quote') || '—' : <Restringido />}
+      <p>
+        <TextoDeIa texto={texto(candidato, 'proposed_text')} />
       </p>
+      <CitaDelCandidato candidato={candidato} etiqueta={t('compromisos.candidatos.cita')} />
       {creado ? (
         <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(creado)}`} className="text-sg-primary-text underline">
           {t('compromisos.candidatos.abrirCompromiso')}
@@ -224,8 +228,12 @@ function RegistrarCandidato({ proyecto, abierto, alCerrar }: { proyecto: string;
 
 const esquemaDeAceptacion = z.object({
   code: z.string().trim().min(1),
-  title: z.string().trim().min(1),
-  description: z.string(),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .refine((v) => !quedanMarcadores(v), { message: 'marcadores' }),
+  description: z.string().refine((v) => !quedanMarcadores(v), { message: 'marcadores' }),
   amount: z.string().refine(esMontoValido),
   currency: z.string().min(1),
   due_date: z.string(),
@@ -237,7 +245,23 @@ const CAMPOS_DE_ACEPTACION = ['code', 'title', 'description', 'amount', 'currenc
 
 type Decision = 'aceptar' | 'duplicado'
 
-function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alCerrar: () => void }) {
+// la revisión de un candidato (también desde la bandeja S52, Tarea 6 del plan 7.3): el texto propuesto llega con las personas
+// registradas ya re-identificadas para quien lee sus nombres (ai-architecture.md §12.2); lo demás queda como marcador y el
+// formulario no lo envía hasta que se reemplace
+export function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alCerrar: () => void }) {
+  const { t } = useTranslation(NS)
+  const propuesto = texto(candidato, 'proposed_text')
+  const { nombres, listo } = useNombresDePersonas(personasCitadas(propuesto))
+  if (!listo)
+    return (
+      <Drawer titulo={t('compromisos.candidatos.revisarTitulo')} abierto alCerrar={alCerrar}>
+        <Cargando />
+      </Drawer>
+    )
+  return <Revision candidato={candidato} propuesto={reidentificar(propuesto, nombresReales(nombres))} alCerrar={alCerrar} />
+}
+
+function Revision({ candidato, propuesto, alCerrar }: { candidato: Registro; propuesto: string; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const navegar = useNavigate()
@@ -252,14 +276,16 @@ function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alC
   const [compromiso, setCompromiso] = useState<Registro | null>(null)
   const [motivoDuplicado, setMotivoDuplicado] = useState('')
   const [intentado, setIntentado] = useState(false)
+  const [responsable, setResponsable] = useState<Usuaria | null>(null)
+  const ia = atributo(candidato, 'ai_generated') === true
   // por puntos de código: cortar en 120 unidades UTF-16 puede partir un par sustituto (un emoji)
-  const texto120 = Array.from(texto(candidato, 'proposed_text')).slice(0, 120).join('')
+  const texto120 = Array.from(propuesto).slice(0, 120).join('')
   const { register, handleSubmit, formState } = useForm<Aceptacion>({
     resolver: zodResolver(esquemaDeAceptacion),
     defaultValues: {
       code: '',
       title: texto120,
-      description: texto(candidato, 'proposed_text'),
+      description: propuesto,
       amount: '',
       currency: 'PEN',
       due_date: texto(candidato, 'suggested_due_date'),
@@ -270,7 +296,7 @@ function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alC
   const error = aceptar.error ?? duplicar.error
   const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(aceptar.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
   const falta = (campo: keyof Aceptacion, texto: string = t('compromisos.candidatos.obligatorio')) =>
-    delServidor[campo] ?? (formState.errors[campo] ? texto : undefined)
+    delServidor[campo] ?? (formState.errors[campo]?.message === 'marcadores' ? t('ia.marcadores.quedan') : formState.errors[campo] ? texto : undefined)
   const releerCandidato = () => releer(['records', 'commitment_candidate'], ['transitions', 'commitment_candidate', candidato.id])
   const confirmarAceptacion = handleSubmit((v) =>
     aceptar.mutate(
@@ -284,7 +310,9 @@ function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alC
             amount: normalizarMonto(v.amount),
             currency: v.currency,
             due_date: v.due_date,
-            origin_engagement: atributo<string>(candidato, 'engagement')
+            origin_engagement: atributo<string>(candidato, 'engagement'),
+            owner_user_id: responsable?.id,
+            owner_user_email: responsable?.email
           }).filter(([, x]) => x !== '' && x !== undefined && x !== null)
         ),
         motivo: v.motivo.trim()
@@ -300,10 +328,10 @@ function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alC
   const enCurso = aceptar.isPending || duplicar.isPending
   return (
     <Drawer titulo={t('compromisos.candidatos.revisarTitulo')} abierto alCerrar={alCerrar}>
-      <p className="text-sm">{texto(candidato, 'proposed_text')}</p>
-      <p className="text-sg-caption">
-        {t('compromisos.candidatos.cita')}: {'evidence_quote' in candidato.attributes ? texto(candidato, 'evidence_quote') || '—' : <Restringido />}
+      <p className="text-sm">
+        <TextoDeIa texto={texto(candidato, 'proposed_text')} />
       </p>
+      <CitaDelCandidato candidato={candidato} etiqueta={t('compromisos.candidatos.cita')} />
       {texto(candidato, 'suggested_owner_user_email') || texto(candidato, 'suggested_due_date') ? (
         <p className="text-sg-caption text-sg-text-muted">
           {t('compromisos.candidatos.sugerido', {
@@ -348,6 +376,8 @@ function RevisionDeCandidato({ candidato, alCerrar }: { candidato: Registro; alC
               <Campo etiqueta={t('compromisos.candidatos.vence')} error={falta('due_date')}>
                 {(p) => <Input {...p} type="date" {...register('due_date')} />}
               </Campo>
+              {ia ? <p className="text-sg-caption text-sg-text-muted">{t('compromisos.candidatos.responsableAyuda')}</p> : null}
+              <SelectorDeUsuario etiqueta={t('compromisos.candidatos.responsable')} valor={responsable} alCambiar={setResponsable} />
               <Campo etiqueta={t('comun.motivoObligatorio')} error={delServidor.reason ?? (formState.errors.motivo ? t('comun.motivoFalta') : undefined)}>
                 {(p) => <Textarea {...p} {...register('motivo')} maxLength={500} />}
               </Campo>
