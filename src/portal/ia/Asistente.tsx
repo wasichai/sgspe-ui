@@ -1,5 +1,5 @@
 import { ApiError } from '@wasichai/core'
-import { Alert, Button, Textarea } from '@wasichai/ui'
+import { Alert, Button, cn, Textarea } from '@wasichai/ui'
 import { Sparkles } from 'lucide-react'
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -13,7 +13,17 @@ import { campoDelError } from '../datos/http'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { AvisoDeIa } from './AvisoDeIa'
-import { disponibilidadDe, useEstadoDeIa, usePreguntarALosDatos, type Disponibilidad, type PasoDelAsistente, type RespuestaDelAsistente } from './contrato'
+import {
+  disponibilidadDe,
+  useEstadoDeIa,
+  usePreguntarALosDatos,
+  usePreguntarALosDocumentos,
+  type Disponibilidad,
+  type PasoDelAsistente,
+  type RespuestaConCitas,
+  type RespuestaDelAsistente
+} from './contrato'
+import { ProyectoDeLaPregunta, RespuestaConFuentes } from './Documentos'
 import { MarcaDeIa } from './MarcaDeIa'
 import { TextoDeIa } from './TextoDeIa'
 
@@ -276,32 +286,76 @@ export function PanelDelAsistente({
 }) {
   const { t } = useTranslation(NS)
   const estado = useEstadoDeIa()
+  const { scope } = useContextFilters()
   const aLosDatos = usePreguntarALosDatos()
+  const aLosDocumentos = usePreguntarALosDocumentos()
   const datos = useConversacion((pregunta: string) => aLosDatos.mutateAsync(pregunta))
+  const documentos = useConversacion((valor: { pregunta: string; proyecto: string }) => aLosDocumentos.mutateAsync(valor))
+  const [modo, setModo] = useState<ModoDelAsistente>('datos')
   const [borrador, setBorrador] = useState('')
-  // abrir desde una ficha prellena la pregunta con el objeto y el id, nunca con el rótulo (decisión 6 del plan); solo al abrir
+  const [proyecto, setProyecto] = useState('')
+  // al abrir: el modo pedido, el proyecto del contexto o de la ruta, y la pregunta prellenada desde una ficha (decisión 6)
   useEffect(() => {
+    setModo(contexto.modo ?? 'datos')
+    setProyecto(contexto.proyecto ?? (scope.kind === 'project' ? scope.projectId : ''))
     if (contexto.registro) setBorrador(t('asistente.sobreElRegistro', { objeto: contexto.registro.objeto, id: contexto.registro.id }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vez])
-  const disponibilidad: Disponibilidad = estado.isPending ? { disponible: false, motivo: 'cargando' } : disponibilidadDe(estado.data, 'AI-05')
+  // flujo 18: quien no lee los nombres de las personas solo ve «Preguntar a los datos» (decisión 5)
+  const ofreceDocumentos = estado.data?.useCases.includes('AI-06') ?? false
+  const enDocumentos = modo === 'documentos' && ofreceDocumentos
+  const disponibilidad: Disponibilidad = estado.isPending
+    ? { disponible: false, motivo: 'cargando' }
+    : disponibilidadDe(estado.data, enDocumentos ? 'AI-06' : 'AI-05')
   return (
     <Drawer titulo={t('asistente.titulo')} abierto={abierto} alCerrar={alCerrar}>
       {contexto.registro ? <p className="text-sg-caption text-sg-text-secondary">{t('asistente.contexto', { contexto: contexto.registro.rotulo })}</p> : null}
-      <Conversacion
-        turnos={datos.turnos}
-        vacio={t('asistente.inicio')}
-        dibujar={(respuesta) => <RespuestaDeDatos respuesta={respuesta} />}
-        alRepetir={(turno) => void datos.preguntar(turno.pregunta, turno.valor)}
-      />
+      {ofreceDocumentos ? (
+        <div role="tablist" aria-label={t('asistente.titulo')} className="flex gap-1 border-b border-sg-border">
+          {(['datos', 'documentos'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={modo === m}
+              onClick={() => setModo(m)}
+              className={cn(
+                'border-b-2 px-3 py-2 text-sm',
+                modo === m ? 'border-sg-primary font-medium text-sg-primary-text' : 'border-transparent text-sg-text-secondary'
+              )}
+            >
+              {t(`asistente.modos.${m}`)}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {enDocumentos ? (
+        <Conversacion
+          turnos={documentos.turnos}
+          vacio={t('asistente.inicioDocumentos')}
+          dibujar={(respuesta: RespuestaConCitas) => <RespuestaConFuentes respuesta={respuesta} />}
+          alRepetir={(turno) => void documentos.preguntar(turno.pregunta, turno.valor)}
+        />
+      ) : (
+        <Conversacion
+          turnos={datos.turnos}
+          vacio={t('asistente.inicio')}
+          dibujar={(respuesta) => <RespuestaDeDatos respuesta={respuesta} />}
+          alRepetir={(turno) => void datos.preguntar(turno.pregunta, turno.valor)}
+        />
+      )}
       <FormularioDePregunta
         disponibilidad={disponibilidad}
+        documentos={enDocumentos}
         borrador={borrador}
         alCambiar={setBorrador}
-        enCurso={datos.enCurso}
-        alPreguntar={(pregunta) => void datos.preguntar(pregunta, pregunta)}
+        enCurso={enDocumentos ? documentos.enCurso : datos.enCurso}
+        listo={!enDocumentos || proyecto !== ''}
+        alPreguntar={(pregunta) => void (enDocumentos ? documentos.preguntar(pregunta, { pregunta, proyecto }) : datos.preguntar(pregunta, pregunta))}
         alReintentarEstado={() => void estado.refetch()}
-      />
+      >
+        {enDocumentos ? <ProyectoDeLaPregunta valor={proyecto} alCambiar={setProyecto} /> : null}
+      </FormularioDePregunta>
     </Drawer>
   )
 }
