@@ -172,9 +172,7 @@ describe('contrato de F7', () => {
     expect(screen.getByText('La propuesta solo permite corregir el valor, no el dato que cambia.')).toBeInTheDocument()
     expect(screen.getByText('El otro registro del par no existe o su cuenta no lo lee.')).toBeInTheDocument()
     expect(screen.getByText('El otro registro del par es de otro proyecto: no se marca como duplicado.')).toBeInTheDocument()
-    expect(
-      screen.getByText('La queja ya no se puede rechazar desde su estado: recargue para ver su estado o pida el paso a quien la gestiona.')
-    ).toBeInTheDocument()
+    expect(screen.getByText('La queja ya no se puede rechazar desde su estado: deje la respuesta vacía para solo vincular el duplicado.')).toBeInTheDocument()
     expect(screen.getByText('El registro de la propuesta no existe o su cuenta no lo lee.')).toBeInTheDocument()
     expect(screen.getByText('La propuesta no es de un proyecto: no se puede registrar su grupo de interés.')).toBeInTheDocument()
   })

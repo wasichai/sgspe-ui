@@ -53,21 +53,45 @@ describe('posible duplicado', () => {
     expect(screen.getByText('Mismo anexo y misma fecha')).toBeInTheDocument()
   })
 
-  it('en una queja, «Es duplicado» pide la respuesta y el motivo, acepta con la otra queja y vuelve a la bandeja', async () => {
+  // api.md §4.14 y SuggestionAcceptance (plan 7.2b): en una queja la respuesta es opcional; sin ella solo se escribe duplicate_of
+  it('en una queja, «Es duplicado» sin respuesta solo vincula el duplicado, con su motivo, y vuelve a la bandeja', async () => {
     montarDuplicado()
     await userEvent.click(await screen.findByRole('radio', { name: 'Es duplicado' }))
-    expect(screen.getByText('Al confirmar, una de las dos quejas queda rechazada como duplicado de la otra, con esta respuesta.')).toBeInTheDocument()
+    expect(screen.getByText('Al confirmar, esta queja queda vinculada como duplicado de la otra; su estado no cambia.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
-    expect(screen.getByText('Este dato es obligatorio')).toBeInTheDocument()
     expect(screen.getByText('Escriba el motivo del cambio')).toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Respuesta a quien planteó la queja'), 'Su pedido se atiende en la queja Q-002.')
+    expect(screen.queryByText('Este dato es obligatorio')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Mismo pedido, misma fecha')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/ai-suggestions/s3/accept')).toHaveLength(1))
+    expect(red!.a('POST', '/sgspe/ai-suggestions/s3/accept')[0].cuerpo).toEqual({ attributes: { other_record_id: 'g2' } })
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/ai-review'))
+  })
+
+  it('en una queja, con respuesta además la rechaza como duplicada, y lo dice antes de confirmar', async () => {
+    montarDuplicado()
+    await userEvent.click(await screen.findByRole('radio', { name: 'Es duplicado' }))
+    const respuesta = screen.getByLabelText('Respuesta a quien planteó la queja (opcional)')
+    expect(respuesta).toHaveAccessibleDescription(
+      'Con respuesta, la queja además se rechaza como duplicada: solo puede hacerlo quien tiene ese paso en el flujo de quejas. Sin respuesta, solo se vincula.'
+    )
+    await userEvent.type(respuesta, 'Su pedido se atiende en la queja Q-002.')
+    expect(screen.getByText('Al confirmar, esta queja queda vinculada como duplicado de la otra y se rechaza con esta respuesta.')).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Mismo pedido, misma fecha')
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/ai-suggestions/s3/accept')).toHaveLength(1))
     expect(red!.a('POST', '/sgspe/ai-suggestions/s3/accept')[0].cuerpo).toEqual({
       attributes: { other_record_id: 'g2', response: 'Su pedido se atiende en la queja Q-002.' }
     })
-    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/ai-review'))
+  })
+
+  it('con respuesta y sin el rol que rechaza la queja, sugiere dejar la respuesta vacía', async () => {
+    montarDuplicado('s3', [], () => problema(403, 'x', [{ field: '', message: 'ROLE_REQUIRED' }]))
+    await userEvent.click(await screen.findByRole('radio', { name: 'Es duplicado' }))
+    await userEvent.type(screen.getByLabelText('Respuesta a quien planteó la queja (opcional)'), 'Se atiende en la Q-002.')
+    await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Mismo pedido')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    expect(await screen.findByText('Su rol no puede rechazar la queja: deje la respuesta vacía para solo vincular el duplicado.')).toBeInTheDocument()
   })
 
   it('«No es duplicado» rechaza la propuesta por WF-K con su motivo', async () => {
@@ -103,14 +127,14 @@ describe('posible duplicado', () => {
       409,
       'STATE_MISMATCH',
       'attributes.response',
-      'La queja ya no se puede rechazar desde su estado: recargue para ver su estado o pida el paso a quien la gestiona.'
+      'La queja ya no se puede rechazar desde su estado: deje la respuesta vacía para solo vincular el duplicado.'
     ],
     [409, 'PROJECT_MISMATCH', 'attributes.other_record_id', 'El otro registro del par es de otro proyecto: no se marca como duplicado.'],
     [400, 'DUPLICATE_NOT_FOUND', 'attributes.other_record_id', 'El otro registro del par no existe o su cuenta no lo lee.']
   ])('un %i %s sobre %s se dice con su texto', async (estado, codigo, campo, texto) => {
     montarDuplicado('s3', [], () => problema(estado, 'x', [{ field: campo, message: codigo }]))
     await userEvent.click(await screen.findByRole('radio', { name: 'Es duplicado' }))
-    await userEvent.type(screen.getByLabelText('Respuesta a quien planteó la queja'), 'Su pedido se atiende en la queja Q-002.')
+    await userEvent.type(screen.getByLabelText('Respuesta a quien planteó la queja (opcional)'), 'Su pedido se atiende en la queja Q-002.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Mismo pedido')
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
     expect(await screen.findByText(texto)).toBeInTheDocument()
