@@ -76,7 +76,8 @@ function Comparacion({ sugerencia, proyecto }: { sugerencia: Registro; proyecto:
   const esQueja = objeto === 'grievance'
   // en una queja la respuesta es opcional (api.md §4.14): sin ella solo se escribe duplicate_of; con ella la queja además se
   // rechaza como duplicada por WF-E1, con los roles de esa transición
-  const conRespuesta = esQueja && respuesta.trim() !== ''
+  // solo cuenta con «Es duplicado» elegido: una respuesta escrita y luego oculta no bloquea «No es duplicado» ni se manda
+  const conRespuesta = decision === 'es' && esQueja && respuesta.trim() !== ''
   const enCurso = aceptar.isPending || rechazar.isPending
   const error = aceptar.error ?? rechazar.error
   const confirmar = () => {
@@ -192,7 +193,8 @@ function Comparacion({ sugerencia, proyecto }: { sugerencia: Registro; proyecto:
           {error ? (
             <Alert tone="danger">
               {mensaje(error, {
-                // la queja ya no se rechaza desde su estado (WF-E1) no es la propuesta ya decidida
+                // sobre attributes.response, STATE_MISMATCH es la queja que ya no se rechaza desde su estado (WF-E1), no la
+                // propuesta que otra persona ya decidió
                 'STATE_MISMATCH:attributes.response': t('comun.codigosEnCampo.iaQuejaNoRechazable'),
                 // con respuesta, el rol que falta es el de rechazar la queja (WF-E1): «Es duplicado» solo se ofrece con accept
                 ...(conRespuesta ? { ROLE_REQUIRED: t('bandejaIa.duplicado.sinRolDeRechazo') } : {}),

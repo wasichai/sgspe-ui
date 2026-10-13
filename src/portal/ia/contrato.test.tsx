@@ -146,7 +146,7 @@ describe('contrato de F7', () => {
     )
     expect(screen.getByText('La IA está ocupada: reintente en unos segundos.')).toBeInTheDocument()
     expect(screen.queryByText('El servicio de IA no responde. Reintente en unos minutos.')).not.toBeInTheDocument()
-    expect(screen.getByText('La IA solo lee documentos de un proyecto: este es de toda la organización.')).toBeInTheDocument()
+    expect(screen.getByText('El documento no es de un proyecto: la IA no puede proponer compromisos a partir de él.')).toBeInTheDocument()
     expect(screen.getByText('Su rol no puede leer los nombres de las personas, que la IA necesita para proteger los datos de la fuente.')).toBeInTheDocument()
     expect(screen.getByText('Hay demasiados registros para buscar posibles duplicados de una vez.')).toBeInTheDocument()
     expect(screen.getByText('Esta decisión la toma una persona, no una cuenta de servicio.')).toBeInTheDocument()

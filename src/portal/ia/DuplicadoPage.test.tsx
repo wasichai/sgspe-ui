@@ -94,6 +94,19 @@ describe('posible duplicado', () => {
     expect(await screen.findByText('Su rol no puede rechazar la queja: deje la respuesta vacía para solo vincular el duplicado.')).toBeInTheDocument()
   })
 
+  it('una respuesta escrita en «Es duplicado» no bloquea «No es duplicado» ni se manda', async () => {
+    montarDuplicado()
+    await userEvent.click(await screen.findByRole('radio', { name: 'Es duplicado' }))
+    await userEvent.type(screen.getByLabelText('Respuesta a quien planteó la queja (opcional)'), 'Llamar a [[PERSONA]')
+    await userEvent.click(screen.getByRole('radio', { name: 'No es duplicado' }))
+    expect(screen.getByText('Al confirmar, la propuesta queda rechazada con su motivo.')).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Son anexos distintos')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/ai_suggestion/records/s3/transitions/reject')).toHaveLength(1))
+    expect(red!.a('POST', '/objects/ai_suggestion/records/s3/transitions/reject')[0].cuerpo ?? {}).not.toHaveProperty('response')
+    expect(red!.a('POST', '/sgspe/ai-suggestions/s3/accept')).toHaveLength(0)
+  })
+
   it('«No es duplicado» rechaza la propuesta por WF-K con su motivo', async () => {
     montarDuplicado()
     await userEvent.click(await screen.findByRole('radio', { name: 'No es duplicado' }))

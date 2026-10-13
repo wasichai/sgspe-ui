@@ -265,7 +265,7 @@ export const ES_COMUN = {
     iaSinProveedor: 'El servicio de IA no responde. Reintente en unos minutos.',
     iaPreguntaLarga: 'La pregunta es demasiado larga para la IA: acórtela y vuelva a preguntar.',
     // plan 7.2b: los códigos de la corrida y de la aceptación que dicen otra cosa según su campo (api.md §4.14)
-    iaSinProyecto: 'La IA solo lee documentos de un proyecto: este es de toda la organización.',
+    iaSinProyecto: 'El documento no es de un proyecto: la IA no puede proponer compromisos a partir de él.',
     iaSinNombres: 'Su rol no puede leer los nombres de las personas, que la IA necesita para proteger los datos de la fuente.',
     iaDemasiados: 'Hay demasiados registros para buscar posibles duplicados de una vez.',
     iaCampoFijo: 'La propuesta solo permite corregir el valor, no el dato que cambia.',
@@ -529,7 +529,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     iaSinOrganizacion: 'Your organization does not have AI enabled.',
     iaSinProveedor: 'The AI service is not responding. Retry in a few minutes.',
     iaPreguntaLarga: 'The question is too long for the AI: shorten it and ask again.',
-    iaSinProyecto: 'The AI only reads documents of a project: this one belongs to the whole organization.',
+    iaSinProyecto: 'The document does not belong to a project: the AI cannot propose commitments from it.',
     iaSinNombres: 'Your role cannot read the names of people, which the AI needs to protect the data of the source.',
     iaDemasiados: 'There are too many records to look for possible duplicates at once.',
     iaCampoFijo: 'The proposal only allows correcting the value, not the data it changes.',

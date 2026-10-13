@@ -92,6 +92,22 @@ describe('S05 · preguntar a los datos', () => {
     expect(await within(panel).findByText('La pregunta es demasiado larga para la IA: acórtela y vuelva a preguntar.')).toBeInTheDocument()
   })
 
+  // los 403 de las preguntas: PERSON_REQUIRED a una cuenta de servicio (AiErrors.personRequired) y, sin código, el permiso que
+  // falta (ForbiddenException; AgentHttpGate tampoco lleva código). solo PERSON_REQUIRED dice su texto; los demás, el del rol
+  it.each([
+    ['PERSON_REQUIRED', 'Esta decisión la toma una persona, no una cuenta de servicio.'],
+    ['ROLE_REQUIRED', 'La IA no está disponible para su rol.'],
+    ['', 'La IA no está disponible para su rol.']
+  ])('un 403 con el código «%s» se dice con su texto', async (codigo, texto) => {
+    montarAsistente()
+    red = espiarRed([
+      { method: 'POST', path: '/sgspe/ai/assistant/questions', responder: () => problema(403, 'x', codigo ? [{ field: '', message: codigo }] : []) }
+    ])
+    const panel = await abrirPanel()
+    await preguntar(panel, '¿Qué vence?')
+    expect(await within(panel).findByText(texto)).toBeInTheDocument()
+  })
+
   it('un 503 del proveedor ofrece volver a preguntar lo mismo', async () => {
     montarAsistente()
     let vez = 0
