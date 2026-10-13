@@ -327,12 +327,8 @@ function CamposDeLaFila({
           {grupo}
         </>
       )
+    // el borrador de acta se decide en el editor del acta y el duplicado en su página: aquí no llegan
     case 'borrador':
-      return (
-        <Campo etiqueta={t('borradorDeActa.texto')} error={error('minutes')}>
-          {(p) => <Textarea {...p} className="min-h-[240px]" value={v.texto} onChange={(e) => alCambiar({ ...v, texto: e.target.value })} />}
-        </Campo>
-      )
     case 'duplicado':
       return null
   }

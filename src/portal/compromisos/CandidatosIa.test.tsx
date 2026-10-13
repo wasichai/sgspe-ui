@@ -25,9 +25,23 @@ const CON_RESERVADO = registro(
   { state: 'proposed', createdAt: '2026-10-08T14:00:00Z', updatedAt: '2026-10-08T14:00:00Z' }
 )
 
+const ID_LARGO = '0b5d9d5e-1c2a-4f6e-9a47-3c8d2e1f7a90'
+const CON_MARCADOR_AL_CORTE = registro(
+  'k4',
+  {
+    project: 'p1',
+    proposed_text: `${'a'.repeat(110)} [PERSONA:${ID_LARGO}] fin`,
+    ai_generated: true,
+    confidence: 0.6,
+    source_evidence: 'ev1',
+    ai_interaction: 'ai1'
+  },
+  { state: 'proposed', createdAt: '2026-10-08T13:00:00Z', updatedAt: '2026-10-08T13:00:00Z' }
+)
+
 const montarCandidatos = () => {
   fetch = mockFetch([
-    { path: '/objects/commitment_candidate/records', body: pagina([CANDIDATO_IA, CON_RESERVADO]) },
+    { path: '/objects/commitment_candidate/records', body: pagina([CANDIDATO_IA, CON_RESERVADO, CON_MARCADOR_AL_CORTE]) },
     { path: /^\/objects\/commitment_candidate\/records\/k\d\/transitions$/, body: [] },
     { path: '/metadata/objects/commitment', body: DEF_COMPROMISO },
     { path: '/users', body: [{ id: 'u-gestora', email: 'gestora@sgspe.test', displayName: 'Gestora de prueba', enabled: true }] },
@@ -97,5 +111,18 @@ describe('S28 · candidatos de IA', () => {
     await userEvent.type(within(panel).getByLabelText('Descripción'), 'Entregar víveres a la junta directiva')
     await userEvent.click(within(panel).getByRole('button', { name: 'Aceptar y crear borrador' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/commitment-candidates/k3/accept')).toHaveLength(1))
+  })
+
+  it('el título recortado no parte un marcador: lo deja entero y el formulario bloquea', async () => {
+    montarCandidatos()
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Revisar' }))[2])
+    const panel = await screen.findByRole('dialog')
+    expect(await within(panel).findByLabelText('Título del compromiso')).toHaveValue(`${'a'.repeat(110)} [PERSONA:${ID_LARGO}]`)
+    await userEvent.type(within(panel).getByLabelText('Código del compromiso'), 'C-022')
+    await userEvent.type(within(panel).getByLabelText('Monto'), '50')
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Revisado')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Aceptar y crear borrador' }))
+    expect((await within(panel).findAllByText(/Reemplace los datos reservados/)).length).toBeGreaterThan(0)
+    expect(red!.a('POST', '/sgspe/commitment-candidates/k4/accept')).toHaveLength(0)
   })
 })

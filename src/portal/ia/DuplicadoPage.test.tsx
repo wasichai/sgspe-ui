@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeIa, EQUIPO_IA, GERENCIA_IA, SUG_CLASIFICACION, SUG_DUPLICADO, TRANSICIONES_DE_SUGERENCIA } from '../../test/ia'
-import { montar, ubicacion } from '../../test/montar'
+import { montar, pagina, ubicacion } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
 import { DuplicadoPage } from './DuplicadoPage'
 
@@ -18,8 +18,9 @@ afterEach(() => {
   red = fetch = null
 })
 
-const montarDuplicado = (id = 's3') => {
+const montarDuplicado = (id = 's3', extra: MockRoute[] = []) => {
   fetch = mockFetch([
+    ...extra,
     { path: '/objects/ai_suggestion/records/s3', body: SUG_DUPLICADO },
     { path: '/objects/ai_suggestion/records/s1', body: SUG_CLASIFICACION },
     { path: /^\/objects\/ai_suggestion\/records\/s\d\/transitions$/, body: TRANSICIONES_DE_SUGERENCIA },
@@ -84,5 +85,14 @@ describe('posible duplicado', () => {
     montarDuplicado('s1')
     expect(await screen.findByText('Esta propuesta no es un posible duplicado.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Volver a la bandeja' })).toHaveAttribute('href', '/projects/p1/ai-review')
+  })
+
+  it('sin asignación vigente al proyecto no ofrece decidir', async () => {
+    montarDuplicado('s3', [{ path: '/objects/project_assignment/records', body: pagina([]) }])
+    const tabla = await screen.findByRole('table', { name: 'Posible duplicado' })
+    await waitFor(() => expect(within(within(tabla).getByRole('row', { name: /^code/ })).getByText('Difiere')).toBeInTheDocument())
+    await new Promise((r) => setTimeout(r, 100))
+    expect(screen.queryByRole('radio', { name: 'Es duplicado' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument()
   })
 })

@@ -22,6 +22,26 @@ export function partirMarcadores(texto: string): Segmento[] {
   return segmentos
 }
 
+// el texto cortado a n puntos de código sin partir un marcador: el que cruza el límite entra entero (el texto puede pasar de n),
+// de modo que sigue a la vista de quedanMarcadores y el formulario bloquea
+export function recortar(texto: string, n: number): string {
+  let salida = ''
+  let usados = 0
+  for (const s of partirMarcadores(texto)) {
+    if (usados >= n) break
+    const parte = s.tipo === 'texto' ? s.texto : comoMarcador(s)
+    if (s.tipo === 'texto') {
+      const puntos = Array.from(parte)
+      salida += puntos.slice(0, n - usados).join('')
+      usados += puntos.length
+    } else {
+      salida += parte
+      usados += Array.from(parte).length
+    }
+  }
+  return salida
+}
+
 // un texto que todavía lleva un marcador no puede llegar a un registro de dominio (ai-architecture.md §4.2)
 export const quedanMarcadores = (texto: string): boolean => new RegExp(PATRON).test(texto)
 
