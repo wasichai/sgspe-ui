@@ -40,10 +40,40 @@ describe('VistaMarkdown: énfasis en línea', () => {
     expect(c.querySelector('strong')?.textContent).toBe('Ana Quispe')
   })
 
-  it('no toma como énfasis lo que hay dentro de un marcador', () => {
-    const c = dibujar('[PERSONA:a_b_c] y *x*')
-    expect(c.querySelectorAll('em')).toHaveLength(1)
-    expect(c.querySelector('p')?.textContent).toBe('[PERSONA:a_b_c] y x')
+  it('no parte un marcador de la IA: el énfasis lo rodea o queda literal', () => {
+    const c = dibujar('**x [PERSONA_1]** y _x [PERSONA_1]_ y [PERSONA:p-1] y [DATO_SENSIBLE]')
+    expect(c.querySelector('strong')?.textContent).toBe('x [PERSONA_1]')
+    expect(c.querySelector('em')?.textContent).toBe('x [PERSONA_1]')
+    expect(c.querySelector('p')?.textContent).toBe('x [PERSONA_1] y x [PERSONA_1] y [PERSONA:p-1] y [DATO_SENSIBLE]')
+  })
+
+  it('un marcador sin su corchete de cierre no es marcador ni cierra el énfasis', () => {
+    const c = dibujar('**x [PERSONA_1**')
+    expect(c.querySelector('p')?.textContent).toBe('x [PERSONA_1')
+    expect(c.querySelector('strong')?.textContent).toBe('x [PERSONA_1')
+  })
+
+  it('una cursiva con espacio junto a la marca queda literal', () => {
+    const c = dibujar('_ [CITA_1]_')
+    expect(c.querySelector('em')).toBeNull()
+    expect(c.querySelector('p')?.textContent).toBe('_ [CITA_1]_')
+  })
+
+  it('anida la cursiva dentro de la negrita', () => {
+    const c = dibujar('**a *b* c**')
+    expect(c.querySelector('strong em')?.textContent).toBe('b')
+    expect(c.querySelector('strong')?.textContent).toBe('a b c')
+  })
+
+  it('***x*** no es negrita con cursiva: la negrita toma "*x" y el resto queda literal', () => {
+    const c = dibujar('***x***')
+    expect(c.querySelector('p')?.textContent).toBe('*x*')
+    expect(c.querySelector('strong')?.textContent).toBe('*x')
+  })
+
+  it('un ítem "* **x**" es una lista con negrita', () => {
+    const c = dibujar('* **x**')
+    expect(c.querySelector('li strong')?.textContent).toBe('x')
   })
 
   it('no dibuja enlaces ni HTML: quedan como texto', () => {

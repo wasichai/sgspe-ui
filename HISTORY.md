@@ -12,10 +12,10 @@ La entrada más reciente va primero. El diseño y los ADR están en el repositor
   y el posible duplicado lado a lado.
 - Las acciones de IA en las fichas (evidencia, interacción y sus preguntas, QCS, mención y proyecto), el resumen ejecutivo de S08
   y el borrador del acta en S25.
-- `VistaMarkdown` dibuja la negrita, la cursiva y el código en línea como elementos de React (lo halló la prueba en vivo); los
-  marcadores sin pareja, los enlaces y el HTML quedan como texto.
+- `VistaMarkdown` dibuja la negrita, la cursiva y el código en línea como elementos de React (lo halló la prueba en vivo); las
+  marcas de énfasis sin pareja, los enlaces y el HTML quedan como texto.
 - La prueba en vivo contra el backend real pasó con Claude Haiku 4.5.
-- Pruebas: 1819 en 135 archivos de Vitest y 29 recorridos de Playwright.
+- Pruebas: 1824 en 135 archivos de Vitest y 29 recorridos de Playwright.
 
 ## 2026-10-12 — Fase 6: portal del SIG avanzado (plan 6.3)
 

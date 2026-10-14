@@ -6,7 +6,7 @@ export type ClaseDeMarcador = 'PERSONA' | 'DOCUMENTO' | 'TELEFONO' | 'CORREO' | 
 
 export type Segmento = { tipo: 'texto'; texto: string } | { tipo: 'persona'; id: string } | { tipo: 'reservado'; clase: ClaseDeMarcador }
 
-const PATRON = '\\[(PERSONA|DOCUMENTO|TELEFONO|CORREO|CONTACTO|DATO_SENSIBLE|CITA)(?::([A-Za-z0-9-]+)|_\\d+)?\\]'
+export const PATRON = '\\[(PERSONA|DOCUMENTO|TELEFONO|CORREO|CONTACTO|DATO_SENSIBLE|CITA)(?::([A-Za-z0-9-]+)|_\\d+)?\\]'
 
 export function partirMarcadores(texto: string): Segmento[] {
   const segmentos: Segmento[] = []
