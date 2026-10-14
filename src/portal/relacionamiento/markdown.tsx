@@ -1,9 +1,63 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 // la vista previa del acta: Markdown sin HTML (database-model.md §3.4) dibujado como elementos de React, nunca con
 // innerHTML. cubre lo que usa un acta: títulos, listas y párrafos. desde F7 dibuja también las salidas de la IA, con sus
 // marcadores resueltos por línea (enLinea)
-export function VistaMarkdown({ texto, enLinea = (linea: string): ReactNode => linea }: { texto: string; enLinea?: (linea: string) => ReactNode }) {
+const MARCADOR = /^\[[A-Z]+(?::[^\]\s]*)?\]/
+const ALFANUMERICO = /[\p{L}\p{N}]/u
+const sinBordes = (t: string) => t.length > 0 && t === t.trim()
+
+// énfasis en línea como elementos de React armados desde texto: **negrita**, *cursiva*, _cursiva_ y `código`. los marcadores
+// sin pareja quedan literales, los enlaces y el HTML no se dibujan y un marcador de la IA ([PERSONA:id]) no se parte. el texto
+// que no es énfasis (y el de dentro del énfasis) pasa por enLinea, para re-identificar los marcadores
+function conEnfasis(linea: string, enLinea: (linea: string) => ReactNode): ReactNode[] {
+  const nodos: ReactNode[] = []
+  let suelto = ''
+  const soltar = () => {
+    if (suelto) nodos.push(<Fragment key={nodos.length}>{enLinea(suelto)}</Fragment>)
+    suelto = ''
+  }
+  let i = 0
+  while (i < linea.length) {
+    const c = linea[i]
+    if (c === '[') {
+      const marcador = MARCADOR.exec(linea.slice(i))
+      if (marcador) {
+        suelto += marcador[0]
+        i += marcador[0].length
+        continue
+      }
+    }
+    if (c === '*' || c === '_' || c === '`') {
+      const doble = c === '*' && linea[i + 1] === '*'
+      const marca = doble ? '**' : c
+      const cierre = linea.indexOf(marca, i + marca.length)
+      const dentro = cierre < 0 ? '' : linea.slice(i + marca.length, cierre)
+      const antes = i > 0 ? linea[i - 1] : ''
+      const despues = cierre < 0 ? '' : (linea[cierre + 1] ?? '')
+      const aislada = c !== '_' || (!ALFANUMERICO.test(antes) && !ALFANUMERICO.test(despues))
+      if (cierre > 0 && (c === '`' ? dentro.length > 0 : sinBordes(dentro)) && aislada && !(c === '*' && !doble && dentro.startsWith('*'))) {
+        soltar()
+        const key = nodos.length
+        if (c === '`') nodos.push(<code key={key}>{enLinea(dentro)}</code>)
+        else if (doble) nodos.push(<strong key={key}>{conEnfasis(dentro, enLinea)}</strong>)
+        else nodos.push(<em key={key}>{conEnfasis(dentro, enLinea)}</em>)
+        i = cierre + marca.length
+        continue
+      }
+      suelto += marca
+      i += marca.length
+      continue
+    }
+    suelto += c
+    i++
+  }
+  soltar()
+  return nodos
+}
+
+export function VistaMarkdown({ texto, enLinea: dibujar = (linea: string): ReactNode => linea }: { texto: string; enLinea?: (linea: string) => ReactNode }) {
+  const enLinea = (linea: string): ReactNode => conEnfasis(linea, dibujar)
   const bloques: ReactNode[] = []
   let lista: string[] = []
   const cerrarLista = () => {
