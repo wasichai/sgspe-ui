@@ -60,6 +60,12 @@ el idioma:
   sugerencias y el resumen de S10, la importación por GDAL de S15 con sus destinos nuevos, la exportación geográfica con niveles
   por capa, la validación de geometrías en S13 y S14, los lugares del punto en S24 y la calidad de datos (`/territory/quality`).
   Sin proyecto, S12 abre sobre todo el Perú (no pide capas sin una vista acotada).
+- **F7 · IA** (`src/portal/ia/`): el asistente S05 en la barra superior y desde las fichas, con «Preguntar a los datos» y
+  «Preguntar a los documentos» con sus fuentes; la bandeja de revisión por proyecto (`/projects/:projectId/ai-review`) con la
+  aceptación con corrección y motivo, el rechazo y el duplicado de WF-K y la comparación lado a lado
+  (`/projects/:projectId/ai-review/:suggestionId`); las acciones de IA de la evidencia, la interacción, sus preguntas, las QCS,
+  la mención y el proyecto; el resumen ejecutivo de S08 y el borrador del acta en S25. Toda salida va como texto o Markdown sin
+  HTML, con los marcadores re-identificados al mostrar y la cita solo para quien abre la fuente.
 - **Alcance por proyecto (plan 4.4b):** el servidor acota la lectura a los proyectos de cada cuenta (ADR-0029). El selector
   ofrece «Todos los proyectos» a quien los lee todos (`useLeeTodosLosProyectos`) y avisa a una cuenta sin asignaciones; un
   registro que responde 404 no se distingue de uno inexistente (`NoEsDeSusProyectos` en una ficha, «Registro reservado» en

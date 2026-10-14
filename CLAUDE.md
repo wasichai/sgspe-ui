@@ -92,3 +92,13 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
 - `yarn format && yarn lint && yarn typecheck && yarn test && yarn build && yarn e2e` antes de cada commit.
 - Instalar con `yarn install`: el token de lectura de GitHub Packages vive en `~/.npmrc`, no en el repositorio, y la CI lo
   recibe de `setup-node` (`PACKAGES_TOKEN`). Ningún token en archivos del repositorio.
+- Lo de F7 vive en `src/portal/ia/`. El contrato de `/api/sgspe/ai/**` está en `ia/contrato.ts`: una pantalla no pide esos
+  endpoints por su cuenta. La IA se ofrece por `GET /api/sgspe/ai/status` (`useEstadoDeIa`, `disponibilidadDe`) y la aceptación
+  por la transición `accept` de WF-K, nunca por roles. El asistente es el panel del portal (`ia/Asistente.tsx`) sobre
+  `POST /api/sgspe/ai/assistant/questions`; `/api/agent/ask` no se llama desde el navegador.
+- Toda salida de la IA se dibuja con `TextoDeIa` (los marcadores se re-identifican al mostrar con los permisos de quien mira,
+  nunca al guardar) y la cita con `CitaDeIa` (solo para quien abre la fuente). Aceptar nunca manda un texto con marcadores
+  (`quedanMarcadores`), y toda aceptación lleva motivo.
+- Ningún fuente usa `dangerouslySetInnerHTML` ni asigna `innerHTML` (`boundaries.test.ts`): el Markdown se dibuja con
+  `VistaMarkdown`, que arma como elementos de React la negrita, la cursiva y el código en línea; los enlaces y el HTML quedan
+  como texto.
