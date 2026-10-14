@@ -94,6 +94,11 @@ describe('fronteras de la interfaz', () => {
     expect([...new Set(lugares)]).toEqual(['portal/contexto/proyectos.ts'])
   })
 
+  // F7: las salidas de la IA y el Markdown se dibujan como elementos de React, nunca como HTML (RQ-AI-011, screens.md §13)
+  it('ningún fuente dibuja HTML crudo', () => {
+    expect(hallazgos(/dangerouslySetInnerHTML|\.(?:inner|outer)HTML\s*=/)).toEqual([])
+  })
+
   it('los vigías reconocen lo prohibido y dejan pasar lo permitido', () => {
     const rol = (line: string) => ROL.test(sinComentario(line))
     expect(rol("user.roles.includes('AUDITOR')")).toBe(true)

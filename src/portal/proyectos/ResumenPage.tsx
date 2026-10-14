@@ -1,6 +1,5 @@
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
-import { Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -18,6 +17,8 @@ import { atributo, texto, usePuedeEditar, useTodos, type Registro } from '../dat
 import { BarraDePosturas } from '../graficos/BarraDePosturas'
 import { MiniMatriz, puntosDeMatriz } from '../graficos/MiniMatriz'
 import { NS, numeroPe } from '../i18n'
+import { AccionesDeIa } from '../ia/AccionesDeIa'
+import { ResumenEjecutivo } from '../ia/ResumenEjecutivo'
 import { useCapas } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { capa } from '../mapa/capas'
@@ -27,7 +28,7 @@ import { vigente, PARAMETROS_F2 } from './parametros'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. de F2 a F7 una llamada por
 // indicador con ?project= (KPI-STK-01 a 03, KPI-ENG-01 y 02); los de compromisos, QCS y riesgos dicen en qué fase llegan.
-// el bloque de posturas siempre se dibuja: sin permiso sobre stance (security.md §7.9) dice "no disponible" y por qué. una
+// desde F7, el resumen ejecutivo (AI-04), los posibles duplicados (AI-07) y la pregunta a los documentos (AI-06). el bloque de posturas siempre se dibuja: sin permiso sobre stance (security.md §7.9) dice "no disponible" y por qué. una
 // consulta auxiliar que carga, falla o no se puede leer lo dice; nunca se lee como "sin datos" ni como "sin nada que atender"
 const TIPOS_FORMALES = ['REUNION', 'REUNION INFORMATIVA', 'TALLER', 'ASAMBLEA', 'MESA DE DIALOGO']
 
@@ -108,17 +109,10 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
             </Button>
           ) : null}
           <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} />
-          <button
-            type="button"
-            aria-disabled="true"
-            title={t('p360.resumen.iaLlega')}
-            className="flex h-8 cursor-not-allowed items-center gap-1.5 rounded-sg-md border border-dashed border-sg-ai-border px-2.5 text-sg-body-sm text-sg-ai opacity-60"
-          >
-            <Sparkles aria-hidden className="size-4" />
-            {t('p360.resumen.resumenIa')}
-          </button>
         </div>
       </header>
+      <ResumenEjecutivo proyecto={proyecto} />
+      <AccionesDeIa objeto="project" registro={proyecto} proyecto={proyecto.id} rotulo={texto(proyecto, 'name')} casos={['AI-07']} />
       <Atencion proyecto={proyecto} inactividad={parametro('inactivity_days')} revision={parametro('stakeholder_review_days')} />
       <section aria-label={t('p360.resumen.salud')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <h2 className="sr-only">{t('p360.resumen.salud')}</h2>

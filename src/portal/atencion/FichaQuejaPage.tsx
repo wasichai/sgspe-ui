@@ -13,6 +13,7 @@ import { esGrave } from '../datos/atencion'
 import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
+import { AccionesDeIa } from '../ia/AccionesDeIa'
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { AvisoDeConfidencial, Dato, DatosDelCaso, DeDondeViene, EditarQcs, MarcasDeQcs, PlazoQueCorre } from './comunesDeFicha'
@@ -189,6 +190,7 @@ function Ficha({ queja }: { queja: Registro }) {
           ]}
         />
         <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+          <AccionesDeIa objeto="grievance" registro={queja} proyecto={proyecto} rotulo={texto(queja, 'code')} casos={['AI-08']} />
           <DeDondeViene objeto="grievance" qcs={queja} />
           <QueGenero queja={queja} />
         </aside>

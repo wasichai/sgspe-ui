@@ -21,6 +21,7 @@ import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
 import { usePedir } from '../datos/http'
 import { atributo, campoDe, consulta, texto, useDefinicion, useRegistro, useRegistros, type Pagina, type Registro } from '../datos/registros'
 import { diaPe, fechaYHoraPe, NS } from '../i18n'
+import { AccionesDeIa, casosDeEvidencia } from '../ia/AccionesDeIa'
 import { MOTIVO_EN_TODAS } from '../transiciones/reglas'
 import {
   CLASIFICACIONES_RESTRINGIDAS,
@@ -101,6 +102,15 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
       {!puedeDescargar ? <Alert tone="notice">{t('documentos.ficha.noDescarga')}</Alert> : null}
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
+          {proyecto ? (
+            <AccionesDeIa
+              objeto="evidence"
+              registro={evidencia}
+              proyecto={proyecto}
+              rotulo={nombreDeEvidencia(evidencia)}
+              casos={casosDeEvidencia(evidencia, puedeDescargar)}
+            />
+          ) : null}
           {puedeDescargar && descriptor?.contentType.startsWith('image/') ? <VistaPrevia evidencia={evidencia} difuminada={sinConsentimiento} /> : null}
           <Sustenta evidencia={evidencia} escribe={escribe} />
           <Versiones evidencia={evidencia} />

@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { AuthUser } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import type { ComponentType } from 'react'
@@ -174,18 +175,25 @@ describe('navegación del portal', () => {
     expect(enlaces()).toEqual(['Dashboard', 'Proyectos'])
   })
 
-  // ASM-073: el asistente es el botón Preguntar de la barra superior, nunca una sección; llega en F7 y hasta entonces
-  // está deshabilitado y dice por qué
-  it('Preguntar está en la barra superior, deshabilitado, y no en las secciones', async () => {
-    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
+  // ASM-073: el asistente es el botón Preguntar de la barra superior, nunca una sección. llega en F7: se dibuja si
+  // GET /api/sgspe/ai/status responde, y un backend sin F7 (404) no lo dibuja
+  it('Preguntar está en la barra superior si el servidor tiene la IA, abre el asistente y no es una sección', async () => {
+    start(ADMINISTRACION, [
+      ...rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS),
+      { path: '/sgspe/ai/status', body: { enabled: true, providerAvailable: true, useCases: ['AI-05'] } }
+    ])
     const preguntar = await within(await screen.findByRole('banner')).findByRole('button', { name: 'Preguntar' })
-    expect(preguntar).toHaveAttribute('aria-disabled', 'true')
-    expect(preguntar).toHaveAccessibleDescription('El asistente de IA llega en una próxima fase')
-    // el motivo también se ve al pasar el puntero
-    expect(preguntar).toHaveAttribute('title', 'El asistente de IA llega en una próxima fase')
     await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
+    await userEvent.click(preguntar)
+    expect(await screen.findByRole('dialog', { name: 'Asistente de IA' })).toBeInTheDocument()
   })
 
+  it('sin la IA en el servidor (404) no hay botón Preguntar', async () => {
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
+    await screen.findByRole('navigation', { name: 'Secciones' })
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path === '/sgspe/ai/status')).toBe(true))
+    expect(within(screen.getByRole('banner')).queryByRole('button', { name: 'Preguntar' })).not.toBeInTheDocument()
+  })
   it('un admin con todas las pantallas registradas ve las 13 secciones', async () => {
     for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))

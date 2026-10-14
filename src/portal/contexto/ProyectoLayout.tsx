@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { NS } from '../i18n'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
+import { LEE_PROPUESTAS } from '../shell/leePropuestas'
 import { estadoDe, guardaDe, useOferta, type ClaveDeSeccion, type Par } from '../shell/navTree'
 import { BarraDeContexto } from './BarraDeContexto'
 import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyectos'
@@ -26,6 +27,7 @@ const PESTANAS = [
   'programs',
   'documents',
   'tasks',
+  'ai-review',
   'settings',
   'reports'
 ] as const
@@ -42,9 +44,10 @@ const SECCION_DE_PESTANA: Partial<Record<(typeof PESTANAS)[number], ClaveDeSecci
   programs: 'programs',
   documents: 'documents',
   tasks: 'tasks',
+  'ai-review': 'projects',
   reports: 'reports'
 }
-const PERMISOS_DE_PESTANA: Partial<Record<(typeof PESTANAS)[number], Par[][]>> = { agreements: LEE_ACUERDOS }
+const PERMISOS_DE_PESTANA: Partial<Record<(typeof PESTANAS)[number], Par[][]>> = { agreements: LEE_ACUERDOS, 'ai-review': LEE_PROPUESTAS }
 
 export function ProyectoLayout() {
   const { t } = useTranslation(NS)

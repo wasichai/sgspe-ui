@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -520,5 +520,56 @@ describe('S25 · editor de acta', () => {
     const [devolucion] = red.a('POST', '/objects/engagement/records/e1/transitions/return_minutes')
     expect(devolucion.cabeceras.get('If-Match')).toBe('"2026-10-06T12:00:00Z"')
     expect(decodeURIComponent(devolucion.cabeceras.get('X-Change-Reason') ?? '')).toContain('Faltan los acuerdos')
+  })
+
+  // F7: el borrador de la IA (AI-02) se inserta con su aceptación y el editor queda con el acta que escribió el servidor
+  it('insertar el borrador de la IA acepta con el acta completa y el editor la relee, sin un PUT propio', async () => {
+    const BORRADOR = registro(
+      's4',
+      {
+        project: 'p1',
+        suggestion_kind: 'BORRADOR DE ACTA',
+        target_object: 'engagement',
+        target_record_id: 'e1',
+        suggested_value: '## Acuerdos\n- Reservorio',
+        confidence: 0.7,
+        model: 'claude-ejemplo',
+        ai_interaction: 'ai1'
+      },
+      { state: 'proposed', updatedAt: '2026-10-09T17:00:00Z' }
+    )
+    const conBorrador = registro(
+      'e1',
+      { project: 'p1', title: 'Asamblea comunal', minutes: '# Acta\n\n## Acuerdos\n- Reservorio' },
+      { state: 'held', updatedAt: '2026-10-09T18:00:00Z' }
+    )
+    let aceptada = false
+    fetch = abrirPortal('/projects/p1/engagements/e1/minutes', RELACIONISTA, { ...EQUIPO, objects: { ...EQUIPO.objects, ai_suggestion: ['READ', 'UPDATE'] } }, [
+      { path: '/objects/ai_suggestion/records', body: pagina([BORRADOR]) },
+      {
+        path: '/objects/ai_suggestion/records/s4/transitions',
+        body: [{ name: 'accept', label: 'Aceptar', to: 'accepted', toLabel: 'Aceptada', allowed: true, reason: null }]
+      },
+      ...rutas('held')
+    ])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/ai-suggestions/s4/accept',
+        responder: () => {
+          aceptada = true
+          return jsonResponse({ suggestion: { ...BORRADOR, state: 'accepted' }, result: conBorrador })
+        }
+      },
+      { ...GET_E1, responder: () => jsonResponse(aceptada ? conBorrador : conActa('held')) }
+    ])
+    await userEvent.click(await screen.findByRole('button', { name: 'Insertar y editar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Insertar el borrador en el acta' })
+    expect(await within(dialogo).findByLabelText('Texto del acta')).toHaveValue('# Acta\n\n## Acuerdos\n- Reservorio')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Borrador revisado')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Insertar en el acta' }))
+    await waitFor(() => expect((screen.getByLabelText(EDITOR) as HTMLTextAreaElement).value).toBe('# Acta\n\n## Acuerdos\n- Reservorio'))
+    expect(red.a('POST', '/sgspe/ai-suggestions/s4/accept')[0].cuerpo).toEqual({ attributes: { minutes: '# Acta\n\n## Acuerdos\n- Reservorio' } })
+    expect(red.a('PUT', PUT)).toHaveLength(0)
   })
 })

@@ -19,6 +19,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { Rastro } from '../contexto/Rastro'
 import { DocumentosEmitidos } from '../documentos/DocumentosEmitidos'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
+import { AccionesDeIa, casosDeInteraccion } from '../ia/AccionesDeIa'
 import {
   atributo,
   puedeEscribir,
@@ -102,6 +103,13 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         </div>
         <BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />
       </header>
+      <AccionesDeIa
+        objeto="engagement"
+        registro={interaccion}
+        proyecto={proyecto}
+        rotulo={texto(interaccion, 'title')}
+        casos={casosDeInteraccion(interaccion)}
+      />
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
         <Tabs
           label={texto(interaccion, 'title')}
@@ -324,7 +332,14 @@ function Preguntas({ interaccion }: { interaccion: Registro }) {
       ) : null}
       {preguntas.data?.length === 0 ? <li className="text-sg-text-muted">{t('relacionamiento.ficha.sinPreguntas')}</li> : null}
       {(preguntas.data ?? []).map((p) => (
-        <FilaDePregunta key={p.id} pregunta={p} interaccionId={interaccion.id} responde={responde} destinos={destinos} />
+        <FilaDePregunta
+          key={p.id}
+          pregunta={p}
+          interaccionId={interaccion.id}
+          proyecto={texto(interaccion, 'project')}
+          responde={responde}
+          destinos={destinos}
+        />
       ))}
     </ul>
   )
@@ -333,11 +348,13 @@ function Preguntas({ interaccion }: { interaccion: Registro }) {
 function FilaDePregunta({
   pregunta,
   interaccionId,
+  proyecto,
   responde,
   destinos
 }: {
   pregunta: Registro
   interaccionId: string
+  proyecto: string
   responde: boolean
   destinos: readonly (typeof OBJETOS_DE_QCS)[number][]
 }) {
@@ -382,6 +399,7 @@ function FilaDePregunta({
         {texto(pregunta, 'raised_by_role')} · <span data-estado={enElLugar || respondida ? 'respondida' : derivada ? 'derivada' : 'pendiente'}>{estado}</span>
       </p>
       {texto(pregunta, 'answer') ? <p className="text-sg-text-secondary">{texto(pregunta, 'answer')}</p> : null}
+      <AccionesDeIa objeto="engagement_question" registro={pregunta} proyecto={proyecto} rotulo={texto(pregunta, 'question_text')} casos={['AI-08']} compacta />
       {derivada ? <QcsDeLaPregunta pregunta={pregunta} /> : null}
       {pendiente && destinos.length > 0 && !abierta ? (
         <Button size="sm" variant="secondary" onClick={() => setDerivando(true)}>

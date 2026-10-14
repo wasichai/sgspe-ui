@@ -126,3 +126,13 @@ describe('reglas de transición de F5', () => {
     expect(esDeComando('social_program', 'approve')).toBe(false)
   })
 })
+
+// F7: las sugerencias de IA (WF-K): aceptar es de comando (POST …/accept); rechazar y marcar como duplicada piden motivo
+describe('reglas de transición de F7', () => {
+  it('rechazar y marcar como duplicada una sugerencia exigen motivo; aceptarla va por su endpoint', () => {
+    expect(exigeMotivo('ai_suggestion', 'reject')).toBe(true)
+    expect(exigeMotivo('ai_suggestion', 'mark_duplicate')).toBe(true)
+    expect(esDeComando('ai_suggestion', 'accept')).toBe(true)
+    expect(esDeComando('ai_suggestion', 'reject')).toBe(false)
+  })
+})

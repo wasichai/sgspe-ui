@@ -2,6 +2,21 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-14 — Fase 7: portal de la IA (plan 7.3)
+
+- El asistente S05: el botón «Preguntar» si el servidor tiene la IA, «Preguntar a los datos» con sus pasos, sus registros y la
+  marca de truncado, y «Preguntar a los documentos» con sus fuentes; la organización sin IA, el proveedor caído y el rol sin el
+  caso se dicen con su razón.
+- La bandeja S52 por proyecto: sugerencias y candidatos por confianza y fecha, la cita solo para quien abre la fuente, los
+  marcadores re-identificados al mostrar, aceptar con corrección y motivo sin marcadores, rechazar y marcar duplicado por WF-K,
+  y el posible duplicado lado a lado.
+- Las acciones de IA en las fichas (evidencia, interacción y sus preguntas, QCS, mención y proyecto), el resumen ejecutivo de S08
+  y el borrador del acta en S25.
+- `VistaMarkdown` dibuja la negrita, la cursiva y el código en línea como elementos de React (lo halló la prueba en vivo); las
+  marcas de énfasis sin pareja, los enlaces y el HTML quedan como texto.
+- La prueba en vivo contra el backend real pasó con Claude Haiku 4.5.
+- Pruebas: 1824 en 135 archivos de Vitest y 29 recorridos de Playwright.
+
 ## 2026-10-12 — Fase 6: portal del SIG avanzado (plan 6.3)
 
 - El mapa base de la organización llega por `/map/settings` y lo comparten el portal, `GeometryField` y `/admin`

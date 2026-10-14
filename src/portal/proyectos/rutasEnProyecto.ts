@@ -1,4 +1,6 @@
 import type { ComponentType } from 'react'
+import { BandejaDeIaPage } from '../ia/BandejaDeIaPage'
+import { DuplicadoPage } from '../ia/DuplicadoPage'
 import { AcuerdosPage } from '../acuerdos/AcuerdosPage'
 import { AtencionPage } from '../atencion/AtencionPage'
 import { FichaConsultaPage, FichaSolicitudPage } from '../atencion/FichaConsultaPage'
@@ -28,6 +30,7 @@ import { FichaProgramaPage } from '../inversion/FichaProgramaPage'
 import { ProgramasPage } from '../inversion/ProgramasPage'
 import { TableroInversionPage } from '../inversion/TableroInversionPage'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
+import { LEE_PROPUESTAS } from '../shell/leePropuestas'
 import type { ClaveDeSeccion, Par } from '../shell/navTree'
 import { FichaGrupoPage } from '../grupos/FichaGrupoPage'
 import { GruposPage } from '../grupos/GruposPage'
@@ -115,5 +118,8 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'programs', seccion: 'programs', Pantalla: ProgramasPage },
   { ruta: 'programs/dashboard', seccion: 'programs', Pantalla: TableroInversionPage },
   { ruta: 'programs/:programId', seccion: 'programs', Pantalla: FichaProgramaPage },
-  { ruta: 'contributions/:contributionId', seccion: 'programs', Pantalla: FichaAportePage }
+  { ruta: 'contributions/:contributionId', seccion: 'programs', Pantalla: FichaAportePage },
+  // F7: la bandeja de revisión de IA (S52), para quien lee las sugerencias o los candidatos
+  { ruta: 'ai-review', seccion: 'projects', seOfreceCon: LEE_PROPUESTAS, Pantalla: BandejaDeIaPage },
+  { ruta: 'ai-review/:suggestionId', seccion: 'projects', seOfreceCon: LEE_PROPUESTAS, Pantalla: DuplicadoPage }
 ]

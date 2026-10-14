@@ -55,6 +55,8 @@ export interface RegistrosSimplesProps {
   congelado?: string
   // tras crear, cambiar o borrar: lo que la pantalla deja viejo además de la lista (el total de un aporte, su consulta en seco)
   alCambiar?: () => void
+  // lo que el drawer de un registro suma debajo de sus datos (las acciones de IA de una mención, F7)
+  delRegistro?: (registro: Registro) => ReactNode
 }
 
 const NUEVO = '__nuevo__'
@@ -151,6 +153,7 @@ function DelRegistro({
   mensajesAlBorrar,
   congelado,
   alCambiar,
+  delRegistro,
   alCerrar
 }: RegistrosSimplesProps & { registro: Registro; escribe: boolean; alCerrar: () => void }) {
   const { can } = useAuth()
@@ -166,6 +169,7 @@ function DelRegistro({
       ) : (
         <SoloLectura objeto={objeto} campos={campos} registro={registro} />
       )}
+      {delRegistro?.(registro)}
       {escribe && !congelado && can(objeto, 'DELETE') ? <Borrar objeto={objeto} registro={registro} propios={mensajesAlBorrar} alBorrar={terminar} /> : null}
     </div>
   )

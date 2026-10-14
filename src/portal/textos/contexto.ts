@@ -26,7 +26,8 @@ export const ES_CONTEXTO = {
     documents: 'Documentos',
     tasks: 'Tareas',
     settings: 'Equipo y parámetros',
-    reports: 'Reportes'
+    reports: 'Reportes',
+    'ai-review': 'Bandeja de IA'
   },
   tipos: {
     community: 'Comunidad',
@@ -62,7 +63,8 @@ export const EN_CONTEXTO: typeof ES_CONTEXTO = {
     documents: 'Documents',
     tasks: 'Tasks',
     settings: 'Team and parameters',
-    reports: 'Reports'
+    reports: 'Reports',
+    'ai-review': 'AI tray'
   },
   tipos: {
     community: 'Community',

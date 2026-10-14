@@ -51,6 +51,11 @@ import { ES_EXPORTACION_GEOGRAFICA } from './exportacionGeografica'
 import { ES_EDICION_DE_GEOMETRIA } from './edicionDeGeometria'
 import { ES_UBICAR } from './ubicar'
 import { ES_CALIDAD } from './calidad'
+import { ES_IA } from './ia'
+import { ES_ASISTENTE } from './asistente'
+import { ES_BANDEJA_IA } from './bandejaIa'
+import { ES_ACCIONES_IA } from './accionesIa'
+import { ES_BORRADOR_DE_ACTA } from './borradorDeActa'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
@@ -112,6 +117,12 @@ export const ES = {
   edicionDeGeometria: ES_EDICION_DE_GEOMETRIA,
   ubicar: ES_UBICAR,
   calidad: ES_CALIDAD,
+  // F7: IA
+  ia: ES_IA,
+  asistente: ES_ASISTENTE,
+  bandejaIa: ES_BANDEJA_IA,
+  accionesIa: ES_ACCIONES_IA,
+  borradorDeActa: ES_BORRADOR_DE_ACTA,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',
@@ -128,7 +139,6 @@ export const ES = {
     sinPermisos: 'No se pudieron leer sus permisos',
     sinAcceso: 'Su cuenta no puede abrir «{{seccion}}».',
     preguntar: 'Preguntar',
-    asistentePorLlegar: 'El asistente de IA llega en una próxima fase',
     idioma: 'Idioma',
     idiomaNoGuardado: 'No se pudo guardar el idioma'
   },
