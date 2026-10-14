@@ -1,9 +1,25 @@
 import { Fragment, type ReactNode } from 'react'
+import { PATRON } from '../ia/marcadores'
 
 // la vista previa del acta: Markdown sin HTML (database-model.md §3.4) dibujado como elementos de React, nunca con
 // innerHTML. cubre lo que usa un acta: títulos, listas y párrafos. desde F7 dibuja también las salidas de la IA, con sus
 // marcadores resueltos por línea (enLinea)
-const MARCADOR = /^\[[A-Z]+(?::[^\]\s]*)?\]/
+const MARCADOR = new RegExp(`^${PATRON}`)
+
+// la primera aparición de la marca fuera de un marcador de la IA: el guion bajo de [PERSONA_1] no cierra una cursiva
+function buscarCierre(linea: string, marca: string, desde: number): number {
+  for (let i = desde; i < linea.length; i++) {
+    if (linea[i] === '[') {
+      const marcador = MARCADOR.exec(linea.slice(i))
+      if (marcador) {
+        i += marcador[0].length - 1
+        continue
+      }
+    }
+    if (linea.startsWith(marca, i)) return i
+  }
+  return -1
+}
 const ALFANUMERICO = /[\p{L}\p{N}]/u
 const sinBordes = (t: string) => t.length > 0 && t === t.trim()
 
@@ -31,7 +47,7 @@ function conEnfasis(linea: string, enLinea: (linea: string) => ReactNode): React
     if (c === '*' || c === '_' || c === '`') {
       const doble = c === '*' && linea[i + 1] === '*'
       const marca = doble ? '**' : c
-      const cierre = linea.indexOf(marca, i + marca.length)
+      const cierre = buscarCierre(linea, marca, i + marca.length)
       const dentro = cierre < 0 ? '' : linea.slice(i + marca.length, cierre)
       const antes = i > 0 ? linea[i - 1] : ''
       const despues = cierre < 0 ? '' : (linea[cierre + 1] ?? '')
