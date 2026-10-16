@@ -99,6 +99,12 @@ describe('fronteras de la interfaz', () => {
     expect(hallazgos(/dangerouslySetInnerHTML|\.(?:inner|outer)HTML\s*=/)).toEqual([])
   })
 
+  // F8 (plan 8.3, decisión 8): tiptap vive solo en el editor de secciones; las pantallas usan EditorMarkdown
+  it('tiptap solo se importa en el editor de secciones', () => {
+    const lugares = hallazgos(/['"]@tiptap\//).map((h) => h.split(':')[0])
+    expect([...new Set(lugares)].sort()).toEqual(['portal/entregables/EditorMarkdown.tsx', 'portal/entregables/nodoMencion.ts'])
+  })
+
   it('los vigías reconocen lo prohibido y dejan pasar lo permitido', () => {
     const rol = (line: string) => ROL.test(sinComentario(line))
     expect(rol("user.roles.includes('AUDITOR')")).toBe(true)
