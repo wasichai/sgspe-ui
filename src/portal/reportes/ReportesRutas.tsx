@@ -1,11 +1,15 @@
 import { Route, Routes } from 'react-router'
+import { PorRuta } from '../componentes/PorRuta'
+import { EntregablePage } from '../entregables/EntregablePage'
 import { ReportesPage } from './ReportesPage'
 
-// la sección Reportes en F2: las exportaciones; los entregables llegan en F8 (ux-architecture.md §6.2)
+// la sección Reportes: las exportaciones de F2 a F4 y, desde F8, los entregables (S49 en ReportesPage y S50 por registro;
+// ux-architecture.md §6.2)
 export function ReportesRutas() {
   return (
     <Routes>
       <Route index element={<ReportesPage />} />
+      <Route path="deliverables/:deliverableId" element={<PorRuta parametros={['deliverableId']} Pantalla={EntregablePage} />} />
     </Routes>
   )
 }
