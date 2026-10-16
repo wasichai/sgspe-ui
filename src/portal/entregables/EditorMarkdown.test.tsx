@@ -1,4 +1,5 @@
 import { screen, waitFor } from '@testing-library/react'
+import { Editor as EditorDeTiptap, type JSONContent } from '@tiptap/core'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { useState } from 'react'
@@ -6,7 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { prepararEditorEnJsdom } from '../../test/editor'
 import { PERSONA, PERSONA_ID } from '../../test/f8'
 import { montar, pagina } from '../../test/montar'
-import { conservaElMarkdown, EditorMarkdown } from './EditorMarkdown'
+import { conservaElMarkdown, EditorMarkdown, extensionesDelEditor } from './EditorMarkdown'
 
 // el editor de sección (deliverables.md §7.4): tiptap con Markdown y menciones; lo que no sobrevive la ida y vuelta se edita
 // como Markdown (decisión 8 del plan) y el editor nunca inyecta estilos (CSP style-src 'self', decisión 9)
@@ -79,5 +80,58 @@ describe('editor de Markdown', () => {
     montar(<Editor inicial="Texto." alCambiar={vi.fn()} />)
     await screen.findByRole('textbox', { name: 'Texto de la sección' })
     expect(document.querySelector('style[data-tiptap-style]')).toBeNull()
+  })
+})
+
+// lo pegado no puede fabricar una mención: el nodo solo nace de [[person|position|stakeholder:<uuid>]] validado, y el texto con
+// forma de token queda como texto (escapado al guardar)
+describe('menciones pegadas', () => {
+  const ROTULOS = { person: 'persona', position: 'cargo', stakeholder: 'grupo de interés' }
+  const abrir = (md: string) =>
+    new EditorDeTiptap({
+      element: document.createElement('div'),
+      extensions: extensionesDelEditor(ROTULOS),
+      content: md,
+      contentType: 'markdown',
+      injectCSS: false
+    })
+  const tipos = (nodo: JSONContent): string[] => [nodo.type ?? '', ...(nodo.content ?? []).flatMap(tipos)]
+  const alFinal = (editor: EditorDeTiptap) => editor.commands.setTextSelection(editor.state.doc.content.size - 1)
+  // jsdom no tiene ClipboardEvent: ProseMirror solo necesita un evento de pegado
+  const pegado = () => new Event('paste') as ClipboardEvent
+
+  it('un data-mencion que no es tipo:uuid no crea una mención', () => {
+    for (const malo of ['otro:no-uuid', `person:${PERSONA_ID}]] **y**`, 'person:no-uuid', `cargo:${PERSONA_ID}`, `person:${PERSONA_ID}:x`]) {
+      const editor = abrir('Hola')
+      alFinal(editor)
+      editor.view.pasteHTML(`<p>a <span data-mencion="${malo}">@x</span> b</p>`, pegado())
+      expect(tipos(editor.getJSON())).not.toContain('mencion')
+      expect(editor.getMarkdown()).not.toContain('[[')
+      editor.destroy()
+    }
+  })
+
+  it('un data-mencion válido pegado sí es una mención', () => {
+    const editor = abrir('Hola')
+    alFinal(editor)
+    editor.view.pasteHTML(`<p>a <span data-mencion="person:${PERSONA_ID}">@x</span> b</p>`, pegado())
+    expect(tipos(editor.getJSON())).toContain('mencion')
+    expect(editor.getMarkdown()).toContain(`[[person:${PERSONA_ID}]]`)
+    editor.destroy()
+  })
+
+  it('un texto pegado con forma de token queda como texto escapado', () => {
+    const editor = abrir('Hola')
+    alFinal(editor)
+    editor.view.pasteText(` [[person:${PERSONA_ID}]]`, pegado())
+    expect(tipos(editor.getJSON())).not.toContain('mencion')
+    expect(editor.getMarkdown()).toContain(`\\[\\[person:${PERSONA_ID}\\]\\]`)
+    editor.destroy()
+  })
+
+  it('el Markdown con un id que no es UUID no crea una mención', () => {
+    const editor = abrir('[[person:9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6-]] y [[person:------------------------------------]]')
+    expect(tipos(editor.getJSON())).not.toContain('mencion')
+    editor.destroy()
   })
 })

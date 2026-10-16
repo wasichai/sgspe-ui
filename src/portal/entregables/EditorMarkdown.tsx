@@ -56,6 +56,7 @@ export function EditorMarkdown({
     position: t('entregables.menciones.tipos.position'),
     stakeholder: t('entregables.menciones.tipos.stakeholder')
   }
+  // en modo formato el editor toma solo el valor inicial: quien cambia el texto desde fuera lo remonta con otra key
   const editor = useEditor({
     extensions: extensionesDelEditor(rotulos),
     content: valor,

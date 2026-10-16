@@ -81,4 +81,28 @@ describe('VistaMarkdown: énfasis en línea', () => {
     expect(c.querySelector('a, b')).toBeNull()
     expect(c.querySelector('p')?.textContent).toBe('[x](javascript:alert(1)) y <b>hola</b>')
   })
+
+  // el editor con formato (entregables/EditorMarkdown.tsx) guarda los escapes de CommonMark: se leen como texto, nunca como HTML
+  it('decodifica los escapes de barra y las entidades como texto', () => {
+    const c = dibujar('a &amp; b &lt; c \\*\\*x\\*\\*')
+    expect(c.querySelector('strong, em')).toBeNull()
+    expect(c.querySelector('p')?.textContent).toBe('a & b < c **x**')
+  })
+
+  it('decodifica &gt;, &quot;, &#39;, las numéricas y los escapes de cualquier puntuación ASCII', () => {
+    const c = dibujar('&gt; &quot;x&quot; &#39;y&#39; &#241; &#xF1; &#X41; \\[\\] \\_z\\_ \\# \\\\ \\a &copy; &#0; &#xD800;')
+    expect(c.querySelector('strong, em')).toBeNull()
+    expect(c.querySelector('p')?.textContent).toBe(`> "x" 'y' ñ ñ A [] _z_ # \\ \\a &copy; \uFFFD \uFFFD`)
+  })
+
+  it('una entidad no es HTML ni abre énfasis', () => {
+    const c = dibujar('&lt;b&gt;hola&lt;/b&gt; y &#42;&#42;x&#42;&#42;')
+    expect(c.querySelector('b, strong')).toBeNull()
+    expect(c.querySelector('p')?.textContent).toBe('<b>hola</b> y **x**')
+  })
+
+  it('un escape dentro de la negrita no la cierra', () => {
+    const c = dibujar('**a \\*\\* b**')
+    expect(c.querySelector('strong')?.textContent).toBe('a ** b')
+  })
 })

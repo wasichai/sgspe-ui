@@ -1,5 +1,5 @@
 import { Node } from '@tiptap/core'
-import { mencion, type TipoDeMencion } from './menciones'
+import { leerMencion, mencion, UUID_ESTRICTO, type TipoDeMencion } from './menciones'
 
 // la mención como nodo atómico de tiptap (decisión 8 del plan): se lee del Markdown con su propio tokenizador (marked no conoce
 // [[…]]) y se escribe de vuelta como el mismo token. al insertarla lleva su rótulo (el nombre que la cuenta lee, el cargo o el
@@ -9,7 +9,7 @@ export interface OpcionesDeMencion {
   rotulos: Record<TipoDeMencion, string>
 }
 
-const MENCION = /^\[\[(person|position|stakeholder):([0-9a-fA-F-]{36})\]\]/
+const MENCION = new RegExp(`^\\[\\[(person|position|stakeholder):(${UUID_ESTRICTO})\\]\\]`)
 
 export const NodoMencion = Node.create<OpcionesDeMencion>({
   name: 'mencion',
@@ -34,10 +34,8 @@ export const NodoMencion = Node.create<OpcionesDeMencion>({
     return [
       {
         tag: 'span[data-mencion]',
-        getAttrs: (elemento) => {
-          const [tipo, id] = (elemento as HTMLElement).getAttribute('data-mencion')?.split(':') ?? []
-          return tipo && id ? { tipo, id } : false
-        }
+        // un data-mencion pegado de otra página solo vale si es tipo:uuid (leerMencion); si no, no es mención
+        getAttrs: (elemento) => leerMencion((elemento as HTMLElement).getAttribute('data-mencion') ?? '') ?? false
       }
     ]
   },
@@ -65,5 +63,9 @@ export const NodoMencion = Node.create<OpcionesDeMencion>({
 
   parseMarkdown: (token, helpers) => helpers.createNode('mencion', { tipo: token.tipo, id: token.id }),
 
-  renderMarkdown: (node) => mencion(node.attrs?.tipo as TipoDeMencion, String(node.attrs?.id ?? ''))
+  // un nodo con atributos fuera de la forma no escribe nada: el Markdown solo lleva tokens válidos
+  renderMarkdown: (node) => {
+    const valida = leerMencion(`${String(node.attrs?.tipo)}:${String(node.attrs?.id)}`)
+    return valida ? mencion(valida.tipo, valida.id) : ''
+  }
 })

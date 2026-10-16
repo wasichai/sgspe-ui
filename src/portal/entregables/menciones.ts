@@ -10,6 +10,15 @@ const TOKEN = new RegExp(`\\[\\[(person|position|stakeholder):(${UUID})\\]\\]`, 
 
 export const mencion = (tipo: TipoDeMencion, id: string): string => `[[${tipo}:${id}]]`
 
+// lo que puede volverse un nodo de mención en el editor (lo pegado como HTML o leído del Markdown): un tipo de la lista y un UUID
+// con sus guiones en su sitio. cualquier otra cosa no es mención y queda como texto
+export const UUID_ESTRICTO = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+const VALOR_DE_MENCION = new RegExp(`^(person|position|stakeholder):(${UUID_ESTRICTO})$`)
+export function leerMencion(valor: string): { tipo: TipoDeMencion; id: string } | null {
+  const m = VALOR_DE_MENCION.exec(valor)
+  return m ? { tipo: m[1] as TipoDeMencion, id: m[2] } : null
+}
+
 export type Trozo = { tipo: 'texto'; texto: string } | { tipo: 'mencion'; clase: TipoDeMencion; id: string }
 
 export function partirMenciones(texto: string): Trozo[] {
