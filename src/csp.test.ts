@@ -60,4 +60,10 @@ describe('CSP', () => {
   it('una URL https mal formada falla nombrando SGSPE_MAPA_BASE', () => {
     expect(() => origenesDelMapa('https://bien.example/a https://')).toThrow(/SGSPE_MAPA_BASE/)
   })
+
+  // plan 8.3, decisión 9: PdfDialog de @wasichai/ui dibuja el borrador en un iframe con una URL blob:, que default-src 'self'
+  // bloquearía; ningún otro origen entra en frame-src
+  it('la vista previa del PDF puede dibujar un blob en un marco', () => {
+    expect(contentSecurityPolicy(html)).toContain("frame-src 'self' blob:")
+  })
 })

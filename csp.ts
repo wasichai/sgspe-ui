@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto'
 
 // la política de security.md §3.2 para el portal y /admin, con el hash del único script en línea: el arranque de temas
 // de index.html. Vite la manda en modo de solo informe (ADR-0020); en producción la pone el proxy, que la toma de
-// `yarn csp` (ADR-0026). los proveedores del mapa base (SGSPE_MAPA_BASE, una lista de URL; gis.md §6.4) entran en img-src y connect-src
+// `yarn csp` (ADR-0026). los proveedores del mapa base (SGSPE_MAPA_BASE, una lista de URL; gis.md §6.4) entran en img-src y connect-src;
+// desde F8, `frame-src 'self' blob:` para la vista previa del PDF del borrador (PdfDialog)
 
 // el texto exacto del script en línea de index.html: lo que el navegador hashea
 export function bootScript(html: string): string {
@@ -43,6 +44,7 @@ export function contentSecurityPolicy(html: string, mapaBase = ''): string {
     `connect-src 'self'${externo}`,
     "worker-src 'self' blob:",
     "font-src 'self'",
+    "frame-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

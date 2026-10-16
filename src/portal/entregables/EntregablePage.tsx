@@ -8,6 +8,7 @@ import { texto, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { seccionDelTipo, useTiposDeEntregable } from './contrato'
 import { EditorDeSeccion } from './EditorDeSeccion'
+import { PanelDelBorrador } from './PanelDelBorrador'
 import { SugerenciaDeSeccion } from './SugerenciaDeSeccion'
 import { cambioDespuesDelBorrador, ESTADOS_DE_WF_H, NIVELES_DE_ENTREGABLE, ORIGEN_IA } from './tipos'
 
@@ -86,6 +87,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
       <CaminoDeEstados estado={entregable.state} />
       <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
         <aside className="space-y-3">
+          <PanelDelBorrador entregable={entregable} secciones={lista} />
           {tipos.isError ? <p className="text-sg-caption text-sg-warning">{t('entregables.seccion.tiposConError')}</p> : null}
           <nav aria-label={t('entregables.secciones.titulo')} className="space-y-1">
             <DeLista consulta={secciones}>
