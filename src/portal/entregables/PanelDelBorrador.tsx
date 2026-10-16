@@ -49,11 +49,13 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
     return seccion ? texto(seccion, 'title') : (clave ?? '')
   }
   const titulo = t('entregables.borrador.titulo')
-  const descargarDocx = () =>
-    pedir
+  const descargarDocx = () => {
+    setFalloDeDescarga(null)
+    return pedir
       .archivo(rutaDelBorrador(entregable.id, 'INTERNO', 'docx'))
       .then((a) => guardarArchivo(a, `${texto(entregable, 'document_code') || 'borrador'}-borrador.docx`))
       .catch(setFalloDeDescarga)
+  }
   return (
     <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
       <h2 className="text-sg-h3 font-semibold">{titulo}</h2>

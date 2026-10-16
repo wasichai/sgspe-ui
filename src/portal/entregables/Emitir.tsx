@@ -1,6 +1,6 @@
 import { useAuth } from '@wasichai/core'
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
-import { useState } from 'react'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
@@ -39,17 +39,20 @@ export function AccionesDelEntregable({ entregable }: { entregable: Registro }) 
           anexos={sha ? { approve: t('entregables.aprobar.anexo', { sha }) } : {}}
         />
         {ofreceEmitir ? (
-          <Button
-            size="sm"
-            disabled={mapaFallido}
-            title={mapaFallido ? t('entregables.emitir.mapaFallido') : undefined}
-            onClick={() => {
-              setEmitida(null)
-              setEmitiendo(true)
-            }}
-          >
-            {t('entregables.emitir.boton')}
-          </Button>
+          <>
+            <Button
+              size="sm"
+              disabled={mapaFallido}
+              title={mapaFallido ? t('entregables.emitir.mapaFallido') : undefined}
+              onClick={() => {
+                setEmitida(null)
+                setEmitiendo(true)
+              }}
+            >
+              {t('entregables.emitir.boton')}
+            </Button>
+            {mapaFallido ? <p className="text-sm text-sg-warning">{t('entregables.emitir.mapaFallido')}</p> : null}
+          </>
         ) : null}
       </div>
       {emitida !== null ? (
@@ -74,7 +77,7 @@ export function AccionesDelEntregable({ entregable }: { entregable: Registro }) 
 
 function DialogoDeEmision({
   entregable,
-  estado,
+  estado: vivo,
   alCerrar,
   alEmitir
 }: {
@@ -85,11 +88,19 @@ function DialogoDeEmision({
 }) {
   const { t } = useTranslation(NS)
   const emitir = useEmitir(entregable.id)
+  // lo que la persona vio al abrir: se emite este SHA-256, nunca uno más fresco que llegó con el diálogo abierto
+  const [foto, setFoto] = useState(vivo)
+  const estado = foto
+  const cambio = vivo.modelSha256 !== foto.modelSha256 || vivo.status !== 'LISTO' || (vivo.warnings ?? []).some((a) => a.code === 'MAP_FAILED')
   const releer = useReleer()
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set())
   const [motivo, setMotivo] = useState('')
   const listaEntera = LISTA.every((c) => marcadas.has(c))
-  const puede = listaEntera && motivo.trim() !== '' && Boolean(estado.modelSha256) && !emitir.isPending
+  const puede = !cambio && listaEntera && motivo.trim() !== '' && Boolean(estado.modelSha256) && !emitir.isPending
+  useEffect(() => {
+    if (cambio) setMarcadas(new Set())
+  }, [cambio])
+  const hayOtroLimpio = cambio && vivo.status === 'LISTO' && !(vivo.warnings ?? []).some((a) => a.code === 'MAP_FAILED') && Boolean(vivo.modelSha256)
   const alternar = (clave: string) => {
     const siguiente = new Set(marcadas)
     if (siguiente.has(clave)) siguiente.delete(clave)
@@ -132,6 +143,25 @@ function DialogoDeEmision({
           <Campo etiqueta={t('comun.motivoObligatorio')}>
             {(p) => <Textarea {...p} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
           </Campo>
+          {cambio ? (
+            <Alert tone="warning">
+              {t('entregables.emitir.cambio')}
+              {hayOtroLimpio ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="ml-2"
+                  onClick={() => {
+                    emitir.reset()
+                    setMarcadas(new Set())
+                    setFoto(vivo)
+                  }}
+                >
+                  {t('entregables.emitir.usarActual')}
+                </Button>
+              ) : null}
+            </Alert>
+          ) : null}
           {emitir.isError ? (
             <AvisoDeConflicto
               error={emitir.error}

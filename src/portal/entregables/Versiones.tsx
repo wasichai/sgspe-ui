@@ -24,11 +24,13 @@ export function Versiones({ entregable }: { entregable: Registro }) {
   const [fallo, setFallo] = useState<unknown>(null)
   const formatos = (nivel: string): FormatoDeArchivo[] =>
     nivel === 'INTERNO' ? (can('deliverable', 'DOWNLOAD_RESTRICTED') ? ['pdf', 'docx'] : []) : can('deliverable', 'EXPORT') ? ['pdf'] : []
-  const descargar = (numero: number, formato: FormatoDeArchivo) =>
-    pedir
+  const descargar = (numero: number, formato: FormatoDeArchivo) => {
+    setFallo(null)
+    return pedir
       .archivo(rutaDeLaVersion(entregable.id, numero, formato))
       .then((a) => guardarArchivo(a, `${texto(entregable, 'document_code') || 'entregable'}-v${numero}.${formato}`))
       .catch(setFallo)
+  }
   const titulo = t('entregables.versiones.titulo')
   return (
     <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">

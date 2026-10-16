@@ -162,6 +162,9 @@ export const ES_ENTREGABLES = {
     confirmar: 'Emitir',
     emitiendo: 'Emitiendo…',
     recargarBorrador: 'Recargar el borrador',
+    cambio:
+      'El borrador cambió mientras esta ventana estaba abierta: lo que revisó ya no es lo que hay. Cierre la ventana y vuelva a abrirla, o use el borrador actual para revisarlo y marcar la lista otra vez.',
+    usarActual: 'Usar el borrador actual',
     hecho: 'Entregable emitido en su revisión {{revision}}.'
   },
   versiones: {
@@ -337,6 +340,9 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     confirmar: 'Issue',
     emitiendo: 'Issuing…',
     recargarBorrador: 'Reload the draft',
+    cambio:
+      'The draft changed while this window was open: what you reviewed is no longer what is there. Close the window and open it again, or use the current draft to review it and tick the checklist again.',
+    usarActual: 'Use the current draft',
     hecho: 'Deliverable issued in its revision {{revision}}.'
   },
   versiones: {

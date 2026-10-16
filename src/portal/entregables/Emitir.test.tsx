@@ -109,6 +109,51 @@ describe('emitir', () => {
     expect(boton).toHaveAttribute('title', 'Un mapa del borrador falló: pida un borrador nuevo antes de emitir.')
   })
 
+  it('si el borrador cambia con el diálogo abierto, avisa, desmarca la lista y no deja emitir hasta usar el actual', async () => {
+    const OTRO = 'f'.repeat(64)
+    let borrador: EstadoDelBorrador = BORRADOR_LISTO
+    let intentos = 0
+    abrir(
+      entregableEn('approved'),
+      BORRADOR_LISTO,
+      [],
+      [
+        { path: '/sgspe/deliverables/d1/draft', responder: () => jsonResponse(borrador) },
+        {
+          method: 'POST',
+          path: '/sgspe/deliverables/d1/issue',
+          responder: () =>
+            ++intentos === 1
+              ? problema(409, 'x', [{ field: 'draftModelSha256', message: 'MODEL_MISMATCH' }])
+              : jsonResponse({ deliverable: entregableEn('issued', { current_revision: '0' }), versions: [VERSION_INTERNO, VERSION_EXTERNO] }, 201)
+        }
+      ]
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Emitir…' }))
+    const dialogo = screen.getByRole('dialog')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Entrega')
+    await marcarLaLista(dialogo)
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Emitir' }))
+    await within(dialogo).findByRole('button', { name: 'Recargar el borrador' })
+    borrador = { ...BORRADOR_LISTO, modelSha256: OTRO }
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Recargar el borrador' }))
+    expect(await within(dialogo).findByText(/cambió mientras esta ventana estaba abierta/)).toBeInTheDocument()
+    expect(within(dialogo).getByText(SHA_MODELO)).toBeInTheDocument()
+    for (const c of within(dialogo).getAllByRole('checkbox')) expect(c).not.toBeChecked()
+    expect(within(dialogo).getByRole('button', { name: 'Emitir' })).toBeDisabled()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Usar el borrador actual' }))
+    expect(within(dialogo).getByText(OTRO)).toBeInTheDocument()
+    await marcarLaLista(dialogo)
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Emitir' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/deliverables/d1/issue')).toHaveLength(2))
+    expect(red!.a('POST', '/sgspe/deliverables/d1/issue')[1].cuerpo).toEqual({ draftModelSha256: OTRO, checklistConfirmed: true })
+  })
+
+  it('un mapa fallido dice su razón como texto junto al botón', async () => {
+    abrir(entregableEn('approved'), BORRADOR_CON_MAPA_FALLIDO, [])
+    expect(await screen.findByText('Un mapa del borrador falló: pida un borrador nuevo antes de emitir.')).toBeInTheDocument()
+  })
+
   it('«Aprobar» agrega el SHA-256 del modelo revisado al motivo; sin el estado del borrador no se ofrece', async () => {
     abrir(entregableEn('in_review'), BORRADOR_LISTO, [
       transicion('approve', 'Aprobar', 'approved', 'Aprobado'),
@@ -148,6 +193,24 @@ describe('versiones', () => {
     expect(within(tabla).queryByRole('button', { name: 'Descargar el DOCX de la versión 2' })).not.toBeInTheDocument()
     expect(within(tabla).getByRole('button', { name: 'Descargar el PDF de la versión 2' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /CE-2026-0001/ })).toBeInTheDocument()
+  })
+
+  it('un fallo de descarga se limpia al descargar de nuevo', async () => {
+    montarVersiones()
+    let n = 0
+    red!.restaurar()
+    red = espiarRed([
+      {
+        path: /\/sgspe\/deliverables\/d1\/versions\/\d+\/content/,
+        responder: () => (++n === 1 ? problema(500, 'x') : new Response('%PDF', { headers: { 'Content-Type': 'application/pdf' } }))
+      }
+    ])
+    const tabla = await screen.findByRole('table', { name: 'Versiones emitidas' })
+    const boton = within(tabla).getByRole('button', { name: 'Descargar el PDF de la versión 2' })
+    await userEvent.click(boton)
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    await userEvent.click(boton)
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
   })
 
   it('sin descargar lo restringido ni exportar, no ofrece descargas', async () => {
