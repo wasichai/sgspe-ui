@@ -41,7 +41,12 @@ export function MonitoreoPage() {
     else siguiente.delete(clave)
     fijar(siguiente, { replace: true })
   }
-  const detalle = (code: string) => `/dashboards/indicators/${encodeURIComponent(code)}?periodStart=${desde}&periodEnd=${hasta}`
+  // el detalle calcula la misma cifra que la fila (el periodo y el proyecto) y vuelve al mismo mes y proyecto
+  const detalle = (code: string) => {
+    const consulta = new URLSearchParams({ periodStart: desde, periodEnd: hasta, month: mes })
+    if (proyecto) consulta.set('project', proyecto)
+    return `/dashboards/indicators/${encodeURIComponent(code)}?${consulta}`
+  }
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">

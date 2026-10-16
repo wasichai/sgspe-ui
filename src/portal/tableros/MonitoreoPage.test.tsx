@@ -53,7 +53,7 @@ describe('Monitoreo de la Tabla 9.5', () => {
     expect(within(quinta).getByText('Sin cerrar')).toBeInTheDocument()
     expect(within(primera).getByRole('link', { name: 'Grupos de interés contactados, por sexo, ámbito e institución' })).toHaveAttribute(
       'href',
-      '/dashboards/indicators/KPI-STK-04?periodStart=2026-09-01&periodEnd=2026-09-30'
+      '/dashboards/indicators/KPI-STK-04?periodStart=2026-09-01&periodEnd=2026-09-30&month=2026-09'
     )
   })
 

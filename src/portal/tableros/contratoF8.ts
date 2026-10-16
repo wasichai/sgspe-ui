@@ -81,6 +81,9 @@ export function mesAnterior(hoy: string): string {
   return mes === 1 ? `${anio - 1}-12` : `${anio}-${String(mes - 1).padStart(2, '0')}`
 }
 
+// un mes AAAA-MM bien formado (el de ?month= puede venir de un enlace editado a mano)
+export const esMes = (valor: string | null | undefined): valor is string => typeof valor === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(valor)
+
 // el primer y el último día de un mes (AAAA-MM), en fechas de calendario
 export function periodoDelMes(mes: string): { desde: string; hasta: string } {
   const [anio, numeroDeMes] = mes.split('-').map(Number)
