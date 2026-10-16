@@ -219,9 +219,9 @@ describe('emitir', () => {
 })
 
 describe('versiones', () => {
-  const montarVersiones = (usuario = GERENCIA_SOCIAL, permisos = EQUIPO_DE_ENTREGABLES) => {
+  const montarVersiones = (usuario = GERENCIA_SOCIAL, permisos = EQUIPO_DE_ENTREGABLES, versiones: unknown[] = [VERSION_EXTERNO, VERSION_INTERNO]) => {
     fetch = mockFetch([
-      { path: '/objects/deliverable_version/records', body: pagina([VERSION_EXTERNO, VERSION_INTERNO]) },
+      { path: '/objects/deliverable_version/records', body: pagina(versiones) },
       {
         path: '/objects/deliverable/records/d1/documents',
         body: [
@@ -236,11 +236,18 @@ describe('versiones', () => {
     montar(<Versiones entregable={ENTREGABLE} />, { usuario, permisos })
   }
 
+  it('las secciones con IA se dicen por su título del tipo; una clave que el tipo ya no trae, tal cual', async () => {
+    const version = { ...VERSION_INTERNO, attributes: { ...VERSION_INTERNO.attributes, ai_assisted_sections: 'conclusiones\nseccion-retirada' } }
+    montarVersiones(GERENCIA_SOCIAL, EQUIPO_DE_ENTREGABLES, [version])
+    const tabla = await screen.findByRole('table', { name: 'Versiones emitidas' })
+    expect(await within(tabla).findByText('Conclusiones, seccion-retirada')).toBeInTheDocument()
+  })
+
   it('lista cada versión con su nivel, su huella y sus descargas, y la constancia de emisión', async () => {
     montarVersiones()
     const tabla = await screen.findByRole('table', { name: 'Versiones emitidas' })
     expect(within(tabla).getByText(SHA_INTERNO)).toBeInTheDocument()
-    expect(within(tabla).getAllByText('conclusiones')).toHaveLength(2)
+    expect(await within(tabla).findAllByText('Conclusiones')).toHaveLength(2)
     await userEvent.click(within(tabla).getByRole('button', { name: 'Descargar el DOCX de la versión 1' }))
     await waitFor(() => expect(red!.a('GET', /\/sgspe\/deliverables\/d1\/versions\/1\/content\?format=docx$/)).toHaveLength(1))
     expect(within(tabla).queryByRole('button', { name: 'Descargar el DOCX de la versión 2' })).not.toBeInTheDocument()

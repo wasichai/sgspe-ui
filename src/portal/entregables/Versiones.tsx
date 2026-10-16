@@ -9,7 +9,7 @@ import { DocumentosEmitidos } from '../documentos/DocumentosEmitidos'
 import { guardarArchivo, usePedir } from '../datos/http'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
-import { rutaDeLaVersion, type FormatoDeArchivo } from './contrato'
+import { rutaDeLaVersion, seccionDelTipo, useTiposDeEntregable, type FormatoDeArchivo } from './contrato'
 
 // las versiones emitidas de S50 (deliverables.md §8.4 y §12): cada una con su número, su revisión, su nivel, quién y cuándo, la
 // huella de su PDF y las secciones asistidas por IA. las descargas, por nivel y permiso: INTERNO (PDF y DOCX) con
@@ -22,6 +22,16 @@ export function Versiones({ entregable }: { entregable: Registro }) {
   const mensaje = useMensajeDeError()
   const versiones = useTodos('deliverable_version', { deliverable: entregable.id, sort: 'version_number', dir: 'desc' })
   const [fallo, setFallo] = useState<unknown>(null)
+  // ai_assisted_sections guarda las claves, una por línea (DeliverableIssue): se dicen por su título del tipo y, si el tipo ya no
+  // trae la clave (o no se pudo leer), por la clave
+  const tipos = useTiposDeEntregable()
+  const conIa = (v: Registro) =>
+    texto(v, 'ai_assisted_sections')
+      .split('\n')
+      .map((clave) => clave.trim())
+      .filter(Boolean)
+      .map((clave) => seccionDelTipo(tipos.data, texto(entregable, 'deliverable_type'), clave)?.title ?? clave)
+      .join(', ')
   const formatos = (nivel: string): FormatoDeArchivo[] =>
     nivel === 'INTERNO' ? (can('deliverable', 'DOWNLOAD_RESTRICTED') ? ['pdf', 'docx'] : []) : can('deliverable', 'EXPORT') ? ['pdf'] : []
   const descargar = (numero: number, formato: FormatoDeArchivo) => {
@@ -63,7 +73,7 @@ export function Versiones({ entregable }: { entregable: Registro }) {
                         <Td className="text-sm">{texto(v, 'issued_at') ? fechaYHoraPe(new Date(texto(v, 'issued_at'))) : '—'}</Td>
                         <Td className="text-sm">{texto(v, 'issued_by_user_email') || '—'}</Td>
                         <Td className="break-all font-sg-mono text-sg-caption">{texto(v, 'pdf_sha256')}</Td>
-                        <Td className="text-sm">{texto(v, 'ai_assisted_sections') || '—'}</Td>
+                        <Td className="text-sm">{conIa(v) || '—'}</Td>
                         <Td className="text-sm">
                           <div className="flex flex-wrap gap-1">
                             {formatos(nivel).map((f) => (
