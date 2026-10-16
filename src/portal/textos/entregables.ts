@@ -105,6 +105,7 @@ export const ES_ENTREGABLES = {
     usarTitulo: 'Usar la sugerencia en la sección',
     usarAyuda: 'Este será el texto de la sección. Corríjalo y escriba el motivo: la sección queda asistida por IA.',
     texto: 'Texto que irá a la sección',
+    textoFalta: 'Escriba el texto de la sección.',
     quedanMarcadores: 'El texto todavía lleva datos reservados por la IA: reemplácelos por una mención o por un texto genérico.',
     confirmar: 'Usar en la sección',
     usando: 'Usando…'
@@ -279,6 +280,7 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     usarTitulo: 'Use the suggestion in the section',
     usarAyuda: 'This will be the section text. Correct it and write the reason: the section becomes AI-assisted.',
     texto: 'Text that will go to the section',
+    textoFalta: 'Write the section text.',
     quedanMarcadores: 'The text still has data reserved by the AI: replace it with a mention or a generic text.',
     confirmar: 'Use in the section',
     usando: 'Using…'

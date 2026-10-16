@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { prepararEditorEnJsdom } from '../../test/editor'
-import { baseDeF8, ENTREGABLE, entregableEn, EQUIPO_DE_ENTREGABLES, SECCION_ANTECEDENTES, SECCION_CONCLUSIONES, SECCIONES } from '../../test/f8'
+import { baseDeF8, ENTREGABLE, SUG_SECCION, entregableEn, EQUIPO_DE_ENTREGABLES, SECCION_ANTECEDENTES, SECCION_CONCLUSIONES, SECCIONES } from '../../test/f8'
 import { montar, pagina } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { GERENCIA_SOCIAL } from '../../test/portal'
@@ -149,5 +149,25 @@ describe('S50 · entregable por secciones', () => {
       { path: '/objects/ai_suggestion/records', body: pagina([]) }
     ])
     expect(await screen.findByRole('heading', { level: 1, name: 'Informe de campo de la Comunidad Ejemplo' })).toBeInTheDocument()
+  })
+
+  it('con cambios sin guardar el panel de IA no deja usar la sugerencia, y sí tras guardar', async () => {
+    abrir('/reports/deliverables/d1?seccion=antecedentes', [
+      guardado('sec-antecedentes'),
+      {
+        method: 'GET',
+        path: /ai_suggestion\/records.*suggestion_kind=BORRADOR/,
+        responder: () => jsonResponse(pagina([SUG_SECCION]))
+      }
+    ])
+    const usar = await screen.findByRole('button', { name: 'Usar…' })
+    expect(usar).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Editar como Markdown' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Más.')
+    expect(screen.getByRole('button', { name: 'Usar…' })).toBeDisabled()
+    expect(screen.getAllByText('Guarde o descarte los cambios de la sección antes de usar una sugerencia.').length).toBeGreaterThan(0)
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Revisada' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar sección' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/deliverable_section/records/sec-antecedentes')).toHaveLength(1))
   })
 })

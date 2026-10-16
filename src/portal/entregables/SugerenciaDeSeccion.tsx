@@ -95,9 +95,12 @@ export function SugerenciaDeSeccion({ entregable, seccion, sucio }: { entregable
         <p className="text-sg-text-secondary">{t('entregables.ia.sinSugerencia')}</p>
       ) : null}
       {resumen && editable ? (
-        <Button size="sm" variant="ghost" disabled={sucio} onClick={() => setUsando({ sugerencia: resumen, conSeccion: true })}>
-          {t('entregables.ia.usarResumen')}
-        </Button>
+        <div className="space-y-1">
+          <Button size="sm" variant="ghost" disabled={sucio} onClick={() => setUsando({ sugerencia: resumen, conSeccion: true })}>
+            {t('entregables.ia.usarResumen')}
+          </Button>
+          {!propuesto && sucio ? <p className="text-sg-caption text-sg-warning">{t('entregables.ia.guardeAntes')}</p> : null}
+        </div>
       ) : null}
       {usando ? <UsarSugerencia sugerencia={usando.sugerencia} seccion={seccion} conSeccion={usando.conSeccion} alCerrar={() => setUsando(null)} /> : null}
     </section>
@@ -132,7 +135,7 @@ function UsarSugerencia({ sugerencia, seccion, conSeccion, alCerrar }: { sugeren
         <DialogTitle className="text-sg-h3 font-semibold">{t('entregables.ia.usarTitulo')}</DialogTitle>
         <DialogDescription className="text-sm text-sg-text-secondary">{t('entregables.ia.usarAyuda')}</DialogDescription>
         <div className="mt-4 space-y-3">
-          <Campo etiqueta={t('entregables.ia.texto')}>
+          <Campo etiqueta={t('entregables.ia.texto')} error={intentado && !contenido.trim() ? t('entregables.ia.textoFalta') : undefined}>
             {(p) => <Textarea {...p} rows={10} className="font-sg-mono" value={contenido} onChange={(e) => setContenido(e.target.value)} />}
           </Campo>
           {!lista ? <Alert tone="warning">{t('entregables.ia.quedanMarcadores')}</Alert> : null}
@@ -142,8 +145,12 @@ function UsarSugerencia({ sugerencia, seccion, conSeccion, alCerrar }: { sugeren
           {aceptar.isError ? (
             <AvisoDeConflicto
               error={aceptar.error}
-              releer={() => releer(['record', 'ai_suggestion', sugerencia.id], ['records', 'ai_suggestion'])}
-              alRecargar={() => aceptar.reset()}
+              releer={() => releer(['records', 'ai_suggestion'])}
+              alRecargar={() => {
+                // la lista observada ya trae la versión nueva: se cierra para reabrir «Usar…» con ella
+                aceptar.reset()
+                alCerrar()
+              }}
             />
           ) : null}
         </div>

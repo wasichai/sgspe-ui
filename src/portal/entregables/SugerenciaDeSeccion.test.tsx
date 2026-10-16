@@ -161,4 +161,51 @@ describe('AI-04 en la sección', () => {
       attributes: { section: 'sec-antecedentes', content: 'El proyecto tuvo cuatro interacciones en el periodo.' }
     })
   })
+
+  it('tras un 412, Recargar cierra el diálogo y «Usar…» manda la versión nueva', async () => {
+    let vigente: Registro = SUG_SECCION
+    let intentos = 0
+    abrir({
+      especiales: [
+        { method: 'GET', path: /suggestion_kind=BORRADOR/, responder: () => jsonResponse(pagina([vigente])) },
+        {
+          method: 'POST',
+          path: '/sgspe/ai-suggestions/sug1/accept',
+          responder: () => {
+            intentos += 1
+            return intentos === 1 ? problema(412, 'x') : jsonResponse({ suggestion: { ...SUG_SECCION, state: 'accepted' }, result: SECCION_ANTECEDENTES })
+          }
+        }
+      ]
+    })
+    const panel = await screen.findByRole('region', { name: 'Borrador de la IA' })
+    await userEvent.click(await within(panel).findByRole('button', { name: 'Usar…' }))
+    let dialogo = screen.getByRole('dialog')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Revisado')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Usar en la sección' }))
+    vigente = { ...SUG_SECCION, updatedAt: '2026-10-12T10:00:00Z' }
+    await userEvent.click(await within(dialogo).findByRole('button', { name: 'Recargar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await userEvent.click(within(panel).getByRole('button', { name: 'Usar…' }))
+    dialogo = screen.getByRole('dialog')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Revisado')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Usar en la sección' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/ai-suggestions/sug1/accept')).toHaveLength(2))
+    expect(red!.a('POST', '/sgspe/ai-suggestions/sug1/accept')[1].cabeceras.get('If-Match')).toBe('"2026-10-12T10:00:00Z"')
+  })
+
+  it('con el texto vacío dice que falta; con cambios sin guardar el resumen también da la razón', async () => {
+    abrir({ borradores: [], resumenes: [SUG_RESUMEN], sucio: true })
+    expect(await screen.findByRole('button', { name: 'Usar el resumen ejecutivo del proyecto…' })).toBeDisabled()
+    expect(screen.getByText('Guarde o descarte los cambios de la sección antes de usar una sugerencia.')).toBeInTheDocument()
+    fetch!.restore()
+    red!.restaurar()
+    document.body.innerHTML = ''
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Usar…' }))
+    const dialogo = screen.getByRole('dialog')
+    await userEvent.clear(within(dialogo).getByLabelText('Texto que irá a la sección'))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Usar en la sección' }))
+    expect(await within(dialogo).findByText('Escriba el texto de la sección.')).toBeInTheDocument()
+  })
 })
