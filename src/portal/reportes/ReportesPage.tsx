@@ -20,8 +20,9 @@ import { MatrizDeCompromisos } from './MatrizDeCompromisos'
 import { RegistroDeAtencion } from './RegistroDeAtencion'
 import { RegistroDeRiesgos } from './RegistroDeRiesgos'
 import { OBJETOS_DE_QCS } from '../datos/atencion'
+import { EntregablesDeReportes } from '../entregables/EntregablesDeReportes'
 
-// S49 en F2 a F4 · reportes y exportaciones: el registro de grupos de interés, desde F3 la matriz de compromisos
+// S49: desde F8 los entregables (EntregablesDeReportes); de F2 a F4 · reportes y exportaciones: el registro de grupos de interés, desde F3 la matriz de compromisos
 // (MatrizDeCompromisos, con EXPORT sobre commitment) y desde F4 el registro de quejas, consultas y solicitudes (RegistroDeAtencion,
 // con EXPORT sobre los tres objetos) y la matriz de riesgos (RegistroDeRiesgos, con EXPORT sobre social_risk), en XLSX (api.md §4.13) con el nivel de divulgación
 // elegido; una salida fuera de la organización exige confirmar la lista de verificación (checklistConfirmed, RQ-REP-033).
@@ -59,6 +60,7 @@ export function ReportesPage() {
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
       <h1 className="text-sg-h1 font-semibold">{t('reportes.titulo')}</h1>
+      {can('deliverable', 'READ') ? <EntregablesDeReportes /> : null}
       <section aria-label={t('reportes.registroDeGrupos')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
         <h2 className="text-sg-h3 font-semibold">{t('reportes.registroDeGrupos')}</h2>
         <p className="text-sm text-sg-text-secondary">{t('reportes.registroAyuda')}</p>
@@ -130,7 +132,6 @@ export function ReportesPage() {
           )}
         </section>
       ) : null}
-      <p className="text-sm text-sg-text-muted">{t('reportes.otrasLlegan')}</p>
     </section>
   )
 }

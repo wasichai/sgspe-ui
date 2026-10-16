@@ -28,6 +28,7 @@ export const ES_TRANSICIONES = {
   quePasaraTexto: 'El registro pasa a «{{a}}». El cambio y su motivo quedan en el historial.',
   confirmar: 'Confirmar',
   confirmando: 'Aplicando…',
+  anexo: 'Se agrega al motivo: {{anexo}}',
   hecho: 'Listo: el registro está en «{{a}}».'
 }
 
@@ -59,5 +60,6 @@ export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
   quePasaraTexto: 'The record moves to “{{a}}”. The change and its reason are kept in the history.',
   confirmar: 'Confirm',
   confirmando: 'Applying…',
+  anexo: 'Added to the reason: {{anexo}}',
   hecho: 'Done: the record is now “{{a}}”.'
 }

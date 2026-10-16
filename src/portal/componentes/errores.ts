@@ -50,7 +50,8 @@ const claveEnCampo = (codigo: string, campo: string | undefined): string | null 
   if (codigo === 'AI_INPUT_TOO_LARGE' && campo === 'question') return 'comun.codigosEnCampo.iaPreguntaLarga'
   // F7, plan 7.2b: la corrida (target, person.given_names) y la aceptación de una sugerencia (attributes.field,
   // attributes.other_record_id, attributes.response, target_record_id, attributes.stakeholder; api.md §4.14)
-  return CODIGOS_DE_IA_EN_CAMPO[`${codigo}:${campo}`] ?? null
+  // F8, plan 8.3: CODIGOS_DE_F8_EN_CAMPO
+  return CODIGOS_DE_IA_EN_CAMPO[`${codigo}:${campo}`] ?? CODIGOS_DE_F8_EN_CAMPO[`${codigo}:${campo}`] ?? null
 }
 
 const CODIGOS_DE_IA_EN_CAMPO: Readonly<Record<string, string>> = {
@@ -63,6 +64,22 @@ const CODIGOS_DE_IA_EN_CAMPO: Readonly<Record<string, string>> = {
   'PROJECT_MISMATCH:attributes.other_record_id': 'comun.codigosEnCampo.iaOtroDeOtroProyecto',
   'STATE_MISMATCH:attributes.response': 'comun.codigosEnCampo.iaQuejaNoRechazable',
   'OBJECT_NOT_READABLE:target_record_id': 'comun.codigosEnCampo.iaDestinoNoLegible'
+}
+
+// F8: los parámetros que faltan (DeliverableDrafts y DeliverableSections: un error por campo), el borrador que no está listo
+// (DeliverableWriteGuard sobre draft) y la sección destino de una sugerencia (DeliverableSections.adopt)
+const CODIGOS_DE_F8_EN_CAMPO: Readonly<Record<string, string>> = {
+  'DELIVERABLE_PARAMETERS_MISSING:community': 'comun.codigosEnCampo.faltaComunidad',
+  'DELIVERABLE_PARAMETERS_MISSING:study': 'comun.codigosEnCampo.faltaEstudio',
+  'DELIVERABLE_PARAMETERS_MISSING:area_of_influence': 'comun.codigosEnCampo.faltaArea',
+  'DELIVERABLE_PARAMETERS_MISSING:period_start_date': 'comun.codigosEnCampo.faltaInicio',
+  'DELIVERABLE_PARAMETERS_MISSING:period_end_date': 'comun.codigosEnCampo.faltaFin',
+  'DELIVERABLE_PARAMETERS_MISSING:cutoff_date': 'comun.codigosEnCampo.faltaCorte',
+  'DELIVERABLE_PARAMETERS_MISSING:project.working_crs': 'comun.codigosEnCampo.faltaCrs',
+  'DELIVERABLE_PARAMETERS_MISSING:project': 'comun.codigosEnCampo.faltaProyecto',
+  'STATE_MISMATCH:draft': 'comun.codigosEnCampo.borradorNoListo',
+  'PROJECT_MISMATCH:attributes.section': 'comun.codigosEnCampo.seccionDeOtroProyecto',
+  'OBJECT_NOT_READABLE:attributes.section': 'comun.codigosEnCampo.seccionNoLegible'
 }
 
 export function useMensajeDeError(): (error: unknown, propios?: MensajesPropios) => string {

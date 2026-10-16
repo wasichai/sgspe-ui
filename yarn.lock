@@ -1130,6 +1130,13 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extensions/-/extensions-3.31.3.tgz#f94a6a154d9fb3849db92a64b43e197d255c89cb"
   integrity sha512-8sJNPGGUe8f3aDojcOW5cfVL7I5NrBbE0UWxG08qoi9Tea6qWbvQJsCR9tsrOapr/DaLr3kpbGZ9s1gEEfcNcA==
 
+"@tiptap/markdown@3.31.3":
+  version "3.31.3"
+  resolved "https://registry.yarnpkg.com/@tiptap/markdown/-/markdown-3.31.3.tgz#9a8cc1312fdb2c8e125dfa8cbce2ca7ffc40fa1f"
+  integrity sha512-rBbYSxasseUoaBo15C8Yoaqafo7mJJzxwAwV9Z1OpLBvOroW9nQ0EbOdqaSYRw3/d9pP71B/3LNSzKyfyy+dpQ==
+  dependencies:
+    marked "^17.0.1"
+
 "@tiptap/pm@3.31.3":
   version "3.31.3"
   resolved "https://registry.yarnpkg.com/@tiptap/pm/-/pm-3.31.3.tgz#e5bd2fac567a5d62aa016572f9747c8901108e20"
@@ -2261,6 +2268,11 @@ maplibre-gl@6.10.0:
     potpack "^2.1.0"
     quickselect "^3.0.0"
     tinyqueue "^3.0.0"
+
+marked@^17.0.1:
+  version "17.0.6"
+  resolved "https://registry.yarnpkg.com/marked/-/marked-17.0.6.tgz#2a97586a272d3be5880f198e020b74ad27cf86ba"
+  integrity sha512-gB0gkNafnonOw0obSTEGZTT86IuhILt2Wfx0mWH/1Au83kybTayroZ/V6nS25mN7u8ASy+5fMhgB3XPNrOZdmA==
 
 mdn-data@2.27.1:
   version "2.27.1"

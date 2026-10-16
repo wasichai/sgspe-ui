@@ -1,9 +1,11 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation, useParams } from 'react-router'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { KpiCard } from '../componentes/KpiCard'
 import { useIndicador, type Desglose, type Indicador } from '../datos/indicadores'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { esMes } from './contratoF8'
 import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, FiltrosIgnorados, SerieConMeta, useFiltrosDeTablero } from './comunes'
 
 // los desgloses de cada indicador que son categorías y se dibujan en barras (api.md §4.11). los demás no lo son: los
@@ -36,14 +38,34 @@ export const desglosesEnBarras = (i: Indicador): Desglose[] =>
 export function DetalleDeIndicadorPage() {
   const { t } = useTranslation(NS)
   const { code = '' } = useParams()
-  const { search } = useLocation()
+  const { pathname, search } = useLocation()
+  const [busqueda] = useSearchParams()
   const { scope } = useContextFilters()
-  const filtros = useFiltrosDeTablero()
+  const delTablero = useFiltrosDeTablero()
+  // desde F8 el detalle se abre también desde el monitoreo de la Tabla 9.5 (/dashboards/indicators/:code): toma el proyecto de
+  // la fila (?project=, fuera de /projects/:id no hay otro) y vuelve al monitoreo con el mismo mes y proyecto
+  const delMonitoreo = pathname.startsWith('/dashboards/')
+  const proyectoDelMonitoreo = delMonitoreo ? busqueda.get('project') : null
+  const filtros = useMemo(
+    () => (proyectoDelMonitoreo && !delTablero.project ? { ...delTablero, project: [proyectoDelMonitoreo] } : delTablero),
+    [delTablero, proyectoDelMonitoreo]
+  )
   const indicador = useIndicador(code, filtros)
-  const tablero = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}/stakeholders/dashboard` : '/stakeholders/dashboard'
+  const volver = () => {
+    if (!delMonitoreo) {
+      const tablero = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}/stakeholders/dashboard` : '/stakeholders/dashboard'
+      return `${tablero}${search}`
+    }
+    const consulta = new URLSearchParams()
+    const mes = busqueda.get('month') ?? busqueda.get('periodStart')?.slice(0, 7)
+    if (esMes(mes)) consulta.set('month', mes)
+    if (proyectoDelMonitoreo) consulta.set('project', proyectoDelMonitoreo)
+    const q = consulta.toString()
+    return q ? `/dashboards/monitoring?${q}` : '/dashboards/monitoring'
+  }
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
-      <Link to={`${tablero}${search}`} className="text-sm text-sg-primary-text underline">
+      <Link to={volver()} className="text-sm text-sg-primary-text underline">
         {t('tableros.volverAlTablero')}
       </Link>
       <h1 className="text-sg-h1 font-semibold">{indicador.data?.label ?? t('tableros.indicador')}</h1>

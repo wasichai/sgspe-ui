@@ -3,9 +3,11 @@ import { Badge, Table, Td, Th } from '@wasichai/ui'
 import { CircleCheck, Clock, Lock, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
+import { useCatalogoDeIndicadores } from '../datos/indicadores'
 import { INICIOS, inicioPara } from '../inicios'
 import { useCuenta, useOrganizacion } from '../queries'
 import { estadoDe, NAV_TREE, useOferta, type Estado } from '../shell/navTree'
+import { RevisionEjecutivaPage } from '../tableros/RevisionEjecutivaPage'
 
 // cada estado con su tono e ícono de design-system.md §4: nunca solo color
 const TONO: Record<Estado, { clase: string; Icono: LucideIcon }> = {
@@ -15,11 +17,16 @@ const TONO: Record<Estado, { clase: string; Icono: LucideIcon }> = {
   'sin-acceso': { clase: 'bg-sg-warning-soft text-sg-warning', Icono: Lock }
 }
 
-// el inicio del portal (S02, ASM-078): la variante del rol si la cuenta tiene una (inicios.ts); si no, la bienvenida de F1
+// el inicio del portal (S02, ASM-078): la variante del rol si la cuenta tiene una (inicios.ts); si no, desde F8 la revisión
+// ejecutiva S51 para quien el catálogo le ofrece el tablero executive (decisión 7 del plan 8.3); si no, la bienvenida de F1.
+// mientras el catálogo se lee, o si no se puede leer (un backend sin F8 responde sin KPI-EXE), la bienvenida
 export function InicioPage() {
   const oferta = useOferta()
   const variante = inicioPara(INICIOS, oferta)
-  return variante ? <variante.Pantalla /> : <Bienvenida />
+  const catalogo = useCatalogoDeIndicadores()
+  if (variante) return <variante.Pantalla />
+  const ejecutivo = (catalogo.data ?? []).some((i) => i.dashboard === 'executive' && i.available)
+  return ejecutivo ? <RevisionEjecutivaPage /> : <Bienvenida />
 }
 
 // la bienvenida de F1 (docs/ux/ux-architecture.md §6.2; roadmap, B7): quién es, de qué organización, con qué roles, y el

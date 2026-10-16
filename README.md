@@ -66,6 +66,12 @@ el idioma:
   (`/projects/:projectId/ai-review/:suggestionId`); las acciones de IA de la evidencia, la interacción, sus preguntas, las QCS,
   la mención y el proyecto; el resumen ejecutivo de S08 y el borrador del acta en S25. Toda salida va como texto o Markdown sin
   HTML, con los marcadores re-identificados al mostrar y la cita solo para quien abre la fuente.
+- **F8 · Tableros consolidados y entregables** (`src/portal/tableros/`, `src/portal/entregables/`): la revisión ejecutiva S51
+  en `/`, el tablero del proyecto en S08 en una sola llamada, el monitoreo de la Tabla 9.5 con su cierre de periodo
+  (`/dashboards/monitoring`) y el catálogo de indicadores (`/dashboards/indicators`); los entregables en Reportes (S49), el
+  entregable por secciones (`/reports/deliverables/:id`, S50) con el editor tiptap con Markdown y menciones (cargado diferido),
+  AI-04, el borrador en `PdfDialog`, WF-H, la emisión con la lista EXTERNO y las versiones; y las plantillas
+  (`/reports/templates`, S64).
 - **Alcance por proyecto (plan 4.4b):** el servidor acota la lectura a los proyectos de cada cuenta (ADR-0029). El selector
   ofrece «Todos los proyectos» a quien los lee todos (`useLeeTodosLosProyectos`) y avisa a una cuenta sin asignaciones; un
   registro que responde 404 no se distingue de uno inexistente (`NoEsDeSusProyectos` en una ficha, «Registro reservado» en

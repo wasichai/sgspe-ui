@@ -2,6 +2,25 @@
 
 La entrada más reciente va primero. El diseño y los ADR están en el repositorio `sgspe`.
 
+## 2026-10-16 — Fase 8: portal de tableros y entregables (plan 8.3)
+
+- La revisión ejecutiva S51 con la atención por regla fija, la inversión por moneda, la tendencia y la tabla por proyecto; S08
+  con el tablero del proyecto en una sola llamada; el monitoreo de la Tabla 9.5 con la cifra oficial y el cierre de periodo; el
+  catálogo de indicadores con sus metas.
+- Los entregables: S49 con «Nuevo entregable», S50 con el editor tiptap con Markdown y menciones (cargado diferido), AI-04 con
+  «Usar» y motivo, el panel del borrador con su sondeo de 5 s y `PdfDialog`, WF-H con el SHA-256 en la aprobación, la emisión
+  con la lista EXTERNO, las versiones y la constancia; y S64, las plantillas.
+- S50 pide confirmación antes de cambiar de sección con cambios sin guardar, y un refetch de la lista no remonta un editor con
+  cambios (un `412` con «Recargar» conserva el texto).
+- Dependencias: `@tiptap/markdown`, `@tiptap/core`, `@tiptap/pm`, `@tiptap/react` y `@tiptap/starter-kit` en 3.31.3. La CSP
+  abre `frame-src` a `blob:`; su prueba en `e2e/f8.spec.ts` tolera una sola violación conocida (el estilo en línea de
+  `react-remove-scroll` del Dialog de Radix, wasichai/wasichai-ui#58).
+- Huecos conocidos en sgspe-ui#32: la navegación hacia el monitoreo y el catálogo, S50 dentro de un proyecto y «Volver» sin
+  confirmación.
+- Pruebas: 1942 en 152 archivos de Vitest y 4 recorridos de Playwright de F8 (la CI corre los 33 de toda la suite). Bundle: el
+  chunk principal `PortalApp` pesa 1245.42 kB (316.48 kB gzip) con `index` en 232.49 kB; el editor queda diferido en
+  `EditorMarkdown` (65.64 kB, 20.24 kB gzip) más el chunk compartido de ProseMirror.
+
 ## 2026-10-14 — Fase 7: portal de la IA (plan 7.3)
 
 - El asistente S05: el botón «Preguntar» si el servidor tiene la IA, «Preguntar a los datos» con sus pasos, sus registros y la

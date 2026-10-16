@@ -2,6 +2,7 @@ import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -15,7 +16,7 @@ import { partirMarcadores, personasCitadas } from './marcadores'
 import { TextoDeIa, useNombresDePersonas } from './TextoDeIa'
 
 // el resumen ejecutivo del proyecto en S08 (AI-04, screens.md «Resumen ejecutivo y borrador de sección»): no es un dato; solo
-// informa y no se acepta mientras no lo use una sección de entregable (F8, decisión 18 del plan). cuenta solo lo que la persona
+// informa y desde F8 se copia a una sección asistida desde el panel de IA de esa sección (decisión 15 del plan 8.3); aquí lleva a los entregables del proyecto. cuenta solo lo que la persona
 // lee y no menciona posturas (lo garantiza el servidor). sin IA, la tarjeta no aparece
 export function ResumenEjecutivo({ proyecto }: { proyecto: Registro }) {
   const { t } = useTranslation(NS)
@@ -74,6 +75,11 @@ export function ResumenEjecutivo({ proyecto }: { proyecto: Registro }) {
           {ultimo ? (
             <Button size="sm" variant="ghost" onClick={() => void copiar()}>
               {t('accionesIa.resumen.copiar')}
+            </Button>
+          ) : null}
+          {ultimo && can('deliverable', 'READ') ? (
+            <Button asChild size="sm" variant="ghost">
+              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/reports`}>{t('entregables.resumen.usarEnEntregable')}</Link>
             </Button>
           ) : null}
           {documentos ? (

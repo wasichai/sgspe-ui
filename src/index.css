@@ -20,3 +20,28 @@
 @import '@fontsource/ibm-plex-mono/latin-ext-500.css';
 /* los paquetes @wasichai traen nombres de clase, no css: tailwind los escanea */
 @source '../node_modules/@wasichai';
+
+/* el editor de secciones de F8 (entregables/EditorMarkdown.tsx): tiptap no inyecta su CSS (injectCSS: false, la CSP de
+   producción no admite <style> en línea), así que lo mínimo de ProseMirror vive aquí */
+.ProseMirror {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    outline: none;
+}
+.ProseMirror p {
+    margin: 0 0 0.5rem;
+}
+.ProseMirror ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+}
+.ProseMirror ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+}
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3 {
+    font-weight: 600;
+    margin: 0.5rem 0;
+}

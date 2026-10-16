@@ -99,6 +99,18 @@ describe('fronteras de la interfaz', () => {
     expect(hallazgos(/dangerouslySetInnerHTML|\.(?:inner|outer)HTML\s*=/)).toEqual([])
   })
 
+  // F8 (plan 8.3, decisión 8): tiptap vive solo en el editor de secciones; las pantallas usan EditorMarkdown
+  it('tiptap solo se importa en el editor de secciones', () => {
+    const lugares = hallazgos(/['"]@tiptap\//).map((h) => h.split(':')[0])
+    expect([...new Set(lugares)].sort()).toEqual(['portal/entregables/EditorMarkdown.tsx', 'portal/entregables/nodoMencion.ts'])
+  })
+
+  // revisión final de 8.3 (importante 3): tiptap y ProseMirror van en un chunk diferido, que solo baja quien abre una sección;
+  // nadie importa el editor de forma estática (sus pruebas sí, y no son fuentes)
+  it('el editor de secciones se carga diferido', () => {
+    expect(hallazgos(/from\s+['"]\.{1,2}\/(?:entregables\/)?EditorMarkdown['"]/)).toEqual([])
+  })
+
   it('los vigías reconocen lo prohibido y dejan pasar lo permitido', () => {
     const rol = (line: string) => ROL.test(sinComentario(line))
     expect(rol("user.roles.includes('AUDITOR')")).toBe(true)

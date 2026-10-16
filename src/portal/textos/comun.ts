@@ -249,7 +249,22 @@ export const ES_COMUN = {
     // plan 7.2b: el tope de corridas a la vez (no es el proveedor caído) y los rechazos de la aceptación (api.md §4.14)
     AI_BUSY: 'La IA está ocupada: reintente en unos segundos.',
     SUGGESTION_NOT_ACCEPTABLE: 'Esta propuesta no se acepta: solo se rechaza o se marca como duplicada.',
-    PSEUDONYM_NOT_ALLOWED: 'Quedan datos reservados por la IA: reemplácelos por los valores reales antes de aceptar.'
+    PSEUDONYM_NOT_ALLOWED: 'Quedan datos reservados por la IA: reemplácelos por los valores reales antes de aceptar.',
+    // F8: entregables, plantillas, AI-04 de sección y cierre de periodo (api.md §3.3, §4.11, §4.12 y §4.14)
+    SECTION_NOT_ASSISTED: 'El tipo de entregable no prevé borradores de IA para esta sección.',
+    UNRESOLVED_PSEUDONYM: 'El texto todavía nombra a una persona sin identificar: reemplácela por una mención o por un texto genérico.',
+    AI_ORIGIN_LOCKED: 'Una sección asistida por IA conserva ese origen durante toda la vida del entregable: no vuelve a humana ni se borra.',
+    DELIVERABLE_PARAMETERS_MISSING: 'Faltan datos del entregable para esta acción.',
+    TEMPLATE_INVALID: 'La plantilla no pasó la validación: revise la lista de problemas.',
+    TEMPLATE_UNAVAILABLE: 'No hay una plantilla con esa clave: elija otra o deje la plantilla base.',
+    TYPE_NOT_AVAILABLE: 'Esta versión todavía no genera ese tipo de entregable.',
+    SECTIONS_CHANGED: 'Una o más secciones cambiaron después del borrador: pida un borrador nuevo antes de seguir.',
+    MODEL_MISMATCH: 'El borrador cambió desde que lo revisó: recargue y revise el borrador actual antes de emitir.',
+    MAP_FAILED: 'Un mapa del borrador no se pudo dibujar: pida un borrador nuevo cuando el servicio de mapas responda.',
+    INDICATOR_NOT_CLOSABLE: 'Este indicador no se puede cerrar.',
+    PERIOD_NOT_ENDED: 'El periodo todavía no terminó: se cierra desde el día siguiente a su fin.',
+    MEASUREMENT_EXISTS: 'Ese periodo ya está cerrado para este indicador y este alcance.',
+    FILE_WRITE_NOT_ALLOWED: 'Los archivos de los entregables y de las plantillas no se suben por esta vía.'
   },
   // el texto de un código que dice otra cosa según su campo (plan 4.2a; componentes/errores.ts)
   codigosEnCampo: {
@@ -273,7 +288,20 @@ export const ES_COMUN = {
     iaOtroDeOtroProyecto: 'El otro registro del par es de otro proyecto: no se marca como duplicado.',
     iaQuejaNoRechazable: 'La queja ya no se puede rechazar desde su estado: deje la respuesta vacía para solo vincular el duplicado.',
     iaDestinoNoLegible: 'El registro de la propuesta no existe o su cuenta no lo lee.',
-    iaGrupoSinProyecto: 'La propuesta no es de un proyecto: no se puede registrar su grupo de interés.'
+    iaGrupoSinProyecto: 'La propuesta no es de un proyecto: no se puede registrar su grupo de interés.',
+    // F8: los parámetros del tipo que faltan para pedir un borrador o redactar una sección (un error por campo), el borrador que
+    // no está listo y la sección destino de una sugerencia
+    faltaComunidad: 'Falta la comunidad del informe.',
+    faltaEstudio: 'Falta el estudio del diagnóstico.',
+    faltaArea: 'El diagnóstico necesita un área de influencia directa social aprobada.',
+    faltaInicio: 'Falta el inicio del periodo.',
+    faltaFin: 'Falta el fin del periodo.',
+    faltaCorte: 'Falta la fecha de corte.',
+    faltaCrs: 'El proyecto no tiene sistema de coordenadas de trabajo: complételo en sus parámetros.',
+    faltaProyecto: 'Falta el proyecto del entregable.',
+    borradorNoListo: 'El borrador no está listo o ya se emitió: pida un borrador nuevo.',
+    seccionDeOtroProyecto: 'La sección es de otro proyecto que la sugerencia: no se copia.',
+    seccionNoLegible: 'La sección no existe o su cuenta no puede leerla.'
   },
   errores: {
     '400': 'Revise los datos marcados.',
@@ -518,7 +546,21 @@ export const EN_COMUN: typeof ES_COMUN = {
     AI_RUN_TRUNCATED: 'The AI did not finish in time and saved no proposal: retry or try a shorter document.',
     AI_BUSY: 'The AI is busy: retry in a few seconds.',
     SUGGESTION_NOT_ACCEPTABLE: 'This proposal cannot be accepted: it can only be rejected or marked as a duplicate.',
-    PSEUDONYM_NOT_ALLOWED: 'Some data reserved by the AI remains: replace it with the real values before accepting.'
+    PSEUDONYM_NOT_ALLOWED: 'Some data reserved by the AI remains: replace it with the real values before accepting.',
+    SECTION_NOT_ASSISTED: 'The deliverable type does not allow AI drafts for this section.',
+    UNRESOLVED_PSEUDONYM: 'The text still names an unidentified person: replace it with a mention or a generic text.',
+    AI_ORIGIN_LOCKED: 'An AI-assisted section keeps that origin for the whole life of the deliverable: it does not go back to human nor is it deleted.',
+    DELIVERABLE_PARAMETERS_MISSING: 'The deliverable lacks data for this action.',
+    TEMPLATE_INVALID: 'The template did not pass validation: check the list of problems.',
+    TEMPLATE_UNAVAILABLE: 'There is no template with that key: choose another one or keep the base template.',
+    TYPE_NOT_AVAILABLE: 'This version does not generate that deliverable type yet.',
+    SECTIONS_CHANGED: 'One or more sections changed after the draft: request a new draft before going on.',
+    MODEL_MISMATCH: 'The draft changed since you reviewed it: reload and review the current draft before issuing.',
+    MAP_FAILED: 'A map of the draft could not be drawn: request a new draft when the map service answers.',
+    INDICATOR_NOT_CLOSABLE: 'This indicator cannot be closed.',
+    PERIOD_NOT_ENDED: 'The period has not ended yet: it can be closed from the day after it ends.',
+    MEASUREMENT_EXISTS: 'That period is already closed for this indicator and this scope.',
+    FILE_WRITE_NOT_ALLOWED: 'Deliverable and template files are not uploaded this way.'
   },
   codigosEnCampo: {
     vinculoDeComando:
@@ -537,7 +579,18 @@ export const EN_COMUN: typeof ES_COMUN = {
     iaOtroDeOtroProyecto: 'The other record of the pair belongs to another project: it is not marked as a duplicate.',
     iaQuejaNoRechazable: 'The grievance can no longer be rejected from its state: leave the answer empty to only link the duplicate.',
     iaDestinoNoLegible: 'The record of the proposal does not exist or your account cannot read it.',
-    iaGrupoSinProyecto: 'The proposal does not belong to a project: its stakeholder cannot be recorded.'
+    iaGrupoSinProyecto: 'The proposal does not belong to a project: its stakeholder cannot be recorded.',
+    faltaComunidad: 'The report community is missing.',
+    faltaEstudio: 'The diagnosis study is missing.',
+    faltaArea: 'The diagnosis needs an approved direct social area of influence.',
+    faltaInicio: 'The period start is missing.',
+    faltaFin: 'The period end is missing.',
+    faltaCorte: 'The cutoff date is missing.',
+    faltaCrs: 'The project has no working coordinate system: complete it in its parameters.',
+    faltaProyecto: 'The deliverable project is missing.',
+    borradorNoListo: 'The draft is not ready or was already issued: request a new draft.',
+    seccionDeOtroProyecto: 'The section belongs to another project than the suggestion: it is not copied.',
+    seccionNoLegible: 'The section does not exist or your account cannot read it.'
   },
   errores: {
     '400': 'Check the highlighted data.',

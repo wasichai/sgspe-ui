@@ -24,7 +24,9 @@ export const MOTIVO_EN_TODAS: readonly string[] = [
   'inquiry',
   'stakeholder_request',
   'social_risk',
-  'social_contribution'
+  'social_contribution',
+  // F8: el entregable (WF-H)
+  'deliverable'
 ]
 
 // las transiciones de comando (workflows.md, «Transiciones de comando»): solo las aplica su endpoint, así que no son
@@ -42,7 +44,9 @@ export const DE_COMANDO: Readonly<Record<string, readonly string[]>> = {
   grievance: ['close_reclassified_received', 'close_reclassified_acknowledged', 'close_reclassified_in_assessment'],
   inquiry: ['close_reclassified'],
   stakeholder_request: ['accept', 'close_accepted', 'close_reclassified_received', 'close_reclassified_under_evaluation'],
-  social_risk: ['assess']
+  social_risk: ['assess'],
+  // F8: emitir solo por POST /api/sgspe/deliverables/{id}/issue (CommandTransitionGuard; Emitir en S50)
+  deliverable: ['issue']
 }
 
 export const exigeMotivo = (objeto: string, transicion: string): boolean =>

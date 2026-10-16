@@ -132,7 +132,7 @@ function FiltrosDeInversion({ proyecto }: { proyecto?: string }) {
 const moneda = (f: FilaDeDesglose): string => (typeof f.currency === 'string' && f.currency ? f.currency : '')
 
 // KPI-INV-02: por programa, año y moneda, lo asignado y lo ejecutado registrado (decisión 4); una figura por moneda, con su tabla
-function ProgramasPorAnio({ indicador }: { indicador: Indicador }) {
+export function ProgramasPorAnio({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const filas = desglose(indicador, 'program')
   const monedas = [...new Set(filas.map(moneda))]
@@ -210,7 +210,7 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
 // KPI-INV-03: el desglose `project` de InvestmentKpis (plan 5.2b), una fila por proyecto y moneda con lo ejecutado del periodo y sus
 // fuentes frente al presupuesto y al tope; cada fila en su moneda, nunca sumadas entre monedas. las otras monedas y los programas
 // excluidos por localidad llegan como avisos del indicador (Zona los dice)
-function Consolidado({ indicador }: { indicador: Indicador }) {
+export function Consolidado({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const filas = desglose(indicador, 'project')
   if (filas.length === 0) return <p className="text-sm text-sg-text-muted">{t('tableroInversion.consolidado.sinFilas')}</p>
@@ -254,7 +254,7 @@ function Consolidado({ indicador }: { indicador: Indicador }) {
 }
 
 // KPI-INV-04: por programa, la meta y los alcanzados de sus grupos, y aparte las otras fuentes (no se suman)
-function BeneficiariosPorPrograma({ indicador }: { indicador: Indicador }) {
+export function BeneficiariosPorPrograma({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const filas = desglose(indicador, 'program')
   const conteo = (valor: unknown) => {

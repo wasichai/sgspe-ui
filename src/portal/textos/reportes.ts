@@ -37,7 +37,6 @@ export const ES_REPORTES = {
   historialAyuda: 'Las últimas exportaciones de la organización (o del proyecto elegido), con quién las hizo.',
   historialVacio: 'Todavía no hay exportaciones registradas.',
   columnas: { fecha: 'Fecha', quien: 'Exportó', objeto: 'Objeto', nivel: 'Nivel', filas: 'Filas' },
-  otrasLlegan: 'Los entregables llegan en F8.',
   // F3: la matriz de compromisos (api.md §4.13, deliverables.md §10)
   matriz: {
     titulo: 'Matriz de compromisos',
@@ -171,7 +170,6 @@ export const EN_REPORTES: typeof ES_REPORTES = {
   historialAyuda: 'The latest exports of the organization (or of the chosen project), with who made them.',
   historialVacio: 'No exports have been recorded yet.',
   columnas: { fecha: 'Date', quien: 'Exported by', objeto: 'Object', nivel: 'Level', filas: 'Rows' },
-  otrasLlegan: 'The deliverables arrive in F8.',
   matriz: {
     titulo: 'Commitment matrix',
     ayuda:

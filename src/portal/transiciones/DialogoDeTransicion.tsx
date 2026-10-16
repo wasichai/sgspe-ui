@@ -17,12 +17,17 @@ import { exigeMotivo } from './reglas'
 // un 412 dice "otra persona cambió este registro" con "Recargar", y lo escrito se conserva; un 403 o un 409 con código
 // dice el texto de su código. cada regla se dice con useTextoDeAviso: el campo con su etiqueta y la acción con su nombre,
 // nunca sus nombres de la API
+// X-Change-Reason admite 500 caracteres (RQ-AUD-002): con un anexo, lo que la persona escribe deja sitio al anexo y al separador
+const LIMITE_DEL_MOTIVO = 500
+const SEPARADOR = ' · '
+
 export function DialogoDeTransicion({
   objeto,
   registro,
   transicion,
   alCerrar,
-  alAplicar
+  alAplicar,
+  anexo
 }: {
   objeto: string
   registro: Registro
@@ -30,6 +35,9 @@ export function DialogoDeTransicion({
   alCerrar: () => void
   // la transición se aplicó: quien abrió el diálogo lo confirma (transiciones.hecho)
   alAplicar?: () => void
+  // lo que la pantalla agrega al motivo que escribe la persona (decisión 13 del plan 8.3: «Aprobar» un entregable lleva el SHA-256
+  // del modelo revisado); se muestra antes de confirmar
+  anexo?: string
 }) {
   const { t } = useTranslation(NS)
   const etiquetas = useEtiquetasDeEstado(objeto)
@@ -54,7 +62,7 @@ export function DialogoDeTransicion({
     setIntentado(true)
     if (!puede) return
     aplicar.mutate(
-      { registro, transicion: transicion.name, motivo: motivo.trim() || undefined },
+      { registro, transicion: transicion.name, motivo: [motivo.trim(), anexo].filter(Boolean).join(SEPARADOR) || undefined },
       {
         onSuccess: () => {
           alAplicar?.()
@@ -103,8 +111,16 @@ export function DialogoDeTransicion({
             etiqueta={motivoRequerido ? t('comun.motivoObligatorio') : t('comun.motivoOpcional')}
             error={intentado && faltaMotivo ? t('comun.motivoFalta') : undefined}
           >
-            {(props) => <Textarea {...props} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
+            {(props) => (
+              <Textarea
+                {...props}
+                maxLength={LIMITE_DEL_MOTIVO - (anexo ? anexo.length + SEPARADOR.length : 0)}
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+              />
+            )}
           </Campo>
+          {anexo ? <p className="text-sg-caption text-sg-text-muted">{t('transiciones.anexo', { anexo })}</p> : null}
           {aplicar.isError ? (
             // se relee el registro, la lista de botones y las reglas que muestra este diálogo: si el estado cambió, todo lo
             // demás quedó viejo y confirmar sobre reglas obsoletas daría un STATE_MISMATCH
