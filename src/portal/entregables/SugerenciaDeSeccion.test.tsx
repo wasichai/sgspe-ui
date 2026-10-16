@@ -196,7 +196,9 @@ describe('AI-04 en la sección', () => {
 
   it('con el texto vacío dice que falta; con cambios sin guardar el resumen también da la razón', async () => {
     abrir({ borradores: [], resumenes: [SUG_RESUMEN], sucio: true })
-    expect(await screen.findByRole('button', { name: 'Usar el resumen ejecutivo del proyecto…' })).toBeDisabled()
+    const usarResumen = await screen.findByRole('button', { name: 'Usar el resumen ejecutivo del proyecto…' })
+    expect(usarResumen).toBeDisabled()
+    expect(usarResumen).toHaveAttribute('title', 'Guarde o descarte los cambios de la sección antes de usar una sugerencia.')
     expect(screen.getByText('Guarde o descarte los cambios de la sección antes de usar una sugerencia.')).toBeInTheDocument()
     fetch!.restore()
     red!.restaurar()

@@ -96,7 +96,13 @@ export function SugerenciaDeSeccion({ entregable, seccion, sucio }: { entregable
       ) : null}
       {resumen && editable ? (
         <div className="space-y-1">
-          <Button size="sm" variant="ghost" disabled={sucio} onClick={() => setUsando({ sugerencia: resumen, conSeccion: true })}>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={sucio}
+            title={sucio ? t('entregables.ia.guardeAntes') : undefined}
+            onClick={() => setUsando({ sugerencia: resumen, conSeccion: true })}
+          >
             {t('entregables.ia.usarResumen')}
           </Button>
           {!propuesto && sucio ? <p className="text-sg-caption text-sg-warning">{t('entregables.ia.guardeAntes')}</p> : null}
