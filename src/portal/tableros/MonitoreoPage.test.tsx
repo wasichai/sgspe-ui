@@ -57,6 +57,14 @@ describe('Monitoreo de la Tabla 9.5', () => {
     )
   })
 
+  it('un ?month= mal formado cae en el mes anterior en Lima', async () => {
+    abrir('/dashboards/monitoring?month=abc')
+    await fila('1')
+    const llamada = red!.a('GET', '/sgspe/dashboards/monitoring')[0]
+    expect(llamada.ruta).toContain('periodStart=2026-09-01')
+    expect(llamada.ruta).toContain('periodEnd=2026-09-30')
+  })
+
   it('cierra el periodo del proyecto con el indicador del catálogo y dice la cifra oficial', async () => {
     abrir('/dashboards/monitoring?project=p1', GERENCIA_SOCIAL, CIERRE, [
       { method: 'POST', path: '/sgspe/indicators/i-eng02/measurements', responder: () => jsonResponse({ id: 'm9', attributes: { measured_value: 3 } }, 201) }

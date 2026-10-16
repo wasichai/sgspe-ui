@@ -12,7 +12,7 @@ import { texto } from '../datos/registros'
 import { fechaPe, NS, numeroPe } from '../i18n'
 import { CerrarPeriodo } from './CerrarPeriodo'
 import { ConsultaDeTablero } from './comunes'
-import { mesAnterior, periodoDelMes, type FilaDeMonitoreo, type TableroDeMonitoreo } from './contratoF8'
+import { esMes, mesAnterior, periodoDelMes, type FilaDeMonitoreo, type TableroDeMonitoreo } from './contratoF8'
 
 // el monitoreo de la Tabla 9.5 (screens.md, dashboards.md §5.5): el mes (?month=AAAA-MM; por defecto el anterior en Lima, el
 // que ya se puede cerrar) y el proyecto (?project=; sin él, mis proyectos o todos) gobiernan el pedido. la cifra oficial sale solo
@@ -25,7 +25,9 @@ export function MonitoreoPage() {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const [busqueda, fijar] = useSearchParams()
-  const mes = busqueda.get('month') ?? mesAnterior(hoyEnLima())
+  // un mes mal formado (un enlace editado a mano) no llega al servidor: vale el mes anterior
+  const pedido = busqueda.get('month')
+  const mes = esMes(pedido) ? pedido : mesAnterior(hoyEnLima())
   const proyecto = busqueda.get('project') ?? ''
   const { desde, hasta } = periodoDelMes(mes)
   const filtros = useMemo(() => ({ periodStart: desde, periodEnd: hasta, ...(proyecto ? { project: [proyecto] } : {}) }), [desde, hasta, proyecto])
