@@ -7,9 +7,11 @@ import { DeLista } from '../componentes/LecturaConEstados'
 import { texto, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { seccionDelTipo, useTiposDeEntregable } from './contrato'
+import { AccionesDelEntregable } from './Emitir'
 import { EditorDeSeccion } from './EditorDeSeccion'
 import { PanelDelBorrador } from './PanelDelBorrador'
 import { SugerenciaDeSeccion } from './SugerenciaDeSeccion'
+import { Versiones } from './Versiones'
 import { cambioDespuesDelBorrador, ESTADOS_DE_WF_H, NIVELES_DE_ENTREGABLE, ORIGEN_IA } from './tipos'
 
 // S50 · entregable por secciones (screens.md, deliverables.md §8): revisar, aprobar y emitir sabiendo que se emite lo revisado.
@@ -85,6 +87,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
         </div>
       </header>
       <CaminoDeEstados estado={entregable.state} />
+      <AccionesDelEntregable entregable={entregable} />
       <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
         <aside className="space-y-3">
           <PanelDelBorrador entregable={entregable} secciones={lista} />
@@ -136,6 +139,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
           ) : null}
         </div>
       </div>
+      <Versiones entregable={entregable} />
     </div>
   )
 }

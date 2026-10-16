@@ -21,7 +21,8 @@ export function BotonesDeTransicion({
   ocultar = [],
   solo,
   comprobarAntes = [],
-  proyecto
+  proyecto,
+  anexos
 }: {
   objeto: string
   registro: Registro
@@ -32,6 +33,8 @@ export function BotonesDeTransicion({
   // el proyecto del registro, si su objeto tiene alcance de proyecto: ProjectScopeGuard rechaza la transición de quien no
   // está asignado (salvo ADMIN), así que no se le ofrece (re-revisión, menor 4)
   proyecto?: string
+  // por transición, lo que se agrega al motivo (DialogoDeTransicion.anexo)
+  anexos?: Partial<Record<string, string>>
 }) {
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, registro.id)
@@ -82,6 +85,7 @@ export function BotonesDeTransicion({
           transicion={abierta}
           alCerrar={() => setAbierta(null)}
           alAplicar={() => setHecha(abierta.toLabel)}
+          anexo={anexos?.[abierta.name]}
         />
       ) : null}
     </div>
