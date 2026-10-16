@@ -98,7 +98,7 @@ export const NAV_TREE: SeccionNav[] = [
   { clave: 'documents', label: 'Documentos', to: '/documents', icon: FileText, fases: ['F3'], seOfreceCon: [[lee('evidence')]] },
   { clave: 'tasks', label: 'Tareas', to: '/tasks', icon: ListChecks, fases: ['F3'], seOfreceCon: [[lee('task')]] },
   // de F2 a F4, Reportes son las exportaciones (el registro de grupos de interés, la matriz de compromisos y, desde F4, el registro
-  // de QCS, que pide EXPORT sobre las tres, y la matriz de riesgos) y su historial
+  // de QCS, que pide EXPORT sobre las tres, y la matriz de riesgos) y su historial; desde F8, también quien lee los entregables
   {
     clave: 'reports',
     label: 'Reportes',
@@ -114,7 +114,8 @@ export const NAV_TREE: SeccionNav[] = [
         { objeto: 'stakeholder_request', accion: 'EXPORT' }
       ],
       [{ objeto: 'social_risk', accion: 'EXPORT' }],
-      [lee('export_log')]
+      [lee('export_log')],
+      [lee('deliverable')]
     ]
   },
   { clave: 'admin', label: 'Administración', to: '/admin', icon: Settings, external: true, soloAdmin: true, fases: ['F1'] }
