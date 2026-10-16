@@ -22,15 +22,15 @@ afterEach(() => {
   red = fetch = null
 })
 
-const rutas = (entregable = ENTREGABLE): MockRoute[] => [
+const rutas = (entregable = ENTREGABLE, secciones = SECCIONES): MockRoute[] => [
   { path: '/objects/deliverable/records/d1', body: entregable },
-  { path: '/objects/deliverable_section/records', body: pagina(SECCIONES) },
+  { path: '/objects/deliverable_section/records', body: pagina(secciones) },
   { path: '/objects/deliverable_section/records/sec-antecedentes', body: SECCION_ANTECEDENTES },
   { path: '/objects/deliverable_section/records/sec-conclusiones', body: SECCION_CONCLUSIONES },
   ...baseDeF8(GERENCIA_SOCIAL)
 ]
-const abrir = (ruta = '/reports/deliverables/d1', especiales: RutaEspecial[] = [], entregable = ENTREGABLE) => {
-  fetch = mockFetch(rutas(entregable))
+const abrir = (ruta = '/reports/deliverables/d1', especiales: RutaEspecial[] = [], entregable = ENTREGABLE, secciones = SECCIONES) => {
+  fetch = mockFetch(rutas(entregable, secciones))
   red = espiarRed(especiales)
   montar(<EntregablePage />, { ruta, camino: '/reports/deliverables/:deliverableId', usuario: GERENCIA_SOCIAL, permisos: EQUIPO_DE_ENTREGABLES })
 }
@@ -105,6 +105,38 @@ describe('S50 · entregable por secciones', () => {
     expect(await screen.findByText('Las secciones se editan con el entregable en borrador u observado.')).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: 'Texto de la sección' })).not.toBeInTheDocument()
     expect(screen.getByText('@persona 9b8a7c6d')).toBeInTheDocument()
+  })
+
+  it('una calculada se muestra de solo lectura con su contenido', async () => {
+    const portada = { ...SECCIONES[0], attributes: { ...SECCIONES[0].attributes, content: 'Informe del **periodo** de septiembre.' } }
+    abrir('/reports/deliverables/d1?seccion=portada', [], ENTREGABLE, [portada, ...SECCIONES.slice(1)])
+    expect(await screen.findByText('Sección calculada: su contenido sale de los registros al generar el borrador.')).toBeInTheDocument()
+    expect(screen.getByText('periodo')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Guardar sección' })).not.toBeInTheDocument()
+  })
+
+  it('un 400 de motivo se explica para la sección y el guardado hecho no se repite', async () => {
+    abrir('/reports/deliverables/d1?seccion=antecedentes', [
+      {
+        method: 'PUT',
+        path: '/objects/deliverable_section/records/sec-antecedentes',
+        responder: () => problema(400, 'x', [{ field: 'content', message: 'FIELD_REASON_REQUIRED' }])
+      }
+    ])
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Más.')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar sección' }))
+    expect(await screen.findByText('Esta sección está asistida por IA: guardar un cambio exige un motivo.')).toBeInTheDocument()
+  })
+
+  it('tras guardar bien, el botón no admite un segundo guardado con la versión vieja', async () => {
+    abrir('/reports/deliverables/d1?seccion=antecedentes', [guardado('sec-antecedentes')])
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Más.')
+    const boton = screen.getByRole('button', { name: 'Guardar sección' })
+    await userEvent.click(boton)
+    await userEvent.click(boton)
+    await waitFor(() => expect(red!.a('PUT', '/objects/deliverable_section/records/sec-antecedentes')).toHaveLength(1))
   })
 
   it('vive en /reports/deliverables/:deliverableId', async () => {

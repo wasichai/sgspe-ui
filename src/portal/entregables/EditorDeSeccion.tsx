@@ -85,7 +85,10 @@ export function EditorDeSeccion({
         </div>
       ) : null}
       {calculada ? (
-        <p className="text-sm text-sg-text-muted">{t('entregables.seccion.calculada')}</p>
+        <>
+          <p className="text-sm text-sg-text-muted">{t('entregables.seccion.calculada')}</p>
+          {original ? <VistaMarkdown texto={original} enLinea={(linea) => <ConMenciones texto={linea} />} /> : null}
+        </>
       ) : edita ? (
         <>
           <EditorMarkdown etiqueta={t('entregables.seccion.texto')} valor={contenido} alCambiar={setContenido} proyecto={texto(entregable, 'project')} />
@@ -103,12 +106,13 @@ export function EditorDeSeccion({
           {actualizar.isError ? (
             <AvisoDeConflicto
               error={actualizar.error}
+              propios={{ FIELD_REASON_REQUIRED: t('entregables.seccion.motivoDelServidor') }}
               releer={() => releer(['record', 'deliverable_section', seccion.id], ['records', 'deliverable_section'])}
               alRecargar={() => actualizar.reset()}
             />
           ) : null}
           <div className="flex justify-end">
-            <Button onClick={guardar} disabled={!sucio || actualizar.isPending} aria-busy={actualizar.isPending}>
+            <Button onClick={guardar} disabled={!sucio || actualizar.isPending || actualizar.isSuccess} aria-busy={actualizar.isPending}>
               {actualizar.isPending ? t('comun.guardando') : t('entregables.seccion.guardar')}
             </Button>
           </div>

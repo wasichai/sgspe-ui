@@ -8,7 +8,7 @@ import { texto, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { seccionDelTipo, useTiposDeEntregable } from './contrato'
 import { EditorDeSeccion } from './EditorDeSeccion'
-import { cambioDespuesDelBorrador, ESTADOS_DE_WF_H, NIVELES_DE_ENTREGABLE } from './tipos'
+import { cambioDespuesDelBorrador, ESTADOS_DE_WF_H, NIVELES_DE_ENTREGABLE, ORIGEN_IA } from './tipos'
 
 // S50 · entregable por secciones (screens.md, deliverables.md §8): revisar, aprobar y emitir sabiendo que se emite lo revisado.
 // la sección abierta viaja en ?seccion=<clave>; sin ella, la primera. una sección cambiada después de congelar el modelo bloquea
@@ -92,7 +92,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
                 <ul className="space-y-1">
                   {filas.map((s) => {
                     const clave = texto(s, 'section_key')
-                    const asistida = texto(s, 'content_origin') === 'ASISTIDO POR IA'
+                    const asistida = texto(s, 'content_origin') === ORIGEN_IA
                     return (
                       <li key={s.id}>
                         <button

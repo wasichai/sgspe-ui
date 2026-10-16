@@ -70,6 +70,7 @@ export const ES_ENTREGABLES = {
     calculada: 'Sección calculada: su contenido sale de los registros al generar el borrador.',
     soloEnBorrador: 'Las secciones se editan con el entregable en borrador u observado.',
     asistidaAyuda: 'Esta sección fue asistida por IA y lo seguirá diciendo en las versiones emitidas: todo cambio lleva motivo.',
+    motivoDelServidor: 'Esta sección está asistida por IA: guardar un cambio exige un motivo.',
     vacia: 'La sección todavía no tiene texto.',
     guia: 'Guía de redacción',
     tiposConError: 'No se pudieron leer los tipos de entregable: la guía y las sugerencias de IA no se ofrecen por ahora.'
@@ -243,6 +244,7 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     calculada: 'Computed section: its content comes from the records when the draft is generated.',
     soloEnBorrador: 'Sections are edited with the deliverable in draft or observed.',
     asistidaAyuda: 'This section was AI-assisted and the issued versions will keep saying so: every change takes a reason.',
+    motivoDelServidor: 'This section is AI-assisted: saving a change needs a reason.',
     vacia: 'The section has no text yet.',
     guia: 'Writing guide',
     tiposConError: 'The deliverable types could not be read: the guide and the AI suggestions are not offered for now.'
