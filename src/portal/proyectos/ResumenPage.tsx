@@ -12,7 +12,6 @@ import { ROL_DE_JEFATURA } from '../config'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto } from '../contexto/proyectos'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
-import { useIndicador } from '../datos/indicadores'
 import { atributo, texto, usePuedeEditar, useTodos, type Registro } from '../datos/registros'
 import { BarraDePosturas } from '../graficos/BarraDePosturas'
 import { MiniMatriz, puntosDeMatriz } from '../graficos/MiniMatriz'
@@ -25,9 +24,10 @@ import { capa } from '../mapa/capas'
 import { Mapa } from '../mapa/Mapa'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { vigente, PARAMETROS_F2 } from './parametros'
+import { TableroDelProyecto, useIndicadoresDelProyecto } from './TableroDelProyecto'
 
-// S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. de F2 a F7 una llamada por
-// indicador con ?project= (KPI-STK-01 a 03, KPI-ENG-01 y 02); los de compromisos, QCS y riesgos dicen en qué fase llegan.
+// S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
+// project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
 // desde F7, el resumen ejecutivo (AI-04), los posibles duplicados (AI-07) y la pregunta a los documentos (AI-06). el bloque de posturas siempre se dibuja: sin permiso sobre stance (security.md §7.9) dice "no disponible" y por qué. una
 // consulta auxiliar que carga, falla o no se puede leer lo dice; nunca se lee como "sin datos" ni como "sin nada que atender"
 const TIPOS_FORMALES = ['REUNION', 'REUNION INFORMATIVA', 'TALLER', 'ASAMBLEA', 'MESA DE DIALOGO']
@@ -44,12 +44,16 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
   const escribeEnElProyecto = useEscribeEnProyecto(proyecto.id)
   // un rol con "u" sobre project (el analista SIG, que solo vincula concesiones) no completa el borrador
   const editaProyecto = usePuedeEditar('project')
-  const filtros = { project: [proyecto.id] }
-  const stk01 = useIndicador('KPI-STK-01', filtros)
-  const stk02 = useIndicador('KPI-STK-02', filtros)
-  const stk03 = useIndicador('KPI-STK-03', filtros)
-  const eng01 = useIndicador('KPI-ENG-01', filtros)
-  const eng02 = useIndicador('KPI-ENG-02', filtros)
+  // desde F8, una sola llamada al tablero project (decisión 6 del plan 8.3)
+  const { tablero, de } = useIndicadoresDelProyecto(proyecto.id)
+  const stk01 = de('KPI-STK-01')
+  const stk02 = de('KPI-STK-02')
+  const stk03 = de('KPI-STK-03')
+  const eng01 = de('KPI-ENG-01')
+  const eng02 = de('KPI-ENG-02')
+  const com03 = de('KPI-COM-03')
+  const grv02 = de('KPI-GRV-02')
+  const rsk01 = de('KPI-RSK-01')
   const jefatura = useTodos('project_assignment', { project: proyecto.id, role_name: ROL_DE_JEFATURA, active: true })
   const areas = useTodos('area_of_influence', { project: proyecto.id })
   const capas = useCapas(['LYR-09', 'LYR-13'], { project: proyecto.id })
@@ -118,9 +122,9 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
         <h2 className="sr-only">{t('p360.resumen.salud')}</h2>
         <KpiCard titulo={t('p360.resumen.kpis.gruposVigentes')} indicador={stk01.data} cargando={stk01.isPending} error={stk01.error} />
         <KpiCard titulo={t('p360.resumen.kpis.interacciones')} indicador={eng01.data} cargando={eng01.isPending} error={eng01.error} />
-        <KpiCard titulo={t('p360.resumen.kpis.compromisos')} llegaEn="F3" />
-        <KpiCard titulo={t('p360.resumen.kpis.qcs')} llegaEn="F4" />
-        <KpiCard titulo={t('p360.resumen.kpis.riesgos')} llegaEn="F4" />
+        <KpiCard titulo={t('p360.resumen.kpis.compromisos')} indicador={com03.data} cargando={com03.isPending} error={com03.error} />
+        <KpiCard titulo={t('p360.resumen.kpis.qcs')} indicador={grv02.data} cargando={grv02.isPending} error={grv02.error} />
+        <KpiCard titulo={t('p360.resumen.kpis.riesgos')} indicador={rsk01.data} cargando={rsk01.isPending} error={rsk01.error} />
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
         <section aria-label={t('p360.resumen.paisaje')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
@@ -198,6 +202,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
           )}
         </section>
       </div>
+      <TableroDelProyecto tablero={tablero} proyecto={proyecto.id} />
       <div className="grid gap-4 lg:grid-cols-2">
         <section aria-label={t('p360.resumen.areas')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
           <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.areas')}</h2>

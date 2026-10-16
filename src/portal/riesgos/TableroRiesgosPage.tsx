@@ -75,7 +75,7 @@ const ZONAS = { matriz: 'matriz', activos: 'activos', territorio: 'territorio', 
 
 // KPI-RSK-02: la matriz de probabilidad (filas, de 5 a 1) por impacto (columnas, de 1 a 5), con el conteo de cada celda y, si el
 // servidor lo manda (un solo proyecto, sus umbrales), el nivel. vigente o residual; los riesgos sin revisión se dicen aparte
-function MapaDeCalor({ indicador }: { indicador: Indicador }) {
+export function MapaDeCalor({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const [residual, setResidual] = useState(false)
   const filas = desglose(indicador, residual ? 'residual' : 'matrix')
