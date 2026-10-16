@@ -73,7 +73,14 @@ export const ES_ENTREGABLES = {
     motivoDelServidor: 'Esta sección está asistida por IA: guardar un cambio exige un motivo.',
     vacia: 'La sección todavía no tiene texto.',
     guia: 'Guía de redacción',
-    tiposConError: 'No se pudieron leer los tipos de entregable: la guía y las sugerencias de IA no se ofrecen por ahora.'
+    tiposConError: 'No se pudieron leer los tipos de entregable: la guía y las sugerencias de IA no se ofrecen por ahora.',
+    cargandoEditor: 'Cargando el editor…',
+    sinGuardar: {
+      titulo: 'Hay cambios sin guardar',
+      ayuda: 'Hay cambios sin guardar en esta sección. ¿Descartarlos y abrir la otra sección?',
+      cancelar: 'Cancelar',
+      descartar: 'Descartar'
+    }
   },
   editor: {
     herramientas: 'Herramientas del editor',
@@ -251,7 +258,14 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     motivoDelServidor: 'This section is AI-assisted: saving a change needs a reason.',
     vacia: 'The section has no text yet.',
     guia: 'Writing guide',
-    tiposConError: 'The deliverable types could not be read: the guide and the AI suggestions are not offered for now.'
+    tiposConError: 'The deliverable types could not be read: the guide and the AI suggestions are not offered for now.',
+    cargandoEditor: 'Loading the editor…',
+    sinGuardar: {
+      titulo: 'There are unsaved changes',
+      ayuda: 'This section has unsaved changes. Discard them and open the other section?',
+      cancelar: 'Cancel',
+      descartar: 'Discard'
+    }
   },
   editor: {
     herramientas: 'Editor tools',

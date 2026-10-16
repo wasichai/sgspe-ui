@@ -1,11 +1,12 @@
 import { useAuth } from '@wasichai/core'
 import { Badge, Button, Textarea } from '@wasichai/ui'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { atributo, texto, useActualizar, type Registro } from '../datos/registros'
+import { atributo, texto, useActualizar, useRegistro, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { VistaMarkdown } from '../relacionamiento/markdown'
 import { EditorMarkdown } from './EditorMarkdown'
@@ -33,10 +34,12 @@ export function ConMenciones({ texto: contenido }: { texto: string }) {
 // el editor de una sección de S50 (decisión 12 del plan): se edita en draft u observed (deliverables.md §8.3), con UPDATE sobre
 // deliverable_section y la asignación vigente; una CALCULADA no tiene editor. guardar es el PUT genérico con If-Match; una sección
 // ASISTIDO POR IA lleva motivo (DeliverableWriteGuard: 400 FIELD_REASON_REQUIRED) y conserva su origen (422 AI_ORIGIN_LOCKED si
-// algo intentara cambiarlo). la pantalla la vuelve a montar con la versión guardada; alCambiarSucio avisa de cambios sin guardar
+// algo intentara cambiarlo). la pantalla la vuelve a montar con la versión guardada; alCambiarSucio avisa de cambios sin guardar.
+// el editor guarda sobre la versión con la que se montó (su If-Match), no sobre la que traiga una relectura de la lista: si
+// otra persona guardó antes, el guardado dice 412 y «Recargar» toma la versión nueva conservando lo escrito
 export function EditorDeSeccion({
   entregable,
-  seccion,
+  seccion: abierta,
   guia,
   alCambiarSucio
 }: {
@@ -51,6 +54,8 @@ export function EditorDeSeccion({
   const escribe = useEscribeEnProyecto(texto(entregable, 'project') || undefined)
   const actualizar = useActualizar('deliverable_section')
   const releer = useReleer()
+  const cliente = useQueryClient()
+  const [seccion, setSeccion] = useState(abierta)
   const original = contenidoDe(seccion)
   const revisadaAntes = atributo(seccion, 'reviewed') === true
   const [contenido, setContenido] = useState(original)
@@ -60,7 +65,10 @@ export function EditorDeSeccion({
   const asistida = texto(seccion, 'content_origin') === ORIGEN_IA
   const calculada = esCalculada(seccion)
   const edita = seEditan(entregable) && can('deliverable_section', 'UPDATE') && escribe && !calculada
-  const sucio = contenido !== original || revisada !== revisadaAntes
+  // el registro de la sección, para que «Recargar» traiga su versión vigente
+  useRegistro('deliverable_section', edita ? seccion.id : undefined)
+  // tras guardar bien no queda nada sin guardar: la pantalla vuelve a montar el editor con la versión guardada
+  const sucio = !actualizar.isSuccess && (contenido !== original || revisada !== revisadaAntes)
   useEffect(() => {
     alCambiarSucio?.(sucio)
   }, [sucio, alCambiarSucio])
@@ -108,7 +116,11 @@ export function EditorDeSeccion({
               error={actualizar.error}
               propios={{ FIELD_REASON_REQUIRED: t('entregables.seccion.motivoDelServidor') }}
               releer={() => releer(['record', 'deliverable_section', seccion.id], ['records', 'deliverable_section'])}
-              alRecargar={() => actualizar.reset()}
+              alRecargar={() => {
+                const vigente = cliente.getQueryData<Registro>(['record', 'deliverable_section', seccion.id])
+                if (vigente) setSeccion(vigente)
+                actualizar.reset()
+              }}
             />
           ) : null}
           <div className="flex justify-end">

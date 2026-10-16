@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { focusManager } from '@tanstack/react-query'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -169,5 +170,73 @@ describe('S50 · entregable por secciones', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Revisada' }))
     await userEvent.click(screen.getByRole('button', { name: 'Guardar sección' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/deliverable_section/records/sec-antecedentes')).toHaveLength(1))
+  })
+
+  it('con cambios sin guardar, cambiar de sección pide confirmación y solo cambia al descartar', async () => {
+    abrir('/reports/deliverables/d1?seccion=antecedentes')
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Sin guardar.')
+    const lista = screen.getByRole('navigation', { name: 'Secciones' })
+    await userEvent.click(within(lista).getByRole('button', { name: /Conclusiones/ }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Hay cambios sin guardar' })
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Antecedentes' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Texto de la sección' })).toHaveValue('La comunidad pidió una reunión en agosto. Sin guardar.')
+    await userEvent.click(within(lista).getByRole('button', { name: /Conclusiones/ }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Descartar' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Conclusiones' })).toBeInTheDocument()
+    // sin cambios, se cambia de sección sin preguntar
+    await userEvent.click(within(lista).getByRole('button', { name: /Antecedentes/ }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Antecedentes' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('una relectura de la lista no vuelve a montar el editor con cambios: el guardado dice 412 y Recargar conserva lo escrito', async () => {
+    let otraGuardo = false
+    const ajena = {
+      ...SECCION_ANTECEDENTES,
+      updatedAt: '2026-10-12T15:00:00Z',
+      attributes: { ...SECCION_ANTECEDENTES.attributes, content: 'Texto de otra persona.' }
+    }
+    const vigente = () => (otraGuardo ? ajena : SECCION_ANTECEDENTES)
+    let guardados = 0
+    abrir('/reports/deliverables/d1?seccion=antecedentes', [
+      {
+        method: 'GET',
+        path: '/objects/deliverable_section/records',
+        responder: () => jsonResponse(pagina(SECCIONES.map((s) => (s.id === 'sec-antecedentes' ? vigente() : s))))
+      },
+      { method: 'GET', path: '/objects/deliverable_section/records/sec-antecedentes', responder: () => jsonResponse(vigente()) },
+      {
+        method: 'PUT',
+        path: '/objects/deliverable_section/records/sec-antecedentes',
+        responder: () => (++guardados === 1 ? problema(412, 'x') : jsonResponse(ajena))
+      }
+    ])
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Mío.')
+    otraGuardo = true
+    const antes = red!.a('GET', '/objects/deliverable_section/records').length
+    act(() => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+    })
+    focusManager.setFocused(undefined)
+    await waitFor(() => expect(red!.a('GET', '/objects/deliverable_section/records').length).toBeGreaterThan(antes))
+    // la lista ya llegó: la sección ajena cambió después del borrador
+    const lista = screen.getByRole('navigation', { name: 'Secciones' })
+    await waitFor(() => expect(within(lista).getByRole('button', { name: /Antecedentes/ })).toHaveTextContent('Cambió después del borrador'))
+    expect(screen.getByRole('textbox', { name: 'Texto de la sección' })).toHaveValue('La comunidad pidió una reunión en agosto. Mío.')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar sección' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument())
+    expect(screen.getByRole('textbox', { name: 'Texto de la sección' })).toHaveValue('La comunidad pidió una reunión en agosto. Mío.')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar sección' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/deliverable_section/records/sec-antecedentes')).toHaveLength(2))
+    const [primero, segundo] = red!.a('PUT', '/objects/deliverable_section/records/sec-antecedentes')
+    expect(primero.cabeceras.get('If-Match')).toBe('"2026-10-09T15:00:00Z"')
+    expect(segundo.cabeceras.get('If-Match')).toBe('"2026-10-12T15:00:00Z"')
+    expect(segundo.cuerpo).toMatchObject({ attributes: { content: 'La comunidad pidió una reunión en agosto. Mío.' } })
   })
 })

@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router'
@@ -64,10 +65,28 @@ function Entregable({ entregable }: { entregable: Registro }) {
   const generadoEl = texto(entregable, 'draft_generated_at') || null
   const lista = secciones.data ?? []
   const actual = lista.find((s) => texto(s, 'section_key') === busqueda.get('seccion')) ?? lista[0]
-  const elegir = (clave: string) => {
+  // la versión con la que se abrió el editor: otra sección, o la misma releída sin cambios sin guardar, lo vuelve a montar;
+  // con cambios, una relectura de la lista no lo toca y el guardado dice 412 con «Recargar» (revisión final, importante 1)
+  const [abierta, setAbierta] = useState<{ id: string; updatedAt: string | null } | null>(null)
+  const vigente =
+    actual && (abierta?.id !== actual.id || (!sucio && abierta.updatedAt !== actual.updatedAt)) ? { id: actual.id, updatedAt: actual.updatedAt } : abierta
+  if (vigente !== abierta) setAbierta(vigente)
+  const [pendiente, setPendiente] = useState<string | null>(null)
+  const abrirSeccion = (clave: string) => {
     const siguiente = new URLSearchParams(busqueda)
     siguiente.set('seccion', clave)
     fijar(siguiente, { replace: true })
+  }
+  // con cambios sin guardar, cambiar de sección pide confirmación: sin ella se perdería lo escrito
+  const elegir = (clave: string) => {
+    if (sucio && actual && clave !== texto(actual, 'section_key')) setPendiente(clave)
+    else abrirSeccion(clave)
+  }
+  const descartar = () => {
+    if (pendiente === null) return
+    setPendiente(null)
+    setSucio(false)
+    abrirSeccion(pendiente)
   }
   return (
     <div className="space-y-4">
@@ -128,7 +147,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
           {actual ? (
             <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
               <EditorDeSeccion
-                key={`${actual.id}:${actual.updatedAt}`}
+                key={`${vigente?.id}:${vigente?.updatedAt}`}
                 entregable={entregable}
                 seccion={actual}
                 guia={seccionDelTipo(tipos.data, tipo, texto(actual, 'section_key'))?.guide}
@@ -140,6 +159,17 @@ function Entregable({ entregable }: { entregable: Registro }) {
         </div>
       </div>
       <Versiones entregable={entregable} />
+      {pendiente !== null ? (
+        <ConfirmDialog
+          title={t('entregables.seccion.sinGuardar.titulo')}
+          description={t('entregables.seccion.sinGuardar.ayuda')}
+          cancelLabel={t('entregables.seccion.sinGuardar.cancelar')}
+          confirmLabel={t('entregables.seccion.sinGuardar.descartar')}
+          variant="danger"
+          onConfirm={descartar}
+          onCancel={() => setPendiente(null)}
+        />
+      ) : null}
     </div>
   )
 }
