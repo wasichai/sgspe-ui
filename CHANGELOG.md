@@ -1,5 +1,70 @@
 # Changelog
 
+## [3.0.0](https://github.com/wasichai/sgspe-ui/compare/v2.0.0...v3.0.0) (2026-10-16)
+
+
+### Features
+
+* **ia:** acciones de IA en las fichas ([3baefe3](https://github.com/wasichai/sgspe-ui/commit/3baefe3f3b9e70af72ce3410cc654ad060944be7))
+* **ia:** aceptar una sugerencia con corrección y motivo ([d383513](https://github.com/wasichai/sgspe-ui/commit/d3835131f6549a8e3940146865fd34ec4b07045c))
+* **ia:** contrato de F7, códigos de error, textos y datos de prueba ([6993fe5](https://github.com/wasichai/sgspe-ui/commit/6993fe597136a4c087523760af189491be2a7eb4))
+* **ia:** el asistente pregunta a los documentos con sus fuentes ([cd29eb4](https://github.com/wasichai/sgspe-ui/commit/cd29eb48647cf3b032cdf29cc2a62a2ca5bb390e))
+* **ia:** el asistente S05 pregunta a los datos ([946152d](https://github.com/wasichai/sgspe-ui/commit/946152d682dccb0828389fd9db815cadadca6aed))
+* **ia:** el borrador del acta en S25 ([62ab662](https://github.com/wasichai/sgspe-ui/commit/62ab662616a8004084f3176f39566036fd2225fb))
+* **ia:** el posible duplicado lado a lado ([16c2ac8](https://github.com/wasichai/sgspe-ui/commit/16c2ac83b3a6791e3f5838265f3e1ca413086e08))
+* **ia:** la bandeja de revisión S52 por proyecto ([27caf31](https://github.com/wasichai/sgspe-ui/commit/27caf31e17db9989591edb0c1ed67aff6d9a638a))
+* **ia:** la cita solo para quien abre la fuente y los candidatos de IA re-identificados ([27525b9](https://github.com/wasichai/sgspe-ui/commit/27525b9d267ee03be3818b48acc3c41b0cd45624))
+* **ia:** marcadores re-identificados al mostrar y salidas sin HTML ([1f61658](https://github.com/wasichai/sgspe-ui/commit/1f6165838f38db0a3e3c921fcbb659cbea8ef787))
+* **ia:** resumen ejecutivo, duplicados y pregunta a los documentos en S08 ([ce7ace6](https://github.com/wasichai/sgspe-ui/commit/ce7ace683bb7a95f2ced3d667729c4a88d25905a))
+* portal de la Fase 7 (IA) ([e55403f](https://github.com/wasichai/sgspe-ui/commit/e55403feb3467649058bc0aa47780fe9fed138a3))
+* **portal:** AI-04 en la sección, sugerir y usar con motivo ([e1ad745](https://github.com/wasichai/sgspe-ui/commit/e1ad74569a5eac4e5defdc4e2cad02fa95046709))
+* **portal:** base de F8, tiptap con Markdown, textos y reglas de WF-H ([a963818](https://github.com/wasichai/sgspe-ui/commit/a963818fa8a1cec1b058d742e60646cd34bca8da))
+* **portal:** catálogo de indicadores con la meta y la frecuencia ([eb0867d](https://github.com/wasichai/sgspe-ui/commit/eb0867d28b872b3a8bb309a20f22987d4505c291))
+* **portal:** contratos de tableros y entregables de F8 ([a7b8373](https://github.com/wasichai/sgspe-ui/commit/a7b8373b21f1100fa07a037ad4562de8ffde73f2))
+* **portal:** editor de secciones con tiptap, Markdown y menciones ([7a36151](https://github.com/wasichai/sgspe-ui/commit/7a3615109020809ccdf8875366ff9bcd16ca92fb))
+* **portal:** fase 8.3, tableros y entregables de F8 ([c5c4163](https://github.com/wasichai/sgspe-ui/commit/c5c4163d743a9d18ab952c7ad9393ec5059d9e03))
+* **portal:** monitoreo de la Tabla 9.5 y cierre de periodo ([7e9cb03](https://github.com/wasichai/sgspe-ui/commit/7e9cb03ce346bd07a4bb01f9ef72ec60cd9e8337))
+* **portal:** panel del borrador con sondeo de 5 s y PdfDialog ([eb54f40](https://github.com/wasichai/sgspe-ui/commit/eb54f400dac5542095afe8e1c9f79292e2bdc557))
+* **portal:** S08 con el tablero del proyecto en una sola llamada ([28f7c47](https://github.com/wasichai/sgspe-ui/commit/28f7c47984b467b9ae2cf2890c93d5ba1e89a663))
+* **portal:** S49, los entregables en Reportes ([4c81b3f](https://github.com/wasichai/sgspe-ui/commit/4c81b3f574affabd9934309f1429a79abd90905f))
+* **portal:** S50, el entregable por secciones y su editor ([2178245](https://github.com/wasichai/sgspe-ui/commit/21782453f3051255c4deff011af50d81102c509b))
+* **portal:** S51, la revisión ejecutiva de 5 minutos ([0746e8f](https://github.com/wasichai/sgspe-ui/commit/0746e8f9797d171252a64e8ee7977a8dfd5458aa))
+* **portal:** S64, las plantillas de entregables ([cb78651](https://github.com/wasichai/sgspe-ui/commit/cb78651334bbc4fb4cc50da91588be83f55ed121))
+* **portal:** WF-H, emitir con la lista EXTERNO y las versiones ([d05a41c](https://github.com/wasichai/sgspe-ui/commit/d05a41c4d0486c3fcf0e5796c489eec93926a2b4))
+
+
+### Bug Fixes
+
+* **ia:** correcciones de la revisión de la tarea 13a ([387b4f6](https://github.com/wasichai/sgspe-ui/commit/387b4f6fd441f3e45c73afafea5f01c8a0e207d8))
+* **ia:** el portal sigue el contrato final de las corridas y la aceptación ([f0698bb](https://github.com/wasichai/sgspe-ui/commit/f0698bbbde7a65f7d94b5f4ca5be05443d812c01))
+* **ia:** la aceptación revisa el número de cláusula y no manda un grupo sin permiso ([f173e42](https://github.com/wasichai/sgspe-ui/commit/f173e42f470ea9e3ad16f9b9b7be3fff7c490a12))
+* **ia:** la respuesta de un duplicado de queja es opcional, como en el servidor ([a09f370](https://github.com/wasichai/sgspe-ui/commit/a09f370d8b79c0be6cf7eedf683d8cdf9e871a06))
+* **ia:** una propuesta ilegible solo se puede rechazar ([758e249](https://github.com/wasichai/sgspe-ui/commit/758e2498c5e2868b67c8c9269a75d3090723efd7))
+* **portal:** «Usar el resumen» deshabilitado dice por qué en su title ([3613c03](https://github.com/wasichai/sgspe-ui/commit/3613c03f21dfb7d1ed314242b9014f0f8f7b91f2))
+* **portal:** correcciones de la revisión final del plan 7.3 ([8efb4dc](https://github.com/wasichai/sgspe-ui/commit/8efb4dc4f24b841b9568b39e5a5efa21f646e2aa))
+* **portal:** el detalle del monitoreo calcula la cifra de la fila y vuelve al mismo filtro ([b364d9c](https://github.com/wasichai/sgspe-ui/commit/b364d9ca00c76bd90e106aa4c2335efe31d040e4))
+* **portal:** el énfasis no parte los marcadores de la IA ([ba2c3b6](https://github.com/wasichai/sgspe-ui/commit/ba2c3b698cbec464dfb0b71d77cdcc86982c0c12))
+* **portal:** el monitoreo ignora un ?month= mal formado ([3a66529](https://github.com/wasichai/sgspe-ui/commit/3a6652953d3ec2917334e2e0415a46bfb1861030))
+* **portal:** énfasis en línea en VistaMarkdown ([a00d8d9](https://github.com/wasichai/sgspe-ui/commit/a00d8d9056c09880e9f901baec633e41886ccf4e))
+* **portal:** la descarga de una plantilla conserva su extensión .docx ([0fbbefa](https://github.com/wasichai/sgspe-ui/commit/0fbbefad84d39d03cec4d0c220c4a17ea858f605))
+* **portal:** las versiones dicen las secciones con IA por su título ([c6b6a1f](https://github.com/wasichai/sgspe-ui/commit/c6b6a1fd07ad0d0480c040f91decd034fa72d53b))
+* **portal:** menciones validadas al pegar y escapes de CommonMark en la vista ([6698ccd](https://github.com/wasichai/sgspe-ui/commit/6698ccd52c0db3253c07dca2d12fa86cea2e43ff))
+* **portal:** Recargar tras un 412 en Usar, razón del resumen y texto vacío ([43675cc](https://github.com/wasichai/sgspe-ui/commit/43675cc6c3f4d8285289e37d0efc07e4f3e95e6f))
+* **portal:** relee los documentos tras emitir y nombra la lista EXTERNO ([2446cd7](https://github.com/wasichai/sgspe-ui/commit/2446cd7aff8ccb554cb40326674bce879d0d028c))
+* **portal:** S50 no descarta en silencio los cambios sin guardar de una sección ([340b7a5](https://github.com/wasichai/sgspe-ui/commit/340b7a586d10fd6f42b62006316d9bbb998585b3))
+* **portal:** S50, guardado único, motivo de sección y calculada de solo lectura ([034dc49](https://github.com/wasichai/sgspe-ui/commit/034dc491a20a01dd26265fcd607cc79d23827584))
+* **portal:** tope del motivo con anexo, foto del borrador al emitir y fallos de descarga ([de37288](https://github.com/wasichai/sgspe-ui/commit/de3728868851c3f5a444addbcf57c9ae0e50af43))
+
+
+### Performance Improvements
+
+* **portal:** el editor tiptap de las secciones se carga diferido ([8d8e767](https://github.com/wasichai/sgspe-ui/commit/8d8e767fd955049ed46492ab3845367a63bd6ec9))
+
+
+### Miscellaneous Chores
+
+* inicia la versión 3.0.0 para F7 y F8 ([a0b6bb7](https://github.com/wasichai/sgspe-ui/commit/a0b6bb7d3830ffab751bce888039e938ac71c21d))
+
 ## [2.0.0](https://github.com/wasichai/sgspe-ui/compare/v1.1.0...v2.0.0) (2026-10-12)
 
 
