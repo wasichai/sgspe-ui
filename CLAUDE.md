@@ -102,3 +102,22 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
 - Ningún fuente usa `dangerouslySetInnerHTML` ni asigna `innerHTML` (`boundaries.test.ts`): el Markdown se dibuja con
   `VistaMarkdown`, que arma como elementos de React la negrita, la cursiva y el código en línea; los enlaces y el HTML quedan
   como texto.
+- Los tableros de F8 viven en `src/portal/tableros/` (contrato en `tableros/contratoF8.ts`) y los entregables en
+  `src/portal/entregables/` (contrato en `entregables/contrato.ts`, reglas de los tipos en `entregables/tipos.ts`): una
+  pantalla no pide `/api/sgspe/deliverables/**`, `/api/sgspe/deliverable-templates` ni `/api/sgspe/indicators/**` por su
+  cuenta. Los tipos de entregable y sus secciones (con `assisted` y `guide`) los da el backend
+  (`GET /api/sgspe/deliverable-types`, `useTiposDeEntregable`): el portal no copia ninguna lista de secciones.
+- tiptap solo se importa en `entregables/EditorMarkdown.tsx` y `entregables/nodoMencion.ts` (`boundaries.test.ts`); el editor
+  va con `injectCSS: false` (su CSS vive en `src/index.css`) y lo que no sobrevive la ida y vuelta se edita como Markdown. El
+  editor se carga diferido (`lazy(() => import('./EditorMarkdown'))` en `EditorDeSeccion`, con un `Suspense`): una prueba que
+  interactúa con él espera al chunk con `findBy*`. Una mención es `[[person|position|stakeholder:<uuid>]]`; usar una sugerencia
+  de la IA convierte `[PERSONA:<id>]` con `deSugerencia` y nunca manda otro marcador. S50 pide confirmación antes de cambiar de
+  sección con cambios sin guardar, y un refetch de la lista no remonta un editor con cambios (un `412` con «Recargar» conserva
+  el texto).
+- El estado del borrador se consulta cada 5 s solo mientras está pendiente (`useEstadoDelBorrador`), y una prueba de tiempo usa
+  relojes falsos. Nada sin la marca BORRADOR se descarga antes de emitir: de una candidata solo se muestra su SHA-256. La CSP
+  abre `frame-src` solo a `blob:` para `PdfDialog`. La prueba de CSP de `e2e/f8.spec.ts` tolera exactamente una violación
+  conocida (el estilo en línea de `react-remove-scroll` del Dialog de Radix mientras hay un diálogo abierto,
+  wasichai/wasichai-ui#58); cualquier otra la hace fallar.
+- Huecos conocidos de F8 en sgspe-ui#32: la navegación hacia el monitoreo y el catálogo, S50 dentro de un proyecto y «Volver»
+  sin confirmación.

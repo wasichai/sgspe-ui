@@ -164,7 +164,7 @@ describe('S50 · entregable por secciones', () => {
     ])
     const usar = await screen.findByRole('button', { name: 'Usar…' })
     expect(usar).toBeEnabled()
-    await userEvent.click(screen.getByRole('button', { name: 'Editar como Markdown' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Más.')
     expect(screen.getByRole('button', { name: 'Usar…' })).toBeDisabled()
     expect(screen.getAllByText('Guarde o descarte los cambios de la sección antes de usar una sugerencia.').length).toBeGreaterThan(0)
