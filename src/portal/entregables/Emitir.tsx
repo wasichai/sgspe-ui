@@ -1,6 +1,7 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
-import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
@@ -25,6 +26,17 @@ export function AccionesDelEntregable({ entregable }: { entregable: Registro }) 
   const escribe = useEscribeEnProyecto(proyecto)
   const [emitiendo, setEmitiendo] = useState(false)
   const [emitida, setEmitida] = useState<string | null>(null)
+  // el certificado (AUT-12) lo crea la automatización del servidor sin esperar la respuesta de «issue»: se relee la lista de
+  // documentos emitidos un par de veces más (~2 s y ~6 s), acotado y con los temporizadores limpios al desmontar
+  const cliente = useQueryClient()
+  const temporizadores = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => temporizadores.current.forEach(clearTimeout), [])
+  const releerDocumentos = () => {
+    temporizadores.current.forEach(clearTimeout)
+    temporizadores.current = [2000, 6000].map((ms) =>
+      setTimeout(() => void cliente.invalidateQueries({ queryKey: ['documents', 'deliverable', entregable.id] }), ms)
+    )
+  }
   const sha = estado.data?.modelSha256
   const ofreceEmitir = entregable.state === 'approved' && estado.data?.status === 'LISTO' && can('deliverable', 'ISSUE') && escribe
   const mapaFallido = (estado.data?.warnings ?? []).some((a) => a.code === 'MAP_FAILED')
@@ -68,6 +80,7 @@ export function AccionesDelEntregable({ entregable }: { entregable: Registro }) 
           alEmitir={(revision) => {
             setEmitiendo(false)
             setEmitida(revision)
+            releerDocumentos()
           }}
         />
       ) : null}
@@ -134,10 +147,19 @@ function DialogoDeEmision({
           <fieldset className="space-y-1 rounded-sg-md border border-sg-border p-3">
             <legend className="px-1 font-medium">{t('entregables.emitir.lista.titulo')}</legend>
             {LISTA.map((c) => (
-              <label key={c} className="flex items-start gap-2">
-                <input type="checkbox" className="mt-1" checked={marcadas.has(c)} onChange={() => alternar(c)} />
-                {t(`entregables.emitir.lista.${c}`)}
-              </label>
+              <div key={c} className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id={`lista-${c}`}
+                  aria-labelledby={`lista-${c}-etiqueta`}
+                  className="mt-1"
+                  checked={marcadas.has(c)}
+                  onChange={() => alternar(c)}
+                />
+                <label id={`lista-${c}-etiqueta`} htmlFor={`lista-${c}`}>
+                  {t(`entregables.emitir.lista.${c}`)}
+                </label>
+              </div>
             ))}
           </fieldset>
           <Campo etiqueta={t('comun.motivoObligatorio')}>

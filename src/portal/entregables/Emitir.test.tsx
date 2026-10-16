@@ -25,6 +25,7 @@ import type { Registro } from '../datos/registros'
 import type { EstadoDelBorrador } from './contrato'
 import { AccionesDelEntregable } from './Emitir'
 import { Versiones } from './Versiones'
+import { DocumentosEmitidos } from '../documentos/DocumentosEmitidos'
 
 // WF-H, la emisión y las versiones (deliverables.md §8.3 a §8.5, api.md §4.12): se emite lo revisado, con la lista entera y motivo
 let fetch: FetchMock | null = null
@@ -76,6 +77,58 @@ describe('emitir', () => {
     expect(emision.cuerpo).toEqual({ draftModelSha256: SHA_MODELO, checklistConfirmed: true })
     expect(emision.cabeceras.get('If-Match')).toBe('"2026-10-10T15:05:00Z"')
     expect(emision.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Entrega%20al%20cliente")
+  })
+
+  it('cada casilla de la lista EXTERNO tiene su nombre accesible', async () => {
+    abrir(entregableEn('approved'), BORRADOR_LISTO, [])
+    await userEvent.click(await screen.findByRole('button', { name: 'Emitir…' }))
+    const dialogo = screen.getByRole('dialog', { name: 'Emitir el entregable' })
+    for (const nombre of [/^La narrativa y los textos/, /fotos/i, /mapas/i, /anexos/i])
+      expect(within(dialogo).getByRole('checkbox', { name: nombre })).toBeInTheDocument()
+  })
+
+  it('tras emitir se relee la lista de documentos y aparece el certificado creado después', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      let certificados: unknown[] = []
+      fetch = mockFetch([
+        { path: '/sgspe/deliverables/d1/draft', body: BORRADOR_LISTO },
+        { path: '/objects/deliverable/records/d1/transitions', body: [] },
+        ...baseDeF8(GERENCIA_SOCIAL)
+      ])
+      red = espiarRed([emitida, { path: '/objects/deliverable/records/d1/documents', responder: () => jsonResponse(certificados) }])
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      montar(
+        <>
+          <AccionesDelEntregable entregable={entregableEn('approved')} />
+          <DocumentosEmitidos objeto="deliverable" registroId="d1" escribe={false} />
+        </>,
+        { usuario: GERENCIA_SOCIAL, permisos: EQUIPO_DE_ENTREGABLES }
+      )
+      await user.click(await screen.findByRole('button', { name: 'Emitir…' }))
+      const dialogo = screen.getByRole('dialog', { name: 'Emitir el entregable' })
+      await user.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Entrega')
+      for (const casilla of within(dialogo).getAllByRole('checkbox')) await user.click(casilla)
+      await user.click(within(dialogo).getByRole('button', { name: 'Emitir' }))
+      await screen.findByText('Entregable emitido en su revisión 0.')
+      const antes = red.a('GET', '/objects/deliverable/records/d1/documents').length
+      certificados = [
+        {
+          id: 'c1',
+          number: 'CE-2026-001',
+          status: 'VALID',
+          recordId: 'd1',
+          objectName: 'deliverable',
+          issuedAt: '2026-10-16T15:00:00Z',
+          snapshot: { fields: [] }
+        }
+      ]
+      await vi.advanceTimersByTimeAsync(2500)
+      await waitFor(() => expect(red!.a('GET', '/objects/deliverable/records/d1/documents').length).toBeGreaterThan(antes))
+      expect(await screen.findByRole('button', { name: 'Abrir CE-2026-001' })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('un modelo distinto se explica y ofrece recargar el borrador', async () => {
