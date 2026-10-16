@@ -19,7 +19,9 @@ export interface Comando {
   // relativa a /api, como en usePedir: '/sgspe/commitments/c1/reschedules'
   ruta: string
   metodo?: 'POST' | 'PATCH' | 'DELETE'
-  json: unknown
+  // el cuerpo JSON; sin él, formulario (multipart: la subida de plantillas de F8, api.md §4.12)
+  json?: unknown
+  formulario?: FormData
   // If-Match con el updatedAt leído (IM)
   version?: string | null
   // X-Change-Reason (CR)
@@ -40,7 +42,14 @@ const dormir: Esperar = (milisegundos) => new Promise((resolver) => setTimeout(r
 export async function enviarComando<T>(pedir: Pedido, comando: Comando, clave: string | null, esperar: Esperar = dormir): Promise<T> {
   for (let intento = 0; ; intento++) {
     try {
-      return await pedir<T>(comando.ruta, { metodo: comando.metodo ?? 'POST', json: comando.json, version: comando.version, motivo: comando.motivo, clave })
+      return await pedir<T>(comando.ruta, {
+        metodo: comando.metodo ?? 'POST',
+        json: comando.json,
+        formulario: comando.formulario,
+        version: comando.version,
+        motivo: comando.motivo,
+        clave
+      })
     } catch (error) {
       if (!esClaveEnCurso(error) || intento >= REENVIOS_EN_CURSO) throw error
       await esperar(((error as ErrorDeSgspe).reintentarEn ?? 1) * 1000)

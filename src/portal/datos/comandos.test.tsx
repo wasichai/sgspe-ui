@@ -266,3 +266,18 @@ describe('textos de los errores de los comandos', () => {
     expect(await screen.findByText(/^file: Ese archivo ya es de otra evidencia/)).toBeInTheDocument()
   })
 })
+
+describe('comandos multipart', () => {
+  it('un comando con formulario manda el multipart, su clave y ningún Content-Type propio', async () => {
+    fetch = mockFetch([])
+    red = espiarRed([{ method: 'POST', path: '/sgspe/deliverable-templates', responder: () => jsonResponse({ id: 't1' }, 201) }])
+    const formulario = new FormData()
+    formulario.append('templateKey', 'informe-base')
+    await enviarComando(crearPedido(cliente, vi.fn()), { ruta: '/sgspe/deliverable-templates', formulario }, 'k-9')
+    const [llamada] = red.a('POST', '/sgspe/deliverable-templates')
+    expect(llamada.formulario?.get('templateKey')).toBe('informe-base')
+    expect(llamada.cuerpo).toBeNull()
+    expect(llamada.cabeceras.get('Idempotency-Key')).toBe('k-9')
+    expect(llamada.cabeceras.get('Content-Type')).toBeNull()
+  })
+})

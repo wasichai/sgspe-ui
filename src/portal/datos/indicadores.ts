@@ -99,12 +99,13 @@ export function useIndicador(code: string, filtros: FiltrosDeIndicador, activo =
   })
 }
 
-export function useTablero(tablero: string, filtros: FiltrosDeIndicador) {
+// T es la forma de un tablero con claves propias (F8: byProject del ejecutivo, rows del monitoreo; tableros/contratoF8.ts)
+export function useTablero<T extends Tablero = Tablero>(tablero: string, filtros: FiltrosDeIndicador) {
   const pedir = usePedir()
   const busqueda = consulta({ ...filtros })
   return useQuery({
     queryKey: ['dashboard', tablero, busqueda],
-    queryFn: () => pedir<Tablero>(`/sgspe/dashboards/${tablero}?${busqueda}`),
+    queryFn: () => pedir<T>(`/sgspe/dashboards/${tablero}?${busqueda}`),
     staleTime: UN_MINUTO
   })
 }
