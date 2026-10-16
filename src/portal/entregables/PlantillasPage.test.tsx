@@ -25,12 +25,13 @@ afterEach(() => {
 
 const abrir = (plantillas: unknown[] = [PLANTILLA], especiales: RutaEspecial[] = [], usuario = ADMINISTRACION, permisos = ADMIN_PERMISOS) => {
   fetch = mockFetch([{ path: '/sgspe/deliverable-templates', body: plantillas }, ...baseDeF8(usuario)])
+  // las especiales primero: una prueba puede contestar la descarga de otra forma
   red = espiarRed([
+    ...especiales,
     {
       path: '/objects/deliverable_template/records/t1/files/file',
       responder: () => new Response('PK', { headers: { 'Content-Disposition': 'attachment; filename="base.dotx"' } })
-    },
-    ...especiales
+    }
   ])
   montar(<PlantillasPage />, { usuario, permisos })
 }
@@ -57,6 +58,30 @@ describe('S64 · plantillas', () => {
     expect(screen.getByText('{{titulo}}')).toBeInTheDocument()
     expect(screen.getByText('heading 1')).toBeInTheDocument()
     expect(screen.getByText('Liberation Serif')).toBeInTheDocument()
+  })
+
+  it('sin nombre del servidor, la descarga toma la extensión del tipo del archivo (.docx o .dotx)', async () => {
+    const nombres: string[] = []
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      nombres.push(this.download)
+    })
+    const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    abrir(
+      [PLANTILLA, { ...PLANTILLA, id: 't2', templateKey: 'otra-base' }],
+      [
+        { path: '/objects/deliverable_template/records/t1/files/file', responder: () => new Response('PK', { headers: { 'Content-Type': DOCX } }) },
+        {
+          path: '/objects/deliverable_template/records/t2/files/file',
+          responder: () => new Response('PK', { headers: { 'Content-Type': 'application/octet-stream' } })
+        }
+      ]
+    )
+    const tabla = await screen.findByRole('table', { name: 'Plantillas de entregables' })
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Descargar informe-base' }))
+    await waitFor(() => expect(nombres).toEqual(['informe-base.docx']))
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Descargar otra-base' }))
+    await waitFor(() => expect(nombres).toEqual(['informe-base.docx', 'otra-base.dotx']))
+    clic.mockRestore()
   })
 
   it('sube una plantilla en multipart y dice sus avisos', async () => {

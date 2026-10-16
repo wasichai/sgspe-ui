@@ -22,6 +22,10 @@ export const FUENTES_PERMITIDAS = ['Carlito', 'Caladea', 'Liberation Sans', 'Lib
 export const TOPE_DE_PLANTILLA = 20 * 1024 * 1024
 const CLAVE = /^[a-z0-9][a-z0-9-]{0,63}$/
 
+// sin nombre en Content-Disposition, la extensión sale del tipo del archivo: se aceptan .dotx y .docx (menor 1 de la revisión)
+const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const extensionDe = (blob: Blob) => (blob.type.split(';')[0].trim() === DOCX ? '.docx' : '.dotx')
+
 function TextoDeHallazgo({ hallazgo }: { hallazgo: Hallazgo }) {
   const { t } = useTranslation(NS)
   const texto = t(`plantillas.codigos.${hallazgo.code}`, { defaultValue: t('plantillas.codigos.otro') })
@@ -54,7 +58,7 @@ function Plantillas() {
     setFallo(null)
     return pedir
       .archivo(rutaDeLaPlantilla(id))
-      .then((a) => guardarArchivo(a, `${clave}.dotx`))
+      .then((a) => guardarArchivo(a, `${clave}${extensionDe(a.blob)}`))
       .catch(setFallo)
   }
   const titulo = t('plantillas.titulo')
