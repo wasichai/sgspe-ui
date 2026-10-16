@@ -61,7 +61,8 @@ describe('S50 · entregable por secciones', () => {
     await screen.findByRole('heading', { level: 2, name: 'Antecedentes' })
     expect(await screen.findByText('Guía de redacción')).toBeInTheDocument()
     expect(screen.getByText('Incidentes del proyecto y relación con los grupos de interés.')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Editar como Markdown' }))
+    // el editor llega en su chunk diferido
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Con acta.')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Revisada' }))
     await userEvent.click(screen.getByRole('button', { name: 'Guardar sección' }))

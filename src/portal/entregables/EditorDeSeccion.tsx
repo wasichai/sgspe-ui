@@ -1,7 +1,7 @@
 import { useAuth } from '@wasichai/core'
 import { Badge, Button, Textarea } from '@wasichai/ui'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
@@ -9,9 +9,12 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { atributo, texto, useActualizar, useRegistro, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { VistaMarkdown } from '../relacionamiento/markdown'
-import { EditorMarkdown } from './EditorMarkdown'
 import { partirMenciones } from './menciones'
 import { contenidoDe, esCalculada, ORIGEN_IA, seEditan } from './tipos'
+
+// tiptap y ProseMirror bajan solo al abrir una sección que se edita (revisión final de 8.3, importante 3): el resto del portal
+// no los carga
+const EditorMarkdown = lazy(() => import('./EditorMarkdown').then((m) => ({ default: m.EditorMarkdown })))
 
 // una mención leída: su tipo y los ocho primeros caracteres del id (decisión 10 del plan); la vista PDF del borrador la resuelve
 export function ConMenciones({ texto: contenido }: { texto: string }) {
@@ -99,7 +102,9 @@ export function EditorDeSeccion({
         </>
       ) : edita ? (
         <>
-          <EditorMarkdown etiqueta={t('entregables.seccion.texto')} valor={contenido} alCambiar={setContenido} proyecto={texto(entregable, 'project')} />
+          <Suspense fallback={<p className="text-sm text-sg-text-muted">{t('entregables.seccion.cargandoEditor')}</p>}>
+            <EditorMarkdown etiqueta={t('entregables.seccion.texto')} valor={contenido} alCambiar={setContenido} proyecto={texto(entregable, 'project')} />
+          </Suspense>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={revisada} onChange={(e) => setRevisada(e.target.checked)} />
             {t('entregables.seccion.revisada')}
