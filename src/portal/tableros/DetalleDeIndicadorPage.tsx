@@ -36,11 +36,16 @@ export const desglosesEnBarras = (i: Indicador): Desglose[] =>
 export function DetalleDeIndicadorPage() {
   const { t } = useTranslation(NS)
   const { code = '' } = useParams()
-  const { search } = useLocation()
+  const { pathname, search } = useLocation()
   const { scope } = useContextFilters()
   const filtros = useFiltrosDeTablero()
   const indicador = useIndicador(code, filtros)
-  const tablero = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}/stakeholders/dashboard` : '/stakeholders/dashboard'
+  // desde F8 el detalle se abre también desde el monitoreo de la Tabla 9.5 (/dashboards/indicators/:code) y vuelve allí
+  const tablero = pathname.startsWith('/dashboards/')
+    ? '/dashboards/monitoring'
+    : scope.kind === 'project'
+      ? `/projects/${encodeURIComponent(scope.projectId)}/stakeholders/dashboard`
+      : '/stakeholders/dashboard'
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
       <Link to={`${tablero}${search}`} className="text-sm text-sg-primary-text underline">
