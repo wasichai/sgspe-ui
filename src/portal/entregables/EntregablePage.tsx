@@ -8,6 +8,7 @@ import { texto, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { seccionDelTipo, useTiposDeEntregable } from './contrato'
 import { EditorDeSeccion } from './EditorDeSeccion'
+import { SugerenciaDeSeccion } from './SugerenciaDeSeccion'
 import { cambioDespuesDelBorrador, ESTADOS_DE_WF_H, NIVELES_DE_ENTREGABLE, ORIGEN_IA } from './tipos'
 
 // S50 · entregable por secciones (screens.md, deliverables.md §8): revisar, aprobar y emitir sabiendo que se emite lo revisado.
@@ -55,7 +56,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
   // la marca de IA y la guía de cada sección las da el backend (decisión 1 del plan)
   const tipos = useTiposDeEntregable()
   const [busqueda, fijar] = useSearchParams()
-  const [, setSucio] = useState(false)
+  const [sucio, setSucio] = useState(false)
   const tipo = texto(entregable, 'deliverable_type')
   const generadoEl = texto(entregable, 'draft_generated_at') || null
   const lista = secciones.data ?? []
@@ -128,6 +129,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
                 guia={seccionDelTipo(tipos.data, tipo, texto(actual, 'section_key'))?.guide}
                 alCambiarSucio={setSucio}
               />
+              <SugerenciaDeSeccion key={actual.id} entregable={entregable} seccion={actual} sucio={sucio} />
             </div>
           ) : null}
         </div>
