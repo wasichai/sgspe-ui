@@ -97,6 +97,8 @@ async function prepararF8(page: Page, { estado = 'draft', pendiente = false } = 
     deliverable: ['READ', 'CREATE', 'UPDATE', 'GENERATE', 'APPROVE', 'ISSUE', 'EXPORT', 'DOWNLOAD_RESTRICTED'],
     deliverable_section: ['READ', 'UPDATE'],
     deliverable_version: ['READ'],
+    ai_interaction: ['READ', 'CREATE'],
+    ai_suggestion: ['READ', 'CREATE'],
     deliverable_template: ['READ'],
     indicator: ['READ', 'UPDATE'],
     indicator_measurement: ['READ', 'CREATE'],
@@ -106,7 +108,22 @@ async function prepararF8(page: Page, { estado = 'draft', pendiente = false } = 
   const rutas: [RegExp, string, () => unknown, number?][] = [
     [/^\/auth\/me\/permissions$/, 'GET', () => ({ admin: false, objects: permisos })],
     [/^\/objects\/project_assignment\/records$/, 'GET', () => pagina([registro('as', { project: 'p1', member_user_id: 'u-smg', active: true })])],
-    [/^\/sgspe\/ai\/status$/, 'GET', () => ({ enabled: false, providerAvailable: false, useCases: [] })],
+    [/^\/sgspe\/ai\/status$/, 'GET', () => ({ enabled: true, providerAvailable: true, useCases: ['AI-04'] })],
+    [/^\/objects\/ai_suggestion\/records$/, 'GET', () => pagina([])],
+    [
+      /^\/sgspe\/deliverable-types$/,
+      'GET',
+      () => [
+        { type: 'DIAGNOSTICO SOCIAL', version: 1, sections: [] },
+        {
+          type: 'INFORME DE CAMPO Y AVANCE',
+          version: 1,
+          sections: [
+            { key: 'antecedentes', title: 'Antecedentes', order: 2, kind: 'MIXTA', required: true, assisted: true, guide: 'Describa el contexto del periodo.' }
+          ]
+        }
+      ]
+    ],
     [/^\/sgspe\/dashboards\/indicators$/, 'GET', () => [{ code: 'KPI-EXE-01', label: 'Proyectos activos', dashboard: 'executive', available: true }]],
     [/^\/sgspe\/dashboards\/executive$/, 'GET', () => EJECUTIVO],
     [/^\/sgspe\/dashboards\/monitoring$/, 'GET', () => MONITOREO],
@@ -192,6 +209,10 @@ test('la revisión ejecutiva y el cierre de un periodo con su razón', async ({ 
 test('una sección se edita en el navegador con una mención y se guarda', async ({ page }) => {
   const { escrituras } = await prepararF8(page)
   await page.goto('/reports/deliverables/d1?seccion=antecedentes')
+  // los tipos de entregable dan la guía de redacción y ofrecen la IA en las secciones asistidas
+  await expect(page.getByText('Describa el contexto del periodo.')).toBeVisible()
+  await expect(page.getByText('Guía de redacción')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sugerir con IA' })).toBeVisible()
   const editor = page.getByRole('textbox', { name: 'Texto de la sección' })
   await editor.click()
   await page.keyboard.press('End')
@@ -212,7 +233,13 @@ test('el borrador se sondea y se ve en el navegador sin violar la CSP', async ({
   await page.addInitScript(() => {
     const w = window as unknown as { violaciones: string[] }
     w.violaciones = []
-    document.addEventListener('securitypolicyviolation', (e) => w.violaciones.push(`${e.effectiveDirective} ${e.blockedURI}`))
+    document.addEventListener('securitypolicyviolation', (e) => {
+      // el <style> en línea del bloqueo de scroll de los diálogos modales (react-remove-scroll, por react-style-singleton, dentro de
+      // Radix) no se puede configurar sin un nonce: se admite solo ese y solo con un modal abierto; se sigue en wasichai-ui. cualquier otra
+      // violación (frame-src, estilos de tiptap, lo nuevo) falla
+      if (e.effectiveDirective === 'style-src-elem' && e.blockedURI === 'inline' && document.querySelector('[role="dialog"]')) return
+      w.violaciones.push(`${e.effectiveDirective} ${e.blockedURI} ${e.sourceFile}`)
+    })
   })
   await page.clock.install({ time: new Date('2026-10-16T15:00:00Z') })
   const { terminarBorrador } = await prepararF8(page, { pendiente: true })
