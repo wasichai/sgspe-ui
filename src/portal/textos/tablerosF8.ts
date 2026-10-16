@@ -1,0 +1,233 @@
+// F8 · los tableros consolidados (dashboards.md §5.1, §5.2, §5.5 y §10): la revisión ejecutiva S51, el monitoreo de la Tabla 9.5 con
+// su cierre de periodo, el catálogo de indicadores y la zona de tablero de S08
+export const ES_TABLEROS_F8 = {
+  ejecutivo: {
+    titulo: 'Revisión ejecutiva',
+    ayuda: 'Qué cambió, qué es crítico, dónde y quién lo atiende, con las mismas cifras que las fichas.',
+    monitoreo: 'Monitoreo de la Tabla 9.5',
+    elegirProyectos: 'Proyectos de la tabla ({{n}} elegidos)',
+    proyectos: 'Proyectos',
+    demasiados: 'La tabla por proyecto admite hasta {{tope}} proyectos: quite algunos.',
+    sinProyectos: 'No tiene proyectos asignados.',
+    irAProyectos: 'Ir a Proyectos',
+    atencion: 'Lo que necesita atención hoy',
+    atencionAyuda: 'Ordenado por una regla fija: alertas activas, riesgos altos o críticos, compromisos vencidos y quejas abiertas.',
+    sinAtencion: 'Nada pide atención con estos filtros.',
+    items: {
+      'KPI-EXE-02': '{{proyecto}}: {{n}} alertas activas',
+      'KPI-RSK-01': '{{proyecto}}: {{n}} riesgos altos o críticos',
+      'KPI-COM-03': '{{proyecto}}: {{n}} compromisos vencidos',
+      'KPI-GRV-02': '{{proyecto}}: {{n}} quejas abiertas'
+    },
+    todaLaCartera: 'Toda la cartera',
+    tiles: 'Indicadores de la cartera',
+    postura: 'Postura de los grupos de interés',
+    posturaAyuda: 'La postura es un dato reservado: esta revisión no la muestra.',
+    inversion: 'Inversión ejecutada frente a presupuesto y topes',
+    sinInversion: 'Sin inversión registrada en el periodo.',
+    ejecutadoDe: 'Avance de lo ejecutado en {{moneda}}',
+    ejecutado: 'Ejecutado: {{monto}}',
+    presupuesto: 'Presupuesto: {{monto}}',
+    tope: 'Topes de campaña: {{monto}}',
+    tendencia: 'Tendencia de 12 meses',
+    series: {
+      engagements: 'Interacciones realizadas',
+      grievances: 'Quejas recibidas y cerradas',
+      overdue: 'Compromisos vencidos al cierre del mes'
+    },
+    recibidas: 'Recibidas',
+    cerradas: 'Cerradas',
+    porProyecto: 'Por proyecto',
+    proyecto: 'Proyecto',
+    omitida: 'Tiene más de {{tope}} proyectos: elija hasta {{tope}} para ver la tabla por proyecto.'
+  },
+  monitoreo: {
+    titulo: 'Monitoreo de la Tabla 9.5',
+    ayuda: 'Los 13 indicadores del plan de relaciones comunitarias en el mes elegido, con su meta y, si el periodo se cerró, su cifra oficial.',
+    catalogo: 'Catálogo de indicadores',
+    mes: 'Mes',
+    proyecto: 'Proyecto',
+    misProyectos: 'Todos mis proyectos',
+    todosLosProyectos: 'Todos los proyectos',
+    cerrado: 'Periodo cerrado: las filas con cifra oficial la muestran marcada.',
+    vivo: 'Cifra viva: puede cambiar si llegan registros tardíos. Una cifra oficial aparece cuando se cierra el periodo.',
+    columnas: {
+      numero: 'N.º',
+      indicador: 'Indicador',
+      valor: 'Valor',
+      meta: 'Meta',
+      origen: 'Origen de la meta',
+      oficial: 'Cifra oficial',
+      medio: 'Medio de verificación',
+      entregable: 'Entregable',
+      acciones: 'Acciones'
+    },
+    origenes: { PROJECT: 'Del proyecto', CATALOG: 'Del catálogo', DEFAULT: 'Por defecto', NONE: 'Sin meta' },
+    oficial: 'Oficial: {{valor}}',
+    oficialCerrada: 'Cerrada el {{fecha}}',
+    sinOficial: 'Sin cerrar',
+    cerrar: 'Cerrar periodo…',
+    sinCatalogo: 'El catálogo de indicadores no tiene este indicador o su cuenta no lo lee.'
+  },
+  cierre: {
+    titulo: 'Cerrar el periodo de {{indicador}}',
+    ayuda: 'Congela la cifra del mes como la oficial. Es opcional, se hace una vez y no se deshace.',
+    periodo: 'Del {{desde}} al {{hasta}}',
+    alcance: 'Alcance',
+    delProyecto: 'Solo el proyecto {{proyecto}}',
+    delTenant: 'Toda la organización',
+    soloAdministracion: 'Cerrar para toda la organización solo lo hace la administración. Elija un proyecto en el filtro.',
+    sinAsignacion: 'Para cerrar el periodo de este proyecto hace falta una asignación vigente a él.',
+    confirmar: 'Cerrar periodo',
+    cerrando: 'Cerrando…',
+    listo: 'Listo',
+    hecho: 'Periodo cerrado: la cifra oficial es {{valor}}.',
+    razones: {
+      STANCE: 'No se cierra: los indicadores que leen la postura nunca tienen cifra oficial, porque la postura es un dato reservado.',
+      NO_SCALAR_VALUE: 'No se cierra: este indicador no tiene una cifra única que congelar (solo series o componentes).',
+      UNAVAILABLE: 'No se cierra: su cuenta no puede calcular este indicador completo (le falta leer algún dato o las quejas confidenciales).',
+      NOT_PERIOD_BOUND: 'No se cierra para este periodo: este indicador es la foto de hoy y solo se cierra por un mes calendario entero.'
+    }
+  },
+  catalogo: {
+    titulo: 'Catálogo de indicadores',
+    ayuda: 'Cada indicador con su frecuencia, su meta y su medio de verificación. La meta de un proyecto, si la tiene, manda sobre la del catálogo.',
+    volver: 'Volver al monitoreo',
+    columnas: { codigo: 'Código', nombre: 'Indicador', frecuencia: 'Frecuencia', meta: 'Meta', medio: 'Medio de verificación', acciones: 'Acciones' },
+    sinMeta: 'Sin meta',
+    editar: 'Editar la meta de {{indicador}}',
+    meta: 'Meta',
+    frecuencia: 'Frecuencia',
+    metaInvalida: 'Escriba un número sin signo, con hasta 4 decimales.',
+    guardado: 'Meta guardada.'
+  },
+  proyecto: {
+    titulo: 'Tablero del proyecto',
+    compromisos: 'Compromisos',
+    qcs: 'Quejas, consultas y solicitudes',
+    mapaDeCalor: 'Mapa de calor de riesgos',
+    programas: 'Presupuesto de los programas',
+    inversion: 'Inversión ejecutada',
+    beneficiarios: 'Beneficiarios de los programas',
+    verCompromisos: 'Ver el tablero de compromisos',
+    verQcs: 'Ver el tablero de quejas, consultas y solicitudes',
+    verRiesgos: 'Ver el tablero de riesgos',
+    verInversion: 'Ver el tablero de inversión social'
+  }
+}
+
+export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
+  ejecutivo: {
+    titulo: 'Executive review',
+    ayuda: 'What changed, what is critical, where and who handles it, with the same figures as the records.',
+    monitoreo: 'Table 9.5 monitoring',
+    elegirProyectos: 'Projects in the table ({{n}} chosen)',
+    proyectos: 'Projects',
+    demasiados: 'The per-project table admits up to {{tope}} projects: remove some.',
+    sinProyectos: 'You have no assigned projects.',
+    irAProyectos: 'Go to Projects',
+    atencion: 'What needs attention today',
+    atencionAyuda: 'Ordered by a fixed rule: active alerts, high or critical risks, overdue commitments and open grievances.',
+    sinAtencion: 'Nothing needs attention with these filters.',
+    items: {
+      'KPI-EXE-02': '{{proyecto}}: {{n}} active alerts',
+      'KPI-RSK-01': '{{proyecto}}: {{n}} high or critical risks',
+      'KPI-COM-03': '{{proyecto}}: {{n}} overdue commitments',
+      'KPI-GRV-02': '{{proyecto}}: {{n}} open grievances'
+    },
+    todaLaCartera: 'The whole portfolio',
+    tiles: 'Portfolio indicators',
+    postura: 'Stakeholder stance',
+    posturaAyuda: 'Stance is reserved data: this review does not show it.',
+    inversion: 'Executed investment against budget and caps',
+    sinInversion: 'No investment recorded in the period.',
+    ejecutadoDe: 'Progress of the executed amount in {{moneda}}',
+    ejecutado: 'Executed: {{monto}}',
+    presupuesto: 'Budget: {{monto}}',
+    tope: 'Campaign caps: {{monto}}',
+    tendencia: '12-month trend',
+    series: {
+      engagements: 'Engagements held',
+      grievances: 'Grievances received and closed',
+      overdue: 'Overdue commitments at month end'
+    },
+    recibidas: 'Received',
+    cerradas: 'Closed',
+    porProyecto: 'By project',
+    proyecto: 'Project',
+    omitida: 'You have more than {{tope}} projects: choose up to {{tope}} to see the per-project table.'
+  },
+  monitoreo: {
+    titulo: 'Table 9.5 monitoring',
+    ayuda: 'The 13 indicators of the community relations plan in the chosen month, with their target and, if the period was closed, their official figure.',
+    catalogo: 'Indicator catalog',
+    mes: 'Month',
+    proyecto: 'Project',
+    misProyectos: 'All my projects',
+    todosLosProyectos: 'All projects',
+    cerrado: 'Closed period: rows with an official figure show it marked.',
+    vivo: 'Live figure: it may change if late records arrive. An official figure appears when the period is closed.',
+    columnas: {
+      numero: 'No.',
+      indicador: 'Indicator',
+      valor: 'Value',
+      meta: 'Target',
+      origen: 'Target source',
+      oficial: 'Official figure',
+      medio: 'Means of verification',
+      entregable: 'Deliverable',
+      acciones: 'Actions'
+    },
+    origenes: { PROJECT: 'From the project', CATALOG: 'From the catalog', DEFAULT: 'Default', NONE: 'No target' },
+    oficial: 'Official: {{valor}}',
+    oficialCerrada: 'Closed on {{fecha}}',
+    sinOficial: 'Not closed',
+    cerrar: 'Close period…',
+    sinCatalogo: 'The indicator catalog does not have this indicator or your account cannot read it.'
+  },
+  cierre: {
+    titulo: 'Close the period of {{indicador}}',
+    ayuda: 'Freezes the month figure as the official one. It is optional, done once and cannot be undone.',
+    periodo: 'From {{desde}} to {{hasta}}',
+    alcance: 'Scope',
+    delProyecto: 'Only the project {{proyecto}}',
+    delTenant: 'The whole organization',
+    soloAdministracion: 'Only the administration closes for the whole organization. Choose a project in the filter.',
+    sinAsignacion: 'Closing the period of this project needs a current assignment to it.',
+    confirmar: 'Close period',
+    cerrando: 'Closing…',
+    listo: 'Done',
+    hecho: 'Period closed: the official figure is {{valor}}.',
+    razones: {
+      STANCE: 'Not closed: indicators that read stance never get an official figure, because stance is reserved data.',
+      NO_SCALAR_VALUE: 'Not closed: this indicator has no single figure to freeze (only series or components).',
+      UNAVAILABLE: 'Not closed: your account cannot compute this indicator completely (it cannot read some data or the confidential grievances).',
+      NOT_PERIOD_BOUND: 'Not closed for this period: this indicator is a snapshot of today and is only closed for a whole calendar month.'
+    }
+  },
+  catalogo: {
+    titulo: 'Indicator catalog',
+    ayuda: 'Each indicator with its frequency, its target and its means of verification. A project target, if any, wins over the catalog one.',
+    volver: 'Back to monitoring',
+    columnas: { codigo: 'Code', nombre: 'Indicator', frecuencia: 'Frequency', meta: 'Target', medio: 'Means of verification', acciones: 'Actions' },
+    sinMeta: 'No target',
+    editar: 'Edit the target of {{indicador}}',
+    meta: 'Target',
+    frecuencia: 'Frequency',
+    metaInvalida: 'Write an unsigned number with up to 4 decimals.',
+    guardado: 'Target saved.'
+  },
+  proyecto: {
+    titulo: 'Project dashboard',
+    compromisos: 'Commitments',
+    qcs: 'Grievances, inquiries and requests',
+    mapaDeCalor: 'Risk heat map',
+    programas: 'Program budgets',
+    inversion: 'Executed investment',
+    beneficiarios: 'Program beneficiaries',
+    verCompromisos: 'See the commitments dashboard',
+    verQcs: 'See the grievances, inquiries and requests dashboard',
+    verRiesgos: 'See the risks dashboard',
+    verInversion: 'See the social investment dashboard'
+  }
+}

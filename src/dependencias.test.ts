@@ -45,3 +45,15 @@ describe('dependencias de F2 y F3', () => {
     expect([...versiones]).toEqual(['1.0.0'])
   })
 })
+
+// F8 (plan 8.3, decisión 8): la extensión oficial de Markdown de tiptap y los paquetes que el editor importa, fijados en la
+// misma versión que trae @wasichai/documents
+describe('dependencias de F8', () => {
+  it.each(['@tiptap/markdown', '@tiptap/core', '@tiptap/pm', '@tiptap/react', '@tiptap/starter-kit'])('%s va fijada en 3.31.3', (nombre) => {
+    expect(paquete.dependencies[nombre]).toBe('3.31.3')
+  })
+
+  it('es la versión de tiptap que trae @wasichai/documents', () => {
+    expect(leer('node_modules/@wasichai/documents/package.json').dependencies['@tiptap/core']).toBe('3.31.3')
+  })
+})

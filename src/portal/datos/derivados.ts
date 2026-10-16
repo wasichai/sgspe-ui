@@ -55,7 +55,24 @@ export const CAMPOS_DERIVADOS: Readonly<Record<string, readonly string[]>> = {
   // F5 (plan 5.1): el total de un aporte (ContributionTotalsListener) y el presupuesto total de un programa en su moneda
   // (ProgramTotalsListener)
   social_contribution: ['total_amount'],
-  social_program: ['total_budget']
+  social_program: ['total_budget'],
+  // F8 (plan 8.1): el último borrador, que solo escribe JOB-05, y la revisión vigente, que escribe la emisión
+  deliverable: [
+    'generation_requested_at',
+    'draft_generation_status',
+    'draft_generated_at',
+    'draft_model_sha256',
+    'draft_revision',
+    'draft_warnings',
+    'draft_model',
+    'draft_internal_docx',
+    'draft_internal_pdf',
+    'draft_external_pdf',
+    'draft_candidate_internal_docx',
+    'draft_candidate_internal_pdf',
+    'draft_candidate_external_pdf',
+    'current_revision'
+  ]
 }
 
 export const esDerivado = (objeto: string, campo: string): boolean => CAMPOS_DERIVADOS[objeto]?.includes(campo) ?? false
@@ -70,7 +87,8 @@ export const CAMPOS_DE_COMANDO: Readonly<Record<string, readonly string[]>> = {
   inquiry: ['reclassified_from_grievance', 'reclassified_from_request'],
   stakeholder_request: ['created_commitment', 'created_contribution', 'reclassified_from_grievance', 'reclassified_from_inquiry'],
   task: ['generator_key'],
-  early_warning: ['generator_key', 'early_warning_rule', 'detected_at']
+  early_warning: ['generator_key', 'early_warning_rule', 'detected_at'],
+  deliverable: ['current_version']
 }
 
 export const esDeComando = (objeto: string, campo: string): boolean => CAMPOS_DE_COMANDO[objeto]?.includes(campo) ?? false
