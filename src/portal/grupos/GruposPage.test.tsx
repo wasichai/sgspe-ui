@@ -40,6 +40,16 @@ describe('S16 · lista de grupos de interés', () => {
     expect(await within(filas()[1]).findByText('Persona registrada')).toBeInTheDocument()
   })
 
+  // revisión de UX, etapa 3: vistas con conteo, el total en el encabezado y Responsable solo desde 1440 px
+  it('cada vista dice cuántos tiene, el encabezado el total, y Responsable se oculta por debajo de 1440 px', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAccessibleDescription('2 registros')
+    expect(screen.getByRole('tab', { name: 'Retirados' })).toHaveAccessibleDescription('1 registro')
+    expect(screen.getByText('2 grupos de interés')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Responsable' })).toHaveClass('hidden', '2xl:table-cell')
+  })
+
   it('la postura restringida se explica una vez, en el encabezado: las celdas no llevan botón de ayuda', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))

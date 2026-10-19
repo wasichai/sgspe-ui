@@ -1,3 +1,5 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
 import { useId, useState } from 'react'
@@ -54,8 +56,8 @@ export function GruposPage() {
   const filtros = FILTROS.filter((f) => f !== 'stance' || leePostura)
 
   const hoy = hoyEnLima()
-  const enVista = (g: Registro) => {
-    switch (lista.vista) {
+  const enVistaLa = (vista: string, g: Registro) => {
+    switch (vista) {
       case 'prioridad':
         return g.state !== 'retired' && ['MUY ALTA', 'ALTA'].includes(texto(g, 'information_priority'))
       case 'mios':
@@ -73,7 +75,10 @@ export function GruposPage() {
         return g.state !== 'retired'
     }
   }
-  const filtrados = (grupos.data ?? []).filter((g) => enVista(g) && filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f)))
+  const conFiltros = (g: Registro) => filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f))
+  const filtrados = (grupos.data ?? []).filter((g) => enVistaLa(lista.vista, g) && conFiltros(g))
+  // la etapa 3 de la revisión de UX: cada vista dice cuántos tiene con los filtros puestos
+  const conteoDe = (vista: string) => (grupos.data ? grupos.data.filter((g) => enVistaLa(vista, g) && conFiltros(g)).length : null)
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
   // la selección es de lo que se ve: al cambiar de vista, de filtro o de página se reinicia, y nunca viaja una fila oculta
   const claveDeVista = [lista.vista, lista.pagina, ...FILTROS.map((f) => lista.filtro(f))].join('|')
@@ -89,34 +94,36 @@ export function GruposPage() {
 
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-sg-h1 font-semibold">{t('grupos.titulo')}</h1>
-          <p className="text-sm text-sg-text-muted">{t('grupos.conteo', { n: filtrados.length, count: filtrados.length })}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {proyecto ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/stakeholders/matrix`}>{t('grupos.verMatriz')}</Link>
-            </Button>
-          ) : null}
-          {conTablero ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/stakeholders/dashboard`}>{t('grupos.tablero')}</Link>
-            </Button>
-          ) : null}
-          {can('stakeholder', 'EXPORT') ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/reports`}>{t('grupos.exportar')}</Link>
-            </Button>
-          ) : null}
-          {proyecto && escribeEnElProyecto && can('stakeholder', 'CREATE') ? (
+      <EncabezadoDePagina
+        titulo={t('grupos.titulo')}
+        conteo={t('grupos.conteo', { n: filtrados.length, count: filtrados.length })}
+        primaria={
+          proyecto && escribeEnElProyecto && can('stakeholder', 'CREATE') ? (
             <Button size="sm" onClick={() => setCreando(true)}>
               {t('grupos.nuevo')}
             </Button>
-          ) : null}
-        </div>
-      </div>
+          ) : undefined
+        }
+        secundarias={
+          <>
+            {proyecto ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`${base}/stakeholders/matrix`}>{t('grupos.verMatriz')}</Link>
+              </Button>
+            ) : null}
+            {conTablero ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`${base}/stakeholders/dashboard`}>{t('grupos.tablero')}</Link>
+              </Button>
+            ) : null}
+            {can('stakeholder', 'EXPORT') ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`${base}/reports`}>{t('grupos.exportar')}</Link>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {territorio === null ? <Alert tone="notice">{t('contexto.noAplica')}</Alert> : null}
       {definicion.isError && !definicion.data ? (
         esProhibido(definicion.error) ? (
@@ -129,7 +136,7 @@ export function GruposPage() {
       ) : (
         <>
           <VistasGuardadas
-            vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }) }))}
+            vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }), conteo: conteoDe(id) }))}
             actual={lista.vista}
             alCambiar={(id) => lista.cambiar({ view: id })}
           />
@@ -174,6 +181,7 @@ export function GruposPage() {
           ) : filtrados.length === 0 ? (
             <VacioDeLista
               conFiltros={chips.length > 0 || lista.vista !== 'todos'}
+              sinFiltros={(grupos.data ?? []).filter((g) => g.state !== 'retired').length}
               alLimpiar={() => lista.cambiar({ view: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })}
             >
               {t('grupos.vacio')}
@@ -209,7 +217,8 @@ export function GruposPage() {
                             {t(`grupos.columnas.${c}`)}
                           </ThConExplicacion>
                         ) : (
-                          <Th key={c} scope="col">
+                          // Responsable se oculta por debajo de 1440 px: así la evaluación se ve sin desplazar (revisión de UX)
+                          <Th key={c} scope="col" className={c === 'responsable' ? 'hidden 2xl:table-cell' : undefined}>
                             {t(`grupos.columnas.${c}`)}
                           </Th>
                         )
@@ -290,12 +299,19 @@ function Fila({
         </Td>
       ) : null}
       <Td className="min-w-48">
-        <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(grupo.id)}`} className="font-medium text-sg-primary-text">
+        <Link
+          to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(grupo.id)}`}
+          className="font-medium text-sg-primary-text underline"
+        >
           <NombreDelGrupo grupo={grupo} />
         </Link>
         <p className="text-sg-caption text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
       </Td>
-      {global ? <Td className="font-sg-mono text-sg-caption">{texto(del.data, 'code')}</Td> : null}
+      {global ? (
+        <Td className="text-sm">
+          <ProyectoEnLista proyecto={del.data} />
+        </Td>
+      ) : null}
       <Td className="text-sm">{texto(localidad.data, 'name') || '—'}</Td>
       <Td className="text-sm">{evaluado ? opcion(grupo, 'influence_group') || '—' : t('grupos.sinEvaluarValor')}</Td>
       <Td className="text-sm">{leePostura ? opcion(grupo, 'stance') || '—' : <Restringido describedPor={idDeLaPostura} />}</Td>
@@ -304,7 +320,7 @@ function Fila({
         <EstadoChip objeto="stakeholder" estado={grupo.state} />
       </Td>
       <Td className="text-sm">{opcion(grupo, 'relationship_status') || '—'}</Td>
-      <Td className="text-sm">
+      <Td className="hidden text-sm 2xl:table-cell">
         <Persona correo={texto(grupo, 'owner_user_email')} />
       </Td>
       <Td className="text-sm">
