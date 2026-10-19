@@ -78,6 +78,7 @@ export const ES_ENTREGABLES = {
     sinGuardar: {
       titulo: 'Hay cambios sin guardar',
       ayuda: 'Hay cambios sin guardar en esta sección. ¿Descartarlos y abrir la otra sección?',
+      salir: 'Hay cambios sin guardar en esta sección. ¿Descartarlos y salir del entregable?',
       cancelar: 'Cancelar',
       descartar: 'Descartar'
     }
@@ -263,6 +264,7 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     sinGuardar: {
       titulo: 'There are unsaved changes',
       ayuda: 'This section has unsaved changes. Discard them and open the other section?',
+      salir: 'This section has unsaved changes. Discard them and leave the deliverable?',
       cancelar: 'Cancel',
       descartar: 'Discard'
     }

@@ -5,7 +5,7 @@ import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasich
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { prepararEditorEnJsdom } from '../../test/editor'
 import { baseDeF8, ENTREGABLE, SUG_SECCION, entregableEn, EQUIPO_DE_ENTREGABLES, SECCION_ANTECEDENTES, SECCION_CONCLUSIONES, SECCIONES } from '../../test/f8'
-import { montar, pagina } from '../../test/montar'
+import { montar, pagina, ubicacion } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { GERENCIA_SOCIAL } from '../../test/portal'
 import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
@@ -30,11 +30,20 @@ const rutas = (entregable = ENTREGABLE, secciones = SECCIONES): MockRoute[] => [
   { path: '/objects/deliverable_section/records/sec-conclusiones', body: SECCION_CONCLUSIONES },
   ...baseDeF8(GERENCIA_SOCIAL)
 ]
+// sobre un data router, como en el portal: la página usa useBlocker para no salir con cambios sin guardar
 const abrir = (ruta = '/reports/deliverables/d1', especiales: RutaEspecial[] = [], entregable = ENTREGABLE, secciones = SECCIONES) => {
   fetch = mockFetch(rutas(entregable, secciones))
   red = espiarRed(especiales)
-  montar(<EntregablePage />, { ruta, camino: '/reports/deliverables/:deliverableId', usuario: GERENCIA_SOCIAL, permisos: EQUIPO_DE_ENTREGABLES })
+  const camino = ruta.startsWith('/projects/') ? '/projects/:projectId/reports/deliverables/:deliverableId' : '/reports/deliverables/:deliverableId'
+  montar(<EntregablePage />, { ruta, camino, usuario: GERENCIA_SOCIAL, permisos: EQUIPO_DE_ENTREGABLES, datos: true })
 }
+const RUTAS_DEL_PORTAL: MockRoute[] = [
+  { path: '/sgspe/deliverables/d1/draft', body: { status: null, pending: false, levels: [], warnings: [] } },
+  { path: '/objects/deliverable/records/d1/transitions', body: [] },
+  { path: '/objects/deliverable_version/records', body: pagina([]) },
+  { path: '/objects/deliverable/records/d1/documents', body: [] },
+  { path: '/objects/ai_suggestion/records', body: pagina([]) }
+]
 const guardado = (id: string): RutaEspecial => ({
   method: 'PUT',
   path: `/objects/deliverable_section/records/${id}`,
@@ -143,15 +152,15 @@ describe('S50 · entregable por secciones', () => {
   })
 
   it('vive en /reports/deliverables/:deliverableId', async () => {
-    fetch = abrirPortal('/reports/deliverables/d1', GERENCIA_SOCIAL, EQUIPO_DE_ENTREGABLES, [
-      ...rutas(),
-      { path: '/sgspe/deliverables/d1/draft', body: { status: null, pending: false, levels: [], warnings: [] } },
-      { path: '/objects/deliverable/records/d1/transitions', body: [] },
-      { path: '/objects/deliverable_version/records', body: pagina([]) },
-      { path: '/objects/deliverable/records/d1/documents', body: [] },
-      { path: '/objects/ai_suggestion/records', body: pagina([]) }
-    ])
+    fetch = abrirPortal('/reports/deliverables/d1', GERENCIA_SOCIAL, EQUIPO_DE_ENTREGABLES, [...rutas(), ...RUTAS_DEL_PORTAL])
     expect(await screen.findByRole('heading', { level: 1, name: 'Informe de campo de la Comunidad Ejemplo' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver a Reportes' })).toHaveAttribute('href', '/reports')
+  })
+
+  it('vive también en los Reportes de un proyecto, y «Volver» no sale del proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/reports/deliverables/d1', GERENCIA_SOCIAL, EQUIPO_DE_ENTREGABLES, [...rutas(), ...RUTAS_DEL_PORTAL])
+    expect(await screen.findByRole('heading', { level: 1, name: 'Informe de campo de la Comunidad Ejemplo' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver a Reportes' })).toHaveAttribute('href', '/projects/p1/reports')
   })
 
   it('con cambios sin guardar el panel de IA no deja usar la sugerencia, y sí tras guardar', async () => {
@@ -191,6 +200,30 @@ describe('S50 · entregable por secciones', () => {
     // sin cambios, se cambia de sección sin preguntar
     await userEvent.click(within(lista).getByRole('button', { name: /Antecedentes/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Antecedentes' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('con cambios sin guardar, salir por «Volver a Reportes» pide confirmación y solo sale al descartar', async () => {
+    abrir('/projects/p1/reports/deliverables/d1?seccion=antecedentes')
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Sin guardar.')
+    await userEvent.click(screen.getByRole('link', { name: 'Volver a Reportes' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Hay cambios sin guardar' })
+    expect(within(dialogo).getByText('Hay cambios sin guardar en esta sección. ¿Descartarlos y salir del entregable?')).toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(ubicacion.actual).toBe('/projects/p1/reports/deliverables/d1?seccion=antecedentes')
+    expect(screen.getByRole('textbox', { name: 'Texto de la sección' })).toHaveValue('La comunidad pidió una reunión en agosto. Sin guardar.')
+    await userEvent.click(screen.getByRole('link', { name: 'Volver a Reportes' }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Descartar' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/reports'))
+  })
+
+  it('sin cambios, «Volver a Reportes» sale sin preguntar', async () => {
+    abrir('/reports/deliverables/d1?seccion=antecedentes')
+    await screen.findByRole('heading', { level: 2, name: 'Antecedentes' })
+    await userEvent.click(screen.getByRole('link', { name: 'Volver a Reportes' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/reports'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 

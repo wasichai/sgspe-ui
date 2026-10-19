@@ -1,4 +1,5 @@
 import { useAuth } from '@wasichai/core'
+import { Button } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { NS } from '../i18n'
@@ -31,10 +32,12 @@ export function InicioPage() {
 // «Mi día» (S02, revisión de UX, etapa 2): lo primero que se ve contesta, en este orden, qué está vencido o por vencer a su cargo
 // y qué espera su decisión (AtencionRequerida), cómo crea lo de siempre (Atajos), cómo van sus proyectos (MisProyectos) y todo lo
 // que tiene abierto (SuTrabajo). la grilla de secciones, que repite la barra lateral, solo queda cuando no hay nada de eso: la
-// bienvenida de F1, sin indicadores (dashboards.md §11). la cuenta vive en el menú del perfil (shell/Perfil.tsx)
+// bienvenida de F1, sin indicadores (dashboards.md §11). la cuenta vive en el menú del perfil (shell/Perfil.tsx). el monitoreo de
+// la Tabla 9.5 y el catálogo de indicadores se ofrecen aquí también a quien no tiene la revisión ejecutiva, que los enlaza: a quien
+// lee indicator o indicator_measurement, el monitoreo; a quien lee indicator, el catálogo
 function Bienvenida() {
   const { t } = useTranslation(NS)
-  const { user, permissions, permissionsError } = useAuth()
+  const { user, permissions, permissionsError, can } = useAuth()
   const oferta = useOferta()
   const trabajo = useSuTrabajo()
   const atajos = useAtajos()
@@ -45,9 +48,28 @@ function Bienvenida() {
   const disponibles = estados.filter(({ estado }) => estado === 'disponible').length
   // mientras los permisos se leen, o si no se pudieron leer, can e isAdmin son falsos sin serlo: ningún estado sale de ellos
   const permisosNoListos = permissions ? null : permissionsError ? 'error' : 'cargando'
+  const conCatalogo = can('indicator', 'READ')
+  const conMonitoreo = conCatalogo || can('indicator_measurement', 'READ')
   return (
     <div className="mx-auto max-w-[1440px] space-y-8">
-      <EncabezadoDePagina titulo={t('inicio.titulo')} descripcion={t('inicio.bienvenida', { nombre: user?.displayName ?? '' })} />
+      <EncabezadoDePagina
+        titulo={t('inicio.titulo')}
+        descripcion={t('inicio.bienvenida', { nombre: user?.displayName ?? '' })}
+        secundarias={
+          conMonitoreo ? (
+            <>
+              <Button asChild size="sm" variant="secondary">
+                <Link to="/dashboards/monitoring">{t('tablerosF8.monitoreo.titulo')}</Link>
+              </Button>
+              {conCatalogo ? (
+                <Button asChild size="sm" variant="secondary">
+                  <Link to="/dashboards/indicators">{t('tablerosF8.catalogo.titulo')}</Link>
+                </Button>
+              ) : null}
+            </>
+          ) : undefined
+        }
+      />
       <AtencionRequerida />
       <Atajos />
       <MisProyectos />

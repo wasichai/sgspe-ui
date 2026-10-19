@@ -10,12 +10,14 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { texto, useRegistros } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { FalloDeProyectos, SelectorDeProyecto, useProyectoElegido } from '../reportes/exportacion'
+import { useContextFilters } from '../shell/context'
 import { NuevoEntregable } from './NuevoEntregable'
-import { NIVELES_DE_ENTREGABLE } from './tipos'
+import { NIVELES_DE_ENTREGABLE, rutaDeEntregable } from './tipos'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // los entregables de S49 (screens.md): del proyecto elegido (el de la URL o el del selector) o de todos los que la cuenta lee,
-// los más recientes primero. el código lleva a S50. «Nuevo entregable» pide un proyecto, CREATE sobre deliverable y la asignación
+// los más recientes primero. el código lleva a S50: dentro de un proyecto, bajo el proyecto del entregable, para que «Volver» no
+// salga del proyecto. «Nuevo entregable» pide un proyecto, CREATE sobre deliverable y la asignación
 // vigente (useEscribeEnProyecto); «Plantillas» (S64) es de la administración (decisión 20 del plan)
 export function EntregablesDeReportes() {
   const { t } = useTranslation(NS)
@@ -24,6 +26,7 @@ export function EntregablesDeReportes() {
   const entregables = useRegistros('deliverable', { project: proyecto || undefined, sort: 'updated_at', dir: 'desc', size: 50 })
   const escribe = useEscribeEnProyecto(proyecto || undefined)
   const [nuevo, setNuevo] = useState(false)
+  const { scope } = useContextFilters()
   const crea = can('deliverable', 'CREATE')
   const titulo = t('entregables.lista.titulo')
   return (
@@ -70,7 +73,10 @@ export function EntregablesDeReportes() {
                   {pagina.content.map((e) => (
                     <tr key={e.id}>
                       <Td className="text-sm">
-                        <Link to={`/reports/deliverables/${encodeURIComponent(e.id)}`} className="font-sg-mono text-sg-primary-text underline">
+                        <Link
+                          to={rutaDeEntregable(e.id, scope.kind === 'project' ? texto(e, 'project') : null)}
+                          className="font-sg-mono text-sg-primary-text underline"
+                        >
                           {texto(e, 'document_code')}
                         </Link>
                       </Td>

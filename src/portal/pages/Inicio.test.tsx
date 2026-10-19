@@ -160,6 +160,33 @@ describe('inicio de F1', () => {
   })
 })
 
+// F8 (sgspe-ui#32): sin la revisión ejecutiva, el monitoreo y el catálogo de indicadores también se alcanzan desde el inicio,
+// con los permisos de indicator e indicator_measurement
+describe('enlaces a los indicadores', () => {
+  const monitoreo = () => pagina().queryByRole('link', { name: 'Monitoreo del plan de relaciones comunitarias' })
+  const catalogo = () => pagina().queryByRole('link', { name: 'Catálogo de indicadores' })
+
+  it('quien lee indicator ve el monitoreo y el catálogo', async () => {
+    start(RELACIONISTA, { admin: false, objects: { indicator: ['READ'] } })
+    expect(await pagina().findByRole('link', { name: 'Monitoreo del plan de relaciones comunitarias' })).toHaveAttribute('href', '/dashboards/monitoring')
+    expect(catalogo()).toHaveAttribute('href', '/dashboards/indicators')
+  })
+
+  it('quien solo lee indicator_measurement ve el monitoreo y no el catálogo', async () => {
+    start(RELACIONISTA, { admin: false, objects: { indicator_measurement: ['READ'] } })
+    expect(await pagina().findByRole('link', { name: 'Monitoreo del plan de relaciones comunitarias' })).toBeInTheDocument()
+    expect(catalogo()).not.toBeInTheDocument()
+  })
+
+  it('sin leer ninguno de los dos, ninguno', async () => {
+    start(AUDITORA, SIN_PERMISOS)
+    // los permisos ya se leyeron: la bienvenida cuenta las secciones disponibles
+    expect(await pagina().findByText('1 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
+    expect(monitoreo()).not.toBeInTheDocument()
+    expect(catalogo()).not.toBeInTheDocument()
+  })
+})
+
 // ASM-078 sin nombres de rol (RQ-SEC-005): la variante del inicio sale de los permisos de la cuenta
 describe('inicio por rol', () => {
   it('sin variantes registradas, toda cuenta ve la bienvenida', async () => {

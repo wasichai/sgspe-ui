@@ -31,18 +31,24 @@ const abrir = (ruta = '/projects/p1/reports', usuario = GERENCIA_SOCIAL, permiso
     ...baseDeF8(usuario)
   ])
   red = espiarRed([{ method: 'POST', path: '/objects/deliverable/records', responder: () => jsonResponse({ ...ENTREGABLE, id: 'd9' }, 201) }])
-  montar(<EntregablesDeReportes />, { ruta, camino: '/projects/:projectId/reports', usuario, permisos })
+  montar(<EntregablesDeReportes />, { ruta, camino: ruta.startsWith('/projects/') ? '/projects/:projectId/reports' : '/reports', usuario, permisos })
 }
 
 describe('S49 · entregables', () => {
-  it('lista los entregables con su estado, su borrador y sus niveles, y enlaza a cada uno', async () => {
+  it('lista los entregables con su estado, su borrador y sus niveles, y enlaza a cada uno dentro de su proyecto', async () => {
     abrir()
     const tabla = await screen.findByRole('table', { name: 'Entregables' })
-    expect(within(tabla).getByRole('link', { name: 'INF-001' })).toHaveAttribute('href', '/reports/deliverables/d1')
+    expect(within(tabla).getByRole('link', { name: 'INF-001' })).toHaveAttribute('href', '/projects/p1/reports/deliverables/d1')
     const fila = within(tabla).getByRole('link', { name: 'INF-001' }).closest('tr')!
     expect(within(fila).getByText('Informe de campo y avance')).toBeInTheDocument()
     expect(within(fila).getByText('Listo')).toBeInTheDocument()
     expect(within(fila).getByText('Interno, Externo')).toBeInTheDocument()
+  })
+
+  it('fuera de un proyecto, enlaza a la ruta global de cada entregable', async () => {
+    abrir('/reports')
+    const tabla = await screen.findByRole('table', { name: 'Entregables' })
+    expect(within(tabla).getByRole('link', { name: 'INF-001' })).toHaveAttribute('href', '/reports/deliverables/d1')
   })
 
   it('un informe de campo pide la comunidad y el periodo, y se crea con motivo', async () => {
@@ -64,7 +70,7 @@ describe('S49 · entregables', () => {
     await userEvent.selectOptions(within(dialogo).getByLabelText('Plantilla'), 'informe-base')
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Informe mensual')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Crear entregable' }))
-    await waitFor(() => expect(ubicacion.actual).toBe('/reports/deliverables/d9'))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/reports/deliverables/d9'))
     const [alta] = red!.a('POST', '/objects/deliverable/records')
     expect(alta.cuerpo).toMatchObject({
       attributes: {
