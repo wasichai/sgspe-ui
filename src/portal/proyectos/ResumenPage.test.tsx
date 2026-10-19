@@ -130,6 +130,10 @@ describe('S08 · Project 360, resumen', () => {
     expect(red.a('GET', '/sgspe/dashboards/project')[0].ruta).toContain('project=p1')
     expect(red.a('GET', /^\/sgspe\/dashboards\/indicators\//)).toHaveLength(0)
     expect(screen.getByText('12 sin evaluar')).toBeInTheDocument()
+    // cada cifra lleva a su lista con el filtro puesto (revisión de UX, etapa 6); KPI-COM-03 son los vencidos
+    expect(within(salud).getByRole('link', { name: 'Compromisos vencidos: 3' })).toHaveAttribute('href', '/projects/p1/commitments?view=vencidos')
+    expect(within(salud).getByRole('link', { name: 'Riesgos altos: 8' })).toHaveAttribute('href', '/projects/p1/risks?level=alto')
+    expect(within(salud).getByRole('link', { name: 'QCS abiertas: 4' })).toHaveAttribute('href', '/projects/p1/attention')
   })
 
   it('el tablero del proyecto reparte compromisos, QCS, riesgos e inversión de la misma llamada', async () => {

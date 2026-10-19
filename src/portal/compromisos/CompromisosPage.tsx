@@ -1,3 +1,4 @@
+import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
@@ -14,7 +15,7 @@ import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useProyectos } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
-import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
+import { atributo, texto, useRelacionados, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
@@ -64,10 +65,16 @@ export function CompromisosPage() {
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const q = lista.filtro('q').trim().toLowerCase()
   const estado = lista.filtro('state')
+  // ?stakeholder=<id>: los compromisos que pidió un grupo de interés (commitment_stakeholder), desde las cifras de su ficha
+  const grupo = lista.filtro('stakeholder')
+  const delGrupo = useRelacionados('stakeholder', grupo || undefined, 'commitment_stakeholder')
+  const idsDelGrupo = new Set((delGrupo.data?.content ?? []).map((c) => c.id))
+  const chipDeGrupo = useChipDeGrupo(grupo)
   const filtrados = (compromisos.data ?? []).filter(
     (c) =>
       enVista(lista.vista, c, user?.id) &&
       (!estado || c.state === estado) &&
+      (!grupo || idsDelGrupo.has(c.id)) &&
       (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
   )
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
@@ -75,14 +82,17 @@ export function CompromisosPage() {
   // la etapa 3 de la revisión de UX: cada vista dice cuántos tiene (con la búsqueda y el estado puestos), los filtros activos
   // son chips con «Limpiar» y el vacío por filtros dice cuántos hay sin ellos
   const conFiltros = (c: Registro) =>
-    (!estado || c.state === estado) && (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
+    (!estado || c.state === estado) &&
+    (!grupo || idsDelGrupo.has(c.id)) &&
+    (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
   const conteoDe = (vista: string) => (compromisos.data ? compromisos.data.filter((c) => enVista(vista, c, user?.id) && conFiltros(c)).length : null)
   const enLaVista = (compromisos.data ?? []).filter((c) => enVista(lista.vista, c, user?.id)).length
   const chips = [
+    ...(grupo ? [{ clave: 'stakeholder', etiqueta: chipDeGrupo }] : []),
     ...(estado ? [{ clave: 'state', etiqueta: t('compromisos.filtroEstado', { estado: etiquetas[estado] ?? estado }) }] : []),
     ...(q ? [{ clave: 'q', etiqueta: t('compromisos.filtroBusqueda', { texto: lista.filtro('q').trim() }) }] : [])
   ]
-  const limpiar = () => lista.cambiar({ state: null, q: null })
+  const limpiar = () => lista.cambiar({ state: null, q: null, stakeholder: null })
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina

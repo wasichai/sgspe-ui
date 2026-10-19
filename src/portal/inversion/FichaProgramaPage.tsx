@@ -1,3 +1,4 @@
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -5,7 +6,6 @@ import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha, type PestanaDeFicha } from '../componentes/PestanasDeFicha'
-import { rutaDeFicha } from '../datos/fichas'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
@@ -189,6 +189,8 @@ function Resumen({ programa }: { programa: Registro }) {
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (el convenio y el socio), qué generó (sus aportes y
 // las tareas que nacen de él, task.social_program, spec F5 §3.1) y lo que lo sustenta (sus evidencias)
 function Trazabilidad({ programa, evidencias }: { programa: Registro; evidencias: Registro[] }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const leeTareas = can('task', 'READ')
@@ -239,7 +241,7 @@ function Trazabilidad({ programa, evidencias }: { programa: Registro; evidencias
             <ul>
               {evidencias.map((e) => (
                 <li key={e.id}>
-                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                 </li>
               ))}
             </ul>

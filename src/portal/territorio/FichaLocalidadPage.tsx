@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import type { UseQueryResult } from '@tanstack/react-query'
@@ -10,7 +11,6 @@ import { Drawer } from '../componentes/Drawer'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Cargando, Consulta, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
-import { Rastro } from '../contexto/Rastro'
 import {
   atributo,
   puedeEscribir,
@@ -78,7 +78,6 @@ function Ficha({ localidad }: { localidad: Registro }) {
   const [dibujando, setDibujando] = useState(false)
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <Rastro />
       {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, el reconocimiento como chip y los datos de la
           localidad debajo */}
       <EncabezadoDePagina
@@ -88,6 +87,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
         primaria={<TrabajarEnProyecto tipo="locality" id={localidad.id} />}
         secundarias={
           <>
+            <VerEnElMapa objeto="locality" registro={localidad} />
             {puedeEditar ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('territorio.editar')}

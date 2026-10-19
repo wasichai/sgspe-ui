@@ -12,7 +12,7 @@ import { Cargando, Consulta, NoDisponible, Restringido, NoEsDeSusProyectos } fro
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useActorDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro, useSiguientePaso } from '../contexto/Rastro'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
 import {
   atributo,
@@ -112,7 +112,6 @@ function Ficha({ grupo }: { grupo: Registro }) {
   useMigaDelRegistro(nombre)
   return (
     <article className="space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={[t('grupos.ficha.tipo'), opcion(grupo, 'stakeholder_type')].filter(Boolean).join(' · ')}
         titulo={nombre}
@@ -330,6 +329,13 @@ function Pendientes({ grupo }: { grupo: Registro }) {
   const qcsCargando = deQcs.some((q) => q.consulta.isPending)
   const qcsFallo = deQcs.some((q) => q.consulta.isError)
   const qcsAbiertas = deQcs.reduce((n, q) => n + (q.consulta.data ?? []).filter((r) => !QCS_TERMINADA.has(r.state ?? '')).length, 0)
+  // cada cifra lleva a su lista con el grupo puesto como filtro (design P8; revisión de UX, etapa 6)
+  const base = `/projects/${encodeURIComponent(String(atributo(grupo, 'project')))}`
+  const cifra = (ruta: string, texto: string) => (
+    <Link to={ruta} className="text-sg-primary-text underline">
+      {texto}
+    </Link>
+  )
   return (
     <ul className="space-y-1 text-sm">
       {leeCompromisos ? (
@@ -339,12 +345,23 @@ function Pendientes({ grupo }: { grupo: Registro }) {
           ) : compromisos.isError || conEstado.error ? (
             t('comun.errorDeCarga')
           ) : (
-            t('grupos.ficha.compromisosAbiertos', { count: conEstado.registros.filter((c) => COMPROMISO_ABIERTO.has(c.state ?? '')).length })
+            cifra(
+              `${base}/commitments?stakeholder=${encodeURIComponent(grupo.id)}`,
+              t('grupos.ficha.compromisosAbiertos', { count: conEstado.registros.filter((c) => COMPROMISO_ABIERTO.has(c.state ?? '')).length })
+            )
           )}
         </li>
       ) : null}
       {deQcs.length > 0 ? (
-        <li>{qcsCargando ? <Cargando compacto /> : qcsFallo ? t('comun.errorDeCarga') : t('grupos.ficha.qcsAbiertas', { count: qcsAbiertas })}</li>
+        <li>
+          {qcsCargando ? (
+            <Cargando compacto />
+          ) : qcsFallo ? (
+            t('comun.errorDeCarga')
+          ) : (
+            cifra(`${base}/attention?stakeholder=${encodeURIComponent(grupo.id)}`, t('grupos.ficha.qcsAbiertas', { count: qcsAbiertas }))
+          )}
+        </li>
       ) : null}
     </ul>
   )
@@ -356,6 +373,7 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const interacciones = useRelacionados('stakeholder', grupo.id, 'engagement_stakeholder')
+  const paso = useSiguientePaso()
   const compromisos = useCompromisosDelGrupo(grupo)
   const proyecto = String(atributo(grupo, 'project'))
   const dia = (e: Registro) => diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))
@@ -369,7 +387,11 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
       <ul>
         {(interacciones.data?.content ?? []).map((e) => (
           <li key={e.id}>
-            <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`} className="text-sg-primary-text underline">
+            <Link
+              to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`}
+              state={paso()}
+              className="text-sg-primary-text underline"
+            >
               {texto(e, 'title')}
             </Link>
             {dia(e) ? (
@@ -390,7 +412,11 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
           <ul>
             {(compromisos.data?.content ?? []).map((c) => (
               <li key={c.id}>
-                <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`} className="text-sg-primary-text underline">
+                <Link
+                  to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`}
+                  state={paso()}
+                  className="text-sg-primary-text underline"
+                >
                   {[texto(c, 'code'), texto(c, 'title')].filter(Boolean).join(' · ')}
                 </Link>
               </li>

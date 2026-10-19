@@ -1,3 +1,4 @@
+import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
@@ -107,9 +108,13 @@ export function AtencionPage() {
   const canal = lista.filtro('channel')
   const categoria = lista.filtro('category')
   const severidad = lista.filtro('severity')
+  // ?stakeholder=<id>: las QCS de un grupo de interés, desde las cifras de su ficha (revisión de UX, etapa 6)
+  const grupo = lista.filtro('stakeholder')
+  const chipDeGrupo = useChipDeGrupo(grupo)
   const visibles = filas.filter(
     (f) =>
       enVista(lista.vista, f, user?.id) &&
+      (!grupo || texto(f.registro, 'stakeholder') === grupo) &&
       (!canal || texto(f.registro, 'channel') === canal) &&
       (!categoria || texto(f.registro, 'category') === categoria) &&
       (!conSeveridad || !severidad || texto(f.registro, 'severity') === severidad) &&
@@ -120,6 +125,7 @@ export function AtencionPage() {
   // la etapa 3 de la revisión de UX: cada vista con su conteo (con los filtros puestos), los filtros como chips con «Limpiar» y el
   // vacío por filtros con cuántos hay sin ellos
   const conFiltros = (f: Fila) =>
+    (!grupo || texto(f.registro, 'stakeholder') === grupo) &&
     (!canal || texto(f.registro, 'channel') === canal) &&
     (!categoria || texto(f.registro, 'category') === categoria) &&
     (!conSeveridad || !severidad || texto(f.registro, 'severity') === severidad) &&
@@ -127,12 +133,13 @@ export function AtencionPage() {
   const conteoDe = (vista: string) => (cargando || fallida ? null : filas.filter((f) => enVista(vista, f, user?.id) && conFiltros(f)).length)
   const enLaVista = filas.filter((f) => enVista(lista.vista, f, user?.id)).length
   const chips = [
+    ...(grupo ? [{ clave: 'stakeholder', etiqueta: chipDeGrupo }] : []),
     ...(q ? [{ clave: 'q', etiqueta: t('atencion.filtroBusqueda', { texto: lista.filtro('q').trim() }) }] : []),
     ...(canal ? [{ clave: 'channel', etiqueta: `${t('atencion.canal')}: ${rotuloDeOpcion(canal)}` }] : []),
     ...(categoria ? [{ clave: 'category', etiqueta: `${t('atencion.categoria')}: ${rotuloDeOpcion(categoria)}` }] : []),
     ...(conSeveridad && severidad ? [{ clave: 'severity', etiqueta: `${t('atencion.severidad')}: ${rotuloDeOpcion(severidad)}` }] : [])
   ]
-  const limpiar = () => lista.cambiar({ q: null, channel: null, category: null, severity: null })
+  const limpiar = () => lista.cambiar({ q: null, channel: null, category: null, severity: null, stakeholder: null })
   const conConfidencialesOcultas = [abiertas, vencidas, absueltas].some((i) => i.data?.confidentialHidden === true)
   const tarjeta = (titulo: string, consulta: { data?: Indicador; error: unknown; isPending: boolean }) => (
     <KpiCard titulo={titulo} indicador={consulta.data} cargando={consulta.isPending} error={consulta.error} />

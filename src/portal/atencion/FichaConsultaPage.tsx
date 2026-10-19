@@ -1,3 +1,4 @@
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -236,6 +237,8 @@ function Ficha({
   // lo que nació de la QCS (el compromiso o el aporte creado al aceptar una solicitud), para «Qué generó»
   generado?: SeccionDeTrazabilidad[]
 }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const proyecto = texto(qcs, 'project')
   const escribe = useEscribeEnProyecto(proyecto)
@@ -345,7 +348,7 @@ function Ficha({
                   <ul>
                     {evidencias.data.content.map((e) => (
                       <li key={e.id}>
-                        <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                        <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                       </li>
                     ))}
                   </ul>

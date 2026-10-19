@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { ApiError } from '@wasichai/core'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -16,7 +17,8 @@ export function KpiCard({
   llegaEn,
   cargando,
   error,
-  notas
+  notas,
+  a
 }: {
   titulo: string
   indicador?: Indicador
@@ -24,6 +26,8 @@ export function KpiCard({
   cargando?: boolean
   error?: unknown
   notas?: ReactNode
+  // la lista con el filtro puesto: la cifra la enlaza (design P8; revisión de UX, etapa 6)
+  a?: string
 }) {
   const { t } = useTranslation(NS)
   let cuerpo
@@ -37,7 +41,15 @@ export function KpiCard({
   else
     cuerpo = (
       <>
-        <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">{numeroPe(indicador.value)}</p>
+        <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">
+          {a ? (
+            <Link to={a} aria-label={`${titulo}: ${numeroPe(indicador.value)}`} className="hover:underline">
+              {numeroPe(indicador.value)}
+            </Link>
+          ) : (
+            numeroPe(indicador.value)
+          )}
+        </p>
         <p className="text-sg-caption text-sg-text-muted">
           {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
             ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `

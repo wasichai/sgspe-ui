@@ -12,7 +12,6 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro } from '../contexto/Rastro'
 import { rutaDeFicha } from '../datos/fichas'
 import { atributo, texto, useActualizar, useRegistro, useTodos, useTodosConTope, type Registro } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
@@ -127,7 +126,6 @@ function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
   const enTriaje = alerta.state === 'in_triage'
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <Rastro />
       <Link to={volver} className="text-sm text-sg-primary-text underline">
         {t('alertas.ficha.volver')}
       </Link>

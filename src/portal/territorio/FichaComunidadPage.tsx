@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { useQueries, type UseQueryResult } from '@tanstack/react-query'
@@ -10,7 +11,6 @@ import { Drawer } from '../componentes/Drawer'
 import { Cargando, Consulta, ErrorDeCarga } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useNombreDelGrupo } from '../componentes/NombreDeActor'
-import { Rastro } from '../contexto/Rastro'
 import { usePedir } from '../datos/http'
 import { atributo, leerTodos, puedeEscribir, texto, useDefinicion, useRegistro, useTodos, usePuedeEditar, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
@@ -43,7 +43,6 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
   const [dibujando, setDibujando] = useState(false)
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <Rastro />
       {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, la situación orgánica y las partidas por verificar
           como chips, y las acciones en su lugar */}
       <EncabezadoDePagina
@@ -65,9 +64,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
         primaria={<TrabajarEnProyecto tipo="community" id={comunidad.id} />}
         secundarias={
           <>
-            <Button asChild size="sm" variant="secondary">
-              <Link to="/territory">{t('territorio.verEnMapa')}</Link>
-            </Button>
+            <VerEnElMapa objeto="community" registro={comunidad} />
             {puedeEditar ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('territorio.editar')}

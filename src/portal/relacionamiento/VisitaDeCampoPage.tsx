@@ -19,7 +19,6 @@ import { useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useAsignadoAlProyecto, useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
-import { Rastro } from '../contexto/Rastro'
 import { nuevaClave, usePedir } from '../datos/http'
 import {
   atributo,
@@ -224,7 +223,6 @@ function Visita({ visita }: { visita: Registro }) {
   const siguiente = useSiguienteAccion('field_visit', visita)
   return (
     <article className="space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={t('relacionamiento.visita.tipo')}
         titulo={texto(visita, 'title')}

@@ -1,3 +1,5 @@
+import { VistaPrevia } from '../componentes/VistaPrevia'
+import { Rastro } from '../contexto/Rastro'
 import { useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
 import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal } from 'lucide-react'
@@ -94,7 +96,12 @@ export function AppShell() {
             <ListaDeSecciones rotulo={ROTULO} />
           </nav>
           <main id="content" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-5 pb-20 sm:pb-5 md:px-6 2xl:px-8">
+            {/* el rastro, en un solo lugar para todas las pantallas (revisión de UX, etapa 6): aparece al seguir un enlace */}
+            <div className="mx-auto max-w-[1440px] empty:hidden [&:has(nav)]:mb-3">
+              <Rastro />
+            </div>
             <Outlet />
+            <VistaPrevia />
           </main>
         </div>
       </div>

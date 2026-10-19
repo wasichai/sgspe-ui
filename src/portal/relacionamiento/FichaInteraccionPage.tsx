@@ -1,3 +1,6 @@
+import { useSiguientePaso } from '../contexto/Rastro'
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -28,7 +31,6 @@ import { AcuerdosDeLaInteraccion } from '../acuerdos/AcuerdosDeLaInteraccion'
 import { DialogoDeDerivacion, QcsDeLaPregunta } from '../atencion/Derivacion'
 import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro } from '../contexto/Rastro'
 import { DocumentosEmitidos } from '../documentos/DocumentosEmitidos'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { AccionesDeIa, casosDeInteraccion } from '../ia/AccionesDeIa'
@@ -101,7 +103,6 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
   const evidencias = useEvidenciasDe('engagement', interaccion.id)
   return (
     <article className="space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={[t('relacionamiento.ficha.tipo'), opcion(interaccion, 'engagement_type')].filter(Boolean).join(' · ')}
         titulo={texto(interaccion, 'title')}
@@ -125,22 +126,25 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         }
         primaria={<BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />}
         secundarias={
-          // lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5)
-          <CrearRelacionado
-            proyecto={proyecto}
-            acciones={[
-              {
-                objeto: 'commitment',
-                etiqueta: t('paginas.relacionados.compromiso'),
-                a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
-              },
-              {
-                objeto: [...OBJETOS_DE_QCS],
-                etiqueta: t('paginas.relacionados.qcs'),
-                a: `/projects/${encodeURIComponent(proyecto)}/attention/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
-              }
-            ]}
-          />
+          <>
+            <VerEnElMapa objeto="engagement" registro={interaccion} />
+            {/* lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5) */}
+            <CrearRelacionado
+              proyecto={proyecto}
+              acciones={[
+                {
+                  objeto: 'commitment',
+                  etiqueta: t('paginas.relacionados.compromiso'),
+                  a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
+                },
+                {
+                  objeto: [...OBJETOS_DE_QCS],
+                  etiqueta: t('paginas.relacionados.qcs'),
+                  a: `/projects/${encodeURIComponent(proyecto)}/attention/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
+                }
+              ]}
+            />
+          </>
         }
       />
       <AccionesDeIa
@@ -491,6 +495,9 @@ function FilaDePregunta({
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la visita de campo, los grupos de interés y los
 // temas), qué generó (los compromisos y las QCS que nacieron de ella) y lo que la sustenta (sus evidencias)
 function Trazabilidad({ interaccion }: { interaccion: Registro }) {
+  const paso = useSiguientePaso()
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const proyecto = String(atributo(interaccion, 'project'))
@@ -521,7 +528,7 @@ function Trazabilidad({ interaccion }: { interaccion: Registro }) {
             <ul>
               {grupos.data.content.map((g) => (
                 <li key={g.id}>
-                  <Link to={`${base}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
+                  <Link to={`${base}/stakeholders/${encodeURIComponent(g.id)}`} state={paso()} className="text-sg-primary-text underline">
                     <NombreDelGrupo grupo={g} />
                   </Link>
                 </li>
@@ -555,7 +562,7 @@ function Trazabilidad({ interaccion }: { interaccion: Registro }) {
             <ul>
               {evidencias.data.content.map((e) => (
                 <li key={e.id}>
-                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                 </li>
               ))}
             </ul>

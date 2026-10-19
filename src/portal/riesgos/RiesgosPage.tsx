@@ -10,7 +10,7 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { ChipsDeFiltro, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -53,6 +53,8 @@ const CAMPOS_DEL_ALTA = [
 
 const cerrado = (r: Registro) => r.state === 'closed'
 
+const NIVELES_ALTOS = ['ALTO', 'CRITICO']
+
 export function enVista(vista: string, r: Registro, usuario: string | undefined): boolean {
   switch (vista) {
     case 'revision':
@@ -90,7 +92,9 @@ export function RiesgosPage() {
   const proyectos = useProyectos()
   const umbrales = umbralesDe(registroDelProyecto.data)
   const celda = lista.filtro('cell')
-  const enLaVista = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id))
+  // ?level=alto: los de nivel alto o crítico, como «Riesgos altos» (KPI-RSK-01) del resumen y del tablero (revisión de UX, etapa 6)
+  const soloAltos = lista.filtro('level') === 'alto'
+  const enLaVista = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id) && (!soloAltos || NIVELES_ALTOS.includes(texto(r, 'risk_level'))))
   const filtrados = celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
   const crea = proyecto !== undefined && escribe && can('social_risk', 'CREATE')
@@ -144,6 +148,11 @@ export function RiesgosPage() {
         }))}
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista, cell: null })}
+      />
+      <ChipsDeFiltro
+        chips={soloAltos ? [{ clave: 'level', etiqueta: t('riesgos.filtroAltos') }] : []}
+        alQuitar={(clave) => lista.cambiar({ [clave]: null })}
+        alLimpiar={() => lista.cambiar({ level: null })}
       />
       {riesgos.truncado ? <Alert tone="warning">{t('riesgos.truncado', { n: numeroPe(riesgos.data?.length ?? 0) })}</Alert> : null}
       {riesgos.isPending ? (

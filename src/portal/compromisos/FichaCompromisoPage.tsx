@@ -1,10 +1,11 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { useSumasDeConteos } from '../datos/conteos'
-import { rutaDeFicha } from '../datos/fichas'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import type { UseQueryResult } from '@tanstack/react-query'
@@ -26,7 +27,6 @@ import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro } from '../contexto/Rastro'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { atributo, texto, usePuedeEditar, useRegistro, useRegistros, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
@@ -119,7 +119,6 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   const evidencias = useEvidenciasDe('commitment', compromiso.id)
   return (
     <article className="space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={[t('fichaCompromiso.titulo'), texto(compromiso, 'code'), opcion(compromiso, 'resource_type')].filter(Boolean).join(' · ')}
         titulo={texto(compromiso, 'title')}
@@ -138,16 +137,19 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         }
         primaria={<BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
         secundarias={
-          edita ? (
-            <>
-              <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
-                {t('fichaCompromiso.editar')}
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
-                {t('fichaCompromiso.riesgo')}
-              </Button>
-            </>
-          ) : undefined
+          <>
+            <VerEnElMapa objeto="commitment" registro={compromiso} />
+            {edita ? (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
+                  {t('fichaCompromiso.editar')}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
+                  {t('fichaCompromiso.riesgo')}
+                </Button>
+              </>
+            ) : null}
+          </>
         }
       />
       {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
@@ -323,6 +325,8 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
 // evidencias), con los grupos fijos de PanelDeTrazabilidad. una queja confidencial que quien mira no lee se dice «Registro
 // reservado» (RegistroVinculado); una lectura que falló lo dice al pie
 function Trazabilidad({ compromiso }: { compromiso: Registro }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const proyecto = texto(compromiso, 'project')
   const interaccion = useRegistro('engagement', atributo<string>(compromiso, 'origin_engagement'))
@@ -402,7 +406,7 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
               <ul>
                 {evidencias.data.content.map((e) => (
                   <li key={e.id}>
-                    <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                    <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                   </li>
                 ))}
               </ul>

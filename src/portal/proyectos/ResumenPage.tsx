@@ -129,11 +129,42 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
       <Atencion proyecto={proyecto} inactividad={parametro('inactivity_days')} revision={parametro('stakeholder_review_days')} />
       <section aria-label={t('p360.resumen.salud')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <h2 className="sr-only">{t('p360.resumen.salud')}</h2>
-        <KpiCard titulo={t('p360.resumen.kpis.gruposVigentes')} indicador={stk01.data} cargando={stk01.isPending} error={stk01.error} />
-        <KpiCard titulo={t('p360.resumen.kpis.interacciones')} indicador={eng01.data} cargando={eng01.isPending} error={eng01.error} />
-        <KpiCard titulo={t('p360.resumen.kpis.compromisos')} indicador={com03.data} cargando={com03.isPending} error={com03.error} />
-        <KpiCard titulo={t('p360.resumen.kpis.qcs')} indicador={grv02.data} cargando={grv02.isPending} error={grv02.error} />
-        <KpiCard titulo={t('p360.resumen.kpis.riesgos')} indicador={rsk01.data} cargando={rsk01.isPending} error={rsk01.error} />
+        {/* cada cifra lleva a su lista con el filtro puesto (design P8; revisión de UX, etapa 6) */}
+        <KpiCard
+          titulo={t('p360.resumen.kpis.gruposVigentes')}
+          indicador={stk01.data}
+          cargando={stk01.isPending}
+          error={stk01.error}
+          a={`/projects/${encodeURIComponent(proyecto.id)}/stakeholders?view=todos`}
+        />
+        <KpiCard
+          titulo={t('p360.resumen.kpis.interacciones')}
+          indicador={eng01.data}
+          cargando={eng01.isPending}
+          error={eng01.error}
+          a={`/projects/${encodeURIComponent(proyecto.id)}/engagements`}
+        />
+        <KpiCard
+          titulo={t('p360.resumen.kpis.compromisos')}
+          indicador={com03.data}
+          cargando={com03.isPending}
+          error={com03.error}
+          a={`/projects/${encodeURIComponent(proyecto.id)}/commitments?view=vencidos`}
+        />
+        <KpiCard
+          titulo={t('p360.resumen.kpis.qcs')}
+          indicador={grv02.data}
+          cargando={grv02.isPending}
+          error={grv02.error}
+          a={`/projects/${encodeURIComponent(proyecto.id)}/attention`}
+        />
+        <KpiCard
+          titulo={t('p360.resumen.kpis.riesgos')}
+          indicador={rsk01.data}
+          cargando={rsk01.isPending}
+          error={rsk01.error}
+          a={`/projects/${encodeURIComponent(proyecto.id)}/risks?level=alto`}
+        />
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
         <section aria-label={t('p360.resumen.paisaje')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">

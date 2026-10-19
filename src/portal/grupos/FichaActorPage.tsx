@@ -10,7 +10,6 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Cargando, NoDisponible, Restringido } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { nombreDe } from '../componentes/NombreDeActor'
-import { Rastro } from '../contexto/Rastro'
 import { usePedir } from '../datos/http'
 import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
@@ -66,7 +65,6 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
   const nombre = nombreDe(actor, tipo, t('comun.personaRegistrada'))
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={tipo === 'organization' ? texto(actor, 'organization_type') || t('grupos.actor.organizacion') : t('grupos.actor.persona')}
         titulo={nombre}

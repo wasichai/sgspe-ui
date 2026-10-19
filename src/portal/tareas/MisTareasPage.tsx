@@ -6,18 +6,16 @@ import { useProyectos } from '../contexto/proyectos'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { hoyEnLima } from '../datos/fechas'
-import { rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { origenDe, TareaDrawer } from './TareaDrawer'
+import { OrigenDeTarea, TareaDrawer } from './TareaDrawer'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 
@@ -151,7 +149,6 @@ function TablaDeTareas({
         </thead>
         <tbody>
           {tareas.map((x) => {
-            const origen = origenDe(x)
             return (
               <tr key={x.id}>
                 <Td className="text-sm">
@@ -170,13 +167,7 @@ function TablaDeTareas({
                   </Td>
                 ) : null}
                 <Td className="text-sm">
-                  {origen ? (
-                    <Link to={rutaParaAbrir(origen.objeto, origen.id)} className="underline">
-                      {t(`tareas.origenes.${origen.objeto}`)}
-                    </Link>
-                  ) : (
-                    t('tareas.sinOrigen')
-                  )}
+                  <OrigenDeTarea tarea={x} />
                 </Td>
                 <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td>
                 <Td className="space-x-2 text-sm">

@@ -1,3 +1,5 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -128,6 +130,7 @@ function Ficha({ queja }: { queja: Registro }) {
         primaria={<BotonesDeTransicion objeto="grievance" registro={queja} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
         secundarias={
           <>
+            <VerEnElMapa objeto="grievance" registro={queja} />
             {edita ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('fichaQueja.comun.editar')}
@@ -225,6 +228,8 @@ function Ficha({ queja }: { queja: Registro }) {
 // alimenta (el riesgo y el incidente vinculados, la queja de la que es duplicado, los compromisos que nacen de ella) y lo que
 // la sustenta (sus evidencias)
 function Trazabilidad({ queja, origen, evidencias }: { queja: Registro; origen: SeccionDeTrazabilidad[]; evidencias: Registro[] }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const compromisos = useTodos('commitment', { origin_grievance: queja.id })
   const rotulo = useRotuloDeRegistro()
@@ -275,7 +280,7 @@ function Trazabilidad({ queja, origen, evidencias }: { queja: Registro; origen: 
               <ul>
                 {evidencias.map((e) => (
                   <li key={e.id}>
-                    <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                    <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                   </li>
                 ))}
               </ul>

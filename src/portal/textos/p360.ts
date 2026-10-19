@@ -23,7 +23,7 @@ export const ES_P360 = {
     kpis: {
       gruposVigentes: 'Grupos de interés vigentes',
       interacciones: 'Interacciones realizadas este mes',
-      compromisos: 'Compromisos abiertos',
+      compromisos: 'Compromisos vencidos',
       qcs: 'QCS abiertas',
       riesgos: 'Riesgos altos'
     },
@@ -199,7 +199,7 @@ export const EN_P360: typeof ES_P360 = {
     kpis: {
       gruposVigentes: 'Current stakeholders',
       interacciones: 'Engagements held this month',
-      compromisos: 'Open commitments',
+      compromisos: 'Overdue commitments',
       qcs: 'Open grievances',
       riesgos: 'High risks'
     },
