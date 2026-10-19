@@ -39,15 +39,15 @@ const deInversion = (): MockRoute[] => [
 describe('rutas de F5', () => {
   it('la sección Programas sociales se ofrece y /programs abre S42 de todos los proyectos', async () => {
     fetch = abrirPortal('/programs', INVERSION, EQUIPO_DE_INVERSION, deInversion())
-    expect(await screen.findByRole('heading', { name: 'Programas e inversión', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Programas sociales', level: 1 })).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Programas sociales' })).toHaveAttribute('href', '/programs')
   })
 
   it('la pestaña del proyecto lleva a S42; programs/dashboard es el tablero y programs/sp1 la ficha del programa', async () => {
     fetch = abrirPortal('/projects/p1/programs', INVERSION, EQUIPO_DE_INVERSION, deInversion())
-    expect(await screen.findByRole('heading', { name: 'Programas e inversión', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Programas sociales', level: 1 })).toBeInTheDocument()
     const pestanas = screen.getByRole('navigation', { name: 'Secciones del proyecto' })
-    expect(within(pestanas).getByRole('link', { name: 'Programas e inversión' })).toHaveAttribute('href', '/projects/p1/programs')
+    expect(within(pestanas).getByRole('link', { name: 'Programas sociales' })).toHaveAttribute('href', '/projects/p1/programs')
     cleanup()
     fetch.restore()
     fetch = abrirPortal('/projects/p1/programs/dashboard', INVERSION, EQUIPO_DE_INVERSION, deInversion())

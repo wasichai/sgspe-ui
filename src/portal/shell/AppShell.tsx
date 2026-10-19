@@ -1,16 +1,20 @@
 import { useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
 import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Campana } from '../avisos/Campana'
-import { SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
+import { ChipDeProyecto, SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
 import { BotonPreguntar, ProveedorDelAsistente } from '../ia/Asistente'
 import { BotonBuscar } from '../busqueda/BusquedaGlobal'
 import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
+import { seccionDeRuta } from './seccionActual'
+import { useInsignias } from './insignias'
+import { Insignia } from '../componentes/Insignia'
+import { useTituloDeDocumento } from '../componentes/Pagina'
 import { ThemeMenu } from './ThemeMenu'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
@@ -38,8 +42,12 @@ export function AppShell() {
     .filter(Boolean)
     .join(', ')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  // el panel del menú se cierra al cambiar de ruta: al elegir una sección o un proyecto en su selector
+  const { pathname } = useLocation()
+  useEffect(() => setMenuAbierto(false), [pathname])
   return (
     <ProveedorDelAsistente>
+      <TituloDeSeccion />
       <div className="flex h-full flex-col bg-sg-bg text-sg-text">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-sg-border bg-sg-surface px-4">
           <button
@@ -59,6 +67,7 @@ export function AppShell() {
           {/* el selector de proyecto ("Todos mis proyectos" o uno) lee y escribe el alcance de la URL (./context.ts); la
             búsqueda con ⌘K (S03) queda para después de F2 */}
           <SelectorDeProyecto />
+          <ChipDeProyecto alAbrir={() => setMenuAbierto(true)} />
           <div className="flex-1" />
           {/* el asistente no es una sección (ASM-073): su botón vive aquí y se dibuja si el servidor tiene la IA (F7) */}
           <BotonBuscar />
@@ -102,6 +111,7 @@ export function AppShell() {
             <span className="block text-sg-text">{user?.displayName}</span>
             {rotulosDeRol ? <span className="block text-sg-caption text-sg-text-muted">{rotulosDeRol}</span> : null}
           </p>
+          <SelectorDeProyecto siempre />
           <nav aria-label={t('shell.seccionesDelMenu')} className="min-h-0 flex-1 overflow-y-auto">
             <ListaDeSecciones rotulo={ROTULO_VISIBLE} alElegir={() => setMenuAbierto(false)} />
           </nav>
@@ -120,16 +130,34 @@ export function AppShell() {
   )
 }
 
+// el título del documento con la sección de la ruta (D7): la capa más baja; el proyecto y la pantalla lo precisan
+function TituloDeSeccion() {
+  const { t } = useTranslation(NS)
+  const { pathname } = useLocation()
+  const clave = seccionDeRuta(pathname)
+  useTituloDeDocumento(clave ? t(`secciones.${clave}`) : pathname === '/notifications' ? t('avisos.titulo') : '', 0)
+  return null
+}
+
 // las secciones que se le ofrecen a la cuenta (useArbol), en su orden: en la barra lateral (rótulo solo desde xl) y en el
 // panel del menú (rótulo siempre, y elegir una cierra el panel)
+// la sección marcada es la de la ruta (seccionDeRuta): dentro de un proyecto, la del módulo abierto. un nombre largo se ve
+// corto («QCS») y el completo queda en aria-label y en title
 function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () => void }) {
   const { t } = useTranslation(NS)
   const secciones = useArbol()
+  const actual = seccionDeRuta(useLocation().pathname)
+  const insignias = useInsignias()
+  const idInsignia = useId()
   return (
     <ul className="space-y-0.5">
       {secciones.map((seccion) => {
         const Icono = seccion.icon ?? LayoutDashboard
         const nombre = t(`secciones.${seccion.clave}`)
+        const corto = t(`seccionesCortas.${seccion.clave}`, { defaultValue: '' })
+        const marcada = seccion.clave === actual
+        const pendientes = seccion.clave === 'tasks' ? insignias.tareas : null
+        const idDeEsta = `${idInsignia}-${seccion.clave}`
         return (
           <li key={seccion.clave}>
             {seccion.external ? (
@@ -139,16 +167,24 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
                 <ExternalLink aria-hidden className="ml-auto hidden size-3 xl:block" />
               </a>
             ) : (
-              <NavLink
+              <Link
                 to={seccion.to}
-                end={seccion.to === '/'}
                 title={nombre}
+                aria-label={corto ? nombre : undefined}
+                aria-current={marcada ? 'page' : undefined}
+                aria-describedby={pendientes ? idDeEsta : undefined}
                 onClick={alElegir}
-                className={({ isActive }) => cn(ENLACE, isActive ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
+                className={cn(ENLACE, 'relative', marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
               >
                 <Icono aria-hidden className="size-4 shrink-0" />
-                <span className={rotulo}>{nombre}</span>
-              </NavLink>
+                <span className={rotulo}>{corto || nombre}</span>
+                <Insignia
+                  n={pendientes}
+                  id={idDeEsta}
+                  descripcion={t('shell.insignias.tareas', { count: pendientes ?? 0 })}
+                  className={rotulo === ROTULO ? 'absolute top-0.5 right-0.5 xl:static xl:ml-auto' : 'ml-auto'}
+                />
+              </Link>
             )}
           </li>
         )
@@ -162,6 +198,8 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
 function BarraInferior({ alMas }: { alMas: () => void }) {
   const { t } = useTranslation(NS)
   const conTareas = useArbol().some((s) => s.clave === 'tasks')
+  const insignias = useInsignias()
+  const id = useId()
   const destino = 'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-sg-caption'
   const estilo = ({ isActive }: { isActive: boolean }) => cn(destino, isActive ? 'text-sg-primary-text' : 'text-sg-text-secondary')
   return (
@@ -171,14 +209,26 @@ function BarraInferior({ alMas }: { alMas: () => void }) {
         {t('secciones.dashboard')}
       </NavLink>
       {conTareas ? (
-        <NavLink to="/tasks" className={estilo}>
+        <NavLink to="/tasks" aria-describedby={insignias.tareas ? `${id}-tareas` : undefined} className={(e) => cn(estilo(e), 'relative')}>
           <ListChecks aria-hidden className="size-5" />
           {t('secciones.tasks')}
+          <Insignia
+            n={insignias.tareas}
+            id={`${id}-tareas`}
+            descripcion={t('shell.insignias.tareas', { count: insignias.tareas ?? 0 })}
+            className="absolute top-1 left-1/2 ml-2"
+          />
         </NavLink>
       ) : null}
-      <NavLink to="/notifications" className={estilo}>
+      <NavLink to="/notifications" aria-describedby={insignias.avisos ? `${id}-avisos` : undefined} className={(e) => cn(estilo(e), 'relative')}>
         <Bell aria-hidden className="size-5" />
         {t('avisos.titulo')}
+        <Insignia
+          n={insignias.avisos}
+          id={`${id}-avisos`}
+          descripcion={t('shell.insignias.avisos', { count: insignias.avisos ?? 0 })}
+          className="absolute top-1 left-1/2 ml-2"
+        />
       </NavLink>
       <button type="button" onClick={alMas} className={cn(destino, 'text-sg-text-secondary')}>
         <MoreHorizontal aria-hidden className="size-5" />

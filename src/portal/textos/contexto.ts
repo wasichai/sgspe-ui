@@ -2,6 +2,15 @@
 // y sub-navegación de Project 360
 export const ES_CONTEXTO = {
   proyecto: 'Proyecto',
+  conteos: {
+    total_one: '{{count}} en total',
+    total_other: '{{count}} en total',
+    vencidos_one: '{{count}} vencido',
+    vencidos_other: '{{count}} vencidos'
+  },
+  masPestanas: 'Más secciones del proyecto',
+  vistasDe: 'Vistas de {{pestana}}',
+  cambiarProyecto: 'Proyecto: {{proyecto}}. Cambiar de proyecto',
   todos: 'Todos mis proyectos',
   // con la acción de leer todos los proyectos (o ADMIN), el alcance global no es «mis» proyectos (plan 4.4b)
   todosLosProyectos: 'Todos los proyectos',
@@ -22,7 +31,7 @@ export const ES_CONTEXTO = {
     agreements: 'Acuerdos',
     attention: 'Quejas, consultas y solicitudes',
     risks: 'Riesgos',
-    programs: 'Programas e inversión',
+    programs: 'Programas sociales',
     documents: 'Documentos',
     tasks: 'Tareas',
     settings: 'Equipo y parámetros',
@@ -40,6 +49,15 @@ export const ES_CONTEXTO = {
 
 export const EN_CONTEXTO: typeof ES_CONTEXTO = {
   proyecto: 'Project',
+  conteos: {
+    total_one: '{{count}} in total',
+    total_other: '{{count}} in total',
+    vencidos_one: '{{count}} overdue',
+    vencidos_other: '{{count}} overdue'
+  },
+  masPestanas: 'More project sections',
+  vistasDe: '{{pestana}} views',
+  cambiarProyecto: 'Project: {{proyecto}}. Change project',
   todos: 'All my projects',
   todosLosProyectos: 'All projects',
   sinProyectos: 'You have no assigned projects. Ask the project administrator for an assignment.',
@@ -59,7 +77,7 @@ export const EN_CONTEXTO: typeof ES_CONTEXTO = {
     agreements: 'Agreements',
     attention: 'Grievances, inquiries and requests',
     risks: 'Risks',
-    programs: 'Programs and investment',
+    programs: 'Social programs',
     documents: 'Documents',
     tasks: 'Tasks',
     settings: 'Team and parameters',

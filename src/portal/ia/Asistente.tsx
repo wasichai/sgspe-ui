@@ -95,10 +95,12 @@ export function BotonPreguntar() {
     <button
       type="button"
       onClick={() => asistente.abrir({ proyecto: scope.kind === 'project' ? scope.projectId : undefined })}
+      title={t('shell.preguntar')}
       className="flex h-8 items-center gap-1.5 rounded-sg-md border border-dashed border-sg-ai-border bg-sg-ai-soft px-2.5 text-sg-body-sm text-sg-ai hover:bg-sg-surface-hover"
     >
       <Sparkles aria-hidden className="size-4" />
-      {t('shell.preguntar')}
+      {/* en el teléfono, solo el ícono: la barra superior no da para más (el nombre sigue para lectores y en title) */}
+      <span className="sr-only sm:not-sr-only">{t('shell.preguntar')}</span>
     </button>
   )
 }

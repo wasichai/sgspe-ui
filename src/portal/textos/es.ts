@@ -150,6 +150,12 @@ export const ES = {
     incorrecta: 'La contraseña no es correcta.'
   },
   shell: {
+    insignias: {
+      tareas_one: '{{count}} tarea suya vencida o por vencer',
+      tareas_other: '{{count}} tareas suyas vencidas o por vencer',
+      avisos_one: '{{count}} aviso sin leer que pide acción',
+      avisos_other: '{{count}} avisos sin leer que piden acción'
+    },
     salir: 'Cerrar sesión',
     menu: 'Menú',
     seccionesDelMenu: 'Secciones del menú',
@@ -164,6 +170,10 @@ export const ES = {
     idiomaNoGuardado: 'No se pudo guardar el idioma'
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
+  // el rótulo corto de una sección cuyo nombre no cabe en la barra lateral; el completo va en aria-label y title
+  seccionesCortas: {
+    attention: 'QCS'
+  },
   secciones: {
     dashboard: 'Inicio',
     projects: 'Proyectos',

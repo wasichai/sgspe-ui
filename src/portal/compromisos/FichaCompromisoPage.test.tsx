@@ -129,6 +129,16 @@ describe('S29 · ficha de compromiso', () => {
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 
+  // etapa 1 de la revisión de UX: sin el enlace suelto a la lista (lo dicen las migas del proyecto) y con el código y el
+  // título en el del documento
+  it('dice dónde se está con las migas y el título del documento, sin enlace suelto a la lista', async () => {
+    fetch = mockFetch(rutas(C1))
+    abrir()
+    await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })
+    expect(screen.queryByRole('link', { name: 'Compromisos del proyecto' })).not.toBeInTheDocument()
+    expect(document.title).toMatch(/^C-001 Reservorio de agua para Tunas Pampa · /)
+  })
+
   it('un compromiso que no existe lo dice con su texto, sin reintento', async () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/commitment/records/c1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrir()

@@ -144,6 +144,24 @@ test.beforeEach(async ({ page }) => {
   await prepararApi(page)
 })
 
+// etapa 1 de la revisión de UX: en una ficha, las migas dicen dónde vive el registro, la barra lateral marca el módulo y el
+// título del documento lleva el código; las migas llevan de vuelta a la lista
+test('la ficha dice dónde se está: migas, sección marcada y título del documento', async ({ page }) => {
+  await prepararCompromisos(page)
+  await page.goto('/projects/p1/commitments/c1')
+  await expect(page.getByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeVisible()
+  const migas = page.getByRole('navigation', { name: 'Ubicación' })
+  await expect(migas.getByText('C-001')).toHaveAttribute('aria-current', 'page')
+  await expect(migas.getByRole('link', { name: /^PRJ-01 · / })).toHaveAttribute('href', '/projects/p1/overview')
+  await expect(page.getByRole('navigation', { name: 'Secciones', exact: true }).getByRole('link', { name: 'Compromisos' })).toHaveAttribute(
+    'aria-current',
+    'page'
+  )
+  await expect(page).toHaveTitle(/^C-001 Reservorio de agua para Tunas Pampa · .* · SGSPE$/)
+  await migas.getByRole('link', { name: 'Compromisos' }).click()
+  await expect(page).toHaveURL(/\/projects\/p1\/commitments$/)
+})
+
 // D6 de la revisión de UX: en el teléfono las pestañas de la ficha caben en la pantalla y se desplazan con su flecha, sin
 // empujar el contenido hacia la derecha
 test('a 390 px las pestañas de la ficha se desplazan sin salirse de la pantalla', async ({ page }) => {

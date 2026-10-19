@@ -11,7 +11,9 @@ import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
+import { useMigaDelRegistro } from '../componentes/Migas'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { useTituloDeDocumento } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
@@ -96,12 +98,12 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
     setEditando(null)
     setMotivo('')
   }
+  // dónde se está: el código en las migas del proyecto (en lugar del enlace suelto a la lista) y en el título del documento
+  useMigaDelRegistro(texto(compromiso, 'code') || texto(compromiso, 'title'))
+  useTituloDeDocumento([texto(compromiso, 'code'), texto(compromiso, 'title')].filter(Boolean).join(' '))
   return (
     <article className="space-y-4">
       <Rastro />
-      <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments`} className="text-sm text-sg-primary-text underline">
-        {t('fichaCompromiso.volver')}
-      </Link>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">

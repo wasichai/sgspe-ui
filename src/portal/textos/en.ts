@@ -150,6 +150,12 @@ export const EN: Textos = {
     incorrecta: 'The password is not correct.'
   },
   shell: {
+    insignias: {
+      tareas_one: '{{count}} of your tasks is overdue or due soon',
+      tareas_other: '{{count}} of your tasks are overdue or due soon',
+      avisos_one: '{{count}} unread notification needs action',
+      avisos_other: '{{count}} unread notifications need action'
+    },
     salir: 'Sign out',
     menu: 'Menu',
     seccionesDelMenu: 'Menu sections',
@@ -162,6 +168,9 @@ export const EN: Textos = {
     preguntar: 'Ask',
     idioma: 'Language',
     idiomaNoGuardado: 'Could not save the language'
+  },
+  seccionesCortas: {
+    attention: 'GIR'
   },
   secciones: {
     dashboard: 'Home',
