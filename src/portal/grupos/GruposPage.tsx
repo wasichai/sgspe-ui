@@ -3,7 +3,6 @@ import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
-import { SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, ThConExplicacion, esProhibido } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
@@ -20,6 +19,7 @@ import { NuevoGrupo } from './NuevoGrupo'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Correo } from '../componentes/Correo'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
 
 // S16 · lista de grupos de interés (screens.md §5): la misma página con alcance global (agrega la columna Proyecto) o de un
 // proyecto (ASM-076). vistas del sistema, filtros en la URL, selección para registrar una interacción con varios y el chip
@@ -135,10 +135,9 @@ export function GruposPage() {
           />
           <div className="flex flex-wrap gap-3">
             {filtros.map((f) => (
-              <SelectNativo
+              <FiltroDeLista
                 key={f}
-                aria-label={t(`grupos.filtros.${f}`)}
-                className="w-auto"
+                etiqueta={t(`grupos.filtros.${f}`)}
                 opciones={opciones(f)}
                 value={lista.filtro(f)}
                 onChange={(e) => lista.cambiar({ [f]: e.target.value })}
@@ -290,7 +289,7 @@ function Fila({
           />
         </Td>
       ) : null}
-      <Td>
+      <Td className="min-w-48">
         <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(grupo.id)}`} className="font-medium text-sg-primary-text">
           <NombreDelGrupo grupo={grupo} />
         </Link>

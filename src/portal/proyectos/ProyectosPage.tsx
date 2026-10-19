@@ -3,7 +3,6 @@ import { Button, Table, Td, Th } from '@wasichai/ui'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
-import { SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Vacio } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
@@ -12,6 +11,7 @@ import { useLeeTodosLosProyectos, useMisAsignaciones } from '../contexto/proyect
 import { atributo, texto, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
 
 // S06 · lista de proyectos (screens.md §3): vistas "Mis proyectos", "Activos", "En revisión" y "Todos"; filtros por tipo,
 // etapa y fase en la URL; la jefatura son las asignaciones activas con el rol de jefatura (ASM-080) y la campaña en curso,
@@ -102,10 +102,9 @@ export function ProyectosPage() {
       />
       <div className="flex flex-wrap gap-3">
         {FILTROS.filter(([campo]) => opciones(campo).length > 0).map(([campo, clave]) => (
-          <SelectNativo
+          <FiltroDeLista
             key={campo}
-            aria-label={t(`proyectos.filtros.${clave}`)}
-            className="w-auto"
+            etiqueta={t(`proyectos.filtros.${clave}`)}
             opciones={opciones(campo)}
             value={lista.filtro(campo)}
             onChange={(e) => lista.cambiar({ [campo]: e.target.value })}

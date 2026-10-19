@@ -225,6 +225,7 @@ function Aportes({ proyecto }: { proyecto?: string }) {
         <span className="block">{t('inversion.aportes.estado')}</span>
         <SelectNativo
           className={CONTROL}
+          textoVacio={t('comun.todos')}
           value={estado}
           onChange={(e) => lista.cambiar({ state: e.target.value })}
           opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}

@@ -1,7 +1,6 @@
 import { Alert, Button, cn, Pagination } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { SelectNativo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -22,6 +21,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { destinoDeAviso } from '../datos/fichas'
 import { fechaYHoraPe, NS } from '../i18n'
 import { PreferenciasDeAvisos } from './PreferenciasDeAvisos'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
 
 // S04 · avisos (/notifications, screens.md §14): la bandeja de wasichai-notifications de la persona, con «Solo sin leer» y los
 // pospuestos, por tipo; abrir un aviso lo marca leído y lleva a su registro; posponer lo esconde hasta mañana a las 8:00 de Lima;
@@ -62,14 +62,13 @@ export function AvisosPage() {
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
-      <label className="flex items-center gap-2 text-sm">
-        {t('avisos.tipo')}
-        <SelectNativo
-          value={tipo ?? ''}
-          onChange={(e) => lista.cambiar({ kind: e.target.value })}
-          opciones={TIPOS_DE_AVISO.map((k) => ({ valor: k, etiqueta: t(`avisos.tipos.${k}`) }))}
-        />
-      </label>
+      <FiltroDeLista
+        etiqueta={t('avisos.tipo')}
+        className="max-w-xs"
+        value={tipo ?? ''}
+        onChange={(e) => lista.cambiar({ kind: e.target.value })}
+        opciones={TIPOS_DE_AVISO.map((k) => ({ valor: k, etiqueta: t(`avisos.tipos.${k}`) }))}
+      />
       {avisos.isPending ? (
         <Cargando />
       ) : avisos.isError && !avisos.data ? (

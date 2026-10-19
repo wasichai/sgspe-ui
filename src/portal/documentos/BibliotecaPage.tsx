@@ -110,6 +110,7 @@ export function BibliotecaPage() {
         <label className="space-y-1">
           <span className="block">{t('documentos.tipo')}</span>
           <SelectNativo
+            textoVacio={t('comun.todos')}
             value={lista.filtro('evidence_type')}
             onChange={(e) => lista.cambiar({ evidence_type: e.target.value })}
             opciones={opciones('evidence_type')}
@@ -119,6 +120,7 @@ export function BibliotecaPage() {
           <label className="space-y-1">
             <span className="block">{t('documentos.clasificacion')}</span>
             <SelectNativo
+              textoVacio={t('comun.todos')}
               value={lista.filtro('classification')}
               onChange={(e) => lista.cambiar({ classification: e.target.value })}
               opciones={opciones('classification')}

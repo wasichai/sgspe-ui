@@ -112,6 +112,7 @@ export function CompromisosPage() {
             <label className="space-y-1">
               <span className="block">{t('compromisos.estado')}</span>
               <SelectNativo
+                textoVacio={t('comun.todos')}
                 value={estado}
                 onChange={(e) => lista.cambiar({ state: e.target.value })}
                 opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}

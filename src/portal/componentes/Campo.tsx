@@ -44,16 +44,22 @@ export function Campo({
 export const CONTROL = 'h-9 w-full rounded-sg-md border border-sg-border-strong bg-sg-surface px-2.5 text-sm text-sg-text'
 
 // un select nativo: accesible, con teclado y fácil de probar; las opciones son los valores ENUM tal como se guardan
+// textoVacio: lo que dice la opción vacía; en un formulario, «Seleccionar…»; en un filtro, «Todos» (FiltroDeLista)
 export function SelectNativo({
   opciones,
   vacio = true,
+  textoVacio,
   className,
   ...props
-}: Omit<React.ComponentProps<'select'>, 'children'> & { opciones: readonly (string | { valor: string; etiqueta: string })[]; vacio?: boolean }) {
+}: Omit<React.ComponentProps<'select'>, 'children'> & {
+  opciones: readonly (string | { valor: string; etiqueta: string })[]
+  vacio?: boolean
+  textoVacio?: string
+}) {
   const { t } = useTranslation(NS)
   return (
     <select className={cn(CONTROL, className)} {...props}>
-      {vacio ? <option value="">{t('comun.seleccionar')}</option> : null}
+      {vacio ? <option value="">{textoVacio ?? t('comun.seleccionar')}</option> : null}
       {opciones.map((o) =>
         typeof o === 'string' ? (
           <option key={o} value={o}>

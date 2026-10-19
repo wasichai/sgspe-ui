@@ -80,7 +80,11 @@ describe('S16 · lista de grupos de interés', () => {
     fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(within(filas()[0]).getByText('En contra')).toBeInTheDocument()
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Postura' }), 'EN CONTRA')
+    // el filtro tiene su rótulo a la vista y, sin elegir, dice «Todos»
+    const postura = screen.getByRole('combobox', { name: 'Postura' })
+    expect(postura.closest('label')).toHaveTextContent(/^Postura/)
+    expect(postura).toHaveDisplayValue('Todos')
+    await userEvent.selectOptions(postura, 'EN CONTRA')
     await waitFor(() => expect(filas()).toHaveLength(1))
   })
 

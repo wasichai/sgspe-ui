@@ -141,7 +141,7 @@ describe('S06 · lista de proyectos', () => {
       within(fase)
         .getAllByRole('option')
         .map((o) => o.textContent)
-    ).toEqual(['Seleccionar…', 'PRE_EXPLORACION', 'EXPLORACION_AVANZADA'])
+    ).toEqual(['Todos', 'PRE_EXPLORACION', 'EXPLORACION_AVANZADA'])
   })
 
   it('la jefatura repetida se muestra una vez y un líder sin correo no deja un nombre vacío', async () => {
