@@ -1,6 +1,16 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { PestanasDeFicha, type PestanaDeFicha } from '../componentes/PestanasDeFicha'
+import { rutaDeFicha } from '../datos/fichas'
+import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Tabs, Textarea } from '@wasichai/ui'
+import { Alert, Button, Textarea } from '@wasichai/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -14,7 +24,7 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { RegistrosSimples, type ColumnaSimple } from '../componentes/RegistrosSimples'
-import { EnlaceDeFicha, RegistroVinculado } from '../componentes/RegistroVinculado'
+import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { aDiezmilesimos } from '../datos/decimales'
 import { APORTE_TERMINADO, enSolicitud, monedaDe, TERMINOS_APROBADOS, totalDeItems } from '../datos/inversion'
@@ -50,6 +60,8 @@ const EDITABLES = [
   'has_institutional_synergy',
   'agreement'
 ]
+// el camino de WF-P sin sus excepciones (rechazar, cancelar); un estado fuera de él se agrega
+const CAMINO = ['requested', 'approved', 'procured', 'delivered', 'closed']
 const COMPROBAR = ['approve', 'approve_direct', 'register_procurement', 'register_delivery', 'close']
 const CAMPOS_DEL_ITEM = ['description', 'item_kind', 'quantity', 'unit', 'unit_cost', 'line_amount']
 
@@ -89,17 +101,23 @@ function Ficha({ aporte }: { aporte: Registro }) {
     setMotivo('')
   }
   const titulo = t('fichaAporte.titulo', { codigo: texto(aporte, 'code') })
-  const pestanas: { id: string; label: string; render: () => ReactNode }[] = [
-    { id: 'resumen', label: t('fichaAporte.pestanas.resumen'), render: () => <Resumen aporte={aporte} /> },
-    { id: 'entrega', label: t('fichaAporte.pestanas.entrega'), render: () => <EntregaDelAporte aporte={aporte} escribe={escribe} /> },
+  // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
+  // decisión, pestañas con conteo y trazabilidad en tres grupos
+  useMigaDelRegistro(texto(aporte, 'code'))
+  const siguiente = useSiguienteAccion('social_contribution', aporte, COMPROBAR)
+  const evidencias = useEvidenciasDe('social_contribution', aporte.id)
+  const pestanas: PestanaDeFicha[] = [
+    { id: 'resumen', etiqueta: t('fichaAporte.pestanas.resumen'), render: () => <Resumen aporte={aporte} /> },
+    { id: 'entrega', etiqueta: t('fichaAporte.pestanas.entrega'), render: () => <EntregaDelAporte aporte={aporte} escribe={escribe} /> },
     {
       id: 'evidencias',
-      label: t('fichaAporte.pestanas.evidencias'),
+      etiqueta: t('fichaAporte.pestanas.evidencias'),
+      conteo: evidencias.data?.totalElements ?? null,
       render: () => <EvidenciasDelRegistro objeto="social_contribution" registro={aporte} escribe={escribe} />
     },
     {
       id: 'actividad',
-      label: t('fichaAporte.pestanas.actividad'),
+      etiqueta: t('fichaAporte.pestanas.actividad'),
       render: () => (
         <div className="pt-3">
           <Historia objeto="social_contribution" id={aporte.id} vacio={t('fichaAporte.sinActividad')} />
@@ -109,40 +127,40 @@ function Ficha({ aporte }: { aporte: Registro }) {
   ]
   return (
     <article className="space-y-4">
-      <Link to={`/projects/${encodeURIComponent(proyecto)}/programs`} className="text-sm text-sg-primary-text underline">
-        {t('fichaAporte.volver')}
-      </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {[opcion(aporte, 'contribution_type'), texto(aporte, 'occasion')].filter(Boolean).join(' · ') || '—'}
-          </p>
-          <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+      <EncabezadoDePagina
+        antetitulo={[t('fichaAporte.tipo'), texto(aporte, 'code'), opcion(aporte, 'contribution_type'), texto(aporte, 'occasion')].filter(Boolean).join(' · ')}
+        titulo={titulo}
+        chips={
+          <>
             <EstadoChip objeto="social_contribution" estado={aporte.state} />
             <span className="tabular-nums">{t('fichaAporte.total', { monto: montoPe(atributo(aporte, 'total_amount'), monedaDe(aporte)) })}</span>
-            {texto(aporte, 'exploration_campaign') ? (
-              <span>
-                {t('fichaAporte.campana')}: <RegistroVinculado objeto="exploration_campaign" id={texto(aporte, 'exploration_campaign')} />
-              </span>
-            ) : null}
-          </div>
-        </div>
-        <div className="space-y-2">
-          {edita ? (
+          </>
+        }
+        primaria={<BotonesDeTransicion objeto="social_contribution" registro={aporte} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        secundarias={
+          edita ? (
             <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
               {t('fichaAporte.editar')}
             </Button>
-          ) : null}
-          <BotonesDeTransicion objeto="social_contribution" registro={aporte} proyecto={proyecto} comprobarAntes={COMPROBAR} />
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
+      <CaminoDelFlujo objeto="social_contribution" estado={aporte.state} camino={CAMINO} />
+      <PanelDeDecision
+        objeto="social_contribution"
+        estado={aporte.state}
+        desde={texto(aporte, 'state_changed_at') || null}
+        por={texto(aporte, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={texto(aporte, 'owner_user_email') || null}
+        vencimiento={null}
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs label={titulo} tabs={pestanas} />
+        <PestanasDeFicha etiqueta={titulo} pestanas={pestanas} />
         {/* en teléfono, «Antes de aprobar» sube antes de los ítems (screens.md S44, Responsive) */}
         <aside className="order-first space-y-4 lg:order-none">
           {solicitud ? <AntesDeAprobar aporte={aporte} escribe={escribe} /> : null}
-          <Trazabilidad aporte={aporte} />
+          <Trazabilidad aporte={aporte} evidencias={evidencias.data?.content ?? []} />
         </aside>
       </div>
       <Drawer
@@ -303,32 +321,57 @@ function TopeDeLaCampana({ aporte, total }: { aporte: Registro; total: string | 
 
 // de dónde viene el aporte: la solicitud aceptada que lo creó (created_contribution). una QCS que la cuenta no lee no la trae la
 // lista (alcance y confidencialidad), así que solo se dice que no nace de una solicitud que la cuenta lea
-function Trazabilidad({ aporte }: { aporte: Registro }) {
+// la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la solicitud de origen, el acuerdo, el compromiso
+// y la campaña) y lo que lo sustenta (sus evidencias)
+function Trazabilidad({ aporte, evidencias }: { aporte: Registro; evidencias: Registro[] }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const leeSolicitudes = can('stakeholder_request', 'READ')
   const solicitudes = useRegistros('stakeholder_request', { created_contribution: aporte.id, size: 1 }, leeSolicitudes)
   const solicitud = solicitudes.data?.content[0]
+  const nombreDeEvidencia = useNombreDeEvidencia()
+  const vinculo = (campo: string, objeto: string, titulo: string) => ({
+    clave: campo,
+    titulo,
+    contenido: texto(aporte, campo) ? <RegistroVinculado objeto={objeto} id={texto(aporte, campo)} /> : null
+  })
   return (
-    <section aria-label={t('fichaAporte.trazabilidad.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaAporte.trazabilidad.titulo')}</h2>
-      {leeSolicitudes ? (
-        // un div, no un <p>: «Cargando» y el aviso de fallo ya son párrafos o bloques
-        <div>
-          {t('fichaAporte.trazabilidad.solicitud')}:{' '}
-          {solicitudes.isPending ? (
-            <Cargando compacto />
+    <PanelDeTrazabilidad
+      deDondeViene={[
+        {
+          clave: 'solicitud',
+          titulo: t('fichaAporte.trazabilidad.solicitud'),
+          // un div, no un <p>: «Cargando» y el aviso de fallo ya son párrafos o bloques
+          contenido: !leeSolicitudes ? null : solicitudes.isPending ? (
+            <div>
+              <Cargando compacto />
+            </div>
           ) : solicitudes.isError && !solicitudes.data ? (
             <FalloDeLectura error={solicitudes.error} alReintentar={() => void solicitudes.refetch()} />
           ) : solicitud ? (
-            <EnlaceDeFicha objeto="stakeholder_request" registro={solicitud}>
-              {texto(solicitud, 'code')}
-            </EnlaceDeFicha>
-          ) : (
-            t('fichaAporte.trazabilidad.sinSolicitud')
-          )}
-        </div>
-      ) : null}
-    </section>
+            <EnlaceDeRegistro titulo={texto(solicitud, 'code')} ruta={rutaDeFicha('stakeholder_request', solicitud)} />
+          ) : null
+        },
+        vinculo('agreement', 'agreement', t('fichaAporte.trazabilidad.acuerdo')),
+        vinculo('commitment', 'commitment', t('fichaAporte.trazabilidad.compromiso')),
+        vinculo('exploration_campaign', 'exploration_campaign', t('fichaAporte.campana'))
+      ]}
+      vacios={{ deDondeViene: t('fichaAporte.trazabilidad.sinSolicitud') }}
+      loSustenta={[
+        {
+          clave: 'evidencias',
+          titulo: t('fichaAporte.pestanas.evidencias'),
+          contenido: evidencias.length ? (
+            <ul>
+              {evidencias.map((e) => (
+                <li key={e.id}>
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                </li>
+              ))}
+            </ul>
+          ) : null
+        }
+      ]}
+    />
   )
 }

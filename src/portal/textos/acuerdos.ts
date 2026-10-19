@@ -23,6 +23,9 @@ export const ES_ACUERDOS = {
   motivo: 'Motivo del registro o del cambio (obligatorio)',
   motivoAyuda: 'Un acuerdo exige un motivo en cada registro o cambio.',
   ficha: {
+    tipo: 'Acuerdo',
+    compromisos: 'Compromisos que lo implementan',
+    evidencias: 'Evidencias',
     volver: 'Acuerdos del proyecto',
     editar: 'Editar el acuerdo',
     editarTitulo: 'Datos del acuerdo',
@@ -96,6 +99,9 @@ export const EN_ACUERDOS: typeof ES_ACUERDOS = {
   motivo: 'Reason for the record or the change (required)',
   motivoAyuda: 'An agreement needs a reason on every record or change.',
   ficha: {
+    tipo: 'Agreement',
+    compromisos: 'Commitments that implement it',
+    evidencias: 'Evidence',
     volver: 'Project agreements',
     editar: 'Edit the agreement',
     editarTitulo: 'Agreement data',

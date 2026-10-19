@@ -1,3 +1,13 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { RegistroVinculado, useRotuloDeRegistro } from '../componentes/RegistroVinculado'
+import { rutaDeFicha } from '../datos/fichas'
+import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Textarea, Th } from '@wasichai/ui'
@@ -48,6 +58,67 @@ export function FichaAcuerdoPage() {
   )
 }
 
+// el camino de WF-I sin sus excepciones (suspender, terminar, cancelar); un estado fuera de él se agrega
+const CAMINO = ['draft', 'in_negotiation', 'active', 'concluded']
+
+// la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la asamblea que lo autoriza y la comunidad),
+// qué generó (los compromisos que lo implementan) y lo que lo sustenta (sus evidencias)
+function Trazabilidad({ acuerdo }: { acuerdo: Registro }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const compromisos = useTodos('commitment', { agreement: acuerdo.id }, can('commitment', 'READ'))
+  const evidencias = useEvidenciasDe('agreement', acuerdo.id)
+  const nombreDeEvidencia = useNombreDeEvidencia()
+  const rotulo = useRotuloDeRegistro()
+  return (
+    <PanelDeTrazabilidad
+      deDondeViene={[
+        {
+          clave: 'asamblea',
+          titulo: t('acuerdos.ficha.asamblea'),
+          contenido: texto(acuerdo, 'assembly_engagement') ? <RegistroVinculado objeto="engagement" id={texto(acuerdo, 'assembly_engagement')} /> : null
+        },
+        {
+          clave: 'comunidad',
+          titulo: t('acuerdos.ficha.comunidad'),
+          contenido: texto(acuerdo, 'community') ? <RegistroVinculado objeto="community" id={texto(acuerdo, 'community')} /> : null
+        }
+      ]}
+      queGenero={[
+        {
+          clave: 'compromisos',
+          titulo: t('acuerdos.ficha.compromisos'),
+          contenido: compromisos.data?.length ? (
+            <ul>
+              {compromisos.data.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center gap-2">
+                  <EnlaceDeRegistro titulo={rotulo(c)} ruta={rutaDeFicha('commitment', c)} />
+                  <EstadoChip objeto="commitment" estado={c.state} />
+                </li>
+              ))}
+            </ul>
+          ) : null
+        }
+      ]}
+      loSustenta={[
+        {
+          clave: 'evidencias',
+          titulo: t('acuerdos.ficha.evidencias'),
+          contenido: evidencias.data?.content.length ? (
+            <ul>
+              {evidencias.data.content.map((e) => (
+                <li key={e.id}>
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                </li>
+              ))}
+            </ul>
+          ) : null
+        }
+      ]}
+    />
+  )
+}
+
 function Ficha({ acuerdo }: { acuerdo: Registro }) {
   const { t } = useTranslation(NS)
   const proyecto = texto(acuerdo, 'project')
@@ -56,32 +127,45 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
   const [editando, setEditando] = useState(false)
   const [motivo, setMotivo] = useState('')
   const tipo = texto(acuerdo, 'agreement_type')
+  // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
+  // decisión con el vencimiento y la vigencia, y trazabilidad en tres grupos; las cláusulas, las partes y los predios siguen
+  useMigaDelRegistro(texto(acuerdo, 'code') || texto(acuerdo, 'title'))
+  const siguiente = useSiguienteAccion('agreement', acuerdo, ['activate', 'activate_from_draft', 'resume'])
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Rastro />
-      <Link to={`/projects/${encodeURIComponent(proyecto)}/agreements`} className="text-sm text-sg-primary-text underline">
-        {t('acuerdos.ficha.volver')}
-      </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {texto(acuerdo, 'code')} · {rotuloDeOpcion(tipo)}
-          </p>
-          <h1 className="text-sg-h1 font-semibold">{texto(acuerdo, 'title')}</h1>
-          <div className="flex flex-wrap items-center gap-2">
+      <EncabezadoDePagina
+        antetitulo={[t('acuerdos.ficha.tipo'), texto(acuerdo, 'code'), rotuloDeOpcion(tipo)].filter(Boolean).join(' · ')}
+        titulo={texto(acuerdo, 'title')}
+        chips={
+          <>
             <EstadoChip objeto="agreement" estado={acuerdo.state} />
             <SituacionDePlazo valor={atributo(acuerdo, 'validity_status')} vigencia />
-          </div>
-        </div>
-        <div className="space-y-2">
-          {edita ? (
+          </>
+        }
+        primaria={
+          <BotonesDeTransicion objeto="agreement" registro={acuerdo} proyecto={proyecto} comprobarAntes={['activate', 'activate_from_draft', 'resume']} />
+        }
+        secundarias={
+          edita ? (
             <Button variant="secondary" size="sm" onClick={() => setEditando(true)}>
               {t('acuerdos.ficha.editar')}
             </Button>
-          ) : null}
-          <BotonesDeTransicion objeto="agreement" registro={acuerdo} proyecto={proyecto} comprobarAntes={['activate', 'activate_from_draft', 'resume']} />
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
+      <CaminoDelFlujo objeto="agreement" estado={acuerdo.state} camino={CAMINO} />
+      <PanelDeDecision
+        objeto="agreement"
+        estado={acuerdo.state}
+        desde={texto(acuerdo, 'state_changed_at') || null}
+        por={texto(acuerdo, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={texto(acuerdo, 'owner_user_email') || null}
+        vencimiento={texto(acuerdo, 'expiry_date') || null}
+        situacion={atributo(acuerdo, 'validity_status')}
+        tipoDeSituacion="vigencia"
+      />
       <section aria-label={t('acuerdos.ficha.vigencia')} className="flex flex-wrap gap-4 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
         <span>
           {t('acuerdos.ficha.firmado')}: {texto(acuerdo, 'signed_date') ? diaPe(texto(acuerdo, 'signed_date')) : t('acuerdos.ficha.sinFecha')}
@@ -111,6 +195,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
           </section>
         </div>
         <aside className="space-y-4">
+          <Trazabilidad acuerdo={acuerdo} />
           <Partes acuerdo={acuerdo} escribe={escribe} />
           <Titulares acuerdo={acuerdo} />
           <Predios acuerdo={acuerdo} escribe={escribe} conPredios={CON_PREDIOS.includes(tipo)} />

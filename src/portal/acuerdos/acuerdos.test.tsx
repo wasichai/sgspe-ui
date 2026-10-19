@@ -158,6 +158,26 @@ describe('S33 · acuerdos', () => {
     expect(alta.cabeceras.get('Idempotency-Key')).toBeTruthy()
   })
 
+  // revisión de UX, etapa 4: la anatomía común (camino del flujo, panel de decisión con la vigencia, trazabilidad)
+  it('la ficha dice el camino del flujo, su vigencia en el panel de decisión y los tres grupos de trazabilidad', async () => {
+    fetch = mockFetch(rutas())
+    montar(<FichaAcuerdoPage />, {
+      ruta: '/projects/p1/agreements/ag1',
+      camino: '/projects/:projectId/agreements/:agreementId',
+      usuario: GERENCIA_SOCIAL,
+      permisos: EQUIPO
+    })
+    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Vencimiento' })).toBeInTheDocument()
+    const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
+    expect(
+      within(panel)
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label'))
+    ).toEqual(['De dónde viene', 'Qué generó', 'Lo sustenta'])
+    expect(screen.queryByRole('link', { name: 'Acuerdos del proyecto' })).not.toBeInTheDocument()
+  })
+
   it('la ficha dice qué cláusula no tiene compromiso, quién firmó y que la servidumbre sin predios no registra su vigencia', async () => {
     fetch = mockFetch(rutas())
     montar(<FichaAcuerdoPage />, {
