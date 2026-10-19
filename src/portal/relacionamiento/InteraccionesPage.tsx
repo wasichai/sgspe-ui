@@ -19,6 +19,7 @@ import { useTableroDisponible } from '../tableros/comunes'
 import { diaDe, esDia, esFormal, esMes, mesActual, semanaDe, semanasDelMes, sumarMeses } from './fechas'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { ListaPlegable } from '../componentes/ListaPlegable'
 
 // S21 y S22 · calendario y lista de interacciones (screens.md §6, flujo 4): el mes frente a la meta (KPI-ENG-02), las
 // festividades de la línea base como contexto y "Te toca". la misma consulta se ve como mes, semana o lista; el alcance es
@@ -423,20 +424,30 @@ function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes
             <p className="text-sg-text-muted">{t('comun.errorDeCarga')}</p>
           )
         ) : (
-          <ul>
-            {pendientes.map((i) => (
-              <li key={i.id}>
-                <Link
-                  to={`/projects/${encodeURIComponent(texto(i, 'project'))}/engagements/${encodeURIComponent(i.id)}${i.state === 'held' ? '/minutes' : ''}`}
-                  className="text-sg-primary-text underline"
-                >
-                  {i.state === 'held'
-                    ? t('relacionamiento.actaPorRedactar', { titulo: texto(i, 'title') })
-                    : t('relacionamiento.postergada', { titulo: texto(i, 'title') })}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          // las actas por redactar y las postergadas, cada grupo con su conteo y cinco a la vista
+          <div className="mt-2 space-y-3">
+            {(['held', 'postponed'] as const).map((estado) => {
+              const delEstado = pendientes.filter((i) => i.state === estado)
+              return (
+                <ListaPlegable
+                  key={estado}
+                  titulo={t(estado === 'held' ? 'relacionamiento.grupoActas' : 'relacionamiento.grupoPostergadas', { count: delEstado.length })}
+                  elementos={delEstado.map((i) => ({
+                    clave: i.id,
+                    contenido: (
+                      <Link
+                        to={`/projects/${encodeURIComponent(texto(i, 'project'))}/engagements/${encodeURIComponent(i.id)}${i.state === 'held' ? '/minutes' : ''}`}
+                        className="text-sg-primary-text underline"
+                      >
+                        {texto(i, 'title')}
+                      </Link>
+                    )
+                  }))}
+                />
+              )
+            })}
+            {pendientes.length === 0 ? <p className="text-sm text-sg-text-muted">{t('relacionamiento.nadaPendiente')}</p> : null}
+          </div>
         )}
       </section>
       <section aria-label={t('relacionamiento.festividades')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">

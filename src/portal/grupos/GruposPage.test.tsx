@@ -224,7 +224,7 @@ describe('S16 · lista de grupos de interés', () => {
     fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
     await waitFor(() => expect(filas()).toHaveLength(2))
     await userEvent.click(within(filas()[1]).getByRole('checkbox'))
-    expect(screen.getByText('1 seleccionados')).toBeInTheDocument()
+    expect(screen.getByText('1 seleccionado')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Postura' }), 'EN CONTRA')
     await waitFor(() => expect(filas()).toHaveLength(1))
     expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()

@@ -18,7 +18,8 @@ export const ES_APROBACIONES = {
     social_program: 'Aprobación de programa',
     social_contribution: 'Aprobación de aporte'
   },
-  dias: '{{n}} días',
+  dias_one: '{{n}} día',
+  dias_other: '{{n}} días',
   hoy: 'Hoy',
   si: 'Sí',
   noPuede: 'No: {{razon}}',
@@ -67,7 +68,8 @@ export const EN_APROBACIONES: typeof ES_APROBACIONES = {
     social_program: 'Program approval',
     social_contribution: 'Contribution approval'
   },
-  dias: '{{n}} days',
+  dias_one: '{{n}} day',
+  dias_other: '{{n}} days',
   hoy: 'Today',
   si: 'Yes',
   noPuede: 'No: {{razon}}',

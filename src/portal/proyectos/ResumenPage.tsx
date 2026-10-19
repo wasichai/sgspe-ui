@@ -1,5 +1,6 @@
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -15,7 +16,7 @@ import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { atributo, texto, usePuedeEditar, useTodos, type Registro } from '../datos/registros'
 import { BarraDePosturas } from '../graficos/BarraDePosturas'
 import { MiniMatriz, puntosDeMatriz } from '../graficos/MiniMatriz'
-import { NS, numeroPe } from '../i18n'
+import { NS, numeroPe, periodoPe } from '../i18n'
 import { AccionesDeIa } from '../ia/AccionesDeIa'
 import { ResumenEjecutivo } from '../ia/ResumenEjecutivo'
 import { useCapas } from '../mapa/api'
@@ -26,6 +27,7 @@ import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { vigente, PARAMETROS_F2 } from './parametros'
 import { TableroDelProyecto, useIndicadoresDelProyecto } from './TableroDelProyecto'
 import { opcion } from '../datos/opciones'
+import { ListaPlegable } from '../componentes/ListaPlegable'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
 // project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
@@ -185,7 +187,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
                   <li key={s.period} className="flex items-center gap-2">
                     <span className="w-48">
                       {t('p360.resumen.reunionesMes', {
-                        mes: s.period,
+                        mes: periodoPe(s.period),
                         valor: s.value === null || s.value === undefined ? '—' : numeroPe(s.value),
                         meta: numeroPe(meta)
                       })}
@@ -254,40 +256,46 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   const interacciones = useTodos('engagement', { project: proyecto.id })
   const grupos = useTodos('stakeholder', { project: proyecto.id })
   const hoy = hoyEnLima()
-  const items = [
-    ...(interacciones.data ?? [])
-      .filter((e) => e.state === 'held' && TIPOS_FORMALES.includes(texto(e, 'engagement_type')))
-      .map((e) => ({
-        id: e.id,
-        texto: t('p360.resumen.actaPendiente', { titulo: texto(e, 'title') }),
-        ruta: `/projects/${encodeURIComponent(proyecto.id)}/engagements/${encodeURIComponent(e.id)}`
-      })),
-    ...(grupos.data ?? [])
-      // una cuenta que no lee last_contact_date (la clave no viene en el registro) no puede decir si hubo contacto
-      .filter((g) => g.state !== 'retired' && 'last_contact_date' in g.attributes)
-      .flatMap((g) => {
-        const dias = diasEntre(atributo(g, 'last_contact_date'), hoy)
-        if (dias !== null && dias <= inactividad) return []
-        return [
-          {
-            id: `c-${g.id}`,
-            grupo: g,
-            clave: dias === null ? 'p360.resumen.nuncaContactado' : 'p360.resumen.sinContacto',
-            dias: inactividad,
-            ruta: `/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`
-          }
-        ]
-      }),
-    ...(grupos.data ?? [])
-      .filter((g) => g.state === 'assessed' && (diasEntre(atributo(g, 'last_assessment_date'), hoy) ?? 0) > revision)
-      .map((g) => ({
-        id: `e-${g.id}`,
-        grupo: g,
-        clave: 'p360.resumen.evaluacionVencida',
-        dias: revision,
-        ruta: `/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`
-      }))
+  const enlace = (ruta: string, contenido: ReactNode) => (
+    <Link to={ruta} className="text-sg-primary-text underline">
+      {contenido}
+    </Link>
+  )
+  const actas = (interacciones.data ?? [])
+    .filter((e) => e.state === 'held' && TIPOS_FORMALES.includes(texto(e, 'engagement_type')))
+    .map((e) => ({
+      clave: e.id,
+      contenido: enlace(`/projects/${encodeURIComponent(proyecto.id)}/engagements/${encodeURIComponent(e.id)}`, texto(e, 'title'))
+    }))
+  const sinContacto = (grupos.data ?? [])
+    // una cuenta que no lee last_contact_date (la clave no viene en el registro) no puede decir si hubo contacto
+    .filter((g) => g.state !== 'retired' && 'last_contact_date' in g.attributes)
+    .flatMap((g) => {
+      const dias = diasEntre(atributo(g, 'last_contact_date'), hoy)
+      if (dias !== null && dias <= inactividad) return []
+      return [
+        {
+          clave: `c-${g.id}`,
+          contenido: enlace(
+            `/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`,
+            <AvisoDeGrupo grupo={g} nunca={dias === null} />
+          )
+        }
+      ]
+    })
+  const evaluaciones = (grupos.data ?? [])
+    .filter((g) => g.state === 'assessed' && (diasEntre(atributo(g, 'last_assessment_date'), hoy) ?? 0) > revision)
+    .map((g) => ({
+      clave: `e-${g.id}`,
+      contenido: enlace(`/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`, <AvisoDeGrupo grupo={g} />)
+    }))
+  // por tipo, con su conteo: cinco de cada uno y «Ver los N» (antes, una sola lista de más de cien enlaces)
+  const grupos_ = [
+    { clave: 'actas', elementos: actas, dias: 0 },
+    { clave: 'sinContacto', elementos: sinContacto, dias: inactividad },
+    { clave: 'evaluaciones', elementos: evaluaciones, dias: revision }
   ]
+  const hayAvisos = grupos_.some((g) => g.elementos.length > 0)
   const fuentes = [
     { clave: 'interacciones', consulta: interacciones },
     { clave: 'grupos', consulta: grupos }
@@ -297,16 +305,12 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   return (
     <section aria-label={t('p360.resumen.atencion')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.atencion')}</h2>
-      {items.length > 0 ? (
-        <ul className="space-y-1 text-sm">
-          {items.map((i) => (
-            <li key={i.id}>
-              <Link to={i.ruta} className="text-sg-primary-text underline">
-                {'grupo' in i ? <AvisoDeGrupo grupo={i.grupo} clave={i.clave} dias={i.dias} /> : i.texto}
-              </Link>
-            </li>
+      {hayAvisos ? (
+        <div className="grid gap-4 lg:grid-cols-3">
+          {grupos_.map((g) => (
+            <ListaPlegable key={g.clave} titulo={t(`p360.resumen.grupos.${g.clave}`, { count: g.elementos.length, dias: g.dias })} elementos={g.elementos} />
           ))}
-        </ul>
+        </div>
       ) : null}
       {cargando ? <Cargando /> : null}
       {fallidas.map((f) => (
@@ -315,15 +319,16 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
           <FalloDeLectura error={f.consulta.error} alReintentar={() => void f.consulta.refetch()} />
         </div>
       ))}
-      {items.length === 0 && !cargando && fallidas.length === 0 ? <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinAtencion')}</p> : null}
+      {!hayAvisos && !cargando && fallidas.length === 0 ? <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinAtencion')}</p> : null}
     </section>
   )
 }
 
-function AvisoDeGrupo({ grupo, clave, dias }: { grupo: Registro; clave: string; dias: number }) {
+// el grupo de interés de un aviso, por su nombre: el título del grupo ya dice qué le pasa; uno que nunca tuvo contacto lo dice
+function AvisoDeGrupo({ grupo, nunca = false }: { grupo: Registro; nunca?: boolean }) {
   const { t } = useTranslation(NS)
   const nombre = useNombreDelGrupo(grupo)
-  return <>{t(clave, { nombre, dias })}</>
+  return <>{nunca ? t('p360.resumen.nuncaContactado', { nombre }) : nombre}</>
 }
 
 function Actividad({ proyecto }: { proyecto: string }) {

@@ -9,10 +9,15 @@ export const ES_P360 = {
     registrarInteraccion: 'Registrar interacción',
     atencion: 'Atención requerida',
     sinAtencion: 'Nada pide atención hoy en lo que llega en F2.',
-    actaPendiente: '{{titulo}}: acta por redactar',
-    sinContacto: '{{nombre}}: sin contacto hace más de {{dias}} días',
-    evaluacionVencida: '{{nombre}}: evaluación con más de {{dias}} días',
-    nuncaContactado: '{{nombre}}: sin contacto registrado',
+    nuncaContactado: '{{nombre}} · nunca contactado',
+    grupos: {
+      actas_one: '{{count}} acta por redactar',
+      actas_other: '{{count}} actas por redactar',
+      sinContacto_one: '{{count}} grupo de interés sin contacto en más de {{dias}} días',
+      sinContacto_other: '{{count}} grupos de interés sin contacto en más de {{dias}} días',
+      evaluaciones_one: '{{count}} evaluación con más de {{dias}} días',
+      evaluaciones_other: '{{count}} evaluaciones con más de {{dias}} días'
+    },
     fuentes: { interacciones: 'Interacciones', grupos: 'Grupos de interés' },
     salud: 'Salud del proyecto',
     kpis: {
@@ -179,10 +184,16 @@ export const EN_P360: typeof ES_P360 = {
     registrarInteraccion: 'Register engagement',
     atencion: 'Needs attention',
     sinAtencion: 'Nothing needs attention today in what arrives in F2.',
-    actaPendiente: '{{titulo}}: minutes to draft',
-    sinContacto: '{{nombre}}: no contact for more than {{dias}} days',
-    evaluacionVencida: '{{nombre}}: assessment older than {{dias}} days',
-    nuncaContactado: '{{nombre}}: no contact recorded',
+
+    nuncaContactado: '{{nombre}} · never contacted',
+    grupos: {
+      actas_one: '{{count}} minutes to draft',
+      actas_other: '{{count}} minutes to draft',
+      sinContacto_one: '{{count}} stakeholder with no contact for more than {{dias}} days',
+      sinContacto_other: '{{count}} stakeholders with no contact for more than {{dias}} days',
+      evaluaciones_one: '{{count}} assessment older than {{dias}} days',
+      evaluaciones_other: '{{count}} assessments older than {{dias}} days'
+    },
     fuentes: { interacciones: 'Engagements', grupos: 'Stakeholders' },
     salud: 'Project health',
     kpis: {

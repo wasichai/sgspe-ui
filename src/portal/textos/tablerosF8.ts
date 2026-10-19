@@ -14,10 +14,14 @@ export const ES_TABLEROS_F8 = {
     atencionAyuda: 'Ordenado por una regla fija: alertas activas, riesgos altos o críticos, compromisos vencidos y quejas abiertas.',
     sinAtencion: 'Nada pide atención con estos filtros.',
     items: {
-      'KPI-EXE-02': '{{proyecto}}: {{n}} alertas activas',
-      'KPI-RSK-01': '{{proyecto}}: {{n}} riesgos altos o críticos',
-      'KPI-COM-03': '{{proyecto}}: {{n}} compromisos vencidos',
-      'KPI-GRV-02': '{{proyecto}}: {{n}} quejas abiertas'
+      'KPI-EXE-02_one': '{{proyecto}}: {{n}} alerta activa',
+      'KPI-EXE-02_other': '{{proyecto}}: {{n}} alertas activas',
+      'KPI-RSK-01_one': '{{proyecto}}: {{n}} riesgo alto o crítico',
+      'KPI-RSK-01_other': '{{proyecto}}: {{n}} riesgos altos o críticos',
+      'KPI-COM-03_one': '{{proyecto}}: {{n}} compromiso vencido',
+      'KPI-COM-03_other': '{{proyecto}}: {{n}} compromisos vencidos',
+      'KPI-GRV-02_one': '{{proyecto}}: {{n}} queja abierta',
+      'KPI-GRV-02_other': '{{proyecto}}: {{n}} quejas abiertas'
     },
     todaLaCartera: 'Toda la cartera',
     tiles: 'Indicadores de la cartera',
@@ -130,10 +134,14 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
     atencionAyuda: 'Ordered by a fixed rule: active alerts, high or critical risks, overdue commitments and open grievances.',
     sinAtencion: 'Nothing needs attention with these filters.',
     items: {
-      'KPI-EXE-02': '{{proyecto}}: {{n}} active alerts',
-      'KPI-RSK-01': '{{proyecto}}: {{n}} high or critical risks',
-      'KPI-COM-03': '{{proyecto}}: {{n}} overdue commitments',
-      'KPI-GRV-02': '{{proyecto}}: {{n}} open grievances'
+      'KPI-EXE-02_one': '{{proyecto}}: {{n}} active alert',
+      'KPI-EXE-02_other': '{{proyecto}}: {{n}} active alerts',
+      'KPI-RSK-01_one': '{{proyecto}}: {{n}} high or critical risk',
+      'KPI-RSK-01_other': '{{proyecto}}: {{n}} high or critical risks',
+      'KPI-COM-03_one': '{{proyecto}}: {{n}} overdue commitment',
+      'KPI-COM-03_other': '{{proyecto}}: {{n}} overdue commitments',
+      'KPI-GRV-02_one': '{{proyecto}}: {{n}} open grievance',
+      'KPI-GRV-02_other': '{{proyecto}}: {{n}} open grievances'
     },
     todaLaCartera: 'The whole portfolio',
     tiles: 'Portfolio indicators',

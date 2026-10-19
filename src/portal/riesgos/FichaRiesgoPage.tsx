@@ -133,7 +133,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
           </div>
           <p className="text-sm text-sg-text-secondary">
             {t('fichaRiesgo.responsable')}: {texto(riesgo, 'owner_user_email') || t('fichaRiesgo.sinResponsable')} ·{' '}
-            {cadencia ? t('fichaRiesgo.cadencia', { n: cadencia }) : t('fichaRiesgo.cadenciaDelProyecto')}
+            {cadencia ? t('fichaRiesgo.cadencia', { n: cadencia, count: Number(cadencia) }) : t('fichaRiesgo.cadenciaDelProyecto')}
           </p>
           {hecha ? (
             <p role="status" className="text-sm text-sg-success">

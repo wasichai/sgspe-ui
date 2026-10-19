@@ -107,7 +107,11 @@ function Revision({ datos }: { datos: TableroEjecutivo }) {
             {items.map((i) => (
               <li key={`${i.code}-${i.proyecto ?? 'cartera'}`}>
                 <Link to={i.ruta} className="text-sg-primary-text underline">
-                  {t(`tablerosF8.ejecutivo.items.${i.code}`, { proyecto: i.nombre ?? t('tablerosF8.ejecutivo.todaLaCartera'), n: numeroPe(i.valor) })}
+                  {t(`tablerosF8.ejecutivo.items.${i.code}`, {
+                    proyecto: i.nombre ?? t('tablerosF8.ejecutivo.todaLaCartera'),
+                    n: numeroPe(i.valor),
+                    count: i.valor
+                  })}
                 </Link>
               </li>
             ))}

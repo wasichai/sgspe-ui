@@ -37,10 +37,10 @@ describe('S51 · revisión ejecutiva', () => {
     const items = within(atencion).getAllByRole('link')
     expect(items.map((a) => a.textContent)).toEqual([
       'Proyecto Ejemplo A: 2 alertas activas',
-      'Proyecto Ejemplo A: 1 riesgos altos o críticos',
+      'Proyecto Ejemplo A: 1 riesgo alto o crítico',
       'Proyecto Ejemplo A: 3 compromisos vencidos',
       'Proyecto Ejemplo B: 3 quejas abiertas',
-      'Proyecto Ejemplo A: 1 quejas abiertas'
+      'Proyecto Ejemplo A: 1 queja abierta'
     ])
     expect(items[0]).toHaveAttribute('href', '/projects/p1/risks/warnings')
     const tiles = screen.getByRole('region', { name: 'Indicadores de la cartera' })
