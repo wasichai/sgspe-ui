@@ -87,7 +87,10 @@ describe('S45 · biblioteca', () => {
     red = espiarRed()
     montar(<BibliotecaPage />, { ruta: '/documents', camino: '/documents', permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Evidencias' })
-    expect(await within(tabla).findByText('PRJ-01 · Pukaqaqa')).toBeInTheDocument()
+    expect(await within(tabla).findByRole('link', { name: 'PRJ-01 · Pukaqaqa' })).toHaveAttribute('href', '/projects/p1/overview')
+    // D12: el título es un enlace a la ficha, y el encabezado dice el total del servidor
+    expect(within(tabla).getByRole('link', { name: 'Lista de beneficiarios' })).toHaveAttribute('href', '/projects/p1/documents/ev1')
+    expect(screen.getByText('2 evidencias')).toBeInTheDocument()
     expect(within(tabla).getByText('1.9 MB')).toBeInTheDocument()
     // la clasificación que la cuenta no lee (ev2 no la trae) dice Restringido, nunca vacío
     expect(within(tabla).getByText('Restringido')).toBeInTheDocument()

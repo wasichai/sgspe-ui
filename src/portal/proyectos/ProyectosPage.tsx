@@ -1,3 +1,4 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import type { ReactNode } from 'react'
@@ -77,11 +78,14 @@ export function ProyectosPage() {
   // §3.12): se dice que no tiene proyectos asignados, no «un proyecto nace con Nuevo proyecto» a quien no puede crearlo
   const sinProyectos = proyectos.isSuccess && proyectos.data.length === 0 && !leeTodo && !can('project', 'CREATE')
 
-  const filtrados = (proyectos.data ?? []).filter((p) => {
-    if (lasMias && !mios.has(p.id)) return false
-    if ((lista.vista === 'active' || lista.vista === 'in_review') && p.state !== lista.vista) return false
+  const enLaVista = (vista: string, p: Registro) => {
+    if (vista === 'mine' && !mios.has(p.id)) return false
+    if ((vista === 'active' || vista === 'in_review') && p.state !== vista) return false
     return FILTROS.every(([campo]) => !lista.filtro(campo) || atributo(p, campo) === lista.filtro(campo))
-  })
+  }
+  const filtrados = (proyectos.data ?? []).filter((p) => enLaVista(lista.vista, p))
+  // cada vista dice cuántos tiene con los filtros puestos (revisión de UX, etapa 3)
+  const conteoDe = (vista: string) => (proyectos.data ?? []).filter((p) => enLaVista(vista, p)).length
   const chips = FILTROS.filter(([campo]) => lista.filtro(campo)).map(([campo, clave]) => ({
     clave: campo,
     etiqueta: `${t(`proyectos.filtros.${clave}`)}: ${rotuloDeOpcion(lista.filtro(campo))}`
@@ -90,19 +94,19 @@ export function ProyectosPage() {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-sg-h1 font-semibold text-sg-text">{t('proyectos.titulo')}</h1>
-          {cargando || fallo || sinProyectos ? null : <p className="text-sm text-sg-text-muted">{t('proyectos.conteo', { count: filtrados.length })}</p>}
-        </div>
-        {can('project', 'CREATE') ? (
-          <Button asChild>
-            <Link to="/projects/new">{t('proyectos.nuevo')}</Link>
-          </Button>
-        ) : null}
-      </div>
+      <EncabezadoDePagina
+        titulo={t('proyectos.titulo')}
+        conteo={cargando || fallo || sinProyectos ? undefined : t('proyectos.conteo', { count: filtrados.length })}
+        primaria={
+          can('project', 'CREATE') ? (
+            <Button asChild size="sm">
+              <Link to="/projects/new">{t('proyectos.nuevo')}</Link>
+            </Button>
+          ) : undefined
+        }
+      />
       <VistasGuardadas
-        vistas={VISTAS.map((id) => ({ id, etiqueta: t(`proyectos.vistas.${id}`) }))}
+        vistas={VISTAS.map((id) => ({ id, etiqueta: t(`proyectos.vistas.${id}`), conteo: cargando || fallo ? null : conteoDe(id) }))}
         actual={lista.vista}
         alCambiar={(id) => lista.cambiar({ view: id })}
       />
@@ -155,7 +159,7 @@ export function ProyectosPage() {
                   <Td>
                     <Link
                       to={`/projects/${encodeURIComponent(p.id)}/overview`}
-                      className="font-medium text-sg-primary-text"
+                      className="font-medium text-sg-primary-text underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {texto(p, 'name')}

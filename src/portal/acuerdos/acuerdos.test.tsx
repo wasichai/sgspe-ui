@@ -126,6 +126,18 @@ const rutasDeLaAutorizacion: MockRoute[] = [
 const FICHA = { camino: '/projects/:projectId/agreements/:agreementId', usuario: GERENCIA_SOCIAL, permisos: EQUIPO }
 
 describe('S33 · acuerdos', () => {
+  // revisión de UX, etapa 3: el total en el encabezado, crear desde lo global y ?nuevo=1 abre el alta
+  it('dice cuántos hay, ofrece el alta en lo global y ?nuevo=1 abre el formulario en el proyecto', async () => {
+    fetch = mockFetch(rutas())
+    const global = montar(<AcuerdosPage />, { ruta: '/agreements', camino: '/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
+    await screen.findByRole('table', { name: 'Acuerdos' })
+    expect(screen.getByRole('button', { name: 'Nuevo acuerdo' })).toBeInTheDocument()
+    expect(screen.getByText(/^\d+ acuerdos?$/)).toBeInTheDocument()
+    global.unmount()
+    montar(<AcuerdosPage />, { ruta: '/projects/p1/agreements?nuevo=1', camino: '/projects/:projectId/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
+    expect(await within(await screen.findByRole('dialog')).findByLabelText('Motivo del registro o del cambio (obligatorio)')).toBeInTheDocument()
+  })
+
   it('lista el acuerdo con su vigencia y lo registra con el proyecto fijo y el motivo', async () => {
     fetch = mockFetch(rutas([{ method: 'POST', path: '/objects/agreement/records', status: 201, body: registro('ag9', { project: 'p1' }) }]))
     red = espiarRed()

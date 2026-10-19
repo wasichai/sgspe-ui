@@ -1,6 +1,8 @@
 // S45 y S46 · biblioteca de documentos y ficha de evidencia (screens.md §11)
 export const ES_DOCUMENTOS = {
   titulo: 'Documentos',
+  conteo_one: '{{count}} evidencia',
+  conteo_other: '{{count}} evidencias',
   ayuda: 'Las evidencias del proyecto o de la organización: lo que prueba cada una, su tipo y quién puede descargarla.',
   buscar: 'Buscar por título o autor',
   tipo: 'Tipo',
@@ -72,6 +74,8 @@ export const ES_DOCUMENTOS = {
 
 export const EN_DOCUMENTOS: typeof ES_DOCUMENTOS = {
   titulo: 'Documents',
+  conteo_one: '{{count}} piece of evidence',
+  conteo_other: '{{count}} pieces of evidence',
   ayuda: 'The evidence of the project or the organization: what each one proves, its type and who can download it.',
   buscar: 'Search by title or author',
   tipo: 'Type',

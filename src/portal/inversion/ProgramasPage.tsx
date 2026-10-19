@@ -1,8 +1,11 @@
+import { BotonCrear } from '../componentes/BotonCrear'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
@@ -59,36 +62,50 @@ export function ProgramasPage() {
   const escribe = useEscribeEnProyecto(proyecto)
   const conTablero = useTableroDisponible('investment')
   const tablero = useTablero('investment', proyecto ? { project: [proyecto] } : {})
-  const [alta, setAlta] = useState<'social_contribution' | 'social_program' | null>(null)
+  // ?nuevo=social_contribution o social_program abre el alta: así llega BotonCrear desde lo global, ya con el proyecto elegido
+  const [busqueda] = useSearchParams()
+  const pedida = busqueda.get('nuevo')
+  const [alta, setAlta] = useState<'social_contribution' | 'social_program' | null>(
+    pedida === 'social_contribution' || pedida === 'social_program' ? pedida : null
+  )
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const creaAporte = proyecto !== undefined && escribe && can('social_contribution', 'CREATE')
   const creaPrograma = proyecto !== undefined && escribe && can('social_program', 'CREATE')
   const indicadores = tablero.data?.indicators
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('inversion.titulo')}</h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          {conTablero ? (
-            <Link to={`${base}/programs/dashboard`} className="text-sg-primary-text underline">
-              {t('inversion.tablero')}
-            </Link>
-          ) : null}
-          {creaPrograma ? (
-            <Button size="sm" variant="secondary" onClick={() => setAlta('social_program')}>
-              {t('inversion.nuevoPrograma')}
-            </Button>
-          ) : null}
-          {creaAporte ? (
-            <Button size="sm" onClick={() => setAlta('social_contribution')}>
-              {t('inversion.nuevoAporte')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      {proyecto === undefined && (can('social_contribution', 'CREATE') || can('social_program', 'CREATE')) ? (
-        <p className="text-sm text-sg-text-muted">{t('inversion.eligeProyecto')}</p>
-      ) : null}
+      <EncabezadoDePagina
+        titulo={t('inversion.titulo')}
+        primaria={
+          proyecto ? (
+            creaAporte ? (
+              <Button size="sm" onClick={() => setAlta('social_contribution')}>
+                {t('inversion.nuevoAporte')}
+              </Button>
+            ) : undefined
+          ) : (
+            <BotonCrear objeto="social_contribution" etiqueta={t('inversion.nuevoAporte')} resto="programs?nuevo=social_contribution" />
+          )
+        }
+        secundarias={
+          <>
+            {conTablero ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`${base}/programs/dashboard`}>{t('inversion.tablero')}</Link>
+              </Button>
+            ) : null}
+            {proyecto ? (
+              creaPrograma ? (
+                <Button size="sm" variant="secondary" onClick={() => setAlta('social_program')}>
+                  {t('inversion.nuevoPrograma')}
+                </Button>
+              ) : null
+            ) : (
+              <BotonCrear objeto="social_program" etiqueta={t('inversion.nuevoPrograma')} resto="programs?nuevo=social_program" />
+            )}
+          </>
+        }
+      />
       {conTablero ? <ConsultaDeTablero consulta={tablero}>{(datos) => <Cifras indicadores={datos.indicators} />}</ConsultaDeTablero> : null}
       {can('social_program', 'READ') ? <Programas proyecto={proyecto} indicadores={indicadores} /> : null}
       {can('social_contribution', 'READ') ? <Aportes proyecto={proyecto} /> : null}
@@ -172,9 +189,12 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
               {(programas.data ?? []).map((p) => (
                 <tr key={p.id}>
                   <Td className="text-sm">
-                    <Link to={rutaDeFicha('social_program', p) ?? '#'} className="text-sg-primary-text underline">
-                      {texto(p, 'code')} · {texto(p, 'name')}
-                    </Link>
+                    <EnlaceDeRegistro
+                      codigo={texto(p, 'code')}
+                      titulo={texto(p, 'name')}
+                      ruta={rutaDeFicha('social_program', p)}
+                      desde={t('inversion.titulo')}
+                    />
                   </Td>
                   {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(p, 'project'))}</Td>}
                   <Td className="text-sm">
@@ -217,7 +237,11 @@ function Aportes({ proyecto }: { proyecto?: string }) {
     <section aria-label={t('inversion.aportes.titulo')} className="space-y-2">
       <h2 className="text-sg-h2 font-semibold">{t('inversion.aportes.titulo')}</h2>
       <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`inversion.aportes.vistas.${v}`) }))}
+        vistas={VISTAS.map((v) => ({
+          id: v,
+          etiqueta: t(`inversion.aportes.vistas.${v}`),
+          conteo: aportes.data ? aportes.data.filter((a) => enVista(v, a) && (!estado || a.state === estado)).length : null
+        }))}
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
@@ -256,9 +280,7 @@ function Aportes({ proyecto }: { proyecto?: string }) {
               {filtrados.map((a) => (
                 <tr key={a.id}>
                   <Td className="font-sg-mono text-sm">
-                    <Link to={rutaDeFicha('social_contribution', a) ?? '#'} className="text-sg-primary-text underline">
-                      {texto(a, 'code')}
-                    </Link>
+                    <EnlaceDeRegistro titulo={texto(a, 'code')} ruta={rutaDeFicha('social_contribution', a)} desde={t('inversion.titulo')} />
                   </Td>
                   {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(a, 'project'))}</Td>}
                   <Td className="text-sm">{opcion(a, 'contribution_type') || '—'}</Td>

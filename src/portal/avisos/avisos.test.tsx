@@ -119,6 +119,15 @@ describe('S04 · campana', () => {
 })
 
 describe('S04 · bandeja', () => {
+  // revisión de UX, etapa 3: las vistas dicen cuántos avisos tienen, del resumen de la bandeja
+  it('«Activos» y «Solo sin leer» dicen cuántos tienen; «Pospuestos», no', async () => {
+    fetch = mockFetch(rutas())
+    montar(<AvisosPage />, { ruta: '/notifications', camino: '/notifications' })
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Activos' })).toHaveAccessibleDescription('3 registros'))
+    expect(screen.getByRole('tab', { name: 'Solo sin leer' })).toHaveAccessibleDescription('3 registros')
+    expect(screen.getByRole('tab', { name: 'Pospuestos' })).not.toHaveAccessibleDescription()
+  })
+
   it('filtra sin leer en el servidor; un ACTION de una fuente no se descarta y uno manual sí', async () => {
     fetch = mockFetch(rutas([{ method: 'POST', path: '/auth/me/notifications/n2/dismiss', status: 204 }]))
     red = espiarRed()

@@ -1,8 +1,12 @@
+import { BotonCrear } from '../componentes/BotonCrear'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -11,7 +15,7 @@ import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
+import { useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useTodosConTope } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
@@ -45,16 +49,28 @@ export function AcuerdosPage() {
   const acuerdos = useTodosConTope('agreement', { project: proyecto, sort: 'code', dir: 'asc' })
   const proyectos = useProyectos()
   const lista = acuerdos.data ?? []
-  const [creando, setCreando] = useState(false)
+  // ?nuevo=1 abre el alta: así llega BotonCrear desde lo global, ya con el proyecto elegido
+  const [busqueda] = useSearchParams()
+  const [creando, setCreando] = useState(busqueda.get('nuevo') === '1')
   const [motivo, setMotivo] = useState('')
   const fijos = proyecto ? { project: proyecto } : undefined
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('acuerdos.titulo')}</h1>
-        {proyecto && escribe && can('agreement', 'CREATE') ? <Button onClick={() => setCreando(true)}>{t('acuerdos.nuevo')}</Button> : null}
-      </div>
-      {!proyecto && can('agreement', 'CREATE') ? <p className="text-sm text-sg-text-muted">{t('acuerdos.eligeProyecto')}</p> : null}
+      <EncabezadoDePagina
+        titulo={t('acuerdos.titulo')}
+        conteo={acuerdos.data ? t('acuerdos.conteo', { count: lista.length }) : undefined}
+        primaria={
+          proyecto ? (
+            escribe && can('agreement', 'CREATE') ? (
+              <Button size="sm" onClick={() => setCreando(true)}>
+                {t('acuerdos.nuevo')}
+              </Button>
+            ) : undefined
+          ) : (
+            <BotonCrear objeto="agreement" etiqueta={t('acuerdos.nuevo')} resto="agreements?nuevo=1" />
+          )
+        }
+      />
       {acuerdos.truncado ? <Alert tone="warning">{t('acuerdos.truncado', { n: numeroPe(acuerdos.data?.length ?? 0) })}</Alert> : null}
       {acuerdos.isPending ? (
         <Cargando />
@@ -67,8 +83,7 @@ export function AcuerdosPage() {
           <Table aria-label={t('acuerdos.tabla')}>
             <thead>
               <tr>
-                <Th scope="col">{t('acuerdos.columnas.codigo')}</Th>
-                <Th scope="col">{t('acuerdos.columnas.titulo')}</Th>
+                <Th scope="col">{t('acuerdos.columnas.acuerdo')}</Th>
                 {proyecto ? null : <Th scope="col">{t('acuerdos.columnas.proyecto')}</Th>}
                 <Th scope="col">{t('acuerdos.columnas.tipo')}</Th>
                 <Th scope="col">{t('acuerdos.columnas.estado')}</Th>
@@ -81,16 +96,19 @@ export function AcuerdosPage() {
                 const p = proyectos.data?.find((x) => x.id === texto(a, 'project'))
                 return (
                   <tr key={a.id}>
-                    <Td className="font-sg-mono text-sm">{texto(a, 'code')}</Td>
-                    <Td className="text-sm">
-                      <Link
-                        to={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
-                        className="text-sg-primary-text underline"
-                      >
-                        {texto(a, 'title')}
-                      </Link>
+                    <Td className="min-w-64 text-sm">
+                      <EnlaceDeRegistro
+                        codigo={texto(a, 'code')}
+                        titulo={texto(a, 'title')}
+                        ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
+                        desde={t('acuerdos.titulo')}
+                      />
                     </Td>
-                    {proyecto ? null : <Td className="text-sm">{p ? nombreDeProyecto(p) : '…'}</Td>}
+                    {proyecto ? null : (
+                      <Td className="text-sm">
+                        <ProyectoEnLista proyecto={p} />
+                      </Td>
+                    )}
                     <Td className="text-sm">{opcion(a, 'agreement_type')}</Td>
                     <Td>
                       <EstadoChip objeto="agreement" estado={a.state} />

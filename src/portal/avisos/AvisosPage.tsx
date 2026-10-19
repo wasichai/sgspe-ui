@@ -1,3 +1,4 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { Alert, Button, cn, Pagination } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
@@ -13,6 +14,7 @@ import {
   useAccionDeAviso,
   useAvisos,
   useLeerTodos,
+  useResumenDeAvisos,
   type Aviso,
   type EstadoDeBandeja,
   type TipoDeAviso
@@ -48,17 +50,26 @@ export function AvisosPage() {
   const avisos = useAvisos({ state: estado, kind: tipo, page: lista.pagina, size: POR_PAGINA })
   const leerTodos = useLeerTodos()
   const mensaje = useMensajeDeError()
+  // los conteos de las vistas salen del resumen de la bandeja (activos y sin leer, del tipo elegido o de todos); los pospuestos
+  // no tienen conteo en el resumen
+  const resumen = useResumenDeAvisos()
+  const sumar = (campo: 'active' | 'unread') =>
+    resumen.data ? (tipo ? [tipo] : TIPOS_DE_AVISO).reduce((total, k) => total + (resumen.data.kinds[k]?.[campo] ?? 0), 0) : null
+  const conteos: Record<string, number | null> = { todos: sumar('active'), sinLeer: sumar('unread'), pospuestos: null }
+  // el ancho único de las pantallas (revisión de UX, etapa 3): antes, centrado y angosto, distinto del resto
   return (
-    <section className="mx-auto max-w-[900px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('avisos.titulo')}</h1>
-        <Button size="sm" variant="secondary" disabled={leerTodos.isPending} aria-busy={leerTodos.isPending} onClick={() => leerTodos.mutate(tipo)}>
-          {t('avisos.leerTodos')}
-        </Button>
-      </div>
+    <section className="mx-auto max-w-[1440px] space-y-4">
+      <EncabezadoDePagina
+        titulo={t('avisos.titulo')}
+        secundarias={
+          <Button size="sm" variant="secondary" disabled={leerTodos.isPending} aria-busy={leerTodos.isPending} onClick={() => leerTodos.mutate(tipo)}>
+            {t('avisos.leerTodos')}
+          </Button>
+        }
+      />
       {leerTodos.isError ? <Alert tone="danger">{mensaje(leerTodos.error)}</Alert> : null}
       <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v.id, etiqueta: t(`avisos.filtros.${v.id}`) }))}
+        vistas={VISTAS.map((v) => ({ id: v.id, etiqueta: t(`avisos.filtros.${v.id}`), conteo: conteos[v.id] }))}
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
