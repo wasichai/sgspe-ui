@@ -11,6 +11,7 @@ import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
 import { ThemeMenu } from './ThemeMenu'
 import { useNombresDeRol } from '../proyectos/usuarios'
+import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
 
 // text-sm es el cuerpo de 14/20 de tokens.css: dentro de cn(), text-sg-body se confundiría con un color
 const ENLACE = 'flex h-9 items-center gap-2.5 rounded-sg-md px-2.5 text-sm'
@@ -100,6 +101,7 @@ export function AppShell() {
           </main>
         </div>
       </div>
+      <DialogoDeSesionVencida />
     </ProveedorDelAsistente>
   )
 }
