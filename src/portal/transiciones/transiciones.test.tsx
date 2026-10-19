@@ -86,6 +86,25 @@ describe('transiciones', () => {
     expect(suspender.className).not.toBe(primaria.className)
   })
 
+  // revisión de UX, etapa 8: el foco entra al motivo, el orden de tabulación termina en Cancelar y Confirmar, y Escape devuelve el
+  // foco al botón que abrió el diálogo
+  it('el diálogo pone el foco en el motivo y, al cerrarse, lo devuelve al botón que lo abrió', async () => {
+    start()
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    const boton = await screen.findByRole('button', { name: 'Suspender' })
+    await userEvent.click(boton)
+    const dialogo = await screen.findByRole('dialog')
+    await within(dialogo).findByText('Se cumplen las reglas para este paso.')
+    await waitFor(() => expect(within(dialogo).getByLabelText('Motivo (obligatorio)')).toHaveFocus())
+    await userEvent.tab()
+    expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
+    await userEvent.tab()
+    expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(boton).toHaveFocus()
+  })
+
   it('suspender exige motivo y lo envía con la versión leída', async () => {
     start([{ method: 'POST', path: '/objects/project/records/p1/transitions/suspend', body: { ...PROYECTO, state: 'suspended' } }])
     red = espiarRed()

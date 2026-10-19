@@ -1,3 +1,4 @@
+import { useFocoDeRegreso } from './foco'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@wasichai/ui'
 import type { ReactNode } from 'react'
 
@@ -18,9 +19,12 @@ export function Drawer({
   children: ReactNode
   pie?: ReactNode
 }) {
+  // al cerrarse, el foco vuelve a quien lo abrió (revisión de UX, etapa 8)
+  const regreso = useFocoDeRegreso()
   return (
     <Dialog open={abierto} onOpenChange={(abrir) => !abrir && alCerrar()}>
       <DialogContent
+        {...regreso}
         {...(descripcion ? {} : { 'aria-describedby': undefined })}
         className="left-auto right-0 top-0 flex h-full max-w-[560px] translate-x-0 translate-y-0 flex-col rounded-none rounded-l-sg-xl p-0 lg:max-w-[560px]"
       >
