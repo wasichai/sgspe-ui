@@ -61,8 +61,13 @@ describe('rutas de F4', () => {
     expect(await screen.findByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeInTheDocument()
   })
 
-  it('/risks es el tablero de riesgos (S62); risks/register del proyecto es el registro y risks/k1 la ficha', async () => {
+  // decisión 7 de la revisión de UX: la sección aterriza en el registro; el tablero (S62) es /risks/dashboard
+  it('/risks es el registro de riesgos y /risks/dashboard el tablero (S62)', async () => {
     fetch = abrirPortal('/risks', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
+    expect(await screen.findByRole('heading', { name: 'Riesgos', level: 1 })).toBeInTheDocument()
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/risks/dashboard', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
     expect(await screen.findByRole('heading', { name: 'Tablero de riesgos', level: 1 })).toBeInTheDocument()
   })
 
@@ -107,14 +112,15 @@ describe('rutas de F4', () => {
     cleanup()
     fetch!.restore()
     fetch = abrirPortal('/risks', GESTOR_DE_RIESGOS, permisos({ project: ['READ'], social_risk: ['READ', 'EXPORT'] }), deRiesgos())
-    expect(await screen.findByRole('heading', { name: 'Tablero de riesgos', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Riesgos', level: 1 })).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Reportes' })).toBeInTheDocument()
   })
 
   it.each([
     ['/attention', 'p1', '/projects/p1/attention'],
     ['/attention/dashboard', 'p1', '/projects/p1/attention/dashboard'],
-    ['/risks', 'p1', '/projects/p1/risks/dashboard'],
+    ['/risks', 'p1', '/projects/p1/risks'],
+    ['/risks/dashboard', 'p1', '/projects/p1/risks/dashboard'],
     ['/risks/rules', 'p1', '/projects/p1/risks/rules'],
     ['/projects/p1/grievances/g1', 'p2', '/projects/p2/attention'],
     ['/projects/p1/risks/warnings/w1', 'p2', '/projects/p2/risks/warnings'],
@@ -122,8 +128,8 @@ describe('rutas de F4', () => {
     ['/projects/p1/incidents/n1', 'p2', '/projects/p2/incidents'],
     ['/projects/p1/risks/incidents', 'p2', '/projects/p2/incidents'],
     ['/projects/p1/inquiries/i1', null, '/attention'],
-    ['/projects/p1/risks/dashboard', null, '/risks'],
-    ['/projects/p1/risks/k1', null, '/risks/register']
+    ['/projects/p1/risks/dashboard', null, '/risks/dashboard'],
+    ['/projects/p1/risks/k1', null, '/risks']
   ])('el selector de proyecto lleva de %s (proyecto %s) a %s', (desde, proyecto, hacia) => {
     expect(rutaEquivalente(desde, proyecto)).toBe(hacia)
   })

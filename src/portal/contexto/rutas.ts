@@ -24,7 +24,8 @@ const GLOBAL_A_PROYECTO: [RegExp, string][] = [
   [/^\/programs/, 'programs'],
   [/^\/risks\/register/, 'risks/register'],
   [/^\/risks\/rules/, 'risks/rules'],
-  [/^\/risks/, 'risks/dashboard']
+  [/^\/risks\/dashboard/, 'risks/dashboard'],
+  [/^\/risks/, 'risks']
 ]
 
 const PROYECTO_A_GLOBAL: [RegExp, string][] = [
@@ -46,8 +47,9 @@ const PROYECTO_A_GLOBAL: [RegExp, string][] = [
   [/^programs\/dashboard/, '/programs/dashboard'],
   [/^(programs|contributions)/, '/programs'],
   [/^risks\/rules/, '/risks/rules'],
-  [/^risks\/dashboard/, '/risks'],
-  [/^(risks|incidents)/, '/risks/register']
+  [/^risks\/dashboard/, '/risks/dashboard'],
+  [/^risks\/register/, '/risks/register'],
+  [/^(risks|incidents)/, '/risks']
 ]
 
 const SECCIONES_DE_PROYECTO = [

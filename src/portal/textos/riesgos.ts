@@ -2,7 +2,17 @@
 export const ES_RIESGOS = {
   titulo: 'Riesgos',
   identificar: 'Identificar riesgo',
-  eligeProyecto: 'Para identificar un riesgo, elija su proyecto en el selector.',
+  conteo_one: '{{count}} riesgo',
+  conteo_other: '{{count}} riesgos',
+  tablero: 'Tablero',
+  mas: {
+    warnings: 'Alerta temprana',
+    incidents: 'Incidentes',
+    mentions: 'Menciones en medios',
+    signals: 'Señales de alerta',
+    impacts: 'Impactos potenciales',
+    rules: 'Reglas de alerta'
+  },
   truncado: 'Se muestran los primeros {{n}} riesgos: elija un proyecto para ver el resto.',
   vacio: 'No hay riesgos en esta vista.',
   tabla: 'Riesgos',
@@ -42,7 +52,17 @@ export const ES_RIESGOS = {
 export const EN_RIESGOS: typeof ES_RIESGOS = {
   titulo: 'Risks',
   identificar: 'Identify risk',
-  eligeProyecto: 'To identify a risk, pick its project in the selector.',
+  conteo_one: '{{count}} risk',
+  conteo_other: '{{count}} risks',
+  tablero: 'Dashboard',
+  mas: {
+    warnings: 'Early warning',
+    incidents: 'Incidents',
+    mentions: 'Media mentions',
+    signals: 'Warning signals',
+    impacts: 'Potential impacts',
+    rules: 'Warning rules'
+  },
   truncado: 'The first {{n}} risks are shown: pick a project to see the rest.',
   vacio: 'There are no risks in this view.',
   tabla: 'Risks',

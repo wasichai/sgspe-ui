@@ -2,7 +2,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { CLASE_DE_TONO } from '../componentes/apariencias'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
@@ -12,7 +12,10 @@ import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
-import { EnlaceDeFicha } from '../componentes/RegistroVinculado'
+import { BotonCrear } from '../componentes/BotonCrear'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { rutaDeFicha } from '../datos/fichas'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto, useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
@@ -70,6 +73,10 @@ export function celdaDe(r: Registro): string | null {
   return Number.isInteger(p) && Number.isInteger(i) && p >= 1 && p <= 5 && i >= 1 && i <= 5 ? `${p}-${i}` : null
 }
 
+// las páginas de riesgos que no son el registro: en «Más» del encabezado; fuera de un proyecto solo existen las reglas del tenant
+const MAS_EN_PROYECTO = ['warnings', 'incidents', 'mentions', 'signals', 'impacts', 'rules'] as const
+const MAS_GLOBAL = ['rules'] as const
+
 export function RiesgosPage() {
   const { t } = useTranslation(NS)
   const { user, can } = useAuth()
@@ -98,16 +105,43 @@ export function RiesgosPage() {
     }
     fijar(siguiente, { replace: true })
   }
+  const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('riesgos.titulo')}</h1>
-        {crea ? <Button onClick={() => abrirAlta(true)}>{t('riesgos.identificar')}</Button> : null}
-      </div>
-      {!proyecto && can('social_risk', 'CREATE') ? <p className="text-sm text-sg-text-muted">{t('riesgos.eligeProyecto')}</p> : null}
+      {/* la sección aterriza en el registro y la matriz (decisión 7 de la revisión de UX): el tablero es una vista más, y las
+          demás páginas de riesgos van en «Más» */}
+      <EncabezadoDePagina
+        titulo={t('riesgos.titulo')}
+        conteo={riesgos.data ? t('riesgos.conteo', { count: filtrados.length }) : undefined}
+        primaria={
+          proyecto ? (
+            crea ? (
+              <Button size="sm" onClick={() => abrirAlta(true)}>
+                {t('riesgos.identificar')}
+              </Button>
+            ) : undefined
+          ) : (
+            <BotonCrear objeto="social_risk" etiqueta={t('riesgos.identificar')} resto="risks?nuevo=1" />
+          )
+        }
+        secundarias={
+          <Button asChild size="sm" variant="secondary">
+            <Link to={`${base}/risks/dashboard`}>{t('riesgos.tablero')}</Link>
+          </Button>
+        }
+        mas={(proyecto ? MAS_EN_PROYECTO : MAS_GLOBAL).map((resto) => (
+          <Link key={resto} to={`${base}/risks/${resto}`} className="rounded-sg-sm px-2.5 py-1.5 text-sm hover:bg-sg-surface-hover">
+            {t(`riesgos.mas.${resto}`)}
+          </Link>
+        ))}
+      />
       <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`riesgos.vistas.${v}`) }))}
+        vistas={VISTAS.map((v) => ({
+          id: v,
+          etiqueta: t(`riesgos.vistas.${v}`),
+          conteo: riesgos.data ? riesgos.data.filter((r) => enVista(v, r, user?.id)).length : null
+        }))}
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista, cell: null })}
       />
@@ -152,9 +186,12 @@ export function RiesgosPage() {
                   {filtrados.map((r) => (
                     <tr key={r.id}>
                       <Td className="min-w-64 text-sm">
-                        <EnlaceDeFicha objeto="social_risk" registro={r}>
-                          {texto(r, 'code')} · {texto(r, 'title')}
-                        </EnlaceDeFicha>
+                        <EnlaceDeRegistro
+                          codigo={texto(r, 'code')}
+                          titulo={texto(r, 'title')}
+                          ruta={rutaDeFicha('social_risk', r)}
+                          desde={t('riesgos.titulo')}
+                        />
                       </Td>
                       {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(r, 'project'))}</Td>}
                       <Td className="text-sm">{opcion(r, 'category') || '—'}</Td>

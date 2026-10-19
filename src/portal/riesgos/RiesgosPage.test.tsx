@@ -59,7 +59,9 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     expect(within(mapa).getByRole('button', { name: 'Probabilidad 1, impacto 1: 0 riesgos, nivel Bajo' })).toBeInTheDocument()
     expect(within(mapa).getByText('Sin evaluar (fuera del mapa): 1')).toBeInTheDocument()
     const tabla = screen.getByRole('table', { name: 'Riesgos' })
-    expect(within(tabla).getByRole('link', { name: 'R-001 · Bloqueo de la vía de acceso por la comunidad' })).toHaveAttribute('href', '/projects/p1/risks/k1')
+    // el código va aparte, en gris, y el título es el enlace (EnlaceDeRegistro, revisión de UX)
+    expect(within(tabla).getByRole('link', { name: 'Bloqueo de la vía de acceso por la comunidad' })).toHaveAttribute('href', '/projects/p1/risks/k1')
+    expect(within(tabla).getByText('R-001')).toHaveClass('font-sg-mono')
     expect(within(tabla).getByLabelText('Nivel de riesgo: Crítico')).toBeInTheDocument()
     expect(within(tabla).getByText('4 × 4 = 16')).toBeInTheDocument()
     expect(within(tabla).getByText('Sin evaluar')).toBeInTheDocument()
@@ -75,8 +77,9 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     const fila = within(tabla).getByRole('row', { name: /R-005/ })
     expect(within(fila).queryByText(/=/)).not.toBeInTheDocument()
     expect(within(fila).getAllByText('—').length).toBeGreaterThan(0)
-    expect(within(tabla).getByText('R-006 · Huelga regional')).toBeInTheDocument()
-    expect(within(tabla).queryByRole('link', { name: /R-006/ })).not.toBeInTheDocument()
+    expect(within(tabla).getByText('Huelga regional')).toBeInTheDocument()
+    expect(within(tabla).getByText('R-006')).toBeInTheDocument()
+    expect(within(tabla).queryByRole('link', { name: /Huelga regional/ })).not.toBeInTheDocument()
   })
 
   it('elegir una celda filtra la tabla y «Quitar filtro de celda» la devuelve entera', async () => {
