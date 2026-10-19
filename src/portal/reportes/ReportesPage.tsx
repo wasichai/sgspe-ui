@@ -1,3 +1,5 @@
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { useAuth } from '@wasichai/core'
 import { Alert, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +14,7 @@ import {
   NIVELES,
   SalidaFueraDeLaOrganizacion,
   SelectorDeNivel,
-  SelectorDeProyecto,
+  AlcanceDeLaExportacion,
   useExportacion,
   useProyectoElegido
 } from './exportacion'
@@ -44,7 +46,7 @@ export function ReportesPage() {
   const verHistorial = can('export_log', 'READ')
   // export_log es un objeto reservado: quien no lo lee no pide su definición (los niveles tienen respaldo en NIVELES)
   const definicion = useDefinicion(verHistorial ? 'export_log' : undefined)
-  const { proyecto, elegir } = useProyectoElegido()
+  const { proyecto } = useProyectoElegido()
   const historial = useRegistros(
     'export_log',
     { project: proyecto || undefined, sort: 'exported_at', dir: 'desc', size: EXPORTACIONES_A_LA_VISTA, count: false },
@@ -59,23 +61,17 @@ export function ReportesPage() {
   // la matriz se monta por el proyecto de la URL: lo elegido en ella (la campaña, los estados, el nivel) no pasa a otro proyecto
   const delaUrl = scope.kind === 'project' ? scope.projectId : ''
 
-  return (
-    <section className="mx-auto max-w-[1100px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('reportes.titulo')}</h1>
-      {can('deliverable', 'READ') ? <EntregablesDeReportes /> : null}
+  // tres vistas (revisión de UX, etapa 7): los entregables, las exportaciones (con el alcance de la barra superior) y el historial
+  // de exportaciones, cada una con su pestaña (?tab=); sin permiso para una, su pestaña no está
+  const exportaciones = (
+    <div className="space-y-4">
       <section aria-label={t('reportes.registroDeGrupos')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
         <h2 className="text-sg-h3 font-semibold">{t('reportes.registroDeGrupos')}</h2>
         <p className="text-sm text-sg-text-secondary">{t('reportes.registroAyuda')}</p>
         {can('stakeholder', 'EXPORT') ? (
           <>
             <div className="grid gap-3 md:grid-cols-2">
-              <SelectorDeProyecto
-                proyecto={proyecto}
-                alCambiar={(id) => {
-                  elegir(id)
-                  exportacion.reiniciar()
-                }}
-              />
+              <AlcanceDeLaExportacion proyecto={proyecto} />
               <SelectorDeNivel exportacion={exportacion} niveles={niveles} descripciones="reportes.niveles" />
             </div>
             <FalloDeProyectos />
@@ -96,46 +92,64 @@ export function ReportesPage() {
       {can('commitment', 'EXPORT') ? <MatrizDeCompromisos key={`compromisos-${delaUrl}`} niveles={niveles} /> : null}
       {OBJETOS_DE_QCS.every((o) => can(o, 'EXPORT')) ? <RegistroDeAtencion key={`atencion-${delaUrl}`} niveles={niveles} /> : null}
       {can('social_risk', 'EXPORT') ? <RegistroDeRiesgos key={`riesgos-${delaUrl}`} niveles={niveles} /> : null}
-      {verHistorial ? (
-        <section aria-label={t('reportes.historial')} className="space-y-2">
-          <h2 className="text-sg-h3 font-semibold">{t('reportes.historial')}</h2>
-          <p className="text-sm text-sg-text-muted">{t('reportes.historialAyuda')}</p>
-          {historial.isPending ? (
-            <Cargando compacto />
-          ) : historial.isError && !historial.data ? (
-            <FalloDeLectura error={historial.error} alReintentar={() => void historial.refetch()} />
-          ) : historial.data && historial.data.content.length === 0 ? (
-            <Vacio titulo={t('reportes.historialVacio')} />
-          ) : (
-            <Table aria-label={t('reportes.historial')}>
-              <thead>
-                <tr>
-                  {(['fecha', 'quien', 'objeto', 'nivel', 'filas'] as const).map((c) => (
-                    <Th key={c} scope="col">
-                      {t(`reportes.columnas.${c}`)}
-                    </Th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(historial.data?.content ?? []).map((e) => (
-                  <tr key={e.id}>
-                    <Td className="text-sm">{atributo(e, 'exported_at') ? fechaPe(new Date(String(atributo(e, 'exported_at')))) : '—'}</Td>
-                    <Td className="text-sm">
-                      <Persona correo={texto(e, 'exporter_user_email')} />
-                    </Td>
-                    <Td className="text-sm">{texto(e, 'object_name')}</Td>
-                    <Td className="text-sm">{opcion(e, 'disclosure_level')}</Td>
-                    <Td className="text-sm tabular-nums">
-                      {atributo(e, 'row_count') === null || atributo(e, 'row_count') === undefined ? '—' : numeroPe(Number(atributo(e, 'row_count')))}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </section>
-      ) : null}
-    </section>
+    </div>
+  )
+  const pestanas = [
+    ...(can('deliverable', 'READ') ? [{ id: 'entregables', etiqueta: t('reportes.vistas.entregables'), render: () => <EntregablesDeReportes /> }] : []),
+    { id: 'exportaciones', etiqueta: t('reportes.vistas.exportaciones'), render: () => exportaciones },
+    ...(verHistorial
+      ? [
+          {
+            id: 'historial',
+            etiqueta: t('reportes.vistas.historial'),
+            render: () => (
+              <section aria-label={t('reportes.historial')} className="space-y-2">
+                <h2 className="text-sg-h3 font-semibold">{t('reportes.historial')}</h2>
+                <p className="text-sm text-sg-text-muted">{t('reportes.historialAyuda')}</p>
+                {historial.isPending ? (
+                  <Cargando compacto />
+                ) : historial.isError && !historial.data ? (
+                  <FalloDeLectura error={historial.error} alReintentar={() => void historial.refetch()} />
+                ) : historial.data && historial.data.content.length === 0 ? (
+                  <Vacio titulo={t('reportes.historialVacio')} />
+                ) : (
+                  <Table aria-label={t('reportes.historial')}>
+                    <thead>
+                      <tr>
+                        {(['fecha', 'quien', 'objeto', 'nivel', 'filas'] as const).map((c) => (
+                          <Th key={c} scope="col">
+                            {t(`reportes.columnas.${c}`)}
+                          </Th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(historial.data?.content ?? []).map((e) => (
+                        <tr key={e.id}>
+                          <Td className="text-sm">{atributo(e, 'exported_at') ? fechaPe(new Date(String(atributo(e, 'exported_at')))) : '—'}</Td>
+                          <Td className="text-sm">
+                            <Persona correo={texto(e, 'exporter_user_email')} />
+                          </Td>
+                          <Td className="text-sm">{texto(e, 'object_name')}</Td>
+                          <Td className="text-sm">{opcion(e, 'disclosure_level')}</Td>
+                          <Td className="text-sm tabular-nums">
+                            {atributo(e, 'row_count') === null || atributo(e, 'row_count') === undefined ? '—' : numeroPe(Number(atributo(e, 'row_count')))}
+                          </Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </section>
+            )
+          }
+        ]
+      : [])
+  ]
+  return (
+    <ContenedorDePagina>
+      <EncabezadoDePagina titulo={t('reportes.titulo')} />
+      <PestanasDeFicha etiqueta={t('reportes.titulo')} pestanas={pestanas} />
+    </ContenedorDePagina>
   )
 }

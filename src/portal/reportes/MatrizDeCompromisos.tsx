@@ -12,7 +12,7 @@ import {
   FalloDeProyectos,
   SalidaFueraDeLaOrganizacion,
   SelectorDeNivel,
-  SelectorDeProyecto,
+  AlcanceDeLaExportacion,
   useExportacion,
   useProyectoElegido
 } from './exportacion'
@@ -25,7 +25,7 @@ import {
 export function MatrizDeCompromisos({ niveles }: { niveles: string[] }) {
   const { t } = useTranslation(NS)
   const flujo = useWorkflow('commitment')
-  const { proyecto, elegir } = useProyectoElegido()
+  const { proyecto } = useProyectoElegido()
   const campanas = useTodos('exploration_campaign', { project: proyecto || undefined }, proyecto !== '')
   // la campaña vale solo para el proyecto en que se eligió
   const [elegida, setElegida] = useState<{ valor: string; proyecto: string } | null>(null)
@@ -50,13 +50,7 @@ export function MatrizDeCompromisos({ niveles }: { niveles: string[] }) {
       <h2 className="text-sg-h3 font-semibold">{t('reportes.matriz.titulo')}</h2>
       <p className="text-sm text-sg-text-secondary">{t('reportes.matriz.ayuda')}</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <SelectorDeProyecto
-          proyecto={proyecto}
-          alCambiar={(id) => {
-            elegir(id)
-            exportacion.reiniciar()
-          }}
-        />
+        <AlcanceDeLaExportacion proyecto={proyecto} />
         {proyecto ? (
           <Campo etiqueta={t('reportes.matriz.campana')}>
             {(p) => (

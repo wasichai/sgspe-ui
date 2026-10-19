@@ -1,3 +1,4 @@
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
@@ -9,20 +10,20 @@ import { DeLista } from '../componentes/LecturaConEstados'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { texto, useRegistros } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
-import { FalloDeProyectos, SelectorDeProyecto, useProyectoElegido } from '../reportes/exportacion'
+import { AlcanceDeLaExportacion, FalloDeProyectos, useProyectoElegido } from '../reportes/exportacion'
 import { useContextFilters } from '../shell/context'
 import { NuevoEntregable } from './NuevoEntregable'
 import { NIVELES_DE_ENTREGABLE, rutaDeEntregable } from './tipos'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
-// los entregables de S49 (screens.md): del proyecto elegido (el de la URL o el del selector) o de todos los que la cuenta lee,
+// los entregables de S49 (screens.md): del proyecto de la barra superior o de todos los que la cuenta lee,
 // los más recientes primero. el código lleva a S50: dentro de un proyecto, bajo el proyecto del entregable, para que «Volver» no
 // salga del proyecto. «Nuevo entregable» pide un proyecto, CREATE sobre deliverable y la asignación
 // vigente (useEscribeEnProyecto); «Plantillas» (S64) es de la administración (decisión 20 del plan)
 export function EntregablesDeReportes() {
   const { t } = useTranslation(NS)
   const { isAdmin, can } = useAuth()
-  const { proyecto, elegir } = useProyectoElegido()
+  const { proyecto } = useProyectoElegido()
   const entregables = useRegistros('deliverable', { project: proyecto || undefined, sort: 'updated_at', dir: 'desc', size: 50 })
   const escribe = useEscribeEnProyecto(proyecto || undefined)
   const [nuevo, setNuevo] = useState(false)
@@ -47,9 +48,7 @@ export function EntregablesDeReportes() {
         </div>
       </div>
       <p className="text-sm text-sg-text-secondary">{t('entregables.lista.ayuda')}</p>
-      <div className="md:w-1/2">
-        <SelectorDeProyecto proyecto={proyecto} alCambiar={elegir} />
-      </div>
+      <AlcanceDeLaExportacion proyecto={proyecto} />
       <FalloDeProyectos />
       {crea && !proyecto ? <p className="text-sg-caption text-sg-text-muted">{t('entregables.lista.eligeProyecto')}</p> : null}
       {crea && proyecto && !escribe ? <p className="text-sg-caption text-sg-text-muted">{t('entregables.lista.sinAsignacion')}</p> : null}
@@ -62,7 +61,7 @@ export function EntregablesDeReportes() {
               <Table aria-label={titulo}>
                 <thead>
                   <tr>
-                    {(['codigo', 'titulo', 'tipo', 'corte', 'estado', 'borrador', 'revision', 'niveles'] as const).map((c) => (
+                    {(['entregable', 'tipo', 'corte', 'estado', 'borrador', 'revision', 'niveles'] as const).map((c) => (
                       <Th key={c} scope="col">
                         {t(`entregables.lista.columnas.${c}`)}
                       </Th>
@@ -72,15 +71,14 @@ export function EntregablesDeReportes() {
                 <tbody>
                   {pagina.content.map((e) => (
                     <tr key={e.id}>
+                      {/* el código en gris y el título como enlace a su página (revisión de UX, etapa 7) */}
                       <Td className="text-sm">
-                        <Link
-                          to={rutaDeEntregable(e.id, scope.kind === 'project' ? texto(e, 'project') : null)}
-                          className="font-sg-mono text-sg-primary-text underline"
-                        >
-                          {texto(e, 'document_code')}
-                        </Link>
+                        <EnlaceDeRegistro
+                          codigo={texto(e, 'document_code')}
+                          titulo={texto(e, 'title') || texto(e, 'document_code')}
+                          ruta={rutaDeEntregable(e.id, scope.kind === 'project' ? texto(e, 'project') : null)}
+                        />
                       </Td>
-                      <Td className="text-sm">{texto(e, 'title')}</Td>
                       <Td className="text-sm">{opcion(e, 'deliverable_type')}</Td>
                       <Td className="text-sm">{diaPe(texto(e, 'cutoff_date') || texto(e, 'period_end_date')) || '—'}</Td>
                       <Td className="text-sm">
