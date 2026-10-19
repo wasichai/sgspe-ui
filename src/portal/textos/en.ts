@@ -139,6 +139,11 @@ export const EN: Textos = {
     incorrectas: 'Wrong email or password',
     fallo: 'Could not sign in. Please try again.'
   },
+  sesionVencida: {
+    titulo: 'Your session expired',
+    texto: 'What you were doing is still on screen. Enter your password to continue and, if something was not saved, save it again.',
+    incorrecta: 'The password is not correct.'
+  },
   shell: {
     salir: 'Sign out',
     secciones: 'Sections',

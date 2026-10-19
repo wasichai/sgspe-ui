@@ -3,6 +3,7 @@ import { ApiError, useApiClient, useAuth } from '@wasichai/core'
 import { useEffect } from 'react'
 import { usePedir } from './http'
 import { consulta } from './registros'
+import { sesionVencida } from '../api'
 
 // los avisos de wasichai-notifications (decisión D2, ADR-0018; WAS-ADR-0046, 0047 y 0060): la bandeja, su resumen en vivo y
 // las preferencias de correo son del módulo, en /api/auth/me/notifications*. @wasichai/* 0.5.1 no trae su interfaz, así que
@@ -225,7 +226,7 @@ export function useFlujoDeAvisos(activo = true, programar: Programar = programar
         })
         if (respuesta.status === 401) {
           cliente.setToken(null)
-          signOut()
+          sesionVencida()
           return
         }
         if (respuesta.status === 404 || respuesta.status === 403) return

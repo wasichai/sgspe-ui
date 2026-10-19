@@ -21,7 +21,14 @@
         </script>
     </head>
     <body>
-        <div id="root"></div>
+        <!-- mientras baja el bundle y se valida la sesión, la marca y un «Cargando…» en lugar de una pantalla en blanco; React lo
+             reemplaza al montar. es marcado estático: la CSP no cambia -->
+        <div id="root">
+            <div role="status" class="flex h-screen flex-col items-center justify-center gap-2 bg-sg-bg text-sg-text-muted">
+                <span class="text-sg-h3 font-semibold text-sg-primary-text">SGSPE</span>
+                <span class="text-sm">Cargando…</span>
+            </div>
+        </div>
         <script type="module" src="/src/main.tsx"></script>
     </body>
 </html>

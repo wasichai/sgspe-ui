@@ -139,6 +139,11 @@ export const ES = {
     incorrectas: 'Correo o contraseña incorrectos',
     fallo: 'No se pudo iniciar sesión. Inténtelo de nuevo.'
   },
+  sesionVencida: {
+    titulo: 'Su sesión venció',
+    texto: 'Lo que estaba haciendo sigue en la pantalla. Ingrese su contraseña para continuar y, si algo no se guardó, vuelva a guardarlo.',
+    incorrecta: 'La contraseña no es correcta.'
+  },
   shell: {
     salir: 'Cerrar sesión',
     secciones: 'Secciones',

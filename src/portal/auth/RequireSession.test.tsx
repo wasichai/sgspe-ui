@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -73,13 +73,16 @@ describe('RequireSession', () => {
   })
 
   // Review Focus 4: un 401 a mitad de sesión borra el token, vuelve al login y, al entrar, regresa a donde estaba
-  it('un 401 a mitad de sesión vuelve al login y después regresa a la misma ruta', async () => {
+  it('un 401 a mitad de sesión pide la contraseña en el lugar; quien prefiere salir va al login y vuelve a la misma ruta', async () => {
     abrirSesion(RELACIONISTA)
     window.history.pushState({}, '', '/?vista=modulos')
     fetch = mockFetch([{ path: '/auth/me/permissions', status: 401, body: { title: 'Unauthorized', status: 401 } }])
     render(<PortalApp />)
-    expect(await screen.findByLabelText('Contraseña')).toBeInTheDocument()
+    const dialogo = await screen.findByRole('dialog', { name: 'Su sesión venció' })
     expect(localStorage.getItem('sgspe.token')).toBeNull()
+    expect(aqui()).toBe('/?vista=modulos')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Cerrar sesión' }))
+    expect(await screen.findByLabelText('Correo')).toBeInTheDocument()
     expect(new URLSearchParams(window.location.search).get('next')).toBe('/?vista=modulos')
 
     fetch.restore()

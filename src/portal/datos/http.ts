@@ -1,5 +1,6 @@
-import { ApiError, useApiClient, useAuth, type ApiClient, type FieldViolation } from '@wasichai/core'
+import { ApiError, useApiClient, type ApiClient, type FieldViolation } from '@wasichai/core'
 import { useMemo } from 'react'
+import { sesionVencida } from '../api'
 
 // el cliente HTTP del portal para todo lo que el ApiClient de core no hace: cabeceras de escritura de SGSPE (If-Match,
 // X-Change-Reason, Idempotency-Key; api.md §3.5 a §3.7), multipart, descargas de archivos y el X-Correlation-Id de los
@@ -158,11 +159,11 @@ export function crearPedido(cliente: ApiClient, alNoAutorizado: () => void): Ped
   return pedir
 }
 
-// el pedido de la sesión abierta: un 401 cierra la sesión de core y RequireSession lleva al login
+// el pedido de la sesión abierta: un 401 pide renovar la sesión (el diálogo del shell, que conserva lo escrito); sin quien la
+// renueve, cierra la sesión de core y RequireSession lleva al login
 export function usePedir(): Pedido {
   const cliente = useApiClient()
-  const { signOut } = useAuth()
-  return useMemo(() => crearPedido(cliente, signOut), [cliente, signOut])
+  return useMemo(() => crearPedido(cliente, sesionVencida), [cliente])
 }
 
 // guarda un archivo descargado con su nombre (las exportaciones y el reporte de diferencias)
