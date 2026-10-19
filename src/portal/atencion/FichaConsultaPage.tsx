@@ -1,3 +1,4 @@
+import { useCodigoPropuesto } from '../datos/codigos'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -12,7 +13,7 @@ import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Textarea } from '@wasichai/ui'
 import { useAvailableTransitions } from '@wasichai/workflow'
-import { useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
@@ -409,6 +410,16 @@ function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Reg
     tipo: '',
     motivo: ''
   })
+  // el código que propone el backend para lo que nace (decisión 6 de la revisión de UX), editable: sigue a «¿Qué se crea?» mientras
+  // no se toque
+  const codigoPropuesto = useCodigoPropuesto(crea, texto(solicitud, 'project') || undefined).codigo
+  const ultimoPropuesto = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (!codigoPropuesto) return
+    const anterior = ultimoPropuesto.current
+    ultimoPropuesto.current = codigoPropuesto
+    setValores((v) => (v.codigo === '' || v.codigo === anterior ? { ...v, codigo: codigoPropuesto } : v))
+  }, [codigoPropuesto])
   const [pagador, setPagador] = useState<Registro | null>(null)
   const [intentado, setIntentado] = useState(false)
   // el error de quién paga, asociado a su buscador como los de Campo
