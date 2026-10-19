@@ -12,7 +12,7 @@ import { texto, useDefinicion, useTodos } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { fechaPe, NS, numeroPe, periodoPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { rotuloDeFila } from '../datos/opciones'
+import { rotuloDeFila, rotuloDeOpcion } from '../datos/opciones'
 
 // la fila de filtros de dashboards.md §3.1, en la URL: proyecto (el del contexto; sin él, las asignaciones de la persona),
 // periodo, territorio (el chip) y ámbito; desde F3, la campaña de exploración y el responsable (?explorationCampaign=, ?owner=),
@@ -81,10 +81,10 @@ export function FiltrosDeTablero({
       <label className="space-y-1">
         <span className="block text-sg-label">{t('tableros.ambito')}</span>
         <select className={CONTROL} value={busqueda.get('scope') ?? ''} onChange={(e) => cambiar('scope', e.target.value)}>
-          <option value="">{t('comun.ninguno')}</option>
+          <option value="">{t('tableros.todosLosAmbitos')}</option>
           {ambitos.map((a) => (
             <option key={a} value={a}>
-              {a}
+              {rotuloDeOpcion(a)}
             </option>
           ))}
         </select>
@@ -93,7 +93,7 @@ export function FiltrosDeTablero({
         <label className="space-y-1">
           <span className="block text-sg-label">{t('tableros.campana')}</span>
           <select className={CONTROL} value={busqueda.get('explorationCampaign') ?? ''} onChange={(e) => cambiar('explorationCampaign', e.target.value)}>
-            <option value="">{t('comun.ninguno')}</option>
+            <option value="">{t('tableros.todasLasCampanas')}</option>
             {(campanas.data ?? []).map((c) => (
               <option key={c.id} value={c.id}>
                 {texto(c, 'name')}
@@ -112,6 +112,10 @@ export function FiltrosDeTablero({
         {t('tableros.actualizar')}
       </Button>
       {calculado ? <span className="text-sg-caption text-sg-text-muted">{t('tableros.calculado', { fecha: fechaPe(new Date(calculado)) })}</span> : null}
+      {/* dashboards.md §3.1: sin fechas, el mes en curso; las series, los 12 meses que terminan hoy */}
+      {!busqueda.get('periodStart') && !busqueda.get('periodEnd') ? (
+        <p className="basis-full text-sg-caption text-sg-text-muted">{t('tableros.periodoPorDefecto')}</p>
+      ) : null}
     </div>
   )
 }

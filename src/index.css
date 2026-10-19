@@ -51,3 +51,10 @@
 table :where(.font-sg-mono, .tabular-nums, time) {
     white-space: nowrap;
 }
+
+/* el Th de @wasichai/ui va en versalitas para los encabezados de columna; un encabezado de fila es el nombre del registro o del
+   indicador y se lee como texto */
+table th[scope='row'] {
+    text-transform: none;
+    letter-spacing: normal;
+}

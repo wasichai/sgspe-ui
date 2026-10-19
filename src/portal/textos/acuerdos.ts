@@ -6,6 +6,8 @@ export const ES_ACUERDOS = {
   eligeProyecto: 'Para registrar un acuerdo, elija su proyecto en el selector.',
   tabla: 'Acuerdos',
   vacio: 'Todavía no hay acuerdos.',
+  vacioAyuda:
+    'Un acuerdo o convenio formaliza lo pactado con una comunidad o una institución, con sus partes y su vigencia; se registra dentro de su proyecto.',
   truncado: 'Se muestran los primeros {{n}} acuerdos: elija un proyecto para ver el resto.',
   columnas: { codigo: 'Código', titulo: 'Título', proyecto: 'Proyecto', tipo: 'Tipo', estado: 'Estado', vigencia: 'Vigencia', vence: 'Vence' },
   motivo: 'Motivo del registro o del cambio (obligatorio)',
@@ -68,6 +70,7 @@ export const EN_ACUERDOS: typeof ES_ACUERDOS = {
   eligeProyecto: 'To record an agreement, pick its project in the selector.',
   tabla: 'Agreements',
   vacio: 'There are no agreements yet.',
+  vacioAyuda: 'An agreement formalizes what was agreed with a community or an institution, with its parties and validity; it is recorded inside its project.',
   truncado: 'The first {{n}} agreements are shown: pick a project to see the rest.',
   columnas: { codigo: 'Code', titulo: 'Title', proyecto: 'Project', tipo: 'Type', estado: 'Status', vigencia: 'Validity', vence: 'Expires' },
   motivo: 'Reason for the record or the change (required)',

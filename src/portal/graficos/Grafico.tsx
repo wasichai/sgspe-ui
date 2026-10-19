@@ -23,9 +23,20 @@ export interface GraficoProps {
 
 const GraficoImpl = lazy(() => import('./GraficoImpl'))
 
+const SIN_CIFRA = new Set<string | number>([0, '0', '—', ''])
+// la primera columna es la categoría (el mes, el grupo); las demás, las cifras
+export const sinDatos = ({ filas }: DatosDelGrafico): boolean => filas.every((fila) => fila.slice(1).every((celda) => SIN_CIFRA.has(celda)))
+
 export function Grafico({ etiqueta, datos, alto = 280, ...props }: GraficoProps) {
   const { t } = useTranslation(NS)
   const [fallo, fijarFallo] = useState(false)
+  // sin filas o con todo en cero (o sin cifra) no se dibujan ejes vacíos: se dice que no hay datos en el periodo
+  if (sinDatos(datos))
+    return (
+      <figure aria-label={etiqueta} className="flex items-center justify-center rounded-sg-md bg-sg-surface-sunken p-6 text-sm text-sg-text-muted">
+        {t('comun.sinDatosEnElPeriodo')}
+      </figure>
+    )
   return (
     <figure className="space-y-2">
       <LimiteDeError mensaje={t('tableros.fallo')} alFallar={() => fijarFallo(true)}>

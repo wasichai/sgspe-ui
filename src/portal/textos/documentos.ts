@@ -9,6 +9,7 @@ export const ES_DOCUMENTOS = {
   tabla: 'Evidencias',
   columnas: { evidencia: 'Evidencia', proyecto: 'Proyecto', tipo: 'Tipo', clasificacion: 'Clasificación', tamano: 'Tamaño', fecha: 'Fecha' },
   vacio: 'Todavía no hay evidencias.',
+  vacioAyuda: 'Las actas, fotos, cartas y comprobantes se suben aquí o desde el registro que sustentan, con su clasificación.',
   subirSinProyecto: 'Una evidencia subida aquí es de la organización, no de un proyecto: para la de un proyecto, elija el proyecto en el selector.',
   // S46
   ficha: {
@@ -79,6 +80,7 @@ export const EN_DOCUMENTOS: typeof ES_DOCUMENTOS = {
   tabla: 'Evidence',
   columnas: { evidencia: 'Evidence', proyecto: 'Project', tipo: 'Type', clasificacion: 'Classification', tamano: 'Size', fecha: 'Date' },
   vacio: 'There is no evidence yet.',
+  vacioAyuda: 'Minutes, photos, letters and receipts are uploaded here or from the record they support, with their classification.',
   subirSinProyecto: 'Evidence uploaded here belongs to the organization, not to a project: for a project’s, pick the project in the selector.',
   ficha: {
     volver: 'Library',

@@ -32,12 +32,12 @@ export function KpiCard({
   else if (error && !indicador) cuerpo = error instanceof ApiError && error.status === 403 ? <NoDisponible /> : <ErrorDeCarga error={error} />
   else if (cargando || !indicador) cuerpo = <Cargando compacto />
   else if (!indicador.available) cuerpo = <NoDisponible motivo={indicador.unavailableReason} />
+  // sin valor en el periodo (un porcentaje sin base, una mediana sin casos) se dice, sin «—» ni la unidad suelta
+  else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
   else
     cuerpo = (
       <>
-        <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">
-          {indicador.value === null || indicador.value === undefined ? '—' : numeroPe(indicador.value)}
-        </p>
+        <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">{numeroPe(indicador.value)}</p>
         <p className="text-sg-caption text-sg-text-muted">
           {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
             ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `

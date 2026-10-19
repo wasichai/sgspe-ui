@@ -188,7 +188,8 @@ export const ES = {
     estados: { disponible: 'Disponible', 'sin-acceso': 'Sin acceso con sus permisos', 'solo-admin': 'Solo para administración' }
   },
   seccionPorLlegar: 'Esta sección llega en {{fase}}',
-  noEncontrada: 'Esta página no existe'
+  noEncontrada: 'Esta página no existe',
+  irAlInicio: 'Ir al inicio'
 }
 
 export type Textos = typeof ES

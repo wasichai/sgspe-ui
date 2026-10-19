@@ -140,7 +140,9 @@ export function BibliotecaPage() {
         columnas={columnas}
         etiqueta={t('documentos.tabla')}
         vacio={
-          <VacioDeLista conFiltros={chips.length > 0} alLimpiar={() => lista.cambiar({ q: null, evidence_type: null, classification: null, consent: null })} />
+          <VacioDeLista conFiltros={chips.length > 0} alLimpiar={() => lista.cambiar({ q: null, evidence_type: null, classification: null, consent: null })}>
+            {t('documentos.vacioAyuda')}
+          </VacioDeLista>
         }
         alPagina={(pagina) => lista.cambiar({ page: String(pagina) })}
         alAbrir={(e) => {

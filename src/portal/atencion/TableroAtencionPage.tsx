@@ -49,12 +49,8 @@ export function TableroAtencionPage() {
               </p>
               <section aria-label={t('tableroAtencion.zonas.flujo')} className="space-y-2">
                 <h2 className="text-sg-h3 font-semibold">{t('tableroAtencion.zonas.flujo')}</h2>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {FLUJO.map((code) => {
-                    const i = ind(code) ?? { code, label: code, available: false }
-                    return <KpiCard key={code} titulo={i.label} indicador={i} notas={i.available ? <NotasDeIndicador indicador={i} /> : null} />
-                  })}
-                </div>
+                {/* una sola vista del flujo: la tabla por tipo con el total destacado y las notas de cada indicador (antes, las
+                    mismas seis cifras salían también en tarjetas) */}
                 <Flujo indicadores={FLUJO.map((code) => ind(code))} />
               </section>
               <div className="grid gap-4 lg:grid-cols-2">
@@ -68,12 +64,15 @@ export function TableroAtencionPage() {
               <Zona titulo={t('tableroAtencion.zonas.desgloses')} indicador={ind('KPI-GRV-08')}>
                 {(i) => (
                   <div className="grid gap-4 lg:grid-cols-2">
+                    {/* cada desglose con su título a la vista: sin él, cinco gráficos (o cinco vacíos) no se distinguen */}
                     {DIMENSIONES.filter((d) => i.breakdowns?.some((b) => b.by === d)).map((d) => (
-                      <Barras
-                        key={d}
-                        titulo={t(`tableroAtencion.dimensiones.${d}`)}
-                        filas={desglose(i, d).map((f) => ({ nombre: rotuloDeFila(f), valor: f.value }))}
-                      />
+                      <div key={d} className="space-y-1">
+                        <h3 className="text-sm font-medium">{t(`tableroAtencion.dimensiones.${d}`)}</h3>
+                        <Barras
+                          titulo={t(`tableroAtencion.dimensiones.${d}`)}
+                          filas={desglose(i, d).map((f) => ({ nombre: rotuloDeFila(f), valor: f.value }))}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -114,6 +113,7 @@ function Flujo({ indicadores }: { indicadores: (Indicador | undefined)[] }) {
               <tr key={i.code ?? n}>
                 <Th scope="row" className="text-sm font-normal">
                   {i.label}
+                  {i.available ? <NotasDeIndicador indicador={i} /> : null}
                 </Th>
                 {i.available ? (
                   <>
@@ -122,7 +122,7 @@ function Flujo({ indicadores }: { indicadores: (Indicador | undefined)[] }) {
                         {cifra(desglose(i, 'type').find((f) => f.key === o)?.value)}
                       </Td>
                     ))}
-                    <Td className="text-sm tabular-nums">{cifra(i.value)}</Td>
+                    <Td className="text-sm font-semibold tabular-nums">{cifra(i.value)}</Td>
                   </>
                 ) : (
                   <Td colSpan={OBJETOS_DE_QCS.length + 1} className="text-sm">
