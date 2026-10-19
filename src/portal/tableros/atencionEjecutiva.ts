@@ -26,7 +26,7 @@ const EN_EL_PROYECTO: Record<CodigoDeAtencion, string> = {
   'KPI-GRV-02': 'attention'
 }
 const EN_LA_CARTERA: Record<CodigoDeAtencion, string> = {
-  'KPI-EXE-02': '/risks',
+  'KPI-EXE-02': '/risks/dashboard',
   'KPI-RSK-01': '/risks/register',
   'KPI-COM-03': '/commitments',
   'KPI-GRV-02': '/attention'

@@ -20,7 +20,7 @@ describe('lo que necesita atención hoy', () => {
   it('sin la tabla por proyecto, una entrada por cifra de toda la cartera que no es cero', () => {
     const sinTabla = { ...TABLERO, byProject: undefined, byProjectOmitted: true }
     expect(itemsDeAtencion(sinTabla).map((i) => [i.code, i.proyecto, i.valor, i.ruta])).toEqual([
-      ['KPI-EXE-02', null, 2, '/risks'],
+      ['KPI-EXE-02', null, 2, '/risks/dashboard'],
       ['KPI-RSK-01', null, 1, '/risks/register'],
       ['KPI-COM-03', null, 3, '/commitments'],
       ['KPI-GRV-02', null, 4, '/attention']

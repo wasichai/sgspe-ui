@@ -360,6 +360,15 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     expect(within(tabla).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
   })
 
+  // revisión de UX, etapa 3: el encabezado común con el total y crear desde lo global sin pasar por el selector
+  it('el encabezado dice cuántas hay y ofrece registrar también en lo global; el proyecto es «código · nombre»', async () => {
+    fetch = abrirPortal('/engagements', RELACIONISTA, EQUIPO, [...base(), { path: '/objects/engagement/records', body: pagina([E3, E1, E2]) }])
+    const tabla = await screen.findByRole('table', { name: 'Relacionamiento' })
+    expect(screen.getByText('3 interacciones')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Registrar interacción' })).toBeInTheDocument()
+    expect((await within(tabla).findAllByRole('link', { name: /^PRJ-01 · / }))[0]).toHaveAttribute('href', '/projects/p1/overview')
+  })
+
   it('la lista global suma la columna Proyecto con su código y ordena de la más reciente a la más antigua', async () => {
     fetch = abrirPortal('/engagements', RELACIONISTA, EQUIPO, [...base(), { path: '/objects/engagement/records', body: pagina([E3, E1, E2]) }])
     const tabla = await screen.findByRole('table', { name: 'Relacionamiento' })
