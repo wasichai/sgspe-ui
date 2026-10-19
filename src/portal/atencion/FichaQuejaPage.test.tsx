@@ -71,7 +71,8 @@ describe('S36 · ficha de queja', () => {
     abrir()
     expect(await screen.findByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeInTheDocument()
     expect(screen.getByText('Severidad Alta')).toBeInTheDocument()
-    expect(screen.getByLabelText('Situación de plazo: Al día')).toBeInTheDocument()
+    // en el encabezado y en el vencimiento del panel de decisión (revisión de UX, etapa 4)
+    expect(screen.getAllByLabelText('Situación de plazo: Al día').length).toBeGreaterThan(0)
     expect(screen.getByText(/Resolución hasta el 31 oct/)).toBeInTheDocument()
     const resolver = await screen.findByRole('button', { name: 'Resolver' })
     await waitFor(() => expect(resolver).toBeDisabled())
@@ -122,6 +123,22 @@ describe('S36 · ficha de queja', () => {
     expect(screen.getByText(/El cargo de queja no se emite en el sistema/)).toBeInTheDocument()
   })
 
+  // revisión de UX, etapa 4: la anatomía común (camino del flujo, panel de decisión, migas con el código y trazabilidad)
+  it('dice el camino del flujo, el panel de decisión y los tres grupos de trazabilidad', async () => {
+    fetch = mockFetch(rutas(QUEJA))
+    abrir()
+    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    const decision = screen.getByRole('region', { name: 'Situación' })
+    expect(within(decision).getByRole('group', { name: 'Responsable' })).toBeInTheDocument()
+    const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
+    expect(
+      within(panel)
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label'))
+    ).toEqual(['De dónde viene', 'Qué generó', 'Lo sustenta'])
+    expect(screen.queryByRole('link', { name: 'Volver a quejas, consultas y solicitudes' })).not.toBeInTheDocument()
+  })
+
   it('de dónde viene: la interacción de origen y «Registro reservado» para la consulta confidencial de la que se reclasificó', async () => {
     const reclasificada = { ...QUEJA, attributes: { ...QUEJA.attributes, origin_engagement: 'e1', reclassified_from_inquiry: 'i9' } }
     fetch = mockFetch(
@@ -140,7 +157,8 @@ describe('S36 · ficha de queja', () => {
     const deDonde = await screen.findByRole('region', { name: 'De dónde viene' })
     expect(await within(deDonde).findByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     expect(await within(deDonde).findByText('Registro reservado')).toBeInTheDocument()
-    const genero = screen.getByRole('region', { name: 'Qué alimenta y qué generó' })
+    // el grupo fijo del panel común (revisión de UX, etapa 4)
+    const genero = screen.getByRole('region', { name: 'Qué generó' })
     expect(await within(genero).findByRole('link', { name: 'COM-7 · Limpieza del canal' })).toHaveAttribute('href', '/projects/p1/commitments/c7')
     const anidados = avisos.mock.calls.filter((llamada) => /cannot be a descendant of <p>|cannot contain a nested/.test(llamada.join(' ')))
     avisos.mockRestore()

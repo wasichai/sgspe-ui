@@ -1,5 +1,15 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad, type SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
+import { plazoQueCorre } from '../datos/atencion'
+import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Tabs, Textarea } from '@wasichai/ui'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Textarea } from '@wasichai/ui'
 import { useAvailableTransitions } from '@wasichai/workflow'
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -17,13 +27,13 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import type { ObjetoDeQcs } from '../datos/atencion'
 import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
 import { rutaDeFicha } from '../datos/fichas'
-import { campoDe, texto, useDefinicion, usePuedeEditar, useRegistro, type Registro } from '../datos/registros'
+import { atributo, campoDe, texto, useDefinicion, usePuedeEditar, useRegistro, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { AccionesDeIa } from '../ia/AccionesDeIa'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarSolicitud, type ObjetoQueNace } from './comandos'
-import { AvisoDeConfidencial, Dato, DatosDelCaso, DeDondeViene, EditarQcs, MarcasDeQcs, PlazoQueCorre } from './comunesDeFicha'
+import { AvisoDeConfidencial, Dato, DatosDelCaso, EditarQcs, MarcasDeQcs, PlazoQueCorre, useOrigenDeQcs } from './comunesDeFicha'
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
 import { opcion } from '../datos/opciones'
 
@@ -146,6 +156,20 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
         qcs={solicitud}
         titulo={t('fichaConsulta.solicitud.titulo', { codigo: texto(solicitud, 'code') })}
         editables={[...EDITABLES_COMUNES, 'request_medium', 'requested_resource']}
+        generado={[
+          {
+            clave: 'compromiso',
+            titulo: t('fichaConsulta.solicitud.campos.created_commitment'),
+            contenido: texto(solicitud, 'created_commitment') ? <RegistroVinculado objeto="commitment" id={texto(solicitud, 'created_commitment')} /> : null
+          },
+          {
+            clave: 'aporte',
+            titulo: t('fichaConsulta.solicitud.campos.created_contribution'),
+            contenido: texto(solicitud, 'created_contribution') ? (
+              <RegistroVinculado objeto="social_contribution" id={texto(solicitud, 'created_contribution')} />
+            ) : null
+          }
+        ]}
         comprobar={['start_evaluation', 'decline', 'close_declined', 'close_unfulfilled']}
         acciones={
           acepta ? (
@@ -171,16 +195,7 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
         resumen={
           <>
             <Dato termino={t('fichaConsulta.solicitud.campos.request_medium')}>{opcion(solicitud, 'request_medium') || '—'}</Dato>
-            <Dato termino={t('fichaConsulta.solicitud.campos.created_commitment')}>
-              {texto(solicitud, 'created_commitment') ? <RegistroVinculado objeto="commitment" id={texto(solicitud, 'created_commitment')} /> : '—'}
-            </Dato>
-            <Dato termino={t('fichaConsulta.solicitud.campos.created_contribution')}>
-              {texto(solicitud, 'created_contribution') ? (
-                <RegistroVinculado objeto="social_contribution" id={texto(solicitud, 'created_contribution')} />
-              ) : (
-                '—'
-              )}
-            </Dato>
+            {/* el compromiso o el aporte creado van en «Qué generó» del panel de trazabilidad (revisión de UX, etapa 4) */}
             <div className="sm:col-span-2">
               <Dato termino={t('fichaConsulta.solicitud.campos.requested_resource')}>{texto(solicitud, 'requested_resource') || '—'}</Dato>
             </div>
@@ -192,7 +207,13 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
   )
 }
 
-// la anatomía común de S57: encabezado, acciones, transiciones del rol (motivo siempre: requiresReason), pestañas y de dónde viene
+// el camino de cada workflow sin sus excepciones (derivar una consulta, declinar una solicitud); un estado de excepción se agrega
+const CAMINO_DE_QCS: Record<Exclude<ObjetoDeQcs, 'grievance'>, string[]> = {
+  inquiry: ['received', 'answered', 'closed'],
+  stakeholder_request: ['received', 'under_evaluation', 'accepted', 'closed']
+}
+
+// la anatomía común de S57: encabezado, acciones, transiciones del rol (motivo siempre: requiresReason), pestañas y trazabilidad
 function Ficha({
   objeto,
   qcs,
@@ -201,7 +222,8 @@ function Ficha({
   comprobar,
   acciones,
   ayuda,
-  resumen
+  resumen,
+  generado
 }: {
   objeto: Exclude<ObjetoDeQcs, 'grievance'>
   qcs: Registro
@@ -211,6 +233,8 @@ function Ficha({
   acciones?: ReactNode
   ayuda?: ReactNode
   resumen?: ReactNode
+  // lo que nació de la QCS (el compromiso o el aporte creado al aceptar una solicitud), para «Qué generó»
+  generado?: SeccionDeTrazabilidad[]
 }) {
   const { t } = useTranslation(NS)
   const proyecto = texto(qcs, 'project')
@@ -219,26 +243,34 @@ function Ficha({
   const reclasifica = useOfreceReclasificar(objeto, qcs) && escribe
   const [editando, setEditando] = useState(false)
   const [reclasificando, setReclasificando] = useState(false)
+  // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
+  // decisión, pestañas con conteo y trazabilidad en tres grupos
+  useMigaDelRegistro(texto(qcs, 'code'))
+  const siguiente = useSiguienteAccion(objeto, qcs, comprobar)
+  const evidencias = useEvidenciasDe(objeto, qcs.id)
+  const origen = useOrigenDeQcs(objeto, qcs)
+  const nombreDeEvidencia = useNombreDeEvidencia()
+  const plazo = plazoQueCorre(objeto, qcs)
   return (
     <article className="space-y-4">
-      <Link to={`/projects/${encodeURIComponent(proyecto)}/attention`} className="text-sm text-sg-primary-text underline">
-        {t('fichaQueja.volver')}
-      </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {[opcion(qcs, 'channel'), opcion(qcs, 'category')].filter(Boolean).join(' · ') || '—'}
-          </p>
-          <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+      <EncabezadoDePagina
+        antetitulo={[t(`comun.qcs.${objeto}`), texto(qcs, 'code'), opcion(qcs, 'channel'), opcion(qcs, 'category')].filter(Boolean).join(' · ')}
+        titulo={titulo}
+        chips={
+          <>
             <EstadoChip objeto={objeto} estado={qcs.state} />
             <PlazoQueCorre objeto={objeto} qcs={qcs} />
             <MarcasDeQcs qcs={qcs} />
-          </div>
-        </div>
-        <div className="space-y-2">
+          </>
+        }
+        primaria={
           <div className="flex flex-wrap gap-2">
             {acciones}
+            <BotonesDeTransicion objeto={objeto} registro={qcs} proyecto={proyecto} comprobarAntes={comprobar} sinPrimaria={Boolean(acciones)} />
+          </div>
+        }
+        secundarias={
+          <>
             {edita ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('fichaQueja.comun.editar')}
@@ -249,20 +281,31 @@ function Ficha({
                 {t('piezas.reclasificar.boton')}
               </Button>
             ) : null}
-          </div>
-          <BotonesDeTransicion objeto={objeto} registro={qcs} proyecto={proyecto} comprobarAntes={comprobar} />
-        </div>
-      </header>
+          </>
+        }
+      />
       <AvisoDeConfidencial qcs={qcs} />
       {ayuda}
+      <CaminoDelFlujo objeto={objeto} estado={qcs.state} camino={CAMINO_DE_QCS[objeto]} />
+      <PanelDeDecision
+        objeto={objeto}
+        estado={qcs.state}
+        desde={texto(qcs, 'state_changed_at') || null}
+        por={texto(qcs, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={texto(qcs, 'owner_user_email')}
+        vencimiento={plazo?.fecha ?? null}
+        situacion={atributo(qcs, 'deadline_status')}
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs
-          label={titulo}
-          tabs={[
-            { id: 'resumen', label: t('fichaQueja.pestanas.resumen'), render: () => <DatosDelCaso qcs={qcs}>{resumen}</DatosDelCaso> },
+        <PestanasDeFicha
+          etiqueta={titulo}
+          pestanas={[
+            { id: 'resumen', etiqueta: t('fichaQueja.pestanas.resumen'), render: () => <DatosDelCaso qcs={qcs}>{resumen}</DatosDelCaso> },
             {
               id: 'evidencias',
-              label: t('fichaQueja.pestanas.evidencias'),
+              etiqueta: t('fichaQueja.pestanas.evidencias'),
+              conteo: evidencias.data?.totalElements ?? null,
               render: () => (
                 <div className="space-y-2 pt-3">
                   <p className="text-sg-caption text-sg-text-muted">{t('fichaConsulta.cartaAyuda')}</p>
@@ -279,7 +322,7 @@ function Ficha({
             },
             {
               id: 'actividad',
-              label: t('fichaQueja.pestanas.actividad'),
+              etiqueta: t('fichaQueja.pestanas.actividad'),
               render: () => (
                 <div className="pt-3">
                   <Historia objeto={objeto} id={qcs.id} vacio={t('fichaQueja.sinActividad')} />
@@ -288,10 +331,29 @@ function Ficha({
             }
           ]}
         />
-        <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <div className="space-y-4">
           <AccionesDeIa objeto={objeto} registro={qcs} proyecto={proyecto} rotulo={texto(qcs, 'code')} casos={['AI-08']} />
-          <DeDondeViene objeto={objeto} qcs={qcs} />
-        </aside>
+          <PanelDeTrazabilidad
+            deDondeViene={origen}
+            vacios={{ deDondeViene: t('fichaQueja.comun.sinOrigen') }}
+            queGenero={generado ?? []}
+            loSustenta={[
+              {
+                clave: 'evidencias',
+                titulo: t('fichaQueja.pestanas.evidencias'),
+                contenido: evidencias.data?.content.length ? (
+                  <ul>
+                    {evidencias.data.content.map((e) => (
+                      <li key={e.id}>
+                        <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : null
+              }
+            ]}
+          />
+        </div>
       </div>
       <EditarQcs objeto={objeto} qcs={qcs} campos={editables} abierto={editando} alCerrar={() => setEditando(false)} marcaConfidencial />
       {reclasificando ? <DialogoDeReclasificacion objeto={objeto} registro={qcs} alCerrar={() => setReclasificando(false)} /> : null}
