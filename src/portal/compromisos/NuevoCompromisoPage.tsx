@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -20,7 +20,7 @@ import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuari
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
-import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
+import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
 import { opcion } from '../datos/opciones'
@@ -191,6 +191,8 @@ function Asistente() {
   const { projectId = '' } = useParams()
   const [busqueda] = useSearchParams()
   const quejaDeOrigen = busqueda.get('origin_grievance') || null
+  // ?social_risk=<id>: desde la ficha del riesgo que el compromiso atiende (revisión de UX, etapa 5)
+  const riesgoQueAtiende = busqueda.get('social_risk') || null
   const navegar = useNavigate()
   const pedir = usePedir()
   const cliente = useQueryClient()
@@ -205,6 +207,16 @@ function Asistente() {
   const [actual, setActual] = useState(0)
   const [visitados, setVisitados] = useState(0)
   const [origen, setOrigen] = useState<Registro | null>(null)
+  // ?origin_engagement=<id>: «Crear relacionado» desde la ficha de la interacción (revisión de UX, etapa 5) la propone como
+  // origen una sola vez; la persona puede quitarla. si no se puede leer, el buscador queda como siempre
+  const interaccionDeOrigen = busqueda.get('origin_engagement') || undefined
+  const propuesta = useRegistro('engagement', interaccionDeOrigen)
+  const yaPropuesta = useRef(false)
+  useEffect(() => {
+    if (!propuesta.data || yaPropuesta.current) return
+    yaPropuesta.current = true
+    setOrigen(propuesta.data)
+  }, [propuesta.data])
   const [solicitantes, setSolicitantes] = useState<Set<string>>(new Set())
   const [responsable, setResponsable] = useState<Usuaria | null>(null)
   const [verificador, setVerificador] = useState<Usuaria | null>(null)
@@ -302,6 +314,7 @@ function Asistente() {
     }
     if (origen) salida.origin_engagement = origen.id
     if (quejaDeOrigen) salida.origin_grievance = quejaDeOrigen
+    if (riesgoQueAtiende) salida.social_risk = riesgoQueAtiende
     if (responsable) Object.assign(salida, { owner_user_id: responsable.id, owner_user_email: responsable.email })
     if (verificador) Object.assign(salida, { verifier_user_id: verificador.id, verifier_user_email: verificador.email })
     return salida
@@ -480,6 +493,11 @@ function Asistente() {
                 {t('nuevoCompromiso.naceDeLaQueja')}: <RegistroVinculado objeto="grievance" id={quejaDeOrigen} />
               </div>
             ) : null}
+            {riesgoQueAtiende ? (
+              <div className="text-sm">
+                {t('nuevoCompromiso.atiendeElRiesgo')}: <RegistroVinculado objeto="social_risk" id={riesgoQueAtiende} />
+              </div>
+            ) : null}
             <div className="space-y-1">
               <p className="text-sg-body-sm font-medium">{nombreDeCampo('origin_engagement')}</p>
               {origen ? (
@@ -496,6 +514,8 @@ function Asistente() {
                     {t('comun.quitar')}
                   </button>
                 </p>
+              ) : interaccionDeOrigen && propuesta.isPending ? (
+                <Cargando />
               ) : (
                 <BuscadorDeRegistro
                   objeto="engagement"

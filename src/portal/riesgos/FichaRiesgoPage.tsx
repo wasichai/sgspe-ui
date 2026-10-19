@@ -1,3 +1,4 @@
+import { CrearRelacionado } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -162,11 +163,24 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
           </div>
         }
         secundarias={
-          edita ? (
-            <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-              {t('fichaRiesgo.editar')}
-            </Button>
-          ) : undefined
+          <>
+            {edita ? (
+              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                {t('fichaRiesgo.editar')}
+              </Button>
+            ) : null}
+            {/* el compromiso que atiende el riesgo (revisión de UX, etapa 5); la medida se crea en su pestaña */}
+            <CrearRelacionado
+              proyecto={proyecto}
+              acciones={[
+                {
+                  objeto: 'commitment',
+                  etiqueta: t('paginas.relacionados.compromiso'),
+                  a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?social_risk=${encodeURIComponent(riesgo.id)}`
+                }
+              ]}
+            />
+          </>
         }
       />
       {hecha ? (

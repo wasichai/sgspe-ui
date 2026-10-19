@@ -52,6 +52,7 @@ export const ES_NUEVO_COMPROMISO = {
   },
   buscarInteraccion: 'Buscar la interacción por título',
   naceDeLaQueja: 'Nace de la queja',
+  atiendeElRiesgo: 'Atiende el riesgo',
   sinSolicitantes: 'Todavía no hay solicitantes: el envío a aprobación pide al menos uno.',
   tope: {
     titulo: 'Tope de apoyo social de la campaña',
@@ -141,6 +142,7 @@ export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
   },
   buscarInteraccion: 'Search the engagement by title',
   naceDeLaQueja: 'Comes from the grievance',
+  atiendeElRiesgo: 'Addresses the risk',
   sinSolicitantes: 'There are no requesters yet: submitting for approval needs at least one.',
   tope: {
     titulo: 'Campaign social support cap',

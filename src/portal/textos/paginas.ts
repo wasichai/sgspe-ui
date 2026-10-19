@@ -37,6 +37,8 @@ export const ES_PAGINAS = {
     pendiente: 'Paso pendiente',
     terminales: 'Otros cierres'
   },
+  crearRelacionado: 'Crear relacionado',
+  relacionados: { compromiso: 'Registrar compromiso', qcs: 'Registrar queja, consulta o solicitud' },
   formulario: {
     anterior: 'Anterior',
     siguiente: 'Siguiente',
@@ -93,6 +95,8 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     pendiente: 'Pending step',
     terminales: 'Other endings'
   },
+  crearRelacionado: 'Create related',
+  relacionados: { compromiso: 'Record a commitment', qcs: 'Record a grievance, inquiry or request' },
   formulario: {
     anterior: 'Previous',
     siguiente: 'Next',

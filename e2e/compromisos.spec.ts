@@ -228,3 +228,99 @@ test('la campana cuenta los avisos sin leer y abrir uno lleva a la ficha del reg
   await expect(page.getByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeVisible()
   expect(escrituras.map((r) => new URL(r.url()).pathname)).toContain('/api/auth/me/notifications/n1/read')
 })
+
+// etapa 5 de la revisión de UX: «Crear relacionado» desde la interacción abre el alta con ella como origen, y el compromiso
+// creado llega a su ficha con el origen enlazado en «De dónde viene»
+test('desde una interacción se crea el compromiso con ella como origen y la ficha lo enlaza', async ({ page }) => {
+  const campo = (name: string, extra: Record<string, unknown> = {}) => ({ name, label: name, type: 'TEXT', editable: true, visible: true, ...extra })
+  const enumeracion = (name: string, opciones: string[]) => campo(name, { type: 'ENUM', enumOptions: opciones })
+  const definicion = {
+    id: 'cm',
+    name: 'commitment',
+    fields: [
+      campo('code'),
+      campo('title'),
+      campo('description', { type: 'LONG_TEXT' }),
+      enumeracion('request_medium', ['ACUERDO EN REUNION']),
+      campo('agreed_date', { type: 'DATE' }),
+      campo('amount', { type: 'DECIMAL' }),
+      enumeracion('currency', ['PEN', 'USD']),
+      campo('due_date', { type: 'DATE' }),
+      campo('origin_engagement', { type: 'RELATION', relationTarget: 'engagement' }),
+      campo('origin_justification', { type: 'LONG_TEXT' }),
+      campo('project', { type: 'RELATION', relationTarget: 'project' })
+    ]
+  }
+  const creado = registro('c9', { project: 'p1', code: 'C-009', title: 'Canal de riego', origin_engagement: 'e1', currency: 'PEN' }, 'draft')
+  const altas: Request[] = []
+  const json = (body: unknown, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) })
+  const permisos = Object.fromEntries(
+    [
+      ['project', ['READ']],
+      ['project_assignment', ['READ']],
+      ['commitment', ['READ', 'CREATE']],
+      ['engagement', ['READ']],
+      ['stakeholder', ['READ']],
+      ['exploration_campaign', ['READ']]
+    ].map(([o, a]) => [o, a])
+  )
+  const rutas: [RegExp, string, unknown][] = [
+    [/^\/auth\/me\/permissions$/, 'GET', { admin: false, objects: permisos }],
+    [/^\/metadata\/objects\/commitment$/, 'GET', definicion],
+    [
+      /^\/objects\/commitment\/workflow$/,
+      'GET',
+      {
+        id: 'w',
+        objectName: 'commitment',
+        name: 'commitment',
+        label: 'commitment',
+        enabled: true,
+        definition: { states: [{ name: 'draft', label: 'Borrador', type: 'INITIAL' }], transitions: [] }
+      }
+    ],
+    [/^\/objects\/commitment\/records$/, 'POST', creado],
+    [/^\/objects\/commitment\/records$/, 'GET', pagina([])],
+    [/^\/objects\/commitment\/records\/c9$/, 'GET', creado],
+    [/^\/objects\/commitment\/records\/c9\/transitions$/, 'GET', []],
+    [/^\/objects\/commitment\/records\/c9\/related\//, 'GET', pagina([])],
+    [/^\/objects\/commitment\/records\/c9\/history$/, 'GET', []],
+    [/^\/objects\/[a-z_]+\/records$/, 'GET', pagina([])]
+  ]
+  await page.route('**/api/**', async (route) => {
+    const peticion = route.request()
+    const ruta = new URL(peticion.url()).pathname.replace(/^\/api/, '')
+    const encontrada = rutas.find(([patron, metodo]) => patron.test(ruta) && metodo === peticion.method())
+    // las listas de la interacción y del proyecto siguen con las respuestas comunes
+    if (
+      !encontrada ||
+      (encontrada[0].source === '^\\/objects\\/[a-z_]+\\/records$' &&
+        /^\/objects\/(engagement|stakeholder|project|project_assignment|organization)\//.test(ruta))
+    )
+      return route.fallback()
+    if (peticion.method() === 'POST') altas.push(peticion)
+    return route.fulfill(json(encontrada[2], peticion.method() === 'POST' ? 201 : 200))
+  })
+
+  await page.goto('/projects/p1/engagements/e1')
+  await page.getByRole('button', { name: 'Crear relacionado' }).click()
+  await page.getByRole('link', { name: 'Registrar compromiso' }).click()
+  await expect(page).toHaveURL(/\/projects\/p1\/commitments\/new\?origin_engagement=e1$/)
+  // el origen viene propuesto: la interacción, sin buscarla
+  await expect(page.getByRole('heading', { name: 'Nuevo compromiso', level: 1 })).toBeVisible()
+  await expect(page.getByRole('form', { name: 'Origen' }).getByText(/Asamblea de agosto/)).toBeVisible()
+  await page.getByRole('button', { name: 'Siguiente' }).click()
+  await page.getByRole('textbox', { name: 'Código' }).fill('C-009')
+  await page.getByRole('textbox', { name: 'Título' }).fill('Canal de riego')
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Siguiente' }).click()
+  await page.getByRole('textbox', { name: 'Monto' }).fill('500')
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Siguiente' }).click()
+  await page.getByRole('textbox', { name: 'Motivo (obligatorio)' }).fill('Acordado en la asamblea')
+  await page.getByRole('button', { name: 'Guardar borrador' }).click()
+
+  await expect(page).toHaveURL(/\/projects\/p1\/commitments\/c9$/)
+  expect(altas).toHaveLength(1)
+  expect(altas[0].postDataJSON()).toMatchObject({ attributes: { project: 'p1', code: 'C-009', origin_engagement: 'e1' } })
+  const deDondeViene = page.getByRole('complementary', { name: 'Trazabilidad' }).getByRole('region', { name: 'De dónde viene' })
+  await expect(deDondeViene.getByRole('link', { name: /Asamblea de agosto/ })).toBeVisible()
+})
