@@ -2,6 +2,7 @@
 export const ES_ENTREGAS = {
   titulo: 'Entregas',
   ejecutado: 'Ejecutado: {{ejecutado}} de {{monto}}',
+  sinEjecucion: 'Sin ejecución registrada · comprometido: {{monto}}',
   vacia: 'Todavía no hay entregas registradas.',
   registrar: 'Registrar entrega',
   registrarTitulo: 'Registrar una entrega',
@@ -57,6 +58,7 @@ export const ES_ENTREGAS = {
 export const EN_ENTREGAS: typeof ES_ENTREGAS = {
   titulo: 'Deliveries',
   ejecutado: 'Executed: {{ejecutado}} of {{monto}}',
+  sinEjecucion: 'No execution recorded · committed: {{monto}}',
   vacia: 'No deliveries recorded yet.',
   registrar: 'Record delivery',
   registrarTitulo: 'Record a delivery',

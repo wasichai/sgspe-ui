@@ -10,9 +10,20 @@ import { NS } from '../i18n'
 
 // el camino: desde el estado inicial, los estados que no cierran en el orden en que las transiciones los alcanzan, y al final
 // el primer cierre al que lleva el último de ellos. una ficha que conoce su camino lo da; los cierres que no nombra van aparte
-export function caminoDe(definicion: WorkflowDefinition, dado?: string[]): { camino: string[]; otros: string[] } {
+// sin transiciones (una definición a medias), el camino sigue el orden de los estados; el estado actual, si el recorrido no lo
+// alcanza, se agrega igual: la ficha siempre dice dónde está el registro
+export function caminoDe(definicion: WorkflowDefinition, dado?: string[], actual?: string | null): { camino: string[]; otros: string[] } {
   const finales = new Set(definicion.states.filter((s) => s.type === 'FINAL').map((s) => s.name))
-  if (dado) return { camino: dado, otros: definicion.states.filter((s) => finales.has(s.name) && !dado.includes(s.name)).map((s) => s.name) }
+  const conActual = (r: { camino: string[]; otros: string[] }) =>
+    actual && !r.camino.includes(actual) && !r.otros.includes(actual) && definicion.states.some((s) => s.name === actual)
+      ? { ...r, camino: [...r.camino, actual] }
+      : r
+  if (dado) return conActual({ camino: dado, otros: definicion.states.filter((s) => finales.has(s.name) && !dado.includes(s.name)).map((s) => s.name) })
+  if (definicion.transitions.length === 0)
+    return conActual({
+      camino: definicion.states.filter((s) => !finales.has(s.name)).map((s) => s.name),
+      otros: definicion.states.filter((s) => finales.has(s.name)).map((s) => s.name)
+    })
   const inicial = definicion.states.find((s) => s.type === 'INITIAL')?.name
   const orden: string[] = []
   for (let cola = inicial ? [inicial] : []; cola.length > 0;) {
@@ -25,7 +36,7 @@ export function caminoDe(definicion: WorkflowDefinition, dado?: string[]): { cam
   const ultimo = intermedios[intermedios.length - 1]
   const cierre = definicion.transitions.find((t) => t.from === ultimo && finales.has(t.to))?.to
   const camino = cierre ? [...intermedios, cierre] : intermedios
-  return { camino, otros: definicion.states.filter((s) => finales.has(s.name) && !camino.includes(s.name)).map((s) => s.name) }
+  return conActual({ camino, otros: definicion.states.filter((s) => finales.has(s.name) && !camino.includes(s.name)).map((s) => s.name) })
 }
 
 export function CaminoDelFlujo({ objeto, estado, camino: dado }: { objeto: string; estado: string | null | undefined; camino?: string[] }) {
@@ -33,7 +44,7 @@ export function CaminoDelFlujo({ objeto, estado, camino: dado }: { objeto: strin
   const workflow = useWorkflow(objeto)
   const definicion = workflow.data?.definition
   if (!definicion) return null
-  const { camino, otros } = caminoDe(definicion, dado)
+  const { camino, otros } = caminoDe(definicion, dado, estado)
   const etiqueta = (nombre: string) => definicion.states.find((s) => s.name === nombre)?.label ?? nombre
   const posicion = estado ? camino.indexOf(estado) : -1
   return (

@@ -40,6 +40,16 @@ describe('caminoDe', () => {
     expect(caminoDe(DEFINICION)).toEqual({ camino: ['draft', 'approved', 'in_progress', 'fulfilled', 'verified'], otros: ['cancelled'] })
   })
 
+  it('sin transiciones, el camino sigue el orden de los estados; los cierres van aparte', () => {
+    const sinTransiciones = { states: DEFINICION.states, transitions: [] }
+    expect(caminoDe(sinTransiciones)).toEqual({ camino: ['draft', 'approved', 'in_progress', 'fulfilled'], otros: ['cancelled', 'verified'] })
+  })
+
+  it('el estado actual siempre está: si el recorrido no lo alcanza, se agrega al camino', () => {
+    const suelto = { states: [...DEFINICION.states, estado('blocked', 'Bloqueado')], transitions: DEFINICION.transitions }
+    expect(caminoDe(suelto, undefined, 'blocked').camino).toContain('blocked')
+  })
+
   it('un camino dado por la ficha manda; los cierres que no nombra van aparte', () => {
     expect(caminoDe(DEFINICION, ['draft', 'approved', 'verified'])).toEqual({ camino: ['draft', 'approved', 'verified'], otros: ['cancelled'] })
   })

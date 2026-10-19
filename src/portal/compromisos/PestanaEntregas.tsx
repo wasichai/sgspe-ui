@@ -104,6 +104,9 @@ export function Ejecutado({ compromiso }: { compromiso: Registro }) {
   const ejecutado = atributo(compromiso, 'executed_amount')
   const moneda = atributo(compromiso, 'currency')
   const porcentaje = monto > 0 && ejecutado !== null && ejecutado !== undefined ? Math.min(100, (Number(ejecutado) / monto) * 100) : 0
+  // sin monto ejecutado registrado, lo dice sin una barra vacía que se lee como «0 %» (revisión de UX, etapa 4)
+  if (ejecutado === null || ejecutado === undefined)
+    return <p className="text-sm text-sg-text-secondary">{t('entregas.sinEjecucion', { monto: montoPe(atributo(compromiso, 'amount'), moneda) })}</p>
   return (
     <div className="space-y-1 text-sm">
       <p>{t('entregas.ejecutado', { ejecutado: montoPe(ejecutado, moneda), monto: montoPe(atributo(compromiso, 'amount'), moneda) })}</p>

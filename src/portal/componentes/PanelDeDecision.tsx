@@ -11,7 +11,7 @@ import { SituacionDePlazo } from './SituacionDePlazo'
 // llegó (desde cuándo, quién) se dice «—»: de dónde se lee se resuelve con cada ficha
 export interface SiguienteAccion {
   etiqueta: string
-  // lo que falta para darla («al menos un solicitante»)
+  // lo que falta para darla, en el texto de la regla que la bloquea («Falta una entrega con conformidad»)
   falta?: string
 }
 
@@ -53,7 +53,7 @@ export function PanelDeDecision({
         {siguiente ? (
           <>
             <p className="font-medium">{siguiente.etiqueta}</p>
-            {siguiente.falta ? <p className="text-sg-caption text-sg-text-secondary">{t('paginas.decision.falta', { que: siguiente.falta })}</p> : null}
+            {siguiente.falta ? <p className="text-sg-caption text-sg-warning">{siguiente.falta}</p> : null}
           </>
         ) : (
           <p className="text-sg-text-muted">{t('paginas.decision.sinSiguiente')}</p>
