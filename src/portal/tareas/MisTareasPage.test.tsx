@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeCompromisos, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
-import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
+import { definicion, montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { MisTareasPage } from './MisTareasPage'
 
@@ -90,15 +90,30 @@ describe('S47 · mis tareas', () => {
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
     expect(red.a('GET', '/objects/task/records')[0].ruta).toContain('assignee_user_id=u-cmm')
-    const contadores = screen.getByLabelText('Mis tareas', { selector: 'dl' })
-    expect(within(contadores).getByText('Vencidas').nextElementSibling).toHaveTextContent('1')
-    expect(within(contadores).getByText('Abiertas').nextElementSibling).toHaveTextContent('2')
+    const contadores = screen.getByRole('group', { name: 'Mis tareas' })
+    expect(within(contadores).getByRole('button', { name: 'Vencidas 1' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(contadores).getByRole('button', { name: 'Abiertas 2' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(tabla).queryByText('Revisar el acta')).not.toBeInTheDocument()
     expect(within(tabla).getByRole('link', { name: 'Compromiso' })).toHaveAttribute('href', '/r/commitment/c1')
     await userEvent.click(within(tabla).getByRole('button', { name: 'Abrir Ejecutar compromiso C-001' }))
     const drawer = await screen.findByRole('dialog')
     expect(await within(drawer).findByRole('button', { name: 'Iniciar' })).toBeInTheDocument()
     expect(within(drawer).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
+  })
+
+  // revisión de UX, etapa 3: las cifras de arriba son filtros; en lo global, la columna Proyecto
+  it('pulsar «Vencidas» filtra la lista, queda como chip y «Abiertas» lo quita; en lo global se dice el proyecto', async () => {
+    fetch = mockFetch(rutas())
+    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
+    expect(within(tabla).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
+    expect(within(tabla).getAllByRole('row')).toHaveLength(3)
+    await userEvent.click(screen.getByRole('button', { name: 'Vencidas 1' }))
+    expect(ubicacion.actual).toBe('/tasks?situacion=VENCIDO')
+    expect(within(screen.getByRole('table', { name: 'Mis tareas' })).getAllByRole('row')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Quitar Vencidas' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Abiertas 2' }))
+    expect(ubicacion.actual).toBe('/tasks')
   })
 
   it('el tablero agrupa por estado y el calendario ubica cada tarea en su día de vencimiento', async () => {

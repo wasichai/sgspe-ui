@@ -1,3 +1,8 @@
+import { cn } from '@wasichai/ui'
+import { ChipsDeFiltro } from '../componentes/Lista'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
+import { useProyectos } from '../contexto/proyectos'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
@@ -47,25 +52,44 @@ export function MisTareasPage() {
   const pagina = lista.pagina ? String(lista.pagina) : null
   const abrir = (tarea: Registro) => lista.cambiar({ task: tarea.id, page: pagina })
   const contar = (situacion: string) => abiertas.filter((x) => atributo(x, 'deadline_status') === situacion).length
+  // las cifras de arriba son filtros (revisión de UX, etapa 3): «Vencidas» y «Por vencer» filtran la lista por su situación de
+  // plazo, en la URL (?situacion=), y «Abiertas» los quita
+  const situacion = lista.filtro('situacion')
+  const filtrar = (valor: string | null) => lista.cambiar({ situacion: valor, view: null })
+  const enLaLista = situacion ? abiertas.filter((x) => atributo(x, 'deadline_status') === situacion) : abiertas
+  const chips = situacion ? [{ clave: 'situacion', etiqueta: t(`tareas.contadores.${situacion === 'VENCIDO' ? 'vencidas' : 'porVencer'}`) }] : []
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{proyecto ? t('tareas.delProyecto') : t('tareas.titulo')}</h1>
+      <EncabezadoDePagina
+        titulo={proyecto ? t('tareas.delProyecto') : t('tareas.titulo')}
+        conteo={tareas.data ? t('tareas.conteo', { count: abiertas.length }) : undefined}
+      />
       {tareas.isPending ? null : tareas.isError && !tareas.data ? null : (
-        <dl aria-label={t('tareas.titulo')} className="grid grid-cols-3 gap-3 sm:max-w-md">
+        <div role="group" aria-label={t('tareas.titulo')} className="grid grid-cols-3 gap-3 sm:max-w-md">
           {(
             [
-              ['vencidas', contar('VENCIDO')],
-              ['porVencer', contar('POR VENCER')],
-              ['abiertas', abiertas.length]
+              ['vencidas', contar('VENCIDO'), 'VENCIDO'],
+              ['porVencer', contar('POR VENCER'), 'POR VENCER'],
+              ['abiertas', abiertas.length, null]
             ] as const
-          ).map(([clave, n]) => (
-            <div key={clave} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
-              <dt className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t(`tareas.contadores.${clave}`)}</dt>
-              <dd className="text-sg-h2 font-semibold tabular-nums">{numeroPe(n)}</dd>
-            </div>
-          ))}
-        </dl>
+          ).map(([clave, n, valor]) => {
+            const activo = vista === 'lista' && (valor ? situacion === valor : !situacion)
+            return (
+              <button
+                key={clave}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => filtrar(valor && situacion !== valor ? valor : null)}
+                className={cn('rounded-sg-lg border bg-sg-surface p-3 text-left hover:bg-sg-surface-hover', activo ? 'border-sg-primary' : 'border-sg-border')}
+              >
+                <span className="block text-sg-overline font-semibold uppercase text-sg-text-muted">{t(`tareas.contadores.${clave}`)}</span>{' '}
+                <span className="block text-sg-h2 font-semibold tabular-nums">{numeroPe(n)}</span>
+              </button>
+            )
+          })}
+        </div>
       )}
+      <ChipsDeFiltro chips={chips} alQuitar={() => filtrar(null)} alLimpiar={() => filtrar(null)} />
       <VistasGuardadas
         vistas={vistas.map((v) => ({ id: v, etiqueta: t(`tareas.vistas.${v}`) }))}
         actual={vista}
@@ -91,7 +115,7 @@ export function MisTareasPage() {
           <TablaDeTareas tareas={paraTomar} vacio={t('tareas.vaciaParaTomar')} alAbrir={abrir} />
         </>
       ) : (
-        <TablaDeTareas tareas={abiertas} vacio={t('tareas.vacia')} alAbrir={abrir} />
+        <TablaDeTareas tareas={enLaLista} vacio={t('tareas.vacia')} alAbrir={abrir} conProyecto={!proyecto} />
       )}
       {!proyecto ? <p className="text-sm text-sg-text-muted">{t('tareas.paraTomarGlobal')}</p> : null}
       {abierta ? <TareaDrawer tarea={abierta} alCerrar={() => lista.cambiar({ task: null, page: pagina })} /> : null}
@@ -99,15 +123,26 @@ export function MisTareasPage() {
   )
 }
 
-function TablaDeTareas({ tareas, vacio, alAbrir }: { tareas: Registro[]; vacio: string; alAbrir: (tarea: Registro) => void }) {
+function TablaDeTareas({
+  tareas,
+  vacio,
+  alAbrir,
+  conProyecto = false
+}: {
+  tareas: Registro[]
+  vacio: string
+  alAbrir: (tarea: Registro) => void
+  conProyecto?: boolean
+}) {
   const { t } = useTranslation(NS)
+  const proyectos = useProyectos()
   if (tareas.length === 0) return <Vacio titulo={vacio} />
   return (
     <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
       <Table aria-label={t('tareas.titulo')}>
         <thead>
           <tr>
-            {(['tarea', 'origen', 'prioridad', 'vence', 'estado'] as const).map((c) => (
+            {(['tarea', ...(conProyecto ? (['proyecto'] as const) : []), 'origen', 'prioridad', 'vence', 'estado'] as const).map((c) => (
               <Th key={c} scope="col">
                 {t(`tareas.columnas.${c}`)}
               </Th>
@@ -129,6 +164,11 @@ function TablaDeTareas({ tareas, vacio, alAbrir }: { tareas: Registro[]; vacio: 
                     {texto(x, 'title')}
                   </button>
                 </Td>
+                {conProyecto ? (
+                  <Td className="text-sm">
+                    <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} />
+                  </Td>
+                ) : null}
                 <Td className="text-sm">
                   {origen ? (
                     <Link to={rutaParaAbrir(origen.objeto, origen.id)} className="underline">
