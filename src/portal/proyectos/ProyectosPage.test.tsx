@@ -70,6 +70,8 @@ describe('S06 · lista de proyectos', () => {
     fetch = abrirPortal('/projects', RELACIONISTA, LECTOR, rutas())
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(screen.getByText('2 proyectos')).toBeInTheDocument()
+    // revisión de UX, etapa 3: cada vista dice cuántos tiene
+    expect(screen.getByRole('tab', { name: 'Mis proyectos' })).toHaveAccessibleDescription('2 registros')
     const [p1, p3] = filas()
     expect(await within(p1).findByText('jefa@sgspe.test')).toBeInTheDocument()
     expect(await within(p1).findByText('Perforación 2026')).toBeInTheDocument()
