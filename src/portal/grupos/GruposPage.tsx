@@ -92,7 +92,7 @@ export function GruposPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-sg-h1 font-semibold">{t('grupos.titulo')}</h1>
-          <p className="text-sm text-sg-text-muted">{t('grupos.conteo', { n: filtrados.length })}</p>
+          <p className="text-sm text-sg-text-muted">{t('grupos.conteo', { n: filtrados.length, count: filtrados.length })}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {proyecto ? (
@@ -152,10 +152,10 @@ export function GruposPage() {
           {elegidos.length > 0 && proyecto ? (
             <div
               role="region"
-              aria-label={t('comun.seleccionados', { n: elegidos.length })}
+              aria-label={t('comun.seleccionados', { n: elegidos.length, count: elegidos.length })}
               className="flex items-center gap-3 rounded-sg-md bg-sg-primary-soft px-3 py-2 text-sm"
             >
-              <span aria-live="polite">{t('comun.seleccionados', { n: elegidos.length })}</span>
+              <span aria-live="polite">{t('comun.seleccionados', { n: elegidos.length, count: elegidos.length })}</span>
               {can('engagement', 'CREATE') && escribeEnElProyecto ? (
                 <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.map(encodeURIComponent).join(',')}`)}>
                   {t('grupos.registrarConEllos')}

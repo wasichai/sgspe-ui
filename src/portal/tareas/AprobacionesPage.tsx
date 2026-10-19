@@ -192,7 +192,7 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
       <Td className="text-sm tabular-nums">
         {registro.data && MONTO_DE[objeto] ? montoPe(atributo(registro.data, MONTO_DE[objeto]), atributo(registro.data, 'currency')) : '—'}
       </Td>
-      <Td className="text-sm">{espera === null || espera <= 0 ? t('aprobaciones.hoy') : t('aprobaciones.dias', { n: espera })}</Td>
+      <Td className="text-sm">{espera === null || espera <= 0 ? t('aprobaciones.hoy') : t('aprobaciones.dias', { n: espera, count: espera })}</Td>
       <Td className="text-sm">{registro.data ? <PuedeDecidir objeto={objeto} id={id} /> : '—'}</Td>
       <Td className="text-sm">
         {reservada ? (

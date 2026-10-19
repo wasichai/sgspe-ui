@@ -183,9 +183,9 @@ describe('S08 · Project 360, resumen', () => {
   it('"Atención requerida" lista las actas por redactar de reuniones formales y los grupos sin contacto', async () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
     const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
-    expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto: acta por redactar' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
+    expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     expect(within(atencion).queryByText(/Llamada/)).not.toBeInTheDocument()
-    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas: sin contacto hace más de 90 días' })).toBeInTheDocument()
+    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
   })
 
   it('un borrador ofrece completarse solo a quien puede escribir algún campo del proyecto, no a un rol con "u"', async () => {
@@ -215,7 +215,7 @@ describe('S08 · Project 360, resumen', () => {
 
   it('las reuniones del mes se comparan con la meta y la actividad trae el motivo', async () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
-    expect(await screen.findByText('2026-10: 3 de 2')).toBeInTheDocument()
+    expect(await screen.findByText('oct. 2026: 3 de 2')).toBeInTheDocument()
     expect(await screen.findByText(/cambio de etapa/)).toBeInTheDocument()
   })
 
@@ -271,7 +271,7 @@ describe('S08 · Project 360, resumen', () => {
     expect(await within(atencion).findByText('Grupos de interés')).toBeInTheDocument()
     expect(within(atencion).getByText('No disponible')).toBeInTheDocument()
     // la otra lectura sí respondió: su aviso se lista
-    expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto: acta por redactar' })).toBeInTheDocument()
+    expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })).toBeInTheDocument()
     expect(within(atencion).queryByText(/Nada pide atención/)).not.toBeInTheDocument()
     cerrar()
     abrir(rutas(SIN_STANCE), [falla(/^\/objects\/engagement\/records/, 400, 'corr-77')])
@@ -287,13 +287,26 @@ describe('S08 · Project 360, resumen', () => {
     expect(await within(atencion).findByText(/Nada pide atención hoy/)).toBeInTheDocument()
   })
 
+  it('"Atención requerida" agrupa por tipo con su conteo, muestra cinco y despliega el resto', async () => {
+    const siete = Array.from({ length: 7 }, (_, n) => registro(`s${n}`, { organization: 'o1', last_contact_date: hace(120) }, { state: 'profiled' }))
+    abrir([{ path: '/objects/stakeholder/records', body: pagina(siete) }, ...rutas(SIN_STANCE)])
+    const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
+    const sinContacto = await within(atencion).findByRole('group', { name: '7 grupos de interés sin contacto en más de 90 días' })
+    await waitFor(() => expect(within(sinContacto).getAllByRole('link')).toHaveLength(5))
+    expect(within(atencion).getByRole('group', { name: '1 acta por redactar' })).toBeInTheDocument()
+    await userEvent.click(within(sinContacto).getByRole('button', { name: 'Ver los 7' }))
+    expect(within(sinContacto).getAllByRole('link')).toHaveLength(7)
+    await userEvent.click(within(sinContacto).getByRole('button', { name: 'Ver menos' }))
+    expect(within(sinContacto).getAllByRole('link')).toHaveLength(5)
+  })
+
   it('un grupo que nunca tuvo contacto entra en "sin contacto" con su propio texto', async () => {
     abrir([
       { path: '/objects/stakeholder/records', body: pagina([registro('s9', { organization: 'o1', last_contact_date: null }, { state: 'identified' })]) },
       ...rutas(SIN_STANCE)
     ])
     const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
-    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas: sin contacto registrado' })).toBeInTheDocument()
+    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas · nunca contactado' })).toBeInTheDocument()
   })
 
   it('una cuenta que no lee last_contact_date no marca a nadie como "sin contacto registrado"', async () => {
@@ -320,12 +333,12 @@ describe('S08 · Project 360, resumen', () => {
       ]
       abrir(con('2026-07-09'))
       const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
-      await within(atencion).findByRole('link', { name: 'Asamblea de agosto: acta por redactar' })
+      await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })
       expect(within(atencion).queryByText(/sin contacto/)).not.toBeInTheDocument()
       cerrar()
       abrir(con('2026-07-08'))
       const mas = await screen.findByRole('region', { name: 'Atención requerida' })
-      expect(await within(mas).findByRole('link', { name: 'Ronda campesina Tunas: sin contacto hace más de 90 días' })).toBeInTheDocument()
+      expect(await within(mas).findByRole('link', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
     })
   })
 
@@ -369,7 +382,7 @@ describe('S08 · Project 360, resumen', () => {
       }),
       [falla(/^\/objects\/project\/records\/p1\/history/, 400, 'corr-504')]
     )
-    expect(await screen.findByText('2026-09: — de 2')).toBeInTheDocument()
+    expect(await screen.findByText('set. 2026: — de 2')).toBeInTheDocument()
     expect(await screen.findByText(/corr-504/)).toBeInTheDocument()
     cerrar()
     abrir(rutas(SIN_STANCE, { 'KPI-ENG-02': { label: 'x', available: true, value: 0, series: [] } }))

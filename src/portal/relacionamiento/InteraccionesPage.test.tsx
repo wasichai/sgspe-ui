@@ -56,8 +56,10 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     ])
     expect(await screen.findByText('1 de 2')).toBeInTheDocument()
     const toca = screen.getByRole('complementary').querySelector('[aria-label="Te toca"]') as HTMLElement
-    expect(within(toca).getByRole('link', { name: 'Asamblea comunal: acta por redactar' })).toHaveAttribute('href', '/projects/p1/engagements/e1/minutes')
-    expect(within(toca).getByRole('link', { name: 'Llamada al teniente: postergada' })).toBeInTheDocument()
+    // agrupado por lo que toca, con su conteo
+    const actas = within(toca).getByRole('group', { name: '1 acta por redactar' })
+    expect(within(actas).getByRole('link', { name: 'Asamblea comunal' })).toHaveAttribute('href', '/projects/p1/engagements/e1/minutes')
+    expect(within(within(toca).getByRole('group', { name: '1 interacción postergada' })).getByRole('link', { name: 'Llamada al teniente' })).toBeInTheDocument()
   })
 
   it('la vista Lista muestra la misma consulta como tabla', async () => {

@@ -185,7 +185,9 @@ function Regla({ alerta }: { alerta: Registro }) {
             <Dato termino={t('alertas.ficha.reglaTipo')}>{opcion(regla.data, 'rule_kind')}</Dato>
             <Dato termino={t('alertas.ficha.reglaUmbral')}>{texto(regla.data, 'threshold') || '—'}</Dato>
             <Dato termino={t('alertas.ficha.reglaVentana')}>
-              {texto(regla.data, 'window_days') ? t('alertas.ficha.reglaDias', { n: texto(regla.data, 'window_days') }) : '—'}
+              {texto(regla.data, 'window_days')
+                ? t('alertas.ficha.reglaDias', { n: texto(regla.data, 'window_days'), count: Number(texto(regla.data, 'window_days')) })
+                : '—'}
             </Dato>
           </dl>
         ) : null

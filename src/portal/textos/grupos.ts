@@ -2,7 +2,8 @@
 export const ES_GRUPOS = {
   advertenciaSinTexto: 'Revise los datos: el sistema advierte sobre esta evaluación.',
   titulo: 'Grupos de interés',
-  conteo: '{{n}} grupos de interés',
+  conteo_one: '{{n}} grupo de interés',
+  conteo_other: '{{n}} grupos de interés',
   nuevo: 'Nuevo grupo de interés',
   verMatriz: 'Ver como matriz',
   tablero: 'Tablero',
@@ -181,7 +182,8 @@ export const ES_GRUPOS = {
 export const EN_GRUPOS: typeof ES_GRUPOS = {
   advertenciaSinTexto: 'Check the data: the system warns about this assessment.',
   titulo: 'Stakeholders',
-  conteo: '{{n}} stakeholders',
+  conteo_one: '{{n}} stakeholder',
+  conteo_other: '{{n}} stakeholders',
   nuevo: 'New stakeholder',
   verMatriz: 'View as matrix',
   tablero: 'Dashboard',
