@@ -4,7 +4,9 @@ export const ES_ATENCION = {
   registrar: 'Registrar QCS',
   tablero: 'Tablero',
   reporte: 'Reporte unificado',
-  eligeProyecto: 'Para registrar una QCS, elija primero un proyecto.',
+  conteo_one: '{{count}} QCS',
+  conteo_other: '{{count}} QCS',
+  filtroBusqueda: 'Contiene «{{texto}}»',
   vistas: {
     atencion: 'Atención',
     quejas: 'Quejas',
@@ -32,7 +34,7 @@ export const ES_ATENCION = {
   tabla: 'Quejas, consultas y solicitudes: {{grupo}}',
   columnas: {
     tipo: 'Tipo',
-    codigo: 'Código',
+    codigo: 'QCS',
     proyecto: 'Proyecto',
     canal: 'Canal',
     categoria: 'Categoría',
@@ -42,8 +44,8 @@ export const ES_ATENCION = {
     responsable: 'Responsable',
     planteaQuien: 'Quién la plantea'
   },
-  anonima: 'anónima',
-  identificada: 'identificada',
+  anonima: 'Anónima',
+  identificada: 'Identificada',
   sinPlazo: 'Sin plazo',
   plazoPorCalcular: 'Por calcular',
   vacio: 'No hay quejas, consultas ni solicitudes en esta vista.',
@@ -56,7 +58,9 @@ export const EN_ATENCION: typeof ES_ATENCION = {
   registrar: 'Record a grievance, inquiry or request',
   tablero: 'Dashboard',
   reporte: 'Unified report',
-  eligeProyecto: 'To record one, pick a project first.',
+  conteo_one: '{{count}} grievance, inquiry or request',
+  conteo_other: '{{count}} grievances, inquiries and requests',
+  filtroBusqueda: 'Contains “{{texto}}”',
   vistas: {
     atencion: 'Attention',
     quejas: 'Grievances',
@@ -94,8 +98,8 @@ export const EN_ATENCION: typeof ES_ATENCION = {
     responsable: 'Owner',
     planteaQuien: 'Raised by'
   },
-  anonima: 'anonymous',
-  identificada: 'identified',
+  anonima: 'Anonymous',
+  identificada: 'Identified',
   sinPlazo: 'No deadline',
   plazoPorCalcular: 'Not computed yet',
   vacio: 'There are no grievances, inquiries or requests in this view.',

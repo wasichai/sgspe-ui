@@ -50,4 +50,14 @@ describe('Persona', () => {
     expect(await screen.findByText(/nadie/)).toHaveTextContent('nadie@sgspe.test')
     expect(container).toHaveTextContent('—')
   })
+
+  // D11 de la revisión de UX: sin nombre, el correo en una sola línea (recortado si no cabe, entero en title), nunca partido
+  it('sin el nombre, el correo va en una línea y entero en el title', async () => {
+    fetch = mockFetch([{ path: /^\/sgspe\/people\?/, status: 404, body: { title: 'Not Found', status: 404 } }])
+    montar(<Persona correo="smg@sgspe.test" />)
+    const correo = await screen.findByText('smg@sgspe.test')
+    expect(correo).toHaveClass('whitespace-nowrap', 'truncate')
+    expect(correo).toHaveAttribute('title', 'smg@sgspe.test')
+    expect(correo.querySelector('wbr')).toBeNull()
+  })
 })

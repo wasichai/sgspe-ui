@@ -22,6 +22,11 @@ describe('EnlaceDeRegistro', () => {
     expect(screen.getByText('Reservorio de agua')).toBeInTheDocument()
   })
 
+  it('con el código en el enlace, código y título son un solo enlace', () => {
+    montar(<EnlaceDeRegistro codigo="Q-002" titulo="Agua turbia en el canal" ruta="/projects/p1/grievances/g2" codigoEnElEnlace />)
+    expect(screen.getByRole('link', { name: 'Q-002 Agua turbia en el canal' })).toHaveAttribute('href', '/projects/p1/grievances/g2')
+  })
+
   it('sin código, solo el título', () => {
     montar(<EnlaceDeRegistro titulo="Junta directiva" ruta="/projects/p1/stakeholders/g1" />)
     expect(screen.getByRole('link', { name: 'Junta directiva' })).toBeInTheDocument()

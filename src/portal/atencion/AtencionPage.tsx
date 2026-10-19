@@ -1,5 +1,5 @@
 import { useAuth } from '@wasichai/core'
-import { Alert, Table, Td, Th } from '@wasichai/ui'
+import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { CONTROL, SelectNativo } from '../componentes/Campo'
@@ -7,17 +7,19 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { KpiCard } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { BotonCrear } from '../componentes/BotonCrear'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
-import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyectos } from '../contexto/proyectos'
 import { estaAbierta, OBJETOS_DE_QCS, plazoQueCorre, rutaDeQcs, type ObjetoDeQcs } from '../datos/atencion'
 import { useIndicador, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { atributo, campoDe, texto, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { opcion } from '../datos/opciones'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 
@@ -32,6 +34,12 @@ const VISTAS = ['atencion', 'quejas', 'consultas', 'solicitudes', 'mias', 'todas
 const DE_LA_VISTA: Partial<Record<string, ObjetoDeQcs>> = { quejas: 'grievance', consultas: 'inquiry', solicitudes: 'stakeholder_request' }
 const GRUPOS = ['vencidas', 'porVencer', 'alDia'] as const
 type Grupo = (typeof GRUPOS)[number]
+
+// el asunto de una QCS, que no tiene título: el comienzo de su descripción
+const asuntoDe = (registro: Registro) => {
+  const d = texto(registro, 'description').trim()
+  return d.length > 70 ? `${d.slice(0, 70).trimEnd()}…` : d
+}
 
 export interface Fila {
   objeto: ObjetoDeQcs
@@ -75,7 +83,6 @@ export function AtencionPage() {
   const { user, can } = useAuth()
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
-  const escribe = useEscribeEnProyecto(proyecto)
   const lista = useParametrosDeLista('atencion')
   const quejas = useTodosConTope('grievance', { project: proyecto }, can('grievance', 'READ'))
   const consultas = useTodosConTope('inquiry', { project: proyecto }, can('inquiry', 'READ'))
@@ -110,7 +117,22 @@ export function AtencionPage() {
   )
   const porVencer = filas.filter((f) => estaAbierta(f.objeto, f.registro) && grupoDe(f) === 'porVencer').length
   const opciones = (campo: string) => campoDe(definicion.data, campo)?.enumOptions ?? []
-  const crea = proyecto !== undefined && escribe && OBJETOS_DE_QCS.some((o) => can(o, 'CREATE'))
+  // la etapa 3 de la revisión de UX: cada vista con su conteo (con los filtros puestos), los filtros como chips con «Limpiar» y el
+  // vacío por filtros con cuántos hay sin ellos
+  const conFiltros = (f: Fila) =>
+    (!canal || texto(f.registro, 'channel') === canal) &&
+    (!categoria || texto(f.registro, 'category') === categoria) &&
+    (!conSeveridad || !severidad || texto(f.registro, 'severity') === severidad) &&
+    (!q || texto(f.registro, 'code').toLowerCase().includes(q) || texto(f.registro, 'description').toLowerCase().includes(q))
+  const conteoDe = (vista: string) => (cargando || fallida ? null : filas.filter((f) => enVista(vista, f, user?.id) && conFiltros(f)).length)
+  const enLaVista = filas.filter((f) => enVista(lista.vista, f, user?.id)).length
+  const chips = [
+    ...(q ? [{ clave: 'q', etiqueta: t('atencion.filtroBusqueda', { texto: lista.filtro('q').trim() }) }] : []),
+    ...(canal ? [{ clave: 'channel', etiqueta: `${t('atencion.canal')}: ${rotuloDeOpcion(canal)}` }] : []),
+    ...(categoria ? [{ clave: 'category', etiqueta: `${t('atencion.categoria')}: ${rotuloDeOpcion(categoria)}` }] : []),
+    ...(conSeveridad && severidad ? [{ clave: 'severity', etiqueta: `${t('atencion.severidad')}: ${rotuloDeOpcion(severidad)}` }] : [])
+  ]
+  const limpiar = () => lista.cambiar({ q: null, channel: null, category: null, severity: null })
   const conConfidencialesOcultas = [abiertas, vencidas, absueltas].some((i) => i.data?.confidentialHidden === true)
   const tarjeta = (titulo: string, consulta: { data?: Indicador; error: unknown; isPending: boolean }) => (
     <KpiCard titulo={titulo} indicador={consulta.data} cargando={consulta.isPending} error={consulta.error} />
@@ -118,23 +140,21 @@ export function AtencionPage() {
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('atencion.titulo')}</h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <Link to={`${base}/attention/dashboard`} className="text-sg-primary-text underline">
-            {t('atencion.tablero')}
-          </Link>
-          <Link to={`${base}/attention/report`} className="text-sg-primary-text underline">
-            {t('atencion.reporte')}
-          </Link>
-          {crea ? (
-            <Link to={`${base}/attention/new`} className="rounded-sg-md bg-sg-primary px-3 py-1.5 font-medium text-sg-on-primary">
-              {t('atencion.registrar')}
-            </Link>
-          ) : null}
-        </div>
-      </div>
-      {!proyecto && OBJETOS_DE_QCS.some((o) => can(o, 'CREATE')) ? <p className="text-sm text-sg-text-muted">{t('atencion.eligeProyecto')}</p> : null}
+      <EncabezadoDePagina
+        titulo={t('atencion.titulo')}
+        conteo={cargando || fallida || legibles.length === 0 ? undefined : t('atencion.conteo', { count: visibles.length })}
+        primaria={<BotonCrear objeto={OBJETOS_DE_QCS} etiqueta={t('atencion.registrar')} resto="attention/new" />}
+        secundarias={
+          <>
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`${base}/attention/dashboard`}>{t('atencion.tablero')}</Link>
+            </Button>
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`${base}/attention/report`}>{t('atencion.reporte')}</Link>
+            </Button>
+          </>
+        }
+      />
       <section aria-label={t('atencion.indicadores')} className="space-y-2">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {tarjeta(abiertas.data?.label || t('atencion.tarjetas.abiertas'), abiertas)}
@@ -155,7 +175,7 @@ export function AtencionPage() {
         <NotaDeConfidenciales oculta={conConfidencialesOcultas} />
       </section>
       <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`atencion.vistas.${v}`) }))}
+        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`atencion.vistas.${v}`), conteo: conteoDe(v) }))}
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
@@ -194,6 +214,7 @@ export function AtencionPage() {
           </label>
         ) : null}
       </div>
+      <ChipsDeFiltro chips={chips} alQuitar={(clave) => lista.cambiar({ [clave]: null })} alLimpiar={limpiar} />
       {truncado ? <Alert tone="warning">{t('atencion.truncado', { n: numeroPe(1000) })}</Alert> : null}
       {legibles.length === 0 ? (
         <Alert tone="notice">{t('atencion.sinLectura')}</Alert>
@@ -202,7 +223,11 @@ export function AtencionPage() {
       ) : fallida ? (
         <FalloDeLectura error={fallida.error} alReintentar={() => legibles.forEach((o) => void lecturas[o].refetch())} />
       ) : visibles.length === 0 ? (
-        <Vacio titulo={t('atencion.vacio')} />
+        chips.length > 0 ? (
+          <VacioDeLista conFiltros alLimpiar={limpiar} sinFiltros={enLaVista} />
+        ) : (
+          <Vacio titulo={t('atencion.vacio')} />
+        )
       ) : (
         GRUPOS.map((grupo) => {
           const delGrupo = visibles.filter((f) => grupoDe(f) === grupo).sort(porPlazo)
@@ -266,10 +291,14 @@ function FilaDeQcs({
   return (
     <tr>
       <Td className="text-sm">{t(`comun.qcs.${objeto}`)}</Td>
-      <Td className="font-sg-mono text-sm">
-        <Link to={rutaDeQcs(texto(registro, 'project'), objeto, registro.id)} className="text-sg-primary-text underline">
-          {texto(registro, 'code')}
-        </Link>
+      <Td className="min-w-56 text-sm" title={texto(registro, 'description') || undefined}>
+        <EnlaceDeRegistro
+          codigo={texto(registro, 'code')}
+          titulo={asuntoDe(registro)}
+          ruta={rutaDeQcs(texto(registro, 'project'), objeto, registro.id)}
+          desde={t('atencion.titulo')}
+          codigoEnElEnlace
+        />
       </Td>
       {conProyecto ? <Td className="text-sm">{nombreDelProyecto(texto(registro, 'project'))}</Td> : null}
       <Td className="text-sm">{opcion(registro, 'channel') || '—'}</Td>

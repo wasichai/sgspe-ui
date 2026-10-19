@@ -94,12 +94,37 @@ describe('S28 · lista de compromisos', () => {
     expect(screen.queryByRole('link', { name: 'Nuevo compromiso' })).not.toBeInTheDocument()
   })
 
-  it('en el alcance global dice el proyecto de cada compromiso y pide elegir uno para registrar', async () => {
+  // revisión de UX, etapa 3: crear no depende del selector de proyecto
+  it('en el alcance global dice el proyecto de cada compromiso y ofrece crear eligiendo el proyecto', async () => {
     fetch = mockFetch(rutas())
     montar(<CompromisosPage />, { ruta: '/commitments', camino: '/commitments', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     expect(await screen.findByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
-    expect((await screen.findAllByTitle('Pukaqaqa'))[0]).toHaveTextContent('PRJ-01 · Pukaqaqa')
-    expect(screen.getByText('Para registrar un compromiso, elija su proyecto en el selector.')).toBeInTheDocument()
+    expect((await screen.findAllByRole('link', { name: 'PRJ-01 · Pukaqaqa' }))[0]).toHaveAttribute('href', '/projects/p1/overview')
+    expect(screen.getByRole('button', { name: 'Nuevo compromiso' })).toBeInTheDocument()
+    expect(screen.queryByText(/elija su proyecto en el selector/)).not.toBeInTheDocument()
+  })
+
+  it('cada vista dice cuántos tiene, el código va junto al título y el total va en el encabezado', async () => {
+    fetch = mockFetch(rutas())
+    enProyecto()
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    expect(screen.getByRole('tab', { name: 'Abiertos' })).toHaveAccessibleDescription('3 registros')
+    expect(screen.getByRole('tab', { name: 'Vencidos' })).toHaveAccessibleDescription('1 registro')
+    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('1 registro')
+    expect(screen.getByRole('tab', { name: 'Candidatos' })).not.toHaveAccessibleDescription()
+    expect(screen.getByText('3 compromisos')).toBeInTheDocument()
+    expect(within(tabla).getByText('C-002')).toHaveClass('font-sg-mono')
+  })
+
+  it('los filtros son chips en la URL con «Limpiar», y el vacío por filtros dice cuántos hay sin ellos', async () => {
+    fetch = mockFetch(rutas())
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=inexistente')
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    expect(screen.getByText('Sin los filtros hay 3.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quitar Contiene «inexistente»' })).toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('button', { name: 'Limpiar filtros' })[0])
+    expect(ubicacion.actual).toBe('/projects/p1/commitments')
+    expect(await screen.findByRole('table', { name: 'Compromisos' })).toBeInTheDocument()
   })
 })
 

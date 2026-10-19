@@ -1,6 +1,6 @@
 import { Pagination, Table, Td, Th, cn } from '@wasichai/ui'
 import { X } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import type { Pagina, Registro } from '../datos/registros'
@@ -20,6 +20,8 @@ export interface Columna {
 export interface Vista {
   id: string
   etiqueta: string
+  // cuántos registros tiene la vista con el alcance y los filtros (revisión de UX, etapa 3); sin él, no se dice
+  conteo?: number | null
 }
 
 // los filtros y la vista viven en la URL (ASM-075): volver atrás nunca los pierde
@@ -42,6 +44,7 @@ export function useParametrosDeLista(porDefecto: string) {
 
 export function VistasGuardadas({ vistas, actual, alCambiar }: { vistas: Vista[]; actual: string; alCambiar: (id: string) => void }) {
   const { t } = useTranslation(NS)
+  const id = useId()
   return (
     <div role="tablist" aria-label={t('comun.vistas')} className="flex gap-1 overflow-x-auto border-b border-sg-border">
       {vistas.map((v) => (
@@ -50,13 +53,24 @@ export function VistasGuardadas({ vistas, actual, alCambiar }: { vistas: Vista[]
           type="button"
           role="tab"
           aria-selected={v.id === actual}
+          aria-describedby={v.conteo != null ? `${id}-${v.id}` : undefined}
           onClick={() => alCambiar(v.id)}
           className={cn(
-            'whitespace-nowrap border-b-2 px-3 py-2 text-sm',
+            'flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm',
             v.id === actual ? 'border-sg-primary font-medium text-sg-primary-text' : 'border-transparent text-sg-text-secondary'
           )}
         >
           {v.etiqueta}
+          {v.conteo != null ? (
+            <>
+              <span aria-hidden className="rounded-full bg-sg-surface-sunken px-1.5 text-sg-caption tabular-nums text-sg-text-muted">
+                {v.conteo}
+              </span>
+              <span id={`${id}-${v.id}`} hidden>
+                {t('comun.registros', { count: v.conteo })}
+              </span>
+            </>
+          ) : null}
         </button>
       ))}
     </div>
@@ -176,11 +190,24 @@ export function TablaDeRegistros({
   )
 }
 
-export function VacioDeLista({ conFiltros, alLimpiar, children }: { conFiltros: boolean; alLimpiar: () => void; children?: ReactNode }) {
+// sinFiltros: cuántos habría sin los filtros (revisión de UX, etapa 3: «Sin los filtros hay 3»); así se sabe que no es la lista
+// la que está vacía
+export function VacioDeLista({
+  conFiltros,
+  alLimpiar,
+  sinFiltros,
+  children
+}: {
+  conFiltros: boolean
+  alLimpiar: () => void
+  sinFiltros?: number
+  children?: ReactNode
+}) {
   const { t } = useTranslation(NS)
   if (!conFiltros) return <Vacio titulo={t('comun.vacio')}>{children}</Vacio>
   return (
     <Vacio titulo={t('comun.sinResultados')}>
+      {sinFiltros ? <p>{t('comun.sinFiltrosHay', { count: sinFiltros })}</p> : null}
       <button type="button" className="text-sg-primary-text underline" onClick={alLimpiar}>
         {t('comun.limpiarFiltros')}
       </button>
