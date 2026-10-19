@@ -132,7 +132,7 @@ describe('S42 · programas e inversión', () => {
   it('dice el tope de la campaña con lo comprometido y lo ejecutado, el presupuesto del año por moneda y «No disponible» sin cifra', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    expect(await screen.findByRole('heading', { name: 'Programas e inversión', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Programas sociales', level: 1 })).toBeInTheDocument()
     const campanas = await screen.findByRole('region', { name: 'Tope de las campañas' })
     expect(within(campanas).getByText('Campaña Ejemplo 2026')).toBeInTheDocument()
     expect(within(campanas).getByText('Tope: S/ 50,000.00')).toBeInTheDocument()
