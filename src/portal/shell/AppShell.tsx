@@ -10,6 +10,7 @@ import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
 import { ThemeMenu } from './ThemeMenu'
+import { useNombresDeRol } from '../proyectos/usuarios'
 
 // text-sm es el cuerpo de 14/20 de tokens.css: dentro de cn(), text-sg-body se confundiría con un color
 const ENLACE = 'flex h-9 items-center gap-2.5 rounded-sg-md px-2.5 text-sm'
@@ -25,6 +26,12 @@ export function AppShell() {
   const { t } = useTranslation(NS)
   const { appName } = useWasichaiConfig()
   const { user, signOut } = useAuth()
+  // el rol con su rótulo (GET /api/roles, solo para quien administra); su código crudo («COMMUNITY_RELATIONS_OFFICER») no se muestra
+  const nombresDeRol = useNombresDeRol()
+  const rotulosDeRol = (user?.roles ?? [])
+    .map((r) => nombresDeRol.data?.find((x) => x.name === r)?.label)
+    .filter(Boolean)
+    .join(', ')
   const secciones = useArbol()
   return (
     <ProveedorDelAsistente>
@@ -46,7 +53,7 @@ export function AppShell() {
           <ThemeMenu />
           <span className="hidden max-w-56 flex-col text-right leading-tight sm:flex" title={user?.email}>
             <span className="truncate text-sg-body-sm text-sg-text">{user?.displayName}</span>
-            <span className="truncate font-sg-mono text-sg-caption text-sg-text-muted">{user?.roles.join(', ')}</span>
+            {rotulosDeRol ? <span className="truncate text-sg-caption text-sg-text-muted">{rotulosDeRol}</span> : null}
           </span>
           <button
             type="button"

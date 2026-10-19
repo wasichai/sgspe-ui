@@ -115,7 +115,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
             </Button>
           ) : null}
-          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} />
+          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
         </div>
       </header>
       <ResumenEjecutivo proyecto={proyecto} />

@@ -1,6 +1,19 @@
 // el diálogo de transición de design-system.md §6.2
 export const ES_TRANSICIONES = {
   acciones: 'Acciones del registro',
+  // el objeto que nombra una transición que anula, cancela, retira o resuelve («Anular el proyecto»)
+  elObjeto: {
+    project: 'el proyecto',
+    stakeholder: 'el grupo de interés',
+    engagement: 'la interacción',
+    field_visit: 'la visita',
+    commitment: 'el compromiso',
+    agreement: 'el acuerdo',
+    social_contribution: 'el aporte',
+    social_program: 'el programa',
+    deliverable: 'el entregable',
+    task: 'la tarea'
+  },
   deA: '{{de}} → {{a}}',
   reglas: 'Reglas',
   comprobando: 'Comprobando las reglas…',
@@ -34,6 +47,18 @@ export const ES_TRANSICIONES = {
 
 export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
   acciones: 'Record actions',
+  elObjeto: {
+    project: '',
+    stakeholder: '',
+    engagement: '',
+    field_visit: '',
+    commitment: '',
+    agreement: '',
+    social_contribution: '',
+    social_program: '',
+    deliverable: '',
+    task: ''
+  },
   deA: '{{de}} → {{a}}',
   reglas: 'Rules',
   comprobando: 'Checking the rules…',

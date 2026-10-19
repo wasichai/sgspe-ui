@@ -11,13 +11,15 @@ import { correlacionDe, useMensajeDeError } from './errores'
 // los estados comunes de design-system.md §6.5: carga, error con su código de correlación y reintento, vacío, campo
 // restringido y cifra no disponible (nunca vacío ni cero, RQ-DSH-032)
 
-// compacto: sin el relleno vertical, para usarlo dentro de una tarjeta pequeña; el texto accesible es el mismo
+// compacto: sin el relleno vertical y en línea (un <span>), para usarlo dentro de una tarjeta pequeña o de un párrafo, como el
+// rótulo que carga de RegistroVinculado; el texto accesible es el mismo
 export function Cargando({ etiqueta, compacto }: { etiqueta?: string; compacto?: boolean }) {
   const { t } = useTranslation(NS)
+  const Etiqueta = compacto ? 'span' : 'p'
   return (
-    <p role="status" aria-busy="true" className={cn('text-sm text-sg-text-muted', !compacto && 'py-6')}>
+    <Etiqueta role="status" aria-busy="true" className={cn('text-sm text-sg-text-muted', !compacto && 'py-6')}>
       {etiqueta ?? t('comun.cargando')}
-    </p>
+    </Etiqueta>
   )
 }
 

@@ -58,6 +58,34 @@ describe('transiciones', () => {
     expect(screen.queryByRole('button', { name: 'Cerrar' })).not.toBeInTheDocument()
   })
 
+  it('la que anula va al final, con texto de peligro y nombrando el objeto; la primera de las demás es la primaria', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/workflow', body: WF },
+      {
+        path: '/objects/project/records/p1/transitions',
+        body: [
+          { name: 'void', label: 'Anular', to: 'cancelled', toLabel: 'Anulado', allowed: true, reason: null },
+          { name: 'submit', label: 'Enviar a revisión', to: 'in_review', toLabel: 'En revisión', allowed: true, reason: null }
+        ]
+      }
+    ])
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    const anular = await screen.findByRole('button', { name: 'Anular el proyecto' })
+    const enviar = screen.getByRole('button', { name: 'Enviar a revisión' })
+    expect(enviar.compareDocumentPosition(anular) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(anular).toHaveClass('text-sg-danger')
+    expect(enviar).not.toHaveClass('text-sg-danger')
+  })
+
+  it('con sinPrimaria, ninguna transición compite con la acción primaria de la ficha', async () => {
+    start()
+    montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} sinPrimaria />)
+    const suspender = await screen.findByRole('button', { name: 'Suspender' })
+    const { container } = montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
+    const primaria = await within(container).findByRole('button', { name: 'Suspender' })
+    expect(suspender.className).not.toBe(primaria.className)
+  })
+
   it('suspender exige motivo y lo envía con la versión leída', async () => {
     start([{ method: 'POST', path: '/objects/project/records/p1/transitions/suspend', body: { ...PROYECTO, state: 'suspended' } }])
     red = espiarRed()
@@ -322,7 +350,7 @@ describe('transiciones', () => {
       }
     ])
     montar(<BotonesDeTransicion objeto="stakeholder" registro={registro('s1', {}, { state: 'profiled' })} />)
-    expect(await screen.findByRole('button', { name: 'Retirar' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Retirar el grupo de interés' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Evaluar' })).not.toBeInTheDocument()
   })
 

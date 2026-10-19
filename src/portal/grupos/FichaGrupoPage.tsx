@@ -138,7 +138,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
               {t('grupos.ficha.evaluar')}
             </Button>
           ) : null}
-          <BotonesDeTransicion objeto="stakeholder" registro={grupo} proyecto={proyecto} />
+          <BotonesDeTransicion objeto="stakeholder" registro={grupo} proyecto={proyecto} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
         </div>
       </header>
       <Advertencias advertencias={advertencias} />
