@@ -19,20 +19,41 @@ export function ContenedorDePagina({ variante = 'pagina', className, children }:
   )
 }
 
-// «Título · Proyecto · SGSPE»: el historial, las pestañas del navegador y los marcadores dicen dónde se estaba. el proyecto
-// es el de la ruta (/projects/:projectId/…), leído de la caché que ya llenó ProyectoLayout. al salir, vuelve el anterior
-export function useTituloDeDocumento(titulo: string) {
+// «Título · Proyecto · SGSPE»: el historial, las pestañas del navegador y los marcadores dicen dónde se estaba (D7). el proyecto
+// es el de la ruta (/projects/:projectId/…), leído de la caché que ya llenó ProyectoLayout. varias capas lo piden a la vez y
+// los efectos de los hijos corren antes que los del padre: gana la de mayor prioridad (el shell, 0, con la sección; el
+// proyecto, 1, con su pestaña; la pantalla, 2) y, entre iguales, la última. al salir la capa, vuelve la siguiente
+export type PrioridadDeTitulo = 0 | 1 | 2
+const PILA: { id: number; titulo: string; prioridad: PrioridadDeTitulo }[] = []
+let siguienteId = 0
+
+function aplicar(appName: string | undefined) {
+  const mejor = PILA.reduce<(typeof PILA)[number] | undefined>((a, b) => (!a || b.prioridad >= a.prioridad ? b : a), undefined)
+  document.title = mejor ? mejor.titulo : (appName ?? '')
+}
+
+export function useTituloDeDocumento(titulo: string, prioridad: PrioridadDeTitulo = 2) {
   const { appName } = useWasichaiConfig()
   const { projectId } = useParams()
   const proyecto = useRegistro('project', projectId)
   const nombre = proyecto.data ? texto(proyecto.data, 'name') : ''
+  const id = useRef(0)
+  if (id.current === 0) id.current = ++siguienteId
   useEffect(() => {
-    const anterior = document.title
-    document.title = [titulo, nombre, appName].filter(Boolean).join(' · ')
-    return () => {
-      document.title = anterior
-    }
-  }, [titulo, nombre, appName])
+    const entrada = { id: id.current, titulo: [titulo, nombre, appName].filter(Boolean).join(' · '), prioridad }
+    const i = PILA.findIndex((e) => e.id === entrada.id)
+    if (i >= 0) PILA[i] = entrada
+    else PILA.push(entrada)
+    aplicar(appName)
+  }, [titulo, nombre, appName, prioridad])
+  useEffect(
+    () => () => {
+      const i = PILA.findIndex((e) => e.id === id.current)
+      if (i >= 0) PILA.splice(i, 1)
+      aplicar(appName)
+    },
+    [appName]
+  )
 }
 
 export interface PropsDeEncabezado {

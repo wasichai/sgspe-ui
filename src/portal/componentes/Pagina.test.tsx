@@ -1,9 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, registro } from '../../test/montar'
-import { ContenedorDePagina, EncabezadoDePagina } from './Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, useTituloDeDocumento } from './Pagina'
 
 // la revisión de UX, etapa 0: un solo encabezado de página (título, antetítulo, chips, conteo, una acción primaria,
 // secundarias y «Más») y el título del documento con la pantalla y el proyecto (D7)
@@ -67,6 +68,23 @@ describe('EncabezadoDePagina', () => {
     montar(<EncabezadoDePagina titulo="Compromisos" />, { ruta: '/projects/p1/commitments', camino: '/projects/:projectId/commitments' })
     expect(document.title).toBe('Compromisos · SGSPE')
     await waitFor(() => expect(document.title).toBe('Compromisos · Proyecto Ejemplo A · SGSPE'))
+  })
+
+  it('la capa de mayor prioridad gana aunque se monte antes, y al salir vuelve la siguiente', async () => {
+    function Capas() {
+      useTituloDeDocumento('Proyectos', 0)
+      const [conPantalla, fijar] = useState(true)
+      return (
+        <>
+          <button onClick={() => fijar(false)}>Salir</button>
+          {conPantalla ? <EncabezadoDePagina titulo="Compromisos" /> : null}
+        </>
+      )
+    }
+    montar(<Capas />)
+    expect(document.title).toBe('Compromisos · SGSPE')
+    await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+    expect(document.title).toBe('Proyectos · SGSPE')
   })
 
   it('el título del documento puede ser otro que el visible', () => {

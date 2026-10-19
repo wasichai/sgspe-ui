@@ -12,6 +12,7 @@ import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
 import { seccionDeRuta } from './seccionActual'
+import { useTituloDeDocumento } from '../componentes/Pagina'
 import { ThemeMenu } from './ThemeMenu'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
@@ -41,6 +42,7 @@ export function AppShell() {
   const [menuAbierto, setMenuAbierto] = useState(false)
   return (
     <ProveedorDelAsistente>
+      <TituloDeSeccion />
       <div className="flex h-full flex-col bg-sg-bg text-sg-text">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-sg-border bg-sg-surface px-4">
           <button
@@ -119,6 +121,15 @@ export function AppShell() {
       <DialogoDeSesionVencida />
     </ProveedorDelAsistente>
   )
+}
+
+// el título del documento con la sección de la ruta (D7): la capa más baja; el proyecto y la pantalla lo precisan
+function TituloDeSeccion() {
+  const { t } = useTranslation(NS)
+  const { pathname } = useLocation()
+  const clave = seccionDeRuta(pathname)
+  useTituloDeDocumento(clave ? t(`secciones.${clave}`) : pathname === '/notifications' ? t('avisos.titulo') : '', 0)
+  return null
 }
 
 // las secciones que se le ofrecen a la cuenta (useArbol), en su orden: en la barra lateral (rótulo solo desde xl) y en el

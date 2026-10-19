@@ -1,13 +1,15 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, cn } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Outlet, useParams } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
+import { useTituloDeDocumento } from '../componentes/Pagina'
 import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
 import { NS } from '../i18n'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
 import { LEE_PROPUESTAS } from '../shell/leePropuestas'
 import { estadoDe, guardaDe, useOferta, type ClaveDeSeccion, type Par } from '../shell/navTree'
+import { seccionDeRuta } from '../shell/seccionActual'
 import { BarraDeContexto } from './BarraDeContexto'
 import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyectos'
 import { Rastro } from './Rastro'
@@ -57,6 +59,11 @@ export function ProyectoLayout() {
   const asignaciones = useMisAsignaciones()
   const escribe = useEscribeEnProyecto(projectId)
   const oferta = useOferta()
+  const { pathname } = useLocation()
+  const pestanaActual = pathname.split('/')[3] ?? 'overview'
+  const seccion = seccionDeRuta(pathname)
+  // D7: la pestaña (o la sección de la ruta, si no es una pestaña) y el proyecto en el título del documento
+  useTituloDeDocumento(t(`contexto.pestanas.${pestanaActual}`, { defaultValue: '' }) || (seccion ? t(`secciones.${seccion}`) : ''), 1)
   const pestanas = PESTANAS.filter((p) => {
     const clave = SECCION_DE_PESTANA[p]
     return !clave || estadoDe(guardaDe(clave, PERMISOS_DE_PESTANA[p]), oferta) === 'disponible'

@@ -199,6 +199,13 @@ describe('navegación del portal', () => {
     expect(within(lateral()).getByRole('link', { name: 'Proyectos' })).not.toHaveAttribute('aria-current')
   })
 
+  it('el título del documento dice la sección (D7)', async () => {
+    registradas.commitments = Prueba
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/commitments')
+    await screen.findByRole('heading', { name: 'Pantalla de prueba' })
+    expect(document.title).toBe('Compromisos · SGSPE')
+  })
+
   it('«Quejas, consultas y solicitudes» se ve como «QCS», con el nombre completo para lectores y en title', async () => {
     registradas.attention = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/attention')

@@ -190,6 +190,13 @@ describe('barra de contexto y Project 360', () => {
     expect(screen.getByRole('link', { name: 'Resumen' })).toHaveAttribute('aria-current', 'page')
   })
 
+  // D7 de la revisión de UX: la pestaña y el proyecto en el título del documento
+  it('el título del documento dice la pestaña y el proyecto', async () => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
+    await waitFor(() => expect(document.title).toBe('Resumen · Pukaqaqa · SGSPE'))
+  })
+
   it('con asignación al proyecto no avisa', async () => {
     fetch = mockFetch([
       ...RUTAS_DEL_PROYECTO,
