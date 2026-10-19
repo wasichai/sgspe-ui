@@ -45,7 +45,8 @@ describe('S50 · entregable por secciones', () => {
   it('muestra el encabezado, el camino de WF-H y las secciones con su origen y sus marcas', async () => {
     abrir()
     expect(await screen.findByRole('heading', { level: 1, name: 'Informe de campo de la Comunidad Ejemplo' })).toBeInTheDocument()
-    expect(screen.getByText('INF-001')).toBeInTheDocument()
+    // el código va en el antetítulo del encabezado común, con el tipo (revisión de UX, etapa 4)
+    expect(screen.getByText(/^INF-001 · /)).toBeInTheDocument()
     const camino = screen.getByRole('navigation', { name: 'Camino del entregable' })
     expect(await within(camino).findByText('Borrador')).toHaveAttribute('aria-current', 'step')
     const lista = await screen.findByRole('navigation', { name: 'Secciones' })
