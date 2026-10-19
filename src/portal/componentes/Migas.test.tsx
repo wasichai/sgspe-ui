@@ -65,6 +65,13 @@ describe('MigasDelProyecto', () => {
     ])
   })
 
+  it('una ficha fuera del segmento de su pestaña (una queja en /grievances) lleva a su pestaña', async () => {
+    fetch = mockFetch([{ path: '/objects/project/records/p1', body: P1 }])
+    montar(<MigasDelProyecto registro="Q-001" />, { ruta: '/projects/p1/grievances/g1', camino: '/projects/:projectId/grievances/:id' })
+    await screen.findByRole('link', { name: 'PRJ-01 · Proyecto Ejemplo A' })
+    expect(pasos()).toContain('Quejas, consultas y solicitudes → /projects/p1/attention')
+  })
+
   it('mientras el proyecto no llega, lo nombra por su id', () => {
     fetch = mockFetch([])
     montar(<MigasDelProyecto />, { ruta: '/projects/p1/risks', camino: '/projects/:projectId/risks' })
