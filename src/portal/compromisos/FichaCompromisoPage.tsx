@@ -1,5 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Alert, Button, Tabs, Textarea } from '@wasichai/ui'
+import { Alert, Button, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -12,6 +12,7 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -134,34 +135,34 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         </div>
       </header>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs
-          label={texto(compromiso, 'title')}
-          tabs={[
-            { id: 'resumen', label: t('fichaCompromiso.pestanas.resumen'), render: () => <Resumen compromiso={compromiso} /> },
+        <PestanasDeFicha
+          etiqueta={texto(compromiso, 'title')}
+          pestanas={[
+            { id: 'resumen', etiqueta: t('fichaCompromiso.pestanas.resumen'), render: () => <Resumen compromiso={compromiso} /> },
             {
               id: 'seguimiento',
-              label: t('fichaCompromiso.pestanas.seguimiento'),
+              etiqueta: t('fichaCompromiso.pestanas.seguimiento'),
               render: () => <PestanaSeguimiento compromiso={compromiso} escribe={escribe} />
             },
-            { id: 'entregas', label: t('fichaCompromiso.pestanas.entregas'), render: () => <PestanaEntregas compromiso={compromiso} escribe={escribe} /> },
+            { id: 'entregas', etiqueta: t('fichaCompromiso.pestanas.entregas'), render: () => <PestanaEntregas compromiso={compromiso} escribe={escribe} /> },
             {
               id: 'reprogramaciones',
-              label: t('fichaCompromiso.pestanas.reprogramaciones'),
+              etiqueta: t('fichaCompromiso.pestanas.reprogramaciones'),
               render: () => <PestanaReprogramaciones compromiso={compromiso} escribe={escribe} />
             },
             {
               id: 'dependencias',
-              label: t('fichaCompromiso.pestanas.dependencias'),
+              etiqueta: t('fichaCompromiso.pestanas.dependencias'),
               render: () => <PestanaDependencias compromiso={compromiso} escribe={escribe} />
             },
             {
               id: 'evidencias',
-              label: t('fichaCompromiso.pestanas.evidencias'),
+              etiqueta: t('fichaCompromiso.pestanas.evidencias'),
               render: () => <EvidenciasDelRegistro objeto="commitment" registro={compromiso} escribe={escribe} />
             },
             {
               id: 'actividad',
-              label: t('fichaCompromiso.pestanas.actividad'),
+              etiqueta: t('fichaCompromiso.pestanas.actividad'),
               render: () => (
                 <div className="pt-3">
                   <Historia objeto="commitment" id={compromiso.id} vacio={t('fichaCompromiso.sinActividad')} />

@@ -4,7 +4,7 @@ import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { useNavigate, type NavigateFunction } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
-import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
+import { definicion, montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaCompromisoPage } from './FichaCompromisoPage'
@@ -48,9 +48,9 @@ const rutas = (compromiso: Registro = C1, extra: MockRoute[] = []): MockRoute[] 
   { path: '/objects/delivery/records', body: pagina([]) },
   { path: '/objects/commitment/records/c1/history', body: [] }
 ]
-const abrir = () =>
+const abrir = (consulta = '') =>
   montar(<FichaCompromisoPage />, {
-    ruta: '/projects/p1/commitments/c1',
+    ruta: `/projects/p1/commitments/c1${consulta}`,
     camino: '/projects/:projectId/commitments/:commitmentId',
     usuario: GESTORA,
     permisos: EQUIPO_DE_COMPROMISOS
@@ -221,6 +221,18 @@ describe('S29 · ficha de compromiso', () => {
     expect(await screen.findByText('Este compromiso no se ha reprogramado.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Acciones e hitos' }))
     expect(await screen.findByText('Todavía no hay acciones registradas.')).toBeInTheDocument()
+  })
+
+  // D6 de la revisión de UX: las pestañas se desplazan cuando no caben y la elegida vive en la URL
+  it('la pestaña elegida queda en la URL y se abre desde ella', async () => {
+    fetch = mockFetch(rutas(C1, [{ path: '/objects/commitment_reschedule/records', body: pagina([]) }]))
+    const { unmount } = abrir()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Reprogramaciones' }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments/c1?tab=reprogramaciones')
+    unmount()
+    abrir('?tab=reprogramaciones')
+    expect(await screen.findByRole('tab', { name: 'Reprogramaciones' })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByText('Este compromiso no se ha reprogramado.')).toBeInTheDocument()
   })
 
   // P63: al pasar entre dos compromisos ya leídos (en caché, sin «Cargando» de por medio) nada de uno queda en el otro: ni el
