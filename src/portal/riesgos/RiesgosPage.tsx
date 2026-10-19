@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn, Table, Td, Textarea, Th } from '@wasichai/ui'
@@ -87,6 +88,7 @@ export function RiesgosPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const escribe = useEscribeEnProyecto(proyecto)
   const lista = useParametrosDeLista('registro')
+  const telefono = useEsTelefono()
   const [busqueda, fijar] = useSearchParams()
   const riesgos = useTodosConTope('social_risk', { project: proyecto, sort: 'code', dir: 'asc' })
   const registroDelProyecto = useProyecto(proyecto)
@@ -173,6 +175,29 @@ export function RiesgosPage() {
           </section>
           {filtrados.length === 0 ? (
             <Vacio titulo={t('riesgos.vacio')} />
+          ) : telefono ? (
+            <ListaEnTarjetas
+              etiqueta={t('riesgos.tabla')}
+              tarjetas={filtrados.map((r) => ({
+                id: r.id,
+                titulo: (
+                  <EnlaceDeRegistro codigo={texto(r, 'code')} titulo={texto(r, 'title')} ruta={rutaDeFicha('social_risk', r)} desde={t('riesgos.titulo')} />
+                ),
+                estado: (
+                  <>
+                    <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
+                    <EstadoChip objeto="social_risk" estado={r.state} />
+                  </>
+                ),
+                plazo: (
+                  <>
+                    <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
+                    {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
+                  </>
+                ),
+                proyecto: proyecto ? undefined : nombreDelProyecto(texto(r, 'project'))
+              }))}
+            />
           ) : (
             <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
               <Table aria-label={t('riesgos.tabla')}>

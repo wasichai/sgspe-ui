@@ -257,6 +257,7 @@ function Ficha({
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t(`comun.qcs.${objeto}`), texto(qcs, 'code'), opcion(qcs, 'channel'), opcion(qcs, 'category')].filter(Boolean).join(' · ')}
         titulo={titulo}
         chips={

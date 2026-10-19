@@ -224,6 +224,7 @@ function Visita({ visita }: { visita: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={t('relacionamiento.visita.tipo')}
         titulo={texto(visita, 'title')}
         chips={

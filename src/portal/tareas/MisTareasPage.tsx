@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { cn } from '@wasichai/ui'
 import { ChipsDeFiltro } from '../componentes/Lista'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -134,7 +135,36 @@ function TablaDeTareas({
 }) {
   const { t } = useTranslation(NS)
   const proyectos = useProyectos()
+  const telefono = useEsTelefono()
   if (tareas.length === 0) return <Vacio titulo={vacio} />
+  if (telefono)
+    return (
+      <ListaEnTarjetas
+        etiqueta={t('tareas.titulo')}
+        tarjetas={tareas.map((x) => ({
+          id: x.id,
+          titulo: (
+            <button
+              type="button"
+              className="text-left text-sg-primary-text underline"
+              aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
+              onClick={() => alAbrir(x)}
+            >
+              {texto(x, 'title')}
+            </button>
+          ),
+          estado: <EstadoChip objeto="task" estado={x.state} />,
+          plazo: (
+            <>
+              <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
+              <Dia valor={texto(x, 'due_date')} />
+            </>
+          ),
+          proyecto: conProyecto ? <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} /> : undefined,
+          detalle: <OrigenDeTarea tarea={x} />
+        }))}
+      />
+    )
   return (
     <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
       <Table aria-label={t('tareas.titulo')}>

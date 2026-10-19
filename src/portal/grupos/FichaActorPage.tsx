@@ -66,6 +66,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={tipo === 'organization' ? texto(actor, 'organization_type') || t('grupos.actor.organizacion') : t('grupos.actor.persona')}
         titulo={nombre}
         descripcion={

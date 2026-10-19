@@ -89,6 +89,9 @@ export interface PropsDeEncabezado {
   mas?: ReactNode
   // «Lista · Tablero» del módulo (VistasDelModulo): va primero entre las acciones
   vistas?: ReactNode
+  // la ficha de un registro: en el teléfono, sus acciones van en una barra fija sobre la barra de accesos (revisión de UX,
+  // etapa 8), siempre a mano mientras se lee la ficha
+  ficha?: boolean
   // si el título visible no basta para el documento (el código de una ficha)
   tituloDelDocumento?: string
 }
@@ -103,6 +106,7 @@ export function EncabezadoDePagina({
   secundarias,
   mas,
   vistas,
+  ficha = false,
   tituloDelDocumento
 }: PropsDeEncabezado) {
   useTituloDeDocumento(tituloDelDocumento ?? titulo)
@@ -118,7 +122,14 @@ export function EncabezadoDePagina({
         {conteo ? <p className="text-sm text-sg-text-muted">{conteo}</p> : null}
       </div>
       {acciones ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          data-barra-de-acciones={ficha ? '' : undefined}
+          className={cn(
+            'flex flex-wrap items-center gap-2',
+            ficha &&
+              'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-12 max-sm:z-20 max-sm:justify-end max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2'
+          )}
+        >
           {vistas}
           {secundarias}
           {mas ? <MasAcciones>{mas}</MasAcciones> : null}
@@ -178,7 +189,8 @@ export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqu
           id={id}
           role="group"
           aria-label={nombre}
-          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md"
+          // en la barra de acciones del teléfono, abajo de todo, el menú se abre hacia arriba
+          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md max-sm:in-[[data-barra-de-acciones]]:top-auto max-sm:in-[[data-barra-de-acciones]]:bottom-full max-sm:in-[[data-barra-de-acciones]]:mb-1"
         >
           {children}
         </div>

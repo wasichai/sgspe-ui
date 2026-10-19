@@ -99,6 +99,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
   return (
     <div className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[texto(entregable, 'document_code'), rotuloDeOpcion(tipo)].filter(Boolean).join(' · ')}
         titulo={texto(entregable, 'title')}
         chips={

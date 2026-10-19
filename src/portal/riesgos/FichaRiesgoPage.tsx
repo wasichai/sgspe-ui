@@ -131,6 +131,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('fichaRiesgo.tipo'), texto(riesgo, 'code'), opcion(riesgo, 'category')].filter(Boolean).join(' · ')}
         titulo={texto(riesgo, 'title')}
         chips={

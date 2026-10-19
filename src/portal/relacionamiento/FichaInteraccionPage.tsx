@@ -104,6 +104,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('relacionamiento.ficha.tipo'), opcion(interaccion, 'engagement_type')].filter(Boolean).join(' · ')}
         titulo={texto(interaccion, 'title')}
         chips={

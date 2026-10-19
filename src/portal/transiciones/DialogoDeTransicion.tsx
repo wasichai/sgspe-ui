@@ -1,3 +1,4 @@
+import { useFocoDeRegreso } from '../componentes/foco'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
 import type { AvailableTransition } from '@wasichai/workflow'
 import { useState } from 'react'
@@ -72,9 +73,11 @@ export function DialogoDeTransicion({
     )
   }
 
+  // el foco vuelve al botón que abrió el diálogo (revisión de UX, etapa 8)
+  const regreso = useFocoDeRegreso()
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && alCerrar()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" {...regreso}>
         <DialogTitle className="text-sg-h3 font-semibold">{transicion.label}</DialogTitle>
         <DialogDescription className="text-sm text-sg-text-secondary">{t('transiciones.deA', { de: desde, a: transicion.toLabel })}</DialogDescription>
         <div className="mt-4 space-y-3">

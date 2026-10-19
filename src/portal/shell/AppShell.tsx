@@ -95,7 +95,10 @@ export function AppShell() {
           <nav aria-label={t('shell.secciones')} className="hidden w-[52px] shrink-0 border-r border-sg-border bg-sg-surface p-1.5 md:block xl:w-60 xl:p-3">
             <ListaDeSecciones rotulo={ROTULO} />
           </nav>
-          <main id="content" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-5 pb-20 sm:pb-5 md:px-6 2xl:px-8">
+          <main
+            id="content"
+            className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-5 pb-20 has-[[data-barra-de-acciones]]:max-sm:pb-36 sm:pb-5 md:px-6 2xl:px-8"
+          >
             {/* el rastro, en un solo lugar para todas las pantallas (revisión de UX, etapa 6): aparece al seguir un enlace */}
             <div className="mx-auto max-w-[1440px] empty:hidden [&:has(nav)]:mb-3">
               <Rastro />
