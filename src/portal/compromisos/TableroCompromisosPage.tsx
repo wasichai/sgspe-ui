@@ -46,6 +46,14 @@ const TARJETAS = [
   ['KPI-COM-05', 'cumplidos'],
   ['KPI-COM-06', 'bloqueados']
 ] as const
+// la vista de la lista que cuenta lo mismo que cada tarjeta: su cifra la enlaza (revisión de UX, etapa 6). los registrados y los
+// cumplidos del periodo no tienen una vista que los cuente igual
+const VISTA_DE_TARJETA: Partial<Record<(typeof TARJETAS)[number][1], string>> = {
+  abiertos: 'abiertos',
+  vencidos: 'vencidos',
+  porVencer: 'porVencer',
+  bloqueados: 'bloqueados'
+}
 // los filtros del tablero que la tabla de pendientes no aplica: el periodo (los pendientes son los de hoy), el territorio y el
 // ámbito (el servidor los resuelve a localidades con sus sectores y comunidades, que una lectura por igualdad no reproduce)
 const NO_APLICA_EN_PENDIENTES = ['periodStart', 'periodEnd', 'administrativeUnit', 'locality', 'community', 'areaOfInfluence', 'scope'] as const
@@ -76,7 +84,15 @@ export function TableroCompromisosPage() {
                   {TARJETAS.map(([code, nombre]) => {
                     const titulo = ind(code)?.label || t(`tableroCompromisos.tarjetas.${nombre}`)
                     const i = ind(code) ?? { code, label: titulo, available: false }
-                    return <KpiCard key={code} titulo={titulo} indicador={i} notas={i.available ? <NotasDeIndicador indicador={i} /> : null} />
+                    return (
+                      <KpiCard
+                        key={code}
+                        titulo={titulo}
+                        indicador={i}
+                        notas={i.available ? <NotasDeIndicador indicador={i} /> : null}
+                        a={VISTA_DE_TARJETA[nombre] ? `${base}/commitments?view=${encodeURIComponent(VISTA_DE_TARJETA[nombre])}` : undefined}
+                      />
+                    )
                   })}
                 </div>
                 <div className="grid gap-4 lg:grid-cols-2">

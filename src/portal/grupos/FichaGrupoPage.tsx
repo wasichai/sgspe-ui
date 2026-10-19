@@ -329,6 +329,13 @@ function Pendientes({ grupo }: { grupo: Registro }) {
   const qcsCargando = deQcs.some((q) => q.consulta.isPending)
   const qcsFallo = deQcs.some((q) => q.consulta.isError)
   const qcsAbiertas = deQcs.reduce((n, q) => n + (q.consulta.data ?? []).filter((r) => !QCS_TERMINADA.has(r.state ?? '')).length, 0)
+  // cada cifra lleva a su lista con el grupo puesto como filtro (design P8; revisión de UX, etapa 6)
+  const base = `/projects/${encodeURIComponent(String(atributo(grupo, 'project')))}`
+  const cifra = (ruta: string, texto: string) => (
+    <Link to={ruta} className="text-sg-primary-text underline">
+      {texto}
+    </Link>
+  )
   return (
     <ul className="space-y-1 text-sm">
       {leeCompromisos ? (
@@ -338,12 +345,23 @@ function Pendientes({ grupo }: { grupo: Registro }) {
           ) : compromisos.isError || conEstado.error ? (
             t('comun.errorDeCarga')
           ) : (
-            t('grupos.ficha.compromisosAbiertos', { count: conEstado.registros.filter((c) => COMPROMISO_ABIERTO.has(c.state ?? '')).length })
+            cifra(
+              `${base}/commitments?stakeholder=${encodeURIComponent(grupo.id)}`,
+              t('grupos.ficha.compromisosAbiertos', { count: conEstado.registros.filter((c) => COMPROMISO_ABIERTO.has(c.state ?? '')).length })
+            )
           )}
         </li>
       ) : null}
       {deQcs.length > 0 ? (
-        <li>{qcsCargando ? <Cargando compacto /> : qcsFallo ? t('comun.errorDeCarga') : t('grupos.ficha.qcsAbiertas', { count: qcsAbiertas })}</li>
+        <li>
+          {qcsCargando ? (
+            <Cargando compacto />
+          ) : qcsFallo ? (
+            t('comun.errorDeCarga')
+          ) : (
+            cifra(`${base}/attention?stakeholder=${encodeURIComponent(grupo.id)}`, t('grupos.ficha.qcsAbiertas', { count: qcsAbiertas }))
+          )}
+        </li>
       ) : null}
     </ul>
   )

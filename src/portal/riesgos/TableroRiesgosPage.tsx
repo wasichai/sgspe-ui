@@ -51,6 +51,7 @@ export function TableroRiesgosPage() {
                 titulo={titulo('KPI-RSK-01', 'activos')}
                 indicador={tarjeta('KPI-RSK-01', 'activos')}
                 notas={ind('KPI-RSK-01')?.available ? <NotasDeIndicador indicador={ind('KPI-RSK-01')} /> : null}
+                a={`${base}/risks?level=alto`}
               />
               <Zona titulo={titulo('KPI-RSK-03', 'territorio')} indicador={ind('KPI-RSK-03')}>
                 {(i) => <PorTerritorio indicador={i} />}

@@ -138,6 +138,23 @@ describe('S35 · lista unificada de QCS', () => {
     expect(enlace).toHaveAttribute('href', '/projects/p1/grievances/g2')
   })
 
+  // revisión de UX, etapa 6: las cifras de la ficha del grupo de interés llegan con ?stakeholder= puesto
+  it('?stakeholder= deja las QCS de ese grupo de interés, con su chip', async () => {
+    // la queja vencida es del grupo s1 (QUEJA); esta, de s2
+    const delGrupo = registro('g8', { ...VENCIDA.attributes, code: 'Q-008', stakeholder: 's2' }, { state: 'received' })
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/grievance/records', body: pagina([VENCIDA, delGrupo]) },
+        { path: '/objects/stakeholder/records/s2', body: registro('s2', { project: 'p1', organization: 'o2' }) },
+        { path: '/objects/organization/records/o2', body: registro('o2', { name: 'Junta de regantes' }) }
+      ])
+    )
+    abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?stakeholder=s2')
+    expect(await screen.findByText('Grupo de interés: Junta de regantes')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^Q-008/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^Q-002/ })).not.toBeInTheDocument()
+  })
+
   it('una QCS cerrada no está en Atención y un plazo solo cuenta en su estado', () => {
     expect(enVista('atencion', { objeto: 'grievance', registro: CERRADA }, 'u-gvm')).toBe(false)
     expect(grupoDe({ objeto: 'grievance', registro: registro('x', { deadline_status: 'VENCIDO' }, { state: 'resolved' }) })).toBe('alDia')

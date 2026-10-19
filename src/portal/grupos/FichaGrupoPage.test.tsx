@@ -87,15 +87,30 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
       },
       { path: '/objects/commitment/records/c1', body: registro('c1', { code: 'C-001', project: 'p1' }, { state: 'in_progress' }) },
       { path: '/objects/commitment/records/c2', body: registro('c2', { code: 'C-002', project: 'p1' }, { state: 'closed' }) },
-      { path: /^\/objects\/grievance\/records\?.*stakeholder=s1/, body: pagina([registro('q1', { stakeholder: 's1' }, { state: 'acknowledged' })]) }
+      { path: /^\/objects\/grievance\/records\?.*stakeholder=s1/, body: pagina([registro('q1', { stakeholder: 's1' }, { state: 'acknowledged' })]) },
+      // la lista de compromisos del proyecto: c3 no es del grupo
+      {
+        path: /^\/objects\/commitment\/records\?/,
+        body: pagina([
+          registro('c1', { code: 'C-001', title: 'Mejora del canal', project: 'p1' }, { state: 'in_progress' }),
+          registro('c3', { code: 'C-003', title: 'Otro compromiso', project: 'p1' }, { state: 'in_progress' })
+        ])
+      }
     ])
     const decidir = await screen.findByRole('region', { name: 'Para decidir' })
-    expect(await within(decidir).findByText('1 compromiso abierto')).toBeInTheDocument()
-    expect(await within(decidir).findByText('1 QCS abierta')).toBeInTheDocument()
+    // las cifras llevan a su lista con el grupo como filtro (revisión de UX, etapa 6)
+    const compromisos = await within(decidir).findByRole('link', { name: '1 compromiso abierto' })
+    expect(compromisos).toHaveAttribute('href', '/projects/p1/commitments?stakeholder=s1')
+    expect(await within(decidir).findByRole('link', { name: '1 QCS abierta' })).toHaveAttribute('href', '/projects/p1/attention?stakeholder=s1')
     expect(within(decidir).queryByText(/llegan en F3/)).not.toBeInTheDocument()
     const genero = screen.getByRole('complementary', { name: 'Qué generó' })
     expect(await within(genero).findByRole('link', { name: 'C-001 · Mejora del canal' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
     expect(within(genero).queryByText(/desde F3/)).not.toBeInTheDocument()
+    await userEvent.click(compromisos)
+    expect(await screen.findByText('Grupo de interés: Ronda campesina Tunas')).toBeInTheDocument()
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    expect(await within(tabla).findByText('Mejora del canal')).toBeInTheDocument()
+    expect(within(tabla).queryByText('Otro compromiso')).not.toBeInTheDocument()
   })
 
   it('con "u" sobre stakeholder (todos los campos de solo lectura, como el agente de campo) no ofrece editar el perfil', async () => {
