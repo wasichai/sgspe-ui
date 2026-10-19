@@ -61,7 +61,7 @@ export function AcuerdosPage() {
       ) : acuerdos.isError && !acuerdos.data ? (
         <FalloDeLectura error={acuerdos.error} alReintentar={() => void acuerdos.refetch()} />
       ) : lista.length === 0 ? (
-        <Vacio titulo={t('acuerdos.vacio')} />
+        <Vacio titulo={t('acuerdos.vacio')}>{t('acuerdos.vacioAyuda')}</Vacio>
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('acuerdos.tabla')}>

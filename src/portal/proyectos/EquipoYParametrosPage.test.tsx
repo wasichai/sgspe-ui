@@ -132,7 +132,7 @@ describe('S11 · equipo y parámetros', () => {
     const tabla = await screen.findByRole('table', { name: 'Equipo' })
     const [, vigente, vencida] = within(tabla).getAllByRole('row')
     expect(await within(vigente).findByText('Administración de proyectos')).toBeInTheDocument()
-    expect(within(vigente).getByText('1 ene. 2026 – …')).toBeInTheDocument()
+    expect(within(vigente).getByText('1 ene. 2026 – sin término')).toBeInTheDocument()
     // un rol que la lista no trae sale con su nombre
     expect(within(vencida).getByText('FIELD_AGENT')).toBeInTheDocument()
   })

@@ -187,5 +187,6 @@ export const EN: Textos = {
     estados: { disponible: 'Available', 'sin-acceso': 'No access with your permissions', 'solo-admin': 'Administrators only' }
   },
   seccionPorLlegar: 'This section arrives in {{fase}}',
-  noEncontrada: 'This page does not exist'
+  noEncontrada: 'This page does not exist',
+  irAlInicio: 'Go to the home page'
 }

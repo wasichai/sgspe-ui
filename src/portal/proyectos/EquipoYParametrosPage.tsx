@@ -124,7 +124,9 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
                       {rolDicho(texto(a, 'role_name'))}
                     </Td>
                     <Td className="text-sm">
-                      {diaPe(texto(a, 'start_date')) || '…'} – {diaPe(texto(a, 'end_date')) || '…'}
+                      {texto(a, 'start_date') || texto(a, 'end_date')
+                        ? `${diaPe(texto(a, 'start_date')) || t('p360.equipo.desdeSiempre')} – ${diaPe(texto(a, 'end_date')) || t('p360.equipo.sinFin')}`
+                        : t('p360.equipo.sinFechas')}
                     </Td>
                     <Td className="text-sm">
                       {vigencia === 'vigente' ? (

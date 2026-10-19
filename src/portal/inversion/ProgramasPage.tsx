@@ -153,7 +153,7 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
       ) : programas.isError && !programas.data ? (
         <FalloDeLectura error={programas.error} alReintentar={() => void programas.refetch()} />
       ) : (programas.data ?? []).length === 0 ? (
-        <Vacio titulo={t('inversion.programas.vacio')} />
+        <Vacio titulo={t('inversion.programas.vacio')}>{t('inversion.programas.vacioAyuda')}</Vacio>
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('inversion.programas.tabla')}>
@@ -236,7 +236,7 @@ function Aportes({ proyecto }: { proyecto?: string }) {
       ) : aportes.isError && !aportes.data ? (
         <FalloDeLectura error={aportes.error} alReintentar={() => void aportes.refetch()} />
       ) : filtrados.length === 0 ? (
-        <Vacio titulo={t('inversion.aportes.vacio')} />
+        <Vacio titulo={t('inversion.aportes.vacio')}>{t('inversion.aportes.vacioAyuda')}</Vacio>
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('inversion.aportes.tabla')}>

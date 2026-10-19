@@ -1,13 +1,14 @@
 import { QueryClient } from '@tanstack/react-query'
-import { ApiError, createRegistry, EmptyState, resolveConfig, WasichaiProviders } from '@wasichai/core'
+import { ApiError, createRegistry, resolveConfig, WasichaiProviders } from '@wasichai/core'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router'
+import { createBrowserRouter, createRoutesFromElements, Link, Route, RouterProvider } from 'react-router'
 import { client } from './api'
 import { ZONA_DE_LIMA } from './datos/fechas'
 import { LoginPage } from './auth/LoginPage'
 import { AbrirRegistroPage } from './avisos/AbrirRegistroPage'
 import { AvisosPage } from './avisos/AvisosPage'
+import { Vacio } from './componentes/Estados'
 import { parametrosDe, PorRuta } from './componentes/PorRuta'
 import { RequireSession } from './auth/RequireSession'
 import { idiomaHtmlModule } from '../idiomaHtml'
@@ -24,13 +25,19 @@ const retry = (count: number, error: unknown) => !(error instanceof ApiError && 
 
 function NoEncontrada() {
   const { t } = useTranslation(NS)
-  return <EmptyState title={t('noEncontrada')} />
+  return (
+    <Vacio titulo={t('noEncontrada')}>
+      <Link to="/" className="text-sg-primary-text underline">
+        {t('irAlInicio')}
+      </Link>
+    </Vacio>
+  )
 }
 
 // design-system.md §6.5: la sección que aún no llega lo dice, sin un error técnico; llega en la primera de sus fases
 function SeccionPorLlegar({ seccion }: { seccion: SeccionNav }) {
   const { t } = useTranslation(NS)
-  return <EmptyState title={t('seccionPorLlegar', { fase: seccion.fases[0] })} />
+  return <Vacio titulo={t('seccionPorLlegar', { fase: seccion.fases[0] })} />
 }
 
 // el Dashboard es la ruta índice; cada otra sección tiene ruta solo con su pantalla (PANTALLAS), y la pantalla se guarda

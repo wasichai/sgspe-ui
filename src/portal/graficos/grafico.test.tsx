@@ -100,6 +100,25 @@ describe('opcionesConTema', () => {
     expect(r.aria).toEqual({ enabled: true, decal: { show: true }, label: { description: 'Programas: uno por aprobar' } })
   })
 
+  it('un eje de valores con series de enteros (conteos) no tiene ticks decimales; con decimales, sí', () => {
+    const conteos = opcionesConTema({ xAxis: { type: 'value' }, yAxis: { type: 'category' }, series: [{ type: 'bar', data: [0, 1] }] }) as Record<string, any>
+    expect(conteos.xAxis.minInterval).toBe(1)
+    expect(conteos.yAxis.minInterval).toBeUndefined()
+    const promedios = opcionesConTema({ yAxis: { type: 'value' }, series: [{ type: 'line', data: [2.7, null, 3.1] }] }) as Record<string, any>
+    expect(promedios.yAxis.minInterval).toBeUndefined()
+    const propio = opcionesConTema({ yAxis: { type: 'value', minInterval: 5 }, series: [{ type: 'bar', data: [10] }] }) as Record<string, any>
+    expect(propio.yAxis.minInterval).toBe(5)
+  })
+
+  it('una leyenda abajo (también la que no dice top: ECharts 6 la pone abajo) deja espacio a las etiquetas del eje', () => {
+    const abajo = opcionesConTema({ grid: { bottom: 24 }, legend: { bottom: 0 }, series: [] }) as Record<string, any>
+    expect(abajo.grid.bottom).toBeGreaterThanOrEqual(56)
+    const porDefecto = opcionesConTema({ grid: { bottom: 32 }, legend: {}, series: [] }) as Record<string, any>
+    expect(porDefecto.grid.bottom).toBeGreaterThanOrEqual(56)
+    const arriba = opcionesConTema({ grid: { bottom: 24 }, legend: { top: 0 }, series: [] }) as Record<string, any>
+    expect(arriba.grid.bottom).toBe(24)
+  })
+
   it('no agrega un tooltip ni una leyenda que la pantalla no pidió', () => {
     const r = opcionesConTema({ series: [] }) as Record<string, unknown>
     expect(r.tooltip).toBeUndefined()
@@ -127,5 +146,25 @@ describe('Grafico', () => {
     expect(tabla.querySelector('caption')).toHaveTextContent('Reuniones al mes')
     expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Mes', 'Reuniones'])
     expect(screen.getAllByRole('row').map((f) => f.textContent)).toEqual(['MesReuniones', '2026-091', '2026-103'])
+  })
+
+  it('sin filas o con todo en cero dice que no hay datos en el periodo, sin ejes vacíos', () => {
+    const { rerender } = montar(<Grafico etiqueta="Reuniones al mes" opciones={OPCIONES} datos={{ columnas: ['Mes', 'Reuniones'], filas: [] }} />)
+    expect(screen.getByText('Sin datos en el periodo')).toBeInTheDocument()
+    expect(screen.queryByText('Ver datos')).not.toBeInTheDocument()
+    rerender(
+      <Grafico
+        etiqueta="Reuniones al mes"
+        opciones={OPCIONES}
+        datos={{
+          columnas: ['Mes', 'Reuniones'],
+          filas: [
+            ['2026-09', '0'],
+            ['2026-10', '—']
+          ]
+        }}
+      />
+    )
+    expect(screen.getByText('Sin datos en el periodo')).toBeInTheDocument()
   })
 })

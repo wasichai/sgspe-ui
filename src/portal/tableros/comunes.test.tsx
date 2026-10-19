@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
@@ -8,6 +8,7 @@ import {
   Barras,
   ConsultaDeTablero,
   diezYOtros,
+  FiltrosDeTablero,
   FiltrosIgnorados,
   SerieConMeta,
   useFiltrosDeTablero,
@@ -168,6 +169,27 @@ describe('filtros y catálogo', () => {
   it('en el alcance global no manda proyecto', () => {
     montar(<Filtros />, { ruta: '/dashboard?territory=area:a1' })
     expect(JSON.parse(screen.getByText(/area/).textContent ?? '')).toEqual({ areaOfInfluence: 'a1' })
+  })
+
+  it('el ámbito dice «Todos los ámbitos» y sus opciones con su rótulo; sin fechas, dice qué periodo se calcula', async () => {
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/stakeholder',
+        body: {
+          name: 'stakeholder',
+          label: 'Grupo',
+          fields: [{ name: 'stakeholder_scope', type: 'ENUM', label: 'Ámbito', enumOptions: ['LOCAL', 'REGIONAL'] }]
+        }
+      }
+    ])
+    const { unmount } = montar(<FiltrosDeTablero alActualizar={() => undefined} />, { ruta: '/stakeholders/dashboard' })
+    const ambito = screen.getByLabelText('Ámbito')
+    expect(within(ambito).getByRole('option', { name: 'Todos los ámbitos' })).toHaveValue('')
+    expect(await within(ambito).findByRole('option', { name: 'Regional' })).toHaveValue('REGIONAL')
+    expect(screen.getByText(/Sin fechas, cada cifra es del mes en curso/)).toBeInTheDocument()
+    unmount()
+    montar(<FiltrosDeTablero alActualizar={() => undefined} />, { ruta: '/stakeholders/dashboard?periodStart=2026-01-01' })
+    expect(screen.queryByText(/Sin fechas, cada cifra es del mes en curso/)).not.toBeInTheDocument()
   })
 
   it('un tablero se ofrece si el catálogo trae un indicador suyo disponible', async () => {

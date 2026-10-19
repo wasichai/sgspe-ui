@@ -35,9 +35,21 @@ export function opcionesConTema(opciones: Objeto): Objeto {
     axisLabel: { color: colorDe('--sg-text-secondary') },
     splitLine: { lineStyle: { color: colorDe('--sg-border-subtle') } }
   }
-  const conEje = (e: unknown) => (Array.isArray(e) ? e.map((x) => fusionar(eje, esObjeto(x) ? x : {})) : fusionar(eje, esObjeto(e) ? e : {}))
+  // un conteo no tiene «0,2 personas»: si toda serie es de enteros, el eje de valores avanza de uno en uno (salvo que la
+  // pantalla diga su minInterval)
+  const enteros = soloEnteros(opciones.series)
+  const conEntero = (x: Objeto) => (enteros && x.type === 'value' && x.minInterval === undefined ? { ...x, minInterval: 1 } : x)
+  const conEje = (e: unknown) =>
+    Array.isArray(e) ? e.map((x) => conEntero(fusionar(eje, esObjeto(x) ? x : {}))) : conEntero(fusionar(eje, esObjeto(e) ? e : {}))
   const resultado: Objeto = { ...temaDelGrafico(), ...opciones }
   for (const clave of ['xAxis', 'yAxis']) if (opciones[clave] !== undefined) resultado[clave] = conEje(opciones[clave])
+  // una leyenda abajo (la posición por defecto de ECharts 6, si la pantalla no dice top) no pisa las etiquetas del eje X: la
+  // grilla le deja su franja
+  if (esObjeto(opciones.legend) && opciones.legend.top === undefined) {
+    const grilla = esObjeto(opciones.grid) ? opciones.grid : {}
+    const abajo = typeof grilla.bottom === 'number' ? grilla.bottom : 0
+    resultado.grid = { ...grilla, bottom: Math.max(abajo, 56) }
+  }
   if (esObjeto(opciones.tooltip)) {
     resultado.tooltip = fusionar(
       {
@@ -52,6 +64,18 @@ export function opcionesConTema(opciones: Objeto): Objeto {
   if (esObjeto(opciones.aria)) resultado.aria = fusionar(temaDelGrafico().aria, opciones.aria)
   if (esObjeto(opciones.legend)) resultado.legend = fusionar({ textStyle: { color: colorDe('--sg-text-secondary') } }, opciones.legend)
   return resultado
+}
+
+// si todos los valores de todas las series son enteros (los conteos); un valor puede ser un número, null, un par [x, y] o
+// { value }
+function soloEnteros(series: unknown): boolean {
+  if (!Array.isArray(series) || series.length === 0) return false
+  const valores = series.flatMap((serie) => (esObjeto(serie) && Array.isArray(serie.data) ? serie.data : []))
+  const numeros = valores
+    .map((v) => (esObjeto(v) ? v.value : v))
+    .flatMap((v) => (Array.isArray(v) ? v : [v]))
+    .filter((v): v is number => typeof v === 'number')
+  return numeros.length > 0 && numeros.every((n) => Number.isInteger(n))
 }
 
 export default function GraficoImpl({ etiqueta, opciones, alto = 280, alElegir }: Omit<GraficoProps, 'datos'> & { datos?: unknown }) {

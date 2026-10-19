@@ -125,7 +125,7 @@ function Revision({ datos }: { datos: TableroEjecutivo }) {
           <p className="text-sg-caption text-sg-text-muted">{t('tablerosF8.ejecutivo.posturaAyuda')}</p>
         </section>
       </section>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <InversionPorMoneda indicador={indicador('KPI-INV-03')} />
         <Tendencia indicador={indicador('KPI-EXE-03')} />
       </div>
@@ -217,19 +217,23 @@ function Linea({ titulo, meses, series }: { titulo: string; meses: MesDeTendenci
     xAxis: { type: 'category', data: meses.map((m) => periodoPe(m.period)) },
     yAxis: { type: 'value', minInterval: 1 },
     tooltip: { trigger: 'axis' },
-    legend: series.length > 1 ? {} : undefined,
+    legend: series.length > 1 ? { bottom: 0 } : undefined,
     series: series.map((s) => ({ type: 'line', name: s.nombre, data: meses.map(s.valor) }))
   }
+  // cada serie con su título a la vista: tres gráficos sin nombre no se distinguen
   return (
-    <Grafico
-      etiqueta={titulo}
-      alto={160}
-      opciones={opciones}
-      datos={{
-        columnas: [t('tableros.periodo'), ...series.map((s) => s.nombre)],
-        filas: meses.map((m) => [periodoPe(m.period), ...series.map((s) => numeroPe(s.valor(m)))])
-      }}
-    />
+    <div className="space-y-1">
+      <h3 className="text-sm font-medium">{titulo}</h3>
+      <Grafico
+        etiqueta={titulo}
+        alto={series.length > 1 ? 190 : 160}
+        opciones={opciones}
+        datos={{
+          columnas: [t('tableros.periodo'), ...series.map((s) => s.nombre)],
+          filas: meses.map((m) => [periodoPe(m.period), ...series.map((s) => numeroPe(s.valor(m)))])
+        }}
+      />
+    </div>
   )
 }
 

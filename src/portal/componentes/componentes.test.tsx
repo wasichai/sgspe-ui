@@ -354,6 +354,13 @@ describe('KpiCard', () => {
     expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 
+  it('una cifra sin valor en el periodo lo dice, sin «—» ni la unidad suelta', async () => {
+    montar(<KpiCard titulo="Absueltas" indicador={{ code: 'KPI-GRV-03', label: 'x', available: true, value: null, numerator: 0, denominator: 0, unit: '%' }} />)
+    expect(await screen.findByText('Sin datos en el periodo')).toBeInTheDocument()
+    expect(screen.queryByText('%')).not.toBeInTheDocument()
+    expect(screen.queryByText('—')).not.toBeInTheDocument()
+  })
+
   it('una cifra no disponible dice por qué: sin permiso, candado; un solo proyecto, que lo elija', async () => {
     montar(
       <>
