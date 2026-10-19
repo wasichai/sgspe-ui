@@ -1,3 +1,4 @@
+import { useSiguientePaso } from '../contexto/Rastro'
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
@@ -494,6 +495,7 @@ function FilaDePregunta({
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la visita de campo, los grupos de interés y los
 // temas), qué generó (los compromisos y las QCS que nacieron de ella) y lo que la sustenta (sus evidencias)
 function Trazabilidad({ interaccion }: { interaccion: Registro }) {
+  const paso = useSiguientePaso()
   // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
   const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
@@ -526,7 +528,7 @@ function Trazabilidad({ interaccion }: { interaccion: Registro }) {
             <ul>
               {grupos.data.content.map((g) => (
                 <li key={g.id}>
-                  <Link to={`${base}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
+                  <Link to={`${base}/stakeholders/${encodeURIComponent(g.id)}`} state={paso()} className="text-sg-primary-text underline">
                     <NombreDelGrupo grupo={g} />
                   </Link>
                 </li>

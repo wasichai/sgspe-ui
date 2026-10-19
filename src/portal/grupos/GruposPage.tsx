@@ -1,3 +1,4 @@
+import { useSiguientePaso } from '../contexto/Rastro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
@@ -288,6 +289,8 @@ function Fila({
   const del = useRegistro('project', global ? proyecto : undefined)
   const evaluado = grupo.state === 'assessed' || Boolean(atributo(grupo, 'influence_group'))
   const nombre = useNombreDelGrupo(grupo)
+  // la lista (con su territorio y sus filtros) queda en el rastro (revisión de UX, etapa 6)
+  const paso = useSiguientePaso()
   return (
     <tr>
       {alSeleccionar ? (
@@ -303,6 +306,7 @@ function Fila({
       <Td className="min-w-48">
         <Link
           to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(grupo.id)}`}
+          state={paso()}
           className="font-medium text-sg-primary-text underline"
         >
           <NombreDelGrupo grupo={grupo} />

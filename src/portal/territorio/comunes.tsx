@@ -1,3 +1,4 @@
+import { useSiguientePaso } from '../contexto/Rastro'
 import { useQueries } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
@@ -23,11 +24,15 @@ export function TrabajarEnProyecto({ tipo, id }: { tipo: TerritoryKind; id: stri
   const proyectos = useProyectos()
   const proyecto = busqueda.get('project')
   const destino = (p: string) => `/projects/${encodeURIComponent(p)}/stakeholders?territory=${encodeURIComponent(valorDeTerritorio(tipo, id))}`
+  // el lugar queda en el rastro (revisión de UX, etapa 6)
+  const paso = useSiguientePaso()
   if (!can('stakeholder', 'READ')) return null
   if (proyecto)
     return (
       <Button asChild size="sm">
-        <Link to={destino(proyecto)}>{t('territorio.trabajarEnProyecto')}</Link>
+        <Link to={destino(proyecto)} state={paso()}>
+          {t('territorio.trabajarEnProyecto')}
+        </Link>
       </Button>
     )
   if (proyectos.isError && !proyectos.data) return <ErrorDeCarga error={proyectos.error} alReintentar={() => void proyectos.refetch()} />
@@ -48,7 +53,7 @@ export function TrabajarEnProyecto({ tipo, id }: { tipo: TerritoryKind; id: stri
       aria-label={t('territorio.trabajarEnProyecto')}
       className="h-8 rounded-sg-md border border-sg-border-strong bg-sg-surface px-2 text-sm"
       value=""
-      onChange={(e) => e.target.value && navegar(destino(e.target.value))}
+      onChange={(e) => e.target.value && navegar(destino(e.target.value), { state: paso() })}
     >
       <option value="">{t('territorio.trabajarEnProyecto')}…</option>
       {opciones.map((p) => (

@@ -373,6 +373,7 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const interacciones = useRelacionados('stakeholder', grupo.id, 'engagement_stakeholder')
+  const paso = useSiguientePaso()
   const compromisos = useCompromisosDelGrupo(grupo)
   const proyecto = String(atributo(grupo, 'project'))
   const dia = (e: Registro) => diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))
@@ -386,7 +387,11 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
       <ul>
         {(interacciones.data?.content ?? []).map((e) => (
           <li key={e.id}>
-            <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`} className="text-sg-primary-text underline">
+            <Link
+              to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`}
+              state={paso()}
+              className="text-sg-primary-text underline"
+            >
               {texto(e, 'title')}
             </Link>
             {dia(e) ? (
@@ -407,7 +412,11 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
           <ul>
             {(compromisos.data?.content ?? []).map((c) => (
               <li key={c.id}>
-                <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`} className="text-sg-primary-text underline">
+                <Link
+                  to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`}
+                  state={paso()}
+                  className="text-sg-primary-text underline"
+                >
                   {[texto(c, 'code'), texto(c, 'title')].filter(Boolean).join(' · ')}
                 </Link>
               </li>
