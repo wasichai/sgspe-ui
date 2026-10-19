@@ -144,6 +144,19 @@ test.beforeEach(async ({ page }) => {
   await prepararApi(page)
 })
 
+// D6 de la revisión de UX: en el teléfono las pestañas de la ficha caben en la pantalla y se desplazan con su flecha, sin
+// empujar el contenido hacia la derecha
+test('a 390 px las pestañas de la ficha se desplazan sin salirse de la pantalla', async ({ page }) => {
+  await prepararCompromisos(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/projects/p1/commitments/c1')
+  const pestanas = page.getByRole('tablist', { name: 'Reservorio de agua para Tunas Pampa' })
+  await expect(pestanas).toBeVisible()
+  const caja = await pestanas.boundingBox()
+  expect(caja!.x + caja!.width).toBeLessThanOrEqual(390)
+  await expect(pestanas.locator('..').getByRole('button', { name: 'Ver más secciones' })).toBeVisible()
+})
+
 test('la entrega lleva el acta subida en dos pasos, por id, con su clave y su motivo (flujo 10)', async ({ page }) => {
   const escrituras = await prepararCompromisos(page)
   await page.goto('/projects/p1/commitments/c1')

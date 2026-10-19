@@ -37,8 +37,9 @@ export function PestanasDeFicha({ etiqueta, pestanas }: { etiqueta: string; pest
     fila.current?.querySelectorAll<HTMLElement>('[role="tab"]')[destino[e.key]]?.focus()
   }
 
+  // min-w-0: dentro de la grilla de una ficha, el ítem no crece con la fila de pestañas; la fila se desplaza en su ancho
   return (
-    <div ref={fila}>
+    <div ref={fila} className="min-w-0">
       <PestanasDesplazables etiqueta={etiqueta} rol="tablist">
         {pestanas.map((p, i) => {
           const elegida = p.id === actual
