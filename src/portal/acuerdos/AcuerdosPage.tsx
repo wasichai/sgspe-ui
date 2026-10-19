@@ -92,6 +92,7 @@ export function AcuerdosPage() {
                 titulo={texto(a, 'title')}
                 ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
                 desde={t('acuerdos.titulo')}
+                previa={{ objeto: 'agreement', id: a.id }}
               />
             ),
             estado: <EstadoChip objeto="agreement" estado={a.state} />,
@@ -129,6 +130,7 @@ export function AcuerdosPage() {
                         titulo={texto(a, 'title')}
                         ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
                         desde={t('acuerdos.titulo')}
+                        previa={{ objeto: 'agreement', id: a.id }}
                       />
                     </Td>
                     {proyecto ? null : (

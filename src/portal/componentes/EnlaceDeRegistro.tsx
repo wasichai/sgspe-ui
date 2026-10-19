@@ -1,3 +1,4 @@
+import { BotonDeVistaPrevia } from './VistaPrevia'
 import { Link } from 'react-router'
 import { useSiguientePaso } from '../contexto/Rastro'
 
@@ -10,18 +11,22 @@ export function EnlaceDeRegistro({
   titulo,
   ruta,
   desde,
-  codigoEnElEnlace = false
+  codigoEnElEnlace = false,
+  previa
 }: {
   codigo?: string | null
   titulo: string
   ruta: string | null
   desde?: string
   codigoEnElEnlace?: boolean
+  // con el objeto y el id, el ojo de su vista previa junto al título (revisión de UX, etapa 6): se mira sin dejar la lista
+  previa?: { objeto: string; id: string }
 }) {
   const paso = useSiguientePaso()
   const elCodigo = codigo ? <span className="font-sg-mono text-sg-caption text-sg-text-muted">{codigo}</span> : null
-  if (codigoEnElEnlace && ruta)
-    return (
+  const ojo = previa && ruta ? <BotonDeVistaPrevia objeto={previa.objeto} id={previa.id} nombre={[codigo, titulo].filter(Boolean).join(' ')} /> : null
+  if (codigoEnElEnlace && ruta) {
+    const enlace = (
       <Link to={ruta} state={paso(desde, ruta)} className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2 text-sg-primary-text">
         {elCodigo}
         {/* el espacio separa el código del título en el nombre del enlace («Q-002 Agua turbia…»); el flex no lo dibuja */}
@@ -29,6 +34,15 @@ export function EnlaceDeRegistro({
         {titulo ? <span className="underline">{titulo}</span> : null}
       </Link>
     )
+    return ojo ? (
+      <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2">
+        {enlace}
+        {ojo}
+      </span>
+    ) : (
+      enlace
+    )
+  }
   return (
     <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2">
       {elCodigo}
@@ -39,6 +53,7 @@ export function EnlaceDeRegistro({
       ) : (
         <span>{titulo}</span>
       )}
+      {ojo}
     </span>
   )
 }

@@ -67,6 +67,11 @@ describe('S28 · lista de compromisos', () => {
     expect(within(tabla).getAllByRole('row')).toHaveLength(4)
     expect(within(tabla).queryByText('Botiquín comunal')).not.toBeInTheDocument()
     expect(within(tabla).getByRole('link', { name: 'Reservorio de agua para Tunas Pampa' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
+    // el ojo abre su vista previa sin dejar la lista (revisión de UX, etapa 6)
+    expect(within(tabla).getByRole('link', { name: /^Vista previa de C-\d+ Reservorio de agua para Tunas Pampa$/ })).toHaveAttribute(
+      'href',
+      '/projects/p1/commitments?peek=commitment%3Ac1'
+    )
     expect(within(tabla).getAllByText('S/ 25,000.00')).toHaveLength(3)
     await userEvent.click(screen.getByRole('tab', { name: 'Vencidos' }))
     expect(await within(await screen.findByRole('table', { name: 'Compromisos' })).findByText('Taller de costura')).toBeInTheDocument()

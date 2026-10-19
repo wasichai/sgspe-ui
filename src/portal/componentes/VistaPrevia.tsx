@@ -50,7 +50,16 @@ export function BotonDeVistaPrevia({ objeto, id, nombre }: { objeto: string; id:
 // los datos que la vista previa dice de cada objeto, además del estado (los que no se leen no llegan y no se dicen)
 const DATOS: Record<string, string[]> = {
   evidence: ['evidence_type', 'classification'],
-  stakeholder: ['stakeholder_type', 'influence_group', 'relationship_status']
+  stakeholder: ['stakeholder_type', 'influence_group', 'relationship_status'],
+  engagement: ['engagement_type', 'place'],
+  commitment: ['resource_type', 'priority'],
+  agreement: ['agreement_type', 'validity_status'],
+  grievance: ['channel', 'category', 'severity'],
+  inquiry: ['channel', 'category'],
+  stakeholder_request: ['channel', 'category', 'request_medium'],
+  social_risk: ['category', 'risk_level'],
+  social_program: ['program_type'],
+  social_contribution: ['contribution_type']
 }
 
 export function VistaPrevia() {

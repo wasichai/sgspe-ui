@@ -52,7 +52,7 @@ test('a 390 px la lista de compromisos es de tarjetas con su estado y su plazo',
   await page.goto('/projects/p1/commitments')
   const tarjetas = page.getByRole('list', { name: 'Compromisos' })
   const tarjeta = tarjetas.getByRole('listitem').filter({ hasText: 'Reservorio de agua' })
-  await expect(tarjeta.getByRole('link', { name: 'Reservorio de agua' })).toBeVisible()
+  await expect(tarjeta.getByRole('link', { name: 'Reservorio de agua', exact: true })).toBeVisible()
   await expect(tarjeta.getByText('En ejecución')).toBeVisible()
   await expect(page.getByRole('table', { name: 'Compromisos' })).toHaveCount(0)
 })

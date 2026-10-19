@@ -163,6 +163,7 @@ export function CompromisosPage() {
                         titulo={texto(c, 'title')}
                         ruta={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
                         desde={t('compromisos.titulo')}
+                        previa={{ objeto: 'commitment', id: c.id }}
                       />
                     ),
                     estado: <EstadoChip objeto="commitment" estado={c.state} />,
@@ -200,6 +201,7 @@ export function CompromisosPage() {
                               titulo={texto(c, 'title')}
                               ruta={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
                               desde={t('compromisos.titulo')}
+                              previa={{ objeto: 'commitment', id: c.id }}
                             />
                           </Td>
                           {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(c, 'project'))}</Td>}

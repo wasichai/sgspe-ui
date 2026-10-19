@@ -181,7 +181,13 @@ export function RiesgosPage() {
               tarjetas={filtrados.map((r) => ({
                 id: r.id,
                 titulo: (
-                  <EnlaceDeRegistro codigo={texto(r, 'code')} titulo={texto(r, 'title')} ruta={rutaDeFicha('social_risk', r)} desde={t('riesgos.titulo')} />
+                  <EnlaceDeRegistro
+                    codigo={texto(r, 'code')}
+                    titulo={texto(r, 'title')}
+                    ruta={rutaDeFicha('social_risk', r)}
+                    desde={t('riesgos.titulo')}
+                    previa={{ objeto: 'social_risk', id: r.id }}
+                  />
                 ),
                 estado: (
                   <>
@@ -222,6 +228,7 @@ export function RiesgosPage() {
                           titulo={texto(r, 'title')}
                           ruta={rutaDeFicha('social_risk', r)}
                           desde={t('riesgos.titulo')}
+                          previa={{ objeto: 'social_risk', id: r.id }}
                         />
                       </Td>
                       {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(r, 'project'))}</Td>}

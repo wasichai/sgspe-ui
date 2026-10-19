@@ -1,3 +1,4 @@
+import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
@@ -74,7 +75,9 @@ export function RegistrosDeLaZona({ zona, id, periodo = {} }: { zona: ObjetoDeZo
                   <Td>
                     <EnlaceDeFicha objeto={objeto} registro={r}>
                       {nombreDe(r, t('fichaTerritorial.registros.sinNombre'))}
-                    </EnlaceDeFicha>
+                    </EnlaceDeFicha>{' '}
+                    {/* la vista previa sin dejar el mapa (revisión de UX, etapa 6) */}
+                    <BotonDeVistaPrevia objeto={objeto} id={r.id} nombre={nombreDe(r, t('fichaTerritorial.registros.sinNombre'))} />
                   </Td>
                   <Td>
                     <EstadoChip objeto={objeto} estado={r.state} />

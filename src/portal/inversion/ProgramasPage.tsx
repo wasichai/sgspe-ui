@@ -176,7 +176,13 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
           tarjetas={(programas.data ?? []).map((p) => ({
             id: p.id,
             titulo: (
-              <EnlaceDeRegistro codigo={texto(p, 'code')} titulo={texto(p, 'name')} ruta={rutaDeFicha('social_program', p)} desde={t('inversion.titulo')} />
+              <EnlaceDeRegistro
+                codigo={texto(p, 'code')}
+                titulo={texto(p, 'name')}
+                ruta={rutaDeFicha('social_program', p)}
+                previa={{ objeto: 'social_program', id: p.id }}
+                desde={t('inversion.titulo')}
+              />
             ),
             estado: <EstadoChip objeto="social_program" estado={p.state} />,
             proyecto: proyecto ? undefined : nombreDelProyecto(texto(p, 'project')),
@@ -205,6 +211,7 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
                       codigo={texto(p, 'code')}
                       titulo={texto(p, 'name')}
                       ruta={rutaDeFicha('social_program', p)}
+                      previa={{ objeto: 'social_program', id: p.id }}
                       desde={t('inversion.titulo')}
                     />
                   </Td>
@@ -280,7 +287,14 @@ function Aportes({ proyecto }: { proyecto?: string }) {
           etiqueta={t('inversion.aportes.tabla')}
           tarjetas={filtrados.map((a) => ({
             id: a.id,
-            titulo: <EnlaceDeRegistro titulo={texto(a, 'code')} ruta={rutaDeFicha('social_contribution', a)} desde={t('inversion.titulo')} />,
+            titulo: (
+              <EnlaceDeRegistro
+                titulo={texto(a, 'code')}
+                ruta={rutaDeFicha('social_contribution', a)}
+                previa={{ objeto: 'social_contribution', id: a.id }}
+                desde={t('inversion.titulo')}
+              />
+            ),
             estado: <EstadoChip objeto="social_contribution" estado={a.state} />,
             proyecto: proyecto ? undefined : nombreDelProyecto(texto(a, 'project')),
             detalle: [opcion(a, 'contribution_type'), montoPe(atributo(a, 'total_amount'), atributo(a, 'currency'))].filter(Boolean).join(' · ')
@@ -304,7 +318,12 @@ function Aportes({ proyecto }: { proyecto?: string }) {
               {filtrados.map((a) => (
                 <tr key={a.id}>
                   <Td className="font-sg-mono text-sm">
-                    <EnlaceDeRegistro titulo={texto(a, 'code')} ruta={rutaDeFicha('social_contribution', a)} desde={t('inversion.titulo')} />
+                    <EnlaceDeRegistro
+                      titulo={texto(a, 'code')}
+                      ruta={rutaDeFicha('social_contribution', a)}
+                      previa={{ objeto: 'social_contribution', id: a.id }}
+                      desde={t('inversion.titulo')}
+                    />
                   </Td>
                   {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(a, 'project'))}</Td>}
                   <Td className="text-sm">{opcion(a, 'contribution_type') || '—'}</Td>
