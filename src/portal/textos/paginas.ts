@@ -21,8 +21,9 @@ export const ES_PAGINAS = {
   decision: {
     titulo: 'Situación',
     estado: 'Estado actual',
-    desde: 'Desde el {{fecha}}',
-    por: 'Por {{persona}}',
+    desde: 'Desde',
+    por: 'Por',
+    falta: 'Falta: {{que}}',
     siguiente: 'Siguiente acción',
     sinSiguiente: 'Nada pendiente',
     responsable: 'Responsable',
@@ -67,8 +68,9 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
   decision: {
     titulo: 'Status',
     estado: 'Current status',
-    desde: 'Since {{fecha}}',
-    por: 'By {{persona}}',
+    desde: 'Since',
+    por: 'By',
+    falta: 'Missing: {{que}}',
     siguiente: 'Next action',
     sinSiguiente: 'Nothing pending',
     responsable: 'Owner',
