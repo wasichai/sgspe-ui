@@ -11,9 +11,14 @@ import { DialogoDeTransicion } from './DialogoDeTransicion'
 import { esDeComando } from './reglas'
 
 // las transiciones del estado actual para quien mira (GET …/transitions, de @wasichai/workflow). las que su rol no tiene
-// no aparecen (design-system.md §6.2); las de comando tampoco: tienen su propia pantalla. la primera es la primaria. las
-// de comprobarAntes consultan transition-checks al dibujarse y, si una regla las bloquea, salen deshabilitadas con la razón
+// no aparecen (design-system.md §6.2); las de comando tampoco: tienen su propia pantalla. la primera es la primaria, salvo
+// con sinPrimaria (la ficha ya tiene la suya: un solo botón primario por encabezado). las que anulan, cancelan, retiran o
+// resuelven van al final, como secundarias con texto de peligro y nombrando el objeto («Anular el proyecto»), para que no se
+// confundan con «cerrar el diálogo». las de comprobarAntes consultan transition-checks al dibujarse y, si una regla las
+// bloquea, salen deshabilitadas con la razón
 const DURACION_DE_LA_CONFIRMACION = 6000
+const DESTINOS_DESTRUCTIVOS = new Set(['cancelled', 'voided', 'retired', 'terminated'])
+export const esDestructiva = (tr: AvailableTransition): boolean => DESTINOS_DESTRUCTIVOS.has(tr.to)
 
 export function BotonesDeTransicion({
   objeto,
@@ -22,7 +27,8 @@ export function BotonesDeTransicion({
   solo,
   comprobarAntes = [],
   proyecto,
-  anexos
+  anexos,
+  sinPrimaria = false
 }: {
   objeto: string
   registro: Registro
@@ -35,6 +41,7 @@ export function BotonesDeTransicion({
   proyecto?: string
   // por transición, lo que se agrega al motivo (DialogoDeTransicion.anexo)
   anexos?: Partial<Record<string, string>>
+  sinPrimaria?: boolean
 }) {
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, registro.id)
@@ -49,9 +56,10 @@ export function BotonesDeTransicion({
     return () => clearTimeout(plazo)
   }, [hecha])
   const ofrece = proyecto === undefined || escribeEnElProyecto
-  const visibles = ofrece
+  const permitidas = ofrece
     ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name) && (!solo || solo.includes(tr.name)))
     : []
+  const visibles = [...permitidas.filter((tr) => !esDestructiva(tr)), ...permitidas.filter(esDestructiva)]
   if (visibles.length === 0 && !hecha) return null
   return (
     <div className="space-y-2">
@@ -63,7 +71,7 @@ export function BotonesDeTransicion({
               objeto={objeto}
               registro={registro}
               transicion={tr}
-              primaria={i === 0}
+              primaria={!sinPrimaria && i === 0 && !esDestructiva(tr)}
               comprobar={comprobarAntes.includes(tr.name)}
               alAbrir={() => {
                 setHecha(null)
@@ -114,17 +122,21 @@ function BotonDeTransicion({
   // la razón con el texto de su regla, nunca el mensaje del servidor con los nombres de la API (humo F4, D3)
   const textoDe = useTextoDeAviso(objeto)
   const razon = (comprobacion.data?.blocking ?? []).map((b) => textoDe(b, transicion).texto).find((x) => x) ?? undefined
+  const { t } = useTranslation(NS)
+  const destructiva = esDestructiva(transicion)
+  const elObjeto = destructiva ? t(`transiciones.elObjeto.${objeto}`, { defaultValue: '' }) : ''
   return (
     <>
       <Button
         variant={primaria ? 'primary' : 'secondary'}
         size="sm"
+        className={destructiva ? 'text-sg-danger' : undefined}
         onClick={alAbrir}
         disabled={bloqueado}
         title={razon}
         aria-describedby={razon ? id : undefined}
       >
-        {transicion.label}
+        {elObjeto ? `${transicion.label} ${elObjeto}` : transicion.label}
       </Button>
       {razon ? (
         <span id={id} className="sr-only">

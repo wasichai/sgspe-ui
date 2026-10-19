@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { AuthUser } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
@@ -116,6 +116,19 @@ describe('NAV_TREE', () => {
 })
 
 describe('navegación del portal', () => {
+  it('el encabezado no muestra el código del rol; con el directorio de roles, su rótulo', async () => {
+    start(RELACIONISTA, rutasDeSesion(RELACIONISTA, permisosConCapacidades({ project: ['READ'] }, [])))
+    await screen.findByRole('navigation', { name: 'Secciones' })
+    expect(screen.getByText('Relacionista de prueba')).toBeInTheDocument()
+    expect(screen.queryByText(RELACIONISTA.roles.join(', '))).not.toBeInTheDocument()
+    cleanup()
+    start(ADMINISTRACION, [
+      ...rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS),
+      { path: '/roles', body: ADMINISTRACION.roles.map((name) => ({ name, label: 'Administración de la organización' })) }
+    ])
+    expect(await screen.findByText('Administración de la organización')).toBeInTheDocument()
+  })
+
   it('el admin ve Dashboard y Administración, que lleva a /admin', async () => {
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
     await screen.findByRole('navigation', { name: 'Secciones' })

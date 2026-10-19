@@ -143,7 +143,7 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
                           confirmando === a.id ? (
                             <span className="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label={t('p360.asignacion.terminarDe', { correo })}>
                               {t('p360.asignacion.confirmarTerminar', { correo })}
-                              <Button size="sm" onClick={() => terminar(a)} disabled={actualizar.isPending}>
+                              <Button size="sm" variant="danger" onClick={() => terminar(a)} disabled={actualizar.isPending}>
                                 {t('p360.asignacion.terminarSi')}
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => setConfirmando(null)}>
@@ -151,7 +151,13 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
                               </Button>
                             </span>
                           ) : (
-                            <Button variant="ghost" size="sm" aria-label={t('p360.asignacion.terminarDe', { correo })} onClick={() => setConfirmando(a.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-sg-danger"
+                              aria-label={t('p360.asignacion.terminarDe', { correo })}
+                              onClick={() => setConfirmando(a.id)}
+                            >
                               {t('p360.asignacion.terminar')}
                             </Button>
                           )

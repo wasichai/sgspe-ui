@@ -160,7 +160,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
               </Button>
             ) : null}
           </div>
-          <BotonesDeTransicion objeto="social_risk" registro={riesgo} proyecto={proyecto} comprobarAntes={COMPROBAR} />
+          <BotonesDeTransicion objeto="social_risk" registro={riesgo} proyecto={proyecto} comprobarAntes={COMPROBAR} sinPrimaria={revisa} />
         </div>
       </header>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
