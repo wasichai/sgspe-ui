@@ -1,3 +1,4 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useQueries, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
@@ -66,14 +67,12 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Rastro />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {tipo === 'organization' ? texto(actor, 'organization_type') || t('grupos.actor.organizacion') : t('grupos.actor.persona')}
-          </p>
-          <h1 className="text-sg-h1 font-semibold">{nombre}</h1>
-          {tipo === 'organization' ? (
-            <p className="text-sm text-sg-text-secondary">
+      <EncabezadoDePagina
+        antetitulo={tipo === 'organization' ? texto(actor, 'organization_type') || t('grupos.actor.organizacion') : t('grupos.actor.persona')}
+        titulo={nombre}
+        descripcion={
+          tipo === 'organization' ? (
+            <>
               {[opcion(actor, 'affiliation'), opcion(actor, 'territorial_level')].filter(Boolean).join(' · ')}
               {comunidad.data ? (
                 <>
@@ -84,22 +83,24 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
                   </Link>
                 </>
               ) : null}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex gap-2">
-          {puedeEditar ? (
+            </>
+          ) : undefined
+        }
+        primaria={
+          puedeEditar ? (
             <Button size="sm" onClick={() => setEditando(true)}>
               {t('comun.editar')}
             </Button>
-          ) : null}
-          {tipo === 'organization' && can('position', 'CREATE') ? (
+          ) : undefined
+        }
+        secundarias={
+          tipo === 'organization' && can('position', 'CREATE') ? (
             <Button size="sm" variant="secondary" onClick={() => setAgregandoCargo(true)}>
               {t('grupos.actor.agregarCargo')}
             </Button>
-          ) : null}
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <section aria-label={t('grupos.actor.cargos')} className="space-y-2">
