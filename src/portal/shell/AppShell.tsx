@@ -1,7 +1,7 @@
 import { useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
 import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Campana } from '../avisos/Campana'
@@ -12,6 +12,8 @@ import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
 import { seccionDeRuta } from './seccionActual'
+import { useInsignias } from './insignias'
+import { Insignia } from '../componentes/Insignia'
 import { useTituloDeDocumento } from '../componentes/Pagina'
 import { ThemeMenu } from './ThemeMenu'
 import { useNombresDeRol } from '../proyectos/usuarios'
@@ -145,6 +147,8 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
   const { t } = useTranslation(NS)
   const secciones = useArbol()
   const actual = seccionDeRuta(useLocation().pathname)
+  const insignias = useInsignias()
+  const idInsignia = useId()
   return (
     <ul className="space-y-0.5">
       {secciones.map((seccion) => {
@@ -152,6 +156,8 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
         const nombre = t(`secciones.${seccion.clave}`)
         const corto = t(`seccionesCortas.${seccion.clave}`, { defaultValue: '' })
         const marcada = seccion.clave === actual
+        const pendientes = seccion.clave === 'tasks' ? insignias.tareas : null
+        const idDeEsta = `${idInsignia}-${seccion.clave}`
         return (
           <li key={seccion.clave}>
             {seccion.external ? (
@@ -166,11 +172,18 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
                 title={nombre}
                 aria-label={corto ? nombre : undefined}
                 aria-current={marcada ? 'page' : undefined}
+                aria-describedby={pendientes ? idDeEsta : undefined}
                 onClick={alElegir}
-                className={cn(ENLACE, marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
+                className={cn(ENLACE, 'relative', marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
               >
                 <Icono aria-hidden className="size-4 shrink-0" />
                 <span className={rotulo}>{corto || nombre}</span>
+                <Insignia
+                  n={pendientes}
+                  id={idDeEsta}
+                  descripcion={t('shell.insignias.tareas', { count: pendientes ?? 0 })}
+                  className={rotulo === ROTULO ? 'absolute top-0.5 right-0.5 xl:static xl:ml-auto' : 'ml-auto'}
+                />
               </Link>
             )}
           </li>
@@ -185,6 +198,8 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
 function BarraInferior({ alMas }: { alMas: () => void }) {
   const { t } = useTranslation(NS)
   const conTareas = useArbol().some((s) => s.clave === 'tasks')
+  const insignias = useInsignias()
+  const id = useId()
   const destino = 'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-sg-caption'
   const estilo = ({ isActive }: { isActive: boolean }) => cn(destino, isActive ? 'text-sg-primary-text' : 'text-sg-text-secondary')
   return (
@@ -194,14 +209,26 @@ function BarraInferior({ alMas }: { alMas: () => void }) {
         {t('secciones.dashboard')}
       </NavLink>
       {conTareas ? (
-        <NavLink to="/tasks" className={estilo}>
+        <NavLink to="/tasks" aria-describedby={insignias.tareas ? `${id}-tareas` : undefined} className={(e) => cn(estilo(e), 'relative')}>
           <ListChecks aria-hidden className="size-5" />
           {t('secciones.tasks')}
+          <Insignia
+            n={insignias.tareas}
+            id={`${id}-tareas`}
+            descripcion={t('shell.insignias.tareas', { count: insignias.tareas ?? 0 })}
+            className="absolute top-1 left-1/2 ml-2"
+          />
         </NavLink>
       ) : null}
-      <NavLink to="/notifications" className={estilo}>
+      <NavLink to="/notifications" aria-describedby={insignias.avisos ? `${id}-avisos` : undefined} className={(e) => cn(estilo(e), 'relative')}>
         <Bell aria-hidden className="size-5" />
         {t('avisos.titulo')}
+        <Insignia
+          n={insignias.avisos}
+          id={`${id}-avisos`}
+          descripcion={t('shell.insignias.avisos', { count: insignias.avisos ?? 0 })}
+          className="absolute top-1 left-1/2 ml-2"
+        />
       </NavLink>
       <button type="button" onClick={alMas} className={cn(destino, 'text-sg-text-secondary')}>
         <MoreHorizontal aria-hidden className="size-5" />

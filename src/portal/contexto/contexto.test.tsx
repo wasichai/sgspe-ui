@@ -286,6 +286,21 @@ describe('barra de contexto y Project 360', () => {
     expect(screen.getByRole('button', { name: 'Más secciones del proyecto: Equipo y parámetros' })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('cada pestaña dice su total y lo vencido, sin cambiar su nombre; QCS suma sus tres objetos', async () => {
+    fetch = mockFetch([
+      ...RUTAS_DEL_PROYECTO,
+      { path: '/objects/project_assignment/records', body: pagina([]) },
+      { path: /\/objects\/commitment\/records\?.*deadline_status=VENCIDO/, body: pagina([], { totalElements: 3 }) },
+      { path: '/objects/commitment/records', body: pagina([], { totalElements: 12 }) },
+      { path: /\/objects\/(grievance|inquiry|stakeholder_request)\/records\?.*deadline_status=VENCIDO/, body: pagina([], { totalElements: 1 }) },
+      { path: /\/objects\/(grievance|inquiry|stakeholder_request)\/records/, body: pagina([], { totalElements: 2 }) }
+    ])
+    montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    await waitFor(() => expect(within(subnav).getByRole('link', { name: 'Compromisos' })).toHaveAccessibleDescription('12 en total, 3 vencidos'))
+    expect(within(subnav).getByRole('link', { name: 'Quejas, consultas y solicitudes' })).toHaveAccessibleDescription('6 en total, 3 vencidos')
+  })
+
   it('Acuerdos es una vista de Compromisos: la pestaña Compromisos queda marcada y la vista ofrece volver', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(

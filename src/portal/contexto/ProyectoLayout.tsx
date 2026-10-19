@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
+import { Insignia } from '../componentes/Insignia'
 import { MigasDelProyecto, ProveedorDeMigas } from '../componentes/Migas'
 import { useTituloDeDocumento } from '../componentes/Pagina'
 import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
@@ -14,6 +15,7 @@ import { LEE_PROPUESTAS } from '../shell/leePropuestas'
 import { estadoDe, guardaDe, useOferta, type ClaveDeSeccion, type Par } from '../shell/navTree'
 import { seccionDeRuta } from '../shell/seccionActual'
 import { BarraDeContexto } from './BarraDeContexto'
+import { useConteosDelProyecto } from './conteos'
 import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyectos'
 import { Rastro } from './Rastro'
 
@@ -78,16 +80,6 @@ export function ProyectoLayout() {
     const clave = SECCION_DE_PESTANA[p]
     return !clave || estadoDe(guardaDe(clave, PERMISOS_DE_PESTANA[p]), oferta) === 'disponible'
   })
-  // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
-  if (proyecto.isError && !proyecto.data)
-    return (
-      <div className="mx-auto max-w-[1440px] space-y-3">
-        {esIlegible(proyecto.error) ? <NoEsDeSusProyectos /> : <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />}
-        <Link to="/projects" className="inline-block text-sm font-medium text-sg-primary-text">
-          {t('contexto.irAProyectos')}
-        </Link>
-      </div>
-    )
   const base = `/projects/${encodeURIComponent(projectId ?? '')}`
   // una vista es pestaña propia si la cuenta no tiene la pestaña que la contiene (lee acuerdos pero no compromisos)
   const contenedora = (p: string) => {
@@ -101,6 +93,27 @@ export function ProyectoLayout() {
   const vistas = (VISTAS_DE_PESTANA[marcada as Pestana] ?? []).filter((v) => pestanas.includes(v))
   const enLista = pathname.split('/').length === 4
   const corto = (p: Pestana) => (p === 'attention' ? t('seccionesCortas.attention') : '')
+  const conteos = useConteosDelProyecto(projectId, visibles)
+  const idConteo = useId()
+  // el total y lo que pide acción, dichos en la descripción del enlace: su nombre sigue siendo el de la pestaña
+  const describir = (p: Pestana) => {
+    const c = conteos[p]
+    const partes = [
+      c?.total != null ? t('contexto.conteos.total', { count: c.total }) : '',
+      c?.accion ? t('contexto.conteos.vencidos', { count: c.accion }) : ''
+    ]
+    return partes.filter(Boolean).join(', ')
+  }
+  // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
+  if (proyecto.isError && !proyecto.data)
+    return (
+      <div className="mx-auto max-w-[1440px] space-y-3">
+        {esIlegible(proyecto.error) ? <NoEsDeSusProyectos /> : <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />}
+        <Link to="/projects" className="inline-block text-sm font-medium text-sg-primary-text">
+          {t('contexto.irAProyectos')}
+        </Link>
+      </div>
+    )
   return (
     <ProveedorDeMigas value={setRegistro}>
       <div className="mx-auto max-w-[1440px] space-y-4">
@@ -114,10 +127,22 @@ export function ProyectoLayout() {
                 to={`${base}/${p}`}
                 aria-current={p === marcada ? 'page' : undefined}
                 aria-label={corto(p) ? t(`contexto.pestanas.${p}`) : undefined}
+                aria-describedby={describir(p) ? `${idConteo}-${p}` : undefined}
                 title={corto(p) ? t(`contexto.pestanas.${p}`) : undefined}
-                className={cn(CLASE_DE_PESTANA, p === marcada ? ACTIVA : REPOSO)}
+                className={cn(CLASE_DE_PESTANA, 'flex items-center gap-1.5', p === marcada ? ACTIVA : REPOSO)}
               >
                 {corto(p) || t(`contexto.pestanas.${p}`)}
+                {conteos[p]?.total != null ? (
+                  <span aria-hidden className="text-sg-caption tabular-nums text-sg-text-muted">
+                    {conteos[p].total}
+                  </span>
+                ) : null}
+                <Insignia n={conteos[p]?.accion} id={`${idConteo}-${p}-accion`} descripcion="" />
+                {describir(p) ? (
+                  <span id={`${idConteo}-${p}`} hidden>
+                    {describir(p)}
+                  </span>
+                ) : null}
               </Link>
             ))}
           </PestanasDesplazables>

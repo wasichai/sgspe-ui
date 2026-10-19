@@ -2,6 +2,12 @@
 // y sub-navegación de Project 360
 export const ES_CONTEXTO = {
   proyecto: 'Proyecto',
+  conteos: {
+    total_one: '{{count}} en total',
+    total_other: '{{count}} en total',
+    vencidos_one: '{{count}} vencido',
+    vencidos_other: '{{count}} vencidos'
+  },
   masPestanas: 'Más secciones del proyecto',
   vistasDe: 'Vistas de {{pestana}}',
   cambiarProyecto: 'Proyecto: {{proyecto}}. Cambiar de proyecto',
@@ -43,6 +49,12 @@ export const ES_CONTEXTO = {
 
 export const EN_CONTEXTO: typeof ES_CONTEXTO = {
   proyecto: 'Project',
+  conteos: {
+    total_one: '{{count}} in total',
+    total_other: '{{count}} in total',
+    vencidos_one: '{{count}} overdue',
+    vencidos_other: '{{count}} overdue'
+  },
   masPestanas: 'More project sections',
   vistasDe: '{{pestana}} views',
   cambiarProyecto: 'Project: {{proyecto}}. Change project',

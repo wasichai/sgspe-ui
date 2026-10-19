@@ -53,6 +53,27 @@ describe('shell responsive', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument())
   })
 
+  // revisión de UX, etapa 1: insignias con lo que pide acción, sin cambiar el nombre de cada destino
+  it('Tareas y Avisos llevan insignias con sus tareas vencidas o por vencer y sus avisos que piden acción', async () => {
+    fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [
+      { path: '/objects/task/records', body: pagina([], { totalElements: 2 }) },
+      {
+        path: '/auth/me/notifications/summary',
+        body: {
+          kinds: { ACTION: { active: 4, unread: 3, overdue: 0 }, WARNING: { active: 0, unread: 0, overdue: 0 }, INFO: { active: 1, unread: 1, overdue: 0 } },
+          latest: null
+        }
+      }
+    ])
+    const barra = await screen.findByRole('navigation', { name: 'Accesos rápidos' })
+    // las dos lecturas de tareas (vencidas y por vencer) responden 2 cada una
+    await waitFor(() => expect(within(barra).getByRole('link', { name: 'Tareas' })).toHaveAccessibleDescription('4 tareas suyas vencidas o por vencer'))
+    expect(within(barra).getByRole('link', { name: 'Avisos' })).toHaveAccessibleDescription('3 avisos sin leer que piden acción')
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Tareas' })).toHaveAccessibleDescription(
+      '4 tareas suyas vencidas o por vencer'
+    )
+  })
+
   it('en el teléfono, una barra inferior con Inicio, Avisos y Más; Más abre el mismo panel', async () => {
     fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [])
     const barra = await screen.findByRole('navigation', { name: 'Accesos rápidos' })

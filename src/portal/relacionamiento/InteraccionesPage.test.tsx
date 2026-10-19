@@ -181,7 +181,8 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     // no promete «las más recientes»: una interacción solo con held_at queda donde el servidor ordene los nulos
     expect(aviso.textContent).not.toMatch(/recientes/)
     expect(screen.getByRole('table', { name: 'Calendario de interacciones' })).toBeInTheDocument()
-    const lecturas = red.a('GET', '/objects/engagement/records')
+    // sin el conteo de la pestaña del proyecto (size=1, revisión de UX): las lecturas de la lista
+    const lecturas = red.a('GET', '/objects/engagement/records').filter((l) => !/[?&]size=1(&|$)/.test(l.ruta))
     expect(lecturas).toHaveLength(5)
     expect(lecturas.every((l) => l.ruta.includes('dir=desc'))).toBe(true)
   })
