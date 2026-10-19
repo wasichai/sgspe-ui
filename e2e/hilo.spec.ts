@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { pagina, prepararApi, registro } from './api'
+import { prepararApi, prepararFichaDeCompromiso } from './api'
 
 // el hilo de contexto (ux-architecture.md §8, flujo 17): del lugar en el mapa a sus grupos de interés, a la interacción,
 // sin perder el proyecto ni el territorio, y con vuelta atrás por el rastro (ASM-066)
@@ -64,62 +64,7 @@ test('el mapa territorial dibuja con MapLibre sin pedir teselas externas', async
 // etapa 6 de la revisión de UX: el recorrido de referencia de ux-architecture.md §8.3 entero, del mapa a la evidencia en el drawer
 // y de vuelta por el rastro a la lista con su territorio, sin perder el proyecto
 test('del mapa a la evidencia en el drawer y de vuelta por el rastro, con el proyecto y el territorio', async ({ page }) => {
-  const compromiso = registro(
-    'k1',
-    { project: 'p1', code: 'C-001', title: 'Reservorio de agua', origin_engagement: 'e1', community: 'c1', due_date: '2026-11-30' },
-    'in_progress'
-  )
-  const acta = registro('ev1', { project: 'p1', title: 'Acta firmada', evidence_type: 'ACTA DE ENTREGA', classification: 'INTERNA' })
-  const permisos = Object.fromEntries(
-    [
-      'project',
-      'project_assignment',
-      'locality',
-      'community',
-      'organization',
-      'stakeholder',
-      'stakeholder_assessment',
-      'engagement',
-      'engagement_participant',
-      'engagement_question',
-      'area_of_influence',
-      'area_of_influence_member',
-      'topic',
-      'commitment',
-      'evidence'
-    ].map((o) => [o, ['READ']])
-  )
-  const rutas: [RegExp, unknown][] = [
-    [/^\/auth\/me\/permissions$/, { admin: false, objects: permisos }],
-    [/^\/objects\/commitment\/records\/k1$/, compromiso],
-    [/^\/objects\/commitment\/records\/k1\/related\/evidence_commitment$/, pagina([acta])],
-    [/^\/objects\/commitment\/records\/k1\/related\//, pagina([])],
-    [/^\/objects\/commitment\/records\/k1\/(transitions|history)$/, []],
-    [/^\/objects\/commitment\/records$/, pagina([compromiso])],
-    [
-      /^\/objects\/commitment\/workflow$/,
-      {
-        id: 'w',
-        objectName: 'commitment',
-        name: 'commitment',
-        label: 'commitment',
-        enabled: true,
-        definition: { states: [{ name: 'in_progress', label: 'En ejecución', type: 'INTERMEDIATE' }], transitions: [] }
-      }
-    ],
-    [/^\/objects\/evidence\/records\/ev1$/, acta],
-    [/^\/objects\/evidence\/records\/ev1\/transitions$/, []],
-    [
-      /^\/objects\/(delivery|task|commitment_candidate|commitment_action|commitment_milestone|commitment_reschedule|commitment_dependency)\/records$/,
-      pagina([])
-    ]
-  ]
-  await page.route('**/api/**', async (route) => {
-    const ruta = new URL(route.request().url()).pathname.replace(/^\/api/, '')
-    const encontrada = rutas.find(([patron]) => patron.test(ruta))
-    if (!encontrada || route.request().method() !== 'GET') return route.fallback()
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(encontrada[1]) })
-  })
+  await prepararFichaDeCompromiso(page)
 
   // 1. el mapa del proyecto: la comunidad
   await page.goto('/territory?project=p1')

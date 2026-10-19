@@ -196,3 +196,64 @@ export async function prepararApi(page: Page): Promise<void> {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(cuerpo) })
   })
 }
+
+// el compromiso k1 del proyecto p1 (nace de la interacción e1, en la comunidad c1) con su evidencia ev1 y lo que su ficha lee:
+// el hilo de contexto y las pruebas a 390 px lo abren. se registra después de prepararApi y gana a las respuestas comunes
+export async function prepararFichaDeCompromiso(page: Page): Promise<void> {
+  const compromiso = registro(
+    'k1',
+    { project: 'p1', code: 'C-001', title: 'Reservorio de agua', origin_engagement: 'e1', community: 'c1', due_date: '2026-11-30' },
+    'in_progress'
+  )
+  const acta = registro('ev1', { project: 'p1', title: 'Acta firmada', evidence_type: 'ACTA DE ENTREGA', classification: 'INTERNA' })
+  const permisos = Object.fromEntries(
+    [
+      'project',
+      'project_assignment',
+      'locality',
+      'community',
+      'organization',
+      'stakeholder',
+      'stakeholder_assessment',
+      'engagement',
+      'engagement_participant',
+      'engagement_question',
+      'area_of_influence',
+      'area_of_influence_member',
+      'topic',
+      'commitment',
+      'evidence'
+    ].map((o) => [o, ['READ']])
+  )
+  const rutas: [RegExp, unknown][] = [
+    [/^\/auth\/me\/permissions$/, { admin: false, objects: permisos }],
+    [/^\/objects\/commitment\/records\/k1$/, compromiso],
+    [/^\/objects\/commitment\/records\/k1\/related\/evidence_commitment$/, pagina([acta])],
+    [/^\/objects\/commitment\/records\/k1\/related\//, pagina([])],
+    [/^\/objects\/commitment\/records\/k1\/(transitions|history)$/, []],
+    [/^\/objects\/commitment\/records$/, pagina([compromiso])],
+    [
+      /^\/objects\/commitment\/workflow$/,
+      {
+        id: 'w',
+        objectName: 'commitment',
+        name: 'commitment',
+        label: 'commitment',
+        enabled: true,
+        definition: { states: [{ name: 'in_progress', label: 'En ejecución', type: 'INTERMEDIATE' }], transitions: [] }
+      }
+    ],
+    [/^\/objects\/evidence\/records\/ev1$/, acta],
+    [/^\/objects\/evidence\/records\/ev1\/transitions$/, []],
+    [
+      /^\/objects\/(delivery|task|commitment_candidate|commitment_action|commitment_milestone|commitment_reschedule|commitment_dependency)\/records$/,
+      pagina([])
+    ]
+  ]
+  await page.route('**/api/**', async (route) => {
+    const ruta = new URL(route.request().url()).pathname.replace(/^\/api/, '')
+    const encontrada = rutas.find(([patron]) => patron.test(ruta))
+    if (!encontrada || route.request().method() !== 'GET') return route.fallback()
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(encontrada[1]) })
+  })
+}

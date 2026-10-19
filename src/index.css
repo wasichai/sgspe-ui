@@ -21,6 +21,20 @@
 /* los paquetes @wasichai traen nombres de clase, no css: tailwind los escanea */
 @source '../node_modules/@wasichai';
 
+/* el teléfono sin desplazamiento horizontal de página (revisión de UX, etapa 8, D3) */
+@layer base {
+    /* una rejilla sin plantilla de columnas tiene una sola columna «auto», que un hijo ancho (una tabla que se desplaza) estira
+       más allá de la pantalla: la columna base es minmax(0, 1fr), y las utilidades (sm:grid-cols-2…) la siguen pisando */
+    .grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+/* el texto solo para lectores de pantalla queda al inicio de su bloque contenedor: sin un ancestro posicionado, el de una celda
+   de una tabla que se desplaza se ubicaba contra la página y la alargaba */
+.sr-only {
+    left: 0;
+}
+
 /* el editor de secciones de F8 (entregables/EditorMarkdown.tsx): tiptap no inyecta su CSS (injectCSS: false, la CSP de
    producción no admite <style> en línea), así que lo mínimo de ProseMirror vive aquí */
 .ProseMirror {
