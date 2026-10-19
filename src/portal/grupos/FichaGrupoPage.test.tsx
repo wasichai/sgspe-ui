@@ -53,6 +53,18 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(await screen.findByRole('button', { name: 'Editar la caracterización' })).toBeInTheDocument()
   })
 
+  // D5 y D9 de la revisión de UX: sin índices, «—» (nunca NaN); sin responsable, ningún guion suelto junto a «Ver el actor»
+  it('sin índices dice «—» y sin responsable no deja un guion suelto; el código del grupo va en las migas', async () => {
+    const sinIndices = { ...S1, attributes: { ...S1.attributes, interest_index: undefined, power_index: undefined, owner_user_id: undefined } }
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', RELACIONISTA, LEE, [{ path: '/objects/stakeholder/records/s1', body: sinIndices }, ...base()])
+    expect(await screen.findByRole('heading', { name: 'Ronda campesina Tunas', level: 1 })).toBeInTheDocument()
+    const decidir = screen.getByRole('region', { name: 'Para decidir' })
+    expect(within(decidir).queryByText(/NaN/)).not.toBeInTheDocument()
+    expect(within(decidir).getByText('Interés — · Poder —')).toBeInTheDocument()
+    expect(screen.queryByText(/^—\s*Ver el actor/)).not.toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/—\s*Ver el actor/)
+  })
+
   it('«Pendientes» dice los compromisos y las QCS abiertas del grupo, y «Qué generó» enlaza sus compromisos', async () => {
     const conPendientes = permisos({
       project: ['READ'],

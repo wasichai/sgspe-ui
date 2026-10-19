@@ -1,3 +1,5 @@
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useState } from 'react'
@@ -57,6 +59,10 @@ const diaEnLima = (marca: string): string => {
   return Number.isNaN(instante.getTime()) ? '' : hoyEnLima(instante)
 }
 
+// un índice de la evaluación: sin valor, «—», nunca NaN (D5 de la revisión de UX)
+const indice = (valor: unknown): string =>
+  valor === null || valor === undefined || valor === '' || Number.isNaN(Number(valor)) ? '—' : numeroPe(Number(valor))
+
 export function FichaGrupoPage() {
   const { stakeholderId = '' } = useParams()
   const grupo = useRegistro('stakeholder', stakeholderId)
@@ -102,19 +108,24 @@ function Ficha({ grupo }: { grupo: Registro }) {
     fijar(siguiente)
   }
 
+  // el nombre del grupo en las migas del proyecto (revisión de UX, etapa 4)
+  useMigaDelRegistro(nombre)
   return (
     <article className="space-y-4">
       <Rastro />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
-          <h1 className="text-sg-h1 font-semibold">{nombre}</h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
+      <EncabezadoDePagina
+        antetitulo={[t('grupos.ficha.tipo'), opcion(grupo, 'stakeholder_type')].filter(Boolean).join(' · ')}
+        titulo={nombre}
+        chips={
+          <>
             <EstadoChip objeto="stakeholder" estado={grupo.state} />
-            <span>{opcion(grupo, 'stakeholder_scope')}</span>
-            <span>
-              <Persona correo={texto(grupo, 'owner_user_email')} />
-            </span>
+            {/* D9: lo que falta no deja un guion suelto junto a «Ver el actor» */}
+            {opcion(grupo, 'stakeholder_scope') ? <span className="text-sg-text-secondary">{opcion(grupo, 'stakeholder_scope')}</span> : null}
+            {texto(grupo, 'owner_user_email') ? (
+              <span className="text-sg-text-secondary">
+                <Persona correo={texto(grupo, 'owner_user_email')} />
+              </span>
+            ) : null}
             {actor.id ? (
               <Link
                 to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
@@ -124,24 +135,28 @@ function Ficha({ grupo }: { grupo: Registro }) {
                 {t('grupos.ficha.actor')}
               </Link>
             ) : null}
+          </>
+        }
+        primaria={
+          <div className="flex flex-wrap gap-2">
+            {escribeEnElProyecto && can('engagement', 'CREATE') ? (
+              <Button asChild size="sm">
+                <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
+                  {t('grupos.ficha.registrar')}
+                </Link>
+              </Button>
+            ) : null}
+            <BotonesDeTransicion objeto="stakeholder" registro={grupo} proyecto={proyecto} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
-            <Button asChild size="sm">
-              <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
-                {t('grupos.ficha.registrar')}
-              </Link>
-            </Button>
-          ) : null}
-          {evalua ? (
+        }
+        secundarias={
+          evalua ? (
             <Button size="sm" variant="secondary" onClick={() => drawer(true)}>
               {t('grupos.ficha.evaluar')}
             </Button>
-          ) : null}
-          <BotonesDeTransicion objeto="stakeholder" registro={grupo} proyecto={proyecto} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
       <Advertencias advertencias={advertencias} />
       <section aria-label={t('grupos.ficha.paraDecidir')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Tarjeta titulo={t('grupos.ficha.influencia')}>
@@ -150,8 +165,8 @@ function Ficha({ grupo }: { grupo: Registro }) {
               <p className="font-semibold">{opcion(grupo, 'influence_group')}</p>
               <p className="text-sg-caption">
                 {t('grupos.ficha.indices', {
-                  interes: numeroPe(Number(atributo(grupo, 'interest_index'))),
-                  poder: numeroPe(Number(atributo(grupo, 'power_index')))
+                  interes: indice(atributo(grupo, 'interest_index')),
+                  poder: indice(atributo(grupo, 'power_index'))
                 })}
               </p>
             </>
@@ -217,8 +232,8 @@ function Ficha({ grupo }: { grupo: Registro }) {
                   <p>
                     {opcion(e, 'influence_group')} ·{' '}
                     {t('grupos.ficha.indices', {
-                      interes: numeroPe(Number(atributo(e, 'interest_index'))),
-                      poder: numeroPe(Number(atributo(e, 'power_index')))
+                      interes: indice(atributo(e, 'interest_index')),
+                      poder: indice(atributo(e, 'power_index'))
                     })}
                     {atributo(e, 'group_overridden') ? <span className="ml-1 text-sg-caption">({t('grupos.ficha.ajustado')})</span> : null}
                   </p>
