@@ -1,5 +1,5 @@
 import { Button, ConfirmDialog } from '@wasichai/ui'
-import { useContext, useEffect, type FormEvent, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, type FormEvent, type MutableRefObject, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UNSAFE_DataRouterContext, useBlocker } from 'react-router'
 import { NS } from '../i18n'
@@ -29,7 +29,14 @@ export interface PropsDeFormularioPorPasos {
   acciones?: ReactNode
   ocupado?: boolean
   conCambios?: boolean
+  // la pantalla la pone en true justo antes de navegar al terminar el alta o al «Guardar y salir»: esa salida no avisa
+  salidaPermitida?: MutableRefObject<boolean>
   children: ReactNode
+}
+
+// la marca de una salida que no avisa (el alta terminada, «Guardar y salir»): la pantalla la pone en true antes de navegar
+export function useSalidaPermitida(): MutableRefObject<boolean> {
+  return useRef(false)
 }
 
 export function FormularioPorPasos({
@@ -48,6 +55,7 @@ export function FormularioPorPasos({
   acciones,
   ocupado = false,
   conCambios = false,
+  salidaPermitida,
   children
 }: PropsDeFormularioPorPasos) {
   const { t } = useTranslation(NS)
@@ -90,16 +98,17 @@ export function FormularioPorPasos({
           </div>
         </form>
       </div>
-      {conRouterDeDatos ? <AvisoDeSalida conCambios={conCambios} /> : null}
+      {conRouterDeDatos ? <AvisoDeSalida conCambios={conCambios} salidaPermitida={salidaPermitida} /> : null}
     </section>
   )
 }
 
-// salir por un enlace del portal con cambios sin guardar: se confirma. «Guardar y salir» y el alta terminada apagan conCambios
-// antes de navegar, así que no lo disparan
-function AvisoDeSalida({ conCambios }: { conCambios: boolean }) {
+// salir por un enlace del portal con cambios sin guardar: se confirma. «Guardar y salir» y el alta terminada ponen
+// salidaPermitida antes de navegar, así que no lo disparan
+function AvisoDeSalida({ conCambios, salidaPermitida }: { conCambios: boolean; salidaPermitida?: MutableRefObject<boolean> }) {
   const { t } = useTranslation(NS)
-  const bloqueo = useBlocker(conCambios)
+  // la condición se lee al navegar: la marca de salidaPermitida ya está puesta aunque el estado no se haya vuelto a dibujar
+  const bloqueo = useBlocker(() => conCambios && !salidaPermitida?.current)
   if (bloqueo.state !== 'blocked') return null
   return (
     <ConfirmDialog
