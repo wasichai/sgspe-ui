@@ -98,6 +98,9 @@ describe('S29 · ficha de compromiso', () => {
     expect(await screen.findByRole('link', { name: 'Junta de regantes' })).toHaveAttribute('href', '/projects/p1/stakeholders/s1')
     expect(screen.getByText('Restringido')).toBeInTheDocument()
     expect(screen.getByText('Ejecutado: S/ 10,000.00 de S/ 25,000.00')).toBeInTheDocument()
+    // las opciones del resumen se ven con su rótulo, no en mayúsculas
+    expect(screen.getByText('Formal')).toBeInTheDocument()
+    expect(screen.getByText('Social')).toBeInTheDocument()
     const deDonde = screen.getByRole('region', { name: 'De dónde viene' })
     expect(await within(deDonde).findByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     const genero = screen.getByRole('region', { name: 'Qué generó' })

@@ -10,7 +10,7 @@ import { sonDemasiadosRegistros, useCatalogoDeIndicadores, type FiltrosDeIndicad
 import { codigoDelError } from '../datos/http'
 import { texto, useDefinicion, useTodos } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
-import { fechaPe, NS, numeroPe } from '../i18n'
+import { fechaPe, NS, numeroPe, periodoPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { rotuloDeFila } from '../datos/opciones'
 
@@ -251,7 +251,7 @@ export function SerieConMeta({
   const opciones = useMemo(
     () => ({
       grid: { left: 40, right: 16, top: 24, bottom: 32 },
-      xAxis: { type: 'category', data: serie.map((s) => s.period) },
+      xAxis: { type: 'category', data: serie.map((s) => periodoPe(s.period)) },
       yAxis: { type: 'value' },
       tooltip: { trigger: 'axis' },
       legend: conMeta ? {} : undefined,
@@ -280,7 +280,7 @@ export function SerieConMeta({
       datos={{
         columnas: [t('tableros.periodo'), t('tableros.valor'), ...(conMeta ? [t('tableros.meta')] : [])],
         filas: serie.map((s) => [
-          s.period,
+          periodoPe(s.period),
           s.value === null ? '—' : numeroPe(s.value),
           ...(conMeta ? [s.target === null || s.target === undefined ? '—' : numeroPe(s.target)] : [])
         ])

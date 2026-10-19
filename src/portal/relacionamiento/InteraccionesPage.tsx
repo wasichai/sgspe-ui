@@ -13,11 +13,12 @@ import { hoyEnLima } from '../datos/fechas'
 import { usePedir } from '../datos/http'
 import { useIndicador } from '../datos/indicadores'
 import { atributo, leerTodos, texto, useRegistro, useTodosConTope, type Registro } from '../datos/registros'
-import { NS, numeroPe } from '../i18n'
+import { diaPe, mesPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { diaDe, esDia, esFormal, esMes, mesActual, semanaDe, semanasDelMes, sumarMeses } from './fechas'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
 
 // S21 y S22 · calendario y lista de interacciones (screens.md §6, flujo 4): el mes frente a la meta (KPI-ENG-02), las
 // festividades de la línea base como contexto y "Te toca". la misma consulta se ve como mes, semana o lista; el alcance es
@@ -109,7 +110,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
             <button type="button" aria-label={t('relacionamiento.mesAnterior')} onClick={() => cambiar({ month: sumarMeses(mes, -1) })} className="px-2">
               ‹
             </button>
-            <span className="font-medium tabular-nums">{mes}</span>
+            <span className="min-w-32 text-center font-medium">{mesPe(mes)}</span>
             <button type="button" aria-label={t('relacionamiento.mesSiguiente')} onClick={() => cambiar({ month: sumarMeses(mes, 1) })} className="px-2">
               ›
             </button>
@@ -119,14 +120,14 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
             <button type="button" aria-label={t('relacionamiento.semanaAnterior')} onClick={() => cambiar(moverSemana(dia, -7))} className="px-2">
               ‹
             </button>
-            <span className="font-medium tabular-nums">{semanas[0][0]}</span>
+            <span className="min-w-32 text-center font-medium">{diaPe(semanas[0][0])}</span>
             <button type="button" aria-label={t('relacionamiento.semanaSiguiente')} onClick={() => cambiar(moverSemana(dia, 7))} className="px-2">
               ›
             </button>
           </div>
         ) : null}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-3">
           {interacciones.truncado ? <Alert tone="warning">{t('relacionamiento.truncado', { n: numeroPe(interacciones.data?.length ?? 0) })}</Alert> : null}
           {vista !== 'lista' && sinFecha > 0 ? <Alert tone="notice">{t('relacionamiento.sinFecha', { n: numeroPe(sinFecha) })}</Alert> : null}
@@ -152,7 +153,9 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
 
 // en la lista el motivo de una cancelada se ve siempre; en la celda del calendario no hay sitio y aparece al enfocar el enlace
 // (el title no se ve con el teclado) además de leerse como descripción
-function Evento({ interaccion, motivoVisible }: { interaccion: Registro; motivoVisible?: boolean }) {
+// en el calendario, un chip que se trunca en su celda; en la lista (enLista), un enlace como el de toda lista, con el motivo de
+// una cancelada a la vista
+function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boolean }) {
   const { t } = useTranslation(NS)
   const idMotivo = useId()
   const cancelada = interaccion.state === 'cancelled'
@@ -168,13 +171,16 @@ function Evento({ interaccion, motivoVisible }: { interaccion: Registro; motivoV
         to={`/projects/${encodeURIComponent(texto(interaccion, 'project'))}/engagements/${encodeURIComponent(interaccion.id)}`}
         title={motivo}
         aria-describedby={motivo ? idMotivo : undefined}
-        className={cn('block truncate rounded-sg-sm bg-sg-surface-sunken px-1 text-sg-caption', cancelada && 'line-through')}
+        className={cn(
+          enLista ? 'text-sm text-sg-primary-text underline' : 'block truncate rounded-sg-sm bg-sg-surface-sunken px-1 text-sg-caption',
+          cancelada && 'line-through'
+        )}
       >
         {texto(interaccion, 'title')}
         {sinActa ? <span className="ml-1 text-sg-warning">· {t('relacionamiento.sinActa')}</span> : null}
       </Link>
       {motivo ? (
-        <span id={idMotivo} className={cn('block text-sg-caption text-sg-text-muted', !motivoVisible && 'sr-only group-focus-within:not-sr-only')}>
+        <span id={idMotivo} className={cn('block text-sg-caption text-sg-text-muted', !enLista && 'sr-only group-focus-within:not-sr-only')}>
           {motivo}
         </span>
       ) : null}
@@ -291,7 +297,7 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
           {ordenadas.map((i) => (
             <tr key={i.id}>
               <Td>
-                <Evento interaccion={i} motivoVisible />
+                <Evento interaccion={i} enLista />
               </Td>
               {global ? (
                 <Td className="font-sg-mono text-sg-caption">
@@ -302,7 +308,9 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
               <Td>
                 <EstadoChip objeto="engagement" estado={i.state} />
               </Td>
-              <Td className="text-sm tabular-nums">{diaDe(i) ?? '—'}</Td>
+              <Td className="text-sm">
+                <Dia valor={diaDe(i)} />
+              </Td>
               <Td className="text-sm">{texto(i, 'place') || '—'}</Td>
               <Td className="text-sm tabular-nums">
                 {atributo(i, 'attendees_total_count') === null || atributo(i, 'attendees_total_count') === undefined

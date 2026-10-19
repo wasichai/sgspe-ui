@@ -147,7 +147,7 @@ function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
           {enTriaje && !decide ? <p className="max-w-xs text-sg-caption text-sg-text-muted">{t('alertas.ficha.soloGestion')}</p> : null}
         </div>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <section aria-label={t('alertas.ficha.disparo')} className="space-y-1">
             <h2 className="text-sg-h3 font-semibold">{t('alertas.ficha.disparo')}</h2>

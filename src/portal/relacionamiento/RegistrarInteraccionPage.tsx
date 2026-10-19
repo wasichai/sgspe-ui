@@ -250,7 +250,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   const errorDeFecha = formState.errors.held_at ? t('relacionamiento.registro.faltaFecha') : undefined
 
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_1fr]">
+    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
       <div className="space-y-2">
         <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.registro.titulo')}</h1>
         <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void ir(i)} />

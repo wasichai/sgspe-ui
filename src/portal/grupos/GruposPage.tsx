@@ -18,6 +18,8 @@ import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { NuevoGrupo } from './NuevoGrupo'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
+import { Correo } from '../componentes/Correo'
 
 // S16 · lista de grupos de interés (screens.md §5): la misma página con alcance global (agrega la columna Proyecto) o de un
 // proyecto (ASM-076). vistas del sistema, filtros en la URL, selección para registrar una interacción con varios y el chip
@@ -303,9 +305,15 @@ function Fila({
         <EstadoChip objeto="stakeholder" estado={grupo.state} />
       </Td>
       <Td className="text-sm">{opcion(grupo, 'relationship_status') || '—'}</Td>
-      <Td className="text-sm">{texto(grupo, 'owner_user_email') || '—'}</Td>
-      <Td className="text-sm">{texto(grupo, 'last_assessment_date') || '—'}</Td>
-      <Td className="text-sm">{texto(grupo, 'last_contact_date') || '—'}</Td>
+      <Td className="text-sm">
+        <Correo valor={texto(grupo, 'owner_user_email')} />
+      </Td>
+      <Td className="text-sm">
+        <Dia valor={texto(grupo, 'last_assessment_date')} />
+      </Td>
+      <Td className="text-sm">
+        <Dia valor={texto(grupo, 'last_contact_date')} />
+      </Td>
     </tr>
   )
 }

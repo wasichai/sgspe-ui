@@ -10,7 +10,10 @@ export function EstadoChip({ objeto, estado }: { objeto: string; estado: string 
   const { tono, Icono } = aparienciaDe(objeto, estado)
   const etiqueta = workflow.data?.definition.states.find((s) => s.name === estado)?.label ?? estado
   return (
-    <span data-estado={estado} className={cn('inline-flex items-center gap-1 rounded-sg-sm px-2 py-0.5 text-sg-caption font-medium', CLASE_DE_TONO[tono])}>
+    <span
+      data-estado={estado}
+      className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-sg-sm px-2 py-0.5 text-sg-caption font-medium', CLASE_DE_TONO[tono])}
+    >
       <Icono aria-hidden className="size-3.5" />
       {etiqueta}
     </span>

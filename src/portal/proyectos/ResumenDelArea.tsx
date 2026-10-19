@@ -21,7 +21,7 @@ export function ResumenDelArea({ area }: { area: string }) {
       {consulta.data ? (
         <>
           {consulta.data.available === false ? <Alert tone="notice">{t('sugerencias.resumen.incompleto')}</Alert> : null}
-          <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
+          <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1">
             <dt className="text-sg-text-muted">{t('sugerencias.resumen.superficie')}</dt>
             <dd>{cifra(consulta.data.areaHa, ' ha')}</dd>
             <dt className="text-sg-text-muted">{t('sugerencias.resumen.localidades')}</dt>

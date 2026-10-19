@@ -11,7 +11,7 @@ import { desglose, useTablero, type FiltrosDeIndicador, type Indicador } from '.
 import { porcentaje } from '../datos/inversion'
 import { texto } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
-import { NS, numeroPe } from '../i18n'
+import { NS, numeroPe, periodoPe } from '../i18n'
 import { itemsDeAtencion } from './atencionEjecutiva'
 import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero } from './comunes'
 import { CODIGOS_DE_LAS_TILES, mesesDeTendencia, TOPE_DE_PROYECTOS, type MesDeTendencia, type TableroEjecutivo } from './contratoF8'
@@ -214,7 +214,7 @@ function Linea({ titulo, meses, series }: { titulo: string; meses: MesDeTendenci
   const { t } = useTranslation(NS)
   const opciones = {
     grid: { left: 32, right: 12, top: 16, bottom: 24 },
-    xAxis: { type: 'category', data: meses.map((m) => m.period) },
+    xAxis: { type: 'category', data: meses.map((m) => periodoPe(m.period)) },
     yAxis: { type: 'value', minInterval: 1 },
     tooltip: { trigger: 'axis' },
     legend: series.length > 1 ? {} : undefined,
@@ -227,7 +227,7 @@ function Linea({ titulo, meses, series }: { titulo: string; meses: MesDeTendenci
       opciones={opciones}
       datos={{
         columnas: [t('tableros.periodo'), ...series.map((s) => s.nombre)],
-        filas: meses.map((m) => [m.period, ...series.map((s) => numeroPe(s.valor(m)))])
+        filas: meses.map((m) => [periodoPe(m.period), ...series.map((s) => numeroPe(s.valor(m)))])
       }}
     />
   )

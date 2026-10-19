@@ -12,11 +12,13 @@ import { sinBandeja } from '../datos/avisos'
 import { montoPe } from '../componentes/Monto'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { atributo, texto, useRegistro, type Registro } from '../datos/registros'
-import { diaPe, NS } from '../i18n'
+import { NS } from '../i18n'
 import { useAplicarTransicion, useComprobacion } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { APROBACIONES_DE, rutaDeDecision, useAprobacionesPendientes } from './AprobacionesPage'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
+import { Correo } from '../componentes/Correo'
 
 // S31 · aprobación de compromiso (/tasks/approvals/commitment/:recordId; screens.md §7, flujo 8): la bandeja a la izquierda,
 // el compromiso con su origen y la decisión con motivo obligatorio (commitment es requiresReason); a la derecha, las reglas de
@@ -73,7 +75,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
     )
   }
   return (
-    <div className="mx-auto grid max-w-[1440px] gap-4 lg:grid-cols-[260px_1fr_320px]">
+    <div className="mx-auto grid max-w-[1440px] gap-4 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
       <Bandeja actual={compromiso.id} />
       <article className="space-y-4">
         <Link to="/tasks/approvals" className="text-sm text-sg-primary-text underline">
@@ -108,11 +110,15 @@ function Decision({ compromiso }: { compromiso: Registro }) {
             </div>
             <div>
               <dt className="text-sg-text-muted">{t('aprobaciones.decision.responsable')}</dt>
-              <dd>{texto(compromiso, 'owner_user_email') || '—'}</dd>
+              <dd>
+                <Correo valor={texto(compromiso, 'owner_user_email')} />
+              </dd>
             </div>
             <div>
               <dt className="text-sg-text-muted">{t('aprobaciones.decision.vence')}</dt>
-              <dd>{texto(compromiso, 'due_date') ? diaPe(texto(compromiso, 'due_date')) : '—'}</dd>
+              <dd>
+                <Dia valor={texto(compromiso, 'due_date')} />
+              </dd>
             </div>
           </dl>
           <div>

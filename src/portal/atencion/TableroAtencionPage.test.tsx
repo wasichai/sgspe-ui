@@ -125,7 +125,7 @@ describe('S34 · tablero de QCS', () => {
       within(tendencia)
         .getAllByRole('cell')
         .map((c) => c.textContent)
-    ).toEqual(['2026-10', '3', '1'])
+    ).toEqual(['oct. 2026', '3', '1'])
   })
 
   it('400 TOO_MANY_RECORDS es «acote los filtros», no un error ni ceros', async () => {

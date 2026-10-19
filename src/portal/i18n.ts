@@ -18,6 +18,16 @@ export const fechaYHoraPe = (valor: Date): string =>
 // un día AAAA-MM-DD (assessment_date, start_date…) se dice como fecha es-PE sin correrse de día: se toma su mediodía de Lima.
 // lo que no es un día se devuelve tal cual
 export const diaPe = (dia: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(dia) ? fechaPe(new Date(`${dia}T12:00:00-05:00`)) : dia)
+// un mes AAAA-MM (el del calendario) se dice con su nombre: «octubre de 2026»; lo que no es un mes, tal cual
+export const mesPe = (mes: string): string =>
+  /^\d{4}-\d{2}$/.test(mes)
+    ? new Intl.DateTimeFormat('es-PE', { month: 'long', year: 'numeric', timeZone: 'America/Lima' }).format(new Date(`${mes}-15T12:00:00-05:00`))
+    : mes
+// el periodo de una serie, corto para un eje: un mes «nov. 2025», un día como diaPe; lo demás, tal cual
+export const periodoPe = (periodo: string): string =>
+  /^\d{4}-\d{2}$/.test(periodo)
+    ? new Intl.DateTimeFormat('es-PE', { month: 'short', year: 'numeric', timeZone: 'America/Lima' }).format(new Date(`${periodo}-15T12:00:00-05:00`))
+    : diaPe(periodo)
 
 // los textos del portal y los formateadores es-PE sobre los de i18next (como ajustarI18n de caja-ui@a45b224,
 // src/portal/i18n.ts)

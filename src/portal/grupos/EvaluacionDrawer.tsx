@@ -252,7 +252,7 @@ export function EvaluacionDrawer({
           {previa.isError && !previa.data ? <ErrorDeCarga error={previa.error} alReintentar={() => void previa.refetch()} /> : null}
           {previa.data ? (
             <div className="flex flex-wrap items-center gap-6">
-              <dl className="grid grid-cols-[max-content_1fr] gap-x-3">
+              <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3">
                 <dt>{t('grupos.evaluacion.indiceInteres')}</dt>
                 <dd>{numeroPe(previa.data.computed.interest_index)}</dd>
                 <dt>{t('grupos.evaluacion.indicePoder')}</dt>

@@ -118,7 +118,7 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
       { path: '/objects/engagement/records', body: pagina([E1]) }
     ])
     expect(await screen.findByRole('table', { name: 'Calendario de interacciones' })).toBeInTheDocument()
-    expect(screen.getByText('2026-11')).toBeInTheDocument()
+    expect(screen.getByText('noviembre de 2026')).toBeInTheDocument()
   })
 
   it('un ?view= desconocido cae en la vista de la ruta: la lista en /engagements y el mes en /engagements/calendar', async () => {

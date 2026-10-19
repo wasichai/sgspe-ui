@@ -63,7 +63,7 @@ describe('S51 · revisión ejecutiva', () => {
     expect(within(usd).getByText(/500\.00/)).toBeInTheDocument()
     expect(within(usd).getByText('Presupuesto: —')).toBeInTheDocument()
     const tendencia = screen.getByRole('region', { name: 'Tendencia de 12 meses' })
-    expect(within(tendencia).getByRole('table', { name: 'Interacciones realizadas' })).toHaveTextContent('2026-10')
+    expect(within(tendencia).getByRole('table', { name: 'Interacciones realizadas' })).toHaveTextContent('oct. 2026')
     expect(within(tendencia).getByRole('table', { name: 'Quejas recibidas y cerradas' })).toHaveTextContent('Cerradas')
     expect(within(tendencia).getByRole('table', { name: 'Compromisos vencidos al cierre del mes' })).toHaveTextContent('3')
   })

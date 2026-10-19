@@ -145,7 +145,7 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
     [JSON.stringify(puntos), umbrales?.interes, umbrales?.poder, t, tema]
   )
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-2">
         {sinEvaluar > 0 ? <p className="text-sm text-sg-text-muted">{t('grupos.matriz.sinEvaluar', { count: sinEvaluar })}</p> : null}
         {puntos.length === 0 ? <p className="text-sm text-sg-text-muted">{t('grupos.matriz.sinPuntos')}</p> : null}

@@ -160,7 +160,7 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     <section className="mx-auto max-w-[1100px] space-y-4">
       <h1 className="text-sg-h1 font-semibold">{t('nuevaQcs.titulo')}</h1>
       <p className="text-sm text-sg-text-secondary">{t('nuevaQcs.ayuda')}</p>
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <form
           className="space-y-4"
           aria-label={t('nuevaQcs.titulo')}

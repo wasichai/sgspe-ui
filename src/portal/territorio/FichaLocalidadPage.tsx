@@ -27,6 +27,7 @@ import { Dato, TrabajarEnProyecto } from './comunes'
 import { EditorDeGeometria } from './EditorDeGeometria'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
 
 // S14 · ficha de localidad y línea base social (screens.md §4): el lugar con datos fechados y su confiabilidad. cada perfil
 // es una foto: un dato nuevo es otro perfil. las cifras se comparan con el perfil anterior y una ausente dice "no disponible
@@ -80,7 +81,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-territory">{opcion(localidad, 'locality_type')}</p>
           <h1 className="text-sg-h1 font-semibold">{texto(localidad, 'name')}</h1>
-          <dl className="grid grid-cols-[max-content_1fr] gap-x-3 text-sm text-sg-text-secondary">
+          <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 text-sm text-sg-text-secondary">
             <Dato etiqueta={t('territorio.localidad.codigo')}>{texto(localidad, 'populated_center_code') || '—'}</Dato>
             <Dato etiqueta={t('territorio.localidad.distrito')}>
               <Referencia consulta={distrito} tiene={Boolean(idDistrito)}>
@@ -173,7 +174,7 @@ function LineaBase({ localidad }: { localidad: string }) {
             >
               {lista.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {texto(p, 'data_date')} · {opcion(p, 'reliability')}
+                  <Dia valor={texto(p, 'data_date')} /> · {opcion(p, 'reliability')}
                 </option>
               ))}
             </select>
@@ -199,7 +200,7 @@ function LineaBase({ localidad }: { localidad: string }) {
               <Cifra key={c} campo={c} perfil={perfil} anterior={anterior} />
             ))}
           </ul>
-          <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+          <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
             {CAMPOS.map((c) => (
               <div key={c} className="contents">
                 <dt className="text-sg-text-muted">{t(`territorio.localidad.campos.${c}`)}</dt>

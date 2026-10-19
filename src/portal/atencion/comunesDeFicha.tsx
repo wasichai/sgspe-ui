@@ -15,6 +15,8 @@ import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { LEE_CONFIDENCIALES, plazoQueCorre, type ObjetoDeQcs } from '../datos/atencion'
 import { atributo, puedeEscribir, texto, useActualizar, useDefinicion, useRegistro, type Registro } from '../datos/registros'
 import { diaPe, fechaYHoraPe, NS } from '../i18n'
+import { Dia } from '../componentes/Dia'
+import { opcion } from '../datos/opciones'
 
 // lo que comparten la ficha de queja (S36) y las de consulta y solicitud (S57): las marcas de anonimato y confidencialidad, el plazo
 // que corre en el estado, los datos del caso (la persona solo para quien la lee, security.md §7.9), la edición con motivo (las QCS
@@ -94,7 +96,8 @@ function Grupo({ id }: { id: string }) {
 // los datos del caso comunes a las tres QCS; children suma los propios del tipo
 export function DatosDelCaso({ qcs, children }: { qcs: Registro; children?: ReactNode }) {
   const { t } = useTranslation(NS)
-  const valor = (campo: string) => texto(qcs, campo) || '—'
+  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
+  const valor = (campo: string) => opcion(qcs, campo) || '—'
   const momento = (campo: string) => (texto(qcs, campo) ? fechaYHoraPe(new Date(texto(qcs, campo))) : '—')
   const anonima = atributo(qcs, 'anonymous') === true
   return (
@@ -119,7 +122,11 @@ export function DatosDelCaso({ qcs, children }: { qcs: Registro; children?: Reac
         <Dato termino={t('fichaQueja.campos.response')}>{valor('response')}</Dato>
       </div>
       <Dato termino={t('fichaQueja.campos.responded_at')}>{momento('responded_at')}</Dato>
-      {texto(qcs, 'closed_date') ? <Dato termino={t('fichaQueja.campos.closed_date')}>{diaPe(texto(qcs, 'closed_date'))}</Dato> : null}
+      {texto(qcs, 'closed_date') ? (
+        <Dato termino={t('fichaQueja.campos.closed_date')}>
+          <Dia valor={texto(qcs, 'closed_date')} />
+        </Dato>
+      ) : null}
     </dl>
   )
 }

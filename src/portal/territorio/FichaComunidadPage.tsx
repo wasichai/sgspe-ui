@@ -73,7 +73,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
         </div>
       </header>
       {atributo(comunidad, 'registry_records_unverified') ? <Alert tone="warning">{t('territorio.comunidad.partidasAyuda')}</Alert> : null}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Tabs
           label={texto(comunidad, 'name')}
           tabs={[
@@ -120,7 +120,7 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
     <div className="space-y-4 pt-3">
       <section aria-label={t('territorio.comunidad.registro')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-4">
         <h2 className="mb-2 font-medium">{t('territorio.comunidad.registro')}</h2>
-        <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
           <Dato etiqueta={t('territorio.comunidad.personeria')}>{texto(comunidad, 'legal_entity_record') || '—'}</Dato>
           <Dato etiqueta={t('territorio.comunidad.propiedad')}>{texto(comunidad, 'property_record') || '—'}</Dato>
           <Dato etiqueta={t('territorio.comunidad.titulo')}>{texto(comunidad, 'title_reference') || '—'}</Dato>
@@ -131,7 +131,7 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
       </section>
       <section aria-label={t('territorio.comunidad.vidaOrganica')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-4">
         <h2 className="mb-2 font-medium">{t('territorio.comunidad.vidaOrganica')}</h2>
-        <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
           <Dato etiqueta={t('territorio.comunidad.estadoOrganico')}>{opcion(comunidad, 'organic_status') || '—'}</Dato>
           <Dato etiqueta={t('territorio.comunidad.juntaInscrita')}>{atributo(comunidad, 'board_registered') ? t('comun.si') : t('comun.no')}</Dato>
           <Dato etiqueta={t('territorio.comunidad.comuneros')}>

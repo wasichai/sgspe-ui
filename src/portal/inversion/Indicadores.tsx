@@ -10,6 +10,7 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { RegistrosSimples, type ColumnaSimple } from '../componentes/RegistrosSimples'
 import { atributo, texto, useRegistros, useTodos, useTodosConTope, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
+import { Dia } from '../componentes/Dia'
 
 // los indicadores de un programa (screens.md S43, spec F5 §3.6, GAP-032): línea base, meta y la última medición (la más reciente por
 // period_start_date); un indicador sin mediciones se marca. «Registrar medición» elige el indicador y crea la medición; las
@@ -114,7 +115,7 @@ function Mediciones({ indicador, alCerrar }: { indicador: Registro; alCerrar: ()
             {mediciones.data.map((m) => (
               <tr key={m.id}>
                 <Td className="text-sm">
-                  {diaPe(texto(m, 'period_start_date'))} – {diaPe(texto(m, 'period_end_date'))}
+                  <Dia valor={texto(m, 'period_start_date')} /> – <Dia valor={texto(m, 'period_end_date')} />
                 </Td>
                 <Td className="text-sm tabular-nums">{valorDe(atributo(m, 'measured_value'))}</Td>
                 <Td className="text-sm">{texto(m, 'notes') || '—'}</Td>

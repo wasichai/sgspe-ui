@@ -94,7 +94,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
         </span>
         <span className="text-sg-text-muted">{t('acuerdos.ficha.vencerNoConcluye')}</span>
       </section>
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <section aria-label={t('acuerdos.ficha.resumen')} className="space-y-1 text-sm">
             <h2 className="text-sg-h3 font-semibold">{t('acuerdos.ficha.resumen')}</h2>

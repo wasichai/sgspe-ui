@@ -13,9 +13,10 @@ import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useTodosConTope } from '../datos/registros'
-import { diaPe, NS, numeroPe } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
 
 // S33, la lista: los acuerdos del alcance (global con la columna Proyecto, o de un proyecto) con su tipo, su estado de WF-I y su
 // vigencia (validity_status, de JOB-01: vencer no concluye el acuerdo). el alta va en un drawer con los campos de la ficha y
@@ -97,7 +98,9 @@ export function AcuerdosPage() {
                     <Td>
                       <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
                     </Td>
-                    <Td className="text-sm">{texto(a, 'expiry_date') ? diaPe(texto(a, 'expiry_date')) : '—'}</Td>
+                    <Td className="text-sm">
+                      <Dia valor={texto(a, 'expiry_date')} />
+                    </Td>
                   </tr>
                 )
               })}

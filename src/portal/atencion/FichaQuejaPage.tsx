@@ -14,11 +14,13 @@ import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { AccionesDeIa } from '../ia/AccionesDeIa'
-import { diaPe, NS } from '../i18n'
+import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { AvisoDeConfidencial, Dato, DatosDelCaso, DeDondeViene, EditarQcs, MarcasDeQcs, PlazoQueCorre } from './comunesDeFicha'
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
+import { Correo } from '../componentes/Correo'
 
 // S36 · ficha de queja (screens.md §8, WF-E1, flujos 12 y 13): llevar la queja de la recepción al cierre con sus plazos, su evidencia
 // y su decisión a la vista. las transiciones del rol (motivo siempre: grievance es requiresReason) se comprueban antes con
@@ -112,7 +114,7 @@ function Ficha({ queja }: { queja: Registro }) {
           </div>
           {texto(queja, 'owner_user_email') ? (
             <p className="text-sm text-sg-text-secondary">
-              {t('fichaQueja.campos.owner')}: {texto(queja, 'owner_user_email')}
+              {t('fichaQueja.campos.owner')}: <Correo valor={texto(queja, 'owner_user_email')} />
             </p>
           ) : null}
         </div>
@@ -142,7 +144,7 @@ function Ficha({ queja }: { queja: Registro }) {
       </header>
       <AvisoDeConfidencial qcs={queja} />
       {grave ? <Alert tone="notice">{t('fichaQueja.grave', { severidad: opcion(queja, 'severity') })}</Alert> : null}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Tabs
           label={t('fichaQueja.titulo', { codigo: texto(queja, 'code') })}
           tabs={[
@@ -155,7 +157,9 @@ function Ficha({ queja }: { queja: Registro }) {
                   <div className="sm:col-span-2">
                     <Dato termino={t('fichaQueja.campos.resolution')}>{texto(queja, 'resolution') || '—'}</Dato>
                   </div>
-                  <Dato termino={t('fichaQueja.campos.resolved_date')}>{texto(queja, 'resolved_date') ? diaPe(texto(queja, 'resolved_date')) : '—'}</Dato>
+                  <Dato termino={t('fichaQueja.campos.resolved_date')}>
+                    <Dia valor={texto(queja, 'resolved_date')} />
+                  </Dato>
                   <Dato termino={t('fichaQueja.campos.complainant_conformity_given')}>
                     {atributo(queja, 'complainant_conformity_given') === true ? t('comun.si') : t('comun.no')}
                   </Dato>

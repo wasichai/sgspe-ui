@@ -98,7 +98,7 @@ describe('S28 · lista de compromisos', () => {
     fetch = mockFetch(rutas())
     montar(<CompromisosPage />, { ruta: '/commitments', camino: '/commitments', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     expect(await screen.findByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
-    expect((await screen.findAllByText('PRJ-01 · Pukaqaqa')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByTitle('Pukaqaqa'))[0]).toHaveTextContent('PRJ-01 · Pukaqaqa')
     expect(screen.getByText('Para registrar un compromiso, elija su proyecto en el selector.')).toBeInTheDocument()
   })
 })

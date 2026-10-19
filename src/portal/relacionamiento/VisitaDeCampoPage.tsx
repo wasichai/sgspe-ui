@@ -29,13 +29,14 @@ import {
   useTodosConTope,
   type Registro
 } from '../datos/registros'
-import { fechaPe, NS, numeroPe } from '../i18n'
+import { diaPe, fechaPe, NS, numeroPe } from '../i18n'
 import type { Elemento } from '../mapa/api'
 import { Mapa } from '../mapa/Mapa'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { diaDe } from './fechas'
 import { CodigoDeProyecto } from './InteraccionesPage'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
+import { Dia } from '../componentes/Dia'
 
 // S26 · visita de campo (screens.md §6, WF-L): el camino Planificada → En curso → Concluida o Parcial, el mapa con la ruta,
 // las interacciones y las observaciones, y "Agregar observación aquí" con la ubicación del teléfono o con coordenadas
@@ -223,8 +224,8 @@ function Visita({ visita }: { visita: Registro }) {
             <EstadoChip objeto="field_visit" estado={visita.state} />
             <span className="text-sm text-sg-text-secondary">
               {t('relacionamiento.visita.periodo', {
-                desde: texto(visita, 'actual_start_date') || texto(visita, 'planned_start_date') || '…',
-                hasta: texto(visita, 'actual_end_date') || texto(visita, 'planned_end_date') || '…'
+                desde: diaPe(texto(visita, 'actual_start_date') || texto(visita, 'planned_start_date')) || '…',
+                hasta: diaPe(texto(visita, 'actual_end_date') || texto(visita, 'planned_end_date')) || '…'
               })}
             </span>
           </div>
@@ -257,7 +258,7 @@ function Visita({ visita }: { visita: Registro }) {
         </div>
       </header>
       {enCurso ? <Alert tone="notice">{t('relacionamiento.visita.concluirAviso')}</Alert> : null}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <Mapa
             etiqueta={t('relacionamiento.visita.mapa')}
@@ -289,7 +290,9 @@ function Visita({ visita }: { visita: Registro }) {
                         <Td>
                           <EstadoChip objeto="engagement" estado={i.state} />
                         </Td>
-                        <Td className="text-sm tabular-nums">{diaDe(i) ?? '—'}</Td>
+                        <Td className="text-sm">
+                          <Dia valor={diaDe(i)} />
+                        </Td>
                       </tr>
                     ))}
                   </tbody>
@@ -564,7 +567,9 @@ export function VisitasPage() {
                     <Td>
                       <EstadoChip objeto="field_visit" estado={v.state} />
                     </Td>
-                    <Td className="text-sm tabular-nums">{texto(v, 'actual_start_date') || texto(v, 'planned_start_date') || '—'}</Td>
+                    <Td className="text-sm">
+                      <Dia valor={texto(v, 'actual_start_date') || texto(v, 'planned_start_date')} />
+                    </Td>
                   </tr>
                 ))}
               </tbody>

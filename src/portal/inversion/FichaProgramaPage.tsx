@@ -120,7 +120,7 @@ function Ficha({ programa }: { programa: Registro }) {
         </div>
       </header>
       {avisaSinergia ? <Alert tone="notice">{t('fichaPrograma.sinergia')}</Alert> : null}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Tabs label={texto(programa, 'name')} tabs={pestanas} />
         <aside className="space-y-4">
           <Trazabilidad programa={programa} />

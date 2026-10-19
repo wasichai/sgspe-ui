@@ -14,13 +14,16 @@ import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { EnlaceDeFicha } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { nombreDeProyecto, useProyecto, useProyectos } from '../contexto/proyectos'
+import { useProyecto, useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
-import { diaPe, NS, numeroPe } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
+import { Correo } from '../componentes/Correo'
 
 // S38 y S39 · registro y matriz de riesgos (screens.md §9): qué riesgos hay, de qué nivel y cuáles piden revisión. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076). la API genérica no filtra por estado ni por situación, así que,
@@ -95,10 +98,7 @@ export function RiesgosPage() {
     }
     fijar(siguiente, { replace: true })
   }
-  const nombreDelProyecto = (id: string) => {
-    const p = proyectos.data?.find((x) => x.id === id)
-    return p ? nombreDeProyecto(p) : '…'
-  }
+  const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -117,8 +117,11 @@ export function RiesgosPage() {
       ) : riesgos.isError && !riesgos.data ? (
         <FalloDeLectura error={riesgos.error} alReintentar={() => void riesgos.refetch()} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-          <section aria-label={t('riesgos.mapa.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+        <div className="grid gap-4 min-[105rem]:grid-cols-[360px_minmax(0,1fr)]">
+          <section
+            aria-label={t('riesgos.mapa.titulo')}
+            className="w-full max-w-md space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 min-[105rem]:max-w-none"
+          >
             <h2 className="text-sg-h3 font-semibold">{t('riesgos.mapa.titulo')}</h2>
             <MapaDeCalor riesgos={enLaVista} umbrales={umbrales} elegida={celda} alElegir={(c) => lista.cambiar({ cell: c })} />
             <p className="text-sm text-sg-text-secondary">{t('riesgos.mapa.sinEvaluar', { n: numeroPe(sinEvaluar) })}</p>
@@ -148,7 +151,7 @@ export function RiesgosPage() {
                 <tbody>
                   {filtrados.map((r) => (
                     <tr key={r.id}>
-                      <Td className="text-sm">
+                      <Td className="min-w-64 text-sm">
                         <EnlaceDeFicha objeto="social_risk" registro={r}>
                           {texto(r, 'code')} · {texto(r, 'title')}
                         </EnlaceDeFicha>
@@ -166,9 +169,11 @@ export function RiesgosPage() {
                       </Td>
                       <Td className="space-x-1 text-sm">
                         <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-                        <span>{texto(r, 'next_review_date') ? diaPe(texto(r, 'next_review_date')) : ''}</span>
+                        {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
                       </Td>
-                      <Td className="text-sm">{texto(r, 'owner_user_email') || '—'}</Td>
+                      <Td className="text-sm">
+                        <Correo valor={texto(r, 'owner_user_email')} />
+                      </Td>
                     </tr>
                   ))}
                 </tbody>

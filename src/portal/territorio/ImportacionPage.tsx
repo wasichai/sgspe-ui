@@ -190,7 +190,7 @@ function Preparar() {
   }
 
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_1fr]">
+    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
       <div className="space-y-2">
         <h1 className="text-sg-h2 font-semibold">{t('importacion.titulo')}</h1>
         <Pasos pasos={pasos} actual={paso} visitados={paso} alIr={setPaso} />
@@ -444,7 +444,7 @@ function Revisar({ id }: { id: string }) {
   ] as const
 
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_1fr]">
+    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
       <div className="space-y-2">
         <h1 className="text-sg-h2 font-semibold">{t('importacion.titulo')}</h1>
         <Pasos pasos={pasos} actual={2} visitados={2} />

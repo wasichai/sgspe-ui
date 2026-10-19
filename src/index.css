@@ -45,3 +45,9 @@
     font-weight: 600;
     margin: 0.5rem 0;
 }
+
+/* en una tabla, un código (mono), una cifra o un monto (tabular-nums) y una fecha (<time>, componentes/Dia.tsx) no se parten
+   en dos líneas: la columna de texto libre es la que se acomoda, y la tabla se desplaza dentro de su caja si no cabe */
+table :where(.font-sg-mono, .tabular-nums, time) {
+    white-space: nowrap;
+}

@@ -14,6 +14,8 @@ import { texto, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { rutaDelBorrador, useEstadoDelBorrador, usePedirBorrador } from './contrato'
 import { EDITABLE_EN } from './tipos'
+import { Huella } from '../componentes/Huella'
+import { rotuloDeOpcion } from '../datos/opciones'
 
 // el panel del borrador de S50 (deliverables.md §8.2, api.md §4.12): el estado, la letra, los avisos con su sección y la huella de
 // cada candidata (que nunca se descarga). mientras está pendiente se consulta cada 5 s (useEstadoDelBorrador) y, al terminar, se
@@ -65,7 +67,7 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
         <FalloDeLectura error={estado.error} alReintentar={() => void estado.refetch()} />
       ) : estado.data ? (
         <>
-          <p>{t('entregables.borrador.estado', { estado: estado.data.status ?? 'SIN GENERAR' })}</p>
+          <p>{t('entregables.borrador.estado', { estado: rotuloDeOpcion(estado.data.status ?? 'SIN GENERAR') })}</p>
           {estado.data.revision ? <p>{t('entregables.borrador.letra', { letra: estado.data.revision })}</p> : null}
           {estado.data.generatedAt ? (
             <p className="text-sg-caption text-sg-text-muted">
@@ -97,11 +99,11 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
           {estado.data.levels.map((n) =>
             n.candidateSha256 ? (
               <div key={n.level} className="space-y-1">
-                <p className="break-all font-sg-mono text-sg-caption">{t('entregables.borrador.huella', { nivel: n.level, sha: n.candidateSha256 })}</p>
+                <Huella etiqueta={t('entregables.borrador.huella', { nivel: rotuloDeOpcion(n.level) })} valor={n.candidateSha256} />
                 {descarga ? (
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => setViendo(n.level)}>
-                      {t('entregables.borrador.verPdf', { nivel: n.level })}
+                      {t('entregables.borrador.verPdf', { nivel: rotuloDeOpcion(n.level) })}
                     </Button>
                     {n.level === 'INTERNO' ? (
                       <Button size="sm" variant="ghost" onClick={() => void descargarDocx()}>
@@ -125,7 +127,7 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
       {pidiendo ? <PedirBorrador entregable={entregable} alCerrar={() => setPidiendo(false)} /> : null}
       {viendo ? (
         <PdfDialog
-          title={t('entregables.borrador.vistaPrevia', { nivel: viendo })}
+          title={t('entregables.borrador.vistaPrevia', { nivel: rotuloDeOpcion(viendo) })}
           source={rutaDelBorrador(entregable.id, viendo, 'pdf')}
           load={(ruta) => pedir.archivo(ruta).then((a) => ({ blob: a.blob, filename: a.nombre ?? `borrador-${viendo}.pdf` }))}
           onClose={() => setViendo(null)}

@@ -28,6 +28,8 @@ import { Impactos } from './ImpactosPage'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { nivelDePuntaje, umbralesDe } from './niveles'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
+import { Correo } from '../componentes/Correo'
 
 // S40 · ficha de riesgo (screens.md §9, flujos 14 y 15): el nivel vigente, cómo llegó ahí y qué se hace para bajarlo. «Nueva
 // revisión» es el endpoint de revisiones (api.md §4.7): las revisiones son inmutables y una se corrige con otra; la primera aplica
@@ -161,7 +163,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
           <BotonesDeTransicion objeto="social_risk" registro={riesgo} proyecto={proyecto} comprobarAntes={COMPROBAR} />
         </div>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Tabs
           label={texto(riesgo, 'title')}
           tabs={[
@@ -287,7 +289,8 @@ function columnasDeMedidas(t: (clave: string) => string) {
 
 function Resumen({ riesgo }: { riesgo: Registro }) {
   const { t } = useTranslation(NS)
-  const valor = (campo: string) => texto(riesgo, campo) || '—'
+  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
+  const valor = (campo: string) => opcion(riesgo, campo) || '—'
   const adecuados = atributo(riesgo, 'controls_adequate')
   return (
     <dl className="grid gap-3 pt-3 text-sm sm:grid-cols-2">
@@ -334,7 +337,9 @@ function Revisiones({ consulta }: { consulta: ReturnType<typeof useTodos> }) {
           <tbody>
             {filas.map((r) => (
               <tr key={r.id}>
-                <Td className="text-sm">{texto(r, 'assessment_date') ? diaPe(texto(r, 'assessment_date')) : '—'}</Td>
+                <Td className="text-sm">
+                  <Dia valor={texto(r, 'assessment_date')} />
+                </Td>
                 <Td className="text-sm tabular-nums">
                   {t('fichaRiesgo.puntaje', { p: texto(r, 'probability'), i: texto(r, 'impact'), s: texto(r, 'score') })}
                 </Td>
@@ -344,7 +349,9 @@ function Revisiones({ consulta }: { consulta: ReturnType<typeof useTodos> }) {
                 <Td className="text-sm">{opcion(r, 'trend') || '—'}</Td>
                 <Td className="text-sm">{atributo(r, 'residual') === true ? t('fichaRiesgo.revisiones.residual') : t('fichaRiesgo.revisiones.vigente')}</Td>
                 <Td className="whitespace-pre-line text-sm">{texto(r, 'notes') || '—'}</Td>
-                <Td className="text-sm">{texto(r, 'assessor_user_email') || '—'}</Td>
+                <Td className="text-sm">
+                  <Correo valor={texto(r, 'assessor_user_email')} />
+                </Td>
               </tr>
             ))}
           </tbody>

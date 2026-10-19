@@ -27,7 +27,7 @@ export function SituacionDePlazo({ valor, vigencia = false, revision = false }: 
     <span
       data-situacion={valor}
       aria-label={`${t(revision ? 'comun.situacionDeRevision' : vigencia ? 'comun.situacionDeVigencia' : 'comun.situacionDePlazo')}: ${rotulo}`}
-      className={cn('inline-flex items-center gap-1 rounded-sg-sm px-2 py-0.5 text-sg-caption font-medium', CLASE_DE_TONO[tono])}
+      className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-sg-sm px-2 py-0.5 text-sg-caption font-medium', CLASE_DE_TONO[tono])}
     >
       <Icono aria-hidden className="size-3.5" />
       {rotulo}
