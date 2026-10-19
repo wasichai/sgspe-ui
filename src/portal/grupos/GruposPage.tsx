@@ -18,8 +18,8 @@ import { useTableroDisponible } from '../tableros/comunes'
 import { NuevoGrupo } from './NuevoGrupo'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
-import { Correo } from '../componentes/Correo'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
+import { Persona } from '../componentes/Persona'
 
 // S16 · lista de grupos de interés (screens.md §5): la misma página con alcance global (agrega la columna Proyecto) o de un
 // proyecto (ASM-076). vistas del sistema, filtros en la URL, selección para registrar una interacción con varios y el chip
@@ -305,7 +305,7 @@ function Fila({
       </Td>
       <Td className="text-sm">{opcion(grupo, 'relationship_status') || '—'}</Td>
       <Td className="text-sm">
-        <Correo valor={texto(grupo, 'owner_user_email')} />
+        <Persona correo={texto(grupo, 'owner_user_email')} />
       </Td>
       <Td className="text-sm">
         <Dia valor={texto(grupo, 'last_assessment_date')} />

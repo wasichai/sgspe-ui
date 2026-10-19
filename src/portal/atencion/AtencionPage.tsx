@@ -19,7 +19,7 @@ import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { opcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // S35 · lista unificada de QCS (screens.md §8): ¿qué QCS vence primero y quién la tiene? tres objetos con ciclos distintos (WF-E1,
 // WF-E2, WF-E3) que la lista une para atender por plazo, sin mezclar sus estados: cada fila lleva el estado de su workflow y el plazo
@@ -289,7 +289,7 @@ function FilaDeQcs({
         )}
       </Td>
       <Td className="text-sm">
-        <Correo valor={texto(registro, 'owner_user_email')} />
+        <Persona correo={texto(registro, 'owner_user_email')} />
       </Td>
       <Td className="text-sm">{atributo(registro, 'anonymous') === true ? t('atencion.anonima') : t('atencion.identificada')}</Td>
     </tr>

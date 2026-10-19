@@ -20,7 +20,7 @@ import { AvisoDeConfidencial, Dato, DatosDelCaso, DeDondeViene, EditarQcs, Marca
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // S36 · ficha de queja (screens.md §8, WF-E1, flujos 12 y 13): llevar la queja de la recepción al cierre con sus plazos, su evidencia
 // y su decisión a la vista. las transiciones del rol (motivo siempre: grievance es requiresReason) se comprueban antes con
@@ -114,7 +114,7 @@ function Ficha({ queja }: { queja: Registro }) {
           </div>
           {texto(queja, 'owner_user_email') ? (
             <p className="text-sm text-sg-text-secondary">
-              {t('fichaQueja.campos.owner')}: <Correo valor={texto(queja, 'owner_user_email')} />
+              {t('fichaQueja.campos.owner')}: <Persona correo={texto(queja, 'owner_user_email')} />
             </p>
           ) : null}
         </div>

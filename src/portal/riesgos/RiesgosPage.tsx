@@ -23,7 +23,7 @@ import { nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // S38 y S39 · registro y matriz de riesgos (screens.md §9): qué riesgos hay, de qué nivel y cuáles piden revisión. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076). la API genérica no filtra por estado ni por situación, así que,
@@ -172,7 +172,7 @@ export function RiesgosPage() {
                         {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
                       </Td>
                       <Td className="text-sm">
-                        <Correo valor={texto(r, 'owner_user_email')} />
+                        <Persona correo={texto(r, 'owner_user_email')} />
                       </Td>
                     </tr>
                   ))}

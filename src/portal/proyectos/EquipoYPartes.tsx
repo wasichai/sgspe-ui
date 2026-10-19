@@ -10,7 +10,7 @@ import { atributo, texto, useCrear, useDefinicion, useRegistro, useTodos } from 
 import { NS } from '../i18n'
 import { FormularioDeAsignacion } from './FormularioDeAsignacion'
 import { opcion } from '../datos/opciones'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // un error de campo se ve junto a su control; el aviso al pie queda para lo que no cae en un campo que se dibuja
 const avisoAlPie = (hayError: boolean, porCampo: Record<string, string>, visibles: readonly string[]) => {
@@ -161,7 +161,7 @@ export function EquipoDelProyecto({ proyecto, editable = true }: { proyecto: str
           {(asignaciones.data ?? []).map((a) => (
             <tr key={a.id}>
               <Td>
-                <Correo valor={texto(a, 'member_user_email')} />
+                <Persona correo={texto(a, 'member_user_email')} />
               </Td>
               <Td className="font-sg-mono text-sg-caption">{texto(a, 'role_name')}</Td>
             </tr>

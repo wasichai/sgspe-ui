@@ -16,7 +16,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { atributo, texto, useActualizar, useCrear, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { Dia } from '../componentes/Dia'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // las pestañas «Acciones e hitos» y «Dependencias» de S29 (screens.md §7; RF-COM-004, RF-COM-006): las acciones internas y
 // los plazos parciales no cambian el estado del compromiso; una dependencia bloqueante abierta impide registrar el
@@ -81,7 +81,7 @@ export function PestanaSeguimiento({ compromiso, escribe }: { compromiso: Regist
                       <Dia valor={texto(a, 'action_date')} />
                     </Td>
                     <Td className="text-sm">
-                      <Correo valor={texto(a, 'owner_user_email')} />
+                      <Persona correo={texto(a, 'owner_user_email')} />
                     </Td>
                     <Td className="text-sm">
                       <input

@@ -31,8 +31,8 @@ import { Advertencias } from './Advertencias'
 import { EvaluacionDrawer } from './EvaluacionDrawer'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
-import { Correo } from '../componentes/Correo'
 import { useRegistrosPorId } from '../territorio/comunes'
+import { Persona } from '../componentes/Persona'
 
 // S17 · ficha de grupo de interés (screens.md §5): para decidir cómo relacionarse, su peso, su postura (restringida), su
 // historia de evaluaciones hasta la línea base y lo que generó. la postura y la confianza del grupo de interés son las
@@ -113,7 +113,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
             <EstadoChip objeto="stakeholder" estado={grupo.state} />
             <span>{opcion(grupo, 'stakeholder_scope')}</span>
             <span>
-              <Correo valor={texto(grupo, 'owner_user_email')} />
+              <Persona correo={texto(grupo, 'owner_user_email')} />
             </span>
             {actor.id ? (
               <Link

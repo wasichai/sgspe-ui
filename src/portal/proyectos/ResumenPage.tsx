@@ -28,6 +28,7 @@ import { vigente, PARAMETROS_F2 } from './parametros'
 import { TableroDelProyecto, useIndicadoresDelProyecto } from './TableroDelProyecto'
 import { opcion } from '../datos/opciones'
 import { ListaPlegable } from '../componentes/ListaPlegable'
+import { Persona } from '../componentes/Persona'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
 // project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
@@ -91,7 +92,12 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
                   </span>
                 )
               ) : jefatura.data.length ? (
-                jefatura.data.map((j) => texto(j, 'member_user_email')).join(', ')
+                jefatura.data.map((j, i) => (
+                  <span key={j.id}>
+                    {i ? ', ' : ''}
+                    <Persona correo={texto(j, 'member_user_email')} />
+                  </span>
+                ))
               ) : (
                 <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>
               )}

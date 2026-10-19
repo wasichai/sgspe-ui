@@ -26,6 +26,7 @@ import { PestanaReprogramaciones } from './PestanaReprogramaciones'
 import { Verificacion } from './Verificacion'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { Persona } from '../componentes/Persona'
 
 // S29 · ficha de compromiso (screens.md §7, flujos 9 a 11): la anatomía de design-system.md §6.1 con las transiciones de WF-D del
 // rol (las de envío, aprobación, cumplimiento, verificación y cierre se comprueban antes con transition-checks), las pestañas
@@ -234,8 +235,12 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
         <Dato termino={t('fichaCompromiso.campos.agreed_date')}>{dia('agreed_date')}</Dato>
         <Dato termino={t('fichaCompromiso.campos.due_date')}>{dia('due_date')}</Dato>
         <Dato termino={t('fichaCompromiso.campos.priority')}>{valor('priority')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.owner')}>{valor('owner_user_email')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.verifier')}>{valor('verifier_user_email')}</Dato>
+        <Dato termino={t('fichaCompromiso.campos.owner')}>
+          <Persona correo={texto(compromiso, 'owner_user_email')} />
+        </Dato>
+        <Dato termino={t('fichaCompromiso.campos.verifier')}>
+          <Persona correo={texto(compromiso, 'verifier_user_email')} />
+        </Dato>
         <Dato termino={t('fichaCompromiso.campos.beneficiarios')}>
           {t('fichaCompromiso.beneficiariosConteo', {
             total: n('beneficiaries_count'),
