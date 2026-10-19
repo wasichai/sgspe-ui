@@ -43,9 +43,12 @@ export const ES_FICHA_APORTE = {
     congelados: 'El aporte ya salió de «Solicitado»: sus ítems no cambian. Un cambio es otro aporte.',
     congeladosAlBorrar: 'Otra persona aprobó el aporte mientras tanto: sus ítems ya no cambian.'
   },
+  tipo: 'Aporte',
   trazabilidad: {
     titulo: 'Trazabilidad',
     solicitud: 'Solicitud de origen',
+    acuerdo: 'Acuerdo',
+    compromiso: 'Compromiso',
     sinSolicitud: 'No nace de una solicitud que su cuenta lea.'
   },
   antes: {
@@ -161,8 +164,11 @@ export const EN_FICHA_APORTE: typeof ES_FICHA_APORTE = {
     congelados: 'The contribution is no longer «Requested»: its items do not change. A change is another contribution.',
     congeladosAlBorrar: 'Someone else approved the contribution meanwhile: its items no longer change.'
   },
+  tipo: 'Contribution',
   trazabilidad: {
     titulo: 'Traceability',
+    acuerdo: 'Agreement',
+    compromiso: 'Commitment',
     solicitud: 'Originating request',
     sinSolicitud: 'It does not come from a request your account reads.'
   },
