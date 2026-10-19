@@ -163,6 +163,9 @@ export const EN: Textos = {
     idioma: 'Language',
     idiomaNoGuardado: 'Could not save the language'
   },
+  seccionesCortas: {
+    attention: 'GIR'
+  },
   secciones: {
     dashboard: 'Home',
     projects: 'Projects',

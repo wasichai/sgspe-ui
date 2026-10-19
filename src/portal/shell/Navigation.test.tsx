@@ -40,10 +40,11 @@ function start(user: AuthUser, rutas: MockRoute[], path = '/') {
 }
 
 const lateral = () => screen.getByRole('navigation', { name: 'Secciones' })
+// el nombre de cada sección: el accesible (el rótulo corto «QCS» lleva el completo en aria-label)
 const enlaces = () =>
   within(lateral())
     .getAllByRole('link')
-    .map((link) => link.textContent)
+    .map((link) => link.getAttribute('aria-label') ?? link.textContent)
 
 // una cuenta que puede exactamente estos pares "objeto ACCION", con todas las pantallas registradas
 const cuenta = (pares: string[], isAdmin = false, capacidades: string[] = []) => ({
@@ -186,6 +187,25 @@ describe('navegación del portal', () => {
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, { admin: false, objects: { project: ['READ'] } }), '/projects')
     expect(await screen.findByRole('heading', { name: 'Pantalla de prueba' })).toBeInTheDocument()
     expect(enlaces()).toEqual(['Inicio', 'Proyectos'])
+  })
+
+  // revisión de UX, etapa 1: dentro de una ficha de proyecto se marca el módulo, no «Proyectos»
+  it('dentro de un proyecto marca la sección del módulo abierto', async () => {
+    registradas.projects = Prueba
+    registradas.commitments = Prueba
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/projects/p1/commitments/c1')
+    const compromisos = await within(lateral()).findByRole('link', { name: 'Compromisos' })
+    expect(compromisos).toHaveAttribute('aria-current', 'page')
+    expect(within(lateral()).getByRole('link', { name: 'Proyectos' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('«Quejas, consultas y solicitudes» se ve como «QCS», con el nombre completo para lectores y en title', async () => {
+    registradas.attention = Prueba
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/attention')
+    const qcs = await within(lateral()).findByRole('link', { name: 'Quejas, consultas y solicitudes' })
+    expect(qcs).toHaveTextContent('QCS')
+    expect(qcs).toHaveAttribute('title', 'Quejas, consultas y solicitudes')
+    expect(qcs).toHaveAttribute('aria-current', 'page')
   })
 
   // ASM-073: el asistente es el botón Preguntar de la barra superior, nunca una sección. llega en F7: se dibuja si

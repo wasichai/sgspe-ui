@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
 import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Campana } from '../avisos/Campana'
 import { SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
 import { BotonPreguntar, ProveedorDelAsistente } from '../ia/Asistente'
@@ -11,6 +11,7 @@ import { BotonBuscar } from '../busqueda/BusquedaGlobal'
 import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
+import { seccionDeRuta } from './seccionActual'
 import { ThemeMenu } from './ThemeMenu'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
@@ -122,14 +123,19 @@ export function AppShell() {
 
 // las secciones que se le ofrecen a la cuenta (useArbol), en su orden: en la barra lateral (rótulo solo desde xl) y en el
 // panel del menú (rótulo siempre, y elegir una cierra el panel)
+// la sección marcada es la de la ruta (seccionDeRuta): dentro de un proyecto, la del módulo abierto. un nombre largo se ve
+// corto («QCS») y el completo queda en aria-label y en title
 function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () => void }) {
   const { t } = useTranslation(NS)
   const secciones = useArbol()
+  const actual = seccionDeRuta(useLocation().pathname)
   return (
     <ul className="space-y-0.5">
       {secciones.map((seccion) => {
         const Icono = seccion.icon ?? LayoutDashboard
         const nombre = t(`secciones.${seccion.clave}`)
+        const corto = t(`seccionesCortas.${seccion.clave}`, { defaultValue: '' })
+        const marcada = seccion.clave === actual
         return (
           <li key={seccion.clave}>
             {seccion.external ? (
@@ -139,16 +145,17 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
                 <ExternalLink aria-hidden className="ml-auto hidden size-3 xl:block" />
               </a>
             ) : (
-              <NavLink
+              <Link
                 to={seccion.to}
-                end={seccion.to === '/'}
                 title={nombre}
+                aria-label={corto ? nombre : undefined}
+                aria-current={marcada ? 'page' : undefined}
                 onClick={alElegir}
-                className={({ isActive }) => cn(ENLACE, isActive ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
+                className={cn(ENLACE, marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
               >
                 <Icono aria-hidden className="size-4 shrink-0" />
-                <span className={rotulo}>{nombre}</span>
-              </NavLink>
+                <span className={rotulo}>{corto || nombre}</span>
+              </Link>
             )}
           </li>
         )

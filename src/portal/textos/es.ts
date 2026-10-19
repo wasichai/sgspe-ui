@@ -164,6 +164,10 @@ export const ES = {
     idiomaNoGuardado: 'No se pudo guardar el idioma'
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
+  // el rótulo corto de una sección cuyo nombre no cabe en la barra lateral; el completo va en aria-label y title
+  seccionesCortas: {
+    attention: 'QCS'
+  },
   secciones: {
     dashboard: 'Inicio',
     projects: 'Proyectos',
