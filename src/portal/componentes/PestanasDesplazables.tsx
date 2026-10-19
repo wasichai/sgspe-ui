@@ -6,11 +6,23 @@ import { useLocation } from 'react-router'
 import { NS } from '../i18n'
 
 // una fila de pestañas que no cabe (las de Project 360 en una pantalla mediana) se desplaza en horizontal: un botón a cada lado
-// dice que hay más y desplaza, y la pestaña activa (aria-current) se trae a la vista al cambiar de ruta
-export function PestanasDesplazables({ etiqueta, className, children }: { etiqueta: string; className?: string; children: ReactNode }) {
+// dice que hay más y desplaza, y la pestaña activa (aria-current) se trae a la vista al cambiar de ruta. con rol «tablist»
+// (las pestañas de una ficha, PestanasDeFicha) la fila es una lista de pestañas en lugar de una navegación, y la activa es la
+// de aria-selected
+export function PestanasDesplazables({
+  etiqueta,
+  rol = 'navigation',
+  className,
+  children
+}: {
+  etiqueta: string
+  rol?: 'navigation' | 'tablist'
+  className?: string
+  children: ReactNode
+}) {
   const { t } = useTranslation(NS)
-  const nav = useRef<HTMLElement>(null)
-  const { pathname } = useLocation()
+  const nav = useRef<HTMLElement & HTMLDivElement>(null)
+  const { pathname, search } = useLocation()
   const [hay, setHay] = useState({ antes: false, despues: false })
   const medir = useCallback(() => {
     const el = nav.current
@@ -20,7 +32,7 @@ export function PestanasDesplazables({ etiqueta, className, children }: { etique
   useEffect(() => {
     const el = nav.current
     if (!el) return
-    el.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    el.querySelector<HTMLElement>('[aria-current="page"], [aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
     medir()
     el.addEventListener('scroll', medir, { passive: true })
     window.addEventListener('resize', medir)
@@ -28,8 +40,9 @@ export function PestanasDesplazables({ etiqueta, className, children }: { etique
       el.removeEventListener('scroll', medir)
       window.removeEventListener('resize', medir)
     }
-  }, [medir, pathname])
+  }, [medir, pathname, search])
   const desplazar = (sentido: 1 | -1) => nav.current?.scrollBy?.({ left: sentido * nav.current.clientWidth * 0.8, behavior: 'smooth' })
+  const fila = 'flex gap-1 overflow-x-auto border-b border-sg-border [scrollbar-width:none]'
   const boton = 'absolute top-0 bottom-px z-10 flex w-8 items-center justify-center bg-sg-bg text-sg-text-secondary hover:text-sg-text'
   return (
     <div className={cn('relative', className)}>
@@ -38,9 +51,15 @@ export function PestanasDesplazables({ etiqueta, className, children }: { etique
           <ChevronLeft aria-hidden className="size-4" />
         </button>
       ) : null}
-      <nav ref={nav} aria-label={etiqueta} className="flex gap-1 overflow-x-auto border-b border-sg-border [scrollbar-width:none]">
-        {children}
-      </nav>
+      {rol === 'tablist' ? (
+        <div ref={nav} role="tablist" aria-label={etiqueta} className={fila}>
+          {children}
+        </div>
+      ) : (
+        <nav ref={nav} aria-label={etiqueta} className={fila}>
+          {children}
+        </nav>
+      )}
       {hay.despues ? (
         <button type="button" aria-label={t('comun.pestanasMas')} onClick={() => desplazar(1)} className={cn(boton, 'right-0')}>
           <ChevronRight aria-hidden className="size-4" />
