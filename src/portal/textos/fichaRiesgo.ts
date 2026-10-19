@@ -70,6 +70,14 @@ export const ES_FICHA_RIESGO = {
     pendiente: 'Pendiente',
     columnas: { medida: 'Medida', responsable: 'Responsable', prevista: 'Fecha prevista', avance: 'Avance' }
   },
+  tipo: 'Riesgo',
+  trazabilidad: {
+    medidas_one: '{{count}} medida',
+    medidas_other: '{{count}} medidas',
+    atrasadas_one: '{{count}} atrasada',
+    atrasadas_other: '{{count}} atrasadas',
+    compromisos: 'Compromisos que lo atienden'
+  },
   alimentan: {
     titulo: 'Lo alimentan',
     quejas: 'Quejas',
@@ -157,6 +165,14 @@ export const EN_FICHA_RIESGO: typeof ES_FICHA_RIESGO = {
     atrasada: 'Overdue',
     pendiente: 'Pending',
     columnas: { medida: 'Measure', responsable: 'Owner', prevista: 'Planned date', avance: 'Progress' }
+  },
+  tipo: 'Risk',
+  trazabilidad: {
+    medidas_one: '{{count}} measure',
+    medidas_other: '{{count}} measures',
+    atrasadas_one: '{{count}} overdue',
+    atrasadas_other: '{{count}} overdue',
+    compromisos: 'Commitments that address it'
   },
   alimentan: {
     titulo: 'Fed by',

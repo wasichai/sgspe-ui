@@ -1,5 +1,15 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
+import { rutaDeFicha } from '../datos/fichas'
+import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { ApiError, useAuth } from '@wasichai/core'
-import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Table, Tabs, Td, Textarea, Th } from '@wasichai/ui'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -13,8 +23,7 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { RegistrosSimples } from '../componentes/RegistrosSimples'
-import { EnlaceDeFicha, RegistroVinculado } from '../componentes/RegistroVinculado'
-import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
+import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto } from '../contexto/proyectos'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
@@ -37,6 +46,8 @@ import { Persona } from '../componentes/Persona'
 // comprueban antes (MEASURE_OWNER_REQUIRED, RESIDUAL_ASSESSMENT_REQUIRED, la decisión de tratamiento y el motivo de cierre). las
 // medidas de mitigación, los impactos potenciales y las evidencias viven en la ficha; a la derecha, lo que alimenta al riesgo (QCS y
 // alertas: una QCS confidencial que la cuenta no lee simplemente no llega, security.md §9.6) y su contexto
+// el camino de WF-F sin sus cierres anticipados; un estado fuera de él se agrega
+const CAMINO = ['identified', 'assessed', 'mitigating', 'monitoring', 'closed']
 const COMPROBAR = [
   'decide_mitigation',
   'decide_monitoring',
@@ -108,18 +119,19 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
     setMotivo('')
   }
   const cadencia = texto(riesgo, 'review_every_days')
+  // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
+  // decisión (con la próxima revisión como vencimiento), pestañas con conteo y trazabilidad en tres grupos
+  useMigaDelRegistro(texto(riesgo, 'code') || texto(riesgo, 'title'))
+  const siguiente = useSiguienteAccion('social_risk', riesgo, COMPROBAR)
+  const medidas = useTodos('mitigation_measure', { social_risk: riesgo.id })
+  const evidencias = useEvidenciasDe('social_risk', riesgo.id)
   return (
     <article className="space-y-4">
-      <Link to={`/projects/${encodeURIComponent(proyecto)}/risks/register`} className="text-sm text-sg-primary-text underline">
-        {t('fichaRiesgo.volver')}
-      </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {texto(riesgo, 'code')} · {opcion(riesgo, 'category') || '—'}
-          </p>
-          <h1 className="text-sg-h1 font-semibold">{texto(riesgo, 'title')}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+      <EncabezadoDePagina
+        antetitulo={[t('fichaRiesgo.tipo'), texto(riesgo, 'code'), opcion(riesgo, 'category')].filter(Boolean).join(' · ')}
+        titulo={texto(riesgo, 'title')}
+        chips={
+          <>
             <EstadoChip objeto="social_risk" estado={riesgo.state} />
             <NivelDeRiesgo valor={atributo(riesgo, 'risk_level')} />
             {texto(riesgo, 'score') ? (
@@ -128,21 +140,12 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
               </span>
             ) : null}
             {atributo(riesgo, 'residual_level') ? <NivelDeRiesgo valor={atributo(riesgo, 'residual_level')} residual /> : null}
-            <SituacionDePlazo valor={atributo(riesgo, 'review_status')} revision />
-            {texto(riesgo, 'next_review_date') ? <span>{t('fichaRiesgo.proxima', { fecha: diaPe(texto(riesgo, 'next_review_date')) })}</span> : null}
-          </div>
-          <p className="text-sm text-sg-text-secondary">
-            {t('fichaRiesgo.responsable')}:{' '}
-            {texto(riesgo, 'owner_user_email') ? <Persona correo={texto(riesgo, 'owner_user_email')} /> : t('fichaRiesgo.sinResponsable')} ·{' '}
-            {cadencia ? t('fichaRiesgo.cadencia', { n: cadencia, count: Number(cadencia) }) : t('fichaRiesgo.cadenciaDelProyecto')}
-          </p>
-          {hecha ? (
-            <p role="status" className="text-sm text-sg-success">
-              {hecha}
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-2">
+            <span className="text-sg-text-secondary">
+              {cadencia ? t('fichaRiesgo.cadencia', { n: cadencia, count: Number(cadencia) }) : t('fichaRiesgo.cadenciaDelProyecto')}
+            </span>
+          </>
+        }
+        primaria={
           <div className="flex flex-wrap gap-2">
             {revisa ? (
               <Button
@@ -155,23 +158,43 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
                 {t('fichaRiesgo.revision.nueva')}
               </Button>
             ) : null}
-            {edita ? (
-              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-                {t('fichaRiesgo.editar')}
-              </Button>
-            ) : null}
+            <BotonesDeTransicion objeto="social_risk" registro={riesgo} proyecto={proyecto} comprobarAntes={COMPROBAR} sinPrimaria={revisa} />
           </div>
-          <BotonesDeTransicion objeto="social_risk" registro={riesgo} proyecto={proyecto} comprobarAntes={COMPROBAR} sinPrimaria={revisa} />
-        </div>
-      </header>
+        }
+        secundarias={
+          edita ? (
+            <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+              {t('fichaRiesgo.editar')}
+            </Button>
+          ) : undefined
+        }
+      />
+      {hecha ? (
+        <p role="status" className="text-sm text-sg-success">
+          {hecha}
+        </p>
+      ) : null}
+      <CaminoDelFlujo objeto="social_risk" estado={riesgo.state} camino={CAMINO} />
+      <PanelDeDecision
+        objeto="social_risk"
+        estado={riesgo.state}
+        desde={texto(riesgo, 'state_changed_at') || null}
+        por={texto(riesgo, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={texto(riesgo, 'owner_user_email')}
+        vencimiento={texto(riesgo, 'next_review_date')}
+        situacion={atributo(riesgo, 'review_status')}
+        tipoDeSituacion="revision"
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs
-          label={texto(riesgo, 'title')}
-          tabs={[
-            { id: 'resumen', label: t('fichaRiesgo.pestanas.resumen'), render: () => <Resumen riesgo={riesgo} /> },
+        <PestanasDeFicha
+          etiqueta={texto(riesgo, 'title')}
+          pestanas={[
+            { id: 'resumen', etiqueta: t('fichaRiesgo.pestanas.resumen'), render: () => <Resumen riesgo={riesgo} /> },
             {
               id: 'revisiones',
-              label: t('fichaRiesgo.pestanas.revisiones'),
+              etiqueta: t('fichaRiesgo.pestanas.revisiones'),
+              conteo: revisiones.data?.length ?? null,
               render: () => (
                 <div className="pt-3">
                   <Revisiones consulta={revisiones} />
@@ -180,7 +203,8 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
             },
             {
               id: 'medidas',
-              label: t('fichaRiesgo.pestanas.medidas'),
+              etiqueta: t('fichaRiesgo.pestanas.medidas'),
+              conteo: medidas.data?.length ?? null,
               render: () => (
                 <div className="space-y-2 pt-3">
                   <p className="text-sg-caption text-sg-text-muted">{t('fichaRiesgo.medidas.ayuda')}</p>
@@ -200,7 +224,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
             },
             {
               id: 'impactos',
-              label: t('fichaRiesgo.pestanas.impactos'),
+              etiqueta: t('fichaRiesgo.pestanas.impactos'),
               render: () => (
                 <div className="pt-3">
                   <Impactos proyecto={proyecto} riesgo={riesgo.id} />
@@ -209,12 +233,13 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
             },
             {
               id: 'evidencias',
-              label: t('fichaRiesgo.pestanas.evidencias'),
+              etiqueta: t('fichaRiesgo.pestanas.evidencias'),
+              conteo: evidencias.data?.totalElements ?? null,
               render: () => <EvidenciasDelRegistro objeto="social_risk" registro={riesgo} escribe={escribe} />
             },
             {
               id: 'actividad',
-              label: t('fichaRiesgo.pestanas.actividad'),
+              etiqueta: t('fichaRiesgo.pestanas.actividad'),
               render: () => (
                 <div className="pt-3">
                   <Historia objeto="social_risk" id={riesgo.id} vacio={t('fichaRiesgo.sinActividad')} />
@@ -223,7 +248,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
             }
           ]}
         />
-        <LoAlimentan riesgo={riesgo} />
+        <Trazabilidad riesgo={riesgo} medidas={medidas.data} evidencias={evidencias.data?.content ?? []} />
       </div>
       {revisando ? (
         <NuevaRevision
@@ -469,63 +494,58 @@ function NuevaRevision({
 
 // lo que alimenta al riesgo y su contexto: las QCS y las alertas vinculadas (cada lectura con su propio estado: una que no se
 // puede leer dice «No disponible», nunca una lista vacía), el incidente de origen y los grupos de interés
-function LoAlimentan({ riesgo }: { riesgo: Registro }) {
+// la trazabilidad con los grupos fijos (revisión de UX, etapa 4): «Lo alimentan» pasa a «De dónde viene» (las quejas, las alertas,
+// el incidente de origen y su contexto: lugar, conflicto, tema y grupos), «Qué generó» suma sus medidas de mitigación (cuántas
+// y cuántas atrasadas) y los compromisos que lo atienden, y «Lo sustenta», sus evidencias
+function Trazabilidad({ riesgo, medidas, evidencias }: { riesgo: Registro; medidas: Registro[] | undefined; evidencias: Registro[] }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const proyecto = texto(riesgo, 'project')
   const quejas = useTodos('grievance', { social_risk: riesgo.id }, can('grievance', 'READ'))
   const alertas = useTodos('early_warning', { social_risk: riesgo.id }, can('early_warning', 'READ'))
+  const compromisos = useTodos('commitment', { social_risk: riesgo.id }, can('commitment', 'READ'))
   const grupos = useRelacionados('social_risk', riesgo.id, 'social_risk_stakeholder')
-  const lista = (objeto: string, consulta: ReturnType<typeof useTodos>, titulo: string) =>
-    can(objeto, 'READ') ? (
-      <div>
-        <h3 className="font-medium">{titulo}</h3>
-        {consulta.isPending ? (
-          <Cargando compacto />
-        ) : consulta.isError && !consulta.data ? (
-          <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
-        ) : (consulta.data ?? []).length === 0 ? (
-          <p className="text-sg-text-muted">{t('fichaRiesgo.alimentan.ninguno')}</p>
-        ) : (
-          <ul>
-            {(consulta.data ?? []).map((r) => (
-              <li key={r.id}>
-                <EnlaceDeFicha objeto={objeto} registro={r}>
-                  {[texto(r, 'code'), texto(r, 'title') || opcion(r, 'category')].filter(Boolean).join(' · ')}
-                </EnlaceDeFicha>{' '}
-                <EstadoChip objeto={objeto} estado={r.state} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    ) : null
+  const nombreDeEvidencia = useNombreDeEvidencia()
+  const lista = (objeto: string, consulta: ReturnType<typeof useTodos>) =>
+    !can(objeto, 'READ') ? null : consulta.isPending ? (
+      <Cargando compacto />
+    ) : consulta.isError && !consulta.data ? (
+      <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
+    ) : (consulta.data ?? []).length === 0 ? null : (
+      <ul>
+        {(consulta.data ?? []).map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center gap-2">
+            <EnlaceDeRegistro
+              codigo={texto(r, 'code')}
+              titulo={texto(r, 'title') || opcion(r, 'category')}
+              ruta={rutaDeFicha(objeto, r)}
+              codigoEnElEnlace={!texto(r, 'title')}
+            />
+            <EstadoChip objeto={objeto} estado={r.state} />
+          </li>
+        ))}
+      </ul>
+    )
+  const atrasadas = (medidas ?? []).filter((m) => estaAtrasada(m)).length
   return (
-    <aside aria-label={t('fichaRiesgo.alimentan.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaRiesgo.alimentan.titulo')}</h2>
-      {lista('grievance', quejas, t('fichaRiesgo.alimentan.quejas'))}
-      {lista('early_warning', alertas, t('fichaRiesgo.alimentan.alertas'))}
-      {atributo(riesgo, 'origin_incident') ? (
-        <p>
-          {t('fichaRiesgo.alimentan.incidente')}: <RegistroVinculado objeto="incident" id={atributo<string>(riesgo, 'origin_incident')} />
-        </p>
-      ) : null}
-      <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaRiesgo.contexto.titulo')}</h2>
-      {['locality', 'community', 'local_conflict', 'key_theme'].map((campo) =>
-        atributo(riesgo, campo) ? (
-          <p key={campo}>
-            {t(`fichaRiesgo.contexto.${campo}`)}: <RegistroVinculado objeto={campo} id={atributo<string>(riesgo, campo)} />
-          </p>
-        ) : null
-      )}
-      <div>
-        <h3 className="font-medium">{t('fichaRiesgo.contexto.grupos')}</h3>
-        {grupos.isPending ? <Cargando compacto /> : null}
-        {grupos.isError && !grupos.data ? <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} /> : null}
-        {grupos.data ? (
-          grupos.data.content.length === 0 ? (
-            <p className="text-sg-text-muted">{t('fichaRiesgo.alimentan.ninguno')}</p>
-          ) : (
+    <PanelDeTrazabilidad
+      deDondeViene={[
+        { clave: 'quejas', titulo: t('fichaRiesgo.alimentan.quejas'), contenido: lista('grievance', quejas) },
+        { clave: 'alertas', titulo: t('fichaRiesgo.alimentan.alertas'), contenido: lista('early_warning', alertas) },
+        {
+          clave: 'incidente',
+          titulo: t('fichaRiesgo.alimentan.incidente'),
+          contenido: atributo(riesgo, 'origin_incident') ? <RegistroVinculado objeto="incident" id={atributo<string>(riesgo, 'origin_incident')} /> : null
+        },
+        ...['locality', 'community', 'local_conflict', 'key_theme'].map((campo) => ({
+          clave: campo,
+          titulo: t(`fichaRiesgo.contexto.${campo}`),
+          contenido: atributo(riesgo, campo) ? <RegistroVinculado objeto={campo} id={atributo<string>(riesgo, campo)} /> : null
+        })),
+        {
+          clave: 'grupos',
+          titulo: t('fichaRiesgo.contexto.grupos'),
+          contenido: grupos.data?.content.length ? (
             <ul>
               {grupos.data.content.map((g) => (
                 <li key={g.id}>
@@ -535,9 +555,39 @@ function LoAlimentan({ riesgo }: { riesgo: Registro }) {
                 </li>
               ))}
             </ul>
-          )
-        ) : null}
-      </div>
-    </aside>
+          ) : grupos.isError && !grupos.data ? (
+            <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} />
+          ) : null
+        }
+      ]}
+      queGenero={[
+        {
+          clave: 'medidas',
+          titulo: t('fichaRiesgo.medidas.titulo'),
+          contenido: medidas?.length ? (
+            <p>
+              {t('fichaRiesgo.trazabilidad.medidas', { count: medidas.length })}
+              {atrasadas ? <span className="font-medium text-sg-danger"> · {t('fichaRiesgo.trazabilidad.atrasadas', { count: atrasadas })}</span> : null}
+            </p>
+          ) : null
+        },
+        { clave: 'compromisos', titulo: t('fichaRiesgo.trazabilidad.compromisos'), contenido: lista('commitment', compromisos) }
+      ]}
+      loSustenta={[
+        {
+          clave: 'evidencias',
+          titulo: t('fichaRiesgo.pestanas.evidencias'),
+          contenido: evidencias.length ? (
+            <ul>
+              {evidencias.map((e) => (
+                <li key={e.id}>
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                </li>
+              ))}
+            </ul>
+          ) : null
+        }
+      ]}
+    />
   )
 }
