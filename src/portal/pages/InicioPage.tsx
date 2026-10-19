@@ -6,6 +6,7 @@ import { useCatalogoDeIndicadores } from '../datos/indicadores'
 import { INICIOS, inicioPara } from '../inicios'
 import { estadoDe, NAV_TREE, useOferta } from '../shell/navTree'
 import { RevisionEjecutivaPage } from '../tableros/RevisionEjecutivaPage'
+import { Cargando } from '../componentes/Estados'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useMisAsignaciones, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { Atajos, useAtajos } from './Atajos'
@@ -14,13 +15,15 @@ import { MisProyectos } from './MisProyectos'
 import { SuTrabajo, useSuTrabajo } from './SuTrabajo'
 
 // el inicio del portal (S02, ASM-078): la variante del rol si la cuenta tiene una (inicios.ts); si no, desde F8 la revisión
-// ejecutiva S51 para quien el catálogo le ofrece el tablero executive (decisión 7 del plan 8.3); si no, la bienvenida de F1.
-// mientras el catálogo se lee, o si no se puede leer (un backend sin F8 responde sin KPI-EXE), la bienvenida
+// ejecutiva S51 para quien el catálogo le ofrece el tablero executive (decisión 7 del plan 8.3); si no, «Mi día». mientras el
+// catálogo se lee, la carga: un inicio que se dibuja y después cambia por otro desorienta (revisión de UX, etapa 2). si no se
+// puede leer (un backend sin F8 responde sin KPI-EXE), «Mi día»
 export function InicioPage() {
   const oferta = useOferta()
   const variante = inicioPara(INICIOS, oferta)
   const catalogo = useCatalogoDeIndicadores()
   if (variante) return <variante.Pantalla />
+  if (catalogo.isPending) return <Cargando />
   const ejecutivo = (catalogo.data ?? []).some((i) => i.dashboard === 'executive' && i.available)
   return ejecutivo ? <RevisionEjecutivaPage /> : <Bienvenida />
 }
