@@ -73,7 +73,8 @@ export function FormularioPorPasos({
       {avisos}
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <Pasos pasos={pasos} actual={actual} visitados={visitados} alIr={alIr} />
-        <form className="space-y-3" aria-label={pasos[actual]} onSubmit={alEnviar}>
+        {/* cada pantalla valida con su esquema y lo dice junto al control: la validación nativa no detiene el paso */}
+        <form className="space-y-3" aria-label={pasos[actual]} onSubmit={alEnviar} noValidate>
           <h2 className="text-sg-h2 font-semibold">{pasos[actual]}</h2>
           {children}
           <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
