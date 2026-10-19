@@ -1,3 +1,5 @@
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
@@ -68,37 +70,44 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
   const ubicacion = evidencia.geometries?.location
   const sinConsentimiento = atributo(evidencia, 'people_identifiable') === true && atributo(evidencia, 'photo_consent_given') !== true
   const biblioteca = proyecto ? `/projects/${encodeURIComponent(proyecto)}/documents` : '/documents'
+  // el encabezado común y el nombre en las migas del proyecto (revisión de UX, etapa 4); la evidencia no tiene workflow, y lo que
+  // sustenta es su trazabilidad
+  useMigaDelRegistro(nombreDeEvidencia(evidencia))
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <Link to={biblioteca} className="text-sm text-sg-primary-text underline">
-        {t('documentos.ficha.volver')}
-      </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(evidencia, 'evidence_type')}</p>
-          <h1 className="text-sg-h1 font-semibold">{nombreDeEvidencia(evidencia)}</h1>
-          <p className="text-sm">{'classification' in evidencia.attributes ? opcion(evidencia, 'classification') : <Restringido />}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {puedeDescargar ? (
-            <Button onClick={() => descargar.mutate(evidencia)} disabled={descargar.isPending} aria-busy={descargar.isPending}>
+      {proyecto ? null : (
+        <Link to={biblioteca} className="text-sm text-sg-primary-text underline">
+          {t('documentos.ficha.volver')}
+        </Link>
+      )}
+      <EncabezadoDePagina
+        antetitulo={[t('documentos.ficha.tipo'), opcion(evidencia, 'evidence_type')].filter(Boolean).join(' · ')}
+        titulo={nombreDeEvidencia(evidencia)}
+        chips={
+          'classification' in evidencia.attributes ? <span className="text-sg-text-secondary">{opcion(evidencia, 'classification')}</span> : <Restringido />
+        }
+        primaria={
+          puedeDescargar ? (
+            <Button size="sm" onClick={() => descargar.mutate(evidencia)} disabled={descargar.isPending} aria-busy={descargar.isPending}>
               {descargar.isPending ? t('documentos.ficha.descargando') : t('documentos.ficha.descargar')}
             </Button>
-          ) : null}
-          {escribe ? (
+          ) : undefined
+        }
+        secundarias={
+          escribe ? (
             <>
-              <Button variant="secondary" onClick={() => setEditando(true)}>
+              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('documentos.ficha.editar')}
               </Button>
               {can('evidence', 'CREATE') ? (
-                <Button variant="secondary" onClick={() => setVersionando(true)}>
+                <Button size="sm" variant="secondary" onClick={() => setVersionando(true)}>
                   {t('documentos.ficha.versionNueva')}
                 </Button>
               ) : null}
             </>
-          ) : null}
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
       {descargar.isError ? <Alert tone="danger">{mensaje(descargar.error)}</Alert> : null}
       {!puedeDescargar ? <Alert tone="notice">{t('documentos.ficha.noDescarga')}</Alert> : null}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
