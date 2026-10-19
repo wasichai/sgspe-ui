@@ -155,10 +155,7 @@ describe('S42 · programas e inversión', () => {
     fetch = mockFetch(rutas())
     abrir()
     const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
-    expect(await within(programas).findByRole('link', { name: 'PS-001 · Programa Ejemplo de agua segura' })).toHaveAttribute(
-      'href',
-      '/projects/p1/programs/sp1'
-    )
+    expect(await within(programas).findByRole('link', { name: 'Programa Ejemplo de agua segura' })).toHaveAttribute('href', '/projects/p1/programs/sp1')
     expect(await within(programas).findByRole('link', { name: 'Asociación Ejemplo' })).toBeInTheDocument()
     expect(within(programas).getByText(/S\/ 80,000\.00 · .*5,000\.00/)).toBeInTheDocument()
     const aportes = await screen.findByRole('table', { name: 'Aportes del alcance' })
@@ -208,14 +205,16 @@ describe('S42 · programas e inversión', () => {
     expect(alta.cabeceras.get('Idempotency-Key')).toBeTruthy()
   })
 
-  it('en el alcance global muestra la columna Proyecto y no ofrece «Nuevo»: pide elegir un proyecto', async () => {
+  // revisión de UX, etapa 3: crear desde lo global sin pasar por el selector (BotonCrear pide el proyecto)
+  it('en el alcance global muestra la columna Proyecto y ofrece crear eligiendo el proyecto', async () => {
     fetch = mockFetch(rutas())
     abrir({ ruta: '/programs', camino: '/programs' })
     const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
     expect(within(programas).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
     expect(await within(programas).findByRole('link', { name: 'PRJ-01 · Pukaqaqa' })).toHaveAttribute('href', '/projects/p1/overview')
-    expect(screen.getByText('Para registrar un aporte o un programa, elija un proyecto.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Nuevo aporte' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/elija un proyecto/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nuevo aporte' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nuevo programa' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Tablero de inversión' })).toHaveAttribute('href', '/programs/dashboard')
   })
 
@@ -323,7 +322,7 @@ describe('S42 · programas e inversión', () => {
     expect(within(zona).getByText('Montos que no se pueden leer y no se suman: 1.')).toBeInTheDocument()
     expect(within(zona).getByText('Los programas por aprobar no cuentan en lo ejecutado ni en el avance.')).toBeInTheDocument()
     const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
-    const fila = (await within(programas).findByRole('link', { name: 'PS-001 · Programa Ejemplo de agua segura' })).closest('tr') as HTMLElement
+    const fila = (await within(programas).findByRole('link', { name: 'Programa Ejemplo de agua segura' })).closest('tr') as HTMLElement
     expect(within(fila).getByText('S/ 80,000.00 · monto ilegible')).toBeInTheDocument()
     expect(within(fila).getByText('Por aprobar')).toBeInTheDocument()
     expect(within(fila).queryByText('S/ 0.00')).not.toBeInTheDocument()
