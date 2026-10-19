@@ -77,7 +77,8 @@ export function EncabezadoDePagina({ titulo, antetitulo, chips, descripcion, con
   useTituloDeDocumento(tituloDelDocumento ?? titulo)
   const acciones = primaria || secundarias || mas
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3">
+    // un div y no un <header>: dentro de main no es la barra superior, y así nada lo confunde con ella (el banner de la página)
+    <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1">
         {antetitulo ? <p className="font-sg-mono text-sg-caption text-sg-text-muted">{antetitulo}</p> : null}
         <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
@@ -92,7 +93,7 @@ export function EncabezadoDePagina({ titulo, antetitulo, chips, descripcion, con
           {primaria}
         </div>
       ) : null}
-    </header>
+    </div>
   )
 }
 

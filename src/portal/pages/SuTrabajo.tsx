@@ -16,8 +16,9 @@ const TAREA_ABIERTA = ['open', 'in_progress', 'blocked']
 const COMPROMISO_CERRADO = ['closed', 'cancelled', 'verified']
 const vencidosPrimero = (a: Registro, b: Registro) => Number(texto(b, 'deadline_status') === 'VENCIDO') - Number(texto(a, 'deadline_status') === 'VENCIDO')
 
-export function SuTrabajo() {
-  const { t } = useTranslation(NS)
+// lo que la persona tiene a su cargo, abierto y con los vencidos primero; lo comparten «Su trabajo» y «Atención requerida»
+// (mismas consultas, misma caché). lee: si la cuenta lee alguno de los objetos
+export function useSuTrabajo() {
   const { user, can } = useAuth()
   const yo = user?.id ?? ''
   const leeTareas = can('task', 'READ')
@@ -30,12 +31,21 @@ export function SuTrabajo() {
   const deQcs = [quejas, consultas, solicitudes]
     .map((consulta, i) => ({ objeto: OBJETOS_DE_QCS[i], consulta, lee: can(OBJETOS_DE_QCS[i], 'READ') }))
     .filter((q) => q.lee)
-  if (!leeTareas && !leeCompromisos && deQcs.length === 0) return null
+  const lee = leeTareas || leeCompromisos || deQcs.length > 0
   const cargando = (leeTareas && tareas.isPending) || (leeCompromisos && compromisos.isPending) || deQcs.some((q) => q.consulta.isPending)
   const abiertas = (tareas.data ?? []).filter((x) => TAREA_ABIERTA.includes(x.state ?? '')).sort(vencidosPrimero)
   const aCargo = (compromisos.data ?? []).filter((c) => !COMPROMISO_CERRADO.includes(c.state ?? '')).sort(vencidosPrimero)
-  const qcs = deQcs.flatMap((q) => (q.consulta.data ?? []).filter((r) => estaAbierta(q.objeto, r)).map((registro) => ({ objeto: q.objeto, registro })))
+  const qcs = deQcs.flatMap((q) =>
+    (q.consulta.data ?? []).filter((r) => estaAbierta(q.objeto, r)).map((registro) => ({ objeto: q.objeto as string, registro }))
+  )
   qcs.sort((a, b) => vencidosPrimero(a.registro, b.registro))
+  return { lee, cargando, abiertas, aCargo, qcs }
+}
+
+export function SuTrabajo() {
+  const { t } = useTranslation(NS)
+  const { lee, cargando, abiertas, aCargo, qcs } = useSuTrabajo()
+  if (!lee) return null
   const enlace = (objeto: string, registro: Registro, rotulo: string) => {
     const ruta = rutaDeFicha(objeto, registro)
     return (

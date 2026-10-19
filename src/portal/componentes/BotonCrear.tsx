@@ -15,10 +15,11 @@ import { useContextFilters } from '../shell/context'
 // el botón lleva al alta de ese proyecto; con el alcance global, pide el proyecto entre los que puede escribir (la regla de
 // useEscribeEnProyecto: ADMIN en todos, los demás con una asignación vigente), con los suyos primero, y con uno solo va
 // directo. «resto» es el trozo fijo de la ruta del alta dentro del proyecto («commitments/new»)
-export function BotonCrear({ objeto, etiqueta, resto }: { objeto: string; etiqueta: string; resto: string }) {
+// «objeto» puede ser varios: se ofrece si la cuenta crea alguno (el alta de QCS registra una queja, una consulta o una solicitud)
+export function BotonCrear({ objeto, etiqueta, resto }: { objeto: string | readonly string[]; etiqueta: string; resto: string }) {
   const { can } = useAuth()
   const { scope } = useContextFilters()
-  if (!can(objeto, 'CREATE')) return null
+  if (!(typeof objeto === 'string' ? [objeto] : objeto).some((o) => can(o, 'CREATE'))) return null
   return scope.kind === 'project' ? (
     <CrearEnProyecto proyecto={scope.projectId} etiqueta={etiqueta} resto={resto} />
   ) : (
@@ -74,7 +75,8 @@ function CrearEligiendoProyecto({ etiqueta, resto }: { etiqueta: string; resto: 
   }
   return (
     <>
-      <Button size="sm" onClick={abrir}>
+      {/* mientras se leen los proyectos no se sabe si hay uno solo (que va directo) o varios (que se eligen) */}
+      <Button size="sm" onClick={abrir} disabled={cargando} aria-busy={cargando || undefined}>
         <Plus aria-hidden className="size-4" />
         {etiqueta}
       </Button>

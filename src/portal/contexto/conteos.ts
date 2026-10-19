@@ -1,7 +1,6 @@
-import { useQueries } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { consulta, type Pagina, type Parametros } from '../datos/registros'
-import { usePedir } from '../datos/http'
+import { useSumasDeConteos } from '../datos/conteos'
+import type { Parametros } from '../datos/registros'
 
 // los dos conteos de cada pestaña de Project 360 (ux-architecture.md §7.1, decisión 4 de la revisión de UX): el total del alcance
 // y lo que pide acción (los vencidos), cada uno con size=1 y totalElements de la API genérica, por objeto y con el proyecto.
@@ -30,28 +29,13 @@ export interface Conteo {
 
 export function useConteosDelProyecto(proyecto: string | undefined, pestanas: readonly string[]): Record<string, Conteo> {
   const { can } = useAuth()
-  const pedir = usePedir()
   const pedidos = pestanas.flatMap((pestana) =>
     (['total', 'accion'] as const).flatMap((clase) =>
-      (CONTEOS[pestana]?.[clase] ?? []).filter((f) => can(f.objeto, 'READ')).map((f) => ({ pestana, clase, ...f }))
+      (CONTEOS[pestana]?.[clase] ?? [])
+        .filter((f) => can(f.objeto, 'READ'))
+        .map((f) => ({ clave: `${pestana}:${clase}`, objeto: f.objeto, filtros: { project: proyecto, ...f.filtros } }))
     )
   )
-  const respuestas = useQueries({
-    queries: pedidos.map(({ objeto, filtros }) => {
-      const busqueda = consulta({ project: proyecto, ...filtros, size: 1 })
-      return {
-        queryKey: ['records', objeto, busqueda],
-        queryFn: () => pedir<Pagina>(`/objects/${objeto}/records?${busqueda}`),
-        enabled: Boolean(proyecto)
-      }
-    })
-  })
-  // una suma con una parte que falta (una de las tres QCS no llegó) engañaría: entonces null
-  const sumas: Record<string, Record<'total' | 'accion', number | null | undefined>> = {}
-  pedidos.forEach(({ pestana, clase }, i) => {
-    const n = respuestas[i].data?.totalElements
-    const suma = (sumas[pestana] ??= { total: undefined, accion: undefined })
-    suma[clase] = n == null || suma[clase] === null ? null : (suma[clase] ?? 0) + n
-  })
-  return Object.fromEntries(Object.entries(sumas).map(([p, s]) => [p, { total: s.total ?? null, accion: s.accion ?? null }]))
+  const sumas = useSumasDeConteos(pedidos, Boolean(proyecto))
+  return Object.fromEntries(pestanas.map((p) => [p, { total: sumas[`${p}:total`] ?? null, accion: sumas[`${p}:accion`] ?? null }]))
 }

@@ -13,6 +13,7 @@ import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
 import { seccionDeRuta } from './seccionActual'
 import { useInsignias } from './insignias'
+import { DatosDeLaCuenta, MenuDePerfil } from './Perfil'
 import { Insignia } from '../componentes/Insignia'
 import { useTituloDeDocumento } from '../componentes/Pagina'
 import { ThemeMenu } from './ThemeMenu'
@@ -77,10 +78,7 @@ export function AppShell() {
             <LanguageMenu />
             <ThemeMenu />
           </span>
-          <span className="hidden max-w-56 flex-col text-right leading-tight sm:flex" title={user?.email}>
-            <span className="truncate text-sg-body-sm text-sg-text">{user?.displayName}</span>
-            {rotulosDeRol ? <span className="truncate text-sg-caption text-sg-text-muted">{rotulosDeRol}</span> : null}
-          </span>
+          <MenuDePerfil rotulosDeRol={rotulosDeRol} />
           <button
             type="button"
             onClick={signOut}
@@ -107,10 +105,7 @@ export function AppShell() {
           className="left-0 top-0 flex h-full max-w-xs translate-x-0 translate-y-0 flex-col gap-4 rounded-none rounded-r-sg-xl p-4"
         >
           <DialogTitle className="text-sg-h3 font-semibold">{t('shell.menu')}</DialogTitle>
-          <p className="text-sm">
-            <span className="block text-sg-text">{user?.displayName}</span>
-            {rotulosDeRol ? <span className="block text-sg-caption text-sg-text-muted">{rotulosDeRol}</span> : null}
-          </p>
+          <DatosDeLaCuenta />
           <SelectorDeProyecto siempre />
           <nav aria-label={t('shell.seccionesDelMenu')} className="min-h-0 flex-1 overflow-y-auto">
             <ListaDeSecciones rotulo={ROTULO_VISIBLE} alElegir={() => setMenuAbierto(false)} />

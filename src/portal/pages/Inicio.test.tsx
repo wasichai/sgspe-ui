@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { AuthUser, CallerPermissions } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -71,6 +72,12 @@ function start(user: AuthUser, permisos: CallerPermissions, primero: MockRoute[]
 // el contenido de la página, sin la barra superior (que también muestra el nombre y los roles)
 const pagina = () => within(screen.getByRole('main'))
 
+// la cuenta vive en el menú del perfil de la barra superior (revisión de UX, etapa 2): se abre y se lee ahí
+async function cuenta() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Su cuenta' }))
+  return within(screen.getByRole('group', { name: 'Su cuenta' }))
+}
+
 // los accesos de la bienvenida: las secciones que la cuenta puede abrir, como enlaces
 const accesos = () =>
   within(pagina().getByRole('region', { name: 'Sus secciones' }))
@@ -82,35 +89,40 @@ function InicioDePrueba() {
 }
 
 describe('inicio de F1', () => {
-  it('muestra la cuenta, la organización, los roles por su rótulo y los accesos a sus secciones, sin fases', async () => {
+  it('a quien administra le muestra «Mi día» sin la grilla, y la cuenta, la organización y los roles por su rótulo en el menú del perfil', async () => {
     start(ADMINISTRACION, ADMIN_PERMISOS, [{ path: '/roles', body: [{ name: 'ADMIN', label: 'Administración de la organización' }] }])
     expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
     expect(pagina().getByText('Le damos la bienvenida, Administración de prueba.')).toBeInTheDocument()
-    expect(pagina().getByText('Administración de prueba (admin@sgspe.test)')).toBeInTheDocument()
-    expect(await pagina().findByText('Organización de prueba')).toBeInTheDocument()
-    expect(await pagina().findByText('Administración de la organización')).toBeInTheDocument()
-    await waitFor(() => expect(accesos()).toEqual(['Administración']))
-    expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
+    // quien administra crea y lee: ve «Mi día» (los atajos) y no la grilla de secciones, que repetiría la barra lateral
+    expect(await pagina().findByRole('region', { name: 'Registrar' })).toBeInTheDocument()
+    expect(pagina().queryByRole('region', { name: 'Sus secciones' })).not.toBeInTheDocument()
+    // la cuenta ya no está en la página: en el menú del perfil
+    expect(pagina().queryByText('Administración de prueba (admin@sgspe.test)')).not.toBeInTheDocument()
+    const perfil = await cuenta()
+    expect(perfil.getByText('Administración de prueba (admin@sgspe.test)')).toBeInTheDocument()
+    expect(await perfil.findByText('Organización de prueba')).toBeInTheDocument()
+    expect(await perfil.findByText('Administración de la organización')).toBeInTheDocument()
     expect(pagina().queryByText(/F[0-9]/)).not.toBeInTheDocument()
     expect(pagina().queryByText('ADMIN')).not.toBeInTheDocument()
   })
 
   it('a AUDITOR, sin el directorio de roles, le dice cuántos roles tiene sin su código, y no le ofrece Administración', async () => {
     start(AUDITORA, { admin: false, objects: {} })
-    expect(await pagina().findByText('1 rol asignado')).toBeInTheDocument()
-    expect(pagina().queryByText('AUDITOR')).not.toBeInTheDocument()
+    const perfil = await cuenta()
+    expect(await perfil.findByText('1 rol asignado')).toBeInTheDocument()
+    expect(perfil.queryByText('AUDITOR')).not.toBeInTheDocument()
     expect(accesos()).toEqual([])
     expect(pagina().getByText('1 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
   })
 
   it('dice que no pudo leer la organización en lugar de inventarla', async () => {
     start(AUDITORA, { admin: false, objects: {} }, [{ path: '/organizations/current', status: 404, body: { title: 'Not Found', status: 404 } }])
-    expect(await pagina().findByText('No se pudo leer la organización')).toBeInTheDocument()
+    expect(await (await cuenta()).findByText('No se pudo leer la organización')).toBeInTheDocument()
   })
 
   it('también lo dice cuando la organización contesta 403', async () => {
     start(AUDITORA, { admin: false, objects: {} }, [{ path: '/organizations/current', status: 403, body: { title: 'Forbidden', status: 403 } }])
-    expect(await pagina().findByText('No se pudo leer la organización')).toBeInTheDocument()
+    expect(await (await cuenta()).findByText('No se pudo leer la organización')).toBeInTheDocument()
   })
 
   // los permisos que no se pueden leer, o que aún no llegan, no son «sin acceso»: la tabla no inventa un estado (RQ-SEC-005)
@@ -126,24 +138,25 @@ describe('inicio de F1', () => {
     // la petición de los permisos ya salió y su respuesta está retenida: lo que se ve es el estado de carga de verdad
     await retencion?.solicitada
     // las demás lecturas sí llegan: la página ya procesó respuestas y los permisos siguen retenidos
-    expect(await pagina().findByText('Organización de prueba')).toBeInTheDocument()
-    expect(await pagina().findByText('1 rol asignado')).toBeInTheDocument()
+    const perfil = await cuenta()
+    expect(await perfil.findByText('Organización de prueba')).toBeInTheDocument()
+    expect(await perfil.findByText('1 rol asignado')).toBeInTheDocument()
     expect(accesos()).toEqual([])
     expect(pagina().queryByText(/secciones disponibles/)).not.toBeInTheDocument()
-    // solo liberar la respuesta muestra los accesos
+    // solo liberar la respuesta decide: quien administra pasa a «Mi día» y la grilla se va
     retencion?.liberar()
-    await waitFor(() => expect(accesos()).toEqual(['Administración']))
-    expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
+    expect(await pagina().findByRole('region', { name: 'Registrar' })).toBeInTheDocument()
+    expect(pagina().queryByRole('region', { name: 'Sus secciones' })).not.toBeInTheDocument()
   })
 
   it('dice que no pudo leer la cuenta cuando /auth/me falla', async () => {
     start(AUDITORA, SIN_PERMISOS, [{ path: '/auth/me', status: 403, body: { title: 'Forbidden', status: 403 } }])
-    expect(await pagina().findByText('No se pudo leer la cuenta')).toBeInTheDocument()
+    expect(await (await cuenta()).findByText('No se pudo leer la cuenta')).toBeInTheDocument()
   })
 
   it('dice «Sin roles» cuando la cuenta no tiene ninguno', async () => {
     start(AUDITORA, SIN_PERMISOS, [{ path: '/auth/me', body: { ...yo(AUDITORA), roles: [] } }])
-    expect(await pagina().findByText('Sin roles')).toBeInTheDocument()
+    expect(await (await cuenta()).findByText('Sin roles')).toBeInTheDocument()
   })
 })
 
