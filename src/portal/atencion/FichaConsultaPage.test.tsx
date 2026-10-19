@@ -252,6 +252,22 @@ describe('S57 · aceptar como aporte', () => {
     ...comunes('stakeholder_request', 'r1')
   ]
 
+  // revisión de UX, decisión 6: el código propuesto de lo que nace sigue a «¿Qué se crea?»
+  it('aceptar propone el código del compromiso o del aporte, según lo que se crea', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: /^\/sgspe\/codes\/next\?object=commitment&project=p1$/, body: { code: 'COM-2026-012' } },
+        { path: /^\/sgspe\/codes\/next\?object=social_contribution&project=p1$/, body: { code: 'APO-2026-003' } }
+      ])
+    )
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    await waitFor(() => expect(within(dialogo).getByLabelText('Código del compromiso')).toHaveValue('COM-2026-012'))
+    await userEvent.click(within(dialogo).getByRole('radio', { name: 'Un aporte social' }))
+    await waitFor(() => expect(within(dialogo).getByLabelText('Código del aporte')).toHaveValue('APO-2026-003'))
+  })
+
   it('con los dos, «Aceptar…» pregunta qué se crea; el aporte manda su propósito, condiciones, quién paga y moneda, y abre su ficha', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-10T02:30:00Z'))
