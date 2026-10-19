@@ -16,6 +16,11 @@ export const PARAMETROS: Readonly<Record<string, readonly Parametro[]>> = {
 // las secciones de cada tipo, con su marca de IA y su guía, no se copian aquí: las da el backend (useTiposDeEntregable en
 // contrato.ts, decisión 1 del plan)
 
+// a dónde lleva un entregable (S50): desde un proyecto, bajo ese proyecto, para que «Volver» vuelva a sus Reportes; si no, la ruta
+// global de Reportes
+export const rutaDeEntregable = (id: string, proyecto?: string | null): string =>
+  proyecto ? `/projects/${encodeURIComponent(proyecto)}/reports/deliverables/${encodeURIComponent(id)}` : `/reports/deliverables/${encodeURIComponent(id)}`
+
 // deliverables.md §8.3: el editor solo permite editar las secciones en draft y observed
 export const EDITABLE_EN: readonly string[] = ['draft', 'observed']
 export const seEditan = (entregable: Registro): boolean => EDITABLE_EN.includes(entregable.state ?? '')

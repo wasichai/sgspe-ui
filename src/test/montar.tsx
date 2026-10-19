@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import { createRegistry, resolveConfig, WasichaiProviders, type AuthUser, type CallerPermissions } from '@wasichai/core'
 import type { ReactElement } from 'react'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
+import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLocation } from 'react-router'
 import { client } from '../portal/api'
 import { ZONA_DE_LIMA } from '../portal/datos/fechas'
 import { crearI18n, IDIOMAS } from '../portal/i18n'
@@ -15,6 +15,8 @@ export interface OpcionesDeMontaje {
   camino?: string
   usuario?: AuthUser
   permisos?: CallerPermissions
+  // sobre un data router (createMemoryRouter), como el de PortalApp: lo pide una pantalla que usa useBlocker
+  datos?: boolean
 }
 
 // la ubicación actual, para ver a dónde navegó un componente
@@ -27,11 +29,19 @@ function Ubicacion() {
 
 export function montar(
   ui: ReactElement,
-  { ruta = '/', camino = '*', usuario = RELACIONISTA, permisos = { admin: true, objects: {} } }: OpcionesDeMontaje = {}
+  { ruta = '/', camino = '*', usuario = RELACIONISTA, permisos = { admin: true, objects: {} }, datos = false }: OpcionesDeMontaje = {}
 ) {
   localStorage.setItem('sgspe.token', 't')
   const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS, timeZone: ZONA_DE_LIMA })
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  const rutas = (
+    <>
+      <Ubicacion />
+      <Routes>
+        <Route path={camino} element={ui} />
+      </Routes>
+    </>
+  )
   return render(
     <WasichaiProviders
       config={config}
@@ -42,12 +52,11 @@ export function montar(
       initialUser={usuario}
       initialPermissions={permisos}
     >
-      <MemoryRouter initialEntries={[ruta]}>
-        <Ubicacion />
-        <Routes>
-          <Route path={camino} element={ui} />
-        </Routes>
-      </MemoryRouter>
+      {datos ? (
+        <RouterProvider router={createMemoryRouter([{ path: '*', element: rutas }], { initialEntries: [ruta] })} />
+      ) : (
+        <MemoryRouter initialEntries={[ruta]}>{rutas}</MemoryRouter>
+      )}
     </WasichaiProviders>
   )
 }

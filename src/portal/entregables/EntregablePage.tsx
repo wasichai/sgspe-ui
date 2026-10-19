@@ -2,7 +2,7 @@ import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ConfirmDialog } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { Link, useBlocker, useParams, useSearchParams } from 'react-router'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
 import { DeLista } from '../componentes/LecturaConEstados'
@@ -19,14 +19,17 @@ import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S50 · entregable por secciones (screens.md, deliverables.md §8): revisar, aprobar y emitir sabiendo que se emite lo revisado.
 // la sección abierta viaja en ?seccion=<clave>; sin ella, la primera. una sección cambiada después de congelar el modelo bloquea
-// el envío, la aprobación y la emisión (409 SECTIONS_CHANGED): la lista lo marca comparando su updatedAt con draft_generated_at
+// el envío, la aprobación y la emisión (409 SECTIONS_CHANGED): la lista lo marca comparando su updatedAt con draft_generated_at.
+// abierto desde los Reportes de un proyecto vive en /projects/:projectId/reports/deliverables/:deliverableId y «Volver» lleva a
+// esos Reportes, con el proyecto todavía puesto
 export function EntregablePage() {
   const { t } = useTranslation(NS)
-  const { deliverableId = '' } = useParams()
+  const { projectId, deliverableId = '' } = useParams()
   const entregable = useRegistro('deliverable', deliverableId)
+  const reportes = projectId ? `/projects/${encodeURIComponent(projectId)}/reports` : '/reports'
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <Link to="/reports" className="text-sm text-sg-primary-text underline">
+      <Link to={reportes} className="text-sm text-sg-primary-text underline">
         {t('entregables.pagina.volver')}
       </Link>
       <Consulta consulta={entregable} noExiste={<NoEsDeSusProyectos />}>
@@ -90,6 +93,9 @@ function Entregable({ entregable }: { entregable: Registro }) {
     setSucio(false)
     abrirSeccion(pendiente)
   }
+  // salir de S50 con cambios sin guardar (por «Volver», la barra lateral o el historial) también pide confirmación. cambiar de
+  // sección solo cambia ?seccion= y lo confirma la pregunta de arriba
+  const salida = useBlocker(({ currentLocation, nextLocation }) => sucio && currentLocation.pathname !== nextLocation.pathname)
   return (
     <div className="space-y-4">
       <EncabezadoDePagina
@@ -171,6 +177,17 @@ function Entregable({ entregable }: { entregable: Registro }) {
           variant="danger"
           onConfirm={descartar}
           onCancel={() => setPendiente(null)}
+        />
+      ) : null}
+      {salida.state === 'blocked' ? (
+        <ConfirmDialog
+          title={t('entregables.seccion.sinGuardar.titulo')}
+          description={t('entregables.seccion.sinGuardar.salir')}
+          cancelLabel={t('entregables.seccion.sinGuardar.cancelar')}
+          confirmLabel={t('entregables.seccion.sinGuardar.descartar')}
+          variant="danger"
+          onConfirm={() => salida.proceed?.()}
+          onCancel={() => salida.reset?.()}
         />
       ) : null}
     </div>

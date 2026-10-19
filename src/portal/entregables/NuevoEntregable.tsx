@@ -7,8 +7,9 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { texto, useCrear, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
+import { useContextFilters } from '../shell/context'
 import { usePlantillas, useTiposDeEntregable } from './contrato'
-import { PARAMETROS, T1 } from './tipos'
+import { PARAMETROS, rutaDeEntregable, T1 } from './tipos'
 import { opcion } from '../datos/opciones'
 
 // «Nuevo entregable» de S49 (screens.md): el tipo (de los que registra el backend, GET /api/sgspe/deliverable-types), código, título, periodo, corte, el alcance que pide el tipo (PARAMETROS: la
@@ -20,6 +21,7 @@ type Alcance = { comunidad: Registro | null; estudio: string; area: string; prep
 export function NuevoEntregable({ proyecto, alCerrar }: { proyecto: string; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const navegar = useNavigate()
+  const { scope } = useContextFilters()
   const crear = useCrear('deliverable')
   const plantillas = usePlantillas()
   // los tipos que el backend registra (decisión 1 del plan), no una lista del portal
@@ -77,7 +79,7 @@ export function NuevoEntregable({ proyecto, alCerrar }: { proyecto: string; alCe
         },
         motivo: motivo.trim()
       },
-      { onSuccess: (r) => navegar(`/reports/deliverables/${encodeURIComponent(r.id)}`) }
+      { onSuccess: (r) => navegar(rutaDeEntregable(r.id, scope.kind === 'project' ? proyecto : null)) }
     )
   }
   const organizacion = (clave: 'preparadoPara' | 'suscritoPor', etiqueta: string) => (

@@ -43,6 +43,7 @@ import { FichaInteraccionPage } from '../relacionamiento/FichaInteraccionPage'
 import { RegistrarInteraccionPage } from '../relacionamiento/RegistrarInteraccionPage'
 import { TableroRelacionamientoPage } from '../relacionamiento/TableroRelacionamientoPage'
 import { VisitaDeCampoPage, VisitasPage } from '../relacionamiento/VisitaDeCampoPage'
+import { EntregablePage } from '../entregables/EntregablePage'
 import { ReportesPage } from '../reportes/ReportesPage'
 import { AreaDeInfluenciaPage } from './AreaDeInfluenciaPage'
 import { EquipoYParametrosPage } from './EquipoYParametrosPage'
@@ -88,6 +89,8 @@ export const RUTAS_EN_PROYECTO: RutaEnProyecto[] = [
   { ruta: 'documents/:documentId', seccion: 'documents', Pantalla: FichaEvidenciaPage },
   { ruta: 'tasks', seccion: 'tasks', Pantalla: MisTareasPage },
   { ruta: 'reports', seccion: 'reports', Pantalla: ReportesPage },
+  // F8: S50 abierto desde los Reportes del proyecto, con la barra de contexto puesta y «Volver» a esos Reportes
+  { ruta: 'reports/deliverables/:deliverableId', seccion: 'reports', Pantalla: EntregablePage },
   // F4: quejas, consultas y solicitudes (S35, S37, S36, S57, S34 y el reporte unificado)
   { ruta: 'attention', seccion: 'attention', Pantalla: AtencionPage },
   { ruta: 'attention/new', seccion: 'attention', Pantalla: NuevaQcsPage },

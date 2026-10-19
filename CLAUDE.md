@@ -112,12 +112,15 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
   editor se carga diferido (`lazy(() => import('./EditorMarkdown'))` en `EditorDeSeccion`, con un `Suspense`): una prueba que
   interactúa con él espera al chunk con `findBy*`. Una mención es `[[person|position|stakeholder:<uuid>]]`; usar una sugerencia
   de la IA convierte `[PERSONA:<id>]` con `deSugerencia` y nunca manda otro marcador. S50 pide confirmación antes de cambiar de
-  sección con cambios sin guardar, y un refetch de la lista no remonta un editor con cambios (un `412` con «Recargar» conserva
+  sección o de salir con cambios sin guardar (`useBlocker`, que exige el data router de `PortalApp`; en las pruebas,
+  `montar(…, { datos: true })`), y un refetch de la lista no remonta un editor con cambios (un `412` con «Recargar» conserva
   el texto).
 - El estado del borrador se consulta cada 5 s solo mientras está pendiente (`useEstadoDelBorrador`), y una prueba de tiempo usa
   relojes falsos. Nada sin la marca BORRADOR se descarga antes de emitir: de una candidata solo se muestra su SHA-256. La CSP
   abre `frame-src` solo a `blob:` para `PdfDialog`. La prueba de CSP de `e2e/f8.spec.ts` tolera exactamente una violación
   conocida (el estilo en línea de `react-remove-scroll` del Dialog de Radix mientras hay un diálogo abierto,
   wasichai/wasichai-ui#58); cualquier otra la hace fallar.
-- Huecos conocidos de F8 en sgspe-ui#32: la navegación hacia el monitoreo y el catálogo, S50 dentro de un proyecto y «Volver»
-  sin confirmación.
+- S50 vive en `/reports/deliverables/:deliverableId` y, abierto desde los Reportes de un proyecto, en
+  `/projects/:projectId/reports/deliverables/:deliverableId` (`rutaDeEntregable`, `entregables/tipos.ts`): «Volver» no sale del
+  proyecto. El monitoreo y el catálogo de indicadores se enlazan desde S51 y desde «Mi día», a quien lee `indicator` (los dos)
+  o `indicator_measurement` (el monitoreo).
