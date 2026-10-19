@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
@@ -309,9 +310,12 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
           <ul>
             {solicitantes.data.content.map((g) => (
               <li key={g.id}>
-                <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
+                <EnlaceConRastro
+                  to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`}
+                  className="text-sg-primary-text underline"
+                >
                   <NombreDelGrupo grupo={g} />
-                </Link>
+                </EnlaceConRastro>
               </li>
             ))}
           </ul>

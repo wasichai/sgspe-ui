@@ -1,10 +1,11 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { z } from 'zod'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
@@ -109,14 +110,17 @@ function TarjetaDeCandidato({ candidato, alRevisar }: { candidato: Registro; alR
       </p>
       <CitaDelCandidato candidato={candidato} etiqueta={t('compromisos.candidatos.cita')} />
       {creado ? (
-        <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(creado)}`} className="text-sg-primary-text underline">
+        <EnlaceConRastro to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(creado)}`} className="text-sg-primary-text underline">
           {t('compromisos.candidatos.abrirCompromiso')}
-        </Link>
+        </EnlaceConRastro>
       ) : null}
       {duplicado ? (
-        <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(duplicado)}`} className="text-sg-primary-text underline">
+        <EnlaceConRastro
+          to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(duplicado)}`}
+          className="text-sg-primary-text underline"
+        >
           {t('compromisos.candidatos.duplicadoDe')}
-        </Link>
+        </EnlaceConRastro>
       ) : null}
       {alRevisar ? (
         <Button size="sm" variant="secondary" onClick={alRevisar}>

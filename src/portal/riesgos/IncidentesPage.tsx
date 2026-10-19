@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Tabs, Td, Th } from '@wasichai/ui'
@@ -63,9 +64,9 @@ export function IncidentesPage() {
               {(incidentes.data ?? []).map((i) => (
                 <tr key={i.id}>
                   <Td className="text-sm">
-                    <Link to={rutaDeFicha('incident', i) ?? rutaParaAbrir('incident', i.id)} className="font-sg-mono text-sg-primary-text underline">
+                    <EnlaceConRastro to={rutaDeFicha('incident', i) ?? rutaParaAbrir('incident', i.id)} className="font-sg-mono text-sg-primary-text underline">
                       {texto(i, 'code')}
-                    </Link>
+                    </EnlaceConRastro>
                   </Td>
                   <Td className="text-sm">{texto(i, 'occurred_at') ? fechaPe(new Date(texto(i, 'occurred_at'))) : '—'}</Td>
                   <Td className="text-sm">{opcion(i, 'incident_type') || '—'}</Td>
@@ -276,9 +277,9 @@ function Generados({ titulo, objeto, consulta }: { titulo: string; objeto: strin
         <ul>
           {consulta.data.map((r) => (
             <li key={r.id}>
-              <Link to={rutaDeFicha(objeto, r) ?? rutaParaAbrir(objeto, r.id)} className="text-sg-primary-text underline">
+              <EnlaceConRastro to={rutaDeFicha(objeto, r) ?? rutaParaAbrir(objeto, r.id)} className="text-sg-primary-text underline">
                 {nombre(r)}
-              </Link>
+              </EnlaceConRastro>
             </li>
           ))}
         </ul>

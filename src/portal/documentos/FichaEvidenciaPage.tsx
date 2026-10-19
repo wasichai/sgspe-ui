@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -294,12 +295,12 @@ function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolea
         <ul className="flex flex-wrap gap-2">
           {filas.map(({ objeto, r }) => (
             <li key={`${objeto}:${r.id}`}>
-              <Link
+              <EnlaceConRastro
                 to={rutaDeFicha(objeto, r) ?? rutaParaAbrir(objeto, r.id)}
                 className="rounded-sg-sm bg-sg-surface-sunken px-2 py-0.5 text-sg-caption underline"
               >
                 {t(`documentos.ficha.objetos.${objeto}`)}: {rotulo(r)}
-              </Link>
+              </EnlaceConRastro>
             </li>
           ))}
         </ul>

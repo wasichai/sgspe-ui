@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAvailableTransitions } from '@wasichai/workflow'
 import { Alert, cn, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
@@ -198,9 +199,9 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
         {reservada ? (
           '—'
         ) : (
-          <Link to={decision ?? rutaParaAbrir(objeto, id)} className="text-sg-primary-text underline">
+          <EnlaceConRastro to={decision ?? rutaParaAbrir(objeto, id)} className="text-sg-primary-text underline">
             {decision ? t('aprobaciones.revisar') : t('aprobaciones.ver')}
-          </Link>
+          </EnlaceConRastro>
         )}
       </Td>
     </tr>

@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
@@ -168,7 +169,7 @@ function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boo
     : undefined
   return (
     <span className="group block">
-      <Link
+      <EnlaceConRastro
         to={`/projects/${encodeURIComponent(texto(interaccion, 'project'))}/engagements/${encodeURIComponent(interaccion.id)}`}
         title={motivo}
         aria-describedby={motivo ? idMotivo : undefined}
@@ -179,7 +180,7 @@ function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boo
       >
         {texto(interaccion, 'title')}
         {sinActa ? <span className="ml-1 text-sg-warning">· {t('relacionamiento.sinActa')}</span> : null}
-      </Link>
+      </EnlaceConRastro>
       {motivo ? (
         <span id={idMotivo} className={cn('block text-sg-caption text-sg-text-muted', !enLista && 'sr-only group-focus-within:not-sr-only')}>
           {motivo}
@@ -452,12 +453,12 @@ function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes
                   elementos={delEstado.map((i) => ({
                     clave: i.id,
                     contenido: (
-                      <Link
+                      <EnlaceConRastro
                         to={`/projects/${encodeURIComponent(texto(i, 'project'))}/engagements/${encodeURIComponent(i.id)}${i.state === 'held' ? '/minutes' : ''}`}
                         className="text-sg-primary-text underline"
                       >
                         {texto(i, 'title')}
-                      </Link>
+                      </EnlaceConRastro>
                     )
                   }))}
                 />

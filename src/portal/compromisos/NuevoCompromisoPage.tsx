@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
@@ -5,7 +6,7 @@ import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
@@ -660,9 +661,9 @@ function Asistente() {
               {creado ? <p>{t('nuevoCompromiso.revision.parcial')}</p> : null}
               <p>{mensaje(fallo)}</p>
               {creado ? (
-                <Link to={`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(creado.id)}`} className="underline">
+                <EnlaceConRastro to={`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(creado.id)}`} className="underline">
                   {t('nuevoCompromiso.revision.abrirFicha')}
-                </Link>
+                </EnlaceConRastro>
               ) : null}
             </Alert>
           ) : null}

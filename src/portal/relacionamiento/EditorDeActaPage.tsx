@@ -1,9 +1,10 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
 import { Alert, Button, Textarea } from '@wasichai/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useBlocker, useParams } from 'react-router'
+import { useBlocker, useParams } from 'react-router'
 import { AvisoDeConflicto } from '../componentes/AvisoDeConflicto'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
@@ -216,12 +217,12 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link
+          <EnlaceConRastro
             to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(interaccion.id)}`}
             className="text-sm text-sg-primary-text underline"
           >
             {texto(interaccion, 'title')}
-          </Link>
+          </EnlaceConRastro>
           {leeActa ? (
             <Button variant="secondary" size="sm" onClick={() => setPrevia(!previa)}>
               {previa ? t('relacionamiento.acta.editar') : t('relacionamiento.acta.vistaPrevia')}

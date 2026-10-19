@@ -1,5 +1,5 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -27,9 +27,12 @@ export function AcuerdosDeLaInteraccion({ interaccion }: { interaccion: Registro
         <ul className="space-y-1">
           {acuerdos.data.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center gap-2">
-              <Link to={`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
+              <EnlaceConRastro
+                to={`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`}
+                className="text-sg-primary-text underline"
+              >
                 {texto(a, 'code')} · {texto(a, 'title')}
-              </Link>
+              </EnlaceConRastro>
               <EstadoChip objeto="agreement" estado={a.state} />
             </li>
           ))}
@@ -46,9 +49,12 @@ export function AcuerdosDeLaInteraccion({ interaccion }: { interaccion: Registro
         <ul className="space-y-1">
           {compromisos.data.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-2">
-              <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`} className="text-sg-primary-text underline">
+              <EnlaceConRastro
+                to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`}
+                className="text-sg-primary-text underline"
+              >
                 {texto(c, 'code')} · {texto(c, 'title')}
-              </Link>
+              </EnlaceConRastro>
               <EstadoChip objeto="commitment" estado={c.state} />
             </li>
           ))}

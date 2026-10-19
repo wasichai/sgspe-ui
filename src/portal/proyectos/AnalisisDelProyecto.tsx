@@ -1,8 +1,8 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { Input, Table, Tabs, Td, Th } from '@wasichai/ui'
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { Campo } from '../componentes/Campo'
 import { useMensajeDeError, type MensajesPropios } from '../componentes/errores'
 import { Cargando, esIlegible, esProhibido, NoDisponible, Restringido } from '../componentes/Estados'
@@ -145,9 +145,9 @@ function Titulares({ titulares }: { titulares: Titular[] | null }) {
           {h.name === null ? (
             '—'
           ) : (
-            <Link to={rutaParaAbrir(h.object, h.id)} className="text-sg-primary-text underline">
+            <EnlaceConRastro to={rutaParaAbrir(h.object, h.id)} className="text-sg-primary-text underline">
               {h.name}
-            </Link>
+            </EnlaceConRastro>
           )}
         </Fragment>
       ))}
@@ -367,9 +367,9 @@ function Conflictos({ proyecto }: { proyecto: string }) {
             <tr key={`${x.object}-${x.id}`}>
               <Td>
                 {/* /r/ lee el registro como quien mira y salta a su ficha, o dice «Registro reservado» */}
-                <Link to={rutaParaAbrir(x.object, x.id)} className="text-sg-primary-text underline">
+                <EnlaceConRastro to={rutaParaAbrir(x.object, x.id)} className="text-sg-primary-text underline">
                   {x.label ?? t('analisisDelProyecto.sinNombre')}
-                </Link>
+                </EnlaceConRastro>
               </Td>
               <Td className="tabular-nums">{x.distanceM === null ? '—' : cifra(x.distanceM / 1000)}</Td>
             </tr>

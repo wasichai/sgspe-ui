@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -273,12 +274,12 @@ function Clausulas({ acuerdo, escribe }: { acuerdo: Registro; escribe: boolean }
                       <ul>
                         {deLaClausula.map((x) => (
                           <li key={x.id}>
-                            <Link
+                            <EnlaceConRastro
                               to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(x.id)}`}
                               className="text-sg-primary-text underline"
                             >
                               {texto(x, 'code')} · {texto(x, 'title')}
-                            </Link>
+                            </EnlaceConRastro>
                           </li>
                         ))}
                       </ul>
@@ -397,9 +398,12 @@ function Titulares({ acuerdo }: { acuerdo: Registro }) {
       )}
       <h2 className="font-semibold">{t('acuerdos.ficha.asamblea')}</h2>
       {asamblea.data ? (
-        <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(asamblea.data.id)}`} className="text-sg-primary-text underline">
+        <EnlaceConRastro
+          to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(asamblea.data.id)}`}
+          className="text-sg-primary-text underline"
+        >
           {texto(asamblea.data, 'title')} · {opcion(asamblea.data, 'engagement_type')}
-        </Link>
+        </EnlaceConRastro>
       ) : atributo(acuerdo, 'assembly_engagement') ? (
         asamblea.isError ? (
           <FalloDeLectura error={asamblea.error} alReintentar={() => void asamblea.refetch()} />

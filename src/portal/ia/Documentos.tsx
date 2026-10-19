@@ -1,5 +1,5 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Estados'
 import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
@@ -79,9 +79,9 @@ function FuenteCitada({ cita, n }: { cita: Cita; n: number }) {
           <blockquote className="border-l-2 border-sg-ai-border pl-2 text-sg-caption">
             <TextoDeIa texto={cita.quote} />
           </blockquote>
-          <Link to={rutaParaAbrir('evidence', cita.evidenceId)} className="text-sg-primary-text underline">
+          <EnlaceConRastro to={rutaParaAbrir('evidence', cita.evidenceId)} className="text-sg-primary-text underline">
             {t('asistente.abrirDocumento')}
-          </Link>
+          </EnlaceConRastro>
         </>
       ) : (
         <p className="text-sg-caption text-sg-text-muted">{t('ia.cita.fuenteRestringida')}</p>

@@ -1,4 +1,4 @@
-import { useSiguientePaso } from '../contexto/Rastro'
+import { EnlaceConRastro, useSiguientePaso } from '../contexto/Rastro'
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
@@ -115,12 +115,12 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             {convocante.data ? (
               <span className="text-sg-text-secondary">
                 {t('relacionamiento.ficha.convocante')}:{' '}
-                <Link
+                <EnlaceConRastro
                   to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(convocante.data.id)}`}
                   className="text-sg-primary-text underline"
                 >
                   <NombreDelGrupo grupo={convocante.data} />
-                </Link>
+                </EnlaceConRastro>
               </span>
             ) : null}
           </>
@@ -264,12 +264,12 @@ function Acta({ interaccion }: { interaccion: Registro }) {
   return (
     <div className="space-y-2 pt-3 text-sm">
       {acta ? <VistaMarkdown texto={acta} /> : <p className="text-sg-text-muted">{t('relacionamiento.ficha.sinActa')}</p>}
-      <Link
+      <EnlaceConRastro
         to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(interaccion.id)}/minutes`}
         className="text-sg-primary-text underline"
       >
         {redacta ? t('relacionamiento.ficha.editarActa') : t('relacionamiento.ficha.verActa')}
-      </Link>
+      </EnlaceConRastro>
     </div>
   )
 }

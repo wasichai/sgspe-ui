@@ -1,9 +1,9 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { VistasGuardadas } from '../componentes/Lista'
 import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando } from '../componentes/Estados'
@@ -304,12 +304,12 @@ function Pendientes({ proyecto, filtros }: { proyecto?: string; filtros: Filtros
                 <tr key={c.id}>
                   <Td className="font-sg-mono text-sm">{texto(c, 'code')}</Td>
                   <Td className="text-sm">
-                    <Link
+                    <EnlaceConRastro
                       to={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
                       className="text-sg-primary-text underline"
                     >
                       {texto(c, 'title')}
-                    </Link>
+                    </EnlaceConRastro>
                   </Td>
                   <Td>
                     <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
