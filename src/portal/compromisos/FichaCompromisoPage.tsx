@@ -70,6 +70,7 @@ const EDITABLES_SIEMPRE = [
   'origin_justification'
 ]
 const ANTES_DE_APROBAR = ['draft', 'pending_approval']
+const CAMINO = ['draft', 'pending_approval', 'approved', 'in_progress', 'fulfilled', 'verified', 'closed']
 const COMPROBAR = ['submit', 'approve', 'approve_senior', 'approve_direct', 'register_fulfillment', 'verify', 'close']
 
 export function FichaCompromisoPage() {
@@ -150,7 +151,8 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         }
       />
       {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
-      <CaminoDelFlujo objeto="commitment" estado={compromiso.state} />
+      {/* el camino de WF-D sin la excepción (bloqueado): si el compromiso está bloqueado, se agrega igual al camino */}
+      <CaminoDelFlujo objeto="commitment" estado={compromiso.state} camino={CAMINO} />
       <PanelDeDecision
         objeto="commitment"
         estado={compromiso.state}
