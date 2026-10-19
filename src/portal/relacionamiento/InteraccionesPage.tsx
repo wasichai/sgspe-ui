@@ -1,3 +1,6 @@
+import { BotonCrear } from '../componentes/BotonCrear'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th, cn } from '@wasichai/ui'
@@ -66,31 +69,30 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
 
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-sg-h1 font-semibold">{t('relacionamiento.titulo')}</h1>
-        <div className="flex flex-wrap gap-2">
-          {conTablero ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/engagements/dashboard`}>{t('relacionamiento.tablero')}</Link>
-            </Button>
-          ) : null}
-          {can('field_visit', 'READ') ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/field-visits`}>{t('relacionamiento.visitas')}</Link>
-            </Button>
-          ) : null}
-          {proyecto && escribeEnElProyecto && can('field_visit', 'CREATE') ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/field-visits/new`}>{t('relacionamiento.nuevaVisita')}</Link>
-            </Button>
-          ) : null}
-          {proyecto && escribeEnElProyecto && can('engagement', 'CREATE') ? (
-            <Button asChild size="sm">
-              <Link to={`${base}/engagements/new`}>{t('relacionamiento.registrar')}</Link>
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      <EncabezadoDePagina
+        titulo={t('relacionamiento.titulo')}
+        conteo={interacciones.data ? t('relacionamiento.conteo', { count: interacciones.data.length }) : undefined}
+        primaria={<BotonCrear objeto="engagement" etiqueta={t('relacionamiento.registrar')} resto="engagements/new" />}
+        secundarias={
+          <>
+            {conTablero ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`${base}/engagements/dashboard`}>{t('relacionamiento.tablero')}</Link>
+              </Button>
+            ) : null}
+            {can('field_visit', 'READ') ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`${base}/field-visits`}>{t('relacionamiento.visitas')}</Link>
+              </Button>
+            ) : null}
+            {proyecto && escribeEnElProyecto && can('field_visit', 'CREATE') ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`${base}/field-visits/new`}>{t('relacionamiento.nuevaVisita')}</Link>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {territorio === null ? <Alert tone="notice">{t('contexto.noAplica')}</Alert> : null}
       <div className="flex flex-wrap items-center gap-3">
         <div role="group" aria-label={t('relacionamiento.vista')} className="inline-flex rounded-sg-md border border-sg-border-strong">
@@ -340,7 +342,8 @@ export function CodigoDeProyecto({ id, describedPor }: { id: string; describedPo
   if (proyecto.isPending) return <Cargando compacto etiqueta="…" />
   if (proyecto.isError && !proyecto.data)
     return esProhibido(proyecto.error) ? <NoDisponible describedPor={describedPor} /> : <span>{t('comun.errorDeCarga')}</span>
-  return <>{texto(proyecto.data, 'code') || '—'}</>
+  // «código · nombre», enlazado al resumen del proyecto (revisión de UX, etapa 3)
+  return <ProyectoEnLista proyecto={proyecto.data} />
 }
 
 // las festividades de un mes: con proyecto, las de las localidades de sus áreas de influencia aprobadas; sin él, todas. dice

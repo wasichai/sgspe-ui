@@ -2,6 +2,8 @@
 export const ES_RELACIONAMIENTO = {
   titulo: 'Relacionamiento',
   registrar: 'Registrar interacción',
+  conteo_one: '{{count}} interacción',
+  conteo_other: '{{count}} interacciones',
   nuevaVisita: 'Nueva visita de campo',
   tablero: 'Tablero',
   vistas: { mes: 'Mes', semana: 'Semana', lista: 'Lista' },
@@ -232,6 +234,8 @@ export const ES_RELACIONAMIENTO = {
 export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
   titulo: 'Engagement',
   registrar: 'Register engagement',
+  conteo_one: '{{count}} engagement',
+  conteo_other: '{{count}} engagements',
   nuevaVisita: 'New field visit',
   tablero: 'Dashboard',
   vistas: { mes: 'Month', semana: 'Week', lista: 'List' },
