@@ -1,4 +1,4 @@
-import { opcion, rotuloDeFila, rotuloDeOpcion } from './opciones'
+import { opcion, rotuloDeFila, rotuloDeOpcion, rotuloEnIdioma } from './opciones'
 import type { Registro } from './registros'
 
 // los mismos casos que ReportLabelsTest en sgspe: el portal y los entregables escriben igual una opción del modelo
@@ -46,5 +46,12 @@ describe('rotuloDeOpcion', () => {
     expect(rotuloDeFila({ key: 'ESTRATEGICO' })).toBe('Estratégico')
     expect(rotuloDeFila({ key: 'x', label: 'A FAVOR' })).toBe('A favor')
     expect(rotuloDeFila({ key: 'p1', label: 'Proyecto Wayra Ejemplo' })).toBe('Proyecto Wayra Ejemplo')
+  })
+
+  it('en inglés usa el valor traducido si existe y, si no, el rótulo en español', () => {
+    const catalogo = { 'RELACION ACTIVA': 'Active relationship' }
+    expect(rotuloEnIdioma('RELACION ACTIVA', 'en', catalogo)).toBe('Active relationship')
+    expect(rotuloEnIdioma('EN CONTRA', 'en', catalogo)).toBe('En contra')
+    expect(rotuloEnIdioma('RELACION ACTIVA', 'es-PE', catalogo)).toBe('Relación activa')
   })
 })
