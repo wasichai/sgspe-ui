@@ -143,6 +143,15 @@ describe('S45 · biblioteca', () => {
 })
 
 describe('S46 · ficha de evidencia', () => {
+  // revisión de UX, etapa 4: en un proyecto, el encabezado común sin el enlace suelto a la biblioteca (lo dicen las migas)
+  it('la ficha de evidencia lleva el encabezado común, con su tipo y sin el enlace suelto a la biblioteca', async () => {
+    fetch = mockFetch(rutasDeFicha())
+    abrirFicha()
+    expect(await screen.findByRole('heading', { name: 'Lista de beneficiarios', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText(/^Evidencia · /)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Biblioteca' })).not.toBeInTheDocument()
+  })
+
   it('sin DOWNLOAD_RESTRICTED una CONFIDENCIAL muestra sus datos y lo que sustenta, sin descarga', async () => {
     fetch = mockFetch(rutasDeFicha())
     red = espiarRed()

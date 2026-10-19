@@ -15,6 +15,7 @@ export const ES_DOCUMENTOS = {
   subirSinProyecto: 'Una evidencia subida aquí es de la organización, no de un proyecto: para la de un proyecto, elija el proyecto en el selector.',
   // S46
   ficha: {
+    tipo: 'Evidencia',
     volver: 'Biblioteca',
     descargar: 'Descargar',
     descargando: 'Descargando…',
@@ -87,6 +88,7 @@ export const EN_DOCUMENTOS: typeof ES_DOCUMENTOS = {
   vacioAyuda: 'Minutes, photos, letters and receipts are uploaded here or from the record they support, with their classification.',
   subirSinProyecto: 'Evidence uploaded here belongs to the organization, not to a project: for a project’s, pick the project in the selector.',
   ficha: {
+    tipo: 'Evidence',
     volver: 'Library',
     descargar: 'Download',
     descargando: 'Downloading…',

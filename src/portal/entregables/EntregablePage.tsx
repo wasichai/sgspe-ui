@@ -1,3 +1,4 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ConfirmDialog } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -91,21 +92,22 @@ function Entregable({ entregable }: { entregable: Registro }) {
   }
   return (
     <div className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-sg-h1 font-semibold">{texto(entregable, 'title')}</h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
-          <span className="font-sg-mono">{texto(entregable, 'document_code')}</span>
-          <span>{rotuloDeOpcion(tipo)}</span>
-          <EstadoChip objeto="deliverable" estado={entregable.state} />
-          <span>
-            {t('entregables.pagina.periodo', {
-              desde: diaPe(texto(entregable, 'period_start_date')) || '—',
-              hasta: diaPe(texto(entregable, 'period_end_date')) || '—'
-            })}
-          </span>
-          <span>{t('entregables.pagina.niveles', { niveles: NIVELES_DE_ENTREGABLE.map(rotuloDeOpcion).join(', ') })}</span>
-        </div>
-      </header>
+      <EncabezadoDePagina
+        antetitulo={[texto(entregable, 'document_code'), rotuloDeOpcion(tipo)].filter(Boolean).join(' · ')}
+        titulo={texto(entregable, 'title')}
+        chips={
+          <>
+            <EstadoChip objeto="deliverable" estado={entregable.state} />
+            <span className="text-sg-text-secondary">
+              {t('entregables.pagina.periodo', {
+                desde: diaPe(texto(entregable, 'period_start_date')) || '—',
+                hasta: diaPe(texto(entregable, 'period_end_date')) || '—'
+              })}
+            </span>
+            <span className="text-sg-text-secondary">{t('entregables.pagina.niveles', { niveles: NIVELES_DE_ENTREGABLE.map(rotuloDeOpcion).join(', ') })}</span>
+          </>
+        }
+      />
       <CaminoDeEstados estado={entregable.state} />
       <AccionesDelEntregable entregable={entregable} />
       <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
