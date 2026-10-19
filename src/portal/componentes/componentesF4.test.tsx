@@ -35,8 +35,8 @@ describe('piezas comunes de F4', () => {
         <SituacionDePlazo valor="POR REVISAR" revision />
       </>
     )
-    expect(await screen.findByLabelText('Situación de revisión: REVISION VENCIDA')).toHaveClass('text-sg-danger')
-    expect(screen.getByLabelText('Situación de revisión: POR REVISAR')).toHaveClass('text-sg-warning')
+    expect(await screen.findByLabelText('Situación de revisión: Revisión vencida')).toHaveClass('text-sg-danger')
+    expect(screen.getByLabelText('Situación de revisión: Por revisar')).toHaveClass('text-sg-warning')
   })
 
   it('los estados de una queja y de una alerta llevan la etiqueta de su workflow', async () => {
@@ -191,7 +191,7 @@ describe('registros simples', () => {
     abrir(RELACIONISTA, RELACIONES_EN_RIESGOS)
     await userEvent.click(await screen.findByRole('button', { name: 'Señales de conflicto' }))
     const drawer = await screen.findByRole('dialog', { name: 'Reglas' })
-    expect(await within(drawer).findByText('CONTEO DE SEÑALES')).toBeInTheDocument()
+    expect(await within(drawer).findByText('Conteo de señales')).toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
     expect(within(drawer).queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nueva regla' })).not.toBeInTheDocument()
@@ -210,7 +210,7 @@ describe('registros simples', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Señales de conflicto' }))
     const drawer = await screen.findByRole('dialog', { name: 'Reglas' })
     await userEvent.click(await within(drawer).findByRole('button', { name: 'Reintentar' }))
-    expect(await within(drawer).findByText('CONTEO DE SEÑALES')).toBeInTheDocument()
+    expect(await within(drawer).findByText('Conteo de señales')).toBeInTheDocument()
     expect(red.a('GET', '/metadata/objects/early_warning_rule').length).toBeGreaterThanOrEqual(2)
   })
 

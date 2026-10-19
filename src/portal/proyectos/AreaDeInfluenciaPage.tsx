@@ -29,6 +29,7 @@ import { NS, numeroPe } from '../i18n'
 import { Mapa } from '../mapa/Mapa'
 import { ResumenDelArea } from './ResumenDelArea'
 import { SugerenciasDelArea } from './SugerenciasDelArea'
+import { opcion } from '../datos/opciones'
 
 // S10 · área de influencia (screens.md §3, WF-O): versiones, criterios, miembros con su comparación frente a la vigente,
 // alta de miembros en borrador y aprobación por POST /api/sgspe/areas-of-influence/{id}/approve (If-Match y motivo, que
@@ -98,7 +99,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
     <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h1 className="text-sg-h2 font-semibold">{t('areas.titulo', { tipo: texto(area, 'area_type'), version })}</h1>
+          <h1 className="text-sg-h2 font-semibold">{t('areas.titulo', { tipo: opcion(area, 'area_type'), version })}</h1>
           <EstadoChip objeto="area_of_influence" estado={area.state} />
         </div>
         <div className="flex gap-2">
@@ -200,7 +201,7 @@ function FilaDeMiembro({ miembro, comparacion, idDelLugar }: { miembro: Registro
     <tr className={comparacion === 'sale' ? 'text-sg-text-muted line-through' : undefined}>
       <Td>{lugar.isError ? <NoDisponible describedPor={idDelLugar} /> : lugar.isPending ? '…' : texto(lugar.data, 'name') || '—'}</Td>
       <Td className="text-sm">{t(`areas.tiposDeMiembro.${tipo}`)}</Td>
-      <Td className="text-sm">{texto(miembro, 'member_condition')}</Td>
+      <Td className="text-sm">{opcion(miembro, 'member_condition')}</Td>
       <Td className="text-sm">{texto(miembro, 'applied_criteria')}</Td>
       <Td className="text-sm">{texto(miembro, 'rationale')}</Td>
       <Td className="text-sm">{atributo(miembro, 'studied_in_diagnosis') ? t('comun.si') : t('comun.no')}</Td>

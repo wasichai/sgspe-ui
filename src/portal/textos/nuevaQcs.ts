@@ -38,7 +38,7 @@ export const ES_NUEVA_QCS = {
   anonimaAyuda: 'Una QCS anónima no lleva persona ni grupo de interés.',
   confidencialAyuda:
     'Solo la leerán la gestión de quejas, su responsable, usted, que la recibe, y, si es una queja grave, quien aprueba su resolución. El resto del equipo no la verá en listas, tableros ni reportes.',
-  graveAyuda: 'Una queja ALTA o CRITICA la resuelve otra persona: quien aprueba.',
+  graveAyuda: 'Una queja «Alta» o «Crítica» la resuelve otra persona: quien aprueba.',
   ningunGrupo: 'Sin grupo de interés',
   buscarPersona: 'Buscar persona',
   quitar: 'Quitar',
@@ -101,7 +101,7 @@ export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
   anonimaAyuda: 'An anonymous one carries no person or stakeholder.',
   confidencialAyuda:
     'Only grievance management, its owner, you, as receiver, and, for a serious grievance, the approver of its resolution will read it. The rest of the team will not see it in lists, dashboards or reports.',
-  graveAyuda: 'An ALTA or CRITICA grievance is resolved by another person: the approver.',
+  graveAyuda: 'An «Alta» or «Crítica» grievance is resolved by another person: the approver.',
   ningunGrupo: 'No stakeholder',
   buscarPersona: 'Search person',
   quitar: 'Remove',

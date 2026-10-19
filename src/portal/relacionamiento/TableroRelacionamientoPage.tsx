@@ -5,6 +5,7 @@ import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { desglose, useTablero } from '../datos/indicadores'
 import { NS, numeroPe } from '../i18n'
 import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, indicadorDe, SerieConMeta, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import { rotuloDeFila } from '../datos/opciones'
 
 // el tablero de relacionamiento (dashboards.md §5.4, RF-DSH-009), con GET /api/sgspe/dashboards/engagement: actividad por
 // tipo (KPI-ENG-01), reuniones al mes frente a la meta (KPI-ENG-02), reuniones informativas en tabla (KPI-ENG-03: el
@@ -53,7 +54,7 @@ export function TableroRelacionamientoPage() {
                       <tbody>
                         {desglose(i, 'engagement').map((f) => (
                           <tr key={f.key}>
-                            <Td>{f.label ?? f.key}</Td>
+                            <Td>{rotuloDeFila(f)}</Td>
                             <Td className="tabular-nums">{typeof f.value === 'number' ? numeroPe(f.value) : '—'}</Td>
                             <Td className="tabular-nums">{typeof f.femalePercent === 'number' ? `${numeroPe(f.femalePercent)} %` : '—'}</Td>
                             <Td className="tabular-nums">{typeof f.directArea === 'number' ? numeroPe(f.directArea) : '—'}</Td>

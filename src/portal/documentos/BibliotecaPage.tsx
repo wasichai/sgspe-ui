@@ -11,11 +11,12 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
 import { descriptorDe, tamanoPe } from '../datos/archivos'
 import { rutaDeFicha } from '../datos/fichas'
-import { atributo, campoDe, texto, useDefinicion, useRegistros, type Registro } from '../datos/registros'
+import { atributo, campoDe, useDefinicion, useRegistros, type Registro } from '../datos/registros'
 import { diaPe, fechaPe, NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useNombreDeEvidencia } from './api'
 import { FormularioDeEvidencia } from './FormularioDeEvidencia'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S45 · biblioteca de documentos (screens.md §11): las evidencias del alcance (global: todas las de la organización, con la
 // columna Proyecto; un proyecto: las suyas), por página desde el servidor, con búsqueda y filtros en la URL. la clasificación
@@ -51,7 +52,9 @@ export function BibliotecaPage() {
   // en un proyecto la subida exige la asignación vigente (ProjectScopeGuard); en la organización, solo el permiso
   const sube = can('evidence', 'CREATE') && (proyecto === undefined || escribe)
   const chips = [
-    ...(['evidence_type', 'classification', 'q'] as const).filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: lista.filtro(f) })),
+    ...(['evidence_type', 'classification', 'q'] as const)
+      .filter((f) => lista.filtro(f))
+      .map((f) => ({ clave: f, etiqueta: f === 'q' ? lista.filtro(f) : rotuloDeOpcion(lista.filtro(f)) })),
     ...(sinConsentimiento ? [{ clave: 'consent', etiqueta: t('documentos.sinConsentimiento') }] : [])
   ]
   const columnas: Columna[] = [
@@ -69,11 +72,11 @@ export function BibliotecaPage() {
             }
           }
         ]),
-    { id: 'tipo', encabezado: t('documentos.columnas.tipo'), celda: (e) => texto(e, 'evidence_type') || '—' },
+    { id: 'tipo', encabezado: t('documentos.columnas.tipo'), celda: (e) => opcion(e, 'evidence_type') || '—' },
     {
       id: 'clasificacion',
       encabezado: t('documentos.columnas.clasificacion'),
-      celda: (e) => ('classification' in e.attributes ? texto(e, 'classification') : <Restringido />)
+      celda: (e) => ('classification' in e.attributes ? opcion(e, 'classification') : <Restringido />)
     },
     {
       id: 'tamano',

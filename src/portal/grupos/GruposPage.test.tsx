@@ -79,7 +79,7 @@ describe('S16 · lista de grupos de interés', () => {
   it('con acceso, la gerencia social ve la postura y la filtra', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
     await waitFor(() => expect(filas()).toHaveLength(2))
-    expect(within(filas()[0]).getByText('EN CONTRA')).toBeInTheDocument()
+    expect(within(filas()[0]).getByText('En contra')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Postura' }), 'EN CONTRA')
     await waitFor(() => expect(filas()).toHaveLength(1))
   })

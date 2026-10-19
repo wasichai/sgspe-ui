@@ -37,6 +37,7 @@ import { Barras } from '../tableros/comunes'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
 import { VistaMarkdown } from './markdown'
+import { opcion } from '../datos/opciones'
 
 // S23 · ficha de interacción (screens.md §6, flujo 5): qué pasó, con quién, qué se preguntó y qué se acordó. la siguiente
 // transición de WF-C es la acción primaria; "Cerrar" sale deshabilitado con la razón mientras haya preguntas sin respuesta
@@ -82,7 +83,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
       <Rastro />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{texto(interaccion, 'engagement_type')}</p>
+          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(interaccion, 'engagement_type')}</p>
           <h1 className="text-sg-h1 font-semibold">{texto(interaccion, 'title')}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
             <EstadoChip objeto="engagement" estado={interaccion.state} />
@@ -276,8 +277,8 @@ function Participantes({ interaccion }: { interaccion: Registro }) {
                         )}
                       </Td>
                       <Td className="text-sm">{texto(p, 'represented_group') || '—'}</Td>
-                      <Td className="text-sm">{texto(p, 'sex') || '—'}</Td>
-                      <Td className="text-sm">{texto(p, 'participant_scope') || '—'}</Td>
+                      <Td className="text-sm">{opcion(p, 'sex') || '—'}</Td>
+                      <Td className="text-sm">{opcion(p, 'participant_scope') || '—'}</Td>
                       <Td className="text-sm">{asistio === undefined || asistio === null ? '—' : asistio ? t('comun.si') : t('comun.no')}</Td>
                     </tr>
                   )

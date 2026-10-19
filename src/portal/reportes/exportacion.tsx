@@ -10,6 +10,7 @@ import { ACEPTAR_REPORTE, guardarArchivo, nuevaClave, usePedir } from '../datos/
 import { texto } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { rotuloDeOpcion } from '../datos/opciones'
 
 // lo que comparten las exportaciones de Reportes (api.md §4.13): el proyecto, el nivel de divulgación, la lista de verificación
 // de una salida fuera de la organización (checklistConfirmed, RQ-REP-033), el pedido con su propia clave y el error. cada
@@ -135,7 +136,7 @@ export function SelectorDeNivel({ exportacion, niveles, descripciones }: { expor
           vacio={false}
           value={exportacion.nivel}
           onChange={(e) => exportacion.cambiarNivel(e.target.value)}
-          opciones={niveles.map((n) => ({ valor: n, etiqueta: `${n} · ${t(`${descripciones}.${n}`, { defaultValue: n })}` }))}
+          opciones={niveles.map((n) => ({ valor: n, etiqueta: `${rotuloDeOpcion(n)} · ${t(`${descripciones}.${n}`, { defaultValue: n })}` }))}
         />
       )}
     </Campo>

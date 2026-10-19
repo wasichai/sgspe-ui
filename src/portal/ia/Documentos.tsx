@@ -4,12 +4,13 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Estados'
 import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
 import { rutaParaAbrir } from '../datos/fichas'
-import { texto, useRegistro } from '../datos/registros'
+import { useRegistro } from '../datos/registros'
 import { useNombreDeEvidencia, usePuedeDescargar } from '../documentos/api'
 import { NS } from '../i18n'
 import type { Cita, RespuestaConCitas } from './contrato'
 import { MarcaDeIa } from './MarcaDeIa'
 import { TextoDeIa } from './TextoDeIa'
+import { opcion } from '../datos/opciones'
 
 // S05 «Respuesta con citas» (AI-06): la pregunta va sobre los documentos de un proyecto; la respuesta lleva sus fuentes, y
 // cada cita solo para quien descarga la evidencia (RF-DOC-003; el servidor ya filtra, el portal no confía solo en eso)
@@ -69,8 +70,8 @@ function FuenteCitada({ cita, n }: { cita: Cita; n: number }) {
       </p>
       {leida ? (
         <p className="text-sg-caption text-sg-text-muted">
-          {t('asistente.tipo', { valor: texto(leida, 'evidence_type') || '—' })} ·{' '}
-          {t('asistente.clasificacion', { valor: texto(leida, 'classification') || '—' })}
+          {t('asistente.tipo', { valor: opcion(leida, 'evidence_type') || '—' })} ·{' '}
+          {t('asistente.clasificacion', { valor: opcion(leida, 'classification') || '—' })}
         </p>
       ) : null}
       {abrible ? (

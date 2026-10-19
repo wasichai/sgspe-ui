@@ -16,6 +16,7 @@ import { GuardadoParcial, useGuardarInteraccion, type Participante } from './gua
 import { conModo } from './modos'
 import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
+import { rotuloDeOpcion } from '../datos/opciones'
 
 // el modo rápido de campo de S24 (screens.md §6, S55): una sola pantalla con el tipo, la ubicación del teléfono, los
 // grupos presentes, contadores por sexo y ámbito (objetivos de 44 px) y una nota; guarda la interacción como realizada
@@ -150,7 +151,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
         {sexos.flatMap((sexo) =>
           ambitos.map((ambito) => {
             const clave: Clave = `${sexo}|${ambito}`
-            const etiqueta = `${sexo} · ${ambito}`
+            const etiqueta = `${rotuloDeOpcion(sexo)} · ${rotuloDeOpcion(ambito)}`
             return (
               <div key={clave} className="flex items-center justify-between gap-2 text-sm">
                 <span>{etiqueta}</span>

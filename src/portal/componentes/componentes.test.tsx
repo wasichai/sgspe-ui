@@ -7,7 +7,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
-import { Campo } from './Campo'
+import { Campo, SelectNativo } from './Campo'
 import { EstadoChip } from './EstadoChip'
 import { Cargando, Consulta, ErrorDeCarga, esIlegible, ExplicacionDeColumna, NoDisponible, NoEsDeSusProyectos, Restringido, ThConExplicacion } from './Estados'
 import { KpiCard } from './KpiCard'
@@ -200,6 +200,15 @@ describe('Campo (revisión final, M11)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Validar' }))
     expect(region).toHaveTextContent('Obligatorio')
     expect(screen.getByLabelText('Nombre')).toHaveAccessibleDescription('Obligatorio')
+  })
+})
+
+describe('SelectNativo', () => {
+  it('muestra una opción del modelo con su rótulo y conserva el valor crudo', async () => {
+    montar(<SelectNativo aria-label="Postura" opciones={['EN CONTRA PERO ABIERTO A ESCUCHAR', 'DEMO-T1']} />)
+    const opcion = await screen.findByRole('option', { name: 'En contra pero abierto a escuchar' })
+    expect(opcion).toHaveValue('EN CONTRA PERO ABIERTO A ESCUCHAR')
+    expect(screen.getByRole('option', { name: 'DEMO-T1' })).toHaveValue('DEMO-T1')
   })
 })
 

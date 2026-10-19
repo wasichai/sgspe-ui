@@ -10,6 +10,7 @@ import { guardarArchivo, usePedir } from '../datos/http'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { rutaDeLaVersion, seccionDelTipo, useTiposDeEntregable, type FormatoDeArchivo } from './contrato'
+import { rotuloDeOpcion } from '../datos/opciones'
 
 // las versiones emitidas de S50 (deliverables.md §8.4 y §12): cada una con su número, su revisión, su nivel, quién y cuándo, la
 // huella de su PDF y las secciones asistidas por IA. las descargas, por nivel y permiso: INTERNO (PDF y DOCX) con
@@ -69,7 +70,7 @@ export function Versiones({ entregable }: { entregable: Registro }) {
                       <tr key={v.id}>
                         <Td className="text-sm tabular-nums">{numero}</Td>
                         <Td className="text-sm">{texto(v, 'revision')}</Td>
-                        <Td className="text-sm">{nivel}</Td>
+                        <Td className="text-sm">{rotuloDeOpcion(nivel)}</Td>
                         <Td className="text-sm">{texto(v, 'issued_at') ? fechaYHoraPe(new Date(texto(v, 'issued_at'))) : '—'}</Td>
                         <Td className="text-sm">{texto(v, 'issued_by_user_email') || '—'}</Td>
                         <Td className="break-all font-sg-mono text-sg-caption">{texto(v, 'pdf_sha256')}</Td>

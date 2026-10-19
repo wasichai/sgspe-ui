@@ -29,6 +29,7 @@ import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import type { Advertencia } from './api'
 import { Advertencias } from './Advertencias'
 import { EvaluacionDrawer } from './EvaluacionDrawer'
+import { opcion } from '../datos/opciones'
 
 // S17 · ficha de grupo de interés (screens.md §5): para decidir cómo relacionarse, su peso, su postura (restringida), su
 // historia de evaluaciones hasta la línea base y lo que generó. la postura y la confianza del grupo de interés son las
@@ -103,11 +104,11 @@ function Ficha({ grupo }: { grupo: Registro }) {
       <Rastro />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{texto(grupo, 'stakeholder_type')}</p>
+          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
           <h1 className="text-sg-h1 font-semibold">{nombre}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
             <EstadoChip objeto="stakeholder" estado={grupo.state} />
-            <span>{texto(grupo, 'stakeholder_scope')}</span>
+            <span>{opcion(grupo, 'stakeholder_scope')}</span>
             <span>{texto(grupo, 'owner_user_email')}</span>
             {actor.id ? (
               <Link
@@ -141,7 +142,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
         <Tarjeta titulo={t('grupos.ficha.influencia')}>
           {evaluado ? (
             <>
-              <p className="font-semibold">{texto(grupo, 'influence_group')}</p>
+              <p className="font-semibold">{opcion(grupo, 'influence_group')}</p>
               <p className="text-sg-caption">
                 {t('grupos.ficha.indices', {
                   interes: numeroPe(Number(atributo(grupo, 'interest_index'))),
@@ -160,7 +161,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
             <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
           ) : leePostura ? (
             <>
-              <p className="font-semibold">{texto(grupo, 'stance') || '—'}</p>
+              <p className="font-semibold">{opcion(grupo, 'stance') || '—'}</p>
               {ultima && atributo(ultima, 'stance_changed') ? <p className="text-sg-caption text-sg-warning">{t('grupos.ficha.cambio')}</p> : null}
             </>
           ) : (
@@ -205,11 +206,11 @@ function Ficha({ grupo }: { grupo: Registro }) {
               {(evaluaciones.data ?? []).map((e, i, todas) => (
                 <li key={e.id} className="border-l-2 border-sg-border pl-3">
                   <p className="font-medium">
-                    {diaPe(texto(e, 'assessment_date'))} · {texto(e, 'basis')}
+                    {diaPe(texto(e, 'assessment_date'))} · {opcion(e, 'basis')}
                     {i === todas.length - 1 ? <span className="ml-1 text-sg-caption text-sg-text-muted">({t('grupos.ficha.lineaBase')})</span> : null}
                   </p>
                   <p>
-                    {texto(e, 'influence_group')} ·{' '}
+                    {opcion(e, 'influence_group')} ·{' '}
                     {t('grupos.ficha.indices', {
                       interes: numeroPe(Number(atributo(e, 'interest_index'))),
                       poder: numeroPe(Number(atributo(e, 'power_index')))
@@ -218,7 +219,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
                   </p>
                   {definicionDeEvaluacion.data ? (
                     leePosturaDeEvaluacion ? (
-                      <p className="text-sg-text-secondary">{texto(e, 'stance') || '—'}</p>
+                      <p className="text-sg-text-secondary">{opcion(e, 'stance') || '—'}</p>
                     ) : (
                       <Restringido />
                     )

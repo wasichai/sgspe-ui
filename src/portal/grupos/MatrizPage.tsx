@@ -7,6 +7,7 @@ import { desglose, useIndicador, type Indicador } from '../datos/indicadores'
 import { atributo, type Registro } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { escapar, useVersionDeTema } from '../graficos/tema'
+import { rotuloDeOpcion } from '../datos/opciones'
 import { NS, numeroPe } from '../i18n'
 import { colorDe } from '../mapa/colores'
 import { ConsultaDeTablero, FiltrosDeTablero, FiltrosIgnorados, useFiltrosDeTablero } from '../tableros/comunes'
@@ -112,7 +113,7 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
           type: 'scatter',
           symbolSize: 12,
           data: puntos.map((p) => ({
-            value: [p.interest, p.power, p.influenceGroup ?? '', nombre(p)],
+            value: [p.interest, p.power, rotuloDeOpcion(p.influenceGroup ?? ''), nombre(p)],
             name: p.key,
             // SVG no lee var() ni currentColor en los atributos de ECharts: el anillo sale del token
             itemStyle: p.overridden ? { borderWidth: 3, borderColor: colorDe('--sg-text') } : undefined
@@ -155,7 +156,7 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
           alElegir={(id) => navegar(`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(id)}`)}
           datos={{
             columnas: [t('grupos.columnas.grupo'), t('grupos.matriz.interes'), t('grupos.matriz.poder'), t('grupos.columnas.influencia')],
-            filas: puntos.map((p) => [nombre(p), numeroPe(p.interest!), numeroPe(p.power!), p.influenceGroup ?? ''])
+            filas: puntos.map((p) => [nombre(p), numeroPe(p.interest!), numeroPe(p.power!), rotuloDeOpcion(p.influenceGroup ?? '')])
           }}
         />
       </div>
@@ -167,14 +168,14 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
               <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(p.key)}`} className="text-sg-primary-text underline">
                 {nombre(p)}
               </Link>{' '}
-              · {p.influenceGroup} ({numeroPe(p.interest!)}, {numeroPe(p.power!)})
+              · {rotuloDeOpcion(p.influenceGroup ?? '')} ({numeroPe(p.interest!)}, {numeroPe(p.power!)})
               {p.overridden ? (
                 <span className="text-sg-caption text-sg-text-muted" title={p.overrideReason}>
                   {' '}
                   · {t('grupos.matriz.ajustado')}
                 </span>
               ) : null}
-              {p.stance ? <span className="text-sg-caption text-sg-text-muted"> · {p.stance}</span> : null}
+              {p.stance ? <span className="text-sg-caption text-sg-text-muted"> · {rotuloDeOpcion(p.stance)}</span> : null}
             </li>
           ))}
         </ul>

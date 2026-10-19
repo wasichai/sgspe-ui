@@ -152,7 +152,7 @@ describe('S08 · Project 360, resumen', () => {
     expect(sinPostura).toHaveAttribute('title', 'Su rol no puede leer un dato de esta cifra')
     expect(red.a('GET', '/sgspe/dashboards/project').length).toBeGreaterThan(0)
     expect(within(paisaje).getByText('Posturas')).toBeInTheDocument()
-    expect(within(paisaje).queryByText(/A FAVOR/)).not.toBeInTheDocument()
+    expect(within(paisaje).queryByText(/A favor/)).not.toBeInTheDocument()
     fetch.restore()
     document.body.innerHTML = ''
     fetch = abrirPortal(
@@ -175,8 +175,8 @@ describe('S08 · Project 360, resumen', () => {
         ]
       })
     )
-    expect(await screen.findByText('A FAVOR: 5')).toBeInTheDocument()
-    expect(screen.getByText('EN CONTRA: 2')).toBeInTheDocument()
+    expect(await screen.findByText('A favor: 5')).toBeInTheDocument()
+    expect(screen.getByText('En contra: 2')).toBeInTheDocument()
     expect(screen.queryByText('No disponible')).not.toBeInTheDocument()
   })
 

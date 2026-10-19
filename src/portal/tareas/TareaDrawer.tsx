@@ -11,6 +11,7 @@ import { rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, useActualizar, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { opcion } from '../datos/opciones'
 
 // los orígenes de una tarea (task: exactamente uno, planes 3.1 y 4.1): los de F3 y, desde F4, las tres QCS, el riesgo y la alerta
 // (AUT-02, AUT-09, AUT-11, JOB-01). una QCS confidencial que quien mira no lee se abre como «Registro reservado» (/r/…); los de F5
@@ -67,7 +68,7 @@ export function TareaDrawer({ tarea, alCerrar }: { tarea: Registro; alCerrar: ()
         </div>
         <div>
           <dt className="text-sg-text-muted">{t('tareas.ficha.prioridad')}</dt>
-          <dd>{texto(tarea, 'priority') || '—'}</dd>
+          <dd>{opcion(tarea, 'priority') || '—'}</dd>
         </div>
       </dl>
       {origen ? (

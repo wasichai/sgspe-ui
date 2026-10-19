@@ -24,6 +24,7 @@ import { NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { AntesDeAprobar } from './AntesDeAprobar'
 import { EntregaDelAporte } from './EntregaDelAporte'
+import { opcion } from '../datos/opciones'
 
 // S44 · aporte social (screens.md §10, WF-P, spec F5 §3.3): la anatomía de design-system.md §6.1 con las transiciones del rol (toda
 // transición lleva motivo: requiresReason; aprobar, adquirir, entregar y cerrar se comprueban antes con transition-checks), «Para qué
@@ -114,7 +115,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {[texto(aporte, 'contribution_type'), texto(aporte, 'occasion')].filter(Boolean).join(' · ') || '—'}
+            {[opcion(aporte, 'contribution_type'), texto(aporte, 'occasion')].filter(Boolean).join(' · ') || '—'}
           </p>
           <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -237,7 +238,7 @@ function ItemsDelAporte({ aporte }: { aporte: Registro }) {
   const derivado = aDiezmilesimos(atributo(aporte, 'total_amount'))
   const columnas: ColumnaSimple[] = [
     { id: 'descripcion', encabezado: t('fichaAporte.items.columnas.descripcion'), celda: (r) => texto(r, 'description') },
-    { id: 'tipo', encabezado: t('fichaAporte.items.columnas.tipo'), celda: (r) => texto(r, 'item_kind') || '—' },
+    { id: 'tipo', encabezado: t('fichaAporte.items.columnas.tipo'), celda: (r) => opcion(r, 'item_kind') || '—' },
     {
       id: 'cantidad',
       encabezado: t('fichaAporte.items.columnas.cantidad'),

@@ -11,6 +11,7 @@ import { Grafico } from '../graficos/Grafico'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { Barras, ConsultaDeTablero, FiltrosDeTablero, indicadorDe, NotasDeIndicador, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import { rotuloDeFila } from '../datos/opciones'
 
 // S34 · tablero de QCS (dashboards.md §5.7, screens.md §12): GET /api/sgspe/dashboards/attention en una llamada, con los filtros de
 // periodo, territorio y ámbito. zonas: el flujo por tipo (KPI-GRV-01 a 06, desglose `type`), las absueltas (KPI-GRV-07, «n de
@@ -71,7 +72,7 @@ export function TableroAtencionPage() {
                       <Barras
                         key={d}
                         titulo={t(`tableroAtencion.dimensiones.${d}`)}
-                        filas={desglose(i, d).map((f) => ({ nombre: f.label ?? f.key, valor: f.value }))}
+                        filas={desglose(i, d).map((f) => ({ nombre: rotuloDeFila(f), valor: f.value }))}
                       />
                     ))}
                   </div>
@@ -157,7 +158,7 @@ function Tiempos({ indicador }: { indicador: Indicador }) {
         <tbody>
           {desglose(indicador, 'type').map((f) => (
             <tr key={f.key}>
-              <Td className="text-sm">{t(`comun.qcs.plural.${f.key}`, { defaultValue: f.label ?? f.key })}</Td>
+              <Td className="text-sm">{t(`comun.qcs.plural.${f.key}`, { defaultValue: rotuloDeFila(f) })}</Td>
               <Td className="text-sm tabular-nums">{cifra(f.value)}</Td>
               <Td className="text-sm tabular-nums">{cifra(f.attended)}</Td>
               <Td className="text-sm tabular-nums">{f.key === 'stakeholder_request' ? t('tableroAtencion.sinPlazo') : cifra(f.onTime, ' %')}</Td>

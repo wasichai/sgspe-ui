@@ -48,6 +48,29 @@ describe('piezas comunes de F5', () => {
   })
 })
 
+describe('apariencia de los estados de F7 y F8', () => {
+  it.each([
+    ['deliverable', 'draft', 'neutral', 'CircleDashed'],
+    ['deliverable', 'in_review', 'info', 'Clock'],
+    ['deliverable', 'observed', 'warning', 'Eye'],
+    ['deliverable', 'approved', 'success', 'CircleCheck'],
+    ['deliverable', 'issued', 'success', 'BadgeCheck'],
+    ['deliverable', 'voided', 'final', 'X'],
+    ['ai_suggestion', 'proposed', 'info', 'Inbox'],
+    ['ai_suggestion', 'accepted', 'success', 'CircleCheck'],
+    ['ai_suggestion', 'rejected', 'final', 'X'],
+    ['ai_suggestion', 'duplicate', 'final', 'Copy']
+  ])('%s · %s tiene el tono %s y el ícono %s', (objeto, estado, tono, icono) => {
+    const apariencia = aparienciaDe(objeto, estado)
+    expect(apariencia.tono).toBe(tono)
+    expect(apariencia.Icono.displayName).toBe(icono)
+  })
+
+  it('un estado que no conoce no lleva el ícono de prohibido', () => {
+    expect(aparienciaDe('inventado', 'x').Icono.displayName).toBe('CircleDashed')
+  })
+})
+
 // F5: una lista hija que ya no cambia (los ítems de un aporte aprobado) lo dice y no ofrece escribir; lo que la pantalla deja viejo
 // tras escribir (el total del aporte, la consulta en seco) se avisa con alCambiar
 describe('registros simples de F5', () => {
@@ -86,7 +109,7 @@ describe('registros simples de F5', () => {
     expect(await screen.findByText('El aporte ya salió de «Solicitado»: sus ítems no cambian.')).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Estantes de madera' }))
     const drawer = await screen.findByRole('dialog', { name: 'Ítems' })
-    expect(await within(drawer).findByText('BIEN')).toBeInTheDocument()
+    expect(await within(drawer).findByText('Bien')).toBeInTheDocument()
     expect(within(drawer).queryByRole('textbox')).not.toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo ítem' })).not.toBeInTheDocument()

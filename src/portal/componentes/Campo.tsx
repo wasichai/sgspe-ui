@@ -1,6 +1,7 @@
 import { cn } from '@wasichai/ui'
 import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { rotuloDeOpcion } from '../datos/opciones'
 import { NS } from '../i18n'
 
 // un campo con su etiqueta visible y su error enlazado por aria-describedby (design-system.md §3.8 y §7)
@@ -56,7 +57,7 @@ export function SelectNativo({
       {opciones.map((o) =>
         typeof o === 'string' ? (
           <option key={o} value={o}>
-            {o}
+            {rotuloDeOpcion(o)}
           </option>
         ) : (
           <option key={o.valor} value={o.valor}>

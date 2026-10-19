@@ -17,6 +17,7 @@ import { rutaDeFicha } from '../datos/fichas'
 import { atributo, texto, useActualizar, useRegistro, useTodos, useTodosConTope, type Registro } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { opcion } from '../datos/opciones'
 
 // S41 · centro de alerta temprana (screens.md §9, flujo 14): las alertas del proyecto por vista (por triar, confirmadas, todas,
 // cerradas), creadas por JOB-04 o a mano, y la ficha de una alerta: qué la disparó, la regla que la creó (nunca su clave de origen,
@@ -76,7 +77,7 @@ export function AlertasPage() {
                       {texto(a, 'title')}
                     </Link>
                   </Td>
-                  <Td className="text-sm">{texto(a, 'severity') || '—'}</Td>
+                  <Td className="text-sm">{opcion(a, 'severity') || '—'}</Td>
                   <Td className="text-sm">
                     {atributo(a, 'early_warning_rule') ? (
                       <RegistroVinculado objeto="early_warning_rule" id={texto(a, 'early_warning_rule')} />
@@ -136,7 +137,7 @@ function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <EstadoChip objeto="early_warning" estado={alerta.state} />
             <span>
-              {t('alertas.ficha.severidad')}: {texto(alerta, 'severity') || t('alertas.ficha.sinSeveridad')}
+              {t('alertas.ficha.severidad')}: {opcion(alerta, 'severity') || t('alertas.ficha.sinSeveridad')}
             </span>
             {texto(alerta, 'detected_at') ? <span>{t('alertas.ficha.detectada', { fecha: fechaYHoraPe(new Date(texto(alerta, 'detected_at'))) })}</span> : null}
           </div>
@@ -181,7 +182,7 @@ function Regla({ alerta }: { alerta: Registro }) {
         ) : regla.data ? (
           <dl className="space-y-1">
             <Dato termino={t('alertas.ficha.reglaNombre')}>{texto(regla.data, 'name')}</Dato>
-            <Dato termino={t('alertas.ficha.reglaTipo')}>{texto(regla.data, 'rule_kind')}</Dato>
+            <Dato termino={t('alertas.ficha.reglaTipo')}>{opcion(regla.data, 'rule_kind')}</Dato>
             <Dato termino={t('alertas.ficha.reglaUmbral')}>{texto(regla.data, 'threshold') || '—'}</Dato>
             <Dato termino={t('alertas.ficha.reglaVentana')}>
               {texto(regla.data, 'window_days') ? t('alertas.ficha.reglaDias', { n: texto(regla.data, 'window_days') }) : '—'}
@@ -256,7 +257,7 @@ function Senales({ alerta, escribe }: { alerta: Registro; escribe: boolean }) {
           {senales.data.map((s) => (
             <li key={s.id} className="space-y-1 rounded-sg-md border border-sg-border p-3 text-sm">
               <p className="text-sg-caption text-sg-text-muted">
-                {texto(s, 'source_type') || t('alertas.ficha.sinFuente')} · {texto(s, 'received_at') ? fechaYHoraPe(new Date(texto(s, 'received_at'))) : '—'}
+                {opcion(s, 'source_type') || t('alertas.ficha.sinFuente')} · {texto(s, 'received_at') ? fechaYHoraPe(new Date(texto(s, 'received_at'))) : '—'}
               </p>
               <p className="whitespace-pre-line">{texto(s, 'description')}</p>
             </li>

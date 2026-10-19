@@ -14,6 +14,7 @@ import { PanelDelBorrador } from './PanelDelBorrador'
 import { SugerenciaDeSeccion } from './SugerenciaDeSeccion'
 import { Versiones } from './Versiones'
 import { cambioDespuesDelBorrador, ESTADOS_DE_WF_H, NIVELES_DE_ENTREGABLE, ORIGEN_IA } from './tipos'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S50 · entregable por secciones (screens.md, deliverables.md §8): revisar, aprobar y emitir sabiendo que se emite lo revisado.
 // la sección abierta viaja en ?seccion=<clave>; sin ella, la primera. una sección cambiada después de congelar el modelo bloquea
@@ -94,7 +95,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
         <h1 className="text-sg-h1 font-semibold">{texto(entregable, 'title')}</h1>
         <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
           <span className="font-sg-mono">{texto(entregable, 'document_code')}</span>
-          <span>{tipo}</span>
+          <span>{rotuloDeOpcion(tipo)}</span>
           <EstadoChip objeto="deliverable" estado={entregable.state} />
           <span>
             {t('entregables.pagina.periodo', {
@@ -128,7 +129,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
                         >
                           <span className="block font-medium">{texto(s, 'title')}</span>
                           <span className="flex flex-wrap gap-1 text-sg-caption">
-                            <span className={asistida ? 'text-sg-ai' : 'text-sg-text-muted'}>{texto(s, 'content_origin')}</span>
+                            <span className={asistida ? 'text-sg-ai' : 'text-sg-text-muted'}>{opcion(s, 'content_origin')}</span>
                             {seccionDelTipo(tipos.data, tipo, clave)?.assisted ? (
                               <span className="text-sg-ai">· {t('entregables.secciones.conIa')}</span>
                             ) : null}

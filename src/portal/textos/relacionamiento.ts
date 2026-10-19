@@ -149,7 +149,7 @@ export const ES_RELACIONAMIENTO = {
     devuelta: 'Devuelta con este motivo: {{motivo}}',
     soloLectura: 'El acta ya no se edita en este estado.',
     proponerLlega: 'Proponer un compromiso desde el texto llega en F3.',
-    firmada: 'El acta firmada se sube como evidencia ACTA (F3): no es un estado.',
+    firmada: 'El acta firmada se sube como evidencia «Acta» (F3): no es un estado.',
     motivoNoLeido: 'No se pudo leer el motivo de la devolución.',
     sinListas: 'Los asistentes o las preguntas no se leyeron completos: no se pueden insertar en el acta.',
     restringida: 'Su cuenta no puede leer el acta.',

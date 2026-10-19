@@ -76,7 +76,7 @@ describe('reporte unificado de QCS', () => {
     expect(await within(screen.getByRole('table', { name: 'Quejas: Por estado' })).findByText('En atención')).toBeInTheDocument()
     const lista = screen.getByRole('table', { name: 'Quejas, consultas y solicitudes del reporte' })
     expect(within(lista).getByRole('link', { name: 'Q-001' })).toHaveAttribute('href', '/projects/p1/grievances/g1')
-    expect(within(lista).getByLabelText('Situación de plazo: VENCIDO')).toBeInTheDocument()
+    expect(within(lista).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
   })
 
   it('«Anónima» sin dato dice «—», no «No»', async () => {

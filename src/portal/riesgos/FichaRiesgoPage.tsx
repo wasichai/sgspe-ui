@@ -27,6 +27,7 @@ import { useRevisarRiesgo } from './comandos'
 import { Impactos } from './ImpactosPage'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { nivelDePuntaje, umbralesDe } from './niveles'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S40 · ficha de riesgo (screens.md §9, flujos 14 y 15): el nivel vigente, cómo llegó ahí y qué se hace para bajarlo. «Nueva
 // revisión» es el endpoint de revisiones (api.md §4.7): las revisiones son inmutables y una se corrige con otra; la primera aplica
@@ -113,7 +114,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {texto(riesgo, 'code')} · {texto(riesgo, 'category') || '—'}
+            {texto(riesgo, 'code')} · {opcion(riesgo, 'category') || '—'}
           </p>
           <h1 className="text-sg-h1 font-semibold">{texto(riesgo, 'title')}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -228,7 +229,11 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
           alCerrar={() => setRevisando(false)}
           alRegistrar={(nivel) => {
             setRevisando(false)
-            setHecha(nivel ? t('fichaRiesgo.revision.hecha', { nivel }) : t('fichaRiesgo.revision.hechaSinNivel'))
+            setHecha(
+              nivel
+                ? t('fichaRiesgo.revision.hecha', { nivel: t(`tableroRiesgos.niveles.${nivel}`, { defaultValue: rotuloDeOpcion(nivel) }) })
+                : t('fichaRiesgo.revision.hechaSinNivel')
+            )
           }}
         />
       ) : null}
@@ -336,7 +341,7 @@ function Revisiones({ consulta }: { consulta: ReturnType<typeof useTodos> }) {
                 <Td>
                   <NivelDeRiesgo valor={atributo(r, 'risk_level')} residual={atributo(r, 'residual') === true} />
                 </Td>
-                <Td className="text-sm">{texto(r, 'trend') || '—'}</Td>
+                <Td className="text-sm">{opcion(r, 'trend') || '—'}</Td>
                 <Td className="text-sm">{atributo(r, 'residual') === true ? t('fichaRiesgo.revisiones.residual') : t('fichaRiesgo.revisiones.vigente')}</Td>
                 <Td className="whitespace-pre-line text-sm">{texto(r, 'notes') || '—'}</Td>
                 <Td className="text-sm">{texto(r, 'assessor_user_email') || '—'}</Td>
@@ -414,7 +419,7 @@ function NuevaRevision({
           </div>
           {puntaje !== null ? (
             <p role="status" className="text-sm">
-              {t('fichaRiesgo.revision.anticipo', { s: puntaje, nivel: nivelDePuntaje(puntaje, umbralesDe(proyecto.data)) })}
+              {t('fichaRiesgo.revision.anticipo', { s: puntaje, nivel: t(`tableroRiesgos.niveles.${nivelDePuntaje(puntaje, umbralesDe(proyecto.data))}`) })}
             </p>
           ) : null}
           <label className="flex items-start gap-2 text-sm">
@@ -478,7 +483,7 @@ function LoAlimentan({ riesgo }: { riesgo: Registro }) {
             {(consulta.data ?? []).map((r) => (
               <li key={r.id}>
                 <EnlaceDeFicha objeto={objeto} registro={r}>
-                  {[texto(r, 'code'), texto(r, 'title') || texto(r, 'category')].filter(Boolean).join(' · ')}
+                  {[texto(r, 'code'), texto(r, 'title') || opcion(r, 'category')].filter(Boolean).join(' · ')}
                 </EnlaceDeFicha>{' '}
                 <EstadoChip objeto={objeto} estado={r.state} />
               </li>

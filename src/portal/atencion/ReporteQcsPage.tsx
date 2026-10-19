@@ -13,6 +13,7 @@ import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { esQcs, OBJETOS_DE_QCS, rutaDeQcs, type ObjetoDeQcs } from '../datos/atencion'
 import { codigoDelError, usePedir } from '../datos/http'
 import { campoDe, consulta, useDefinicion } from '../datos/registros'
+import { rotuloDeOpcion } from '../datos/opciones'
 import { diaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 
@@ -306,7 +307,7 @@ function Desglose({ tipo, desglose, filas }: { tipo: ObjetoDeQcs; desglose: (typ
       <tbody>
         {filas.map((f) => (
           <tr key={f.key}>
-            <Td className="text-sm">{desglose === 'byState' ? (etiquetas[f.key] ?? f.key) : f.key}</Td>
+            <Td className="text-sm">{desglose === 'byState' ? (etiquetas[f.key] ?? f.key) : rotuloDeOpcion(f.key)}</Td>
             <Td className="text-sm tabular-nums">{numeroPe(f.value)}</Td>
           </tr>
         ))}

@@ -154,7 +154,7 @@ describe('S07 · crear proyecto', () => {
       await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     }
     expect(await screen.findByText(/CRS de trabajo informado/)).toHaveAttribute('data-cumple', 'true')
-    await waitFor(() => expect(screen.getByText(/Una parte CLIENTE u OPERADOR/)).toHaveAttribute('data-cumple', 'true'))
+    await waitFor(() => expect(screen.getByText(/Una parte «Cliente» u «Operador»/)).toHaveAttribute('data-cumple', 'true'))
     await userEvent.click(screen.getByRole('button', { name: 'Crear y enviar a revisión' }))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p9/overview'))
     expect(red.a('POST', '/objects/project/records/p9/transitions/submit_for_review')).toHaveLength(1)
@@ -262,7 +262,7 @@ describe('S07 · asignación del equipo', () => {
     fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, permisos({ ...PAD.objects, project_party: ['READ'] }), rutas())
     await screen.findByRole('heading', { name: 'Completar proyecto' })
     await avanzar(2)
-    expect(await screen.findByText(/CLIENTE/)).toBeInTheDocument()
+    expect(await screen.findByText(/Cliente/)).toBeInTheDocument()
     expect(screen.queryByRole('searchbox', { name: 'Organización' })).not.toBeInTheDocument()
   })
 

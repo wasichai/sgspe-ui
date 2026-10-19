@@ -98,7 +98,7 @@ describe('S47 · mis tareas', () => {
     await userEvent.click(within(tabla).getByRole('button', { name: 'Abrir Ejecutar compromiso C-001' }))
     const drawer = await screen.findByRole('dialog')
     expect(await within(drawer).findByRole('button', { name: 'Iniciar' })).toBeInTheDocument()
-    expect(within(drawer).getByLabelText('Situación de plazo: VENCIDO')).toBeInTheDocument()
+    expect(within(drawer).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
   })
 
   it('el tablero agrupa por estado y el calendario ubica cada tarea en su día de vencimiento', async () => {

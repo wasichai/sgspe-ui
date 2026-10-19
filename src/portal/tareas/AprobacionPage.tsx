@@ -16,6 +16,7 @@ import { diaPe, NS } from '../i18n'
 import { useAplicarTransicion, useComprobacion } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { APROBACIONES_DE, rutaDeDecision, useAprobacionesPendientes } from './AprobacionesPage'
+import { opcion } from '../datos/opciones'
 
 // S31 · aprobación de compromiso (/tasks/approvals/commitment/:recordId; screens.md §7, flujo 8): la bandeja a la izquierda,
 // el compromiso con su origen y la decisión con motivo obligatorio (commitment es requiresReason); a la derecha, las reglas de
@@ -121,7 +122,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
                 to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(origen.data.id)}`}
                 className="text-sg-primary-text underline"
               >
-                {texto(origen.data, 'title')} · {texto(origen.data, 'engagement_type')}
+                {texto(origen.data, 'title')} · {opcion(origen.data, 'engagement_type')}
               </Link>
             ) : !atributo(compromiso, 'origin_engagement') ? (
               t('aprobaciones.decision.sinOrigen')

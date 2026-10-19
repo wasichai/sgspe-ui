@@ -23,6 +23,7 @@ import { usePedir } from '../datos/http'
 import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
+import { opcion } from '../datos/opciones'
 
 // S30 · crear compromiso (screens.md §7, flujo 8): los siete pasos de la matriz de DOC-01 (qué, origen, solicitantes,
 // beneficiarios, monto y campaña, plazo y responsable, revisión). el alta exige monto (RN-COM-004) y, como commitment es
@@ -396,7 +397,7 @@ function Asistente() {
                   <p className="text-sg-body-sm font-medium">{nombreDeCampo('origin_engagement')}</p>
                   {origen ? (
                     <p className="text-sm">
-                      {texto(origen, 'title')} · {texto(origen, 'engagement_type')}{' '}
+                      {texto(origen, 'title')} · {opcion(origen, 'engagement_type')}{' '}
                       <button
                         type="button"
                         className="text-sg-caption text-sg-primary-text underline"
@@ -413,7 +414,7 @@ function Asistente() {
                       objeto="engagement"
                       etiqueta={t('nuevoCompromiso.buscarInteraccion')}
                       filtros={{ project: projectId }}
-                      rotulo={(r) => `${texto(r, 'title')} · ${texto(r, 'engagement_type')}`}
+                      rotulo={(r) => `${texto(r, 'title')} · ${opcion(r, 'engagement_type')}`}
                       alElegir={(r) => {
                         setOrigen(r)
                         setFaltaJustificacion(false)

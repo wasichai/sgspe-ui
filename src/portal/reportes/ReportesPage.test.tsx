@@ -433,7 +433,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       red = espiarRed([{ method: 'POST', path: '/sgspe/exports/commitment-matrix', responder: () => archivoXlsx('matriz.xlsx') }])
       const seccion = await screen.findByRole('region', { name: 'Matriz de compromisos' })
       const nivel = within(seccion).getByRole('combobox', { name: 'Nivel de divulgación' })
-      expect(within(nivel).getByRole('option', { name: /PUBLICO · Público: solo conteos por estado y tema y por tipo de recurso/ })).toBeInTheDocument()
+      expect(within(nivel).getByRole('option', { name: /Público · Público: solo conteos por estado y tema y por tipo de recurso/ })).toBeInTheDocument()
       expect(within(nivel).queryByRole('option', { name: /grupo de influencia/ })).not.toBeInTheDocument()
       await userEvent.selectOptions(nivel, 'PUBLICO')
       expect(within(seccion).getByText(/«Por estado y tema» y «Por tipo de recurso»/)).toBeInTheDocument()

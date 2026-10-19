@@ -13,6 +13,7 @@ import { Rastro } from '../contexto/Rastro'
 import { usePedir } from '../datos/http'
 import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
+import { opcion } from '../datos/opciones'
 
 // S18 · ficha de actor (screens.md §5): la persona u organización detrás de uno o varios grupos de interés, con sus cargos,
 // su red de relaciones, los proyectos donde es grupo de interés y sus medios de contacto con consentimiento. el actor es
@@ -72,7 +73,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
           <h1 className="text-sg-h1 font-semibold">{nombre}</h1>
           {tipo === 'organization' ? (
             <p className="text-sm text-sg-text-secondary">
-              {[texto(actor, 'affiliation'), texto(actor, 'territorial_level')].filter(Boolean).join(' · ')}
+              {[opcion(actor, 'affiliation'), opcion(actor, 'territorial_level')].filter(Boolean).join(' · ')}
               {comunidad.data ? (
                 <>
                   {' · '}
@@ -153,7 +154,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
               {(contactos.data ?? []).map((c) => (
                 <li key={c.id}>
                   {/* una clave ausente del GET es un campo restringido (security.md §7.9): se dice, no se deja vacío */}
-                  {texto(c, 'channel')}: {'contact_value' in c.attributes ? texto(c, 'contact_value') : <Restringido />}
+                  {opcion(c, 'channel')}: {'contact_value' in c.attributes ? texto(c, 'contact_value') : <Restringido />}
                   {'consent_given' in c.attributes && c.attributes.consent_given !== true ? (
                     <span className="ml-1 text-sg-caption text-sg-warning">({t('grupos.actor.sinConsentimiento')})</span>
                   ) : null}
@@ -207,7 +208,7 @@ function FilaDeCargo({ cargo, tipo }: { cargo: Registro; tipo: Tipo }) {
       <Td className="text-sm">
         <ActorVinculado objeto={otro} id={atributo<string>(cargo, otro)} enlazar={false} />
       </Td>
-      <Td className="text-sm">{texto(cargo, 'position_status')}</Td>
+      <Td className="text-sm">{opcion(cargo, 'position_status')}</Td>
       <Td className="text-sm">
         {texto(cargo, 'term_start_date') || '…'} – {texto(cargo, 'term_end_date') || '…'}
       </Td>
@@ -219,7 +220,7 @@ function FilaDeRelacion({ relacion, otro }: { relacion: Registro; otro: 'to' | '
   const persona = atributo<string>(relacion, `${otro}_person`)
   return (
     <tr>
-      <Td className="text-sm">{texto(relacion, 'relationship_type')}</Td>
+      <Td className="text-sm">{opcion(relacion, 'relationship_type')}</Td>
       <Td className="text-sm">
         <ActorVinculado objeto={persona ? 'person' : 'organization'} id={persona ?? atributo<string>(relacion, `${otro}_organization`)} enlazar />
       </Td>

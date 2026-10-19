@@ -9,6 +9,7 @@ import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { atributo, texto, useCrear, useDefinicion, useRegistro, useTodos } from '../datos/registros'
 import { NS } from '../i18n'
 import { FormularioDeAsignacion } from './FormularioDeAsignacion'
+import { opcion } from '../datos/opciones'
 
 // un error de campo se ve junto a su control; el aviso al pie queda para lo que no cae en un campo que se dibuja
 const avisoAlPie = (hayError: boolean, porCampo: Record<string, string>, visibles: readonly string[]) => {
@@ -39,7 +40,7 @@ export function PartesDelProyecto({ proyecto, editable = true }: { proyecto: str
           const organizacion = atributo(p, 'organization')
           return (
             <li key={p.id}>
-              {texto(p, 'party_role')} · {organizacion ? <OrganizacionNombre id={String(organizacion)} /> : '—'}
+              {opcion(p, 'party_role')} · {organizacion ? <OrganizacionNombre id={String(organizacion)} /> : '—'}
             </li>
           )
         })}

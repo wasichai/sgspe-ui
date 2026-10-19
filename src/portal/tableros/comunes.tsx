@@ -12,6 +12,7 @@ import { texto, useDefinicion, useTodos } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { fechaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { rotuloDeFila } from '../datos/opciones'
 
 // la fila de filtros de dashboards.md §3.1, en la URL: proyecto (el del contexto; sin él, las asignaciones de la persona),
 // periodo, territorio (el chip) y ámbito; desde F3, la campaña de exploración y el responsable (?explorationCampaign=, ?owner=),
@@ -129,7 +130,7 @@ export const indicadorDe = (indicadores: Indicador[] | undefined, code: string) 
 export function diezYOtros(filas: { key: string; label?: string; value: number | null }[], otros: string): { nombre: string; valor: number | null }[] {
   const ordenadas = [...filas]
     .sort((a, b) => (a.value === null ? 1 : 0) - (b.value === null ? 1 : 0) || (b.value ?? 0) - (a.value ?? 0))
-    .map((f) => ({ nombre: f.label ?? f.key, valor: f.value }))
+    .map((f) => ({ nombre: rotuloDeFila(f), valor: f.value }))
   if (ordenadas.length <= 10) return ordenadas
   const resto = ordenadas.slice(10).filter((f) => f.valor !== null)
   return [...ordenadas.slice(0, 10), { nombre: otros, valor: resto.length === 0 ? null : resto.reduce((s, f) => s + (f.valor ?? 0), 0) }]

@@ -95,7 +95,7 @@ describe('S06 · lista de proyectos', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Etapa' }), 'FACTIBILIDAD')
     await waitFor(() => expect(filas()).toHaveLength(1))
     expect(rutaActual()).toBe('/projects?view=all&stage=FACTIBILIDAD')
-    await userEvent.click(screen.getByRole('button', { name: 'Quitar Etapa: FACTIBILIDAD' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar Etapa: Factibilidad' }))
     await waitFor(() => expect(filas()).toHaveLength(3))
   })
 

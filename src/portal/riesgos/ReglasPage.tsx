@@ -14,6 +14,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { usePedir } from '../datos/http'
 import { atributo, campoDe, texto, useActualizar, useCrear, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
+import { opcion } from '../datos/opciones'
 
 // S60 · reglas de alerta (screens.md §9; workflows.md, «Tipos de regla de JOB-04»; ASM-097): las reglas del proyecto
 // (/projects/:projectId/risks/rules) o las de la organización (/risks/rules, sin proyecto). un formulario propio, no el de la
@@ -103,10 +104,10 @@ function FilaDeRegla({ regla, escribe, alEditar }: { regla: Registro; escribe: b
     <>
       <tr>
         <Td className="text-sm font-medium">{texto(regla, 'name')}</Td>
-        <Td className="text-sm">{texto(regla, 'rule_kind')}</Td>
+        <Td className="text-sm">{opcion(regla, 'rule_kind')}</Td>
         <Td className="text-sm tabular-nums">{texto(regla, 'threshold') || '—'}</Td>
         <Td className="text-sm tabular-nums">{texto(regla, 'window_days') || '7'}</Td>
-        <Td className="text-sm">{texto(regla, 'severity') || '—'}</Td>
+        <Td className="text-sm">{opcion(regla, 'severity') || '—'}</Td>
         <Td className="text-sm">{atributo(regla, 'project') ? t('reglasDeAlerta.alcances.proyecto') : t('reglasDeAlerta.alcances.organizacion')}</Td>
         <Td className="text-sm">{activa ? t('reglasDeAlerta.estados.activa') : t('reglasDeAlerta.estados.desactivada')}</Td>
         <Td className="space-x-2 whitespace-nowrap text-sm">

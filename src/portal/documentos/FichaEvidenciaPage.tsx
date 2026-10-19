@@ -33,6 +33,7 @@ import {
   useVincularEvidencia
 } from './api'
 import { FormularioDeEvidencia } from './FormularioDeEvidencia'
+import { opcion } from '../datos/opciones'
 
 // S46 · ficha de evidencia (screens.md §11): qué sustenta, quién puede descargarla y si puede salir en un reporte externo.
 // la descarga y la vista previa solo con READ y, para CONFIDENCIAL y DATOS PERSONALES, DOWNLOAD_RESTRICTED (RF-DOC-003); sin
@@ -74,9 +75,9 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
       </Link>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{texto(evidencia, 'evidence_type')}</p>
+          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(evidencia, 'evidence_type')}</p>
           <h1 className="text-sg-h1 font-semibold">{nombreDeEvidencia(evidencia)}</h1>
-          <p className="text-sm">{'classification' in evidencia.attributes ? texto(evidencia, 'classification') : <Restringido />}</p>
+          <p className="text-sm">{'classification' in evidencia.attributes ? opcion(evidencia, 'classification') : <Restringido />}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {puedeDescargar ? (

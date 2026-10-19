@@ -68,7 +68,7 @@ describe('S32 · entregas', () => {
     fetch = mockFetch(rutas())
     abrir()
     expect(await screen.findByText('Ejecutado: S/ 10,000.00 de S/ 25,000.00')).toBeInTheDocument()
-    expect(screen.getByText(/al menos un ACTA DE ENTREGA y una FOTO/)).toBeInTheDocument()
+    expect(screen.getByText(/al menos un «Acta de entrega» y una «Foto»/)).toBeInTheDocument()
     const tarjeta = (await screen.findByRole('heading', { name: /Entrega del/ })).closest('li') as HTMLElement
     // la entrega no trae recipients ni conformity_by: la cuenta no los lee
     expect(within(tarjeta).getAllByText('Restringido')).toHaveLength(2)
@@ -99,7 +99,7 @@ describe('S32 · entregas', () => {
     await userEvent.selectOptions(within(evidencia).getByLabelText('Clasificación'), 'INTERNA')
     await userEvent.type(within(evidencia).getByLabelText('Título'), 'Acta firmada')
     await userEvent.click(within(evidencia).getByRole('button', { name: 'Subir evidencia' }))
-    expect(await within(panel).findByText('Acta firmada · ACTA DE ENTREGA')).toBeInTheDocument()
+    expect(await within(panel).findByText('Acta firmada · Acta de entrega')).toBeInTheDocument()
     // la subida de la evidencia no envió la entrega
     expect(red.a('POST', '/sgspe/commitments/c1/deliveries')).toHaveLength(0)
     await userEvent.type(within(panel).getByLabelText('Monto entregado'), '1e5')

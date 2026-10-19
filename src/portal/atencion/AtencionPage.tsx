@@ -17,6 +17,7 @@ import { useIndicador, type FiltrosDeIndicador, type Indicador } from '../datos/
 import { atributo, campoDe, texto, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { opcion } from '../datos/opciones'
 
 // S35 · lista unificada de QCS (screens.md §8): ¿qué QCS vence primero y quién la tiene? tres objetos con ciclos distintos (WF-E1,
 // WF-E2, WF-E3) que la lista une para atender por plazo, sin mezclar sus estados: cada fila lleva el estado de su workflow y el plazo
@@ -257,9 +258,9 @@ function FilaDeQcs({
         </Link>
       </Td>
       {conProyecto ? <Td className="text-sm">{nombreDelProyecto(texto(registro, 'project'))}</Td> : null}
-      <Td className="text-sm">{texto(registro, 'channel') || '—'}</Td>
-      <Td className="text-sm">{texto(registro, 'category') || '—'}</Td>
-      {conSeveridad ? <Td className="text-sm">{texto(registro, 'severity') || '—'}</Td> : null}
+      <Td className="text-sm">{opcion(registro, 'channel') || '—'}</Td>
+      <Td className="text-sm">{opcion(registro, 'category') || '—'}</Td>
+      {conSeveridad ? <Td className="text-sm">{opcion(registro, 'severity') || '—'}</Td> : null}
       <Td>
         <EstadoChip objeto={objeto} estado={registro.state} />
       </Td>

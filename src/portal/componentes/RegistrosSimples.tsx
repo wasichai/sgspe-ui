@@ -14,6 +14,7 @@ import { Cargando, Vacio } from './Estados'
 import { FormularioDeRegistro } from './FormularioDeRegistro'
 import { FalloDeLectura } from './LecturaConEstados'
 import { RegistroVinculado } from './RegistroVinculado'
+import { opcion } from '../datos/opciones'
 
 // los registros de F4 sin workflow que se llevan a mano en una lista con su formulario (menciones, señales, reglas, impactos y
 // medidas; screens.md S58 a S61 y S40): la lista del alcance con tope (avisa si recorta), «+ Nuevo» para quien crea y escribe en
@@ -204,6 +205,7 @@ function Valor({ campo, registro }: { campo: FieldMeta; registro: Registro }) {
   if (campo.type === 'BOOLEAN') return <>{valor === true ? t('comun.si') : t('comun.no')}</>
   if (campo.type === 'DATE') return <>{diaPe(String(valor))}</>
   if (campo.type === 'DATETIME') return <>{fechaYHoraPe(new Date(String(valor)))}</>
+  if (campo.type === 'ENUM') return <>{opcion(registro, campo.name)}</>
   return <>{texto(registro, campo.name)}</>
 }
 

@@ -50,7 +50,7 @@ describe('S18 · ficha de actor', () => {
     expect(await screen.findByRole('link', { name: 'APAFA' })).toHaveAttribute('href', '/actors/o3')
     // el contacto restringido lleva el candado y su motivo, como todo dato restringido (revisión final, M11)
     const restringido = screen.getByText('Restringido')
-    expect(restringido.closest('li')).toHaveTextContent(/^TELEFONO: Restringido/)
+    expect(restringido.closest('li')).toHaveTextContent(/^Teléfono: Restringido/)
     expect(restringido).toHaveAccessibleDescription('Su rol no puede leer este dato')
     expect(screen.getByText('(sin consentimiento: no se usa para avisos)')).toBeInTheDocument()
     const proyectos = screen.getByRole('region', { name: 'Es grupo de interés en' })

@@ -19,6 +19,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { atributo, puedeEscribir, texto, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { ESTADOS_CONGELADOS, ESTADOS_DE_EJECUCION, useCorregirEntrega, useRegistrarEntrega } from './entregas'
+import { opcion } from '../datos/opciones'
 
 // la pestaña Entregas de S29 y el drawer de S32 (screens.md §7, flujo 10): lo ejecutado frente a lo comprometido, cada
 // entrega con su conformidad (quiénes la dieron y los receptores son restringidos, security.md §7.9) y sus evidencias, y el
@@ -340,7 +341,7 @@ function EntregaDrawer({
             <ul className="space-y-1 text-sm">
               {subidas.map((e) => (
                 <li key={e.id} className="flex items-center gap-2">
-                  {nombreDeEvidencia(e)} · {texto(e, 'evidence_type')}
+                  {nombreDeEvidencia(e)} · {opcion(e, 'evidence_type')}
                   <button
                     type="button"
                     className="text-sg-caption text-sg-primary-text underline"

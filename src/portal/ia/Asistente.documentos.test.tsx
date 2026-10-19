@@ -59,7 +59,7 @@ describe('S05 · preguntar a los documentos', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Preguntar' }))
     expect(await within(panel).findByText('Fuente 1 · Acta de la asamblea de agosto')).toBeInTheDocument()
     await waitFor(() => expect(within(panel).getAllByText('Ana Ejemplo')).toHaveLength(2))
-    expect(within(panel).getByText('Tipo: ACTA · Clasificación: CONFIDENCIAL')).toBeInTheDocument()
+    expect(within(panel).getByText('Tipo: Acta · Clasificación: Confidencial')).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: 'Abrir el documento' })).toHaveAttribute('href', '/r/evidence/ev1')
     expect(red!.a('POST', '/sgspe/ai/knowledge/questions')[0].cuerpo).toEqual({ question: '¿Qué pidió la asamblea?', project: 'p1' })
   })

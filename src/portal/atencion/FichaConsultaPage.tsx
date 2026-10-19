@@ -25,6 +25,7 @@ import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarSolicitud, type ObjetoQueNace } from './comandos'
 import { AvisoDeConfidencial, Dato, DatosDelCaso, DeDondeViene, EditarQcs, MarcasDeQcs, PlazoQueCorre } from './comunesDeFicha'
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
+import { opcion } from '../datos/opciones'
 
 // S57 · fichas de consulta y de solicitud (screens.md §8, WF-E2 y WF-E3): la misma anatomía que la queja (S36) con su propio
 // ciclo. una consulta se responde o se deriva (las dos transiciones piden la respuesta y cuándo se comunicó, que se escriben antes
@@ -169,7 +170,7 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
         }
         resumen={
           <>
-            <Dato termino={t('fichaConsulta.solicitud.campos.request_medium')}>{texto(solicitud, 'request_medium') || '—'}</Dato>
+            <Dato termino={t('fichaConsulta.solicitud.campos.request_medium')}>{opcion(solicitud, 'request_medium') || '—'}</Dato>
             <Dato termino={t('fichaConsulta.solicitud.campos.created_commitment')}>
               {texto(solicitud, 'created_commitment') ? <RegistroVinculado objeto="commitment" id={texto(solicitud, 'created_commitment')} /> : '—'}
             </Dato>
@@ -226,7 +227,7 @@ function Ficha({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {[texto(qcs, 'channel'), texto(qcs, 'category')].filter(Boolean).join(' · ') || '—'}
+            {[opcion(qcs, 'channel'), opcion(qcs, 'category')].filter(Boolean).join(' · ') || '—'}
           </p>
           <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm">

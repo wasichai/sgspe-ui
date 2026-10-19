@@ -15,6 +15,7 @@ import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useTodosConTope } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { opcion } from '../datos/opciones'
 
 // S33, la lista: los acuerdos del alcance (global con la columna Proyecto, o de un proyecto) con su tipo, su estado de WF-I y su
 // vigencia (validity_status, de JOB-01: vencer no concluye el acuerdo). el alta va en un drawer con los campos de la ficha y
@@ -89,7 +90,7 @@ export function AcuerdosPage() {
                       </Link>
                     </Td>
                     {proyecto ? null : <Td className="text-sm">{p ? nombreDeProyecto(p) : '…'}</Td>}
-                    <Td className="text-sm">{texto(a, 'agreement_type')}</Td>
+                    <Td className="text-sm">{opcion(a, 'agreement_type')}</Td>
                     <Td>
                       <EstadoChip objeto="agreement" estado={a.state} />
                     </Td>

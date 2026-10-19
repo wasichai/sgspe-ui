@@ -17,6 +17,7 @@ import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { diaDe, esDia, esFormal, esMes, mesActual, semanaDe, semanasDelMes, sumarMeses } from './fechas'
+import { opcion } from '../datos/opciones'
 
 // S21 y S22 · calendario y lista de interacciones (screens.md §6, flujo 4): el mes frente a la meta (KPI-ENG-02), las
 // festividades de la línea base como contexto y "Te toca". la misma consulta se ve como mes, semana o lista; el alcance es
@@ -297,7 +298,7 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
                   <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} />
                 </Td>
               ) : null}
-              <Td className="text-sm">{texto(i, 'engagement_type')}</Td>
+              <Td className="text-sm">{opcion(i, 'engagement_type')}</Td>
               <Td>
                 <EstadoChip objeto="engagement" estado={i.state} />
               </Td>

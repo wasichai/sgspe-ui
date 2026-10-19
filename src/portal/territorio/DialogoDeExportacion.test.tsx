@@ -81,7 +81,7 @@ describe('diálogo de exportación geográfica', () => {
     await elegir('Formato', 'gpkg')
     await userEvent.click(screen.getByRole('radio', { name: 'UTM del proyecto' }))
     await elegir('Nivel de divulgación', 'EXTERNO')
-    expect(screen.getByText(/En EXTERNO solo salen los predios de propiedad, posesión y comunales/)).toBeInTheDocument()
+    expect(screen.getByText(/En «Externo» solo salen los predios de propiedad, posesión y comunales/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Exportar' }))
     expect(await screen.findByText('Confirme la lista de verificación para una salida fuera de la organización')).toBeInTheDocument()
     expect(red.a('POST', RUTA)).toEqual([])

@@ -41,8 +41,8 @@ describe('piezas comunes de F3', () => {
         <SituacionDePlazo valor={null} />
       </>
     )
-    expect(await screen.findByLabelText('Situación de plazo: VENCIDO')).toHaveTextContent('VENCIDO')
-    expect(screen.getByLabelText('Situación de vigencia: VIGENTE')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Situación de plazo: Vencido')).toHaveTextContent('Vencido')
+    expect(screen.getByLabelText('Situación de vigencia: Vigente')).toBeInTheDocument()
     expect(document.querySelectorAll('[data-situacion]')).toHaveLength(2)
   })
 

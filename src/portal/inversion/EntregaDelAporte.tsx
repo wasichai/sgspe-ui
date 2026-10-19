@@ -22,6 +22,7 @@ import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { FormularioDeEvidencia } from '../documentos/FormularioDeEvidencia'
 import { diaPe, NS } from '../i18n'
 import { useCorregirEntregaDeAporte, useRegistrarEntregaDeAporte } from './comandos'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // la entrega de un aporte en S44 (screens.md S44, spec F5 §3.5, decisión 2, P8): un aporte tiene como máximo una entrega. se
 // registra solo en procured, sin monto entregado (el ejecutado de un aporte es su total, ASM-063), con la conformidad y las
@@ -197,7 +198,7 @@ function Comprobantes({ aporte }: { aporte: Registro }) {
     {
       id: 'tipo',
       encabezado: t('fichaAporte.entrega.comprobantes.tipo'),
-      celda: (r) => texto(r, 'receipt_type') || t('fichaAporte.entrega.comprobantes.sinTipo')
+      celda: (r) => opcion(r, 'receipt_type') || t('fichaAporte.entrega.comprobantes.sinTipo')
     },
     { id: 'emisor', encabezado: t('fichaAporte.entrega.comprobantes.emisor'), celda: (r) => texto(r, 'issuer_name') || '—' },
     { id: 'fecha', encabezado: t('fichaAporte.entrega.comprobantes.fecha'), celda: (r) => (texto(r, 'issue_date') ? diaPe(texto(r, 'issue_date')) : '—') },
@@ -393,7 +394,7 @@ function EntregaDrawer({
             <ul className="space-y-1 text-sm">
               {subidas.map((e) => (
                 <li key={e.id} className="flex items-center gap-2">
-                  {nombreDeEvidencia(e)} · {texto(e, 'evidence_type')}
+                  {nombreDeEvidencia(e)} · {opcion(e, 'evidence_type')}
                   <button
                     type="button"
                     className="text-sg-caption text-sg-primary-text underline"
@@ -407,7 +408,7 @@ function EntregaDrawer({
             </ul>
           )}
           {faltan.length > 0 ? (
-            <p className="text-sg-caption text-sg-warning">{t('fichaAporte.entrega.faltan', { tipos: faltan.join(', ') })}</p>
+            <p className="text-sg-caption text-sg-warning">{t('fichaAporte.entrega.faltan', { tipos: faltan.map(rotuloDeOpcion).join(', ') })}</p>
           ) : (
             <p className="text-sg-caption text-sg-success">{t('fichaAporte.entrega.completas')}</p>
           )}

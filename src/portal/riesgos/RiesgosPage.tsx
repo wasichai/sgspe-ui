@@ -20,6 +20,7 @@ import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
+import { opcion } from '../datos/opciones'
 
 // S38 y S39 · registro y matriz de riesgos (screens.md §9): qué riesgos hay, de qué nivel y cuáles piden revisión. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076). la API genérica no filtra por estado ni por situación, así que,
@@ -153,7 +154,7 @@ export function RiesgosPage() {
                         </EnlaceDeFicha>
                       </Td>
                       {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(r, 'project'))}</Td>}
-                      <Td className="text-sm">{texto(r, 'category') || '—'}</Td>
+                      <Td className="text-sm">{opcion(r, 'category') || '—'}</Td>
                       <Td className="text-sm tabular-nums">
                         {celdaDe(r) && texto(r, 'score') ? `${texto(r, 'probability')} × ${texto(r, 'impact')} = ${texto(r, 'score')}` : '—'}
                       </Td>
@@ -230,7 +231,7 @@ function MapaDeCalor({
                   <button
                     type="button"
                     aria-pressed={elegida === clave}
-                    aria-label={t('riesgos.mapa.celda', { p, i, count: n, nivel })}
+                    aria-label={t('riesgos.mapa.celda', { p, i, count: n, nivel: t(`tableroRiesgos.niveles.${nivel}`) })}
                     onClick={() => alElegir(clave)}
                     className={cn(
                       'h-12 w-full rounded-sg-sm',
@@ -239,7 +240,7 @@ function MapaDeCalor({
                     )}
                   >
                     <span className="block text-sm font-semibold tabular-nums">{numeroPe(n)}</span>
-                    <span className="block text-sg-caption">{nivel}</span>
+                    <span className="block text-sg-caption">{t(`tableroRiesgos.niveles.${nivel}`)}</span>
                   </button>
                 </td>
               )

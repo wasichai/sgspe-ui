@@ -25,6 +25,7 @@ import {
   useFiltrosDeTablero,
   Zona
 } from '../tableros/comunes'
+import { rotuloDeFila } from '../datos/opciones'
 
 // S27 · tablero de compromisos (dashboards.md §5.6, screens.md §12): GET /api/sgspe/dashboards/commitments en una llamada, con
 // los filtros de periodo, territorio, campaña y responsable (owner, que aplican KPI-COM-03, 04, 06 y 09; los demás lo declaran
@@ -149,7 +150,7 @@ function Desgloses({ indicador }: { indicador: Indicador }) {
         actual={dimension}
         alCambiar={(d) => setDimension(d as (typeof DIMENSIONES)[number])}
       />
-      <Barras titulo={t(`tableroCompromisos.dimensiones.${dimension}`)} filas={filas.map((f) => ({ nombre: f.label ?? f.key, valor: f.value }))} />
+      <Barras titulo={t(`tableroCompromisos.dimensiones.${dimension}`)} filas={filas.map((f) => ({ nombre: rotuloDeFila(f), valor: f.value }))} />
       <Table aria-label={t('tableroCompromisos.tablaDesglose', { dimension: t(`tableroCompromisos.dimensiones.${dimension}`) })}>
         <thead>
           <tr>
@@ -161,7 +162,7 @@ function Desgloses({ indicador }: { indicador: Indicador }) {
         <tbody>
           {filas.map((f) => (
             <tr key={`${f.key}`}>
-              <Td>{f.label ?? f.key}</Td>
+              <Td>{rotuloDeFila(f)}</Td>
               <Td className="tabular-nums">{f.value === null ? '—' : numeroPe(f.value)}</Td>
               <Td className="tabular-nums">{typeof f.overdue === 'number' ? numeroPe(f.overdue) : '—'}</Td>
             </tr>

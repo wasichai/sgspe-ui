@@ -24,7 +24,7 @@ export const ES_INCIDENTES = {
     quejas: 'Quejas',
     senales: 'Señales',
     nada: 'Nada todavía',
-    evidenciasAyuda: 'Una foto con personas se sube como DATOS PERSONALES o CONFIDENCIAL.',
+    evidenciasAyuda: 'Una foto con personas se sube como «Datos personales» o «Confidencial».',
     sinActividad: 'Sin actividad registrada'
   }
 }
@@ -54,7 +54,7 @@ export const EN_INCIDENTES: typeof ES_INCIDENTES = {
     quejas: 'Grievances',
     senales: 'Signals',
     nada: 'Nothing yet',
-    evidenciasAyuda: 'A photo with people is uploaded as DATOS PERSONALES or CONFIDENCIAL.',
+    evidenciasAyuda: 'A photo with people is uploaded as «Datos personales» or «Confidencial».',
     sinActividad: 'No recorded activity'
   }
 }

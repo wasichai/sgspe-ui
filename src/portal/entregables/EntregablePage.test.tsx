@@ -50,7 +50,7 @@ describe('S50 · entregable por secciones', () => {
     expect(await within(camino).findByText('Borrador')).toHaveAttribute('aria-current', 'step')
     const lista = await screen.findByRole('navigation', { name: 'Secciones' })
     const conclusiones = within(lista).getByRole('button', { name: /Conclusiones/ })
-    expect(conclusiones).toHaveTextContent('ASISTIDO POR IA')
+    expect(conclusiones).toHaveTextContent('Asistido por IA')
     expect(conclusiones).toHaveTextContent('Con IA')
     expect(conclusiones).toHaveTextContent('Cambió después del borrador')
     expect(within(lista).getByRole('button', { name: /Antecedentes/ })).not.toHaveTextContent('Cambió después del borrador')

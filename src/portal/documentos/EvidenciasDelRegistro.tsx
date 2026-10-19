@@ -11,11 +11,12 @@ import { Cargando, Restringido, ThConExplicacion, Vacio } from '../componentes/E
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { descriptorDe, tamanoPe } from '../datos/archivos'
 import { rutaDeFicha } from '../datos/fichas'
-import { atributo, texto, type Registro } from '../datos/registros'
+import { atributo, type Registro } from '../datos/registros'
 import { diaPe, fechaPe, NS } from '../i18n'
 import { MOTIVO_EN_TODAS } from '../transiciones/reglas'
 import { useDescargarEvidencia, useDesvincularEvidencia, useEvidenciasDe, useNombreDeEvidencia, usePuedeDescargar, useVincularEvidencia } from './api'
 import { FormularioDeEvidencia } from './FormularioDeEvidencia'
+import { opcion } from '../datos/opciones'
 
 // la pestaña Evidencias de una ficha (S29, S33, S23) y «Qué generó»: las evidencias que sustentan el registro (su vínculo
 // evidence_<objeto>), con su descarga (DOWNLOAD_RESTRICTED para CONFIDENCIAL y DATOS PERSONALES, RF-DOC-003), subir una nueva
@@ -117,8 +118,8 @@ export function EvidenciasDelRegistro({
                         <span className="block text-sg-caption text-sg-warning">{t('evidencias.sinConsentimiento')}</span>
                       ) : null}
                     </Td>
-                    <Td className="text-sm">{texto(e, 'evidence_type') || '—'}</Td>
-                    <Td className="text-sm">{'classification' in e.attributes ? texto(e, 'classification') : <Restringido describedPor={explicacion} />}</Td>
+                    <Td className="text-sm">{opcion(e, 'evidence_type') || '—'}</Td>
+                    <Td className="text-sm">{'classification' in e.attributes ? opcion(e, 'classification') : <Restringido describedPor={explicacion} />}</Td>
                     <Td className="text-sm tabular-nums">{descriptor ? tamanoPe(descriptor.size) : '—'}</Td>
                     <Td className="text-sm">{fecha ? diaPe(fecha) : e.createdAt ? fechaPe(new Date(e.createdAt)) : '—'}</Td>
                     <Td className="space-x-2 whitespace-nowrap text-sm">

@@ -11,6 +11,7 @@ import { NS } from '../i18n'
 import { VistaMarkdown } from '../relacionamiento/markdown'
 import { partirMenciones } from './menciones'
 import { contenidoDe, esCalculada, ORIGEN_IA, seEditan } from './tipos'
+import { opcion } from '../datos/opciones'
 
 // tiptap y ProseMirror bajan solo al abrir una sección que se edita (revisión final de 8.3, importante 3): el resto del portal
 // no los carga
@@ -86,7 +87,7 @@ export function EditorDeSeccion({
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sg-h3 font-semibold">{texto(seccion, 'title')}</h2>
         <Badge className={asistida ? 'border border-dashed border-sg-ai-border bg-sg-ai-soft text-sg-ai' : 'bg-sg-neutral-soft text-sg-neutral'}>
-          {texto(seccion, 'content_origin')}
+          {opcion(seccion, 'content_origin')}
         </Badge>
       </div>
       {guia ? (

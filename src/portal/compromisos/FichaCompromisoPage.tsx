@@ -24,6 +24,7 @@ import { PestanaDependencias, PestanaSeguimiento } from './PestanaSeguimiento'
 import { Ejecutado, PestanaEntregas } from './PestanaEntregas'
 import { PestanaReprogramaciones } from './PestanaReprogramaciones'
 import { Verificacion } from './Verificacion'
+import { opcion } from '../datos/opciones'
 
 // S29 · ficha de compromiso (screens.md §7, flujos 9 a 11): la anatomía de design-system.md §6.1 con las transiciones de WF-D del
 // rol (las de envío, aprobación, cumplimiento, verificación y cierre se comprueban antes con transition-checks), las pestañas
@@ -101,7 +102,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {texto(compromiso, 'code')} · {texto(compromiso, 'resource_type') || '—'}
+            {texto(compromiso, 'code')} · {opcion(compromiso, 'resource_type') || '—'}
           </p>
           <h1 className="text-sg-h1 font-semibold">{texto(compromiso, 'title')}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm">

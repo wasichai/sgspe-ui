@@ -9,6 +9,7 @@ import { desglose, useCatalogoDeIndicadores, useTablero } from '../datos/indicad
 import { COLOR_DE_POSTURA, ORDEN_DE_POSTURAS } from '../graficos/BarraDePosturas'
 import { Grafico } from '../graficos/Grafico'
 import { escapar, useVersionDeTema } from '../graficos/tema'
+import { rotuloDeOpcion } from '../datos/opciones'
 import { NS, numeroPe } from '../i18n'
 import { colorDe } from '../mapa/colores'
 import { useContextFilters } from '../shell/context'
@@ -139,17 +140,18 @@ function Posturas({ filas }: { filas: { key: string; value: number | null }[] })
   const mitad = valor('NEUTRAL') / 2
   const opciones = useMemo(() => {
     const color = (k: string) => colorDe(COLOR_DE_POSTURA[k]?.slice(4, -1) ?? '--sg-data-6')
-    const barra = (k: string, dato: number, nombre = k) => ({ type: 'bar', stack: 'posturas', name: nombre, data: [dato], itemStyle: { color: color(k) } })
+    const barra = (k: string, dato: number) => ({ type: 'bar', stack: 'posturas', name: rotuloDeOpcion(k), data: [dato], itemStyle: { color: color(k) } })
     return {
       grid: { left: 16, right: 16, top: 32, bottom: 24 },
-      legend: { top: 0, data: orden },
+      legend: { top: 0, data: orden.map(rotuloDeOpcion) },
       xAxis: { type: 'value', show: false },
       yAxis: { type: 'category', data: [''], show: false },
       // el nombre de la postura viene de la API y el tooltip arma HTML
       tooltip: {
         formatter: (p: { seriesName?: string }) => {
           const nombre = p.seriesName ?? ''
-          return `${escapar(nombre)}: ${cifras.get(nombre) === null ? '—' : numeroPe(valor(nombre))}`
+          const clave = orden.find((k) => rotuloDeOpcion(k) === nombre) ?? nombre
+          return `${escapar(nombre)}: ${cifras.get(clave) === null ? '—' : numeroPe(valor(clave))}`
         }
       },
       // del centro hacia la izquierda: la mitad de NEUTRAL y A FAVOR; hacia la derecha: la otra mitad y lo demás
@@ -168,7 +170,7 @@ function Posturas({ filas }: { filas: { key: string; value: number | null }[] })
       opciones={opciones}
       datos={{
         columnas: [t('tableros.categoria'), t('tableros.valor')],
-        filas: orden.map((k) => [k, cifras.get(k) === null ? '—' : numeroPe(valor(k))])
+        filas: orden.map((k) => [rotuloDeOpcion(k), cifras.get(k) === null ? '—' : numeroPe(valor(k))])
       }}
     />
   )

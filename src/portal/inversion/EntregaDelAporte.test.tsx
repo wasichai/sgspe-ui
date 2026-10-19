@@ -86,15 +86,15 @@ describe('S44 · entrega del aporte', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Registrar entrega' }))
     const panel = await screen.findByRole('dialog', { name: 'Registrar la entrega del aporte' })
     expect(within(panel).queryByLabelText('Monto entregado')).not.toBeInTheDocument()
-    expect(within(panel).getByText('Faltan: ACTA DE RECEPCION, FOTO, COMPROBANTE')).toBeInTheDocument()
+    expect(within(panel).getByText('Faltan: Acta de recepción, Foto, Comprobante')).toBeInTheDocument()
     const subida = within(panel).getByRole('group', { name: 'Subir una evidencia' })
     expect(within(subida).getByLabelText('Tipo de evidencia')).toHaveValue('ACTA DE RECEPCION')
     expect(within(subida).getByLabelText('Clasificación')).toHaveValue('DATOS PERSONALES')
     await userEvent.upload(within(subida).getByLabelText(/Archivo/), new File(['%PDF'], 'acta.pdf', { type: 'application/pdf' }))
     await userEvent.type(within(subida).getByLabelText('Título'), 'Acta firmada')
     await userEvent.click(within(subida).getByRole('button', { name: 'Subir evidencia' }))
-    expect(await within(panel).findByText('Acta firmada · ACTA DE RECEPCION')).toBeInTheDocument()
-    expect(within(panel).getByText('Faltan: FOTO, COMPROBANTE')).toBeInTheDocument()
+    expect(await within(panel).findByText('Acta firmada · Acta de recepción')).toBeInTheDocument()
+    expect(within(panel).getByText('Faltan: Foto, Comprobante')).toBeInTheDocument()
     // la siguiente que falta queda propuesta, también con DATOS PERSONALES (una foto con personas)
     await waitFor(() =>
       expect(within(within(panel).getByRole('group', { name: 'Subir una evidencia' })).getByLabelText('Tipo de evidencia')).toHaveValue('FOTO')
@@ -217,11 +217,11 @@ describe('S44 · entrega del aporte', () => {
       const comprobantes = await screen.findByRole('region', { name: 'Comprobantes' })
       expect(
         within(comprobantes).getByText(
-          'El aporte ya se entregó o se anuló: su comprobante ya no cambia. El escaneo sigue siendo la evidencia COMPROBANTE de la entrega.'
+          'El aporte ya se entregó o se anuló: su comprobante ya no cambia. El escaneo sigue siendo la evidencia «Comprobante» de la entrega.'
         )
       ).toBeInTheDocument()
       expect(within(comprobantes).queryByRole('button', { name: 'Nuevo comprobante' })).not.toBeInTheDocument()
-      await userEvent.click(await within(comprobantes).findByRole('button', { name: 'FACTURA' }))
+      await userEvent.click(await within(comprobantes).findByRole('button', { name: 'Factura' }))
       const drawer = await screen.findByRole('dialog', { name: 'Comprobantes' })
       expect(await within(drawer).findByText('Ferretería Ejemplo')).toBeInTheDocument()
       expect(within(drawer).queryByRole('button', { name: /guardar|save/i })).not.toBeInTheDocument()
@@ -262,7 +262,7 @@ describe('S44 · entrega del aporte', () => {
     ])
     abrir()
     const comprobantes = await screen.findByRole('region', { name: 'Comprobantes' })
-    await userEvent.click(await within(comprobantes).findByRole('button', { name: 'FACTURA' }))
+    await userEvent.click(await within(comprobantes).findByRole('button', { name: 'Factura' }))
     const drawer = await screen.findByRole('dialog', { name: 'Comprobantes' })
     const emisor = await within(drawer).findByLabelText(/^issuer_name/)
     await userEvent.clear(emisor)

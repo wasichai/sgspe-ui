@@ -55,7 +55,7 @@ describe('incidentes', () => {
     })
     const tabla = await screen.findByRole('table', { name: 'Incidentes del proyecto' })
     expect(within(tabla).getByRole('link', { name: 'I-001' })).toHaveAttribute('href', '/projects/p1/incidents/n1')
-    expect(within(tabla).getByText('BLOQUEO DE VIA')).toBeInTheDocument()
+    expect(within(tabla).getByText('Bloqueo de vía')).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Registrar incidente' }))
     const drawer = await screen.findByRole('dialog', { name: 'Registrar incidente' })
     expect(await within(drawer).findByLabelText(/^code/)).toBeInTheDocument()
