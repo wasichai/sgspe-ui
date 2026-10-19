@@ -40,6 +40,17 @@ describe('S16 · lista de grupos de interés', () => {
     expect(await within(filas()[1]).findByText('Persona registrada')).toBeInTheDocument()
   })
 
+  // revisión de UX, etapa 6: una fila abre la vista previa del grupo sin dejar la lista (ux-architecture.md §8.3, paso 2)
+  it('el ojo de una fila abre la vista previa del grupo sobre la lista, con «Abrir ficha»', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(await within(filas()[0]).findByRole('link', { name: 'Vista previa de Ronda campesina Tunas' }))
+    expect(rutaActual()).toMatch(/^\/projects\/p1\/stakeholders\?peek=stakeholder%3A/)
+    const drawer = await screen.findByRole('dialog')
+    expect(within(drawer).getByRole('link', { name: 'Abrir ficha' })).toHaveAttribute('href', expect.stringMatching(/^\/projects\/p1\/stakeholders\//))
+    expect(screen.getByRole('table', { name: 'Grupos de interés', hidden: true })).toBeInTheDocument()
+  })
+
   // revisión de UX, etapa 3: vistas con conteo, el total en el encabezado y Responsable solo desde 1440 px
   it('cada vista dice cuántos tiene, el encabezado el total, y Responsable se oculta por debajo de 1440 px', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())

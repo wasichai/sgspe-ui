@@ -1,4 +1,5 @@
 import { Button } from '@wasichai/ui'
+import { Eye } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useSiguientePaso } from '../contexto/Rastro'
@@ -27,6 +28,29 @@ export function useRutaDeVistaPrevia(): (objeto: string, id: string) => string {
     busqueda.set('peek', `${objeto}:${id}`)
     return `${pathname}?${busqueda.toString()}`
   }
+}
+
+// el ojo junto al nombre de un registro en una lista: abre su vista previa sin dejar la lista
+export function BotonDeVistaPrevia({ objeto, id, nombre }: { objeto: string; id: string; nombre: string }) {
+  const { t } = useTranslation(NS)
+  const previa = useRutaDeVistaPrevia()
+  const etiqueta = t('paginas.vistaPrevia.abrir', { nombre })
+  return (
+    <Link
+      to={previa(objeto, id)}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className="inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text"
+    >
+      <Eye aria-hidden className="size-4" />
+    </Link>
+  )
+}
+
+// los datos que la vista previa dice de cada objeto, además del estado (los que no se leen no llegan y no se dicen)
+const DATOS: Record<string, string[]> = {
+  evidence: ['evidence_type', 'classification'],
+  stakeholder: ['stakeholder_type', 'influence_group', 'relationship_status']
 }
 
 export function VistaPrevia() {
@@ -85,8 +109,8 @@ function ContenidoDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; id: 
   )
 }
 
-// el encabezado de la ficha en pequeño: el tipo y el código, el estado y, con workflow, el panel de decisión. de una evidencia,
-// su tipo y su clasificación (su nombre de archivo y su huella, solo en su ficha y para quien la descarga)
+// el encabezado de la ficha en pequeño: el tipo y el código, el estado, sus DATOS y, con workflow, el panel de decisión. de una
+// evidencia, su tipo y su clasificación (su nombre de archivo y su huella, solo en su ficha y para quien la descarga)
 function Resumen({ objeto, registro }: { objeto: string; registro: Registro }) {
   const definicion = useDefinicion(objeto)
   const siguiente = useSiguienteAccion(objeto, registro)
@@ -105,7 +129,7 @@ function Resumen({ objeto, registro }: { objeto: string; registro: Registro }) {
         {antetitulo ? <span className="font-sg-mono text-sg-caption text-sg-text-muted">{antetitulo}</span> : null}
         <EstadoChip objeto={objeto} estado={registro.state} />
       </div>
-      {objeto === 'evidence' ? <dl className="grid gap-2 sm:grid-cols-2">{['evidence_type', 'classification'].map(dato)}</dl> : null}
+      {DATOS[objeto] ? <dl className="grid gap-2 sm:grid-cols-2">{DATOS[objeto].map(dato)}</dl> : null}
       {registro.state ? (
         <PanelDeDecision
           objeto={objeto}

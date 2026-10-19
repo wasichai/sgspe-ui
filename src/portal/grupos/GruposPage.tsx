@@ -8,7 +8,8 @@ import { Link, useNavigate } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, ThConExplicacion, esProhibido } from '../componentes/Estados'
 import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
-import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { NombreDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
+import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
@@ -286,6 +287,7 @@ function Fila({
   const localidad = useRegistro('locality', atributo<string>(grupo, 'locality'))
   const del = useRegistro('project', global ? proyecto : undefined)
   const evaluado = grupo.state === 'assessed' || Boolean(atributo(grupo, 'influence_group'))
+  const nombre = useNombreDelGrupo(grupo)
   return (
     <tr>
       {alSeleccionar ? (
@@ -304,7 +306,9 @@ function Fila({
           className="font-medium text-sg-primary-text underline"
         >
           <NombreDelGrupo grupo={grupo} />
-        </Link>
+        </Link>{' '}
+        {/* la vista previa sin dejar la lista (ux-architecture.md §8.3, paso 2; revisión de UX, etapa 6) */}
+        <BotonDeVistaPrevia objeto="stakeholder" id={grupo.id} nombre={nombre} />
         <p className="text-sg-caption text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
       </Td>
       {global ? (
