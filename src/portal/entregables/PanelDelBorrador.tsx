@@ -67,7 +67,7 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
         <FalloDeLectura error={estado.error} alReintentar={() => void estado.refetch()} />
       ) : estado.data ? (
         <>
-          <p>{t('entregables.borrador.estado', { estado: estado.data.status ?? 'SIN GENERAR' })}</p>
+          <p>{t('entregables.borrador.estado', { estado: rotuloDeOpcion(estado.data.status ?? 'SIN GENERAR') })}</p>
           {estado.data.revision ? <p>{t('entregables.borrador.letra', { letra: estado.data.revision })}</p> : null}
           {estado.data.generatedAt ? (
             <p className="text-sg-caption text-sg-text-muted">

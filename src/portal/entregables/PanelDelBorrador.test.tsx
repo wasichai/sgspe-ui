@@ -56,7 +56,7 @@ describe('panel del borrador', () => {
     expect(await screen.findByText('Se prepara el borrador: el estado se consulta cada 5 segundos.')).toBeInTheDocument()
     await vi.advanceTimersByTimeAsync(5000)
     await vi.advanceTimersByTimeAsync(5000)
-    expect(await screen.findByText('Estado del borrador: LISTO')).toBeInTheDocument()
+    expect(await screen.findByText('Estado del borrador: Listo')).toBeInTheDocument()
     expect(llamadas()).toBeGreaterThanOrEqual(3)
     const despuesDeListo = llamadas()
     await vi.advanceTimersByTimeAsync(15000)
@@ -72,7 +72,7 @@ describe('panel del borrador', () => {
     await vi.advanceTimersByTimeAsync(15000)
     expect(llamadas()).toBe(conError)
     await usuario().click(screen.getByRole('button', { name: 'Reintentar' }))
-    expect(await screen.findByText('Estado del borrador: LISTO')).toBeInTheDocument()
+    expect(await screen.findByText('Estado del borrador: Listo')).toBeInTheDocument()
   })
 
   it('abre el PDF de cada nivel con su marca, descarga el DOCX INTERNO y dice la huella de cada candidata, abreviada y copiable', async () => {
