@@ -17,6 +17,7 @@ import { crearI18n, IDIOMAS, NS } from './i18n'
 import { InicioPage } from './pages/InicioPage'
 import { PANTALLAS, RUTAS_ADICIONALES } from './pantallas'
 import { AppShell } from './shell/AppShell'
+import { FalloDePantalla } from './shell/FalloDePantalla'
 import { GuardaDeSeccion } from './shell/GuardaDeSeccion'
 import { conPantalla, guardaDe, NAV_TREE, type SeccionNav } from './shell/navTree'
 
@@ -43,55 +44,60 @@ function SeccionPorLlegar({ seccion }: { seccion: SeccionNav }) {
 // el Dashboard es la ruta índice; cada otra sección tiene ruta solo con su pantalla (PANTALLAS), y la pantalla se guarda
 // con los mismos permisos que el árbol (GuardaDeSeccion); una sección del árbol sin pantalla todavía dice en qué fase llega.
 // las fichas de los maestros del tenant que no son secciones (/actors/:actorId, /field-visits, /agreements) son RUTAS_ADICIONALES,
-// guardadas con su sección y montadas de nuevo por registro; cualquier otra ruta es la página no encontrada
+// guardadas con su sección y montadas de nuevo por registro; cualquier otra ruta es la página no encontrada. un error de
+// render lo recoge FalloDePantalla (D1): el de una pantalla, dentro del shell (la ruta sin camino que las agrupa); el del
+// shell mismo, en su ruta
 const rutas = () =>
   createRoutesFromElements(
     <>
       <Route path="/login" element={<LoginPage />} />
       <Route
+        errorElement={<FalloDePantalla />}
         element={
           <RequireSession>
             <AppShell />
           </RequireSession>
         }
       >
-        <Route index element={<InicioPage />} />
-        {NAV_TREE.flatMap((seccion) => {
-          const Pantalla = PANTALLAS[seccion.clave]
-          if (!Pantalla && !seccion.external && !conPantalla(seccion.clave)) {
-            return [<Route key={seccion.clave} path={seccion.to} element={<SeccionPorLlegar seccion={seccion} />} />]
-          }
-          // la pantalla de una sección es su raíz: sus rutas hijas (/projects/:projectId/…, /territory/communities/:id…)
-          // las declara ella misma
-          return Pantalla
-            ? [
-                <Route
-                  key={seccion.clave}
-                  path={`${seccion.to}/*`}
-                  element={
-                    <GuardaDeSeccion seccion={seccion}>
-                      <Pantalla />
-                    </GuardaDeSeccion>
-                  }
-                />
-              ]
-            : []
-        })}
-        {RUTAS_ADICIONALES.map(({ ruta, seccion, seOfreceCon, Pantalla }) => (
-          <Route
-            key={ruta}
-            path={ruta}
-            element={
-              <GuardaDeSeccion seccion={guardaDe(seccion, seOfreceCon)}>
-                <PorRuta parametros={parametrosDe(ruta)} Pantalla={Pantalla} />
-              </GuardaDeSeccion>
+        <Route errorElement={<FalloDePantalla />}>
+          <Route index element={<InicioPage />} />
+          {NAV_TREE.flatMap((seccion) => {
+            const Pantalla = PANTALLAS[seccion.clave]
+            if (!Pantalla && !seccion.external && !conPantalla(seccion.clave)) {
+              return [<Route key={seccion.clave} path={seccion.to} element={<SeccionPorLlegar seccion={seccion} />} />]
             }
-          />
-        ))}
-        {/* transversales, de toda cuenta (ux-architecture.md §6.2 y §7.4): los avisos y el salto a la ficha de un registro */}
-        <Route path="/notifications" element={<AvisosPage />} />
-        <Route path="/r/:object/:recordId" element={<AbrirRegistroPage />} />
-        <Route path="*" element={<NoEncontrada />} />
+            // la pantalla de una sección es su raíz: sus rutas hijas (/projects/:projectId/…, /territory/communities/:id…)
+            // las declara ella misma
+            return Pantalla
+              ? [
+                  <Route
+                    key={seccion.clave}
+                    path={`${seccion.to}/*`}
+                    element={
+                      <GuardaDeSeccion seccion={seccion}>
+                        <Pantalla />
+                      </GuardaDeSeccion>
+                    }
+                  />
+                ]
+              : []
+          })}
+          {RUTAS_ADICIONALES.map(({ ruta, seccion, seOfreceCon, Pantalla }) => (
+            <Route
+              key={ruta}
+              path={ruta}
+              element={
+                <GuardaDeSeccion seccion={guardaDe(seccion, seOfreceCon)}>
+                  <PorRuta parametros={parametrosDe(ruta)} Pantalla={Pantalla} />
+                </GuardaDeSeccion>
+              }
+            />
+          ))}
+          {/* transversales, de toda cuenta (ux-architecture.md §6.2 y §7.4): los avisos y el salto a la ficha de un registro */}
+          <Route path="/notifications" element={<AvisosPage />} />
+          <Route path="/r/:object/:recordId" element={<AbrirRegistroPage />} />
+          <Route path="*" element={<NoEncontrada />} />
+        </Route>
       </Route>
     </>
   )
