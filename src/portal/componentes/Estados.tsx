@@ -11,15 +11,25 @@ import { correlacionDe, useMensajeDeError } from './errores'
 // los estados comunes de design-system.md §6.5: carga, error con su código de correlación y reintento, vacío, campo
 // restringido y cifra no disponible (nunca vacío ni cero, RQ-DSH-032)
 
-// compacto: sin el relleno vertical y en línea (un <span>), para usarlo dentro de una tarjeta pequeña o de un párrafo, como el
-// rótulo que carga de RegistroVinculado; el texto accesible es el mismo
+// compacto: en línea (un <span>) y como texto, para usarlo dentro de una tarjeta pequeña o de un párrafo, como el rótulo que
+// carga de RegistroVinculado. sin compacto, un esqueleto con la forma de una lista (design-system.md §6.5): unas barras que
+// pulsan solo para quien no reduce el movimiento, y «Cargando…» para el lector de pantalla
 export function Cargando({ etiqueta, compacto }: { etiqueta?: string; compacto?: boolean }) {
   const { t } = useTranslation(NS)
-  const Etiqueta = compacto ? 'span' : 'p'
+  const texto = etiqueta ?? t('comun.cargando')
+  if (compacto)
+    return (
+      <span role="status" aria-busy="true" className="text-sm text-sg-text-muted">
+        {texto}
+      </span>
+    )
   return (
-    <Etiqueta role="status" aria-busy="true" className={cn('text-sm text-sg-text-muted', !compacto && 'py-6')}>
-      {etiqueta ?? t('comun.cargando')}
-    </Etiqueta>
+    <div role="status" aria-busy="true" className="space-y-3 py-4">
+      <span className="sr-only">{texto}</span>
+      {['w-1/3', 'w-full', 'w-11/12', 'w-4/5'].map((ancho, i) => (
+        <div key={i} data-esqueleto aria-hidden className={cn('h-4 rounded-sg-sm bg-sg-surface-sunken motion-safe:animate-pulse', ancho, i === 0 && 'h-6')} />
+      ))}
+    </div>
   )
 }
 
