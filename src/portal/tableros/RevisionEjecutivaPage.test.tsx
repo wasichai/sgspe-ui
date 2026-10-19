@@ -104,6 +104,6 @@ describe('S51 · revisión ejecutiva', () => {
   it('/ dibuja la revisión ejecutiva si el catálogo la ofrece', async () => {
     fetch = abrirPortal('/', EJECUTIVA, SOLO_LECTURA_F8, [{ path: '/sgspe/dashboards/executive', body: TABLERO_EJECUTIVO }, ...baseDeF8(EJECUTIVA)])
     expect(await screen.findByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Monitoreo de la Tabla 9.5' })).toHaveAttribute('href', '/dashboards/monitoring')
+    expect(screen.getByRole('link', { name: 'Monitoreo del plan de relaciones comunitarias' })).toHaveAttribute('href', '/dashboards/monitoring')
   })
 })

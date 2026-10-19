@@ -151,7 +151,7 @@ export const ES = {
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
   secciones: {
-    dashboard: 'Dashboard',
+    dashboard: 'Inicio',
     projects: 'Proyectos',
     territory: 'Territorio',
     stakeholders: 'Grupos de interés',
@@ -166,9 +166,8 @@ export const ES = {
     admin: 'Administración'
   },
   inicio: {
-    titulo: 'Dashboard',
+    titulo: 'Inicio',
     bienvenida: 'Le damos la bienvenida, {{nombre}}.',
-    porRol: 'Cada rol tendrá su propio inicio cuando llegue su módulo; mientras tanto, todas las cuentas empiezan aquí.',
     cuenta: 'Su cuenta',
     usuario: 'Usuario',
     organizacion: 'Organización',
@@ -178,16 +177,12 @@ export const ES = {
     sinCuenta: 'No se pudo leer la cuenta',
     sinRoles: 'Sin roles',
     sinPermisos: 'No se pudieron leer sus permisos',
-    modulos: 'Módulos por fase',
-    resumen: '{{disponibles, number}} de {{total, number}} secciones disponibles para su cuenta',
-    seccion: 'Sección',
-    fases: 'Fases',
-    estado: 'Estado',
-    llegaEn: 'Llega en {{fase}}',
-    notasDeFases: { reports: 'F2–F4 exportaciones; F8 entregables' },
-    estados: { disponible: 'Disponible', 'sin-acceso': 'Sin acceso con sus permisos', 'solo-admin': 'Solo para administración' }
+    modulos: 'Sus secciones',
+    rolesAsignados_one: '{{count}} rol asignado',
+    rolesAsignados_other: '{{count}} roles asignados',
+    resumen: '{{disponibles, number}} de {{total, number}} secciones disponibles para su cuenta'
   },
-  seccionPorLlegar: 'Esta sección llega en {{fase}}',
+  seccionPorLlegar: 'Esta sección todavía no está disponible en su organización.',
   noEncontrada: 'Esta página no existe',
   irAlInicio: 'Ir al inicio'
 }

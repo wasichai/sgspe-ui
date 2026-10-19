@@ -32,6 +32,7 @@ import { EvaluacionDrawer } from './EvaluacionDrawer'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Correo } from '../componentes/Correo'
+import { useRegistrosPorId } from '../territorio/comunes'
 
 // S17 · ficha de grupo de interés (screens.md §5): para decidir cómo relacionarse, su peso, su postura (restringida), su
 // historia de evaluaciones hasta la línea base y lo que generó. la postura y la confianza del grupo de interés son las
@@ -180,7 +181,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
           </p>
         </Tarjeta>
         <Tarjeta titulo={t('grupos.ficha.pendientes')}>
-          <p className="text-sg-caption text-sg-text-muted">{t('grupos.ficha.pendientesLlegan')}</p>
+          <Pendientes grupo={grupo} />
         </Tarjeta>
       </section>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -281,11 +282,66 @@ function Tarjeta({ titulo, ayuda, children }: { titulo: string; ayuda?: string; 
   )
 }
 
-// "Qué generó" (ux-architecture.md §8.2): las interacciones del grupo de interés (engagement_stakeholder) y, desde F3, sus
-// compromisos y acuerdos
+// los compromisos que el grupo de interés pidió (commitment_stakeholder); sin permiso sobre commitment no se piden
+function useCompromisosDelGrupo(grupo: Registro) {
+  const { can } = useAuth()
+  return useRelacionados('stakeholder', can('commitment', 'READ') ? grupo.id : undefined, 'commitment_stakeholder')
+}
+
+const COMPROMISO_ABIERTO = new Set(['pending_approval', 'approved', 'in_progress', 'blocked'])
+const QCS_TERMINADA = new Set(['closed', 'rejected', 'withdrawn'])
+
+// lo que el grupo de interés tiene abierto: sus compromisos y sus QCS (quejas, consultas y solicitudes con su stakeholder). lo
+// que la cuenta no lee no se cuenta ni se dice como cero
+function Pendientes({ grupo }: { grupo: Registro }) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const compromisos = useCompromisosDelGrupo(grupo)
+  // la lectura por relación no trae el estado del workflow: cada compromiso se relee con el suyo
+  const conEstado = useRegistrosPorId(
+    'commitment',
+    (compromisos.data?.content ?? []).map((c) => c.id)
+  )
+  const quejas = useTodos('grievance', { stakeholder: grupo.id }, can('grievance', 'READ'))
+  const consultas = useTodos('inquiry', { stakeholder: grupo.id }, can('inquiry', 'READ'))
+  const solicitudes = useTodos('stakeholder_request', { stakeholder: grupo.id }, can('stakeholder_request', 'READ'))
+  const leeCompromisos = can('commitment', 'READ')
+  const deQcs = [
+    { lee: can('grievance', 'READ'), consulta: quejas },
+    { lee: can('inquiry', 'READ'), consulta: consultas },
+    { lee: can('stakeholder_request', 'READ'), consulta: solicitudes }
+  ].filter((q) => q.lee)
+  if (!leeCompromisos && deQcs.length === 0) return <NoDisponible />
+  const qcsCargando = deQcs.some((q) => q.consulta.isPending)
+  const qcsFallo = deQcs.some((q) => q.consulta.isError)
+  const qcsAbiertas = deQcs.reduce((n, q) => n + (q.consulta.data ?? []).filter((r) => !QCS_TERMINADA.has(r.state ?? '')).length, 0)
+  return (
+    <ul className="space-y-1 text-sm">
+      {leeCompromisos ? (
+        <li>
+          {compromisos.isPending || conEstado.pendiente ? (
+            <Cargando compacto />
+          ) : compromisos.isError || conEstado.error ? (
+            t('comun.errorDeCarga')
+          ) : (
+            t('grupos.ficha.compromisosAbiertos', { count: conEstado.registros.filter((c) => COMPROMISO_ABIERTO.has(c.state ?? '')).length })
+          )}
+        </li>
+      ) : null}
+      {deQcs.length > 0 ? (
+        <li>{qcsCargando ? <Cargando compacto /> : qcsFallo ? t('comun.errorDeCarga') : t('grupos.ficha.qcsAbiertas', { count: qcsAbiertas })}</li>
+      ) : null}
+    </ul>
+  )
+}
+
+// "Qué generó" (ux-architecture.md §8.2): las interacciones del grupo de interés (engagement_stakeholder) y los compromisos que
+// pidió (commitment_stakeholder)
 function Trazabilidad({ grupo }: { grupo: Registro }) {
   const { t } = useTranslation(NS)
+  const { can } = useAuth()
   const interacciones = useRelacionados('stakeholder', grupo.id, 'engagement_stakeholder')
+  const compromisos = useCompromisosDelGrupo(grupo)
   const proyecto = String(atributo(grupo, 'project'))
   const dia = (e: Registro) => diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))
   return (
@@ -310,7 +366,23 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
           </li>
         ))}
       </ul>
-      <p className="text-sg-caption text-sg-text-muted">{t('grupos.ficha.compromisosLlegan')}</p>
+      {can('commitment', 'READ') ? (
+        <>
+          <h3 className="font-medium">{t('grupos.ficha.compromisos')}</h3>
+          {compromisos.isPending ? <Cargando compacto /> : null}
+          {compromisos.isError && !compromisos.data ? <FalloDeLectura error={compromisos.error} alReintentar={() => void compromisos.refetch()} /> : null}
+          {compromisos.data?.content.length === 0 ? <p className="text-sg-text-muted">{t('grupos.ficha.sinCompromisos')}</p> : null}
+          <ul>
+            {(compromisos.data?.content ?? []).map((c) => (
+              <li key={c.id}>
+                <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`} className="text-sg-primary-text underline">
+                  {[texto(c, 'code'), texto(c, 'title')].filter(Boolean).join(' · ')}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
     </aside>
   )
 }

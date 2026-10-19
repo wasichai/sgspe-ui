@@ -390,7 +390,7 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
               listo={editable && !sucio && !enPausa}
               alInsertado={(minutes) => void trasInsertarBorrador(minutes)}
             />
-            <p>{t('relacionamiento.acta.proponerLlega')}</p>
+            <p>{t('relacionamiento.acta.proponerDesdeLaFicha')}</p>
             <p>{t('relacionamiento.acta.firmada')}</p>
           </aside>
         </div>

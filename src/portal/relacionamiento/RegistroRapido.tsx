@@ -199,7 +199,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
         </p>
       </fieldset>
       <Campo etiqueta={t('relacionamiento.registro.nota')}>{(p) => <Textarea {...p} value={nota} onChange={(e) => setNota(e.target.value)} />}</Campo>
-      <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.fotoLlega')}</p>
+      <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.fotoDespues')}</p>
       {guardar.isError ? <ErrorDeGuardado error={guardar.error} proyecto={projectId} /> : null}
       <Button
         type="button"

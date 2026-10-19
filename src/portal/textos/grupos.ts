@@ -61,7 +61,10 @@ export const ES_GRUPOS = {
     vigenteAyuda: 'El último valor informado en una evaluación',
     confianzaValor: '{{n}} de 5',
     pendientes: 'Pendientes',
-    pendientesLlegan: 'Los compromisos y QCS pendientes llegan en F3 y F4.',
+    compromisosAbiertos_one: '{{count}} compromiso abierto',
+    compromisosAbiertos_other: '{{count}} compromisos abiertos',
+    qcsAbiertas_one: '{{count}} QCS abierta',
+    qcsAbiertas_other: '{{count}} QCS abiertas',
     sinEvaluar: 'Aún no tiene evaluación: evalúelo para ubicarlo en la matriz.',
     sinInteracciones: 'Aún no participó en ninguna interacción.',
     divergencia: 'Dos evaluaciones cercanas tienen posturas distintas: revise la fuente de cada una.',
@@ -75,7 +78,8 @@ export const ES_GRUPOS = {
     editarPerfil: 'Editar la caracterización',
     trazabilidad: 'Qué generó',
     interacciones: 'Interacciones',
-    compromisosLlegan: 'Compromisos y acuerdos: desde F3',
+    compromisos: 'Compromisos que pidió',
+    sinCompromisos: 'No pidió compromisos.',
     relaciones: 'Relaciones del actor'
   },
   actor: {
@@ -240,7 +244,10 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     vigenteAyuda: 'The last value reported in an assessment',
     confianzaValor: '{{n}} of 5',
     pendientes: 'Pending',
-    pendientesLlegan: 'Pending commitments and grievances arrive in F3 and F4.',
+    compromisosAbiertos_one: '{{count}} open commitment',
+    compromisosAbiertos_other: '{{count}} open commitments',
+    qcsAbiertas_one: '{{count}} open case',
+    qcsAbiertas_other: '{{count}} open cases',
     sinEvaluar: 'Not assessed yet: assess it to place it in the matrix.',
     sinInteracciones: 'It has not taken part in any engagement yet.',
     divergencia: 'Two close assessments have different stances: check the source of each.',
@@ -254,7 +261,8 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     editarPerfil: 'Edit the profile',
     trazabilidad: 'What it generated',
     interacciones: 'Engagements',
-    compromisosLlegan: 'Commitments and agreements: from F3',
+    compromisos: 'Commitments it requested',
+    sinCompromisos: 'It requested no commitments.',
     relaciones: 'Actor relationships'
   },
   actor: {

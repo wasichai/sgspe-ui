@@ -16,6 +16,7 @@ import { Dato, TrabajarEnProyecto, useRegistrosPorId } from './comunes'
 import { EditorDeGeometria } from './EditorDeGeometria'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 import { opcion } from '../datos/opciones'
+import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 
 // S13 · ficha de comunidad (screens.md §4, flujos 2 y 17): quién es la comunidad (registros, vida orgánica, sectores y la
 // organización que la representa con sus cargos), sus grupos de interés y las áreas que la incluyen. los registros del lugar
@@ -86,7 +87,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
             {
               id: 'documentos',
               label: t('territorio.pestanas.documentos'),
-              render: () => <p className="pt-3 text-sm text-sg-text-muted">{t('territorio.documentosLlegan')}</p>
+              render: () => <EvidenciasDelRegistro objeto="community" registro={comunidad} escribe={can('community', 'UPDATE')} />
             }
           ]}
         />
