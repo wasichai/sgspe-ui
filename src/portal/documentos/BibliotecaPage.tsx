@@ -1,3 +1,6 @@
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useState } from 'react'
@@ -8,7 +11,7 @@ import { Drawer } from '../componentes/Drawer'
 import { Restringido } from '../componentes/Estados'
 import { ChipsDeFiltro, TablaDeRegistros, useParametrosDeLista, VacioDeLista, type Columna } from '../componentes/Lista'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
+import { useProyectos } from '../contexto/proyectos'
 import { descriptorDe, tamanoPe } from '../datos/archivos'
 import { rutaDeFicha } from '../datos/fichas'
 import { atributo, campoDe, useDefinicion, useRegistros, type Registro } from '../datos/registros'
@@ -58,7 +61,12 @@ export function BibliotecaPage() {
     ...(sinConsentimiento ? [{ clave: 'consent', etiqueta: t('documentos.sinConsentimiento') }] : [])
   ]
   const columnas: Columna[] = [
-    { id: 'evidencia', encabezado: t('documentos.columnas.evidencia'), celda: (e) => nombreDeEvidencia(e) },
+    // el título es un enlace a la ficha (D12 de la revisión de UX: la fila se abría, pero nada lo decía)
+    {
+      id: 'evidencia',
+      encabezado: t('documentos.columnas.evidencia'),
+      celda: (e) => <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} desde={t('documentos.titulo')} />
+    },
     // en el alcance global, de qué proyecto es (o «—» si es de la organización)
     ...(proyecto
       ? []
@@ -68,7 +76,7 @@ export function BibliotecaPage() {
             encabezado: t('documentos.columnas.proyecto'),
             celda: (e: Registro) => {
               const p = proyectos.data?.find((x) => x.id === atributo(e, 'project'))
-              return p ? nombreDeProyecto(p) : atributo(e, 'project') ? '…' : '—'
+              return p ? <ProyectoEnLista proyecto={p} /> : atributo(e, 'project') ? '…' : '—'
             }
           }
         ]),
@@ -97,11 +105,18 @@ export function BibliotecaPage() {
   ]
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('documentos.titulo')}</h1>
-        {sube ? <Button onClick={() => setSubiendo(true)}>{t('evidencias.subir')}</Button> : null}
-      </div>
-      <p className="text-sm text-sg-text-secondary">{t('documentos.ayuda')}</p>
+      <EncabezadoDePagina
+        titulo={t('documentos.titulo')}
+        descripcion={t('documentos.ayuda')}
+        conteo={evidencias.data?.totalElements != null ? t('documentos.conteo', { count: evidencias.data.totalElements }) : undefined}
+        primaria={
+          sube ? (
+            <Button size="sm" onClick={() => setSubiendo(true)}>
+              {t('evidencias.subir')}
+            </Button>
+          ) : undefined
+        }
+      />
       <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
         <label className="space-y-1">
           <span className="block">{t('documentos.buscar')}</span>
