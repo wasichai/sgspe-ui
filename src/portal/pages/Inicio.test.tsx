@@ -74,7 +74,7 @@ const pagina = () => within(screen.getByRole('main'))
 
 // la cuenta vive en el menú del perfil de la barra superior (revisión de UX, etapa 2): se abre y se lee ahí
 async function cuenta() {
-  await userEvent.click(await within(screen.getByRole('banner')).findByRole('button', { name: 'Su cuenta' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Su cuenta' }))
   return within(screen.getByRole('group', { name: 'Su cuenta' }))
 }
 
@@ -89,18 +89,19 @@ function InicioDePrueba() {
 }
 
 describe('inicio de F1', () => {
-  it('muestra los accesos a sus secciones, sin fases, y la cuenta, la organización y los roles por su rótulo en el menú del perfil', async () => {
+  it('a quien administra le muestra «Mi día» sin la grilla, y la cuenta, la organización y los roles por su rótulo en el menú del perfil', async () => {
     start(ADMINISTRACION, ADMIN_PERMISOS, [{ path: '/roles', body: [{ name: 'ADMIN', label: 'Administración de la organización' }] }])
     expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
     expect(pagina().getByText('Le damos la bienvenida, Administración de prueba.')).toBeInTheDocument()
-    await waitFor(() => expect(accesos()).toEqual(['Administración']))
+    // quien administra crea y lee: ve «Mi día» (los atajos) y no la grilla de secciones, que repetiría la barra lateral
+    expect(await pagina().findByRole('region', { name: 'Registrar' })).toBeInTheDocument()
+    expect(pagina().queryByRole('region', { name: 'Sus secciones' })).not.toBeInTheDocument()
     // la cuenta ya no está en la página: en el menú del perfil
     expect(pagina().queryByText('Administración de prueba (admin@sgspe.test)')).not.toBeInTheDocument()
     const perfil = await cuenta()
     expect(perfil.getByText('Administración de prueba (admin@sgspe.test)')).toBeInTheDocument()
     expect(await perfil.findByText('Organización de prueba')).toBeInTheDocument()
     expect(await perfil.findByText('Administración de la organización')).toBeInTheDocument()
-    expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
     expect(pagina().queryByText(/F[0-9]/)).not.toBeInTheDocument()
     expect(pagina().queryByText('ADMIN')).not.toBeInTheDocument()
   })
@@ -142,10 +143,10 @@ describe('inicio de F1', () => {
     expect(await perfil.findByText('1 rol asignado')).toBeInTheDocument()
     expect(accesos()).toEqual([])
     expect(pagina().queryByText(/secciones disponibles/)).not.toBeInTheDocument()
-    // solo liberar la respuesta muestra los accesos
+    // solo liberar la respuesta decide: quien administra pasa a «Mi día» y la grilla se va
     retencion?.liberar()
-    await waitFor(() => expect(accesos()).toEqual(['Administración']))
-    expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
+    expect(await pagina().findByRole('region', { name: 'Registrar' })).toBeInTheDocument()
+    expect(pagina().queryByRole('region', { name: 'Sus secciones' })).not.toBeInTheDocument()
   })
 
   it('dice que no pudo leer la cuenta cuando /auth/me falla', async () => {

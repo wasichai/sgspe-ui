@@ -15,11 +15,15 @@ const ATAJOS = [
   { clave: 'compromiso', objeto: ['commitment'], resto: 'commitments/new' }
 ] as const
 
+// lo que la cuenta puede crear desde el inicio: los atajos ofrecidos y si crea proyectos
+export function useAtajos() {
+  const { can } = useAuth()
+  return { ofrecidos: ATAJOS.filter((a) => a.objeto.some((o) => can(o, 'CREATE'))), proyecto: can('project', 'CREATE') }
+}
+
 export function Atajos() {
   const { t } = useTranslation(NS)
-  const { can } = useAuth()
-  const ofrecidos = ATAJOS.filter((a) => a.objeto.some((o) => can(o, 'CREATE')))
-  const proyecto = can('project', 'CREATE')
+  const { ofrecidos, proyecto } = useAtajos()
   if (ofrecidos.length === 0 && !proyecto) return null
   return (
     <section aria-labelledby="atajos" className="space-y-2">

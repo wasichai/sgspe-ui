@@ -32,7 +32,8 @@ const AVISOS = {
   content: [
     aviso('n1', 'sgspe.approvals', 'commitment', 'c9', 'Aprobar C-009 Reservorio'),
     aviso('n2', 'sgspe.deadlines', 'grievance', 'g1', 'La queja Q-001 vence hoy'),
-    aviso('n3', 'sgspe.deadlines', 'grievance', 'g2', 'Ya leído', true)
+    aviso('n3', 'sgspe.deadlines', 'grievance', 'g2', 'Ya leído', true),
+    { ...aviso('n4', 'sgspe.deadlines', 'grievance', 'g3', 'Solo informa'), kind: 'WARNING' }
   ],
   page: 0,
   size: 200,

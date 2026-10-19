@@ -36,7 +36,9 @@ export function AtencionRequerida() {
   const porVencer = con('POR VENCER')
   const deAviso = (a: Aviso, ruta: string | null): Elemento => ({ clave: a.id, rotulo: a.title, ruta })
   const decisiones = pendientes.map((a) => deAviso(a, rutaDeDecision(a) ?? destinoDeAviso(a.link)))
-  const otros = (avisos.data?.content ?? []).filter((a) => !a.read && a.source !== FUENTE_DE_APROBACIONES).map((a) => deAviso(a, destinoDeAviso(a.link)))
+  const otros = (avisos.data?.content ?? [])
+    .filter((a) => a.kind === 'ACTION' && !a.read && a.source !== FUENTE_DE_APROBACIONES)
+    .map((a) => deAviso(a, destinoDeAviso(a.link)))
   if (!trabajo.lee && !avisos.data) return null
   const cargando = trabajo.cargando || avisos.isPending
   const nada = !cargando && vencidos.length + porVencer.length + decisiones.length + otros.length === 0
