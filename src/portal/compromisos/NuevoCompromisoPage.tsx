@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -21,7 +21,7 @@ import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
 import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
-import { NS } from '../i18n'
+import { fechaYHoraPe, NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
 import { opcion } from '../datos/opciones'
 
@@ -153,6 +153,38 @@ export function NuevoCompromisoPage() {
   return <ConDefiniciones definiciones={[definicion]}>{() => <Asistente key={projectId} />}</ConDefiniciones>
 }
 
+// el borrador del alta en este navegador (design-system.md §6.3: guardado automático): lo escrito en el formulario se guarda
+// por proyecto mientras se completan los pasos, se recupera al volver y se borra al registrar el compromiso. solo los campos del
+// formulario: el origen, los solicitantes y las personas se vuelven a elegir. si el navegador no guarda, no pasa nada
+const claveDelBorrador = (proyecto: string) => `sgspe.borrador.compromiso.${proyecto}`
+interface Borrador {
+  valores: Valores
+  guardado: string
+}
+function leerBorrador(proyecto: string): Borrador | null {
+  try {
+    const crudo = localStorage.getItem(claveDelBorrador(proyecto))
+    return crudo ? (JSON.parse(crudo) as Borrador) : null
+  } catch {
+    return null
+  }
+}
+function guardarBorrador(proyecto: string, valores: Valores) {
+  try {
+    if (Object.values(valores).every((v) => v === '' || v === undefined || v === null)) localStorage.removeItem(claveDelBorrador(proyecto))
+    else localStorage.setItem(claveDelBorrador(proyecto), JSON.stringify({ valores, guardado: new Date().toISOString() } satisfies Borrador))
+  } catch {
+    // sin almacenamiento, el formulario sigue sin borrador
+  }
+}
+function borrarBorrador(proyecto: string) {
+  try {
+    localStorage.removeItem(claveDelBorrador(proyecto))
+  } catch {
+    // nada que borrar
+  }
+}
+
 function Asistente() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
@@ -185,11 +217,24 @@ function Asistente() {
   const [vinculados, setVinculados] = useState<Set<string>>(new Set())
   const [enviando, setEnviando] = useState(false)
   const [fallo, setFallo] = useState<unknown>(null)
-  const { register, handleSubmit, control, formState, trigger, setError, getValues } = useForm<Valores>({
+  const [recuperado] = useState(() => leerBorrador(projectId))
+  const [avisoDeBorrador, setAvisoDeBorrador] = useState(recuperado !== null)
+  const { register, handleSubmit, control, formState, trigger, setError, getValues, reset } = useForm<Valores>({
     resolver: zodResolver(esquema),
-    defaultValues: VACIO
+    defaultValues: recuperado ? { ...VACIO, ...recuperado.valores } : VACIO
   })
   const valores = useWatch({ control })
+  // lo escrito se guarda medio segundo después de dejar de escribir; tras el alta ya no hay borrador que guardar
+  useEffect(() => {
+    if (creado) return
+    const plazo = setTimeout(() => guardarBorrador(projectId, { ...VACIO, ...valores } as Valores), 500)
+    return () => clearTimeout(plazo)
+  }, [valores, projectId, creado])
+  const descartarBorrador = () => {
+    borrarBorrador(projectId)
+    reset(VACIO)
+    setAvisoDeBorrador(false)
+  }
   const opciones = (campo: string) => campoDe(definicion.data, campo)?.enumOptions ?? []
   const escribible = (campo: string) => puedeEscribir(definicion.data, campo)
   const paso = PASOS[actual]
@@ -315,6 +360,7 @@ function Asistente() {
             }
           }
           void cliente.invalidateQueries({ queryKey: ['records', 'commitment'] })
+          borrarBorrador(projectId)
           navegar(`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(compromiso.id)}`)
         } catch (e) {
           setFallo(e)
@@ -358,6 +404,14 @@ function Asistente() {
     <section className="mx-auto max-w-[1100px] space-y-4">
       <h1 className="text-sg-h1 font-semibold">{t('nuevoCompromiso.titulo')}</h1>
       <p className="text-sm text-sg-text-secondary">{t('nuevoCompromiso.ayuda')}</p>
+      {avisoDeBorrador && recuperado ? (
+        <Alert tone="notice">
+          <span>{t('nuevoCompromiso.borrador.recuperado', { cuando: fechaYHoraPe(new Date(recuperado.guardado)) })}</span>{' '}
+          <Button variant="ghost" size="sm" onClick={descartarBorrador}>
+            {t('nuevoCompromiso.borrador.descartar')}
+          </Button>
+        </Alert>
+      ) : null}
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <Pasos pasos={PASOS.map((p) => t(`nuevoCompromiso.pasos.${p}`))} actual={actual} visitados={visitados} alIr={(i) => void ir(i)} />
         <form
@@ -379,8 +433,10 @@ function Asistente() {
                 {campoDeTexto('description', true)}
                 {campoDeTexto('objective', true)}
                 {campoDeOpciones('resource_type')}
-                {campoNumerico('quantity')}
-                {campoDeTexto('unit')}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {campoNumerico('quantity')}
+                  {campoDeTexto('unit')}
+                </div>
                 {campoDeTexto('execution_time')}
                 {campoDeOpciones('commitment_theme')}
                 {campoDeOpciones('formality')}

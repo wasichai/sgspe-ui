@@ -129,12 +129,31 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
                 markArea: {
                   silent: true,
                   itemStyle: { color: 'transparent' },
-                  label: { position: 'inside' },
+                  // cada rótulo en la esquina exterior de su cuadrante y con fondo: en el centro lo tapaban los puntos
+                  label: {
+                    color: colorDe('--sg-text-secondary'),
+                    backgroundColor: colorDe('--sg-surface'),
+                    padding: [2, 4],
+                    borderRadius: 2,
+                    fontSize: 11
+                  },
                   data: [
-                    [{ name: t('grupos.matriz.cuadrantes.POLITICO'), coord: [1, umbrales.poder] }, { coord: [umbrales.interes, 5] }],
-                    [{ name: t('grupos.matriz.cuadrantes.ESTRATEGICO'), coord: [umbrales.interes, umbrales.poder] }, { coord: [5, 5] }],
-                    [{ name: t('grupos.matriz.cuadrantes.VULNERABLE'), coord: [1, 1] }, { coord: [umbrales.interes, umbrales.poder] }],
-                    [{ name: t('grupos.matriz.cuadrantes.PARA MONITOREO'), coord: [umbrales.interes, 1] }, { coord: [5, umbrales.poder] }]
+                    [
+                      { name: t('grupos.matriz.cuadrantes.POLITICO'), coord: [1, umbrales.poder], label: { position: 'insideTopLeft' } },
+                      { coord: [umbrales.interes, 5] }
+                    ],
+                    [
+                      { name: t('grupos.matriz.cuadrantes.ESTRATEGICO'), coord: [umbrales.interes, umbrales.poder], label: { position: 'insideTopRight' } },
+                      { coord: [5, 5] }
+                    ],
+                    [
+                      { name: t('grupos.matriz.cuadrantes.VULNERABLE'), coord: [1, 1], label: { position: 'insideBottomLeft' } },
+                      { coord: [umbrales.interes, umbrales.poder] }
+                    ],
+                    [
+                      { name: t('grupos.matriz.cuadrantes.PARA MONITOREO'), coord: [umbrales.interes, 1], label: { position: 'insideBottomRight' } },
+                      { coord: [5, umbrales.poder] }
+                    ]
                   ]
                 }
               }
@@ -161,7 +180,9 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
         />
       </div>
       <nav aria-label={t('grupos.matriz.puntos')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
-        <h2 className="font-medium">{t('grupos.matriz.puntos')}</h2>
+        <h2 className="font-medium">
+          {t('grupos.matriz.puntos')} <span className="font-normal text-sg-text-muted">({numeroPe(puntos.length)})</span>
+        </h2>
         <ul className="max-h-[420px] overflow-y-auto">
           {puntos.map((p) => (
             <li key={p.key}>

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import type { FetchMock, MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
+import { pagina } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { problemaDelPeriodo } from './TerritorioPage'
 import {
@@ -62,6 +63,22 @@ describe('S12 · la vista inicial', () => {
     red = espiarRed()
     await waitFor(() => expect(geojson().length).toBeGreaterThan(0))
     for (const l of geojson()) expect(l.ruta).toContain('bbox=-82.000%2C-19.000%2C-68.000%2C1.000')
+  })
+
+  it('sin proyecto, abre sobre los proyectos que la cuenta lee si alguno tiene ubicación', async () => {
+    const conUbicacion = (id: string, x: number, y: number) => ({
+      id,
+      state: 'active',
+      attributes: { code: id, name: id },
+      geometries: { location: { type: 'Point', coordinates: [x, y] }, interest_area: null }
+    })
+    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, [
+      { path: /^\/objects\/project\/records\?/, body: pagina([conUbicacion('p1', -78.2, -8.3), conUbicacion('p2', -77.5, -9.5)]) },
+      ...rutas()
+    ])
+    red = espiarRed()
+    await waitFor(() => expect(geojson().length).toBeGreaterThan(0))
+    for (const l of geojson()) expect(l.ruta).toContain('bbox=-78.200%2C-9.500%2C-77.500%2C-8.300')
   })
 
   it('con proyecto, abre sobre su ubicación y su área de interés, y la sonda de gestión sigue con su encuadre vacío', async () => {

@@ -95,6 +95,21 @@ describe('S30 · crear compromiso', () => {
     expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
   })
 
+  it('lo escrito se guarda en el navegador: al volver se recupera con un aviso, y se puede descartar', async () => {
+    fetch = mockFetch(rutas())
+    const { unmount } = abrir()
+    await escribir('Código', 'C-010')
+    await escribir('Título', 'Canal de riego')
+    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toContain('Canal de riego'))
+    unmount()
+    abrir()
+    expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Título')).toHaveValue('Canal de riego')
+    await userEvent.click(screen.getByRole('button', { name: 'Descartar el borrador' }))
+    expect(screen.getByLabelText('Título')).toHaveValue('')
+    expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toBeNull()
+  })
+
   it('la barra del tope suma lo aprobado en la campaña y avisa si este compromiso lo supera', async () => {
     fetch = mockFetch(rutas())
     abrir()
