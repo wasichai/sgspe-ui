@@ -311,7 +311,10 @@ describe('tablero de inversión social', () => {
     expect(consulta.get('program')).toBe('sp1')
     expect(consulta.get('year')).toBe('2026')
     expect(await screen.findByText('Esta cifra no aplica el filtro de campaña de exploración')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ir a programas y aportes' })).toHaveAttribute('href', '/projects/p1/programs')
+    expect(within(screen.getByRole('navigation', { name: 'Vistas del módulo' })).getByRole('link', { name: 'Lista' })).toHaveAttribute(
+      'href',
+      '/projects/p1/programs'
+    )
   })
 
   it('TOO_MANY_RECORDS es «acote los filtros», no un error ni ceros', async () => {

@@ -8,7 +8,7 @@ import { useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Historia } from '../componentes/Historia'
 import { Cargando, Consulta, NoDisponible, esProhibido } from '../componentes/Estados'
-import { KpiCard } from '../componentes/KpiCard'
+import { CifraFallida, KpiCard } from '../componentes/KpiCard'
 import { ROL_DE_JEFATURA } from '../config'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto } from '../contexto/proyectos'
@@ -127,6 +127,8 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
       <ResumenEjecutivo proyecto={proyecto} />
       <AccionesDeIa objeto="project" registro={proyecto} proyecto={proyecto.id} rotulo={texto(proyecto, 'name')} casos={['AI-07']} />
       <Atencion proyecto={proyecto} inactividad={parametro('inactivity_days')} revision={parametro('stakeholder_review_days')} />
+      {/* todas estas cifras salen del tablero del proyecto: si falla, cada una lo dice en una línea y el aviso con «Reintentar»
+          va una sola vez, en el tablero (D4, revisión de UX, etapa 7) */}
       <section aria-label={t('p360.resumen.salud')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <h2 className="sr-only">{t('p360.resumen.salud')}</h2>
         {/* cada cifra lleva a su lista con el filtro puesto (design P8; revisión de UX, etapa 6) */}
@@ -175,7 +177,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {stk03.isPending ? (
                 <Cargando />
               ) : stk03.isError ? (
-                <FalloDeLectura error={stk03.error} alReintentar={() => void stk03.refetch()} />
+                <CifraFallida error={stk03.error} />
               ) : (
                 <MiniMatriz
                   etiqueta={t('p360.resumen.matriz')}
@@ -199,7 +201,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {stk02.isPending ? (
                 <Cargando />
               ) : stk02.isError ? (
-                <FalloDeLectura error={stk02.error} alReintentar={() => void stk02.refetch()} />
+                <CifraFallida error={stk02.error} />
               ) : (
                 <BarraDePosturas indicador={stk02.data} titulo={t('p360.resumen.posturas')} />
               )}
@@ -211,7 +213,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
           {eng02.isPending ? (
             <Cargando />
           ) : eng02.isError ? (
-            <FalloDeLectura error={eng02.error} alReintentar={() => void eng02.refetch()} />
+            <CifraFallida error={eng02.error} />
           ) : !eng02.data.available ? (
             <NoDisponible motivo={eng02.data.unavailableReason} />
           ) : !eng02.data.series?.length ? (

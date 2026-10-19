@@ -1,7 +1,6 @@
 // S27 · tablero de compromisos (dashboards.md §5.6, KPI-COM-01 a KPI-COM-11)
 export const ES_TABLERO_COMPROMISOS = {
   titulo: 'Tablero de compromisos',
-  verLista: 'Ver la lista de compromisos',
   zonas: {
     estado: 'Estado',
     desgloses: 'Dónde y en manos de quién',
@@ -49,7 +48,6 @@ export const ES_TABLERO_COMPROMISOS = {
 
 export const EN_TABLERO_COMPROMISOS: typeof ES_TABLERO_COMPROMISOS = {
   titulo: 'Commitments dashboard',
-  verLista: 'See the commitments list',
   zonas: {
     estado: 'Status',
     desgloses: 'Where and in whose hands',

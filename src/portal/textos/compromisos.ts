@@ -2,7 +2,6 @@
 export const ES_COMPROMISOS = {
   titulo: 'Compromisos',
   nuevo: 'Nuevo compromiso',
-  tablero: 'Tablero de compromisos',
   exportar: 'Exportar la matriz',
   conteo_one: '{{count}} compromiso',
   conteo_other: '{{count}} compromisos',
@@ -89,7 +88,6 @@ export const ES_COMPROMISOS = {
 export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
   titulo: 'Commitments',
   nuevo: 'New commitment',
-  tablero: 'Commitments dashboard',
   exportar: 'Export the matrix',
   conteo_one: '{{count}} commitment',
   conteo_other: '{{count}} commitments',

@@ -406,10 +406,15 @@ describe('KpiCard', () => {
     expect(screen.getByText('Elija un proyecto')).toHaveAttribute('title', 'Esta cifra se calcula para un solo proyecto: elija uno en el selector')
   })
 
-  it('si la consulta del indicador falló, dice el error en lugar de "Cargando…" para siempre', async () => {
-    montar(<KpiCard titulo="Cifra" cargando={false} error={new ErrorDeSgspe(500, 'Falló', [], 'corr-9')} />)
-    expect(await screen.findByText(/corr-9/)).toBeInTheDocument()
+  it('si la consulta del indicador falló, lo dice en una línea con el detalle en title, en lugar de "Cargando…" para siempre', async () => {
+    const reintentar = vi.fn()
+    montar(<KpiCard titulo="Cifra" cargando={false} error={new ErrorDeSgspe(500, 'Falló', [], 'corr-9')} alReintentar={reintentar} />)
+    // D4 (revisión de UX, etapa 7): una línea, no el aviso entero de una lectura fallida
+    expect((await screen.findByText(/No se pudo cargar/)).getAttribute('title')).toMatch(/corr-9/)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.queryByText('Cargando…')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(reintentar).toHaveBeenCalled()
   })
 
   it('un 403 del indicador dice "No disponible", no un error rojo; otro error sí es un error', async () => {

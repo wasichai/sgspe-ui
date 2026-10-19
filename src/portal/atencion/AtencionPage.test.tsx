@@ -155,6 +155,30 @@ describe('S35 · lista unificada de QCS', () => {
     expect(screen.queryByRole('link', { name: /^Q-002/ })).not.toBeInTheDocument()
   })
 
+  // D4 (revisión de UX, etapa 7): si fallan los tres indicadores, un solo aviso con «Reintentar»; si falla uno, su tarjeta lo ofrece
+  it('los indicadores que fallan se dicen en una línea, con un solo aviso si fallan todos', async () => {
+    const falla = (code: string) => ({ path: `/sgspe/dashboards/indicators/${code}`, status: 500, body: { title: 'Error', status: 500 } })
+    fetch = mockFetch(rutas([falla('KPI-GRV-02'), falla('KPI-GRV-06'), falla('KPI-GRV-07')]))
+    const { unmount } = abrir()
+    const indicadores = await screen.findByRole('region', { name: 'Indicadores' })
+    expect(await within(indicadores).findAllByRole('alert')).toHaveLength(1)
+    // las tres tarjetas en una línea (con el detalle en title); el aviso único dice el texto entero
+    expect(
+      within(indicadores)
+        .getAllByText(/^No se pudo cargar/)
+        .filter((e) => e.hasAttribute('title'))
+    ).toHaveLength(3)
+    expect(within(indicadores).getAllByRole('button', { name: 'Reintentar' })).toHaveLength(1)
+    unmount()
+    fetch.restore()
+    fetch = mockFetch(rutas([falla('KPI-GRV-06')]))
+    abrir()
+    const otra = await screen.findByRole('region', { name: 'Indicadores' })
+    await within(otra).findByText(/^No se pudo cargar/)
+    expect(within(otra).queryByRole('alert')).not.toBeInTheDocument()
+    expect(within(otra).getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+  })
+
   it('una QCS cerrada no está en Atención y un plazo solo cuenta en su estado', () => {
     expect(enVista('atencion', { objeto: 'grievance', registro: CERRADA }, 'u-gvm')).toBe(false)
     expect(grupoDe({ objeto: 'grievance', registro: registro('x', { deadline_status: 'VENCIDO' }, { state: 'resolved' }) })).toBe('alDia')

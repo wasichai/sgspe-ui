@@ -12,7 +12,7 @@ import {
   FalloDeProyectos,
   SalidaFueraDeLaOrganizacion,
   SelectorDeNivel,
-  SelectorDeProyecto,
+  AlcanceDeLaExportacion,
   useExportacion,
   useProyectoElegido
 } from './exportacion'
@@ -27,7 +27,7 @@ const NIVELES_DE_RIESGO = ['BAJO', 'MEDIO', 'ALTO', 'CRITICO']
 
 export function RegistroDeRiesgos({ niveles }: { niveles: string[] }) {
   const { t } = useTranslation(NS)
-  const { proyecto, elegir } = useProyectoElegido()
+  const { proyecto } = useProyectoElegido()
   const definicion = useDefinicion('social_risk')
   const flujo = useWorkflow('social_risk')
   const [estados, setEstados] = useState<Set<string>>(new Set())
@@ -63,7 +63,7 @@ export function RegistroDeRiesgos({ niveles }: { niveles: string[] }) {
       <h2 className="text-sg-h3 font-semibold">{t('reportes.riesgos.titulo')}</h2>
       <p className="text-sm text-sg-text-secondary">{t('reportes.riesgos.ayuda')}</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <SelectorDeProyecto proyecto={proyecto} alCambiar={cambiar(elegir)} />
+        <AlcanceDeLaExportacion proyecto={proyecto} />
         <SelectorDeNivel exportacion={exportacion} niveles={niveles} descripciones="reportes.riesgos.niveles" />
       </div>
       <FalloDeProyectos />

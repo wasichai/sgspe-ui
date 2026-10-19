@@ -1,7 +1,9 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 import { SelectNativo } from '../componentes/Campo'
 import { montoPe } from '../componentes/Monto'
 import { desglose, useTablero, type FilaDeDesglose, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
@@ -44,12 +46,7 @@ export function TableroInversionPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('tableroInversion.titulo')}</h1>
-        <Link to={proyecto ? `/projects/${encodeURIComponent(proyecto)}/programs` : '/programs'} className="text-sm text-sg-primary-text underline">
-          {t('tableroInversion.irAProgramas')}
-        </Link>
-      </div>
+      <EncabezadoDePagina titulo={t('tableroInversion.titulo')} vistas={<VistasDelModulo modulo="programs" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} conCampana />
       <FiltrosDeInversion proyecto={proyecto} />
       <ConsultaDeTablero consulta={tablero}>

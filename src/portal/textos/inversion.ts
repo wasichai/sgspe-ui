@@ -1,7 +1,6 @@
 // S42 · programas e inversión y las cifras de la inversión que comparte con el tablero (screens.md §10 y §12, dashboards.md §4.7)
 export const ES_INVERSION = {
   titulo: 'Programas sociales',
-  tablero: 'Tablero de inversión',
   nuevoAporte: 'Nuevo aporte',
   nuevoPrograma: 'Nuevo programa',
   motivo: 'Motivo (obligatorio)',
@@ -68,7 +67,6 @@ export const ES_INVERSION = {
 
 export const EN_INVERSION: typeof ES_INVERSION = {
   titulo: 'Social programs',
-  tablero: 'Investment dashboard',
   nuevoAporte: 'New contribution',
   nuevoPrograma: 'New program',
   motivo: 'Reason (required)',

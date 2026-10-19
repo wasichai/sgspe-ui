@@ -10,8 +10,7 @@ export const ES_ENTREGABLES = {
     sinAsignacion: 'Para crear un entregable en este proyecto hace falta una asignación vigente a él.',
     vacio: 'Todavía no hay entregables.',
     columnas: {
-      codigo: 'Código',
-      titulo: 'Título',
+      entregable: 'Entregable',
       tipo: 'Tipo',
       corte: 'Corte',
       estado: 'Estado',
@@ -204,7 +203,7 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     eligeProyecto: 'Choose a project to create a deliverable.',
     sinAsignacion: 'Creating a deliverable in this project needs a current assignment to it.',
     vacio: 'There are no deliverables yet.',
-    columnas: { codigo: 'Code', titulo: 'Title', tipo: 'Type', corte: 'Cutoff', estado: 'State', borrador: 'Draft', revision: 'Revision', niveles: 'Levels' }
+    columnas: { entregable: 'Deliverable', tipo: 'Type', corte: 'Cutoff', estado: 'State', borrador: 'Draft', revision: 'Revision', niveles: 'Levels' }
   },
   nuevo: {
     titulo: 'New deliverable',

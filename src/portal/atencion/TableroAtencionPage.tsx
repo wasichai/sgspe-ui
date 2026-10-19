@@ -1,7 +1,8 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { NoDisponible } from '../componentes/Estados'
 import { KpiCard } from '../componentes/KpiCard'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
@@ -9,7 +10,6 @@ import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { desglose, useTablero, type Indicador } from '../datos/indicadores'
 import { Grafico } from '../graficos/Grafico'
 import { NS, numeroPe, periodoPe } from '../i18n'
-import { useContextFilters } from '../shell/context'
 import { Barras, ConsultaDeTablero, FiltrosDeTablero, indicadorDe, NotasDeIndicador, useFiltrosDeTablero, Zona } from '../tableros/comunes'
 import { rotuloDeFila } from '../datos/opciones'
 
@@ -26,16 +26,9 @@ export function TableroAtencionPage() {
   const { t } = useTranslation(NS)
   const filtros = useFiltrosDeTablero()
   const tablero = useTablero('attention', filtros)
-  const { scope } = useContextFilters()
-  const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('tableroAtencion.titulo')}</h1>
-        <Link to={`${base}/attention`} className="text-sm text-sg-primary-text underline">
-          {t('tableroAtencion.verLista')}
-        </Link>
-      </div>
+      <EncabezadoDePagina titulo={t('tableroAtencion.titulo')} vistas={<VistasDelModulo modulo="attention" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {

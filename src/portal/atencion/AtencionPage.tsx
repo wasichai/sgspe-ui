@@ -1,11 +1,12 @@
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
-import { useAuth } from '@wasichai/core'
+import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { CONTROL, SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, Vacio } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, Vacio } from '../componentes/Estados'
 import { KpiCard } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { BotonCrear } from '../componentes/BotonCrear'
@@ -141,21 +142,30 @@ export function AtencionPage() {
   ]
   const limpiar = () => lista.cambiar({ q: null, channel: null, category: null, severity: null, stakeholder: null })
   const conConfidencialesOcultas = [abiertas, vencidas, absueltas].some((i) => i.data?.confidentialHidden === true)
-  const tarjeta = (titulo: string, consulta: { data?: Indicador; error: unknown; isPending: boolean }) => (
-    <KpiCard titulo={titulo} indicador={consulta.data} cargando={consulta.isPending} error={consulta.error} />
+  // si fallan los tres indicadores, un solo aviso con «Reintentar» y las tarjetas en una línea; si falla uno, su tarjeta lo
+  // ofrece (D4, revisión de UX, etapa 7). un 403 no es una falla: es «No disponible»
+  const indicadores = [abiertas, vencidas, absueltas]
+  const fallanTodos = indicadores.every((i) => i.isError && !i.data && !(i.error instanceof ApiError && i.error.status === 403))
+  const reintentarTodos = () => indicadores.forEach((i) => void i.refetch())
+  const tarjeta = (titulo: string, consulta: { data?: Indicador; error: unknown; isPending: boolean; refetch: () => unknown }) => (
+    <KpiCard
+      titulo={titulo}
+      indicador={consulta.data}
+      cargando={consulta.isPending}
+      error={consulta.error}
+      alReintentar={fallanTodos ? undefined : () => void consulta.refetch()}
+    />
   )
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        vistas={<VistasDelModulo modulo="attention" actual="lista" />}
         titulo={t('atencion.titulo')}
         conteo={cargando || fallida || legibles.length === 0 ? undefined : t('atencion.conteo', { count: visibles.length })}
         primaria={<BotonCrear objeto={OBJETOS_DE_QCS} etiqueta={t('atencion.registrar')} resto="attention/new" />}
         secundarias={
           <>
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/attention/dashboard`}>{t('atencion.tablero')}</Link>
-            </Button>
             <Button asChild size="sm" variant="secondary">
               <Link to={`${base}/attention/report`}>{t('atencion.reporte')}</Link>
             </Button>
@@ -163,6 +173,7 @@ export function AtencionPage() {
         }
       />
       <section aria-label={t('atencion.indicadores')} className="space-y-2">
+        {fallanTodos ? <ErrorDeCarga error={abiertas.error} alReintentar={reintentarTodos} /> : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {tarjeta(abiertas.data?.label || t('atencion.tarjetas.abiertas'), abiertas)}
           {tarjeta(vencidas.data?.label || t('atencion.tarjetas.vencidas'), vencidas)}

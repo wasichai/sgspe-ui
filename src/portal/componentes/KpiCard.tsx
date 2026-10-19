@@ -1,10 +1,12 @@
 import { Link } from 'react-router'
 import { ApiError } from '@wasichai/core'
+import { AlertTriangle } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Indicador } from '../datos/indicadores'
 import { NS, numeroPe } from '../i18n'
-import { Cargando, ErrorDeCarga, NoDisponible } from './Estados'
+import { Cargando, NoDisponible } from './Estados'
+import { correlacionDe, useMensajeDeError } from './errores'
 
 // una cifra con su contexto (design-system.md §5, dashboards.md §9.2): el valor, su unidad y, si es un porcentaje, el
 // "n de N" que deja ver la base. sin permiso dice "no disponible" y por qué; un módulo que no llegó dice en qué fase llega
@@ -18,7 +20,8 @@ export function KpiCard({
   cargando,
   error,
   notas,
-  a
+  a,
+  alReintentar
 }: {
   titulo: string
   indicador?: Indicador
@@ -28,12 +31,16 @@ export function KpiCard({
   notas?: ReactNode
   // la lista con el filtro puesto: la cifra la enlaza (design P8; revisión de UX, etapa 6)
   a?: string
+  // con un fallo propio, «Reintentar» junto a la cifra; si falla todo el tablero, el aviso único lo ofrece y la tarjeta no
+  alReintentar?: () => void
 }) {
   const { t } = useTranslation(NS)
   let cuerpo
   if (llegaEn) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.llegaEn', { fase: llegaEn })}</p>
   // sin permiso sobre el indicador (403) no es una falla: la cifra no está disponible para esta cuenta
-  else if (error && !indicador) cuerpo = error instanceof ApiError && error.status === 403 ? <NoDisponible /> : <ErrorDeCarga error={error} />
+  // un fallo que no es de permiso se dice en una línea, con el detalle en title (D4, revisión de UX, etapa 7): el texto largo de
+  // una lectura fallida, repetido en cada tarjeta, tapaba el tablero
+  else if (error && !indicador) cuerpo = <CifraFallida error={error} alReintentar={alReintentar} />
   else if (cargando || !indicador) cuerpo = <Cargando compacto />
   else if (!indicador.available) cuerpo = <NoDisponible motivo={indicador.unavailableReason} />
   // sin valor en el periodo (un porcentaje sin base, una mediana sin casos) se dice, sin «—» ni la unidad suelta
@@ -64,5 +71,31 @@ export function KpiCard({
       {cuerpo}
       {notas}
     </section>
+  )
+}
+
+// una cifra o un gráfico que no se pudo cargar, en una línea: también la usan los gráficos de un tablero cuyo aviso único está en
+// otro lugar de la pantalla
+// sin permiso (403) no es una falla: la cifra no está disponible para esta cuenta, con su candado (RQ-DSH-032)
+export function CifraFallida({ error, alReintentar }: { error: unknown; alReintentar?: () => void }) {
+  const { t } = useTranslation(NS)
+  const mensaje = useMensajeDeError()
+  if (error instanceof ApiError && error.status === 403) return <NoDisponible />
+  // el detalle, con el id de correlación para soporte, va en title
+  const correlacion = correlacionDe(error)
+  const detalle = [mensaje(error), correlacion ? t('comun.correlacion', { id: correlacion }) : ''].filter(Boolean).join(' · ')
+  return (
+    <p className="flex flex-wrap items-center gap-1 text-sm text-sg-text-secondary" title={detalle}>
+      <AlertTriangle aria-hidden className="size-3.5 text-sg-warning" />
+      {t('comun.cifraFallida')}
+      {alReintentar ? (
+        <>
+          {' · '}
+          <button type="button" className="text-sg-primary-text underline" onClick={alReintentar}>
+            {t('comun.reintentar')}
+          </button>
+        </>
+      ) : null}
+    </p>
   )
 }

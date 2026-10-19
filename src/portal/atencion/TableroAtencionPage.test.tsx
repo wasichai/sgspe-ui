@@ -97,7 +97,12 @@ describe('S34 · tablero de QCS', () => {
         .map((c) => c.textContent)
     ).toEqual(['4', '3', '—', '7'])
     expect(within(within(flujo).getByRole('row', { name: /QCS cerradas/ })).getByText('No disponible')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ir a la lista' })).toHaveAttribute('href', '/projects/p1/attention')
+    // «Lista · Tablero» (revisión de UX, etapa 7)
+    expect(within(screen.getByRole('navigation', { name: 'Vistas del módulo' })).getByRole('link', { name: 'Lista' })).toHaveAttribute(
+      'href',
+      '/projects/p1/attention'
+    )
+    expect(within(screen.getByRole('navigation', { name: 'Vistas del módulo' })).getByRole('link', { name: 'Tablero' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('dice que excluye confidenciales sin decir cuántas, y que cada planteamiento cuenta una vez', async () => {

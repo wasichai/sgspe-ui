@@ -20,12 +20,11 @@ export const NIVELES = ['INTERNO', 'EXTERNO', 'PUBLICO']
 // el proyecto de la URL, salvo que la persona elija otro; '' es «todos mis proyectos» (o «todos los proyectos» para quien los
 // lee todos, plan 4.4b). lo elegido vale solo para el proyecto
 // de la URL con el que se eligió: si el conmutador del shell cambia de proyecto, manda la URL otra vez
+// el proyecto de una exportación es el del alcance de la barra superior (revisión de UX, etapa 7): ninguna exportación tiene su
+// propio selector; sin proyecto en la barra, salen todos los que la cuenta lee
 export function useProyectoElegido() {
   const { scope } = useContextFilters()
-  const delaUrl = scope.kind === 'project' ? scope.projectId : ''
-  const [elegido, setElegido] = useState<{ valor: string; desde: string } | null>(null)
-  const proyecto = elegido && elegido.desde === delaUrl ? elegido.valor : delaUrl
-  return { proyecto, elegir: (id: string) => setElegido({ valor: id, desde: delaUrl }) }
+  return { proyecto: scope.kind === 'project' ? scope.projectId : '' }
 }
 
 // extra suma las claves propias de una exportación al cuerpo (la geográfica: object, geometry, format y coordinates, spec F6
@@ -91,32 +90,17 @@ export function useExportacion({
 
 export type Exportacion = ReturnType<typeof useExportacion>
 
-export function SelectorDeProyecto({ proyecto, alCambiar }: { proyecto: string; alCambiar: (id: string) => void }) {
+// el alcance de una exportación, dicho: el proyecto de la barra superior o todos los que la cuenta lee
+export function AlcanceDeLaExportacion({ proyecto }: { proyecto: string }) {
   const { t } = useTranslation(NS)
   const proyectos = useProyectos()
   const leeTodo = useLeeTodosLosProyectos()
-  const lista = proyectos.data ?? []
-  // mientras la lista carga (o si falla), el proyecto de la URL sigue a la vista en el selector
-  const faltaEnLista = proyecto !== '' && !lista.some((x) => x.id === proyecto)
+  const elegido = proyectos.data?.find((x) => x.id === proyecto)
+  const nombre = elegido ? `${texto(elegido, 'code')} · ${texto(elegido, 'name')}` : t('reportes.proyectoDeLaPagina')
   return (
-    <Campo etiqueta={t('reportes.proyecto')}>
-      {(p) => (
-        <select
-          {...p}
-          className="h-9 w-full rounded-sg-md border border-sg-border-strong bg-sg-surface px-2.5 text-sm"
-          value={proyecto}
-          onChange={(e) => alCambiar(e.target.value)}
-        >
-          <option value="">{leeTodo ? t('reportes.todosLosProyectos') : t('reportes.todosMisProyectos')}</option>
-          {faltaEnLista ? <option value={proyecto}>{proyectos.isPending ? t('reportes.proyectosCargando') : t('reportes.proyectoDeLaPagina')}</option> : null}
-          {lista.map((x) => (
-            <option key={x.id} value={x.id}>
-              {texto(x, 'code')} · {texto(x, 'name')}
-            </option>
-          ))}
-        </select>
-      )}
-    </Campo>
+    <p className="text-sm text-sg-text-secondary">
+      {proyecto ? t('reportes.alcance.proyecto', { proyecto: nombre }) : leeTodo ? t('reportes.alcance.todos') : t('reportes.alcance.mios')}
+    </p>
   )
 }
 

@@ -38,8 +38,13 @@ describe('S49 · entregables', () => {
   it('lista los entregables con su estado, su borrador y sus niveles, y enlaza a cada uno dentro de su proyecto', async () => {
     abrir()
     const tabla = await screen.findByRole('table', { name: 'Entregables' })
-    expect(within(tabla).getByRole('link', { name: 'INF-001' })).toHaveAttribute('href', '/projects/p1/reports/deliverables/d1')
-    const fila = within(tabla).getByRole('link', { name: 'INF-001' }).closest('tr')!
+    // el código en gris y el título como enlace a su página (revisión de UX, etapa 7)
+    expect(within(tabla).getByText('INF-001')).toBeInTheDocument()
+    expect(within(tabla).getByRole('link', { name: 'Informe de campo de la Comunidad Ejemplo' })).toHaveAttribute(
+      'href',
+      '/projects/p1/reports/deliverables/d1'
+    )
+    const fila = within(tabla).getByRole('link', { name: 'Informe de campo de la Comunidad Ejemplo' }).closest('tr')!
     expect(within(fila).getByText('Informe de campo y avance')).toBeInTheDocument()
     expect(within(fila).getByText('Listo')).toBeInTheDocument()
     expect(within(fila).getByText('Interno, Externo')).toBeInTheDocument()
@@ -48,7 +53,7 @@ describe('S49 · entregables', () => {
   it('fuera de un proyecto, enlaza a la ruta global de cada entregable', async () => {
     abrir('/reports')
     const tabla = await screen.findByRole('table', { name: 'Entregables' })
-    expect(within(tabla).getByRole('link', { name: 'INF-001' })).toHaveAttribute('href', '/reports/deliverables/d1')
+    expect(within(tabla).getByRole('link', { name: 'Informe de campo de la Comunidad Ejemplo' })).toHaveAttribute('href', '/reports/deliverables/d1')
   })
 
   it('un informe de campo pide la comunidad y el periodo, y se crea con motivo', async () => {

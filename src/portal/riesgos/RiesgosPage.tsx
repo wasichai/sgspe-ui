@@ -1,3 +1,4 @@
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
@@ -129,11 +130,7 @@ export function RiesgosPage() {
             <BotonCrear objeto="social_risk" etiqueta={t('riesgos.identificar')} resto="risks?nuevo=1" />
           )
         }
-        secundarias={
-          <Button asChild size="sm" variant="secondary">
-            <Link to={`${base}/risks/dashboard`}>{t('riesgos.tablero')}</Link>
-          </Button>
-        }
+        vistas={<VistasDelModulo modulo="risks" actual="lista" />}
         mas={(proyecto ? MAS_EN_PROYECTO : MAS_GLOBAL).map((resto) => (
           <Link key={resto} to={`${base}/risks/${resto}`} className="rounded-sg-sm px-2.5 py-1.5 text-sm hover:bg-sg-surface-hover">
             {t(`riesgos.mas.${resto}`)}

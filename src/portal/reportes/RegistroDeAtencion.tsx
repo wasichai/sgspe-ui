@@ -14,7 +14,7 @@ import {
   FalloDeProyectos,
   SalidaFueraDeLaOrganizacion,
   SelectorDeNivel,
-  SelectorDeProyecto,
+  AlcanceDeLaExportacion,
   useExportacion,
   useProyectoElegido
 } from './exportacion'
@@ -30,7 +30,7 @@ const ARCHIVO = 'registro-de-qcs.xlsx'
 export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
-  const { proyecto, elegir } = useProyectoElegido()
+  const { proyecto } = useProyectoElegido()
   const definicion = useDefinicion('grievance')
   const flujos = [useWorkflow('grievance'), useWorkflow('inquiry'), useWorkflow('stakeholder_request')]
   const [desde, setDesde] = useState('')
@@ -84,7 +84,7 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
       <h2 className="text-sg-h3 font-semibold">{t('reportes.atencion.titulo')}</h2>
       <p className="text-sm text-sg-text-secondary">{t('reportes.atencion.ayuda')}</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <SelectorDeProyecto proyecto={proyecto} alCambiar={cambiar(elegir)} />
+        <AlcanceDeLaExportacion proyecto={proyecto} />
         <SelectorDeNivel exportacion={exportacion} niveles={niveles} descripciones="reportes.atencion.niveles" />
         <Campo etiqueta={t('reportes.atencion.desde')} ayuda={t('reportes.atencion.periodoAyuda')}>
           {(p) => <input {...p} type="date" className={CONTROL} value={desde} onChange={(e) => cambiar(setDesde)(e.target.value)} />}

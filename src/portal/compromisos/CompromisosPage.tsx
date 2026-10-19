@@ -1,3 +1,4 @@
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
@@ -96,16 +97,12 @@ export function CompromisosPage() {
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        vistas={<VistasDelModulo modulo="commitments" actual="lista" conTablero={conTablero} />}
         titulo={t('compromisos.titulo')}
         conteo={lista.vista !== 'candidatos' && compromisos.data ? t('compromisos.conteo', { count: filtrados.length }) : undefined}
         primaria={<BotonCrear objeto="commitment" etiqueta={t('compromisos.nuevo')} resto="commitments/new" />}
         secundarias={
           <>
-            {conTablero ? (
-              <Button asChild size="sm" variant="secondary">
-                <Link to={`${base}/commitments/dashboard`}>{t('compromisos.tablero')}</Link>
-              </Button>
-            ) : null}
             {can('commitment', 'EXPORT') ? (
               <Button asChild size="sm" variant="secondary">
                 <Link to={`${base}/reports`}>{t('compromisos.exportar')}</Link>

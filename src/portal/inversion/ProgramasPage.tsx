@@ -1,3 +1,4 @@
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -5,7 +6,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
@@ -68,13 +69,13 @@ export function ProgramasPage() {
   const [alta, setAlta] = useState<'social_contribution' | 'social_program' | null>(
     pedida === 'social_contribution' || pedida === 'social_program' ? pedida : null
   )
-  const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const creaAporte = proyecto !== undefined && escribe && can('social_contribution', 'CREATE')
   const creaPrograma = proyecto !== undefined && escribe && can('social_program', 'CREATE')
   const indicadores = tablero.data?.indicators
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        vistas={<VistasDelModulo modulo="programs" actual="lista" conTablero={conTablero} />}
         titulo={t('inversion.titulo')}
         primaria={
           proyecto ? (
@@ -89,11 +90,6 @@ export function ProgramasPage() {
         }
         secundarias={
           <>
-            {conTablero ? (
-              <Button asChild size="sm" variant="secondary">
-                <Link to={`${base}/programs/dashboard`}>{t('inversion.tablero')}</Link>
-              </Button>
-            ) : null}
             {proyecto ? (
               creaPrograma ? (
                 <Button size="sm" variant="secondary" onClick={() => setAlta('social_program')}>
