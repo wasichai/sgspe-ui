@@ -1,6 +1,7 @@
+import { ListaEnTarjetas, useEsTelefono } from './ListaEnTarjetas'
 import { Pagination, Table, Td, Th, cn } from '@wasichai/ui'
 import { X } from 'lucide-react'
-import { useId, type ReactNode } from 'react'
+import { Fragment, useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import type { Pagina, Registro } from '../datos/registros'
@@ -122,67 +123,102 @@ export function TablaDeRegistros({
   alAbrir?: (registro: Registro) => void
 }) {
   const { t } = useTranslation(NS)
+  const telefono = useEsTelefono()
   if (consulta.isPending) return <Cargando />
   if (consulta.isError) return <ErrorDeCarga error={consulta.error} alReintentar={() => void consulta.refetch()} />
   const pagina = consulta.data
   if (pagina.content.length === 0) return <>{vacio}</>
+  const [primera, ...resto] = columnas
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-        <Table aria-label={etiqueta}>
-          <thead>
-            <tr>
-              {alSeleccionar ? (
-                <Th className="w-8">
-                  <span className="sr-only">{t('comun.seleccionar')}</span>
-                </Th>
-              ) : null}
-              {columnas.map((c) => (
-                <Th key={c.id} scope="col">
-                  {c.encabezado}
-                </Th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pagina.content.map((registro) => (
-              <tr
-                key={registro.id}
-                className={alAbrir ? 'cursor-pointer hover:bg-sg-surface-hover' : undefined}
-                onClick={alAbrir ? () => alAbrir(registro) : undefined}
-                // la fila se abre también con el teclado (Enter o Espacio); una tecla pulsada dentro de un control de la
-                // fila (la casilla, un enlace) es de ese control. la fila conserva su rol de fila de la tabla
-                tabIndex={alAbrir ? 0 : undefined}
-                onKeyDown={
-                  alAbrir
-                    ? (e) => {
-                        if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
-                        e.preventDefault()
-                        alAbrir(registro)
-                      }
-                    : undefined
-                }
-              >
+      {telefono ? (
+        // en el teléfono, cada fila es una tarjeta: la primera columna como título y las demás como datos (revisión de UX, etapa 8)
+        <ListaEnTarjetas
+          etiqueta={etiqueta}
+          tarjetas={pagina.content.map((registro) => ({
+            id: registro.id,
+            titulo: (
+              <span className="flex items-start gap-2">
                 {alSeleccionar ? (
-                  <Td onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      aria-label={`${t('comun.seleccionar')} ${registro.id}`}
-                      checked={seleccion?.has(registro.id) ?? false}
-                      onChange={(e) => alSeleccionar(registro.id, e.target.checked)}
-                    />
-                  </Td>
+                  <input
+                    type="checkbox"
+                    aria-label={`${t('comun.seleccionar')} ${registro.id}`}
+                    checked={seleccion?.has(registro.id) ?? false}
+                    onChange={(e) => alSeleccionar(registro.id, e.target.checked)}
+                  />
+                ) : null}
+                <span className="min-w-0">{primera?.celda(registro)}</span>
+              </span>
+            ),
+            detalle: (
+              <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2">
+                {resto.map((c) => (
+                  <Fragment key={c.id}>
+                    <dt>{c.encabezado}</dt>
+                    <dd className="text-sg-text">{c.celda(registro)}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            )
+          }))}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+          <Table aria-label={etiqueta}>
+            <thead>
+              <tr>
+                {alSeleccionar ? (
+                  <Th className="w-8">
+                    <span className="sr-only">{t('comun.seleccionar')}</span>
+                  </Th>
                 ) : null}
                 {columnas.map((c) => (
-                  <Td key={c.id} className="text-sm">
-                    {c.celda(registro)}
-                  </Td>
+                  <Th key={c.id} scope="col">
+                    {c.encabezado}
+                  </Th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
+            </thead>
+            <tbody>
+              {pagina.content.map((registro) => (
+                <tr
+                  key={registro.id}
+                  className={alAbrir ? 'cursor-pointer hover:bg-sg-surface-hover' : undefined}
+                  onClick={alAbrir ? () => alAbrir(registro) : undefined}
+                  // la fila se abre también con el teclado (Enter o Espacio); una tecla pulsada dentro de un control de la
+                  // fila (la casilla, un enlace) es de ese control. la fila conserva su rol de fila de la tabla
+                  tabIndex={alAbrir ? 0 : undefined}
+                  onKeyDown={
+                    alAbrir
+                      ? (e) => {
+                          if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
+                          e.preventDefault()
+                          alAbrir(registro)
+                        }
+                      : undefined
+                  }
+                >
+                  {alSeleccionar ? (
+                    <Td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`${t('comun.seleccionar')} ${registro.id}`}
+                        checked={seleccion?.has(registro.id) ?? false}
+                        onChange={(e) => alSeleccionar(registro.id, e.target.checked)}
+                      />
+                    </Td>
+                  ) : null}
+                  {columnas.map((c) => (
+                    <Td key={c.id} className="text-sm">
+                      {c.celda(registro)}
+                    </Td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      )}
       {pagina.totalPages && pagina.totalPages > 1 ? (
         <Pagination page={pagina.page} totalPages={pagina.totalPages} totalElements={pagina.totalElements ?? 0} onPage={alPagina} />
       ) : null}

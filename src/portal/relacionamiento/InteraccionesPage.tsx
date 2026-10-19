@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -265,6 +266,7 @@ function Calendario({
 function Lista({ interacciones, global }: { interacciones: Registro[]; global: boolean }) {
   const { t } = useTranslation(NS)
   const idDeProyecto = useId()
+  const telefono = useEsTelefono()
   if (interacciones.length === 0)
     return (
       <VacioDeLista conFiltros={false} alLimpiar={() => undefined}>
@@ -273,6 +275,21 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
     )
   // por su día de Lima, la más reciente primero; las que no tienen fecha, al final
   const ordenadas = [...interacciones].sort((a, b) => (diaDe(b) ?? '').localeCompare(diaDe(a) ?? ''))
+  // en el teléfono, tarjetas con el título, el estado, el día y el proyecto (revisión de UX, etapa 8)
+  if (telefono)
+    return (
+      <ListaEnTarjetas
+        etiqueta={t('relacionamiento.titulo')}
+        tarjetas={ordenadas.map((i) => ({
+          id: i.id,
+          titulo: <Evento interaccion={i} enLista />,
+          estado: <EstadoChip objeto="engagement" estado={i.state} />,
+          plazo: <Dia valor={diaDe(i)} />,
+          proyecto: global ? <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} /> : undefined,
+          detalle: [opcion(i, 'engagement_type'), texto(i, 'place')].filter(Boolean).join(' · ') || undefined
+        }))}
+      />
+    )
   return (
     <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
       <Table aria-label={t('relacionamiento.titulo')}>

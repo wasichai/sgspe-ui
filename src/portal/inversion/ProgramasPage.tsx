@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -147,6 +148,7 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
   const { t } = useTranslation(NS)
   const programas = useTodosConTope('social_program', { project: proyecto, sort: 'code', dir: 'asc' })
   const nombreDelProyecto = useNombreDelProyecto()
+  const telefono = useEsTelefono()
   const anio = anioEnLima()
   const presupuesto = indicadorDe(indicadores, 'KPI-INV-02')
   const textosDeMonto = { ilegible: t('inversion.cifras.ilegible'), porAprobar: t('inversion.cifras.porAprobar') }
@@ -167,6 +169,20 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
         <FalloDeLectura error={programas.error} alReintentar={() => void programas.refetch()} />
       ) : (programas.data ?? []).length === 0 ? (
         <Vacio titulo={t('inversion.programas.vacio')}>{t('inversion.programas.vacioAyuda')}</Vacio>
+      ) : telefono ? (
+        // en el teléfono, tarjetas (revisión de UX, etapa 8)
+        <ListaEnTarjetas
+          etiqueta={t('inversion.programas.tabla')}
+          tarjetas={(programas.data ?? []).map((p) => ({
+            id: p.id,
+            titulo: (
+              <EnlaceDeRegistro codigo={texto(p, 'code')} titulo={texto(p, 'name')} ruta={rutaDeFicha('social_program', p)} desde={t('inversion.titulo')} />
+            ),
+            estado: <EstadoChip objeto="social_program" estado={p.state} />,
+            proyecto: proyecto ? undefined : nombreDelProyecto(texto(p, 'project')),
+            detalle: `${t('inversion.programas.columnas.presupuesto', { anio })}: ${presupuestoDelPrograma(presupuesto, p.id, anio, 'allocated', textosDeMonto)}`
+          }))}
+        />
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('inversion.programas.tabla')}>
@@ -227,6 +243,7 @@ function Aportes({ proyecto }: { proyecto?: string }) {
   const aportes = useTodosConTope('social_contribution', { project: proyecto, sort: 'code', dir: 'desc' })
   const etiquetas = useEtiquetasDeEstado('social_contribution')
   const nombreDelProyecto = useNombreDelProyecto()
+  const telefono = useEsTelefono()
   const estado = lista.filtro('state')
   const filtrados = (aportes.data ?? []).filter((a) => enVista(lista.vista, a) && (!estado || a.state === estado))
   return (
@@ -258,6 +275,17 @@ function Aportes({ proyecto }: { proyecto?: string }) {
         <FalloDeLectura error={aportes.error} alReintentar={() => void aportes.refetch()} />
       ) : filtrados.length === 0 ? (
         <Vacio titulo={t('inversion.aportes.vacio')}>{t('inversion.aportes.vacioAyuda')}</Vacio>
+      ) : telefono ? (
+        <ListaEnTarjetas
+          etiqueta={t('inversion.aportes.tabla')}
+          tarjetas={filtrados.map((a) => ({
+            id: a.id,
+            titulo: <EnlaceDeRegistro titulo={texto(a, 'code')} ruta={rutaDeFicha('social_contribution', a)} desde={t('inversion.titulo')} />,
+            estado: <EstadoChip objeto="social_contribution" estado={a.state} />,
+            proyecto: proyecto ? undefined : nombreDelProyecto(texto(a, 'project')),
+            detalle: [opcion(a, 'contribution_type'), montoPe(atributo(a, 'total_amount'), atributo(a, 'currency'))].filter(Boolean).join(' · ')
+          }))}
+        />
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('inversion.aportes.tabla')}>

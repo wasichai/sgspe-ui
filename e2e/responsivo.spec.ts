@@ -71,3 +71,16 @@ test('a 390 px las acciones de la ficha van en una barra fija sobre la barra de 
   await page.locator('main').evaluate((m) => m.scrollTo(0, m.scrollHeight))
   expect((await barra.boundingBox())!.y).toBeCloseTo(caja.y, 0)
 })
+
+// las demás listas también son de tarjetas en el teléfono
+for (const [ruta, lista, titulo] of [
+  ['/projects/p1/stakeholders', 'Grupos de interés', 'Junta directiva comunal'],
+  ['/projects', 'Proyectos', 'Pukaqaqa'],
+  ['/projects/p1/engagements?view=lista', 'Relacionamiento', 'Asamblea de agosto']
+] as const)
+  test(`a 390 px ${ruta} es una lista de tarjetas`, async ({ page }) => {
+    await page.goto(ruta)
+    const tarjetas = page.getByRole('list', { name: lista })
+    await expect(tarjetas.getByRole('listitem').filter({ hasText: titulo }).first()).toBeVisible()
+    await expect(page.getByRole('table', { name: lista })).toHaveCount(0)
+  })
