@@ -232,7 +232,8 @@ describe('Trabajar en el proyecto con este lugar', () => {
       falla('/objects/project/records'),
       ...sin(ficha, '/objects/project/records')
     ])
-    const cabecera = (await screen.findByRole('heading', { name: 'CC Tunas Pampa' })).closest('header')!
+    // el encabezado común (revisión de UX, etapa 5) ya no es un <header>: el aviso va junto a sus acciones
+    const cabecera = (await screen.findByRole('heading', { name: 'CC Tunas Pampa', level: 1 })).parentElement!.parentElement!
     expect(await within(cabecera).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Trabajar en el proyecto con este lugar' })).not.toBeInTheDocument()
   })

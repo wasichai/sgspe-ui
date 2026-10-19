@@ -1,6 +1,8 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { useQueries, type UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Tabs } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router'
@@ -42,51 +44,57 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Rastro />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-territory">{opcion(comunidad, 'community_type')}</p>
-          <h1 className="text-sg-h1 font-semibold">{texto(comunidad, 'name')}</h1>
-          <p className="text-sm text-sg-text-secondary">{opcion(comunidad, 'organic_status')}</p>
-          {atributo(comunidad, 'registry_records_unverified') ? (
-            <p
-              className="inline-flex rounded-sg-sm bg-sg-warning-soft px-2 py-0.5 text-sg-caption font-medium text-sg-warning"
-              title={t('territorio.comunidad.partidasAyuda')}
-            >
-              {t('territorio.comunidad.partidasPorVerificar')}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <TrabajarEnProyecto tipo="community" id={comunidad.id} />
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/territory">{t('territorio.verEnMapa')}</Link>
-          </Button>
-          {puedeEditar ? (
-            <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-              {t('territorio.editar')}
+      {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, la situación orgánica y las partidas por verificar
+          como chips, y las acciones en su lugar */}
+      <EncabezadoDePagina
+        antetitulo={opcion(comunidad, 'community_type')}
+        titulo={texto(comunidad, 'name')}
+        chips={
+          <>
+            <span className="text-sg-text-secondary">{opcion(comunidad, 'organic_status')}</span>
+            {atributo(comunidad, 'registry_records_unverified') ? (
+              <span
+                className="inline-flex rounded-sg-sm bg-sg-warning-soft px-2 py-0.5 text-sg-caption font-medium text-sg-warning"
+                title={t('territorio.comunidad.partidasAyuda')}
+              >
+                {t('territorio.comunidad.partidasPorVerificar')}
+              </span>
+            ) : null}
+          </>
+        }
+        primaria={<TrabajarEnProyecto tipo="community" id={comunidad.id} />}
+        secundarias={
+          <>
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/territory">{t('territorio.verEnMapa')}</Link>
             </Button>
-          ) : null}
-          {editaGeometria ? (
-            <Button size="sm" variant="secondary" onClick={() => setDibujando(true)}>
-              {t('edicionDeGeometria.abrir')}
-            </Button>
-          ) : null}
-        </div>
-      </header>
+            {puedeEditar ? (
+              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                {t('territorio.editar')}
+              </Button>
+            ) : null}
+            {editaGeometria ? (
+              <Button size="sm" variant="secondary" onClick={() => setDibujando(true)}>
+                {t('edicionDeGeometria.abrir')}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {atributo(comunidad, 'registry_records_unverified') ? <Alert tone="warning">{t('territorio.comunidad.partidasAyuda')}</Alert> : null}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs
-          label={texto(comunidad, 'name')}
-          tabs={[
-            { id: 'resumen', label: t('territorio.pestanas.resumen'), render: () => <Resumen comunidad={comunidad} /> },
+        <PestanasDeFicha
+          etiqueta={texto(comunidad, 'name')}
+          pestanas={[
+            { id: 'resumen', etiqueta: t('territorio.pestanas.resumen'), render: () => <Resumen comunidad={comunidad} /> },
             {
               id: 'registros',
-              label: t('territorio.pestanas.registros'),
+              etiqueta: t('territorio.pestanas.registros'),
               render: () => <RegistrosDeLaZona zona="community" id={comunidad.id} />
             },
             {
               id: 'documentos',
-              label: t('territorio.pestanas.documentos'),
+              etiqueta: t('territorio.pestanas.documentos'),
               render: () => <EvidenciasDelRegistro objeto="community" registro={comunidad} escribe={can('community', 'UPDATE')} />
             }
           ]}
