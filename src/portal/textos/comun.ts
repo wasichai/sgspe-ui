@@ -9,6 +9,7 @@ export const ES_COMUN = {
   restringidoAyuda: 'Su rol no puede leer este dato',
   porQue: 'Por qué no se muestra',
   noDisponible: 'No disponible',
+  cifraFallida: 'No se pudo cargar',
   noDisponibleAyuda: 'Su cuenta no puede leer estos datos',
   // unavailableReason de un indicador (plan 2.2): por qué una cifra no se muestra. un motivo que es el código de una guarda
   // (NOT_ASSIGNED, ROLE_REQUIRED…) y no está aquí se dice con comun.codigos
@@ -340,6 +341,7 @@ export const EN_COMUN: typeof ES_COMUN = {
   restringidoAyuda: 'Your role cannot read this data',
   porQue: 'Why it is not shown',
   noDisponible: 'Not available',
+  cifraFallida: 'Could not load',
   noDisponibleAyuda: 'Your account cannot read this data',
   noDisponiblePorMotivo: {
     FIELD_NOT_READABLE: 'Your role cannot read a field behind this figure',

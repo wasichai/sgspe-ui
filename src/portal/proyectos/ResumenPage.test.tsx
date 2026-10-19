@@ -349,7 +349,11 @@ describe('S08 · Project 360, resumen', () => {
   it('el tablero que falla dice el error en cada zona, no "Cargando" para siempre; la matriz no disponible dice su motivo', async () => {
     abrir(rutas(SIN_STANCE), [falla('/sgspe/dashboards/project', 400, 'corr-501')])
     const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
-    expect((await within(salud).findAllByText(/corr-501/)).length).toBeGreaterThan(0)
+    // D4 (revisión de UX, etapa 7): cada cifra en una línea, con el detalle en title, y el tablero lo dice una sola vez
+    const cifras = await within(salud).findAllByText(/No se pudo cargar/)
+    expect(cifras).toHaveLength(5)
+    expect(cifras[0].getAttribute('title')).toMatch(/corr-501/)
+    expect(await screen.findAllByText(/corr-501/)).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 2, name: 'Salud del proyecto' })).toBeInTheDocument()
     const paisaje = screen.getByRole('region', { name: 'Paisaje de grupos de interés' })
     expect(within(paisaje).queryByRole('img', { name: 'Interés × poder' })).not.toBeInTheDocument()
@@ -368,7 +372,8 @@ describe('S08 · Project 360, resumen', () => {
   it('las reuniones y la actividad dicen su error, su vacío y un mes sin cifra', async () => {
     abrir([{ path: '/objects/project/records/p1/history', body: [] }, ...rutas(SIN_STANCE)], [falla('/sgspe/dashboards/project', 400, 'corr-502')])
     const reuniones = await screen.findByRole('region', { name: 'Reuniones al mes frente a la meta' })
-    expect(await within(reuniones).findByText(/corr-502/)).toBeInTheDocument()
+    // D4 (revisión de UX, etapa 7): en una línea, con el detalle en title
+    expect((await within(reuniones).findByText(/No se pudo cargar/)).getAttribute('title')).toMatch(/corr-502/)
     const actividad = screen.getByRole('region', { name: 'Actividad reciente' })
     expect(await within(actividad).findByText('Este proyecto aún no tiene actividad registrada.')).toBeInTheDocument()
     cerrar()
