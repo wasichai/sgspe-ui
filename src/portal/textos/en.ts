@@ -150,7 +150,7 @@ export const EN: Textos = {
     idiomaNoGuardado: 'Could not save the language'
   },
   secciones: {
-    dashboard: 'Dashboard',
+    dashboard: 'Home',
     projects: 'Projects',
     territory: 'Territory',
     stakeholders: 'Stakeholders',
@@ -165,9 +165,8 @@ export const EN: Textos = {
     admin: 'Administration'
   },
   inicio: {
-    titulo: 'Dashboard',
+    titulo: 'Home',
     bienvenida: 'Welcome, {{nombre}}.',
-    porRol: 'Each role gets its own home when its module arrives; until then, every account starts here.',
     cuenta: 'Your account',
     usuario: 'User',
     organizacion: 'Organization',
@@ -177,16 +176,12 @@ export const EN: Textos = {
     sinCuenta: 'Could not read the account',
     sinRoles: 'No roles',
     sinPermisos: 'Your permissions could not be read',
-    modulos: 'Modules by phase',
-    resumen: '{{disponibles, number}} of {{total, number}} sections available to your account',
-    seccion: 'Section',
-    fases: 'Phases',
-    estado: 'Status',
-    llegaEn: 'Arrives in {{fase}}',
-    notasDeFases: { reports: 'F2–F4 exports; F8 deliverables' },
-    estados: { disponible: 'Available', 'sin-acceso': 'No access with your permissions', 'solo-admin': 'Administrators only' }
+    modulos: 'Your sections',
+    rolesAsignados_one: '{{count}} role assigned',
+    rolesAsignados_other: '{{count}} roles assigned',
+    resumen: '{{disponibles, number}} of {{total, number}} sections available to your account'
   },
-  seccionPorLlegar: 'This section arrives in {{fase}}',
+  seccionPorLlegar: 'This section is not available in your organization yet.',
   noEncontrada: 'This page does not exist',
   irAlInicio: 'Go to the home page'
 }

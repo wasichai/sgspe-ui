@@ -6,7 +6,6 @@ export const ES_TERRITORIO = {
   capasBloqueadas: 'Hay capas que su cuenta no puede ver: la lista no las incluye.',
   editar: 'Editar',
   pestanas: { resumen: 'Resumen', registros: 'Registros del lugar', lineaBase: 'Línea base', documentos: 'Documentos' },
-  documentosLlegan: 'Las evidencias y documentos llegan en F3.',
   comunidad: {
     partidasPorVerificar: 'PARTIDAS POR VERIFICAR',
     partidasAyuda: 'Los datos registrales están pendientes de verificar: no los use en un documento externo hasta confirmarlos.',
@@ -80,7 +79,6 @@ export const EN_TERRITORIO: typeof ES_TERRITORIO = {
   capasBloqueadas: 'Some layers are not visible to your account: the list does not include them.',
   editar: 'Edit',
   pestanas: { resumen: 'Overview', registros: 'Records of the place', lineaBase: 'Baseline', documentos: 'Documents' },
-  documentosLlegan: 'Evidence and documents arrive in F3.',
   comunidad: {
     partidasPorVerificar: 'REGISTRY RECORDS TO VERIFY',
     partidasAyuda: 'The registry data is pending verification: do not use it in an external document until confirmed.',

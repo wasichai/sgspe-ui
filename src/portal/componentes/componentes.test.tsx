@@ -411,9 +411,9 @@ describe('KpiCard', () => {
     expect(enPagina).toHaveClass('py-6')
   })
 
-  it('un módulo que no llegó dice en qué fase llega', async () => {
+  it('un módulo que no llegó dice que todavía no está disponible, sin la fase', async () => {
     montar(<KpiCard titulo="Compromisos vencidos" llegaEn="F3" />)
-    expect(await screen.findByText('Llega en F3')).toBeInTheDocument()
+    expect(await screen.findByText('Todavía no está disponible en su organización.')).toBeInTheDocument()
   })
 })
 

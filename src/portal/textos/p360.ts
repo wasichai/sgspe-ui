@@ -8,7 +8,7 @@ export const ES_P360 = {
     completar: 'Completar proyecto',
     registrarInteraccion: 'Registrar interacción',
     atencion: 'Atención requerida',
-    sinAtencion: 'Nada pide atención hoy en lo que llega en F2.',
+    sinAtencion: 'Nada pide atención hoy.',
     nuncaContactado: '{{nombre}} · nunca contactado',
     grupos: {
       actas_one: '{{count}} acta por redactar',
@@ -183,7 +183,7 @@ export const EN_P360: typeof ES_P360 = {
     completar: 'Complete project',
     registrarInteraccion: 'Register engagement',
     atencion: 'Needs attention',
-    sinAtencion: 'Nothing needs attention today in what arrives in F2.',
+    sinAtencion: 'Nothing needs attention today.',
 
     nuncaContactado: '{{nombre}} · never contacted',
     grupos: {

@@ -4,7 +4,7 @@ export const ES_TABLEROS_F8 = {
   ejecutivo: {
     titulo: 'Revisión ejecutiva',
     ayuda: 'Qué cambió, qué es crítico, dónde y quién lo atiende, con las mismas cifras que las fichas.',
-    monitoreo: 'Monitoreo de la Tabla 9.5',
+    monitoreo: 'Monitoreo del plan de relaciones comunitarias',
     elegirProyectos: 'Proyectos de la tabla ({{n}} elegidos)',
     proyectos: 'Proyectos',
     demasiados: 'La tabla por proyecto admite hasta {{tope}} proyectos: quite algunos.',
@@ -46,8 +46,8 @@ export const ES_TABLEROS_F8 = {
     omitida: 'Tiene más de {{tope}} proyectos: elija hasta {{tope}} para ver la tabla por proyecto.'
   },
   monitoreo: {
-    titulo: 'Monitoreo de la Tabla 9.5',
-    ayuda: 'Los 13 indicadores del plan de relaciones comunitarias en el mes elegido, con su meta y, si el periodo se cerró, su cifra oficial.',
+    titulo: 'Monitoreo del plan de relaciones comunitarias',
+    ayuda: 'Los 13 indicadores del plan (Tabla 9.5) en el mes elegido, con su meta y, si el periodo se cerró, su cifra oficial.',
     catalogo: 'Catálogo de indicadores',
     mes: 'Mes',
     proyecto: 'Proyecto',
@@ -124,7 +124,7 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
   ejecutivo: {
     titulo: 'Executive review',
     ayuda: 'What changed, what is critical, where and who handles it, with the same figures as the records.',
-    monitoreo: 'Table 9.5 monitoring',
+    monitoreo: 'Community relations plan monitoring',
     elegirProyectos: 'Projects in the table ({{n}} chosen)',
     proyectos: 'Projects',
     demasiados: 'The per-project table admits up to {{tope}} projects: remove some.',
@@ -166,7 +166,7 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
     omitida: 'You have more than {{tope}} projects: choose up to {{tope}} to see the per-project table.'
   },
   monitoreo: {
-    titulo: 'Table 9.5 monitoring',
+    titulo: 'Community relations plan monitoring',
     ayuda: 'The 13 indicators of the community relations plan in the chosen month, with their target and, if the period was closed, their official figure.',
     catalogo: 'Indicator catalog',
     mes: 'Month',

@@ -53,6 +53,39 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(await screen.findByRole('button', { name: 'Editar la caracterización' })).toBeInTheDocument()
   })
 
+  it('«Pendientes» dice los compromisos y las QCS abiertas del grupo, y «Qué generó» enlaza sus compromisos', async () => {
+    const conPendientes = permisos({
+      project: ['READ'],
+      stakeholder: ['READ'],
+      stakeholder_assessment: ['READ'],
+      engagement: ['READ'],
+      organization: ['READ'],
+      commitment: ['READ'],
+      grievance: ['READ']
+    })
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', RELACIONISTA, conPendientes, [
+      ...base(),
+      {
+        path: '/objects/stakeholder/records/s1/related/commitment_stakeholder',
+        // como la plataforma: la lectura por relación no trae el estado del workflow
+        body: pagina([
+          registro('c1', { code: 'C-001', title: 'Mejora del canal', project: 'p1' }, { state: null }),
+          registro('c2', { code: 'C-002', title: 'Taller de riego', project: 'p1' }, { state: null })
+        ])
+      },
+      { path: '/objects/commitment/records/c1', body: registro('c1', { code: 'C-001', project: 'p1' }, { state: 'in_progress' }) },
+      { path: '/objects/commitment/records/c2', body: registro('c2', { code: 'C-002', project: 'p1' }, { state: 'closed' }) },
+      { path: /^\/objects\/grievance\/records\?.*stakeholder=s1/, body: pagina([registro('q1', { stakeholder: 's1' }, { state: 'acknowledged' })]) }
+    ])
+    const decidir = await screen.findByRole('region', { name: 'Para decidir' })
+    expect(await within(decidir).findByText('1 compromiso abierto')).toBeInTheDocument()
+    expect(await within(decidir).findByText('1 QCS abierta')).toBeInTheDocument()
+    expect(within(decidir).queryByText(/llegan en F3/)).not.toBeInTheDocument()
+    const genero = screen.getByRole('complementary', { name: 'Qué generó' })
+    expect(await within(genero).findByRole('link', { name: 'C-001 · Mejora del canal' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
+    expect(within(genero).queryByText(/desde F3/)).not.toBeInTheDocument()
+  })
+
   it('con "u" sobre stakeholder (todos los campos de solo lectura, como el agente de campo) no ofrece editar el perfil', async () => {
     const soloLectura = { ...STK_DEF(false), fields: STK_DEF(false).fields.map((f) => ({ ...f, editable: false })) }
     fetch = abrirPortal('/projects/p1/stakeholders/s1', RELACIONISTA, LEE, [{ path: '/metadata/objects/stakeholder', body: soloLectura }, ...base()])

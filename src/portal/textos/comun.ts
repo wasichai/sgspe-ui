@@ -23,7 +23,7 @@ export const ES_COMUN = {
     OBJECT_NOT_READABLE: 'Su rol no puede leer estos registros'
   },
   eligeUnProyecto: 'Elija un proyecto',
-  llegaEn: 'Llega en {{fase}}',
+  llegaEn: 'Todavía no está disponible en su organización.',
   guardar: 'Guardar',
   guardando: 'Guardando…',
   cancelar: 'Cancelar',
@@ -347,7 +347,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     OBJECT_NOT_READABLE: 'Your role cannot read these records'
   },
   eligeUnProyecto: 'Pick a project',
-  llegaEn: 'Arrives in {{fase}}',
+  llegaEn: 'Not available in your organization yet.',
   guardar: 'Save',
   guardando: 'Saving…',
   cancelar: 'Cancel',

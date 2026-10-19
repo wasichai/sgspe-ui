@@ -65,7 +65,7 @@ const lee = (objeto: string): Par => ({ objeto, accion: 'READ' })
 
 // los objetos son los del catálogo canónico (domain-model.md §6): el que lee la pantalla principal de cada sección
 export const NAV_TREE: SeccionNav[] = [
-  { clave: 'dashboard', label: 'Dashboard', to: '/', icon: LayoutDashboard, fases: ['F1', 'F8'] },
+  { clave: 'dashboard', label: 'Inicio', to: '/', icon: LayoutDashboard, fases: ['F1', 'F8'] },
   { clave: 'projects', label: 'Proyectos', to: '/projects', icon: FolderKanban, fases: ['F2', 'F7'], seOfreceCon: [[lee('project')]] },
   { clave: 'territory', label: 'Territorio', to: '/territory', icon: MapIcon, fases: ['F2', 'F6'], seOfreceCon: [[lee('locality')]] },
   { clave: 'stakeholders', label: 'Grupos de interés', to: '/stakeholders', icon: Users, fases: ['F2'], seOfreceCon: [[lee('stakeholder')]] },

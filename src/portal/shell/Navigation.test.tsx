@@ -57,7 +57,7 @@ const soloDashboard = (clave: ClaveDeSeccion) => clave === 'dashboard'
 describe('NAV_TREE', () => {
   it('declara las 13 secciones en su orden, con su ruta de docs/ux, su ícono y sus fases', () => {
     expect(NAV_TREE.map((s) => [s.label, s.to, s.fases.join(', ')])).toEqual([
-      ['Dashboard', '/', 'F1, F8'],
+      ['Inicio', '/', 'F1, F8'],
       ['Proyectos', '/projects', 'F2, F7'],
       ['Territorio', '/territory', 'F2, F6'],
       ['Grupos de interés', '/stakeholders', 'F2'],
@@ -80,22 +80,22 @@ describe('NAV_TREE', () => {
   })
 
   it('en F1, sin pantallas, el admin ve Dashboard y Administración y los demás solo Dashboard', () => {
-    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Dashboard', 'Administración'])
-    expect(arbolPara(NAV_TREE, { ...cuenta(['project READ']), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Dashboard'])
+    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio', 'Administración'])
+    expect(arbolPara(NAV_TREE, { ...cuenta(['project READ']), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio'])
   })
 
   it.each([
-    [[], ['Dashboard']],
-    [['project READ'], ['Dashboard', 'Proyectos']],
-    [['inquiry READ'], ['Dashboard', 'Quejas, consultas y solicitudes']],
+    [[], ['Inicio']],
+    [['project READ'], ['Inicio', 'Proyectos']],
+    [['inquiry READ'], ['Inicio', 'Quejas, consultas y solicitudes']],
     [
       ['early_warning READ', 'task READ'],
-      ['Dashboard', 'Riesgos', 'Tareas']
+      ['Inicio', 'Riesgos', 'Tareas']
     ],
-    [['project CREATE', 'stakeholder UPDATE'], ['Dashboard']],
+    [['project CREATE', 'stakeholder UPDATE'], ['Inicio']],
     // Reportes, con EXPORT sobre grupos de interés o con el historial de exportaciones (revisión final, M7)
-    [['stakeholder EXPORT'], ['Dashboard', 'Reportes']],
-    [['export_log READ'], ['Dashboard', 'Reportes']]
+    [['stakeholder EXPORT'], ['Inicio', 'Reportes']],
+    [['export_log READ'], ['Inicio', 'Reportes']]
   ])('con todas las pantallas, la cuenta %j ve %j', (pares, secciones) => {
     expect(arbolPara(NAV_TREE, cuenta(pares)).map((s) => s.label)).toEqual(secciones)
   })
@@ -126,13 +126,13 @@ describe('navegación del portal', () => {
       ...rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS),
       { path: '/roles', body: ADMINISTRACION.roles.map((name) => ({ name, label: 'Administración de la organización' })) }
     ])
-    expect(await screen.findByText('Administración de la organización')).toBeInTheDocument()
+    expect(await within(screen.getByRole('banner')).findByText('Administración de la organización')).toBeInTheDocument()
   })
 
   it('el admin ve Dashboard y Administración, que lleva a /admin', async () => {
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
     await screen.findByRole('navigation', { name: 'Secciones' })
-    await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
+    await waitFor(() => expect(enlaces()).toEqual(['Inicio', 'Administración']))
     expect(within(lateral()).getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '/admin')
   })
 
@@ -140,7 +140,7 @@ describe('navegación del portal', () => {
   it.each([['MANAGE_METADATA'], ['MANAGE_ORGANIZATION']])('una cuenta con %s en capabilities ve Administración sin ser admin', async (capacidad) => {
     start(AUDITORA, rutasDeSesion(AUDITORA, permisosConCapacidades({ project: ['READ'] }, [capacidad])))
     await screen.findByRole('navigation', { name: 'Secciones' })
-    await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
+    await waitFor(() => expect(enlaces()).toEqual(['Inicio', 'Administración']))
   })
 
   it('con capabilities vacío, Administración no se ofrece', async () => {
@@ -148,13 +148,13 @@ describe('navegación del portal', () => {
     await screen.findByRole('navigation', { name: 'Secciones' })
     // los permisos ya se leyeron: la prueba no pasa por el estado «leyendo», en el que tampoco habría Administración
     await waitFor(() => expect(fetch!.calls.some((c) => c.path === '/auth/me/permissions')).toBe(true))
-    await waitFor(() => expect(enlaces()).toEqual(['Dashboard']))
+    await waitFor(() => expect(enlaces()).toEqual(['Inicio']))
   })
 
   it('AUDITOR no ve Administración', async () => {
     start(AUDITORA, rutasDeSesion(AUDITORA, { admin: false, objects: { project: ['READ'] } }))
     await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(enlaces()).toEqual(['Dashboard'])
+    expect(enlaces()).toEqual(['Inicio'])
   })
 
   it('si los permisos no se pueden leer, nadie ve Administración', async () => {
@@ -163,7 +163,7 @@ describe('navegación del portal', () => {
       { path: '/auth/me/permissions', status: 403, body: { title: 'Forbidden', status: 403 } }
     ])
     await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(enlaces()).toEqual(['Dashboard'])
+    expect(enlaces()).toEqual(['Inicio'])
   })
 
   it('si los permisos no se pueden leer, la URL de una sección lo dice y no afirma que la cuenta no pueda abrirla', async () => {
@@ -185,7 +185,7 @@ describe('navegación del portal', () => {
     registradas.projects = Prueba
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, { admin: false, objects: { project: ['READ'] } }), '/projects')
     expect(await screen.findByRole('heading', { name: 'Pantalla de prueba' })).toBeInTheDocument()
-    expect(enlaces()).toEqual(['Dashboard', 'Proyectos'])
+    expect(enlaces()).toEqual(['Inicio', 'Proyectos'])
   })
 
   // ASM-073: el asistente es el botón Preguntar de la barra superior, nunca una sección. llega en F7: se dibuja si
@@ -196,7 +196,7 @@ describe('navegación del portal', () => {
       { path: '/sgspe/ai/status', body: { enabled: true, providerAvailable: true, useCases: ['AI-05'] } }
     ])
     const preguntar = await within(await screen.findByRole('banner')).findByRole('button', { name: 'Preguntar' })
-    await waitFor(() => expect(enlaces()).toEqual(['Dashboard', 'Administración']))
+    await waitFor(() => expect(enlaces()).toEqual(['Inicio', 'Administración']))
     await userEvent.click(preguntar)
     expect(await screen.findByRole('dialog', { name: 'Asistente de IA' })).toBeInTheDocument()
   })
@@ -217,12 +217,12 @@ describe('navegación del portal', () => {
 
   // design-system.md §6.5: una sección que aún no llega lo dice, sin un error técnico; llega en la primera de sus fases
   it.each([
-    ['/projects', 'Esta sección llega en F2'],
-    ['/territory', 'Esta sección llega en F2'],
-    ['/commitments', 'Esta sección llega en F3'],
-    ['/attention', 'Esta sección llega en F4'],
-    ['/programs', 'Esta sección llega en F5'],
-    ['/reports', 'Esta sección llega en F2']
+    ['/projects', 'Esta sección todavía no está disponible en su organización.'],
+    ['/territory', 'Esta sección todavía no está disponible en su organización.'],
+    ['/commitments', 'Esta sección todavía no está disponible en su organización.'],
+    ['/attention', 'Esta sección todavía no está disponible en su organización.'],
+    ['/programs', 'Esta sección todavía no está disponible en su organización.'],
+    ['/reports', 'Esta sección todavía no está disponible en su organización.']
   ])('la ruta directa a %s, sin pantalla todavía, dice «%s»', async (ruta, texto) => {
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), ruta)
     expect(await screen.findByText(texto)).toBeInTheDocument()
@@ -233,7 +233,7 @@ describe('navegación del portal', () => {
   it('la sección por llegar habla inglés con el idioma en inglés', async () => {
     localStorage.setItem('sgspe.lang', 'en')
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/projects')
-    expect(await screen.findByText('This section arrives in F2')).toBeInTheDocument()
+    expect(await screen.findByText('This section is not available in your organization yet.')).toBeInTheDocument()
   })
 
   it('una ruta que no es de ninguna sección sigue siendo la página no encontrada', async () => {
@@ -245,7 +245,7 @@ describe('navegación del portal', () => {
   it('la sección abierta se marca como la página actual', async () => {
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, SIN_PERMISOS))
     await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(within(lateral()).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+    expect(within(lateral()).getByRole('link', { name: 'Inicio' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('sin el permiso, la URL de la sección dice que la cuenta no puede abrirla', async () => {
@@ -253,7 +253,7 @@ describe('navegación del portal', () => {
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, SIN_PERMISOS), '/projects')
     expect(await screen.findByText('Su cuenta no puede abrir «Proyectos».')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
-    expect(enlaces()).toEqual(['Dashboard'])
+    expect(enlaces()).toEqual(['Inicio'])
   })
 })
 

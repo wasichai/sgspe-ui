@@ -31,14 +31,14 @@ const abrir = (ruta = '/dashboards/monitoring', usuario = GERENCIA_SOCIAL, permi
   montar(<MonitoreoPage />, { ruta, usuario, permisos })
 }
 const fila = async (numero: string) => {
-  const tabla = await screen.findByRole('table', { name: 'Monitoreo de la Tabla 9.5' })
+  const tabla = await screen.findByRole('table', { name: 'Monitoreo del plan de relaciones comunitarias' })
   await within(tabla).findByText('Grupos de interés contactados, por sexo, ámbito e institución')
   return within(tabla)
     .getAllByRole('row')
     .find((r) => within(r).queryAllByRole('cell')[0]?.textContent === numero)!
 }
 
-describe('Monitoreo de la Tabla 9.5', () => {
+describe('Monitoreo del plan de relaciones comunitarias', () => {
   it('pide el mes anterior en Lima, marca la cifra oficial y dice la meta con su origen', async () => {
     abrir()
     const primera = await fila('1')

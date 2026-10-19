@@ -6,13 +6,13 @@ import { abrirSesion, ADMIN_PERMISOS, ADMINISTRACION, AUDITORA, RELACIONISTA, ru
 import type { VarianteDeInicio } from '../inicios'
 import { PortalApp } from '../PortalApp'
 
-// el inicio de F1 (S02, docs/ux/ux-architecture.md §6.2: "F1 bienvenida"; roadmap, B7): usuario, organización, roles y
-// mapa de módulos por fase, sin indicadores; y el inicio por rol de ASM-078, decidido por permisos. F1 no registra
-// variantes: cada prueba registra la suya
+// la bienvenida (S02, docs/ux/ux-architecture.md §6.2): usuario, organización, roles y los accesos a las secciones que la
+// cuenta puede abrir, sin fases ni indicadores; y el inicio por rol de ASM-078, decidido por permisos. cada prueba registra
+// sus variantes
 const variantes = vi.hoisted(() => [] as VarianteDeInicio[])
 vi.mock('../inicios', async (original) => ({ ...(await original<typeof import('../inicios')>()), INICIOS: variantes }))
 
-// el mapa de módulos se prueba con el portal de F1, sin pantallas: lo que cada fase registra lo prueban sus pantallas
+// los accesos se prueban sin pantallas registradas: solo Administración (de quien administra) es una sección disponible
 vi.mock('../pantallas', () => ({ PANTALLAS: {}, RUTAS_ADICIONALES: [] }))
 
 const ORGANIZACION = { id: 'o1', name: 'Organización de prueba', slug: 'prueba', createdAt: null }
@@ -71,50 +71,35 @@ function start(user: AuthUser, permisos: CallerPermissions, primero: MockRoute[]
 // el contenido de la página, sin la barra superior (que también muestra el nombre y los roles)
 const pagina = () => within(screen.getByRole('main'))
 
-const filas = () =>
-  within(pagina().getByRole('table'))
-    .getAllByRole('row')
-    .slice(1)
-    .map((fila) =>
-      within(fila)
-        .getAllByRole('cell')
-        .map((celda) => celda.textContent)
-    )
-
-const POR_LLEGAR = [
-  ['Proyectos', 'F2, F7', 'Llega en F2'],
-  ['Territorio', 'F2, F6', 'Llega en F2'],
-  ['Grupos de interés', 'F2', 'Llega en F2'],
-  ['Relacionamiento', 'F2', 'Llega en F2'],
-  ['Compromisos', 'F3', 'Llega en F3'],
-  ['Quejas, consultas y solicitudes', 'F4', 'Llega en F4'],
-  ['Riesgos', 'F4', 'Llega en F4'],
-  ['Programas sociales', 'F5', 'Llega en F5'],
-  ['Documentos', 'F3', 'Llega en F3'],
-  ['Tareas', 'F3', 'Llega en F3'],
-  ['Reportes', 'F2–F4 exportaciones; F8 entregables', 'Llega en F2']
-]
+// los accesos de la bienvenida: las secciones que la cuenta puede abrir, como enlaces
+const accesos = () =>
+  within(pagina().getByRole('region', { name: 'Sus secciones' }))
+    .queryAllByRole('link')
+    .map((a) => a.textContent)
 
 function InicioDePrueba() {
   return <h1>Inicio de prueba</h1>
 }
 
 describe('inicio de F1', () => {
-  it('muestra la cuenta, la organización, los roles y el mapa de módulos por fase', async () => {
-    start(ADMINISTRACION, ADMIN_PERMISOS)
-    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument()
+  it('muestra la cuenta, la organización, los roles por su rótulo y los accesos a sus secciones, sin fases', async () => {
+    start(ADMINISTRACION, ADMIN_PERMISOS, [{ path: '/roles', body: [{ name: 'ADMIN', label: 'Administración de la organización' }] }])
+    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
     expect(pagina().getByText('Le damos la bienvenida, Administración de prueba.')).toBeInTheDocument()
     expect(pagina().getByText('Administración de prueba (admin@sgspe.test)')).toBeInTheDocument()
     expect(await pagina().findByText('Organización de prueba')).toBeInTheDocument()
-    expect(await pagina().findByText('ADMIN')).toBeInTheDocument()
-    await waitFor(() => expect(filas()).toEqual([['Dashboard', 'F1, F8', 'Disponible'], ...POR_LLEGAR, ['Administración', 'F1', 'Disponible']]))
+    expect(await pagina().findByText('Administración de la organización')).toBeInTheDocument()
+    await waitFor(() => expect(accesos()).toEqual(['Administración']))
     expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
+    expect(pagina().queryByText(/F[0-9]/)).not.toBeInTheDocument()
+    expect(pagina().queryByText('ADMIN')).not.toBeInTheDocument()
   })
 
-  it('a AUDITOR le muestra su rol y que Administración es solo para quien administra', async () => {
+  it('a AUDITOR, sin el directorio de roles, le dice cuántos roles tiene sin su código, y no le ofrece Administración', async () => {
     start(AUDITORA, { admin: false, objects: {} })
-    expect(await pagina().findByText('AUDITOR')).toBeInTheDocument()
-    expect(filas()).toEqual([['Dashboard', 'F1, F8', 'Disponible'], ...POR_LLEGAR, ['Administración', 'F1', 'Solo para administración']])
+    expect(await pagina().findByText('1 rol asignado')).toBeInTheDocument()
+    expect(pagina().queryByText('AUDITOR')).not.toBeInTheDocument()
+    expect(accesos()).toEqual([])
     expect(pagina().getByText('1 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
   })
 
@@ -132,12 +117,8 @@ describe('inicio de F1', () => {
   it('si los permisos no se pueden leer, lo dice y no calcula estados con permisos que no tiene', async () => {
     start(ADMINISTRACION, SIN_PERMISOS, [{ path: '/auth/me/permissions', status: 403, body: { title: 'Forbidden', status: 403 } }])
     await waitFor(() => expect(pagina().getAllByText('No se pudieron leer sus permisos').length).toBeGreaterThan(0))
-    expect(pagina().queryByText(/Sin acceso/)).not.toBeInTheDocument()
-    expect(pagina().queryByText('Solo para administración')).not.toBeInTheDocument()
-    expect(pagina().queryByText('Disponible')).not.toBeInTheDocument()
     expect(pagina().queryByText(/secciones disponibles/)).not.toBeInTheDocument()
-    expect(filas().every(([, , estado]) => estado === 'No se pudieron leer sus permisos')).toBe(true)
-    expect(filas()).toHaveLength(13)
+    expect(accesos()).toEqual([])
   })
 
   it('mientras los permisos se leen, dice «Cargando…» y no «Solo para administración»', async () => {
@@ -146,14 +127,12 @@ describe('inicio de F1', () => {
     await retencion?.solicitada
     // las demás lecturas sí llegan: la página ya procesó respuestas y los permisos siguen retenidos
     expect(await pagina().findByText('Organización de prueba')).toBeInTheDocument()
-    expect(await pagina().findByText('ADMIN')).toBeInTheDocument()
-    expect(filas()).toHaveLength(13)
-    expect(filas().every(([, , estado]) => estado === 'Cargando…')).toBe(true)
-    expect(pagina().queryByText('Solo para administración')).not.toBeInTheDocument()
+    expect(await pagina().findByText('1 rol asignado')).toBeInTheDocument()
+    expect(accesos()).toEqual([])
     expect(pagina().queryByText(/secciones disponibles/)).not.toBeInTheDocument()
-    // solo liberar la respuesta mueve la tabla a sus estados
+    // solo liberar la respuesta muestra los accesos
     retencion?.liberar()
-    await waitFor(() => expect(filas()[0][2]).toBe('Disponible'))
+    await waitFor(() => expect(accesos()).toEqual(['Administración']))
     expect(pagina().getByText('2 de 13 secciones disponibles para su cuenta')).toBeInTheDocument()
   })
 
@@ -170,23 +149,23 @@ describe('inicio de F1', () => {
 
 // ASM-078 sin nombres de rol (RQ-SEC-005): la variante del inicio sale de los permisos de la cuenta
 describe('inicio por rol', () => {
-  it('sin variantes registradas, toda cuenta ve la bienvenida y sabe que su inicio llega con su módulo', async () => {
+  it('sin variantes registradas, toda cuenta ve la bienvenida', async () => {
     start(RELACIONISTA, SIN_PERMISOS)
-    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument()
-    expect(pagina().getByText('Cada rol tendrá su propio inicio cuando llegue su módulo; mientras tanto, todas las cuentas empiezan aquí.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
+    expect(pagina().getByText('Le damos la bienvenida, Relacionista de prueba.')).toBeInTheDocument()
   })
 
   it('una variante registrada se ofrece a quien tiene sus permisos, y solo a quien los tiene', async () => {
     variantes.push({ clave: 'prueba', seOfreceCon: [[{ objeto: 'project', accion: 'READ' }]], Pantalla: InicioDePrueba })
     start(RELACIONISTA, { admin: false, objects: { project: ['READ'] } })
     expect(await screen.findByRole('heading', { name: 'Inicio de prueba' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Inicio', level: 1 })).not.toBeInTheDocument()
   })
 
   it('sin los permisos de ninguna variante, la bienvenida', async () => {
     variantes.push({ clave: 'prueba', seOfreceCon: [[{ objeto: 'project', accion: 'READ' }]], Pantalla: InicioDePrueba })
     start(RELACIONISTA, SIN_PERMISOS)
-    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Inicio de prueba' })).not.toBeInTheDocument()
   })
 })

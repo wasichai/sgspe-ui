@@ -31,7 +31,7 @@ describe('rutas de F8', () => {
       { path: '/objects/indicator/records', body: pagina(INDICADORES_DEL_CATALOGO) },
       ...baseDeF8(GERENCIA_SOCIAL)
     ])
-    expect(await screen.findByRole('heading', { level: 1, name: 'Monitoreo de la Tabla 9.5' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Monitoreo del plan de relaciones comunitarias' })).toBeInTheDocument()
   })
 
   it('el detalle de un indicador vuelve al monitoreo', async () => {
@@ -51,7 +51,7 @@ describe('rutas de F8', () => {
       ...baseDeF8(GERENCIA_SOCIAL)
     ])
     red = espiarRed()
-    const tabla = await screen.findByRole('table', { name: 'Monitoreo de la Tabla 9.5' })
+    const tabla = await screen.findByRole('table', { name: 'Monitoreo del plan de relaciones comunitarias' })
     const enlace = await within(tabla).findByRole('link', { name: 'Grupos de interés contactados, por sexo, ámbito e institución' })
     expect(enlace).toHaveAttribute('href', '/dashboards/indicators/KPI-STK-04?periodStart=2026-07-01&periodEnd=2026-07-31&month=2026-07&project=p1')
     await userEvent.click(enlace)
@@ -61,6 +61,6 @@ describe('rutas de F8', () => {
     expect(detalle.ruta).toContain('periodStart=2026-07-01')
     await userEvent.click(screen.getByRole('link', { name: 'Volver al tablero' }))
     await waitFor(() => expect(rutaActual()).toBe('/dashboards/monitoring?month=2026-07&project=p1'))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Monitoreo de la Tabla 9.5' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Monitoreo del plan de relaciones comunitarias' })).toBeInTheDocument()
   })
 })

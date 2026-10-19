@@ -1,21 +1,13 @@
 import { useAuth } from '@wasichai/core'
-import { Badge, Table, Td, Th } from '@wasichai/ui'
-import { CircleCheck, Clock, Lock, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import { NS } from '../i18n'
 import { useCatalogoDeIndicadores } from '../datos/indicadores'
 import { INICIOS, inicioPara } from '../inicios'
+import { useNombresDeRol } from '../proyectos/usuarios'
 import { useCuenta, useOrganizacion } from '../queries'
-import { estadoDe, NAV_TREE, useOferta, type Estado } from '../shell/navTree'
+import { estadoDe, NAV_TREE, useOferta } from '../shell/navTree'
 import { RevisionEjecutivaPage } from '../tableros/RevisionEjecutivaPage'
-
-// cada estado con su tono e ícono de design-system.md §4: nunca solo color
-const TONO: Record<Estado, { clase: string; Icono: LucideIcon }> = {
-  disponible: { clase: 'bg-sg-success-soft text-sg-success', Icono: CircleCheck },
-  'por-llegar': { clase: 'bg-sg-neutral-soft text-sg-neutral', Icono: Clock },
-  'solo-admin': { clase: 'bg-sg-neutral-soft text-sg-neutral', Icono: Lock },
-  'sin-acceso': { clase: 'bg-sg-warning-soft text-sg-warning', Icono: Lock }
-}
 
 // el inicio del portal (S02, ASM-078): la variante del rol si la cuenta tiene una (inicios.ts); si no, desde F8 la revisión
 // ejecutiva S51 para quien el catálogo le ofrece el tablero executive (decisión 7 del plan 8.3); si no, la bienvenida de F1.
@@ -29,9 +21,9 @@ export function InicioPage() {
   return ejecutivo ? <RevisionEjecutivaPage /> : <Bienvenida />
 }
 
-// la bienvenida de F1 (docs/ux/ux-architecture.md §6.2; roadmap, B7): quién es, de qué organización, con qué roles, y el
-// mapa de módulos por fase, sin indicadores (dashboards.md §11). los roles son los nombres técnicos que contesta wasichai:
-// sus etiquetas en español solo las lee quien administra (/api/roles). lo que no se pudo leer se dice; nunca se inventa
+// la bienvenida (docs/ux/ux-architecture.md §6.2): quién es, de qué organización, con qué roles, y los accesos a las secciones
+// que su cuenta puede abrir, sin indicadores (dashboards.md §11). los roles se dicen por su rótulo, que solo lee quien
+// administra (/api/roles); su código técnico no se muestra. lo que no se pudo leer se dice; nunca se inventa
 function Bienvenida() {
   const { t } = useTranslation(NS)
   const { user, permissions, permissionsError } = useAuth()
@@ -40,16 +32,20 @@ function Bienvenida() {
   const oferta = useOferta()
   const estados = NAV_TREE.map((seccion) => ({ seccion, estado: estadoDe(seccion, oferta) }))
   const disponibles = estados.filter(({ estado }) => estado === 'disponible').length
-  const rotulo = (estado: Estado, fase: string) => (estado === 'por-llegar' ? t('inicio.llegaEn', { fase }) : t(`inicio.estados.${estado}`))
   // mientras los permisos se leen, o si no se pudieron leer, can e isAdmin son falsos sin serlo: ningún estado sale de ellos
   const permisosNoListos = permissions ? null : permissionsError ? 'error' : 'cargando'
+  const nombresDeRol = useNombresDeRol()
+  // los roles por su rótulo si la cuenta lee el directorio de roles; si no, cuántos son, nunca su código técnico
+  const rolesDe = (roles: string[]) => {
+    const rotulos = roles.map((r) => nombresDeRol.data?.find((x) => x.name === r)?.label).filter(Boolean)
+    return rotulos.length === roles.length ? rotulos.join(', ') : t('inicio.rolesAsignados', { count: roles.length })
+  }
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-8">
       <div className="space-y-1">
         <h1 className="text-sg-h1 font-semibold text-sg-text">{t('inicio.titulo')}</h1>
         <p className="text-sg-body text-sg-text-secondary">{t('inicio.bienvenida', { nombre: user?.displayName ?? '' })}</p>
-        <p className="text-sg-body-sm text-sg-text-muted">{t('inicio.porRol')}</p>
       </div>
       <section aria-labelledby="inicio-cuenta" className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-5">
         <h2 id="inicio-cuenta" className="text-sg-h3 font-semibold text-sg-text">
@@ -62,15 +58,13 @@ function Bienvenida() {
           <dd>{organizacion.isPending ? t('inicio.cargando') : organizacion.isError ? t('inicio.sinOrganizacion') : organizacion.data.name}</dd>
           <dt className="text-sg-text-muted">{t('inicio.roles')}</dt>
           <dd>
-            {cuenta.isPending ? (
-              t('inicio.cargando')
-            ) : cuenta.isError ? (
-              t('inicio.sinCuenta')
-            ) : cuenta.data.roles.length ? (
-              <span className="font-sg-mono text-sg-body-sm">{cuenta.data.roles.join(', ')}</span>
-            ) : (
-              t('inicio.sinRoles')
-            )}
+            {cuenta.isPending
+              ? t('inicio.cargando')
+              : cuenta.isError
+                ? t('inicio.sinCuenta')
+                : cuenta.data.roles.length
+                  ? rolesDe(cuenta.data.roles)
+                  : t('inicio.sinRoles')}
           </dd>
         </dl>
       </section>
@@ -87,41 +81,27 @@ function Bienvenida() {
                 : t('inicio.resumen', { disponibles, total: NAV_TREE.length })}
           </p>
         </div>
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('inicio.seccion')}</Th>
-                <Th>{t('inicio.fases')}</Th>
-                <Th>{t('inicio.estado')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {estados.map(({ seccion, estado }) => {
-                const { clase, Icono } = TONO[estado]
+        {/* las secciones que la cuenta puede abrir, como accesos; las fases son del plan, no de quien usa el portal */}
+        {permisosNoListos ? null : (
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {estados
+              .filter(({ seccion, estado }) => estado === 'disponible' && seccion.clave !== 'dashboard')
+              .map(({ seccion }) => {
+                const Icono = seccion.icon
                 return (
-                  <tr key={seccion.clave}>
-                    <Td>{t(`secciones.${seccion.clave}`)}</Td>
-                    <Td className="font-sg-mono tabular-nums">{t(`inicio.notasDeFases.${seccion.clave}`, { defaultValue: seccion.fases.join(', ') })}</Td>
-                    <Td>
-                      {permisosNoListos ? (
-                        <Badge className="gap-1 bg-sg-neutral-soft text-sg-neutral">
-                          {permisosNoListos === 'error' ? <TriangleAlert aria-hidden className="size-3" /> : <Clock aria-hidden className="size-3" />}
-                          {permisosNoListos === 'error' ? t('inicio.sinPermisos') : t('inicio.cargando')}
-                        </Badge>
-                      ) : (
-                        <Badge className={`gap-1 ${clase}`}>
-                          <Icono aria-hidden className="size-3" />
-                          {rotulo(estado, seccion.fases[0])}
-                        </Badge>
-                      )}
-                    </Td>
-                  </tr>
+                  <li key={seccion.clave}>
+                    <Link
+                      to={seccion.to}
+                      className="flex items-center gap-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 font-medium text-sg-text hover:bg-sg-surface-hover"
+                    >
+                      {Icono ? <Icono aria-hidden className="size-5 text-sg-primary-text" /> : null}
+                      {t(`secciones.${seccion.clave}`)}
+                    </Link>
+                  </li>
                 )
               })}
-            </tbody>
-          </Table>
-        </div>
+          </ul>
+        )}
       </section>
     </div>
   )
