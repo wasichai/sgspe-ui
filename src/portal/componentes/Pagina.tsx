@@ -1,0 +1,125 @@
+import { useWasichaiConfig } from '@wasichai/core'
+import { cn } from '@wasichai/ui'
+import { MoreHorizontal } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useParams } from 'react-router'
+import { texto, useRegistro } from '../datos/registros'
+import { NS } from '../i18n'
+
+// las piezas de página de la revisión de UX (etapa 0, design-system.md §6.1 y §6.4): un ancho único para todas las
+// pantallas, un encabezado con el mismo orden y peso en todas, y el título del documento con la pantalla y el proyecto (D7)
+
+// el ancho único de las pantallas; «lectura», más angosto, solo para textos largos (un acta, un entregable)
+export function ContenedorDePagina({ variante = 'pagina', className, children }: { variante?: 'pagina' | 'lectura'; className?: string; children: ReactNode }) {
+  return (
+    <div data-ancho={variante} className={cn('mx-auto space-y-4', variante === 'lectura' ? 'max-w-3xl' : 'max-w-[1440px]', className)}>
+      {children}
+    </div>
+  )
+}
+
+// «Título · Proyecto · SGSPE»: el historial, las pestañas del navegador y los marcadores dicen dónde se estaba. el proyecto
+// es el de la ruta (/projects/:projectId/…), leído de la caché que ya llenó ProyectoLayout. al salir, vuelve el anterior
+export function useTituloDeDocumento(titulo: string) {
+  const { appName } = useWasichaiConfig()
+  const { projectId } = useParams()
+  const proyecto = useRegistro('project', projectId)
+  const nombre = proyecto.data ? texto(proyecto.data, 'name') : ''
+  useEffect(() => {
+    const anterior = document.title
+    document.title = [titulo, nombre, appName].filter(Boolean).join(' · ')
+    return () => {
+      document.title = anterior
+    }
+  }, [titulo, nombre, appName])
+}
+
+export interface PropsDeEncabezado {
+  titulo: string
+  // tipo y código de un registro («Compromiso · COM-2026-031»)
+  antetitulo?: ReactNode
+  // estado, plazo, prioridad
+  chips?: ReactNode
+  descripcion?: ReactNode
+  // cuántos hay con el alcance actual
+  conteo?: ReactNode
+  // una sola acción primaria; las secundarias con menos peso; las demás, en «Más acciones»
+  primaria?: ReactNode
+  secundarias?: ReactNode
+  mas?: ReactNode
+  // si el título visible no basta para el documento (el código de una ficha)
+  tituloDelDocumento?: string
+}
+
+export function EncabezadoDePagina({ titulo, antetitulo, chips, descripcion, conteo, primaria, secundarias, mas, tituloDelDocumento }: PropsDeEncabezado) {
+  useTituloDeDocumento(tituloDelDocumento ?? titulo)
+  const acciones = primaria || secundarias || mas
+  return (
+    <header className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0 space-y-1">
+        {antetitulo ? <p className="font-sg-mono text-sg-caption text-sg-text-muted">{antetitulo}</p> : null}
+        <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
+        {chips ? <div className="flex flex-wrap items-center gap-2 text-sm">{chips}</div> : null}
+        {descripcion ? <p className="text-sm text-sg-text-secondary">{descripcion}</p> : null}
+        {conteo ? <p className="text-sm text-sg-text-muted">{conteo}</p> : null}
+      </div>
+      {acciones ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {secundarias}
+          {mas ? <MasAcciones>{mas}</MasAcciones> : null}
+          {primaria}
+        </div>
+      ) : null}
+    </header>
+  )
+}
+
+// un desplegable sencillo (botón con aria-expanded y un grupo): Escape o un clic fuera lo cierran y el foco vuelve al botón
+export function MasAcciones({ children }: { children: ReactNode }) {
+  const { t } = useTranslation(NS)
+  const [abierto, setAbierto] = useState(false)
+  const id = useId()
+  const raiz = useRef<HTMLDivElement>(null)
+  const boton = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!abierto) return
+    const fuera = (e: MouseEvent) => {
+      if (!raiz.current?.contains(e.target as Node)) setAbierto(false)
+    }
+    document.addEventListener('mousedown', fuera)
+    return () => document.removeEventListener('mousedown', fuera)
+  }, [abierto])
+  const alTeclear = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return
+    e.preventDefault()
+    setAbierto(false)
+    boton.current?.focus()
+  }
+  return (
+    <div ref={raiz} className="relative" onKeyDown={alTeclear}>
+      <button
+        ref={boton}
+        type="button"
+        aria-expanded={abierto}
+        aria-controls={abierto ? id : undefined}
+        aria-label={t('paginas.mas')}
+        title={t('paginas.mas')}
+        onClick={() => setAbierto((a) => !a)}
+        className="flex h-8 items-center justify-center rounded-sg-md border border-sg-border px-2 text-sg-text-secondary hover:bg-sg-surface-hover"
+      >
+        <MoreHorizontal aria-hidden className="size-4" />
+      </button>
+      {abierto ? (
+        <div
+          id={id}
+          role="group"
+          aria-label={t('paginas.mas')}
+          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md"
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
+  )
+}
