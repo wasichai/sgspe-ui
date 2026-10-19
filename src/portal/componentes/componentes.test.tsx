@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { useState } from 'react'
@@ -224,6 +224,28 @@ describe('FiltroDeLista', () => {
   })
 })
 
+describe('Cargando', () => {
+  it('en una página es un esqueleto con la forma de la lista, que el lector de pantalla dice «Cargando…»', () => {
+    const { container } = montar(<Cargando />)
+    const estado = screen.getByRole('status')
+    expect(estado).toHaveAttribute('aria-busy', 'true')
+    expect(within(estado).getByText('Cargando…')).toHaveClass('sr-only')
+    expect(container.querySelectorAll('[data-esqueleto]').length).toBeGreaterThanOrEqual(3)
+    // sin animación para quien la reduce: solo se pulsa con motion-safe
+    expect(container.querySelector('[data-esqueleto]')?.className).toContain('motion-safe:animate-pulse')
+  })
+
+  it('compacto sigue siendo un texto en línea', () => {
+    montar(
+      <p>
+        Responsable: <Cargando compacto />
+      </p>
+    )
+    expect(screen.getByRole('status').tagName).toBe('SPAN')
+    expect(screen.getByText('Cargando…')).not.toHaveClass('sr-only')
+  })
+})
+
 describe('Consulta (revisión final, I1)', () => {
   // lo que importa de una consulta de TanStack Query para Consulta: sus datos, su error y su refetch
   const consulta = (data: string | undefined, error: unknown) =>
@@ -397,7 +419,7 @@ describe('KpiCard', () => {
     expect(screen.queryByText(/corr-403/)).not.toBeInTheDocument()
   })
 
-  it('mientras carga usa el "Cargando…" compacto: el mismo texto accesible, sin el relleno vertical de la página', async () => {
+  it('mientras carga usa el "Cargando…" compacto: el mismo texto accesible, sin el esqueleto de la página', async () => {
     montar(
       <>
         <KpiCard titulo="Cifra" cargando />
@@ -407,8 +429,9 @@ describe('KpiCard', () => {
     const [enTarjeta, enPagina] = await screen.findAllByRole('status')
     expect(enTarjeta).toHaveTextContent('Cargando…')
     expect(enTarjeta).toHaveAttribute('aria-busy', 'true')
-    expect(enTarjeta).not.toHaveClass('py-6')
-    expect(enPagina).toHaveClass('py-6')
+    expect(enTarjeta.querySelector('[data-esqueleto]')).toBeNull()
+    expect(enPagina).toHaveTextContent('Cargando…')
+    expect(enPagina.querySelector('[data-esqueleto]')).not.toBeNull()
   })
 
   it('un módulo que no llegó dice que todavía no está disponible, sin la fase', async () => {

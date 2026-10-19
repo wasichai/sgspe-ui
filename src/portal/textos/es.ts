@@ -38,6 +38,7 @@ import { ES_INCIDENTES } from './incidentes'
 import { ES_REGISTROS_DE_ALERTA } from './registrosDeAlerta'
 import { ES_REGLAS_DE_ALERTA } from './reglasDeAlerta'
 import { ES_TABLERO_RIESGOS } from './tableroRiesgos'
+import { ES_BUSQUEDA } from './busqueda'
 import { ES_INVERSION } from './inversion'
 import { ES_FICHA_PROGRAMA } from './fichaPrograma'
 import { ES_FICHA_APORTE } from './fichaAporte'
@@ -105,6 +106,7 @@ export const ES = {
   registrosDeAlerta: ES_REGISTROS_DE_ALERTA,
   reglasDeAlerta: ES_REGLAS_DE_ALERTA,
   tableroRiesgos: ES_TABLERO_RIESGOS,
+  busqueda: ES_BUSQUEDA,
   // F5: programas e inversión social
   inversion: ES_INVERSION,
   fichaPrograma: ES_FICHA_PROGRAMA,

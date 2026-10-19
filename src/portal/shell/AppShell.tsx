@@ -7,6 +7,7 @@ import { Link, NavLink, Outlet } from 'react-router'
 import { Campana } from '../avisos/Campana'
 import { SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
 import { BotonPreguntar, ProveedorDelAsistente } from '../ia/Asistente'
+import { BotonBuscar } from '../busqueda/BusquedaGlobal'
 import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
 import { useArbol } from './navTree'
@@ -60,6 +61,7 @@ export function AppShell() {
           <SelectorDeProyecto />
           <div className="flex-1" />
           {/* el asistente no es una sección (ASM-073): su botón vive aquí y se dibuja si el servidor tiene la IA (F7) */}
+          <BotonBuscar />
           <BotonPreguntar />
           <Campana />
           <span className="hidden items-center gap-3 sm:flex">
