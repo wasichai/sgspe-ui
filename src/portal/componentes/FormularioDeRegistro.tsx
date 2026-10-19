@@ -1,3 +1,4 @@
+import { useCodigoPropuesto } from '../datos/codigos'
 import { CORE_FIELD_TYPES, DynamicForm, toAttributes, toFormValues, type ObjectDefinition, type RecordPayload } from '@wasichai/core'
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -104,6 +105,10 @@ export function FormularioDeRegistro({
   const actualizar = useActualizar(objeto)
   const erroresDeCampo = useErroresDeCampo()
   const releer = useReleer()
+  // en un alta, el código que propone el backend (decisión 6 de la revisión de UX), editable; DynamicForm toma sus valores al
+  // montarse, así que se espera la propuesta (o su falla) antes de dibujarlo
+  const proyectoDelAlta = registro ? undefined : ((fijos.project ?? iniciales.project) as string | undefined)
+  const propuesta = useCodigoPropuesto(registro || iniciales.code ? undefined : objeto, proyectoDelAlta)
   // el registro con que se abrió el formulario: DynamicForm toma de él sus valores iniciales y no los reinicia (ni tras
   // «Recargar» ni con un refetch), así que es la base para saber qué cambió la persona
   const abierto = useRef<Registro | undefined>(undefined)
@@ -111,7 +116,7 @@ export function FormularioDeRegistro({
     () => (definicion.data ? prepararDefinicion(definicion.data, objeto, fijos, campos, ayudas) : undefined),
     [definicion.data, objeto, fijos, campos, ayudas]
   )
-  if (definicion.isPending) return <Cargando />
+  if (definicion.isPending || propuesta.cargando) return <Cargando />
   if (definicion.isError || !preparada) return <ErrorDeCarga error={definicion.error} />
   const error = crear.error ?? actualizar.error
   // cada error que apunta a un campo del formulario se dice con su etiqueta («Etiqueta: texto») y se muestran todos, para
@@ -120,7 +125,8 @@ export function FormularioDeRegistro({
     .map(([nombre, texto]) => [preparada.fields.find((f) => f.name === nombre)?.label, texto] as const)
     .filter(([etiqueta]) => etiqueta)
     .map(([etiqueta, texto]) => `${etiqueta}: ${texto}`)
-  const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: { ...iniciales, ...fijos } }
+  const conCodigo = propuesta.codigo && preparada.fields.some((f) => f.name === 'code') ? { code: propuesta.codigo } : {}
+  const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: { ...conCodigo, ...iniciales, ...fijos } }
   abierto.current ??= registro
   const enviar = ({ attributes }: RecordPayload) => {
     if (registro) {

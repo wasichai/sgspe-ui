@@ -107,6 +107,27 @@ describe('S37 · registrar QCS', () => {
     expect(attributes).not.toHaveProperty('person')
   })
 
+  // revisión de UX, decisión 6: el código propuesto sigue al tipo mientras no se toque, y uno escrito no se pisa
+  it('propone el código del tipo elegido y no pisa uno escrito', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: /^\/sgspe\/codes\/next\?object=grievance&/, body: { code: 'QUE-2026-003' } },
+        { path: /^\/sgspe\/codes\/next\?object=inquiry&/, body: { code: 'CON-2026-001' } },
+        { path: /^\/sgspe\/codes\/next\?object=stakeholder_request&/, body: { code: 'SOL-2026-007' } }
+      ])
+    )
+    abrir()
+    const codigo = await screen.findByLabelText('Código')
+    await waitFor(() => expect(codigo).toHaveValue('QUE-2026-003'))
+    await userEvent.click(screen.getByRole('radio', { name: /Consulta/ }))
+    await waitFor(() => expect(screen.getByLabelText('Código')).toHaveValue('CON-2026-001'))
+    await userEvent.clear(screen.getByLabelText('Código'))
+    await userEvent.type(screen.getByLabelText('Código'), 'C-PROPIO')
+    await userEvent.click(screen.getByRole('radio', { name: /Solicitud/ }))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.getByLabelText('Código')).toHaveValue('C-PROPIO')
+  })
+
   it('el tipo de la URL, sus datos propios y su regla de plazos; sin plazo en las solicitudes', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed()

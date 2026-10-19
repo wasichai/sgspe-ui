@@ -1,4 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
+import { useCodigoPropuesto } from '../datos/codigos'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
@@ -239,12 +240,22 @@ function Asistente() {
     defaultValues: recuperado ? { ...VACIO, ...recuperado.valores } : VACIO
   })
   const valores = useWatch({ control })
-  // lo escrito se guarda medio segundo después de dejar de escribir; tras el alta ya no hay borrador que guardar
+  // el código que propone el backend (decisión 6 de la revisión de UX), editable: queda como valor por defecto, así que no es un
+  // cambio por guardar ni por avisar. un borrador recuperado con su código no se pisa
+  const codigoPropuesto = useCodigoPropuesto(recuperado?.valores.code ? undefined : 'commitment', projectId)
   useEffect(() => {
-    if (creado) return
+    if (!codigoPropuesto.codigo || getValues('code')) return
+    // el campo puede no estar montado (está en el segundo paso): se cambian los valores por defecto y lo ya escrito se conserva
+    reset({ ...(formState.defaultValues as Valores), code: codigoPropuesto.codigo }, { keepDirtyValues: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codigoPropuesto.codigo])
+  // lo escrito se guarda medio segundo después de dejar de escribir; tras el alta ya no hay borrador que guardar, y sin cambios
+  // (solo el código propuesto) tampoco
+  useEffect(() => {
+    if (creado || !formState.isDirty) return
     const plazo = setTimeout(() => guardarBorrador(projectId, { ...VACIO, ...valores } as Valores), 500)
     return () => clearTimeout(plazo)
-  }, [valores, projectId, creado])
+  }, [valores, projectId, creado, formState.isDirty])
   const descartarBorrador = () => {
     borrarBorrador(projectId)
     reset(VACIO)
