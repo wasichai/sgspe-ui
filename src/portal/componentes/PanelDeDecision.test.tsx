@@ -25,7 +25,7 @@ describe('PanelDeDecision', () => {
         objeto="commitment"
         estado="approved"
         desde="2026-10-02T15:00:00Z"
-        siguiente={{ etiqueta: 'Registrar el cumplimiento', falta: 'una entrega' }}
+        siguiente={{ etiqueta: 'Registrar el cumplimiento', falta: 'Falta una entrega con conformidad' }}
         responsable={null}
         vencimiento="2026-11-30"
         situacion="POR VENCER"
@@ -36,7 +36,7 @@ describe('PanelDeDecision', () => {
     expect(within(tarjeta('Estado actual')).getByText('Desde', { exact: false })).toHaveTextContent('Desde 2 oct. 2026')
     expect(within(tarjeta('Estado actual')).queryByText('Por', { exact: false })).not.toBeInTheDocument()
     expect(within(tarjeta('Siguiente acción')).getByText('Registrar el cumplimiento')).toBeInTheDocument()
-    expect(within(tarjeta('Siguiente acción')).getByText('Falta: una entrega')).toBeInTheDocument()
+    expect(within(tarjeta('Siguiente acción')).getByText('Falta una entrega con conformidad')).toBeInTheDocument()
     expect(within(tarjeta('Responsable')).getByText('Sin responsable')).toBeInTheDocument()
     expect(within(tarjeta('Vencimiento')).getByText('30 nov. 2026')).toBeInTheDocument()
     expect(within(tarjeta('Vencimiento')).getByLabelText('Situación de plazo: Por vencer')).toBeInTheDocument()

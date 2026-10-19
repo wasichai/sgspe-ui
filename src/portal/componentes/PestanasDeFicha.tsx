@@ -1,6 +1,8 @@
 import { cn } from '@wasichai/ui'
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
+import { NS } from '../i18n'
 import { PestanasDesplazables } from './PestanasDesplazables'
 
 // las pestañas de una ficha (design-system.md §6.1, D6 de la revisión de UX): se desplazan con flechas cuando no caben
@@ -15,6 +17,7 @@ export interface PestanaDeFicha {
 }
 
 export function PestanasDeFicha({ etiqueta, pestanas }: { etiqueta: string; pestanas: PestanaDeFicha[] }) {
+  const { t } = useTranslation(NS)
   const [busqueda, fijarBusqueda] = useSearchParams()
   const pedida = busqueda.get('tab')
   const actual = pestanas.some((p) => p.id === pedida) ? pedida! : (pestanas[0]?.id ?? '')
@@ -51,6 +54,7 @@ export function PestanasDeFicha({ etiqueta, pestanas }: { etiqueta: string; pest
               id={`${id}-pestana-${p.id}`}
               aria-selected={elegida}
               aria-controls={`${id}-panel-${p.id}`}
+              aria-describedby={p.conteo != null ? `${id}-conteo-${p.id}` : undefined}
               tabIndex={elegida ? 0 : -1}
               onClick={() => elegir(p.id)}
               onKeyDown={(e) => alTeclear(e, i)}
@@ -60,10 +64,16 @@ export function PestanasDeFicha({ etiqueta, pestanas }: { etiqueta: string; pest
               )}
             >
               {p.etiqueta}
-              {/* el espacio separa el conteo en el nombre de la pestaña («Entregas 2»); el flex no lo dibuja */}
-              {p.conteo != null ? ' ' : null}
+              {/* el conteo se ve y va en la descripción: el nombre de la pestaña no cambia con él (como VistasGuardadas) */}
               {p.conteo != null ? (
-                <span className="rounded-full bg-sg-surface-sunken px-1.5 text-sg-caption tabular-nums text-sg-text-muted">{p.conteo}</span>
+                <>
+                  <span aria-hidden className="rounded-full bg-sg-surface-sunken px-1.5 text-sg-caption tabular-nums text-sg-text-muted">
+                    {p.conteo}
+                  </span>
+                  <span id={`${id}-conteo-${p.id}`} hidden>
+                    {t('comun.registros', { count: p.conteo })}
+                  </span>
+                </>
               ) : null}
             </button>
           )

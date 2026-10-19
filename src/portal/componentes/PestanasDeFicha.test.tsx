@@ -41,17 +41,18 @@ describe('PestanasDeFicha', () => {
     expect(screen.getByRole('tab', { name: 'Resumen' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('muestra el conteo de una pestaña', () => {
+  it('muestra el conteo de una pestaña en su descripción, sin cambiar su nombre', () => {
     montar(<PestanasDeFicha etiqueta="Compromiso" pestanas={PESTANAS} />)
-    expect(screen.getByRole('tab', { name: 'Entregas 2' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Entregas' })).toHaveAccessibleDescription('2 registros')
+    expect(screen.getByRole('tab', { name: 'Entregas' })).toHaveTextContent('Entregas2')
   })
 
   it('lo escrito en una pestaña visitada sigue al volver', async () => {
     montar(<PestanasDeFicha etiqueta="Compromiso" pestanas={PESTANAS} />)
-    await userEvent.click(screen.getByRole('tab', { name: 'Entregas 2' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Entregas' }))
     await userEvent.type(screen.getByLabelText('Nota'), 'pendiente')
     await userEvent.click(screen.getByRole('tab', { name: 'Resumen' }))
-    await userEvent.click(screen.getByRole('tab', { name: 'Entregas 2' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Entregas' }))
     expect(screen.getByLabelText('Nota')).toHaveValue('pendiente')
   })
 
@@ -62,7 +63,7 @@ describe('PestanasDeFicha', () => {
     expect(screen.getByRole('tab', { name: 'Actividad' })).toHaveAttribute('tabindex', '-1')
     resumen.focus()
     await userEvent.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Entregas 2' })).toHaveFocus()
+    expect(screen.getByRole('tab', { name: 'Entregas' })).toHaveFocus()
     await userEvent.keyboard('{End}')
     expect(screen.getByRole('tab', { name: 'Actividad' })).toHaveFocus()
     await userEvent.keyboard('{ArrowRight}')

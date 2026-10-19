@@ -1,3 +1,12 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { useSumasDeConteos } from '../datos/conteos'
+import { rutaDeFicha } from '../datos/fichas'
+import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { Alert, Button, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
@@ -13,7 +22,6 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
-import { useTituloDeDocumento } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
@@ -62,6 +70,7 @@ const EDITABLES_SIEMPRE = [
   'origin_justification'
 ]
 const ANTES_DE_APROBAR = ['draft', 'pending_approval']
+const CAMINO = ['draft', 'pending_approval', 'approved', 'in_progress', 'fulfilled', 'verified', 'closed']
 const COMPROBAR = ['submit', 'approve', 'approve_senior', 'approve_direct', 'register_fulfillment', 'verify', 'close']
 
 export function FichaCompromisoPage() {
@@ -98,19 +107,25 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
     setEditando(null)
     setMotivo('')
   }
-  // dónde se está: el código en las migas del proyecto (en lugar del enlace suelto a la lista) y en el título del documento
+  // dónde se está: el código en las migas del proyecto (en lugar del enlace suelto a la lista); el título del documento lo pone
+  // el encabezado. la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): encabezado, camino del flujo, panel de
+  // decisión, pestañas con conteo y trazabilidad
   useMigaDelRegistro(texto(compromiso, 'code') || texto(compromiso, 'title'))
-  useTituloDeDocumento([texto(compromiso, 'code'), texto(compromiso, 'title')].filter(Boolean).join(' '))
+  const siguiente = useSiguienteAccion('commitment', compromiso, COMPROBAR)
+  const conteos = useSumasDeConteos([
+    { clave: 'entregas', objeto: 'delivery', filtros: { commitment: compromiso.id } },
+    { clave: 'reprogramaciones', objeto: 'commitment_reschedule', filtros: { commitment: compromiso.id } }
+  ])
+  const evidencias = useEvidenciasDe('commitment', compromiso.id)
   return (
     <article className="space-y-4">
       <Rastro />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {texto(compromiso, 'code')} · {opcion(compromiso, 'resource_type') || '—'}
-          </p>
-          <h1 className="text-sg-h1 font-semibold">{texto(compromiso, 'title')}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+      <EncabezadoDePagina
+        antetitulo={[t('fichaCompromiso.titulo'), texto(compromiso, 'code'), opcion(compromiso, 'resource_type')].filter(Boolean).join(' · ')}
+        titulo={texto(compromiso, 'title')}
+        tituloDelDocumento={[texto(compromiso, 'code'), texto(compromiso, 'title')].filter(Boolean).join(' ')}
+        chips={
+          <>
             <EstadoChip objeto="commitment" estado={compromiso.state} />
             <SituacionDePlazo valor={atributo(compromiso, 'deadline_status')} />
             {texto(compromiso, 'due_date') ? (
@@ -119,23 +134,35 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
               </span>
             ) : null}
             <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
-          </div>
-          {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
-        </div>
-        <div className="space-y-2">
-          {edita ? (
-            <div className="flex flex-wrap gap-2">
+          </>
+        }
+        primaria={<BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        secundarias={
+          edita ? (
+            <>
               <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
                 {t('fichaCompromiso.editar')}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
                 {t('fichaCompromiso.riesgo')}
               </Button>
-            </div>
-          ) : null}
-          <BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} />
-        </div>
-      </header>
+            </>
+          ) : undefined
+        }
+      />
+      {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
+      {/* el camino de WF-D sin la excepción (bloqueado): si el compromiso está bloqueado, se agrega igual al camino */}
+      <CaminoDelFlujo objeto="commitment" estado={compromiso.state} camino={CAMINO} />
+      <PanelDeDecision
+        objeto="commitment"
+        estado={compromiso.state}
+        desde={texto(compromiso, 'state_changed_at') || null}
+        por={texto(compromiso, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={texto(compromiso, 'owner_user_email')}
+        vencimiento={texto(compromiso, 'due_date')}
+        situacion={atributo(compromiso, 'deadline_status')}
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <PestanasDeFicha
           etiqueta={texto(compromiso, 'title')}
@@ -146,10 +173,16 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
               etiqueta: t('fichaCompromiso.pestanas.seguimiento'),
               render: () => <PestanaSeguimiento compromiso={compromiso} escribe={escribe} />
             },
-            { id: 'entregas', etiqueta: t('fichaCompromiso.pestanas.entregas'), render: () => <PestanaEntregas compromiso={compromiso} escribe={escribe} /> },
+            {
+              id: 'entregas',
+              etiqueta: t('fichaCompromiso.pestanas.entregas'),
+              conteo: conteos.entregas,
+              render: () => <PestanaEntregas compromiso={compromiso} escribe={escribe} />
+            },
             {
               id: 'reprogramaciones',
               etiqueta: t('fichaCompromiso.pestanas.reprogramaciones'),
+              conteo: conteos.reprogramaciones,
               render: () => <PestanaReprogramaciones compromiso={compromiso} escribe={escribe} />
             },
             {
@@ -160,6 +193,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
             {
               id: 'evidencias',
               etiqueta: t('fichaCompromiso.pestanas.evidencias'),
+              conteo: evidencias.data?.totalElements ?? null,
               render: () => <EvidenciasDelRegistro objeto="commitment" registro={compromiso} escribe={escribe} />
             },
             {
@@ -284,7 +318,10 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
   )
 }
 
-// el panel de trazabilidad (ux-architecture.md §8): de dónde viene el compromiso y qué generó, sin salir del proyecto
+// el panel de trazabilidad (ux-architecture.md §8.1, revisión de UX, etapa 4): de dónde viene el compromiso (interacción,
+// acuerdo y cláusula, candidato, queja de origen, riesgo que atiende), qué generó (tareas, entregas) y lo que lo sustenta (sus
+// evidencias), con los grupos fijos de PanelDeTrazabilidad. una queja confidencial que quien mira no lee se dice «Registro
+// reservado» (RegistroVinculado); una lectura que falló lo dice al pie
 function Trazabilidad({ compromiso }: { compromiso: Registro }) {
   const { t } = useTranslation(NS)
   const proyecto = texto(compromiso, 'project')
@@ -294,84 +331,96 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
   const candidatos = useRegistros('commitment_candidate', { created_commitment: compromiso.id, size: 5 })
   const tareas = useTodos('task', { commitment: compromiso.id })
   const entregas = useRegistros('delivery', { commitment: compromiso.id, size: 1 })
+  const evidencias = useEvidenciasDe('commitment', compromiso.id)
+  const nombreDeEvidencia = useNombreDeEvidencia()
   const candidato = candidatos.data?.content[0]
-  // desde F4 un compromiso nace también de una queja (origin_grievance) o atiende un riesgo (social_risk): una queja confidencial que
-  // quien mira no lee se dice «Registro reservado» (RegistroVinculado)
   const queja = atributo<string>(compromiso, 'origin_grievance')
   const riesgo = atributo<string>(compromiso, 'social_risk')
-  const sinOrigen = !atributo(compromiso, 'origin_engagement') && !atributo(compromiso, 'agreement') && !queja && candidatos.isSuccess && !candidato
+  const base = `/projects/${encodeURIComponent(proyecto)}`
   return (
-    <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <section aria-label={t('fichaCompromiso.trazabilidad.deDondeViene')} className="space-y-1">
-        <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaCompromiso.trazabilidad.deDondeViene')}</h2>
-        {interaccion.data ? (
-          <p>
-            {t('fichaCompromiso.trazabilidad.interaccion')}:{' '}
-            <Link
-              to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(interaccion.data.id)}`}
-              className="text-sg-primary-text underline"
-            >
-              {texto(interaccion.data, 'title')}
-            </Link>
-          </p>
-        ) : null}
-        {acuerdo.data ? (
-          <p>
-            {t('fichaCompromiso.trazabilidad.acuerdo')}:{' '}
-            <Link to={`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(acuerdo.data.id)}`} className="text-sg-primary-text underline">
-              {texto(acuerdo.data, 'code')} · {texto(acuerdo.data, 'title')}
-            </Link>
-            {clausula.data ? ` · ${t('fichaCompromiso.trazabilidad.clausula', { numero: texto(clausula.data, 'clause_number') })}` : ''}
-          </p>
-        ) : null}
-        {candidato ? (
-          <p>
-            {t('fichaCompromiso.trazabilidad.candidato')}: {texto(candidato, 'proposed_text')}
-          </p>
-        ) : null}
-        {queja ? (
-          <p>
-            {t('fichaCompromiso.trazabilidad.queja')}: <RegistroVinculado objeto="grievance" id={queja} />
-          </p>
-        ) : null}
-        {riesgo ? (
-          <p>
-            {t('fichaCompromiso.trazabilidad.riesgo')}: <RegistroVinculado objeto="social_risk" id={riesgo} />
-          </p>
-        ) : null}
-        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.interaccion')} consulta={interaccion} />
-        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.acuerdo')} consulta={acuerdo} />
-        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.clausulaSinNumero')} consulta={clausula} />
-        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.candidato')} consulta={candidatos} />
-        {sinOrigen ? <p className="text-sg-text-muted">{t('fichaCompromiso.trazabilidad.sinOrigen')}</p> : null}
-      </section>
-      <section aria-label={t('fichaCompromiso.trazabilidad.queGenero')} className="space-y-1">
-        <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaCompromiso.trazabilidad.queGenero')}</h2>
-        <h3 className="font-medium">{t('fichaCompromiso.trazabilidad.tareas')}</h3>
-        {tareas.isPending ? (
-          <Cargando compacto />
-        ) : tareas.isError && !tareas.data ? (
-          <FalloDeLectura error={tareas.error} alReintentar={() => void tareas.refetch()} />
-        ) : tareas.data.length === 0 ? (
-          <p className="text-sg-text-muted">{t('fichaCompromiso.trazabilidad.sinTareas')}</p>
-        ) : (
-          <ul>
-            {tareas.data.map((x) => (
-              <li key={x.id} className="flex flex-wrap items-center gap-2">
-                <Link to={`/projects/${encodeURIComponent(proyecto)}/tasks?task=${encodeURIComponent(x.id)}`} className="text-sg-primary-text underline">
-                  {texto(x, 'title')}
-                </Link>
-                <EstadoChip objeto="task" estado={x.state} />
-              </li>
-            ))}
-          </ul>
-        )}
-        {entregas.data ? (
-          <p>{t('fichaCompromiso.trazabilidad.entregas', { n: numeroPe(entregas.data.totalElements ?? entregas.data.content.length) })}</p>
-        ) : null}
-        <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.entregasSinNumero')} consulta={entregas} />
-      </section>
-    </aside>
+    <PanelDeTrazabilidad
+      deDondeViene={[
+        {
+          clave: 'interaccion',
+          titulo: t('fichaCompromiso.trazabilidad.interaccion'),
+          contenido: interaccion.data ? (
+            <EnlaceDeRegistro titulo={texto(interaccion.data, 'title')} ruta={`${base}/engagements/${encodeURIComponent(interaccion.data.id)}`} />
+          ) : null
+        },
+        {
+          clave: 'acuerdo',
+          titulo: t('fichaCompromiso.trazabilidad.acuerdo'),
+          contenido: acuerdo.data ? (
+            <>
+              <EnlaceDeRegistro
+                codigo={texto(acuerdo.data, 'code')}
+                titulo={texto(acuerdo.data, 'title')}
+                ruta={`${base}/agreements/${encodeURIComponent(acuerdo.data.id)}`}
+              />
+              {clausula.data ? <span> · {t('fichaCompromiso.trazabilidad.clausula', { numero: texto(clausula.data, 'clause_number') })}</span> : null}
+            </>
+          ) : null
+        },
+        { clave: 'candidato', titulo: t('fichaCompromiso.trazabilidad.candidato'), contenido: candidato ? texto(candidato, 'proposed_text') : null },
+        { clave: 'queja', titulo: t('fichaCompromiso.trazabilidad.queja'), contenido: queja ? <RegistroVinculado objeto="grievance" id={queja} /> : null },
+        { clave: 'riesgo', titulo: t('fichaCompromiso.trazabilidad.riesgo'), contenido: riesgo ? <RegistroVinculado objeto="social_risk" id={riesgo} /> : null }
+      ]}
+      vacios={{ deDondeViene: t('fichaCompromiso.trazabilidad.sinOrigen') }}
+      queGenero={[
+        {
+          clave: 'tareas',
+          titulo: t('fichaCompromiso.trazabilidad.tareas'),
+          contenido: tareas.isPending ? (
+            <Cargando compacto />
+          ) : tareas.data && tareas.data.length > 0 ? (
+            <ul>
+              {tareas.data.map((x) => (
+                <li key={x.id} className="flex flex-wrap items-center gap-2">
+                  <EnlaceDeRegistro titulo={texto(x, 'title')} ruta={`${base}/tasks?task=${encodeURIComponent(x.id)}`} />
+                  <EstadoChip objeto="task" estado={x.state} />
+                </li>
+              ))}
+            </ul>
+          ) : tareas.data ? (
+            <p className="text-sg-text-muted">{t('fichaCompromiso.trazabilidad.sinTareas')}</p>
+          ) : null
+        },
+        {
+          clave: 'entregas',
+          titulo: t('fichaCompromiso.trazabilidad.entregasSinNumero'),
+          contenido: entregas.data
+            ? t('fichaCompromiso.trazabilidad.entregas', { n: numeroPe(entregas.data.totalElements ?? entregas.data.content.length) })
+            : null
+        }
+      ]}
+      loSustenta={[
+        {
+          clave: 'evidencias',
+          titulo: t('fichaCompromiso.pestanas.evidencias'),
+          contenido:
+            evidencias.data && evidencias.data.content.length > 0 ? (
+              <ul>
+                {evidencias.data.content.map((e) => (
+                  <li key={e.id}>
+                    <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                  </li>
+                ))}
+              </ul>
+            ) : null
+        }
+      ]}
+      pie={
+        <>
+          <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.interaccion')} consulta={interaccion} />
+          <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.acuerdo')} consulta={acuerdo} />
+          <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.clausulaSinNumero')} consulta={clausula} />
+          <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.candidato')} consulta={candidatos} />
+          <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.tareas')} consulta={tareas} />
+          <FalloDe etiqueta={t('fichaCompromiso.trazabilidad.entregasSinNumero')} consulta={entregas} />
+          <FalloDe etiqueta={t('fichaCompromiso.pestanas.evidencias')} consulta={evidencias} />
+        </>
+      }
+    />
   )
 }
 
