@@ -26,6 +26,7 @@ import { ES_TERRITORIO } from './territorio'
 import { ES_TRANSICIONES } from './transiciones'
 import { ES_PIEZAS } from './piezas'
 import { ES_PAGINAS } from './paginas'
+import { ES_MI_DIA } from './miDia'
 import { ES_ATENCION } from './atencion'
 import { ES_NUEVA_QCS } from './nuevaQcs'
 import { ES_FICHA_QUEJA } from './fichaQueja'
@@ -96,6 +97,7 @@ export const ES = {
   piezas: ES_PIEZAS,
   // revisión de UX: las piezas comunes de página y de ficha
   paginas: ES_PAGINAS,
+  miDia: ES_MI_DIA,
   atencion: ES_ATENCION,
   nuevaQcs: ES_NUEVA_QCS,
   fichaQueja: ES_FICHA_QUEJA,

@@ -26,6 +26,7 @@ import { EN_TERRITORIO } from './territorio'
 import { EN_TRANSICIONES } from './transiciones'
 import { EN_PIEZAS } from './piezas'
 import { EN_PAGINAS } from './paginas'
+import { EN_MI_DIA } from './miDia'
 import { EN_ATENCION } from './atencion'
 import { EN_NUEVA_QCS } from './nuevaQcs'
 import { EN_FICHA_QUEJA } from './fichaQueja'
@@ -96,6 +97,7 @@ export const EN: Textos = {
   piezas: EN_PIEZAS,
   // revisión de UX: las piezas comunes de página y de ficha
   paginas: EN_PAGINAS,
+  miDia: EN_MI_DIA,
   atencion: EN_ATENCION,
   nuevaQcs: EN_NUEVA_QCS,
   fichaQueja: EN_FICHA_QUEJA,
