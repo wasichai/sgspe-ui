@@ -12,6 +12,13 @@ export const ES_MI_DIA = {
     avisos_one: '{{count}} aviso que pide acción',
     avisos_other: '{{count}} avisos que piden acción'
   },
+  atajos: {
+    titulo: 'Registrar',
+    interaccion: 'Registrar interacción',
+    qcs: 'Registrar QCS',
+    compromiso: 'Nuevo compromiso',
+    proyecto: 'Nuevo proyecto'
+  },
   tipos: {
     task: 'Tarea',
     commitment: 'Compromiso',
@@ -33,6 +40,13 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     decisiones_other: '{{count}} await your decision',
     avisos_one: '{{count}} notification needs action',
     avisos_other: '{{count}} notifications need action'
+  },
+  atajos: {
+    titulo: 'Record',
+    interaccion: 'Record engagement',
+    qcs: 'Record grievance, inquiry or request',
+    compromiso: 'New commitment',
+    proyecto: 'New project'
   },
   tipos: {
     task: 'Task',
