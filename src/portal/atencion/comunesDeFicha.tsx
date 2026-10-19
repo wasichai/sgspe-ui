@@ -1,3 +1,4 @@
+import type { SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
 import { Lock } from 'lucide-react'
@@ -268,6 +269,27 @@ const RECLASIFICADA_DE: Readonly<Record<ObjetoDeQcs, [string, ObjetoDeQcs][]>> =
 }
 
 // de dónde viene el planteamiento: la interacción y la pregunta de origen y, si se reclasificó, el registro anterior de la cadena
+// el origen de una QCS como secciones del panel de trazabilidad común (revisión de UX, etapa 4): la interacción, la pregunta y
+// la QCS de la que se reclasificó; sin ninguna, el grupo dice que se registró directamente
+export function useOrigenDeQcs(objeto: ObjetoDeQcs, qcs: Registro): SeccionDeTrazabilidad[] {
+  const { t } = useTranslation(NS)
+  const interaccion = atributo<string>(qcs, 'origin_engagement')
+  const pregunta = atributo<string>(qcs, 'origin_question')
+  return [
+    {
+      clave: 'interaccion',
+      titulo: t('fichaQueja.comun.interaccion'),
+      contenido: interaccion ? <RegistroVinculado objeto="engagement" id={interaccion} /> : null
+    },
+    { clave: 'pregunta', titulo: t('fichaQueja.comun.pregunta'), contenido: pregunta ? <Pregunta id={pregunta} /> : null },
+    ...RECLASIFICADA_DE[objeto].map(([campo, otro]) => ({
+      clave: campo,
+      titulo: `${t('fichaQueja.comun.reclasificadaDe')} (${t(`comun.qcs.${otro}`)})`,
+      contenido: atributo(qcs, campo) ? <RegistroVinculado objeto={otro} id={atributo<string>(qcs, campo)} /> : null
+    }))
+  ]
+}
+
 export function DeDondeViene({ objeto, qcs }: { objeto: ObjetoDeQcs; qcs: Registro }) {
   const { t } = useTranslation(NS)
   const reclasificadas = RECLASIFICADA_DE[objeto].filter(([campo]) => atributo(qcs, campo))
