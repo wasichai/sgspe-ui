@@ -87,6 +87,17 @@ async function prepararHastaLaVistaPrevia() {
 const selectorDeProyecto = () => screen.getByRole('combobox', { name: 'Proyecto de la importación' })
 
 describe('S15 · importación geoespacial', () => {
+  it('con un archivo elegido, «Cancelar» pide confirmar y vuelve al territorio sin escribir (revisión de UX, etapa 5)', async () => {
+    fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
+    red = espiarRed()
+    await prepararHastaLaVistaPrevia()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Salir' }))
+    await waitFor(() => expect(rutaActual()).toBe('/territory'))
+    // nada se escribe antes de confirmar: tampoco al salir
+    expect(red.a('POST', '/sgspe/territory/imports/b-1/confirm')).toHaveLength(0)
+  })
+
   it('sin confirmar el CRS de origen no se avanza; la vista previa manda el archivo, el destino, el proyecto, el CRS y las columnas', async () => {
     fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, rutas())
     red = espiarRed()

@@ -8,7 +8,7 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Cargando, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
-import { Pasos } from '../componentes/Pasos'
+import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { useMisProyectos, useProyectos } from '../contexto/proyectos'
 import { codigoDelError, guardarArchivo } from '../datos/http'
 import { atributo, texto, useDefinicion, useRegistro } from '../datos/registros'
@@ -97,6 +97,7 @@ function Preparar() {
   const previo = enCursoDe(user?.id)?.pedido
   const [paso, setPaso] = useState(previo ? 1 : 0)
   const [archivo, setArchivo] = useState<File | null>(previo?.archivo ?? null)
+  const salida = useSalidaPermitida()
   const destinos = (conF6 && !sinModeloDeF6 ? DESTINOS : DESTINOS_DE_F2).filter((d) => importaA(can, d))
   const [elegido, setDestino] = useState<Destino | ''>(previo?.destino ?? '')
   // el elegido mientras se ofrezca; si no (todavía no hay formatos, o el servidor no tiene ese destino), el primero
@@ -172,6 +173,7 @@ function Preparar() {
     vistaPrevia.mutate(pedido, {
       onSuccess: (vista) => {
         guardarEnCurso(user?.id, { pedido, vista })
+        salida.current = true
         navegar(`/territory/imports/${encodeURIComponent(vista.importBatchId)}`)
       },
       onError: alFallar
@@ -189,190 +191,198 @@ function Preparar() {
     ...(conF6 ? { FORMAT_NOT_SUPPORTED: t('importacion.errores.FORMAT_NOT_SUPPORTED') } : {})
   }
 
+  // la forma común de las altas largas (FormularioPorPasos, revisión de UX, etapa 5), sin <form>: nada se escribe hasta confirmar,
+  // así que no hay «Guardar y salir»; «Cancelar» vuelve al territorio y, con un archivo elegido, salir pide confirmar
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="space-y-2">
-        <h1 className="text-sg-h2 font-semibold">{t('importacion.titulo')}</h1>
-        <Pasos pasos={pasos} actual={paso} visitados={paso} alIr={setPaso} />
-      </div>
-      <div className="space-y-4">
-        <Alert tone="notice">{t('importacion.nadaEscrito')}</Alert>
-        {paso === 0 ? (
-          <section className="space-y-3" aria-label={pasos[0]}>
-            {sinModeloDeF6 ? <Alert tone="warning">{t('importacion.destinoSinModelo')}</Alert> : null}
-            <Campo
-              etiqueta={conF6 ? t('importacion.archivoF6') : t('importacion.archivo')}
-              ayuda={
-                conF6
-                  ? t('importacion.formatosDisponibles', {
-                      formatos: FORMATOS_EN_ORDEN.filter((f) => disponible(f, formatos))
-                        .map((f) => t(`importacion.nombresDeFormato.${f}`))
-                        .join(', ')
-                    })
-                  : undefined
-              }
-            >
-              {(p) => (
-                <Input
-                  {...p}
-                  type="file"
-                  accept={aceptaDe(formatos)}
-                  onChange={(e) => {
-                    setArchivo(e.target.files?.[0] ?? null)
-                    // el CRS elegido y confirmado y la capa eran de otro archivo: así se ve lo que propone el nuevo
-                    setCrs('')
-                    setConfirmadoEn('')
-                    setCapa('')
-                    vistaPrevia.reset()
-                    lectura.reset()
-                  }}
-                />
-              )}
-            </Campo>
-            {archivo && formato === null ? <Alert tone="warning">{t('importacion.formatoDesconocido')}</Alert> : null}
-            {archivo && formato !== null && !formatoUsable ? (
-              <Alert tone="warning">{t('importacion.formatoNoDisponible', { formato: t(`importacion.nombresDeFormato.${formato}`) })}</Alert>
-            ) : null}
-            <Campo etiqueta={t('importacion.destino')} ayuda={destinoVectorial ? t('importacion.soloPoligonos') : undefined}>
-              {(p) => (
-                <SelectNativo
-                  {...p}
-                  vacio={false}
-                  value={destino}
-                  onChange={(e) => {
-                    setDestino(e.target.value as Destino)
-                    setConfirmadoEn('')
-                  }}
-                  opciones={destinos.map((d) => ({ valor: d, etiqueta: t(`importacion.destinos.${d}`) }))}
-                />
-              )}
-            </Campo>
-            {archivo && destinoVectorial && formato !== null && !vectorial ? <Alert tone="warning">{t('importacion.soloVectorial')}</Alert> : null}
-            <Campo etiqueta={t('importacion.proyecto')}>
-              {(p) => (
-                <SelectNativo
-                  {...p}
-                  value={proyecto}
-                  disabled={!proyectos.data}
-                  onChange={(e) => {
-                    setProyecto(e.target.value)
-                    // otro proyecto propone otro CRS de trabajo: lo que se confirmó era del anterior
-                    setCrs('')
-                    setConfirmadoEn('')
-                  }}
-                  opciones={(proyectos.data ?? [])
-                    .filter((x) => mios.size === 0 || mios.has(x.id))
-                    .map((x) => ({ valor: x.id, etiqueta: `${String(atributo(x, 'code'))} · ${String(atributo(x, 'name'))}` }))}
-                />
-              )}
-            </Campo>
-            {proyectos.isPending ? <Cargando /> : null}
-            {proyectos.isError && !proyectos.data ? <FalloDeLectura error={proyectos.error} alReintentar={() => void proyectos.refetch()} /> : null}
-            <Button disabled={!archivo || !formatoUsable || !destino || !proyecto || (destinoVectorial && !vectorial)} onClick={() => setPaso(1)}>
-              {t('comun.siguiente')}
-            </Button>
-          </section>
+    <FormularioPorPasos
+      titulo={t('importacion.titulo')}
+      pasos={pasos}
+      actual={paso}
+      visitados={paso}
+      alIr={setPaso}
+      avisos={<Alert tone="notice">{t('importacion.nadaEscrito')}</Alert>}
+      alAnterior={() => setPaso(0)}
+      anteriorDeshabilitado={paso === 0 || vistaPrevia.isPending}
+      alCancelar={() => navegar('/territory')}
+      ocupado={vistaPrevia.isPending}
+      conCambios={archivo !== null}
+      salidaPermitida={salida}
+      acciones={
+        paso === 0 ? (
+          <Button type="button" disabled={!archivo || !formatoUsable || !destino || !proyecto || (destinoVectorial && !vectorial)} onClick={() => setPaso(1)}>
+            {t('comun.siguiente')}
+          </Button>
         ) : (
-          <section className="space-y-3" aria-label={pasos[1]}>
-            {definicion.isPending ? <Cargando /> : null}
-            {definicion.isError && !definicion.data ? <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
-            {/* un proyecto de la dirección (un marcador viejo) que ya no se lee responde 404, como uno que no existe (ADR-0029) */}
-            {registroDelProyecto.isError && !registroDelProyecto.data ? (
-              esIlegible(registroDelProyecto.error) ? (
-                <NoEsDeSusProyectos />
-              ) : (
-                <FalloDeLectura error={registroDelProyecto.error} alReintentar={() => void registroDelProyecto.refetch()} />
-              )
-            ) : null}
-            {porLeer ? (
-              <div className="space-y-1">
-                <Button variant="secondary" disabled={lectura.isPending || !proyecto} aria-busy={lectura.isPending} onClick={leer}>
-                  {lectura.isPending ? t('importacion.leyendo') : t('importacion.leerArchivo')}
-                </Button>
-                <p className="text-sg-caption text-sg-text-muted">{t('importacion.leerArchivoAyuda')}</p>
-                {lectura.isError && leidas.length === 0 ? <Alert tone="danger">{mensaje(lectura.error, mensajes)}</Alert> : null}
-              </div>
-            ) : null}
-            {/* la capa que pide el servidor (LAYER_REQUIRED, por el campo layer del error) */}
-            {eleccionPedida(lectura.error) === 'layer' ? <Alert tone="notice">{t('comun.codigos.LAYER_REQUIRED')}</Alert> : null}
-            {capasDelArchivo.length === 1 ? (
-              <p className="text-sm text-sg-text-secondary">{t('importacion.capaLeida', { capa: describirCapa(capasDelArchivo[0]) })}</p>
-            ) : null}
-            {capasDelArchivo.length > 1 ? (
-              <Campo etiqueta={t('importacion.capa')}>
-                {(p) => (
-                  <SelectNativo
-                    {...p}
-                    value={capaElegida?.name ?? ''}
-                    onChange={(e) => {
-                      setCapa(e.target.value)
-                      // otra capa puede proponer otro CRS: lo confirmado vale solo si la propuesta no cambia
-                      if (propuestaCon(capaDe(e.target.value)) !== crsPropuesto) setConfirmadoEn('')
-                    }}
-                    opciones={capasDelArchivo.map((c) => ({ valor: c.name, etiqueta: describirCapa(c) }))}
-                  />
-                )}
+          <Button type="button" disabled={!crsPropuesto || !confirmado || faltaTipo || faltaCapa || vistaPrevia.isPending} onClick={verPrevia}>
+            {vistaPrevia.isPending ? t('importacion.leyendo') : t('importacion.verPrevia')}
+          </Button>
+        )
+      }
+    >
+      {paso === 0 ? (
+        <section className="space-y-3" aria-label={pasos[0]}>
+          {sinModeloDeF6 ? <Alert tone="warning">{t('importacion.destinoSinModelo')}</Alert> : null}
+          <Campo
+            etiqueta={conF6 ? t('importacion.archivoF6') : t('importacion.archivo')}
+            ayuda={
+              conF6
+                ? t('importacion.formatosDisponibles', {
+                    formatos: FORMATOS_EN_ORDEN.filter((f) => disponible(f, formatos))
+                      .map((f) => t(`importacion.nombresDeFormato.${f}`))
+                      .join(', ')
+                  })
+                : undefined
+            }
+          >
+            {(p) => (
+              <Input
+                {...p}
+                type="file"
+                accept={aceptaDe(formatos)}
+                onChange={(e) => {
+                  setArchivo(e.target.files?.[0] ?? null)
+                  // el CRS elegido y confirmado y la capa eran de otro archivo: así se ve lo que propone el nuevo
+                  setCrs('')
+                  setConfirmadoEn('')
+                  setCapa('')
+                  vistaPrevia.reset()
+                  lectura.reset()
+                }}
+              />
+            )}
+          </Campo>
+          {archivo && formato === null ? <Alert tone="warning">{t('importacion.formatoDesconocido')}</Alert> : null}
+          {archivo && formato !== null && !formatoUsable ? (
+            <Alert tone="warning">{t('importacion.formatoNoDisponible', { formato: t(`importacion.nombresDeFormato.${formato}`) })}</Alert>
+          ) : null}
+          <Campo etiqueta={t('importacion.destino')} ayuda={destinoVectorial ? t('importacion.soloPoligonos') : undefined}>
+            {(p) => (
+              <SelectNativo
+                {...p}
+                vacio={false}
+                value={destino}
+                onChange={(e) => {
+                  setDestino(e.target.value as Destino)
+                  setConfirmadoEn('')
+                }}
+                opciones={destinos.map((d) => ({ valor: d, etiqueta: t(`importacion.destinos.${d}`) }))}
+              />
+            )}
+          </Campo>
+          {archivo && destinoVectorial && formato !== null && !vectorial ? <Alert tone="warning">{t('importacion.soloVectorial')}</Alert> : null}
+          <Campo etiqueta={t('importacion.proyecto')}>
+            {(p) => (
+              <SelectNativo
+                {...p}
+                value={proyecto}
+                disabled={!proyectos.data}
+                onChange={(e) => {
+                  setProyecto(e.target.value)
+                  // otro proyecto propone otro CRS de trabajo: lo que se confirmó era del anterior
+                  setCrs('')
+                  setConfirmadoEn('')
+                }}
+                opciones={(proyectos.data ?? [])
+                  .filter((x) => mios.size === 0 || mios.has(x.id))
+                  .map((x) => ({ valor: x.id, etiqueta: `${String(atributo(x, 'code'))} · ${String(atributo(x, 'name'))}` }))}
+              />
+            )}
+          </Campo>
+          {proyectos.isPending ? <Cargando /> : null}
+          {proyectos.isError && !proyectos.data ? <FalloDeLectura error={proyectos.error} alReintentar={() => void proyectos.refetch()} /> : null}
+        </section>
+      ) : (
+        <section className="space-y-3" aria-label={pasos[1]}>
+          {definicion.isPending ? <Cargando /> : null}
+          {definicion.isError && !definicion.data ? <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
+          {/* un proyecto de la dirección (un marcador viejo) que ya no se lee responde 404, como uno que no existe (ADR-0029) */}
+          {registroDelProyecto.isError && !registroDelProyecto.data ? (
+            esIlegible(registroDelProyecto.error) ? (
+              <NoEsDeSusProyectos />
+            ) : (
+              <FalloDeLectura error={registroDelProyecto.error} alReintentar={() => void registroDelProyecto.refetch()} />
+            )
+          ) : null}
+          {porLeer ? (
+            <div className="space-y-1">
+              <Button variant="secondary" disabled={lectura.isPending || !proyecto} aria-busy={lectura.isPending} onClick={leer}>
+                {lectura.isPending ? t('importacion.leyendo') : t('importacion.leerArchivo')}
+              </Button>
+              <p className="text-sg-caption text-sg-text-muted">{t('importacion.leerArchivoAyuda')}</p>
+              {lectura.isError && leidas.length === 0 ? <Alert tone="danger">{mensaje(lectura.error, mensajes)}</Alert> : null}
+            </div>
+          ) : null}
+          {/* la capa que pide el servidor (LAYER_REQUIRED, por el campo layer del error) */}
+          {eleccionPedida(lectura.error) === 'layer' ? <Alert tone="notice">{t('comun.codigos.LAYER_REQUIRED')}</Alert> : null}
+          {capasDelArchivo.length === 1 ? (
+            <p className="text-sm text-sg-text-secondary">{t('importacion.capaLeida', { capa: describirCapa(capasDelArchivo[0]) })}</p>
+          ) : null}
+          {capasDelArchivo.length > 1 ? (
+            <Campo etiqueta={t('importacion.capa')}>
+              {(p) => (
+                <SelectNativo
+                  {...p}
+                  value={capaElegida?.name ?? ''}
+                  onChange={(e) => {
+                    setCapa(e.target.value)
+                    // otra capa puede proponer otro CRS: lo confirmado vale solo si la propuesta no cambia
+                    if (propuestaCon(capaDe(e.target.value)) !== crsPropuesto) setConfirmadoEn('')
+                  }}
+                  opciones={capasDelArchivo.map((c) => ({ valor: c.name, etiqueta: describirCapa(c) }))}
+                />
+              )}
+            </Campo>
+          ) : null}
+          <Campo
+            etiqueta={t('importacion.crs')}
+            ayuda={fijo ? t('importacion.crsFijo') : delArchivo && !crs ? t('importacion.crsDelArchivo', { crs: delArchivo }) : t('importacion.crsAyuda')}
+          >
+            {(p) => (
+              <SelectNativo
+                {...p}
+                value={crsPropuesto}
+                disabled={Boolean(fijo)}
+                onChange={(e) => {
+                  setCrs(e.target.value)
+                  setConfirmadoEn('')
+                }}
+                opciones={opcionesDeCrs}
+              />
+            )}
+          </Campo>
+          {crsPropuesto ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={confirmado} onChange={(e) => setConfirmadoEn(e.target.checked ? crsPropuesto : '')} />
+              {t('importacion.confirmoCrs', { crs: crsPropuesto })}
+            </label>
+          ) : null}
+          <fieldset className="grid gap-3 rounded-sg-lg border border-sg-border p-4 md:grid-cols-3">
+            <legend className="px-1 text-sm font-medium">{t('importacion.columnas')}</legend>
+            <p className="text-sg-caption text-sg-text-muted md:col-span-3">{t('importacion.columnasAyuda')}</p>
+            {camposDeColumnas.map((c) => (
+              <Campo key={c} etiqueta={t(`importacion.columna.${c}`)}>
+                {(p) => <Input {...p} value={columnas[c] ?? ''} onChange={(e) => setColumnas({ ...columnas, [c]: e.target.value })} />}
+              </Campo>
+            ))}
+            {destino === 'environmental_feature' ? (
+              <Campo etiqueta={t('importacion.tipoFijo')} error={faltaTipo && confirmado ? t('importacion.tipoFalta') : undefined}>
+                {(p) => <SelectNativo {...p} value={tipoFijo} onChange={(e) => setTipoFijo(e.target.value)} opciones={tiposDeElemento} />}
               </Campo>
             ) : null}
-            <Campo
-              etiqueta={t('importacion.crs')}
-              ayuda={fijo ? t('importacion.crsFijo') : delArchivo && !crs ? t('importacion.crsDelArchivo', { crs: delArchivo }) : t('importacion.crsAyuda')}
-            >
-              {(p) => (
-                <SelectNativo
-                  {...p}
-                  value={crsPropuesto}
-                  disabled={Boolean(fijo)}
-                  onChange={(e) => {
-                    setCrs(e.target.value)
-                    setConfirmadoEn('')
-                  }}
-                  opciones={opcionesDeCrs}
-                />
-              )}
-            </Campo>
-            {crsPropuesto ? (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={confirmado} onChange={(e) => setConfirmadoEn(e.target.checked ? crsPropuesto : '')} />
-                {t('importacion.confirmoCrs', { crs: crsPropuesto })}
-              </label>
-            ) : null}
-            <fieldset className="grid gap-3 rounded-sg-lg border border-sg-border p-4 md:grid-cols-3">
-              <legend className="px-1 text-sm font-medium">{t('importacion.columnas')}</legend>
-              <p className="text-sg-caption text-sg-text-muted md:col-span-3">{t('importacion.columnasAyuda')}</p>
-              {camposDeColumnas.map((c) => (
-                <Campo key={c} etiqueta={t(`importacion.columna.${c}`)}>
-                  {(p) => <Input {...p} value={columnas[c] ?? ''} onChange={(e) => setColumnas({ ...columnas, [c]: e.target.value })} />}
-                </Campo>
-              ))}
-              {destino === 'environmental_feature' ? (
-                <Campo etiqueta={t('importacion.tipoFijo')} error={faltaTipo && confirmado ? t('importacion.tipoFalta') : undefined}>
-                  {(p) => <SelectNativo {...p} value={tipoFijo} onChange={(e) => setTipoFijo(e.target.value)} opciones={tiposDeElemento} />}
-                </Campo>
+          </fieldset>
+          {vistaPrevia.isError ? (
+            <Alert tone={capasDelArchivo.length > 0 ? 'notice' : 'danger'}>
+              {mensaje(vistaPrevia.error, mensajes)}
+              {codigoDelError(vistaPrevia.error) === 'IMPORT_BUSY' ? (
+                <Button variant="secondary" size="sm" className="ml-2" onClick={verPrevia}>
+                  {t('comun.reintentar')}
+                </Button>
               ) : null}
-            </fieldset>
-            {vistaPrevia.isError ? (
-              <Alert tone={capasDelArchivo.length > 0 ? 'notice' : 'danger'}>
-                {mensaje(vistaPrevia.error, mensajes)}
-                {codigoDelError(vistaPrevia.error) === 'IMPORT_BUSY' ? (
-                  <Button variant="secondary" size="sm" className="ml-2" onClick={verPrevia}>
-                    {t('comun.reintentar')}
-                  </Button>
-                ) : null}
-              </Alert>
-            ) : null}
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setPaso(0)}>
-                {t('comun.anterior')}
-              </Button>
-              <Button disabled={!crsPropuesto || !confirmado || faltaTipo || faltaCapa || vistaPrevia.isPending} onClick={verPrevia}>
-                {vistaPrevia.isPending ? t('importacion.leyendo') : t('importacion.verPrevia')}
-              </Button>
-            </div>
-          </section>
-        )}
-      </div>
-    </div>
+            </Alert>
+          ) : null}
+        </section>
+      )}
+    </FormularioPorPasos>
   )
 }
 
@@ -443,136 +453,144 @@ function Revisar({ id }: { id: string }) {
     ['fueraDeZona', vista.outOfZone.length]
   ] as const
 
+  // el último paso del formulario común: «Anterior» vuelve al CRS (como «Probar con otro CRS») y «Cancelar», al territorio; lo
+  // elegido sigue guardado en la sesión, así que salir no avisa
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="space-y-2">
-        <h1 className="text-sg-h2 font-semibold">{t('importacion.titulo')}</h1>
-        <Pasos pasos={pasos} actual={2} visitados={2} />
-      </div>
-      <div className="space-y-4">
-        <Alert tone="notice">{t('importacion.nadaEscrito')}</Alert>
-        <p className="font-sg-mono text-sg-caption text-sg-text-muted">
-          {pedido.archivo.name}
-          {vista.layer ? ` · ${vista.layer}` : ''} · {pedido.crs} · SHA-256 {vista.sha256}
-        </p>
-        <CrsDetectado vista={vista} pedido={pedido} alUsar={(otro) => previsualizarCon({ ...pedido, crs: otro })} ocupado={otraVistaPrevia.isPending} />
-        <ul className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-          {kpis.map(([k, v]) => (
-            <li key={k} aria-label={t(`importacion.kpis.${k}`)} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
-              <p className="text-sg-caption text-sg-text-muted">{t(`importacion.kpis.${k}`)}</p>
-              <p className="text-sg-kpi-sm font-semibold tabular-nums">{numeroPe(v)}</p>
-            </li>
-          ))}
-        </ul>
-        {vista.invalid.length > 0 ? (
-          <section aria-label={t('importacion.invalidas')} className="space-y-1 text-sm">
-            <h2 className="font-medium">{t('importacion.invalidas')}</h2>
-            <ul>
-              {vista.invalid.map((f) => (
-                <li key={`${f.row}-${f.field ?? ''}`}>
-                  {t('importacion.fila', { n: f.row })}
-                  {columnaDeCampo(f.field) ? ` · ${t(`importacion.columna.${columnaDeCampo(f.field)}`)}` : ''}: {f.message}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        {filas.length > 0 ? (
-          <Table aria-label={t('importacion.decisiones')}>
-            <thead>
-              <tr>
-                {(['fila', 'codigo', 'caso', 'distancia', 'decision'] as const).map((c) => (
-                  <Th key={c} scope="col">
-                    {t(`importacion.columnasDecision.${c}`)}
-                  </Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((f) => (
-                <tr
-                  key={`${f.caso}-${f.row}`}
-                  data-fuera-de-zona={f.caso === 'OUT_OF_ZONE' ? 'true' : undefined}
-                  className={cn(f.caso === 'OUT_OF_ZONE' && 'bg-sg-warning-soft')}
-                >
-                  <Td>{f.row}</Td>
-                  <Td className="font-sg-mono text-sg-caption">{f.code}</Td>
-                  <Td>
-                    {f.caso === 'OUT_OF_ZONE' ? (
-                      <span className="inline-flex items-center gap-1 font-medium text-sg-warning">
-                        <TriangleAlert aria-hidden className="size-3.5" />
-                        {t(`importacion.casos.${f.caso}`)}
-                      </span>
-                    ) : (
-                      t(`importacion.casos.${f.caso}`)
-                    )}
-                    {f.mensaje ? <p className="text-sg-caption text-sg-text-secondary">{f.mensaje}</p> : null}
-                  </Td>
-                  <Td>{f.distanceM === null || f.distanceM === undefined ? '—' : numeroPe(f.distanceM)}</Td>
-                  <Td>
-                    <select
-                      aria-label={`${t('importacion.columnasDecision.decision')} ${t('importacion.fila', { n: f.row })}`}
-                      value={accion(f.row)}
-                      onChange={(e) => setDecisiones({ ...decisiones, [f.row]: e.target.value as Decision['action'] })}
-                      className="h-8 rounded-sg-md border border-sg-border-strong bg-sg-surface px-2 text-sm"
-                    >
-                      <option value="APPLY">{t('importacion.acciones.APPLY')}</option>
-                      <option value="DISCARD">{t('importacion.acciones.DISCARD')}</option>
-                    </select>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ) : null}
-        <section aria-label={t('importacion.alConfirmar')} className="rounded-sg-lg border border-sg-border bg-sg-surface-sunken p-4 text-sm">
-          <h2 className="font-medium">{t('importacion.alConfirmar')}</h2>
-          <p>
-            {t('importacion.escritura', {
-              crear: numeroPe(aplicadas('CREATE')),
-              versiones: numeroPe(aplicadas('NEW_VERSION')),
-              actualizar: numeroPe(aplicadas('UPDATE')),
-              count: filas.filter((f) => accion(f.row) === 'DISCARD').length
-            })}
-          </p>
-        </section>
-        {confirmacion.isError ? (
-          <Alert tone="danger">
-            {mensaje(confirmacion.error, { NOT_ASSIGNED: t('importacion.errores.NOT_ASSIGNED') })}
-            {codigo === 'IMPORT_CONFLICT' ? (
-              <Button variant="secondary" size="sm" className="ml-2" onClick={previsualizarOtraVez} disabled={otraVistaPrevia.isPending}>
-                {t('importacion.volverAPrevisualizar')}
-              </Button>
-            ) : codigo === 'IMPORT_BUSY' ? (
-              <Button variant="secondary" size="sm" className="ml-2" onClick={confirmar}>
-                {t('comun.reintentar')}
-              </Button>
-            ) : codigo === 'SHA256_MISMATCH' ? (
-              <Link to="/territory/imports/new" className="ml-2 underline" onClick={reiniciarImportacion}>
-                {t('importacion.empezar')}
-              </Link>
-            ) : null}
-          </Alert>
-        ) : null}
-        {otraVistaPrevia.isError ? <Alert tone="danger">{mensaje(otraVistaPrevia.error)}</Alert> : null}
-        {reporte.isError ? <Alert tone="danger">{mensaje(reporte.error)}</Alert> : null}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => navegar('/territory/imports/new')}>
+    <FormularioPorPasos
+      titulo={t('importacion.titulo')}
+      pasos={pasos}
+      actual={2}
+      visitados={2}
+      avisos={<Alert tone="notice">{t('importacion.nadaEscrito')}</Alert>}
+      alAnterior={() => navegar('/territory/imports/new')}
+      anteriorDeshabilitado={confirmacion.isPending}
+      alCancelar={() => navegar('/territory')}
+      ocupado={confirmacion.isPending}
+      acciones={
+        <>
+          <Button type="button" variant="secondary" onClick={() => navegar('/territory/imports/new')}>
             {t('importacion.otroCrs')}
           </Button>
           <Button
+            type="button"
             variant="secondary"
             onClick={() => reporte.mutate(pedido, { onSuccess: (a) => guardarArchivo(a, `diferencias-${vista.importBatchId}.xlsx`) })}
             disabled={reporte.isPending}
           >
             {t('importacion.reporte')}
           </Button>
-          <Button disabled={confirmacion.isPending} onClick={confirmar}>
+          <Button type="button" disabled={confirmacion.isPending} onClick={confirmar}>
             {confirmacion.isPending ? t('importacion.confirmando') : t('importacion.confirmar')}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <p className="font-sg-mono text-sg-caption text-sg-text-muted">
+        {pedido.archivo.name}
+        {vista.layer ? ` · ${vista.layer}` : ''} · {pedido.crs} · SHA-256 {vista.sha256}
+      </p>
+      <CrsDetectado vista={vista} pedido={pedido} alUsar={(otro) => previsualizarCon({ ...pedido, crs: otro })} ocupado={otraVistaPrevia.isPending} />
+      <ul className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {kpis.map(([k, v]) => (
+          <li key={k} aria-label={t(`importacion.kpis.${k}`)} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
+            <p className="text-sg-caption text-sg-text-muted">{t(`importacion.kpis.${k}`)}</p>
+            <p className="text-sg-kpi-sm font-semibold tabular-nums">{numeroPe(v)}</p>
+          </li>
+        ))}
+      </ul>
+      {vista.invalid.length > 0 ? (
+        <section aria-label={t('importacion.invalidas')} className="space-y-1 text-sm">
+          <h2 className="font-medium">{t('importacion.invalidas')}</h2>
+          <ul>
+            {vista.invalid.map((f) => (
+              <li key={`${f.row}-${f.field ?? ''}`}>
+                {t('importacion.fila', { n: f.row })}
+                {columnaDeCampo(f.field) ? ` · ${t(`importacion.columna.${columnaDeCampo(f.field)}`)}` : ''}: {f.message}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {filas.length > 0 ? (
+        <Table aria-label={t('importacion.decisiones')}>
+          <thead>
+            <tr>
+              {(['fila', 'codigo', 'caso', 'distancia', 'decision'] as const).map((c) => (
+                <Th key={c} scope="col">
+                  {t(`importacion.columnasDecision.${c}`)}
+                </Th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr
+                key={`${f.caso}-${f.row}`}
+                data-fuera-de-zona={f.caso === 'OUT_OF_ZONE' ? 'true' : undefined}
+                className={cn(f.caso === 'OUT_OF_ZONE' && 'bg-sg-warning-soft')}
+              >
+                <Td>{f.row}</Td>
+                <Td className="font-sg-mono text-sg-caption">{f.code}</Td>
+                <Td>
+                  {f.caso === 'OUT_OF_ZONE' ? (
+                    <span className="inline-flex items-center gap-1 font-medium text-sg-warning">
+                      <TriangleAlert aria-hidden className="size-3.5" />
+                      {t(`importacion.casos.${f.caso}`)}
+                    </span>
+                  ) : (
+                    t(`importacion.casos.${f.caso}`)
+                  )}
+                  {f.mensaje ? <p className="text-sg-caption text-sg-text-secondary">{f.mensaje}</p> : null}
+                </Td>
+                <Td>{f.distanceM === null || f.distanceM === undefined ? '—' : numeroPe(f.distanceM)}</Td>
+                <Td>
+                  <select
+                    aria-label={`${t('importacion.columnasDecision.decision')} ${t('importacion.fila', { n: f.row })}`}
+                    value={accion(f.row)}
+                    onChange={(e) => setDecisiones({ ...decisiones, [f.row]: e.target.value as Decision['action'] })}
+                    className="h-8 rounded-sg-md border border-sg-border-strong bg-sg-surface px-2 text-sm"
+                  >
+                    <option value="APPLY">{t('importacion.acciones.APPLY')}</option>
+                    <option value="DISCARD">{t('importacion.acciones.DISCARD')}</option>
+                  </select>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      ) : null}
+      <section aria-label={t('importacion.alConfirmar')} className="rounded-sg-lg border border-sg-border bg-sg-surface-sunken p-4 text-sm">
+        <h2 className="font-medium">{t('importacion.alConfirmar')}</h2>
+        <p>
+          {t('importacion.escritura', {
+            crear: numeroPe(aplicadas('CREATE')),
+            versiones: numeroPe(aplicadas('NEW_VERSION')),
+            actualizar: numeroPe(aplicadas('UPDATE')),
+            count: filas.filter((f) => accion(f.row) === 'DISCARD').length
+          })}
+        </p>
+      </section>
+      {confirmacion.isError ? (
+        <Alert tone="danger">
+          {mensaje(confirmacion.error, { NOT_ASSIGNED: t('importacion.errores.NOT_ASSIGNED') })}
+          {codigo === 'IMPORT_CONFLICT' ? (
+            <Button variant="secondary" size="sm" className="ml-2" onClick={previsualizarOtraVez} disabled={otraVistaPrevia.isPending}>
+              {t('importacion.volverAPrevisualizar')}
+            </Button>
+          ) : codigo === 'IMPORT_BUSY' ? (
+            <Button variant="secondary" size="sm" className="ml-2" onClick={confirmar}>
+              {t('comun.reintentar')}
+            </Button>
+          ) : codigo === 'SHA256_MISMATCH' ? (
+            <Link to="/territory/imports/new" className="ml-2 underline" onClick={reiniciarImportacion}>
+              {t('importacion.empezar')}
+            </Link>
+          ) : null}
+        </Alert>
+      ) : null}
+      {otraVistaPrevia.isError ? <Alert tone="danger">{mensaje(otraVistaPrevia.error)}</Alert> : null}
+      {reporte.isError ? <Alert tone="danger">{mensaje(reporte.error)}</Alert> : null}
+    </FormularioPorPasos>
   )
 }
 
