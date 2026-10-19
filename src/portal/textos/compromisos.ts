@@ -4,7 +4,10 @@ export const ES_COMPROMISOS = {
   nuevo: 'Nuevo compromiso',
   tablero: 'Tablero de compromisos',
   exportar: 'Exportar la matriz',
-  eligeProyecto: 'Para registrar un compromiso, elija su proyecto en el selector.',
+  conteo_one: '{{count}} compromiso',
+  conteo_other: '{{count}} compromisos',
+  filtroEstado: 'Estado: {{estado}}',
+  filtroBusqueda: 'Contiene «{{texto}}»',
   buscar: 'Buscar por código o título',
   estado: 'Estado',
   tabla: 'Compromisos',
@@ -20,6 +23,7 @@ export const ES_COMPROMISOS = {
     candidatos: 'Candidatos'
   },
   columnas: {
+    compromiso: 'Compromiso',
     codigo: 'Código',
     titulo: 'Título',
     proyecto: 'Proyecto',
@@ -87,7 +91,10 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
   nuevo: 'New commitment',
   tablero: 'Commitments dashboard',
   exportar: 'Export the matrix',
-  eligeProyecto: 'To record a commitment, pick its project in the selector.',
+  conteo_one: '{{count}} commitment',
+  conteo_other: '{{count}} commitments',
+  filtroEstado: 'Status: {{estado}}',
+  filtroBusqueda: 'Contains “{{texto}}”',
   buscar: 'Search by code or title',
   estado: 'Status',
   tabla: 'Commitments',
@@ -103,6 +110,7 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
     candidatos: 'Candidates'
   },
   columnas: {
+    compromiso: 'Commitment',
     codigo: 'Code',
     titulo: 'Title',
     proyecto: 'Project',
