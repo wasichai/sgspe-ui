@@ -98,6 +98,16 @@ describe('S07 · crear proyecto', () => {
     expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument()
   })
 
+  it('con lo tecleado sin guardar, «Cancelar» pide confirmar y vuelve a la lista sin escribir (revisión de UX, etapa 5)', async () => {
+    fetch = abrirPortal('/projects/new', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    red = espiarRed()
+    await identificar()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Salir' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects'))
+    expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
+  })
+
   it('el paso 1 exige código y nombre y crea el borrador al salir, con los parámetros por defecto', async () => {
     fetch = abrirPortal('/projects/new', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed()

@@ -52,7 +52,7 @@ describe('FormularioPorPasos', () => {
     expect(guardar).toHaveBeenCalled()
   })
 
-  it('con cambios, salir por un enlace del portal pide confirmar; «Seguir aquí» se queda y «Salir» sale', async () => {
+  it('con cambios, salir por un enlace del portal pide confirmar (no al cambiar la búsqueda); «Seguir aquí» se queda y «Salir» sale', async () => {
     localStorage.setItem('sgspe.token', 't')
     const router = createMemoryRouter(
       [
@@ -61,6 +61,7 @@ describe('FormularioPorPasos', () => {
           element: (
             <>
               <Link to="/lista">Ir a la lista</Link>
+              <Link to="/alta?draft=d1">Otra búsqueda</Link>
               <Alta conCambios />
             </>
           )
@@ -75,6 +76,10 @@ describe('FormularioPorPasos', () => {
         <RouterProvider router={router} />
       </WasichaiProviders>
     )
+    // cambiar la búsqueda sigue en la página: no avisa
+    await userEvent.click(screen.getByRole('link', { name: 'Otra búsqueda' }))
+    expect(router.state.location.search).toBe('?draft=d1')
+    expect(screen.queryByText('¿Salir sin terminar?')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Ir a la lista' }))
     expect(await screen.findByText('¿Salir sin terminar?')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Seguir aquí' }))

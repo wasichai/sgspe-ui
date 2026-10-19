@@ -20,7 +20,12 @@ export interface PropsDeFormularioPorPasos {
   alIr?: (indice: number) => void
   // lo que va entre el encabezado y el formulario (el aviso del borrador recuperado)
   avisos?: ReactNode
-  alEnviar: (e: FormEvent<HTMLFormElement>) => void
+  // sin alEnviar, el paso no es un <form> sino un grupo: la pantalla pone sus propios formularios (el asistente de proyecto,
+  // cuyos pasos llevan formularios y diálogos que no pueden anidarse en otro) y su acción los envía con form=
+  alEnviar?: (e: FormEvent<HTMLFormElement>) => void
+  // lo que reemplaza al título del paso (un paso previo que la pantalla exige, como asignarse al proyecto)
+  encabezadoDelPaso?: ReactNode
+  etiquetaDelPaso?: string
   alAnterior: () => void
   anteriorDeshabilitado?: boolean
   alCancelar?: () => void
@@ -48,6 +53,8 @@ export function FormularioPorPasos({
   alIr,
   avisos,
   alEnviar,
+  encabezadoDelPaso,
+  etiquetaDelPaso,
   alAnterior,
   anteriorDeshabilitado,
   alCancelar,
@@ -59,37 +66,48 @@ export function FormularioPorPasos({
   children
 }: PropsDeFormularioPorPasos) {
   const { t } = useTranslation(NS)
+  const contenido = (
+    <>
+      {encabezadoDelPaso ?? <h2 className="text-sg-h2 font-semibold">{pasos[actual]}</h2>}
+      {children}
+      <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
+        <div className="flex flex-wrap gap-2">
+          {alCancelar ? (
+            <Button type="button" variant="ghost" disabled={ocupado} onClick={alCancelar}>
+              {t('paginas.formulario.cancelar')}
+            </Button>
+          ) : null}
+          <Button type="button" variant="secondary" disabled={anteriorDeshabilitado ?? (actual === 0 || ocupado)} onClick={alAnterior}>
+            {t('paginas.formulario.anterior')}
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {alGuardarYSalir ? (
+            <Button type="button" variant="secondary" disabled={ocupado} onClick={alGuardarYSalir}>
+              {t('paginas.formulario.guardarYSalir')}
+            </Button>
+          ) : null}
+          {acciones ?? <Button type="submit">{t('paginas.formulario.siguiente')}</Button>}
+        </div>
+      </div>
+    </>
+  )
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
       <EncabezadoDePagina titulo={titulo} descripcion={descripcion} />
       {avisos}
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <Pasos pasos={pasos} actual={actual} visitados={visitados} alIr={alIr} />
-        {/* cada pantalla valida con su esquema y lo dice junto al control: la validación nativa no detiene el paso */}
-        <form className="space-y-3" aria-label={pasos[actual]} onSubmit={alEnviar} noValidate>
-          <h2 className="text-sg-h2 font-semibold">{pasos[actual]}</h2>
-          {children}
-          <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
-            <div className="flex flex-wrap gap-2">
-              {alCancelar ? (
-                <Button type="button" variant="ghost" disabled={ocupado} onClick={alCancelar}>
-                  {t('paginas.formulario.cancelar')}
-                </Button>
-              ) : null}
-              <Button type="button" variant="secondary" disabled={anteriorDeshabilitado ?? (actual === 0 || ocupado)} onClick={alAnterior}>
-                {t('paginas.formulario.anterior')}
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {alGuardarYSalir ? (
-                <Button type="button" variant="secondary" disabled={ocupado} onClick={alGuardarYSalir}>
-                  {t('paginas.formulario.guardarYSalir')}
-                </Button>
-              ) : null}
-              {acciones ?? <Button type="submit">{t('paginas.formulario.siguiente')}</Button>}
-            </div>
+        {alEnviar ? (
+          // cada pantalla valida con su esquema y lo dice junto al control: la validación nativa no detiene el paso
+          <form className="space-y-3" aria-label={etiquetaDelPaso ?? pasos[actual]} onSubmit={alEnviar} noValidate>
+            {contenido}
+          </form>
+        ) : (
+          <div role="group" className="space-y-3" aria-label={etiquetaDelPaso ?? pasos[actual]}>
+            {contenido}
           </div>
-        </form>
+        )}
       </div>
       <AvisoAlSalir conCambios={conCambios} salidaPermitida={salidaPermitida} />
     </section>
@@ -114,8 +132,11 @@ export function AvisoAlSalir({ conCambios, salidaPermitida }: { conCambios: bool
 
 function ConfirmarSalida({ conCambios, salidaPermitida }: { conCambios: boolean; salidaPermitida?: MutableRefObject<boolean> }) {
   const { t } = useTranslation(NS)
-  // la condición se lee al navegar: la marca de salidaPermitida ya está puesta aunque el estado no se haya vuelto a dibujar
-  const bloqueo = useBlocker(() => conCambios && !salidaPermitida?.current)
+  // la condición se lee al navegar: la marca de salidaPermitida ya está puesta aunque el estado no se haya vuelto a dibujar. solo
+  // salir de la página avisa: cambiar la búsqueda (el ?draft= del asistente de proyecto) sigue en ella
+  const bloqueo = useBlocker(
+    ({ currentLocation, nextLocation }) => conCambios && !salidaPermitida?.current && currentLocation.pathname !== nextLocation.pathname
+  )
   if (bloqueo.state !== 'blocked') return null
   return (
     <ConfirmDialog
