@@ -6,7 +6,6 @@ export const ES_GRUPOS = {
   conteo_other: '{{n}} grupos de interés',
   nuevo: 'Nuevo grupo de interés',
   verMatriz: 'Ver como matriz',
-  tablero: 'Tablero',
   exportar: 'Exportar',
   vistas: {
     prioridad: 'Prioridad muy alta y alta',
@@ -191,7 +190,6 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
   conteo_other: '{{n}} stakeholders',
   nuevo: 'New stakeholder',
   verMatriz: 'View as matrix',
-  tablero: 'Dashboard',
   exportar: 'Export',
   vistas: {
     prioridad: 'Priority very high and high',

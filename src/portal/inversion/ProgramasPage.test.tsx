@@ -215,7 +215,10 @@ describe('S42 · programas e inversión', () => {
     expect(screen.queryByText(/elija un proyecto/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Nuevo aporte' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Nuevo programa' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Tablero de inversión' })).toHaveAttribute('href', '/programs/dashboard')
+    expect(within(screen.getByRole('navigation', { name: 'Vistas del módulo' })).getByRole('link', { name: 'Tablero' })).toHaveAttribute(
+      'href',
+      '/programs/dashboard'
+    )
   })
 
   it('sin crear aportes ni programas no ofrece «Nuevo»; quien lee solo los aportes no ve la tabla de programas', async () => {

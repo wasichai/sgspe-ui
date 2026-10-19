@@ -1,7 +1,8 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
 import { KpiCard } from '../componentes/KpiCard'
 import { desglose, useTablero, type FilaDeDesglose, type Indicador } from '../datos/indicadores'
@@ -30,12 +31,7 @@ export function TableroRiesgosPage() {
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('tableroRiesgos.titulo')}</h1>
-        <Link to={`${base}/risks/register`} className="text-sm text-sg-primary-text underline">
-          {t('tableroRiesgos.irAlRegistro')}
-        </Link>
-      </div>
+      <EncabezadoDePagina titulo={t('tableroRiesgos.titulo')} vistas={<VistasDelModulo modulo="risks" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {

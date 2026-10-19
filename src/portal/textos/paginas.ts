@@ -38,6 +38,7 @@ export const ES_PAGINAS = {
     terminales: 'Otros cierres'
   },
   crearRelacionado: 'Crear relacionado',
+  vistasDelModulo: { titulo: 'Vistas del módulo', lista: 'Lista', tablero: 'Tablero' },
   filtroDeGrupo: 'Grupo de interés: {{nombre}}',
   vistaPrevia: { titulo: 'Vista previa', abrirFicha: 'Abrir ficha', abrir: 'Vista previa de {{nombre}}' },
   relacionados: { compromiso: 'Registrar compromiso', qcs: 'Registrar queja, consulta o solicitud' },
@@ -98,6 +99,7 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     terminales: 'Other endings'
   },
   crearRelacionado: 'Create related',
+  vistasDelModulo: { titulo: 'Module views', lista: 'List', tablero: 'Dashboard' },
   filtroDeGrupo: 'Stakeholder: {{nombre}}',
   vistaPrevia: { titulo: 'Preview', abrirFicha: 'Open record', abrir: 'Preview of {{nombre}}' },
   relacionados: { compromiso: 'Record a commitment', qcs: 'Record a grievance, inquiry or request' },

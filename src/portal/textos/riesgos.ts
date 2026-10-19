@@ -4,7 +4,6 @@ export const ES_RIESGOS = {
   identificar: 'Identificar riesgo',
   conteo_one: '{{count}} riesgo',
   conteo_other: '{{count}} riesgos',
-  tablero: 'Tablero',
   mas: {
     warnings: 'Alerta temprana',
     incidents: 'Incidentes',
@@ -55,7 +54,6 @@ export const EN_RIESGOS: typeof ES_RIESGOS = {
   identificar: 'Identify risk',
   conteo_one: '{{count}} risk',
   conteo_other: '{{count}} risks',
-  tablero: 'Dashboard',
   mas: {
     warnings: 'Early warning',
     incidents: 'Incidents',

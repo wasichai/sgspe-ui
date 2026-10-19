@@ -1,3 +1,5 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
@@ -28,7 +30,7 @@ export function TableroGruposPage() {
   const tablero = useTablero('stakeholders', filtros)
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('grupos.tableroTitulo')}</h1>
+      <EncabezadoDePagina titulo={t('grupos.tableroTitulo')} vistas={<VistasDelModulo modulo="stakeholders" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {

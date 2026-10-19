@@ -105,7 +105,10 @@ describe('S62 · tablero de riesgos', () => {
     ])
     expect(screen.getByRole('region', { name: 'Riesgos activos' })).toHaveTextContent('7')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ir al registro de riesgos' })).toHaveAttribute('href', '/projects/p1/risks/register')
+    expect(within(screen.getByRole('navigation', { name: 'Vistas del módulo' })).getByRole('link', { name: 'Lista' })).toHaveAttribute(
+      'href',
+      '/projects/p1/risks'
+    )
     expect(red.a('GET', '/sgspe/dashboards/risks')[0].ruta).toContain('project=p1')
   })
 

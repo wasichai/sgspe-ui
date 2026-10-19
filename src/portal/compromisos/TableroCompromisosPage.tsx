@@ -1,3 +1,5 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -66,12 +68,7 @@ export function TableroCompromisosPage() {
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('tableroCompromisos.titulo')}</h1>
-        <Link to={`${base}/commitments`} className="text-sm text-sg-primary-text underline">
-          {t('tableroCompromisos.verLista')}
-        </Link>
-      </div>
+      <EncabezadoDePagina titulo={t('tableroCompromisos.titulo')} vistas={<VistasDelModulo modulo="commitments" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} conCampana conResponsable />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {

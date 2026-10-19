@@ -87,13 +87,26 @@ export interface PropsDeEncabezado {
   primaria?: ReactNode
   secundarias?: ReactNode
   mas?: ReactNode
+  // «Lista · Tablero» del módulo (VistasDelModulo): va primero entre las acciones
+  vistas?: ReactNode
   // si el título visible no basta para el documento (el código de una ficha)
   tituloDelDocumento?: string
 }
 
-export function EncabezadoDePagina({ titulo, antetitulo, chips, descripcion, conteo, primaria, secundarias, mas, tituloDelDocumento }: PropsDeEncabezado) {
+export function EncabezadoDePagina({
+  titulo,
+  antetitulo,
+  chips,
+  descripcion,
+  conteo,
+  primaria,
+  secundarias,
+  mas,
+  vistas,
+  tituloDelDocumento
+}: PropsDeEncabezado) {
   useTituloDeDocumento(tituloDelDocumento ?? titulo)
-  const acciones = primaria || secundarias || mas
+  const acciones = primaria || secundarias || mas || vistas
   return (
     // un div y no un <header>: dentro de main no es la barra superior, y así nada lo confunde con ella (el banner de la página)
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -106,6 +119,7 @@ export function EncabezadoDePagina({ titulo, antetitulo, chips, descripcion, con
       </div>
       {acciones ? (
         <div className="flex flex-wrap items-center gap-2">
+          {vistas}
           {secundarias}
           {mas ? <MasAcciones>{mas}</MasAcciones> : null}
           {primaria}

@@ -1,3 +1,5 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { KpiCard } from '../componentes/KpiCard'
@@ -18,7 +20,7 @@ export function TableroRelacionamientoPage() {
   const tablero = useTablero('engagement', filtros)
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('relacionamiento.tableroTitulo')}</h1>
+      <EncabezadoDePagina titulo={t('relacionamiento.tableroTitulo')} vistas={<VistasDelModulo modulo="engagements" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {

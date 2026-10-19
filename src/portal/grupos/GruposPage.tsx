@@ -1,3 +1,4 @@
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
@@ -97,6 +98,7 @@ export function GruposPage() {
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        vistas={<VistasDelModulo modulo="stakeholders" actual="lista" conTablero={conTablero} />}
         titulo={t('grupos.titulo')}
         conteo={t('grupos.conteo', { n: filtrados.length, count: filtrados.length })}
         primaria={
@@ -111,11 +113,6 @@ export function GruposPage() {
             {proyecto ? (
               <Button asChild size="sm" variant="secondary">
                 <Link to={`${base}/stakeholders/matrix`}>{t('grupos.verMatriz')}</Link>
-              </Button>
-            ) : null}
-            {conTablero ? (
-              <Button asChild size="sm" variant="secondary">
-                <Link to={`${base}/stakeholders/dashboard`}>{t('grupos.tablero')}</Link>
               </Button>
             ) : null}
             {can('stakeholder', 'EXPORT') ? (

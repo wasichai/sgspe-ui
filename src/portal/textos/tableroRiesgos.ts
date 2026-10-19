@@ -1,7 +1,6 @@
 // S62 · el tablero de riesgos (dashboards.md §5.8, KPI-RSK-01 a KPI-RSK-05)
 export const ES_TABLERO_RIESGOS = {
   titulo: 'Tablero de riesgos',
-  irAlRegistro: 'Ir al registro de riesgos',
   // el nombre de cada zona si el servidor no devolvió su indicador (nunca su código)
   zonas: {
     matriz: 'Mapa de calor de riesgos',
@@ -43,7 +42,6 @@ export const ES_TABLERO_RIESGOS = {
 
 export const EN_TABLERO_RIESGOS: typeof ES_TABLERO_RIESGOS = {
   titulo: 'Risks dashboard',
-  irAlRegistro: 'Go to the risk register',
   zonas: {
     matriz: 'Risk heat map',
     activos: 'Active risks',

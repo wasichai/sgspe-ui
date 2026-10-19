@@ -1,7 +1,6 @@
 // S34 · el tablero de quejas, consultas y solicitudes (F4)
 export const ES_TABLERO_ATENCION = {
   titulo: 'Tablero de quejas, consultas y solicitudes',
-  verLista: 'Ir a la lista',
   zonas: {
     flujo: 'Flujo por tipo',
     absueltas: 'Absueltas',
@@ -38,7 +37,6 @@ export const ES_TABLERO_ATENCION = {
 
 export const EN_TABLERO_ATENCION: typeof ES_TABLERO_ATENCION = {
   titulo: 'Grievances, inquiries and requests dashboard',
-  verLista: 'Go to the list',
   zonas: {
     flujo: 'Flow by type',
     absueltas: 'Answered',

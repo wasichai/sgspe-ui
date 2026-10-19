@@ -2,7 +2,6 @@
 export const ES_ATENCION = {
   titulo: 'Quejas, consultas y solicitudes',
   registrar: 'Registrar QCS',
-  tablero: 'Tablero',
   reporte: 'Reporte unificado',
   conteo_one: '{{count}} QCS',
   conteo_other: '{{count}} QCS',
@@ -56,7 +55,6 @@ export const ES_ATENCION = {
 export const EN_ATENCION: typeof ES_ATENCION = {
   titulo: 'Grievances, inquiries and requests',
   registrar: 'Record a grievance, inquiry or request',
-  tablero: 'Dashboard',
   reporte: 'Unified report',
   conteo_one: '{{count}} grievance, inquiry or request',
   conteo_other: '{{count}} grievances, inquiries and requests',

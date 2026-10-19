@@ -1,3 +1,4 @@
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
@@ -159,14 +160,12 @@ export function AtencionPage() {
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        vistas={<VistasDelModulo modulo="attention" actual="lista" />}
         titulo={t('atencion.titulo')}
         conteo={cargando || fallida || legibles.length === 0 ? undefined : t('atencion.conteo', { count: visibles.length })}
         primaria={<BotonCrear objeto={OBJETOS_DE_QCS} etiqueta={t('atencion.registrar')} resto="attention/new" />}
         secundarias={
           <>
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`${base}/attention/dashboard`}>{t('atencion.tablero')}</Link>
-            </Button>
             <Button asChild size="sm" variant="secondary">
               <Link to={`${base}/attention/report`}>{t('atencion.reporte')}</Link>
             </Button>

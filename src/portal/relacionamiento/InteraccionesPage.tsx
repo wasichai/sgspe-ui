@@ -1,3 +1,4 @@
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
@@ -70,16 +71,12 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        vistas={<VistasDelModulo modulo="engagements" actual="lista" conTablero={conTablero} />}
         titulo={t('relacionamiento.titulo')}
         conteo={interacciones.data ? t('relacionamiento.conteo', { count: interacciones.data.length }) : undefined}
         primaria={<BotonCrear objeto="engagement" etiqueta={t('relacionamiento.registrar')} resto="engagements/new" />}
         secundarias={
           <>
-            {conTablero ? (
-              <Button asChild size="sm" variant="secondary">
-                <Link to={`${base}/engagements/dashboard`}>{t('relacionamiento.tablero')}</Link>
-              </Button>
-            ) : null}
             {can('field_visit', 'READ') ? (
               <Button asChild size="sm" variant="secondary">
                 <Link to={`${base}/field-visits`}>{t('relacionamiento.visitas')}</Link>
