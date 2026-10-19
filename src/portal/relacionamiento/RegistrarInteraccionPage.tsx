@@ -12,7 +12,7 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { Cargando, NoDisponible } from '../componentes/Estados'
 import { ConDefiniciones, DeLista, FalloDeLectura } from '../componentes/LecturaConEstados'
-import { Pasos } from '../componentes/Pasos'
+import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { nuevaClave } from '../datos/http'
@@ -148,6 +148,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   // el punto de la interacción marcado en el mapa del paso «Lugar» (decisión 20 del plan 6.3): propone sus lugares y viaja como
   // location (si la cuenta la escribe; geometriasDeEscritura lo decide)
   const [punto, setPunto] = useState<[number, number] | null>(null)
+  const salida = useSalidaPermitida()
   const capaDelPunto = useMemo(
     () =>
       punto
@@ -240,6 +241,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       guardar.mutate(nueva, {
         onSuccess: (i) => {
           setClave(nuevaClave())
+          salida.current = true
           navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
         }
       })
@@ -249,310 +251,314 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   const parcial = guardar.error instanceof GuardadoParcial
   const errorDeFecha = formState.errors.held_at ? t('relacionamiento.registro.faltaFecha') : undefined
 
+  // la forma común de las altas largas (FormularioPorPasos, revisión de UX, etapa 5): «Cancelar» vuelve a donde se abrió (la
+  // visita de campo o la lista) y, con cambios, salir pide confirmar. «Completar después» guarda en el servidor y hace de
+  // «Guardar y salir», así que no hay otro
+  const visita = busqueda.get('field_visit')
+  const volverA = visita
+    ? `/projects/${encodeURIComponent(projectId)}/field-visits/${encodeURIComponent(visita)}`
+    : `/projects/${encodeURIComponent(projectId)}/engagements`
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="space-y-2">
-        <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.registro.titulo')}</h1>
-        <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void ir(i)} />
-        <Link to={{ search: conModo(busqueda, 'quick') }} className="text-sg-caption text-sg-primary-text underline">
+    <FormularioPorPasos
+      titulo={t('relacionamiento.registro.titulo')}
+      descripcion={
+        <Link to={{ search: conModo(busqueda, 'quick') }} className="text-sg-primary-text underline">
           {t('relacionamiento.registro.rapido')}
         </Link>
-      </div>
-      <form className="space-y-4" aria-label={pasos[paso]} onSubmit={(e) => e.preventDefault()}>
-        <h2 className="text-sg-h3 font-semibold">{pasos[paso]}</h2>
-        {paso === 0 ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <Campo
-              etiqueta={t('relacionamiento.registro.tipo')}
-              error={formState.errors.engagement_type ? t('relacionamiento.registro.faltaTitulo') : undefined}
-            >
-              {(p) => <SelectNativo {...p} opciones={opciones('engagement_type')} {...register('engagement_type')} />}
-            </Campo>
-            <Campo etiqueta={t('relacionamiento.registro.tituloCampo')} error={formState.errors.title ? t('relacionamiento.registro.faltaTitulo') : undefined}>
-              {(p) => <Input {...p} {...register('title')} />}
-            </Campo>
-            <div className="md:col-span-2">
-              <Campo etiqueta={t('relacionamiento.registro.objetivo')}>{(p) => <Textarea {...p} {...register('objective')} />}</Campo>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" {...register('realizada')} />
-              {t('relacionamiento.registro.realizada')}
-            </label>
+      }
+      pasos={pasos}
+      actual={paso}
+      visitados={visitados}
+      alIr={(i) => void ir(i)}
+      alEnviar={(e) => {
+        e.preventDefault()
+        if (paso < 4) void ir(paso + 1)
+      }}
+      alAnterior={() => setPaso(paso - 1)}
+      anteriorDeshabilitado={paso === 0 || guardar.isPending}
+      alCancelar={() => navegar(volverA)}
+      ocupado={guardar.isPending}
+      conCambios={formState.isDirty || punto !== null}
+      salidaPermitida={salida}
+      acciones={
+        paso < 4 ? undefined : (
+          <>
+            <Button type="button" variant="ghost" disabled={guardar.isPending || parcial} onClick={() => void enviar(null)()}>
+              {t('relacionamiento.registro.completarDespues')}
+            </Button>
             {v.realizada ? (
-              <Campo etiqueta={t('relacionamiento.registro.realizadaEl')} error={errorDeFecha}>
-                {(p) => <Input {...p} type="datetime-local" {...register('held_at')} />}
-              </Campo>
+              <Button type="button" disabled={guardar.isPending || parcial} onClick={() => void enviar('register_held_unplanned')()}>
+                {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.guardarRealizada')}
+              </Button>
             ) : (
-              <Campo etiqueta={t('relacionamiento.registro.programada')}>{(p) => <Input {...p} type="datetime-local" {...register('scheduled_at')} />}</Campo>
+              <Button type="button" disabled={guardar.isPending || parcial || !v.scheduled_at} onClick={() => void enviar('schedule')()}>
+                {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.programar')}
+              </Button>
             )}
+          </>
+        )
+      }
+    >
+      {paso === 0 ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <Campo etiqueta={t('relacionamiento.registro.tipo')} error={formState.errors.engagement_type ? t('relacionamiento.registro.faltaTitulo') : undefined}>
+            {(p) => <SelectNativo {...p} opciones={opciones('engagement_type')} {...register('engagement_type')} />}
+          </Campo>
+          <Campo etiqueta={t('relacionamiento.registro.tituloCampo')} error={formState.errors.title ? t('relacionamiento.registro.faltaTitulo') : undefined}>
+            {(p) => <Input {...p} {...register('title')} />}
+          </Campo>
+          <div className="md:col-span-2">
+            <Campo etiqueta={t('relacionamiento.registro.objetivo')}>{(p) => <Textarea {...p} {...register('objective')} />}</Campo>
           </div>
-        ) : null}
-        {paso === 1 ? (
-          <div className="space-y-3">
-            <Campo etiqueta={t('relacionamiento.registro.lugar')}>{(p) => <Input {...p} {...register('place')} />}</Campo>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
-                <LugarElegido etiqueta={t('relacionamiento.registro.localidad')} id={v.locality} consulta={localidad} />
-                <BuscadorDeRegistro
-                  objeto="locality"
-                  etiqueta={t('relacionamiento.registro.localidad')}
-                  rotulo={(r) => texto(r, 'name')}
-                  alElegir={(r) => setValue('locality', r.id)}
-                />
-              </div>
-              <div className="space-y-1">
-                <LugarElegido etiqueta={t('relacionamiento.registro.comunidad')} id={v.community} consulta={comunidad} />
-                <BuscadorDeRegistro
-                  objeto="community"
-                  etiqueta={t('relacionamiento.registro.comunidad')}
-                  rotulo={(r) => texto(r, 'name')}
-                  alElegir={(r) => setValue('community', r.id)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sg-label font-medium">{t('ubicar.mapa')}</p>
-              <p className="text-sg-caption text-sg-text-muted">{t('ubicar.ayuda')}</p>
-              <Mapa
-                etiqueta={t('ubicar.mapa')}
-                className="relative h-56 w-full overflow-hidden rounded-sg-lg border border-sg-border"
-                capas={capaDelPunto}
-                alPulsar={setPunto}
-              />
-              {punto ? <p className="text-sg-caption">{t('ubicar.punto', { lat: punto[1].toFixed(5), lon: punto[0].toFixed(5) })}</p> : null}
-              <LugaresDelPunto
-                punto={punto}
-                alUsar={({ locality, community }) => {
-                  if (locality) setValue('locality', locality.id)
-                  if (community) setValue('community', community.id)
-                }}
-              />
-            </div>
-            <fieldset className="space-y-1">
-              <legend className="text-sg-label font-medium">{t('relacionamiento.registro.grupos')}</legend>
-              <DeLista consulta={grupos}>
-                {(todos) => (
-                  <ul className="max-h-60 overflow-y-auto rounded-sg-md border border-sg-border p-2 text-sm">
-                    {todos
-                      .filter((g) => g.state !== 'retired')
-                      .map((g) => (
-                        <li key={g.id}>
-                          <label className="flex items-center gap-2">
-                            <input type="checkbox" value={g.id} {...register('grupos')} />
-                            <NombreDelGrupo grupo={g} />
-                          </label>
-                        </li>
-                      ))}
-                  </ul>
-                )}
-              </DeLista>
-            </fieldset>
-            <Campo etiqueta={t('relacionamiento.registro.convocante')}>
-              {(p) => (
-                <select {...p} {...register('convener')} className="h-9 w-full rounded-sg-md border border-sg-border-strong bg-sg-surface px-2.5 text-sm">
-                  <option value="">{t('comun.ninguno')}</option>
-                  {(grupos.data ?? [])
-                    .filter((g) => (v.grupos ?? []).includes(g.id))
-                    .map((g) => (
-                      <option key={g.id} value={g.id}>
-                        <NombreDelGrupo grupo={g} />
-                      </option>
-                    ))}
-                </select>
-              )}
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" {...register('realizada')} />
+            {t('relacionamiento.registro.realizada')}
+          </label>
+          {v.realizada ? (
+            <Campo etiqueta={t('relacionamiento.registro.realizadaEl')} error={errorDeFecha}>
+              {(p) => <Input {...p} type="datetime-local" {...register('held_at')} />}
             </Campo>
-          </div>
-        ) : null}
-        {paso === 2 ? (
-          <div className="space-y-3">
-            {participantes.fields.map((campo, i) => (
-              <fieldset key={campo.id} className="grid gap-2 rounded-sg-md border border-sg-border p-3 md:grid-cols-6">
-                <legend className="px-1 text-sm">
-                  {campo.tipo === 'persona' ? t('relacionamiento.registro.persona') : t('relacionamiento.registro.grupoAnonimo')}
-                </legend>
-                {campo.tipo === 'persona' && leeNombres ? (
-                  <Campo etiqueta={t('relacionamiento.registro.nombre')}>{(p) => <Input {...p} {...register(`participantes.${i}.participant_name`)} />}</Campo>
-                ) : null}
-                <Campo etiqueta={t('relacionamiento.registro.representa')}>
-                  {(p) => <Input {...p} {...register(`participantes.${i}.represented_group`)} />}
-                </Campo>
-                <Campo etiqueta={t('relacionamiento.registro.sexo')}>
-                  {(p) => <SelectNativo {...p} opciones={opcionesDe('sex')} {...register(`participantes.${i}.sex`)} />}
-                </Campo>
-                <Campo etiqueta={t('relacionamiento.registro.ambito')}>
-                  {(p) => <SelectNativo {...p} opciones={opcionesDe('participant_scope')} {...register(`participantes.${i}.participant_scope`)} />}
-                </Campo>
-                {campo.tipo === 'grupo' ? (
-                  <Campo
-                    etiqueta={t('relacionamiento.registro.personas')}
-                    error={formState.errors.participantes?.[i]?.represented_people_count ? t('relacionamiento.registro.personasInvalidas') : undefined}
-                  >
-                    {(p) => <Input {...p} type="number" min={1} {...register(`participantes.${i}.represented_people_count`)} />}
-                  </Campo>
-                ) : null}
-                <div className="flex items-end gap-2">
-                  <label className="flex items-center gap-1 text-sm">
-                    <input type="checkbox" {...register(`participantes.${i}.attended`)} />
-                    {t('relacionamiento.ficha.asistio')}
-                  </label>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => participantes.remove(i)}>
-                    {t('comun.quitar')}
-                  </Button>
-                </div>
-              </fieldset>
-            ))}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  participantes.append({
-                    tipo: 'persona',
-                    participant_name: '',
-                    represented_group: '',
-                    sex: '',
-                    participant_scope: '',
-                    represented_people_count: 1,
-                    attended: true
-                  })
-                }
-              >
-                {t('relacionamiento.registro.agregarPersona')}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  participantes.append({
-                    tipo: 'grupo',
-                    participant_name: '',
-                    represented_group: '',
-                    sex: '',
-                    participant_scope: '',
-                    represented_people_count: 1,
-                    attended: true
-                  })
-                }
-              >
-                {t('relacionamiento.registro.agregarGrupoSinNombres')}
-              </Button>
+          ) : (
+            <Campo etiqueta={t('relacionamiento.registro.programada')}>{(p) => <Input {...p} type="datetime-local" {...register('scheduled_at')} />}</Campo>
+          )}
+        </div>
+      ) : null}
+      {paso === 1 ? (
+        <div className="space-y-3">
+          <Campo etiqueta={t('relacionamiento.registro.lugar')}>{(p) => <Input {...p} {...register('place')} />}</Campo>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <LugarElegido etiqueta={t('relacionamiento.registro.localidad')} id={v.locality} consulta={localidad} />
+              <BuscadorDeRegistro
+                objeto="locality"
+                etiqueta={t('relacionamiento.registro.localidad')}
+                rotulo={(r) => texto(r, 'name')}
+                alElegir={(r) => setValue('locality', r.id)}
+              />
             </div>
-            <p role="status" className="text-sm font-medium">
-              {t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) })}
-            </p>
-            {faltaAsistente && !hayAsistentes ? <Alert tone="warning">{t('relacionamiento.registro.sinAsistentes')}</Alert> : null}
+            <div className="space-y-1">
+              <LugarElegido etiqueta={t('relacionamiento.registro.comunidad')} id={v.community} consulta={comunidad} />
+              <BuscadorDeRegistro
+                objeto="community"
+                etiqueta={t('relacionamiento.registro.comunidad')}
+                rotulo={(r) => texto(r, 'name')}
+                alElegir={(r) => setValue('community', r.id)}
+              />
+            </div>
           </div>
-        ) : null}
-        {paso === 3 ? (
-          <div className="space-y-3">
-            {preguntas.fields.map((campo, i) => (
-              <fieldset key={campo.id} className="grid gap-2 rounded-sg-md border border-sg-border p-3 md:grid-cols-2">
-                <legend className="px-1 text-sm">{t('relacionamiento.registro.pregunta')}</legend>
-                <div className="md:col-span-2">
-                  <Campo
-                    etiqueta={t('relacionamiento.registro.pregunta')}
-                    error={formState.errors.preguntas?.[i]?.question_text ? t('relacionamiento.registro.preguntaVacia') : undefined}
-                  >
-                    {(p) => <Textarea {...p} {...register(`preguntas.${i}.question_text`)} />}
-                  </Campo>
-                </div>
-                <Campo etiqueta={t('relacionamiento.registro.cargo')}>{(p) => <Input {...p} {...register(`preguntas.${i}.raised_by_role`)} />}</Campo>
-                <Campo etiqueta={t('relacionamiento.registro.tema')}>
-                  {(p) => (
-                    <SelectNativo
-                      {...p}
-                      opciones={(temas.data ?? []).map((x) => ({ valor: x.id, etiqueta: texto(x, 'name') }))}
-                      {...register(`preguntas.${i}.topic`)}
-                    />
-                  )}
+          <div className="space-y-2">
+            <p className="text-sg-label font-medium">{t('ubicar.mapa')}</p>
+            <p className="text-sg-caption text-sg-text-muted">{t('ubicar.ayuda')}</p>
+            <Mapa
+              etiqueta={t('ubicar.mapa')}
+              className="relative h-56 w-full overflow-hidden rounded-sg-lg border border-sg-border"
+              capas={capaDelPunto}
+              alPulsar={setPunto}
+            />
+            {punto ? <p className="text-sg-caption">{t('ubicar.punto', { lat: punto[1].toFixed(5), lon: punto[0].toFixed(5) })}</p> : null}
+            <LugaresDelPunto
+              punto={punto}
+              alUsar={({ locality, community }) => {
+                if (locality) setValue('locality', locality.id)
+                if (community) setValue('community', community.id)
+              }}
+            />
+          </div>
+          <fieldset className="space-y-1">
+            <legend className="text-sg-label font-medium">{t('relacionamiento.registro.grupos')}</legend>
+            <DeLista consulta={grupos}>
+              {(todos) => (
+                <ul className="max-h-60 overflow-y-auto rounded-sg-md border border-sg-border p-2 text-sm">
+                  {todos
+                    .filter((g) => g.state !== 'retired')
+                    .map((g) => (
+                      <li key={g.id}>
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" value={g.id} {...register('grupos')} />
+                          <NombreDelGrupo grupo={g} />
+                        </label>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </DeLista>
+          </fieldset>
+          <Campo etiqueta={t('relacionamiento.registro.convocante')}>
+            {(p) => (
+              <select {...p} {...register('convener')} className="h-9 w-full rounded-sg-md border border-sg-border-strong bg-sg-surface px-2.5 text-sm">
+                <option value="">{t('comun.ninguno')}</option>
+                {(grupos.data ?? [])
+                  .filter((g) => (v.grupos ?? []).includes(g.id))
+                  .map((g) => (
+                    <option key={g.id} value={g.id}>
+                      <NombreDelGrupo grupo={g} />
+                    </option>
+                  ))}
+              </select>
+            )}
+          </Campo>
+        </div>
+      ) : null}
+      {paso === 2 ? (
+        <div className="space-y-3">
+          {participantes.fields.map((campo, i) => (
+            <fieldset key={campo.id} className="grid gap-2 rounded-sg-md border border-sg-border p-3 md:grid-cols-6">
+              <legend className="px-1 text-sm">
+                {campo.tipo === 'persona' ? t('relacionamiento.registro.persona') : t('relacionamiento.registro.grupoAnonimo')}
+              </legend>
+              {campo.tipo === 'persona' && leeNombres ? (
+                <Campo etiqueta={t('relacionamiento.registro.nombre')}>{(p) => <Input {...p} {...register(`participantes.${i}.participant_name`)} />}</Campo>
+              ) : null}
+              <Campo etiqueta={t('relacionamiento.registro.representa')}>{(p) => <Input {...p} {...register(`participantes.${i}.represented_group`)} />}</Campo>
+              <Campo etiqueta={t('relacionamiento.registro.sexo')}>
+                {(p) => <SelectNativo {...p} opciones={opcionesDe('sex')} {...register(`participantes.${i}.sex`)} />}
+              </Campo>
+              <Campo etiqueta={t('relacionamiento.registro.ambito')}>
+                {(p) => <SelectNativo {...p} opciones={opcionesDe('participant_scope')} {...register(`participantes.${i}.participant_scope`)} />}
+              </Campo>
+              {campo.tipo === 'grupo' ? (
+                <Campo
+                  etiqueta={t('relacionamiento.registro.personas')}
+                  error={formState.errors.participantes?.[i]?.represented_people_count ? t('relacionamiento.registro.personasInvalidas') : undefined}
+                >
+                  {(p) => <Input {...p} type="number" min={1} {...register(`participantes.${i}.represented_people_count`)} />}
                 </Campo>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" {...register(`preguntas.${i}.answered_on_site`)} />
-                  {t('relacionamiento.registro.respondidaEnElLugar')}
+              ) : null}
+              <div className="flex items-end gap-2">
+                <label className="flex items-center gap-1 text-sm">
+                  <input type="checkbox" {...register(`participantes.${i}.attended`)} />
+                  {t('relacionamiento.ficha.asistio')}
                 </label>
-                {v.preguntas?.[i]?.answered_on_site ? (
-                  <Campo etiqueta={t('relacionamiento.registro.respuesta')}>{(p) => <Textarea {...p} {...register(`preguntas.${i}.answer`)} />}</Campo>
-                ) : null}
-              </fieldset>
-            ))}
+                <Button type="button" variant="ghost" size="sm" onClick={() => participantes.remove(i)}>
+                  {t('comun.quitar')}
+                </Button>
+              </div>
+            </fieldset>
+          ))}
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => preguntas.append({ question_text: '', answered_on_site: false, answer: '', raised_by_role: '', topic: '' })}
+              onClick={() =>
+                participantes.append({
+                  tipo: 'persona',
+                  participant_name: '',
+                  represented_group: '',
+                  sex: '',
+                  participant_scope: '',
+                  represented_people_count: 1,
+                  attended: true
+                })
+              }
             >
-              {t('relacionamiento.registro.agregarPreguntaFila')}
+              {t('relacionamiento.registro.agregarPersona')}
             </Button>
-            <fieldset className="space-y-1">
-              <legend className="text-sg-label font-medium">{t('relacionamiento.ficha.temas')}</legend>
-              <DeLista consulta={temas}>
-                {(todos) => (
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    {todos.map((x) => (
-                      <label key={x.id} className="flex items-center gap-1">
-                        <input type="checkbox" value={x.id} {...register('temas')} />
-                        {texto(x, 'name')}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </DeLista>
-            </fieldset>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                participantes.append({
+                  tipo: 'grupo',
+                  participant_name: '',
+                  represented_group: '',
+                  sex: '',
+                  participant_scope: '',
+                  represented_people_count: 1,
+                  attended: true
+                })
+              }
+            >
+              {t('relacionamiento.registro.agregarGrupoSinNombres')}
+            </Button>
           </div>
-        ) : null}
-        {paso === 4 ? (
-          <section className="space-y-2 text-sm" aria-label={t('relacionamiento.registro.revisar')}>
-            <h3 className="font-medium">{t('relacionamiento.registro.revisar')}</h3>
-            <p>
-              {v.engagement_type} · {v.title}
-            </p>
-            <p>
-              {v.realizada
-                ? `${t('relacionamiento.registro.realizadaEl')}: ${instanteDicho(v.held_at)}`
-                : `${t('relacionamiento.registro.programada')}: ${instanteDicho(v.scheduled_at)}`}
-            </p>
-            <p>{t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) })}</p>
-            <p>
-              {t('relacionamiento.registro.grupos')}: {(v.grupos ?? []).length} · {t('relacionamiento.ficha.preguntas')}: {(v.preguntas ?? []).length}
-            </p>
-            <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.sinConexion')}</p>
-          </section>
-        ) : null}
-        {conErrores !== null && Object.keys(formState.errors).length > 0 ? (
-          <Alert tone="warning">{t('relacionamiento.registro.revisarPaso', { paso: pasos[conErrores] })}</Alert>
-        ) : null}
-        {guardar.isError ? <ErrorDeGuardado error={guardar.error} proyecto={projectId} /> : null}
-        <div className="flex flex-wrap justify-end gap-2 border-t border-sg-border pt-3">
-          {paso > 0 ? (
-            <Button type="button" variant="secondary" onClick={() => setPaso(paso - 1)}>
-              {t('comun.anterior')}
-            </Button>
-          ) : null}
-          {paso < 4 ? (
-            <Button type="button" onClick={() => void ir(paso + 1)}>
-              {t('comun.siguiente')}
-            </Button>
-          ) : (
-            <>
-              <Button type="button" variant="ghost" disabled={guardar.isPending || parcial} onClick={() => void enviar(null)()}>
-                {t('relacionamiento.registro.completarDespues')}
-              </Button>
-              {v.realizada ? (
-                <Button type="button" disabled={guardar.isPending || parcial} onClick={() => void enviar('register_held_unplanned')()}>
-                  {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.guardarRealizada')}
-                </Button>
-              ) : (
-                <Button type="button" disabled={guardar.isPending || parcial || !v.scheduled_at} onClick={() => void enviar('schedule')()}>
-                  {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.programar')}
-                </Button>
-              )}
-            </>
-          )}
+          <p role="status" className="text-sm font-medium">
+            {t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) })}
+          </p>
+          {faltaAsistente && !hayAsistentes ? <Alert tone="warning">{t('relacionamiento.registro.sinAsistentes')}</Alert> : null}
         </div>
-      </form>
-    </div>
+      ) : null}
+      {paso === 3 ? (
+        <div className="space-y-3">
+          {preguntas.fields.map((campo, i) => (
+            <fieldset key={campo.id} className="grid gap-2 rounded-sg-md border border-sg-border p-3 md:grid-cols-2">
+              <legend className="px-1 text-sm">{t('relacionamiento.registro.pregunta')}</legend>
+              <div className="md:col-span-2">
+                <Campo
+                  etiqueta={t('relacionamiento.registro.pregunta')}
+                  error={formState.errors.preguntas?.[i]?.question_text ? t('relacionamiento.registro.preguntaVacia') : undefined}
+                >
+                  {(p) => <Textarea {...p} {...register(`preguntas.${i}.question_text`)} />}
+                </Campo>
+              </div>
+              <Campo etiqueta={t('relacionamiento.registro.cargo')}>{(p) => <Input {...p} {...register(`preguntas.${i}.raised_by_role`)} />}</Campo>
+              <Campo etiqueta={t('relacionamiento.registro.tema')}>
+                {(p) => (
+                  <SelectNativo
+                    {...p}
+                    opciones={(temas.data ?? []).map((x) => ({ valor: x.id, etiqueta: texto(x, 'name') }))}
+                    {...register(`preguntas.${i}.topic`)}
+                  />
+                )}
+              </Campo>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" {...register(`preguntas.${i}.answered_on_site`)} />
+                {t('relacionamiento.registro.respondidaEnElLugar')}
+              </label>
+              {v.preguntas?.[i]?.answered_on_site ? (
+                <Campo etiqueta={t('relacionamiento.registro.respuesta')}>{(p) => <Textarea {...p} {...register(`preguntas.${i}.answer`)} />}</Campo>
+              ) : null}
+            </fieldset>
+          ))}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => preguntas.append({ question_text: '', answered_on_site: false, answer: '', raised_by_role: '', topic: '' })}
+          >
+            {t('relacionamiento.registro.agregarPreguntaFila')}
+          </Button>
+          <fieldset className="space-y-1">
+            <legend className="text-sg-label font-medium">{t('relacionamiento.ficha.temas')}</legend>
+            <DeLista consulta={temas}>
+              {(todos) => (
+                <div className="flex flex-wrap gap-3 text-sm">
+                  {todos.map((x) => (
+                    <label key={x.id} className="flex items-center gap-1">
+                      <input type="checkbox" value={x.id} {...register('temas')} />
+                      {texto(x, 'name')}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </DeLista>
+          </fieldset>
+        </div>
+      ) : null}
+      {paso === 4 ? (
+        <section className="space-y-2 text-sm" aria-label={t('relacionamiento.registro.revisar')}>
+          <h3 className="font-medium">{t('relacionamiento.registro.revisar')}</h3>
+          <p>
+            {v.engagement_type} · {v.title}
+          </p>
+          <p>
+            {v.realizada
+              ? `${t('relacionamiento.registro.realizadaEl')}: ${instanteDicho(v.held_at)}`
+              : `${t('relacionamiento.registro.programada')}: ${instanteDicho(v.scheduled_at)}`}
+          </p>
+          <p>{t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) })}</p>
+          <p>
+            {t('relacionamiento.registro.grupos')}: {(v.grupos ?? []).length} · {t('relacionamiento.ficha.preguntas')}: {(v.preguntas ?? []).length}
+          </p>
+          <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.sinConexion')}</p>
+        </section>
+      ) : null}
+      {conErrores !== null && Object.keys(formState.errors).length > 0 ? (
+        <Alert tone="warning">{t('relacionamiento.registro.revisarPaso', { paso: pasos[conErrores] })}</Alert>
+      ) : null}
+      {guardar.isError ? <ErrorDeGuardado error={guardar.error} proyecto={projectId} /> : null}
+    </FormularioPorPasos>
   )
 }
 

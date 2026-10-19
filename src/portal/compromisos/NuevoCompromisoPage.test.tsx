@@ -47,15 +47,8 @@ const siguiente = async () => userEvent.click(await screen.findByRole('button', 
 const escribir = async (etiqueta: string, valor: string) => userEvent.type(await screen.findByLabelText(etiqueta), valor)
 const elegir = async (etiqueta: string, valor: string) => userEvent.selectOptions(await screen.findByLabelText(etiqueta), valor)
 
+// el origen va primero (revisión de UX, etapa 5): de dónde nace el compromiso condiciona el resto
 async function llenarHastaLaRevision() {
-  await escribir('Código', 'C-010')
-  await escribir('Título', 'Canal de riego')
-  await escribir('Descripción', 'Revestir 2 km de canal')
-  await escribir('Objetivo', 'Riego en estiaje')
-  await elegir('Tipo de recurso', 'MATERIAL')
-  await escribir('Cantidad', '2')
-  await escribir('Unidad', 'km')
-  await siguiente()
   await userEvent.type(await screen.findByLabelText('Buscar la interacción por título'), 'Ta')
   await userEvent.click(await screen.findByRole('button', { name: 'Taller de riego · Taller' }))
   await elegir('Cómo se pidió', 'ACUERDO EN REUNION')
@@ -65,6 +58,14 @@ async function llenarHastaLaRevision() {
   await escribir('Justificación del origen', 'La asamblea lo ratificó')
   // el aviso se va en cuanto la justificación está escrita
   expect(screen.queryByText(JUSTIFICACION)).not.toBeInTheDocument()
+  await siguiente()
+  await escribir('Código', 'C-010')
+  await escribir('Título', 'Canal de riego')
+  await escribir('Descripción', 'Revestir 2 km de canal')
+  await escribir('Objetivo', 'Riego en estiaje')
+  await elegir('Tipo de recurso', 'MATERIAL')
+  await escribir('Cantidad', '2')
+  await escribir('Unidad', 'km')
   await siguiente()
   await userEvent.click(await screen.findByRole('checkbox', { name: 'Junta de regantes' }))
   await siguiente()
@@ -84,7 +85,9 @@ describe('S30 · crear compromiso', () => {
     fetch = mockFetch(rutas())
     red = espiarRed()
     abrir()
-    await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    // el origen no pide nada sin una interacción en taller: se pasa al qué
+    await siguiente()
+    await siguiente()
     expect(await screen.findAllByText('Este dato es obligatorio')).toHaveLength(2)
     expect(screen.getByRole('heading', { name: 'Qué se compromete', level: 2 })).toBeInTheDocument()
     await escribir('Código', 'C-010')
@@ -98,24 +101,44 @@ describe('S30 · crear compromiso', () => {
   it('lo escrito se guarda en el navegador: al volver se recupera con un aviso, y se puede descartar', async () => {
     fetch = mockFetch(rutas())
     const { unmount } = abrir()
+    await siguiente()
     await escribir('Código', 'C-010')
     await escribir('Título', 'Canal de riego')
     await waitFor(() => expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toContain('Canal de riego'))
     unmount()
     abrir()
     expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    await siguiente()
     expect(screen.getByLabelText('Título')).toHaveValue('Canal de riego')
     await userEvent.click(screen.getByRole('button', { name: 'Descartar el borrador' }))
     expect(screen.getByLabelText('Título')).toHaveValue('')
     expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toBeNull()
   })
 
+  it('«Guardar y salir» deja el borrador del navegador y vuelve a la lista; «Cancelar» también vuelve (revisión de UX, etapa 5)', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed()
+    const { unmount } = abrir()
+    expect(await screen.findByRole('heading', { level: 2, name: 'Origen' })).toBeInTheDocument()
+    await siguiente()
+    await escribir('Título', 'Canal de riego')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar y salir' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments'))
+    expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toContain('Canal de riego')
+    expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
+    unmount()
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments'))
+  })
+
   it('la barra del tope suma lo aprobado en la campaña y avisa si este compromiso lo supera', async () => {
     fetch = mockFetch(rutas())
     abrir()
+    await siguiente()
     await escribir('Código', 'C-010')
     await escribir('Título', 'Canal')
-    for (let i = 0; i < 4; i++) await siguiente()
+    for (let i = 0; i < 3; i++) await siguiente()
     await escribir('Monto', '15000')
     await elegir('Campaña de exploración', 'camp1')
     const tope = await screen.findByRole('region', { name: 'Tope de apoyo social de la campaña' })
@@ -186,11 +209,11 @@ describe('S30 · crear compromiso', () => {
       usuario: GESTORA,
       permisos: EQUIPO_DE_COMPROMISOS
     })
-    await escribir('Código', 'C-011')
-    await escribir('Título', 'Limpieza del canal')
-    await siguiente()
     expect(await screen.findByRole('link', { name: 'Q-001' })).toHaveAttribute('href', '/projects/p1/grievances/g1')
     expect(screen.getByText(/Nace de la queja/)).toBeInTheDocument()
+    await siguiente()
+    await escribir('Código', 'C-011')
+    await escribir('Título', 'Limpieza del canal')
     for (let i = 0; i < 3; i++) await siguiente()
     await escribir('Monto', '500')
     await siguiente()
@@ -199,6 +222,72 @@ describe('S30 · crear compromiso', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
     await waitFor(() => expect(red!.a('POST', '/objects/commitment/records')).toHaveLength(1))
     expect(red.a('POST', '/objects/commitment/records')[0].cuerpo).toMatchObject({ attributes: { project: 'p1', origin_grievance: 'g1' } })
+  })
+
+  it('desde una interacción (?origin_engagement) la propone como origen y la manda en el alta (revisión de UX, etapa 5)', async () => {
+    fetch = mockFetch(rutas([{ path: '/objects/engagement/records/e7', body: TALLER }]))
+    red = espiarRed([{ method: 'POST', path: '/objects/commitment/records', responder: () => jsonResponse(CREADO, 201) }])
+    montar(<NuevoCompromisoPage />, {
+      ruta: '/projects/p1/commitments/new?origin_engagement=e7',
+      camino: '/projects/:projectId/commitments/new',
+      usuario: GESTORA,
+      permisos: EQUIPO_DE_COMPROMISOS
+    })
+    expect(await screen.findByText(/Taller de riego · Taller/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Buscar la interacción por título')).not.toBeInTheDocument()
+    // un taller pide la justificación de su origen, como si se hubiera elegido a mano
+    await siguiente()
+    expect(await screen.findByText(JUSTIFICACION)).toBeInTheDocument()
+    await escribir('Justificación del origen', 'La asamblea lo ratificó')
+    await siguiente()
+    await escribir('Código', 'C-012')
+    await escribir('Título', 'Canal')
+    for (let i = 0; i < 3; i++) await siguiente()
+    await escribir('Monto', '500')
+    await siguiente()
+    await siguiente()
+    await escribir('Motivo (obligatorio)', 'Acordado en el taller')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/commitment/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/commitment/records')[0].cuerpo).toMatchObject({ attributes: { origin_engagement: 'e7' } })
+  })
+
+  it('desde un riesgo (?social_risk) dice que lo atiende y lo manda en el alta (revisión de UX, etapa 5)', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/social_risk/records/k1', body: registro('k1', { project: 'p1', code: 'R-001', title: 'Polvo en la vía' }) },
+        // el compromiso tiene la relación con el riesgo que atiende (commitment_social_risk)
+        {
+          path: '/metadata/objects/commitment',
+          body: {
+            ...DEF_COMPROMISO,
+            fields: [
+              ...DEF_COMPROMISO.fields,
+              { ...DEF_COMPROMISO.fields[0], id: 'commitment.social_risk', name: 'social_risk', type: 'RELATION', relationTarget: 'social_risk' }
+            ]
+          }
+        }
+      ])
+    )
+    red = espiarRed([{ method: 'POST', path: '/objects/commitment/records', responder: () => jsonResponse(CREADO, 201) }])
+    montar(<NuevoCompromisoPage />, {
+      ruta: '/projects/p1/commitments/new?social_risk=k1',
+      camino: '/projects/:projectId/commitments/new',
+      usuario: GESTORA,
+      permisos: EQUIPO_DE_COMPROMISOS
+    })
+    expect(await screen.findByText(/Atiende el riesgo/)).toBeInTheDocument()
+    await siguiente()
+    await escribir('Código', 'C-013')
+    await escribir('Título', 'Riego de la vía')
+    for (let i = 0; i < 3; i++) await siguiente()
+    await escribir('Monto', '500')
+    await siguiente()
+    await siguiente()
+    await escribir('Motivo (obligatorio)', 'Atiende el riesgo')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/commitment/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/commitment/records')[0].cuerpo).toMatchObject({ attributes: { social_risk: 'k1' } })
   })
 
   it('las campañas y las interacciones se piden del proyecto; PROJECT_MISMATCH vuelve al paso del monto con su texto (P54)', async () => {
@@ -225,9 +314,10 @@ describe('S30 · crear compromiso', () => {
   it('la revisión dice lo que falta para el envío con el paso donde se completa; enviar queda deshabilitado', async () => {
     fetch = mockFetch(rutas())
     abrir()
+    await siguiente()
     await escribir('Código', 'C-010')
     await escribir('Título', 'Canal')
-    for (let i = 0; i < 4; i++) await siguiente()
+    for (let i = 0; i < 3; i++) await siguiente()
     await escribir('Monto', '100')
     await siguiente()
     await siguiente()

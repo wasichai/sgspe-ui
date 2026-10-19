@@ -92,6 +92,17 @@ describe('S23 · ficha de interacción', () => {
     ).toEqual(['De dónde viene', 'Qué generó', 'Lo sustenta'])
   })
 
+  it('«Crear relacionado» lleva al compromiso y a la QCS con esta interacción como origen (revisión de UX, etapa 5)', async () => {
+    const conCompromisos = { ...EQUIPO, objects: { ...EQUIPO.objects, commitment: ['READ', 'CREATE'], grievance: ['READ', 'CREATE'] } }
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, conCompromisos, rutas())
+    await userEvent.click(await screen.findByRole('button', { name: 'Crear relacionado' }))
+    expect(screen.getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new?origin_engagement=e1')
+    expect(screen.getByRole('link', { name: 'Registrar queja, consulta o solicitud' })).toHaveAttribute(
+      'href',
+      '/projects/p1/attention/new?origin_engagement=e1'
+    )
+  })
+
   it('"Cerrar sin acta" sale deshabilitado con la razón mientras haya preguntas pendientes', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
     const cerrar = await screen.findByRole('button', { name: 'Cerrar sin acta' })

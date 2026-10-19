@@ -1,6 +1,6 @@
 import { useWasichaiConfig } from '@wasichai/core'
 import { cn } from '@wasichai/ui'
-import { MoreHorizontal } from 'lucide-react'
+import { ChevronDown, MoreHorizontal } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
@@ -98,8 +98,10 @@ export function EncabezadoDePagina({ titulo, antetitulo, chips, descripcion, con
 }
 
 // un desplegable sencillo (botón con aria-expanded y un grupo): Escape o un clic fuera lo cierran y el foco vuelve al botón
-export function MasAcciones({ children }: { children: ReactNode }) {
+// el menú de acciones del encabezado: «Más» (solo el ícono) o, con etiqueta, un botón con su texto («Crear relacionado»)
+export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqueta?: string }) {
   const { t } = useTranslation(NS)
+  const nombre = etiqueta ?? t('paginas.mas')
   const [abierto, setAbierto] = useState(false)
   const id = useId()
   const raiz = useRef<HTMLDivElement>(null)
@@ -125,18 +127,25 @@ export function MasAcciones({ children }: { children: ReactNode }) {
         type="button"
         aria-expanded={abierto}
         aria-controls={abierto ? id : undefined}
-        aria-label={t('paginas.mas')}
-        title={t('paginas.mas')}
+        aria-label={etiqueta ? undefined : nombre}
+        title={etiqueta ? undefined : nombre}
         onClick={() => setAbierto((a) => !a)}
-        className="flex h-8 items-center justify-center rounded-sg-md border border-sg-border px-2 text-sg-text-secondary hover:bg-sg-surface-hover"
+        className="flex h-8 items-center justify-center gap-1 rounded-sg-md border border-sg-border px-2 text-sm text-sg-text-secondary hover:bg-sg-surface-hover"
       >
-        <MoreHorizontal aria-hidden className="size-4" />
+        {etiqueta ? (
+          <>
+            {etiqueta}
+            <ChevronDown aria-hidden className="size-4" />
+          </>
+        ) : (
+          <MoreHorizontal aria-hidden className="size-4" />
+        )}
       </button>
       {abierto ? (
         <div
           id={id}
           role="group"
-          aria-label={t('paginas.mas')}
+          aria-label={nombre}
           className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md"
         >
           {children}

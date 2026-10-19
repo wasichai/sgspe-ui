@@ -12,7 +12,7 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Cargando, ErrorDeCarga } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { Pasos } from '../componentes/Pasos'
+import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
@@ -156,6 +156,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   const [fallo, setFallo] = useState<unknown>(null)
   // se salió de un paso con datos inválidos: siguen en el formulario, pero no se guardaron
   const [sinGuardar, setSinGuardar] = useState(false)
+  const salida = useSalidaPermitida()
   const formulario = useForm<Valores>({ resolver: zodResolver(esquema), defaultValues: valoresDe(inicial) })
   const { register, handleSubmit, setError, formState, watch, setValue, reset } = formulario
   const sucio = formState.isDirty
@@ -255,7 +256,9 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   const guardarYSalir = handleSubmit(async (v) => {
     // sin la asignación propia (P40) se sale sin escribir: el borrador ya existe y se completa al volver
     const guardado = faltaAsignarse ? proyecto : !proyecto || sucio ? await persistir(v) : proyecto
-    if (guardado) navegar(`/projects/${encodeURIComponent(guardado.id)}/overview`)
+    if (!guardado) return
+    salida.current = true
+    navegar(`/projects/${encodeURIComponent(guardado.id)}/overview`)
   }, alInvalidar)
 
   const siguiente = (e?: React.BaseSyntheticEvent) => void moverA(Math.min(paso + 1, PASO_REVISION))(e)
@@ -264,7 +267,12 @@ function Asistente({ inicial }: { inicial?: Registro }) {
     if (!proyecto) return
     enviarARevision.mutate(
       { registro: proyecto, transicion: 'submit_for_review' },
-      { onSuccess: () => navegar(`/projects/${encodeURIComponent(proyecto.id)}/overview`) }
+      {
+        onSuccess: () => {
+          salida.current = true
+          navegar(`/projects/${encodeURIComponent(proyecto.id)}/overview`)
+        }
+      }
     )
   }
 
@@ -281,126 +289,127 @@ function Asistente({ inicial }: { inicial?: Registro }) {
       : t(campo === 'latitud' ? 'p360.asistente.latitudFuera' : 'p360.asistente.longitudFuera')
   }
 
+  // la forma común de las altas largas (FormularioPorPasos, revisión de UX, etapa 5), sin <form> propio: cada paso lleva el suyo
+  // (o sus diálogos) y «Siguiente» lo envía con form=. «Cancelar» vuelve a la lista de proyectos (el borrador ya guardado queda) y,
+  // con lo tecleado sin guardar, salir pide confirmar
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="space-y-2">
-        <h1 className="text-sg-h2 font-semibold">{proyecto ? t('proyectos.asistente.completar') : t('proyectos.asistente.titulo')}</h1>
-        <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void moverA(i, true)()} />
-      </div>
-      <div role="group" className="space-y-4" aria-label={faltaAsignarse ? t('proyectos.asistente.asignarse.titulo') : pasos[paso]}>
-        {faltaAsignarse && proyecto ? (
-          <AsignacionPropia proyecto={proyecto.id} asignaciones={misAsignaciones} />
-        ) : (
-          <h2 className="text-sg-h3 font-semibold">{pasos[paso]}</h2>
-        )}
-        {faltaAsignarse ? null : paso === 0 ? (
-          <form id={FORMULARIO} onSubmit={siguiente} className="grid gap-3 md:grid-cols-2">
-            <Campo etiqueta={rotulo('code')} error={errorDe('code')}>
-              {(p) => <Input {...p} {...register('code')} />}
-            </Campo>
-            <Campo etiqueta={rotulo('name')} error={errorDe('name')}>
-              {(p) => <Input {...p} {...register('name')} />}
-            </Campo>
-            {(['project_type', 'stage', 'exploration_phase'] as const).map((c) => (
-              <Campo key={c} etiqueta={rotulo(c)} error={errorDe(c)}>
-                {(p) => <SelectNativo {...p} opciones={opciones(c)} {...register(c)} />}
-              </Campo>
-            ))}
-            <Campo etiqueta={rotulo('start_date')} error={errorDe('start_date')}>
-              {(p) => <Input {...p} type="date" {...register('start_date')} />}
-            </Campo>
-            <div className="md:col-span-2">
-              <Campo etiqueta={rotulo('description')} error={errorDe('description')}>
-                {(p) => <Textarea {...p} {...register('description')} />}
-              </Campo>
-            </div>
-          </form>
-        ) : null}
-        {!faltaAsignarse && paso === 1 ? (
-          <form id={FORMULARIO} onSubmit={siguiente} className="grid gap-3 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <Campo etiqueta={t('proyectos.asistente.crs')} ayuda={t('proyectos.asistente.crsAyuda')} error={errorDe('working_crs')}>
-                {(p) => <SelectNativo {...p} opciones={opciones('working_crs')} {...register('working_crs')} />}
-              </Campo>
-            </div>
-            <Campo etiqueta={t('proyectos.asistente.latitud')} error={errorDeUbicacion('latitud')}>
-              {(p) => <Input {...p} inputMode="decimal" {...register('latitud')} />}
-            </Campo>
-            <Campo etiqueta={t('proyectos.asistente.longitud')} error={errorDeUbicacion('longitud')}>
-              {(p) => <Input {...p} inputMode="decimal" {...register('longitud')} />}
-            </Campo>
-          </form>
-        ) : null}
-        {!faltaAsignarse && paso === 2 && proyecto ? <PartesDelProyecto proyecto={proyecto.id} /> : null}
-        {!faltaAsignarse && paso === 3 && proyecto ? <CampanaDelProyecto proyecto={proyecto.id} /> : null}
-        {!faltaAsignarse && paso === 4 && proyecto ? <EquipoDelProyecto proyecto={proyecto.id} /> : null}
-        {!faltaAsignarse && paso === PASO_PARAMETROS ? (
-          <form id={FORMULARIO} onSubmit={siguiente}>
-            <ul className="space-y-3">
-              {PARAMETROS_F2.map((par) => {
-                const valor = watch(`parametros.${par.campo}`)
-                const marca = valor === par.porDefecto ? t('proyectos.asistente.porDefecto') : t('proyectos.asistente.cambiado')
-                return (
-                  <li key={par.campo} className="flex items-center justify-between gap-4">
-                    <label htmlFor={`par-${par.campo}`} className="text-sm">
-                      {t(`p360.parametros.${par.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
-                    </label>
-                    {par.tipo === 'politica' ? (
-                      <input
-                        id={`par-${par.campo}`}
-                        type="checkbox"
-                        checked={Boolean(valor)}
-                        onChange={(e) => setValue(`parametros.${par.campo}`, e.target.checked, { shouldDirty: true })}
-                      />
-                    ) : (
-                      <ParametroNumerico
-                        id={`par-${par.campo}`}
-                        valor={Number(valor)}
-                        porDefecto={Number(par.porDefecto)}
-                        entero={campoDe(definicion.data, par.campo)?.type === 'INTEGER'}
-                        intentoDeGuardar={formState.submitCount > 0}
-                        textoInicial={textosDeParametros.current[par.campo]}
-                        alEscribir={(x) => (textosDeParametros.current[par.campo] = x)}
-                        alCambiar={(n) => setValue(`parametros.${par.campo}`, n, { shouldDirty: true })}
-                      />
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </form>
-        ) : null}
-        {!faltaAsignarse && paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} /> : null}
-        {sinGuardar ? <Alert tone="notice">{t('proyectos.asistente.sinGuardar')}</Alert> : null}
-        {fallo ? <AvisoDeConflicto error={fallo} releer={releerBorrador} alRecargar={() => setFallo(null)} /> : null}
-        {enviarARevision.isError ? <AvisoDeConflicto error={enviarARevision.error} releer={releerBorrador} alRecargar={() => enviarARevision.reset()} /> : null}
-        <p className="text-sg-caption text-sg-text-muted">{t('proyectos.asistente.guardadoAuto')}</p>
-        <div className="flex flex-wrap justify-end gap-2 border-t border-sg-border pt-3">
-          <Button type="button" variant="ghost" disabled={guardando} onClick={() => void guardarYSalir()}>
-            {t('proyectos.asistente.guardarYSalir')}
+    <FormularioPorPasos
+      titulo={proyecto ? t('proyectos.asistente.completar') : t('proyectos.asistente.titulo')}
+      pasos={pasos}
+      actual={paso}
+      visitados={visitados}
+      alIr={(i) => void moverA(i, true)()}
+      encabezadoDelPaso={faltaAsignarse && proyecto ? <AsignacionPropia proyecto={proyecto.id} asignaciones={misAsignaciones} /> : undefined}
+      etiquetaDelPaso={faltaAsignarse ? t('proyectos.asistente.asignarse.titulo') : undefined}
+      alAnterior={() => void moverA(paso - 1, true)()}
+      anteriorDeshabilitado={paso === 0 || guardando || faltaAsignarse}
+      alCancelar={() => navegar('/projects')}
+      alGuardarYSalir={() => void guardarYSalir()}
+      ocupado={guardando}
+      conCambios={sucio}
+      salidaPermitida={salida}
+      acciones={
+        faltaAsignarse ? (
+          <></>
+        ) : paso < PASO_REVISION ? (
+          <Button
+            type={conCampos(paso) ? 'submit' : 'button'}
+            form={conCampos(paso) ? FORMULARIO : undefined}
+            onClick={conCampos(paso) ? undefined : () => siguiente()}
+            disabled={guardando}
+          >
+            {guardando ? t('comun.guardando') : t('comun.siguiente')}
           </Button>
-          {paso > 0 && !faltaAsignarse ? (
-            <Button type="button" variant="secondary" disabled={guardando} onClick={() => void moverA(paso - 1, true)()}>
-              {t('comun.anterior')}
-            </Button>
-          ) : null}
-          {faltaAsignarse ? null : paso < PASO_REVISION ? (
-            <Button
-              type={conCampos(paso) ? 'submit' : 'button'}
-              form={conCampos(paso) ? FORMULARIO : undefined}
-              onClick={conCampos(paso) ? undefined : () => siguiente()}
-              disabled={guardando}
-            >
-              {guardando ? t('comun.guardando') : t('comun.siguiente')}
-            </Button>
-          ) : (
-            <Button type="button" onClick={enviar} disabled={enviarARevision.isPending || !proyecto}>
-              {enviarARevision.isPending ? t('proyectos.asistente.enviando') : t('proyectos.asistente.crearYEnviar')}
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+        ) : (
+          <Button type="button" onClick={enviar} disabled={enviarARevision.isPending || !proyecto}>
+            {enviarARevision.isPending ? t('proyectos.asistente.enviando') : t('proyectos.asistente.crearYEnviar')}
+          </Button>
+        )
+      }
+    >
+      {faltaAsignarse ? null : paso === 0 ? (
+        <form id={FORMULARIO} onSubmit={siguiente} className="grid gap-3 md:grid-cols-2">
+          <Campo etiqueta={rotulo('code')} error={errorDe('code')}>
+            {(p) => <Input {...p} {...register('code')} />}
+          </Campo>
+          <Campo etiqueta={rotulo('name')} error={errorDe('name')}>
+            {(p) => <Input {...p} {...register('name')} />}
+          </Campo>
+          {(['project_type', 'stage', 'exploration_phase'] as const).map((c) => (
+            <Campo key={c} etiqueta={rotulo(c)} error={errorDe(c)}>
+              {(p) => <SelectNativo {...p} opciones={opciones(c)} {...register(c)} />}
+            </Campo>
+          ))}
+          <Campo etiqueta={rotulo('start_date')} error={errorDe('start_date')}>
+            {(p) => <Input {...p} type="date" {...register('start_date')} />}
+          </Campo>
+          <div className="md:col-span-2">
+            <Campo etiqueta={rotulo('description')} error={errorDe('description')}>
+              {(p) => <Textarea {...p} {...register('description')} />}
+            </Campo>
+          </div>
+        </form>
+      ) : null}
+      {!faltaAsignarse && paso === 1 ? (
+        <form id={FORMULARIO} onSubmit={siguiente} className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Campo etiqueta={t('proyectos.asistente.crs')} ayuda={t('proyectos.asistente.crsAyuda')} error={errorDe('working_crs')}>
+              {(p) => <SelectNativo {...p} opciones={opciones('working_crs')} {...register('working_crs')} />}
+            </Campo>
+          </div>
+          <Campo etiqueta={t('proyectos.asistente.latitud')} error={errorDeUbicacion('latitud')}>
+            {(p) => <Input {...p} inputMode="decimal" {...register('latitud')} />}
+          </Campo>
+          <Campo etiqueta={t('proyectos.asistente.longitud')} error={errorDeUbicacion('longitud')}>
+            {(p) => <Input {...p} inputMode="decimal" {...register('longitud')} />}
+          </Campo>
+        </form>
+      ) : null}
+      {!faltaAsignarse && paso === 2 && proyecto ? <PartesDelProyecto proyecto={proyecto.id} /> : null}
+      {!faltaAsignarse && paso === 3 && proyecto ? <CampanaDelProyecto proyecto={proyecto.id} /> : null}
+      {!faltaAsignarse && paso === 4 && proyecto ? <EquipoDelProyecto proyecto={proyecto.id} /> : null}
+      {!faltaAsignarse && paso === PASO_PARAMETROS ? (
+        <form id={FORMULARIO} onSubmit={siguiente}>
+          <ul className="space-y-3">
+            {PARAMETROS_F2.map((par) => {
+              const valor = watch(`parametros.${par.campo}`)
+              const marca = valor === par.porDefecto ? t('proyectos.asistente.porDefecto') : t('proyectos.asistente.cambiado')
+              return (
+                <li key={par.campo} className="flex items-center justify-between gap-4">
+                  <label htmlFor={`par-${par.campo}`} className="text-sm">
+                    {t(`p360.parametros.${par.campo}`)} <span className="text-sg-caption text-sg-text-muted">({marca})</span>
+                  </label>
+                  {par.tipo === 'politica' ? (
+                    <input
+                      id={`par-${par.campo}`}
+                      type="checkbox"
+                      checked={Boolean(valor)}
+                      onChange={(e) => setValue(`parametros.${par.campo}`, e.target.checked, { shouldDirty: true })}
+                    />
+                  ) : (
+                    <ParametroNumerico
+                      id={`par-${par.campo}`}
+                      valor={Number(valor)}
+                      porDefecto={Number(par.porDefecto)}
+                      entero={campoDe(definicion.data, par.campo)?.type === 'INTEGER'}
+                      intentoDeGuardar={formState.submitCount > 0}
+                      textoInicial={textosDeParametros.current[par.campo]}
+                      alEscribir={(x) => (textosDeParametros.current[par.campo] = x)}
+                      alCambiar={(n) => setValue(`parametros.${par.campo}`, n, { shouldDirty: true })}
+                    />
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </form>
+      ) : null}
+      {!faltaAsignarse && paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} /> : null}
+      {sinGuardar ? <Alert tone="notice">{t('proyectos.asistente.sinGuardar')}</Alert> : null}
+      {fallo ? <AvisoDeConflicto error={fallo} releer={releerBorrador} alRecargar={() => setFallo(null)} /> : null}
+      {enviarARevision.isError ? <AvisoDeConflicto error={enviarARevision.error} releer={releerBorrador} alRecargar={() => enviarARevision.reset()} /> : null}
+      <p className="text-sg-caption text-sg-text-muted">{t('proyectos.asistente.guardadoAuto')}</p>
+    </FormularioPorPasos>
   )
 }
 

@@ -1,6 +1,8 @@
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Tabs } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router'
@@ -77,52 +79,54 @@ function Ficha({ localidad }: { localidad: Registro }) {
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Rastro />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-territory">{opcion(localidad, 'locality_type')}</p>
-          <h1 className="text-sg-h1 font-semibold">{texto(localidad, 'name')}</h1>
-          <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 text-sm text-sg-text-secondary">
-            <Dato etiqueta={t('territorio.localidad.codigo')}>{texto(localidad, 'populated_center_code') || '—'}</Dato>
-            <Dato etiqueta={t('territorio.localidad.distrito')}>
-              <Referencia consulta={distrito} tiene={Boolean(idDistrito)}>
-                {(d) => texto(d, 'name') || '—'}
-              </Referencia>
-            </Dato>
-            {idPadre ? (
-              <Dato etiqueta={t('territorio.localidad.padre')}>
-                <Referencia consulta={padre} tiene>
-                  {(p) => (
-                    <Link to={`/territory/localities/${encodeURIComponent(p.id)}`} className="text-sg-primary-text underline">
-                      {texto(p, 'name')}
-                    </Link>
-                  )}
-                </Referencia>
-              </Dato>
+      {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, el reconocimiento como chip y los datos de la
+          localidad debajo */}
+      <EncabezadoDePagina
+        antetitulo={opcion(localidad, 'locality_type')}
+        titulo={texto(localidad, 'name')}
+        chips={<span>{opcion(localidad, 'recognition_status')}</span>}
+        primaria={<TrabajarEnProyecto tipo="locality" id={localidad.id} />}
+        secundarias={
+          <>
+            {puedeEditar ? (
+              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                {t('territorio.editar')}
+              </Button>
             ) : null}
-          </dl>
-          <p className="text-sm">{opcion(localidad, 'recognition_status')}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <TrabajarEnProyecto tipo="locality" id={localidad.id} />
-          {puedeEditar ? (
-            <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-              {t('territorio.editar')}
-            </Button>
-          ) : null}
-          {editaGeometria ? (
-            <Button size="sm" variant="secondary" onClick={() => setDibujando(true)}>
-              {t('edicionDeGeometria.abrir')}
-            </Button>
-          ) : null}
-        </div>
-      </header>
-      <Tabs
-        label={texto(localidad, 'name')}
-        tabs={[
-          { id: 'linea-base', label: t('territorio.pestanas.lineaBase'), render: () => <LineaBase localidad={localidad.id} /> },
+            {editaGeometria ? (
+              <Button size="sm" variant="secondary" onClick={() => setDibujando(true)}>
+                {t('edicionDeGeometria.abrir')}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+      <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 text-sm text-sg-text-secondary">
+        <Dato etiqueta={t('territorio.localidad.codigo')}>{texto(localidad, 'populated_center_code') || '—'}</Dato>
+        <Dato etiqueta={t('territorio.localidad.distrito')}>
+          <Referencia consulta={distrito} tiene={Boolean(idDistrito)}>
+            {(d) => texto(d, 'name') || '—'}
+          </Referencia>
+        </Dato>
+        {idPadre ? (
+          <Dato etiqueta={t('territorio.localidad.padre')}>
+            <Referencia consulta={padre} tiene>
+              {(p) => (
+                <Link to={`/territory/localities/${encodeURIComponent(p.id)}`} className="text-sg-primary-text underline">
+                  {texto(p, 'name')}
+                </Link>
+              )}
+            </Referencia>
+          </Dato>
+        ) : null}
+      </dl>
+      <PestanasDeFicha
+        etiqueta={texto(localidad, 'name')}
+        pestanas={[
+          { id: 'linea-base', etiqueta: t('territorio.pestanas.lineaBase'), render: () => <LineaBase localidad={localidad.id} /> },
           {
             id: 'registros',
-            label: t('territorio.pestanas.registros'),
+            etiqueta: t('territorio.pestanas.registros'),
             render: () => <RegistrosDeLaZona zona="locality" id={localidad.id} />
           }
         ]}

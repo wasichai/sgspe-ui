@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -14,13 +14,13 @@ import { Cargando } from '../componentes/Estados'
 import { ConDefiniciones, FalloDeLectura } from '../componentes/LecturaConEstados'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
-import { Pasos } from '../componentes/Pasos'
+import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuario'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
-import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
+import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
 import { opcion } from '../datos/opciones'
@@ -33,7 +33,8 @@ import { opcion } from '../datos/opciones'
 // dice y se enlaza su ficha, y un reintento no lo vuelve a crear. desde F4, «Crear compromiso desde esta queja» (S36) llega con
 // ?origin_grievance=<id>: el paso de origen lo dice y el alta lo manda (el proyecto ya es el de la queja: ProjectLinkGuard
 // rechaza otro con PROJECT_MISMATCH, que vuelve a ese paso)
-const PASOS = ['que', 'origen', 'solicitantes', 'beneficiarios', 'monto', 'plazo', 'revision'] as const
+// el origen va primero (design-system.md §6.3, revisión de UX, etapa 5): de dónde nace el compromiso condiciona el resto
+const PASOS = ['origen', 'que', 'solicitantes', 'beneficiarios', 'monto', 'plazo', 'revision'] as const
 type Paso = (typeof PASOS)[number]
 
 // la interacción de origen que exige justificación (RN-ENG-001)
@@ -190,6 +191,8 @@ function Asistente() {
   const { projectId = '' } = useParams()
   const [busqueda] = useSearchParams()
   const quejaDeOrigen = busqueda.get('origin_grievance') || null
+  // ?social_risk=<id>: desde la ficha del riesgo que el compromiso atiende (revisión de UX, etapa 5)
+  const riesgoQueAtiende = busqueda.get('social_risk') || null
   const navegar = useNavigate()
   const pedir = usePedir()
   const cliente = useQueryClient()
@@ -204,6 +207,16 @@ function Asistente() {
   const [actual, setActual] = useState(0)
   const [visitados, setVisitados] = useState(0)
   const [origen, setOrigen] = useState<Registro | null>(null)
+  // ?origin_engagement=<id>: «Crear relacionado» desde la ficha de la interacción (revisión de UX, etapa 5) la propone como
+  // origen una sola vez; la persona puede quitarla. si no se puede leer, el buscador queda como siempre
+  const interaccionDeOrigen = busqueda.get('origin_engagement') || undefined
+  const propuesta = useRegistro('engagement', interaccionDeOrigen)
+  const yaPropuesta = useRef(false)
+  useEffect(() => {
+    if (!propuesta.data || yaPropuesta.current) return
+    yaPropuesta.current = true
+    setOrigen(propuesta.data)
+  }, [propuesta.data])
   const [solicitantes, setSolicitantes] = useState<Set<string>>(new Set())
   const [responsable, setResponsable] = useState<Usuaria | null>(null)
   const [verificador, setVerificador] = useState<Usuaria | null>(null)
@@ -216,6 +229,7 @@ function Asistente() {
   const [creado, setCreado] = useState<Registro | null>(null)
   const [vinculados, setVinculados] = useState<Set<string>>(new Set())
   const [enviando, setEnviando] = useState(false)
+  const salida = useSalidaPermitida()
   const [fallo, setFallo] = useState<unknown>(null)
   const [recuperado] = useState(() => leerBorrador(projectId))
   const [avisoDeBorrador, setAvisoDeBorrador] = useState(recuperado !== null)
@@ -300,6 +314,7 @@ function Asistente() {
     }
     if (origen) salida.origin_engagement = origen.id
     if (quejaDeOrigen) salida.origin_grievance = quejaDeOrigen
+    if (riesgoQueAtiende) salida.social_risk = riesgoQueAtiende
     if (responsable) Object.assign(salida, { owner_user_id: responsable.id, owner_user_email: responsable.email })
     if (verificador) Object.assign(salida, { verifier_user_id: verificador.id, verifier_user_email: verificador.email })
     return salida
@@ -361,6 +376,7 @@ function Asistente() {
           }
           void cliente.invalidateQueries({ queryKey: ['records', 'commitment'] })
           borrarBorrador(projectId)
+          salida.current = true
           navegar(`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(compromiso.id)}`)
         } catch (e) {
           setFallo(e)
@@ -400,244 +416,258 @@ function Asistente() {
       </Campo>
     ) : null
 
+  // la forma común de las altas largas (FormularioPorPasos, revisión de UX, etapa 5): «Cancelar» vuelve a la lista (avisa si hay
+  // cambios), «Guardar y salir» deja el borrador de este navegador guardado y vuelve a la lista sin avisar
+  const lista = `/projects/${encodeURIComponent(projectId)}/commitments`
+  const conCambios = !creado && (formState.isDirty || origen !== null || solicitantes.size > 0)
+  const guardarYSalir = () => {
+    guardarBorrador(projectId, { ...VACIO, ...getValues() })
+    salida.current = true
+    navegar(lista)
+  }
   return (
-    <section className="mx-auto max-w-[1100px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('nuevoCompromiso.titulo')}</h1>
-      <p className="text-sm text-sg-text-secondary">{t('nuevoCompromiso.ayuda')}</p>
-      {avisoDeBorrador && recuperado ? (
-        <Alert tone="notice">
-          <span>{t('nuevoCompromiso.borrador.recuperado', { cuando: fechaYHoraPe(new Date(recuperado.guardado)) })}</span>{' '}
-          <Button variant="ghost" size="sm" onClick={descartarBorrador}>
-            {t('nuevoCompromiso.borrador.descartar')}
-          </Button>
-        </Alert>
-      ) : null}
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <Pasos pasos={PASOS.map((p) => t(`nuevoCompromiso.pasos.${p}`))} actual={actual} visitados={visitados} alIr={(i) => void ir(i)} />
-        <form
-          className="space-y-3"
-          aria-label={t(`nuevoCompromiso.pasos.${paso}`)}
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (paso !== 'revision') void ir(actual + 1)
-          }}
-        >
-          <h2 className="text-sg-h2 font-semibold">{t(`nuevoCompromiso.pasos.${paso}`)}</h2>
-          {creado && paso !== 'revision' ? <Alert tone="notice">{t('nuevoCompromiso.revision.yaCreado')}</Alert> : null}
-          {/* tras el alta, los pasos no se editan: un reintento solo vincula y envía, y lo cambiado aquí no se guardaría */}
-          <fieldset disabled={creado !== null} className="space-y-3">
-            {paso === 'que' ? (
-              <>
-                {campoDeTexto('code')}
-                {campoDeTexto('title')}
-                {campoDeTexto('description', true)}
-                {campoDeTexto('objective', true)}
-                {campoDeOpciones('resource_type')}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {campoNumerico('quantity')}
-                  {campoDeTexto('unit')}
-                </div>
-                {campoDeTexto('execution_time')}
-                {campoDeOpciones('commitment_theme')}
-                {campoDeOpciones('formality')}
-              </>
+    <FormularioPorPasos
+      titulo={t('nuevoCompromiso.titulo')}
+      descripcion={t('nuevoCompromiso.ayuda')}
+      pasos={PASOS.map((p) => t(`nuevoCompromiso.pasos.${p}`))}
+      actual={actual}
+      visitados={visitados}
+      alIr={(i) => void ir(i)}
+      avisos={
+        avisoDeBorrador && recuperado ? (
+          <Alert tone="notice">
+            <span>{t('nuevoCompromiso.borrador.recuperado', { cuando: fechaYHoraPe(new Date(recuperado.guardado)) })}</span>{' '}
+            <Button variant="ghost" size="sm" onClick={descartarBorrador}>
+              {t('nuevoCompromiso.borrador.descartar')}
+            </Button>
+          </Alert>
+        ) : null
+      }
+      alEnviar={(e) => {
+        e.preventDefault()
+        if (paso !== 'revision') void ir(actual + 1)
+      }}
+      alAnterior={() => setActual(actual - 1)}
+      anteriorDeshabilitado={actual === 0 || enviando}
+      alCancelar={() => navegar(lista)}
+      alGuardarYSalir={creado ? undefined : guardarYSalir}
+      ocupado={enviando}
+      conCambios={conCambios}
+      salidaPermitida={salida}
+      acciones={
+        paso === 'revision' ? (
+          <>
+            <Button type="button" variant="secondary" disabled={enviando} aria-busy={enviando} onClick={() => void registrar(false)}>
+              {enviando ? t('nuevoCompromiso.revision.guardando') : t('nuevoCompromiso.revision.guardar')}
+            </Button>
+            <Button type="button" disabled={enviando || faltantes.length > 0} aria-busy={enviando} onClick={() => void registrar(true)}>
+              {t('nuevoCompromiso.revision.enviar')}
+            </Button>
+          </>
+        ) : undefined
+      }
+    >
+      {creado && paso !== 'revision' ? <Alert tone="notice">{t('nuevoCompromiso.revision.yaCreado')}</Alert> : null}
+      {/* tras el alta, los pasos no se editan: un reintento solo vincula y envía, y lo cambiado aquí no se guardaría */}
+      <fieldset disabled={creado !== null} className="space-y-3">
+        {paso === 'que' ? (
+          <>
+            {campoDeTexto('code')}
+            {campoDeTexto('title')}
+            {campoDeTexto('description', true)}
+            {campoDeTexto('objective', true)}
+            {campoDeOpciones('resource_type')}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {campoNumerico('quantity')}
+              {campoDeTexto('unit')}
+            </div>
+            {campoDeTexto('execution_time')}
+            {campoDeOpciones('commitment_theme')}
+            {campoDeOpciones('formality')}
+          </>
+        ) : null}
+        {paso === 'origen' ? (
+          <>
+            {quejaDeOrigen ? (
+              <div className="text-sm">
+                {t('nuevoCompromiso.naceDeLaQueja')}: <RegistroVinculado objeto="grievance" id={quejaDeOrigen} />
+              </div>
             ) : null}
-            {paso === 'origen' ? (
-              <>
-                {quejaDeOrigen ? (
-                  <div className="text-sm">
-                    {t('nuevoCompromiso.naceDeLaQueja')}: <RegistroVinculado objeto="grievance" id={quejaDeOrigen} />
-                  </div>
-                ) : null}
-                <div className="space-y-1">
-                  <p className="text-sg-body-sm font-medium">{nombreDeCampo('origin_engagement')}</p>
-                  {origen ? (
-                    <p className="text-sm">
-                      {texto(origen, 'title')} · {opcion(origen, 'engagement_type')}{' '}
-                      <button
-                        type="button"
-                        className="text-sg-caption text-sg-primary-text underline"
-                        onClick={() => {
-                          setOrigen(null)
-                          sinErrorExterno('origin_engagement')
-                        }}
-                      >
-                        {t('comun.quitar')}
-                      </button>
-                    </p>
-                  ) : (
-                    <BuscadorDeRegistro
-                      objeto="engagement"
-                      etiqueta={t('nuevoCompromiso.buscarInteraccion')}
-                      filtros={{ project: projectId }}
-                      rotulo={(r) => `${texto(r, 'title')} · ${opcion(r, 'engagement_type')}`}
-                      alElegir={(r) => {
-                        setOrigen(r)
-                        setFaltaJustificacion(false)
-                        sinErrorExterno('origin_engagement')
+            {riesgoQueAtiende ? (
+              <div className="text-sm">
+                {t('nuevoCompromiso.atiendeElRiesgo')}: <RegistroVinculado objeto="social_risk" id={riesgoQueAtiende} />
+              </div>
+            ) : null}
+            <div className="space-y-1">
+              <p className="text-sg-body-sm font-medium">{nombreDeCampo('origin_engagement')}</p>
+              {origen ? (
+                <p className="text-sm">
+                  {texto(origen, 'title')} · {opcion(origen, 'engagement_type')}{' '}
+                  <button
+                    type="button"
+                    className="text-sg-caption text-sg-primary-text underline"
+                    onClick={() => {
+                      setOrigen(null)
+                      sinErrorExterno('origin_engagement')
+                    }}
+                  >
+                    {t('comun.quitar')}
+                  </button>
+                </p>
+              ) : interaccionDeOrigen && propuesta.isPending ? (
+                <Cargando />
+              ) : (
+                <BuscadorDeRegistro
+                  objeto="engagement"
+                  etiqueta={t('nuevoCompromiso.buscarInteraccion')}
+                  filtros={{ project: projectId }}
+                  rotulo={(r) => `${texto(r, 'title')} · ${opcion(r, 'engagement_type')}`}
+                  alElegir={(r) => {
+                    setOrigen(r)
+                    setFaltaJustificacion(false)
+                    sinErrorExterno('origin_engagement')
+                  }}
+                />
+              )}
+              <div aria-live="polite">
+                {erroresExternos.origin_engagement ? <p className="text-sg-caption text-sg-danger">{erroresExternos.origin_engagement}</p> : null}
+              </div>
+            </div>
+            {requiereJustificacion ? (
+              <Campo
+                etiqueta={nombreDeCampo('origin_justification')}
+                error={faltaJustificacion && !valores.origin_justification?.trim() ? t('nuevoCompromiso.errores.justificacion') : error('origin_justification')}
+              >
+                {(p) => <Textarea {...p} {...register('origin_justification')} maxLength={4000} />}
+              </Campo>
+            ) : null}
+            {campoDeOpciones('request_medium')}
+            {campoDeFecha('agreed_date')}
+          </>
+        ) : null}
+        {paso === 'solicitantes' ? (
+          grupos.isPending ? (
+            <Cargando compacto />
+          ) : grupos.isError && !grupos.data ? (
+            <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} />
+          ) : (
+            <fieldset className="space-y-1">
+              <legend className="sr-only">{t('nuevoCompromiso.pasos.solicitantes')}</legend>
+              {solicitantes.size === 0 ? <p className="text-sm text-sg-text-muted">{t('nuevoCompromiso.sinSolicitantes')}</p> : null}
+              {grupos.data
+                .filter((g) => g.state !== 'retired')
+                .map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={solicitantes.has(g.id)}
+                      onChange={(e) => {
+                        const siguiente = new Set(solicitantes)
+                        if (e.target.checked) siguiente.add(g.id)
+                        else siguiente.delete(g.id)
+                        setSolicitantes(siguiente)
                       }}
                     />
-                  )}
-                  <div aria-live="polite">
-                    {erroresExternos.origin_engagement ? <p className="text-sg-caption text-sg-danger">{erroresExternos.origin_engagement}</p> : null}
-                  </div>
-                </div>
-                {requiereJustificacion ? (
-                  <Campo
-                    etiqueta={nombreDeCampo('origin_justification')}
-                    error={
-                      faltaJustificacion && !valores.origin_justification?.trim() ? t('nuevoCompromiso.errores.justificacion') : error('origin_justification')
-                    }
-                  >
-                    {(p) => <Textarea {...p} {...register('origin_justification')} maxLength={4000} />}
-                  </Campo>
-                ) : null}
-                {campoDeOpciones('request_medium')}
-                {campoDeFecha('agreed_date')}
-              </>
-            ) : null}
-            {paso === 'solicitantes' ? (
-              grupos.isPending ? (
-                <Cargando compacto />
-              ) : grupos.isError && !grupos.data ? (
-                <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} />
-              ) : (
-                <fieldset className="space-y-1">
-                  <legend className="sr-only">{t('nuevoCompromiso.pasos.solicitantes')}</legend>
-                  {solicitantes.size === 0 ? <p className="text-sm text-sg-text-muted">{t('nuevoCompromiso.sinSolicitantes')}</p> : null}
-                  {grupos.data
-                    .filter((g) => g.state !== 'retired')
-                    .map((g) => (
-                      <label key={g.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={solicitantes.has(g.id)}
-                          onChange={(e) => {
-                            const siguiente = new Set(solicitantes)
-                            if (e.target.checked) siguiente.add(g.id)
-                            else siguiente.delete(g.id)
-                            setSolicitantes(siguiente)
-                          }}
-                        />
-                        <NombreDelGrupo grupo={g} />
-                      </label>
-                    ))}
-                </fieldset>
-              )
-            ) : null}
-            {paso === 'beneficiarios' ? (
-              <>
-                {campoNumerico('beneficiaries_count')}
-                {campoNumerico('beneficiaries_female_count')}
-                {campoNumerico('beneficiaries_male_count')}
-                {campoDeTexto('beneficiaries_detail', true)}
-              </>
-            ) : null}
-            {paso === 'monto' ? (
-              <>
-                {campoNumerico('amount')}
-                {campoDeOpciones('currency')}
-                {escribible('exploration_campaign') && campanas.isPending ? <Cargando compacto /> : null}
-                {escribible('exploration_campaign') && campanas.data ? (
-                  <Campo etiqueta={nombreDeCampo('exploration_campaign')} error={error('exploration_campaign')}>
-                    {(p) => (
-                      <SelectNativo
-                        {...p}
-                        {...register('exploration_campaign')}
-                        opciones={campanas.data.map((c) => ({ valor: c.id, etiqueta: texto(c, 'name') }))}
-                      />
-                    )}
-                  </Campo>
-                ) : null}
-                {campanas.isError && !campanas.data ? <FalloDeLectura error={campanas.error} alReintentar={() => void campanas.refetch()} /> : null}
-                {campana ? <BarraDelTope campana={campana} monto={monto} moneda={valores.currency ?? 'PEN'} /> : null}
-              </>
-            ) : null}
-            {paso === 'plazo' ? (
-              <>
-                {campoDeFecha('due_date')}
-                <SelectorDeUsuario
-                  etiqueta={nombreDeCampo('owner')}
-                  valor={responsable}
-                  alCambiar={(u) => {
-                    setResponsable(u)
-                    setErrorDePersona(undefined)
-                    sinErrorExterno('owner')
-                  }}
-                  error={errorDePersona ?? erroresExternos.owner}
-                />
-                <SelectorDeUsuario
-                  etiqueta={nombreDeCampo('verifier')}
-                  valor={verificador}
-                  alCambiar={(u) => {
-                    setVerificador(u)
-                    setErrorDePersona(undefined)
-                    sinErrorExterno('verifier')
-                  }}
-                  error={erroresExternos.verifier}
-                />
-                {campoDeOpciones('priority')}
-              </>
-            ) : null}
-          </fieldset>
-          {paso === 'revision' ? (
-            <>
-              <section aria-label={t('nuevoCompromiso.revision.lista')} className="space-y-2 rounded-sg-md border border-sg-border p-3 text-sm">
-                <h3 className="font-medium">{t('nuevoCompromiso.revision.lista')}</h3>
-                {faltantes.length === 0 ? (
-                  <p className="text-sg-success">{t('nuevoCompromiso.revision.completo')}</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {faltantes.map((f) => (
-                      <li key={f.etiqueta} className="flex flex-wrap items-center gap-2">
-                        {t('nuevoCompromiso.revision.falta', { campo: f.etiqueta })}
-                        <button type="button" className="text-sg-caption text-sg-primary-text underline" onClick={() => setActual(PASOS.indexOf(f.paso))}>
-                          {t('nuevoCompromiso.revision.irAlPaso')}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                    <NombreDelGrupo grupo={g} />
+                  </label>
+                ))}
+            </fieldset>
+          )
+        ) : null}
+        {paso === 'beneficiarios' ? (
+          <>
+            {campoNumerico('beneficiaries_count')}
+            {campoNumerico('beneficiaries_female_count')}
+            {campoNumerico('beneficiaries_male_count')}
+            {campoDeTexto('beneficiaries_detail', true)}
+          </>
+        ) : null}
+        {paso === 'monto' ? (
+          <>
+            {campoNumerico('amount')}
+            {campoDeOpciones('currency')}
+            {escribible('exploration_campaign') && campanas.isPending ? <Cargando compacto /> : null}
+            {escribible('exploration_campaign') && campanas.data ? (
+              <Campo etiqueta={nombreDeCampo('exploration_campaign')} error={error('exploration_campaign')}>
+                {(p) => (
+                  <SelectNativo
+                    {...p}
+                    {...register('exploration_campaign')}
+                    opciones={campanas.data.map((c) => ({ valor: c.id, etiqueta: texto(c, 'name') }))}
+                  />
                 )}
-              </section>
-              <section className="rounded-sg-md bg-sg-surface-sunken p-3 text-sm">
-                <h3 className="font-medium">{t('nuevoCompromiso.revision.quePasara')}</h3>
-                <p>{t('nuevoCompromiso.revision.quePasaraTexto')}</p>
-              </section>
-              <Campo etiqueta={t('comun.motivoObligatorio')} error={error('motivo')}>
-                {(p) => <Textarea {...p} {...register('motivo')} maxLength={500} />}
               </Campo>
-              {fallo ? (
-                <Alert tone="danger">
-                  {creado ? <p>{t('nuevoCompromiso.revision.parcial')}</p> : null}
-                  <p>{mensaje(fallo)}</p>
-                  {creado ? (
-                    <Link to={`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(creado.id)}`} className="underline">
-                      {t('nuevoCompromiso.revision.abrirFicha')}
-                    </Link>
-                  ) : null}
-                </Alert>
-              ) : null}
-            </>
-          ) : null}
-          <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
-            <Button type="button" variant="secondary" disabled={actual === 0 || enviando} onClick={() => setActual(actual - 1)}>
-              {t('comun.anterior')}
-            </Button>
-            {paso === 'revision' ? (
-              <div className="flex gap-2">
-                <Button type="button" variant="secondary" disabled={enviando} aria-busy={enviando} onClick={() => void registrar(false)}>
-                  {enviando ? t('nuevoCompromiso.revision.guardando') : t('nuevoCompromiso.revision.guardar')}
-                </Button>
-                <Button type="button" disabled={enviando || faltantes.length > 0} aria-busy={enviando} onClick={() => void registrar(true)}>
-                  {t('nuevoCompromiso.revision.enviar')}
-                </Button>
-              </div>
+            ) : null}
+            {campanas.isError && !campanas.data ? <FalloDeLectura error={campanas.error} alReintentar={() => void campanas.refetch()} /> : null}
+            {campana ? <BarraDelTope campana={campana} monto={monto} moneda={valores.currency ?? 'PEN'} /> : null}
+          </>
+        ) : null}
+        {paso === 'plazo' ? (
+          <>
+            {campoDeFecha('due_date')}
+            <SelectorDeUsuario
+              etiqueta={nombreDeCampo('owner')}
+              valor={responsable}
+              alCambiar={(u) => {
+                setResponsable(u)
+                setErrorDePersona(undefined)
+                sinErrorExterno('owner')
+              }}
+              error={errorDePersona ?? erroresExternos.owner}
+            />
+            <SelectorDeUsuario
+              etiqueta={nombreDeCampo('verifier')}
+              valor={verificador}
+              alCambiar={(u) => {
+                setVerificador(u)
+                setErrorDePersona(undefined)
+                sinErrorExterno('verifier')
+              }}
+              error={erroresExternos.verifier}
+            />
+            {campoDeOpciones('priority')}
+          </>
+        ) : null}
+      </fieldset>
+      {paso === 'revision' ? (
+        <>
+          <section aria-label={t('nuevoCompromiso.revision.lista')} className="space-y-2 rounded-sg-md border border-sg-border p-3 text-sm">
+            <h3 className="font-medium">{t('nuevoCompromiso.revision.lista')}</h3>
+            {faltantes.length === 0 ? (
+              <p className="text-sg-success">{t('nuevoCompromiso.revision.completo')}</p>
             ) : (
-              <Button type="submit">{t('comun.siguiente')}</Button>
+              <ul className="space-y-1">
+                {faltantes.map((f) => (
+                  <li key={f.etiqueta} className="flex flex-wrap items-center gap-2">
+                    {t('nuevoCompromiso.revision.falta', { campo: f.etiqueta })}
+                    <button type="button" className="text-sg-caption text-sg-primary-text underline" onClick={() => setActual(PASOS.indexOf(f.paso))}>
+                      {t('nuevoCompromiso.revision.irAlPaso')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-        </form>
-      </div>
-    </section>
+          </section>
+          <section className="rounded-sg-md bg-sg-surface-sunken p-3 text-sm">
+            <h3 className="font-medium">{t('nuevoCompromiso.revision.quePasara')}</h3>
+            <p>{t('nuevoCompromiso.revision.quePasaraTexto')}</p>
+          </section>
+          <Campo etiqueta={t('comun.motivoObligatorio')} error={error('motivo')}>
+            {(p) => <Textarea {...p} {...register('motivo')} maxLength={500} />}
+          </Campo>
+          {fallo ? (
+            <Alert tone="danger">
+              {creado ? <p>{t('nuevoCompromiso.revision.parcial')}</p> : null}
+              <p>{mensaje(fallo)}</p>
+              {creado ? (
+                <Link to={`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(creado.id)}`} className="underline">
+                  {t('nuevoCompromiso.revision.abrirFicha')}
+                </Link>
+              ) : null}
+            </Alert>
+          ) : null}
+        </>
+      ) : null}
+    </FormularioPorPasos>
   )
 }

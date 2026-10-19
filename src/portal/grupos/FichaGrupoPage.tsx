@@ -252,7 +252,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{t('grupos.ficha.perfil')}</h2>
               {editaPerfil ? (
-                <Button size="sm" variant="ghost" onClick={() => setEditando(true)}>
+                <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                   {t('grupos.ficha.editarPerfil')}
                 </Button>
               ) : null}

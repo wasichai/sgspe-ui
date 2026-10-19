@@ -86,19 +86,20 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
             </>
           ) : undefined
         }
-        primaria={
-          puedeEditar ? (
-            <Button size="sm" onClick={() => setEditando(true)}>
-              {t('comun.editar')}
-            </Button>
-          ) : undefined
-        }
         secundarias={
-          tipo === 'organization' && can('position', 'CREATE') ? (
-            <Button size="sm" variant="secondary" onClick={() => setAgregandoCargo(true)}>
-              {t('grupos.actor.agregarCargo')}
-            </Button>
-          ) : undefined
+          <>
+            {tipo === 'organization' && can('position', 'CREATE') ? (
+              <Button size="sm" variant="secondary" onClick={() => setAgregandoCargo(true)}>
+                {t('grupos.actor.agregarCargo')}
+              </Button>
+            ) : null}
+            {/* «Editar» es siempre secundaria, con borde (revisión de UX, etapa 5) */}
+            {puedeEditar ? (
+              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                {t('comun.editar')}
+              </Button>
+            ) : null}
+          </>
         }
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">

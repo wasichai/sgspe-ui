@@ -108,6 +108,20 @@ describe('S24 · registrar interacción', () => {
     expect(screen.getByText('Comunidad: Comunidad Ejemplo')).toBeInTheDocument()
   })
 
+  it('«Cancelar» con cambios pide confirmar y vuelve a la visita de campo de la que se abrió (revisión de UX, etapa 5)', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?field_visit=v1', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(await screen.findByText('¿Salir sin terminar?')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Seguir aquí' }))
+    expect(rutaActual()).toBe('/projects/p1/engagements/new?field_visit=v1')
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Salir' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/field-visits/v1'))
+  })
+
   it('un grupo sin nombres representa al menos a una persona y los totales se ven en vivo', async () => {
     fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
     await screen.findByRole('option', { name: 'Asamblea' })

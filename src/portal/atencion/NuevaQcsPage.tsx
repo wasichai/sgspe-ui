@@ -7,8 +7,10 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
+import { AvisoAlSalir, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { ConDefiniciones, FalloDeLectura } from '../componentes/LecturaConEstados'
 import { nombreDe, useNombreDelGrupo } from '../componentes/NombreDeActor'
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuario'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones, useProyecto } from '../contexto/proyectos'
@@ -16,6 +18,9 @@ import { esQcs, OBJETOS_DE_QCS, rutaDeQcs, SEVERIDADES_GRAVES, type ObjetoDeQcs 
 import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
 import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
+
+// los campos que, escritos, son cambios por perder al salir (la fecha de recepción ya viene propuesta)
+const CON_CAMBIOS = ['code', 'channel', 'category', 'description', 'priority', 'severity', 'request_medium', 'requested_resource'] as const
 
 // S37 · registrar QCS (screens.md §8): en un solo paso lo que se planteó, por el canal que llegó, sin decidir todavía su
 // tratamiento. es la única entrada de QCS (ASM-104): el equipo social registra también lo que llega por un contratista. el tipo
@@ -96,6 +101,7 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     requested_resource: ''
   })
   const [anonima, setAnonima] = useState(false)
+  const salida = useSalidaPermitida()
   const [confidencial, setConfidencial] = useState(false)
   const [responsable, setResponsable] = useState<Usuaria | null>(null)
   const [grupo, setGrupo] = useState('')
@@ -149,17 +155,31 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     if (!anonima && grupo) atributos.stakeholder = grupo
     if (!anonima && persona && conPersona) atributos.person = persona.id
     if (origen) atributos.origin_engagement = origen
-    crear.mutate({ atributos, motivo: motivo.trim() }, { onSuccess: (r) => navegar(rutaDeQcs(projectId, tipo, r.id)) })
+    crear.mutate(
+      { atributos, motivo: motivo.trim() },
+      {
+        onSuccess: (r) => {
+          salida.current = true
+          navegar(rutaDeQcs(projectId, tipo, r.id))
+        }
+      }
+    )
   }
 
   // los errores de campos sin control a la vista (quien recibe, el proyecto) van en el aviso general
   const conControl = ['code', 'channel', 'received_at', 'category', 'description', 'priority', 'severity', 'stakeholder', 'person', 'owner_user_id']
   const sinControl = Object.keys(delServidor).filter((c) => !conControl.includes(c.replace(/^attributes\./, '')))
 
+  // un alta corta de una sola página (revisión de UX, etapa 5): el encabezado común, «Cancelar» junto a «Registrar» y, con
+  // cambios, salir pide confirmar como en el formulario por pasos. la fecha de recepción propuesta no cuenta como cambio
+  const conCambios = CON_CAMBIOS.some((c) => valores[c].trim() !== '') || motivo.trim() !== '' || responsable !== null || grupo !== '' || persona !== null
+  const volverA = origen
+    ? `/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(origen)}`
+    : `/projects/${encodeURIComponent(projectId)}/attention`
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('nuevaQcs.titulo')}</h1>
-      <p className="text-sm text-sg-text-secondary">{t('nuevaQcs.ayuda')}</p>
+      <EncabezadoDePagina titulo={t('nuevaQcs.titulo')} descripcion={t('nuevaQcs.ayuda')} />
+      <AvisoAlSalir conCambios={conCambios} salidaPermitida={salida} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <form
           className="space-y-4"
@@ -315,9 +335,14 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
             {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
           </Campo>
           {crear.isError && (sinControl.length > 0 || Object.keys(delServidor).length === 0) ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
-          <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>
-            {crear.isPending ? t('nuevaQcs.registrando') : t(`nuevaQcs.registrar.${tipo}`)}
-          </Button>
+          <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
+            <Button type="button" variant="ghost" disabled={crear.isPending} onClick={() => navegar(volverA)}>
+              {t('paginas.formulario.cancelar')}
+            </Button>
+            <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>
+              {crear.isPending ? t('nuevaQcs.registrando') : t(`nuevaQcs.registrar.${tipo}`)}
+            </Button>
+          </div>
         </form>
 
         <aside aria-label={t('nuevaQcs.secciones.quePasara')} className="h-fit space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">

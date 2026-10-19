@@ -37,6 +37,18 @@ export const ES_PAGINAS = {
     pendiente: 'Paso pendiente',
     terminales: 'Otros cierres'
   },
+  crearRelacionado: 'Crear relacionado',
+  relacionados: { compromiso: 'Registrar compromiso', qcs: 'Registrar queja, consulta o solicitud' },
+  formulario: {
+    anterior: 'Anterior',
+    siguiente: 'Siguiente',
+    cancelar: 'Cancelar',
+    guardarYSalir: 'Guardar y salir',
+    salirTitulo: '¿Salir sin terminar?',
+    salirTexto: 'Lo que escribió en este formulario se perderá si sale ahora.',
+    salir: 'Salir',
+    quedarse: 'Seguir aquí'
+  },
   trazabilidad: {
     titulo: 'Trazabilidad',
     deDondeViene: 'De dónde viene',
@@ -82,6 +94,18 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     hecho: 'Step done',
     pendiente: 'Pending step',
     terminales: 'Other endings'
+  },
+  crearRelacionado: 'Create related',
+  relacionados: { compromiso: 'Record a commitment', qcs: 'Record a grievance, inquiry or request' },
+  formulario: {
+    anterior: 'Previous',
+    siguiente: 'Next',
+    cancelar: 'Cancel',
+    guardarYSalir: 'Save and exit',
+    salirTitulo: 'Leave without finishing?',
+    salirTexto: 'What you wrote in this form will be lost if you leave now.',
+    salir: 'Leave',
+    quedarse: 'Stay here'
   },
   trazabilidad: {
     titulo: 'Traceability',

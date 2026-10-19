@@ -48,7 +48,7 @@ export function LugaresDelPunto({
             </dl>
             {!datos.locality && !noDisponible('locality') ? <p className="text-sg-caption text-sg-text-muted">{t('ubicar.sinLimite')}</p> : null}
             {datos.locality || datos.community ? (
-              <Button size="sm" variant="secondary" onClick={() => alUsar({ locality: datos.locality, community: datos.community })}>
+              <Button type="button" size="sm" variant="secondary" onClick={() => alUsar({ locality: datos.locality, community: datos.community })}>
                 {t('ubicar.usar')}
               </Button>
             ) : null}
