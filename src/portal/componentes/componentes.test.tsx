@@ -8,6 +8,7 @@ import { montar, pagina, registro, workflow } from '../../test/montar'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Pagina } from '../datos/registros'
 import { Campo, SelectNativo } from './Campo'
+import { FiltroDeLista } from './FiltroDeLista'
 import { EstadoChip } from './EstadoChip'
 import { Cargando, Consulta, ErrorDeCarga, esIlegible, ExplicacionDeColumna, NoDisponible, NoEsDeSusProyectos, Restringido, ThConExplicacion } from './Estados'
 import { KpiCard } from './KpiCard'
@@ -209,6 +210,17 @@ describe('SelectNativo', () => {
     const opcion = await screen.findByRole('option', { name: 'En contra pero abierto a escuchar' })
     expect(opcion).toHaveValue('EN CONTRA PERO ABIERTO A ESCUCHAR')
     expect(screen.getByRole('option', { name: 'DEMO-T1' })).toHaveValue('DEMO-T1')
+  })
+})
+
+describe('FiltroDeLista', () => {
+  it('tiene su rótulo a la vista y la opción vacía dice «Todos», no «Seleccionar…»', async () => {
+    montar(<FiltroDeLista etiqueta="Prioridad" opciones={['MUY ALTA', 'ALTA']} value="" onChange={() => undefined} />)
+    const filtro = await screen.findByLabelText('Prioridad')
+    expect(screen.getByText('Prioridad').tagName).toBe('SPAN')
+    expect(filtro).toHaveDisplayValue('Todos')
+    expect(screen.getByRole('option', { name: 'Muy alta' })).toHaveValue('MUY ALTA')
+    expect(screen.queryByRole('option', { name: 'Seleccionar…' })).not.toBeInTheDocument()
   })
 })
 

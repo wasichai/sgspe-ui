@@ -166,16 +166,31 @@ export function AtencionPage() {
         </label>
         <label className="space-y-1">
           <span className="block">{t('atencion.canal')}</span>
-          <SelectNativo value={canal} onChange={(e) => lista.cambiar({ channel: e.target.value })} opciones={opciones('channel')} />
+          <SelectNativo
+            textoVacio={t('comun.todos')}
+            value={canal}
+            onChange={(e) => lista.cambiar({ channel: e.target.value })}
+            opciones={opciones('channel')}
+          />
         </label>
         <label className="space-y-1">
           <span className="block">{t('atencion.categoria')}</span>
-          <SelectNativo value={categoria} onChange={(e) => lista.cambiar({ category: e.target.value })} opciones={opciones('category')} />
+          <SelectNativo
+            textoVacio={t('comun.todos')}
+            value={categoria}
+            onChange={(e) => lista.cambiar({ category: e.target.value })}
+            opciones={opciones('category')}
+          />
         </label>
         {conSeveridad ? (
           <label className="space-y-1">
             <span className="block">{t('atencion.severidad')}</span>
-            <SelectNativo value={severidad} onChange={(e) => lista.cambiar({ severity: e.target.value })} opciones={opciones('severity')} />
+            <SelectNativo
+              textoVacio={t('comun.todos')}
+              value={severidad}
+              onChange={(e) => lista.cambiar({ severity: e.target.value })}
+              opciones={opciones('severity')}
+            />
           </label>
         ) : null}
       </div>
