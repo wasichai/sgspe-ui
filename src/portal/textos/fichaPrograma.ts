@@ -35,6 +35,7 @@ export const ES_FICHA_PROGRAMA = {
     invalidos: 'Hay montos que no son válidos y no se suman: corríjalos.',
     totalesTruncados: 'La lista de presupuestos llegó al tope de lectura: los totales por moneda no se calculan porque podría faltar alguno.'
   },
+  tipo: 'Programa',
   trazabilidad: { titulo: 'Trazabilidad', tareas: 'Tareas', sinTareas: 'Sin tareas del programa' },
   indicadores: {
     titulo: 'Indicadores',
@@ -118,6 +119,7 @@ export const EN_FICHA_PROGRAMA: typeof ES_FICHA_PROGRAMA = {
     invalidos: 'Some amounts are not valid and are not added: correct them.',
     totalesTruncados: 'The budget list reached the read limit: the totals by currency are not calculated because some may be missing.'
   },
+  tipo: 'Program',
   trazabilidad: { titulo: 'Traceability', tareas: 'Tasks', sinTareas: 'No program tasks' },
   indicadores: {
     titulo: 'Indicators',

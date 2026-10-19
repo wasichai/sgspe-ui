@@ -1,5 +1,15 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { PestanasDeFicha, type PestanaDeFicha } from '../componentes/PestanasDeFicha'
+import { rutaDeFicha } from '../datos/fichas'
+import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Tabs } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -27,6 +37,8 @@ import { Presupuestos } from './Presupuestos'
 // requiresReason); el presupuesto por año y moneda, evidencias, actividad y las tareas del programa. los datos del programa tienen
 // un solo dueño (elección 15): quien no los escribe los ve en solo lectura. un 404 no dice si no existe o no es de sus proyectos
 const EDITABLES = ['name', 'description', 'topic', 'partner_organization', 'agreement', 'start_date', 'end_date', 'currency']
+// el camino de WF-G sin sus excepciones (suspender, cancelar); un estado fuera de él se agrega
+const CAMINO = ['draft', 'pending_approval', 'planned', 'executing', 'monitoring', 'evaluation', 'closed']
 const COMPROBAR = ['submit', 'approve', 'plan_direct']
 const TERMINADOS = ['closed', 'cancelled']
 const DECIDIENDO = ['draft', 'pending_approval']
@@ -64,20 +76,25 @@ function Ficha({ programa }: { programa: Registro }) {
     delProyecto.data !== undefined &&
     atributo(delProyecto.data, 'policy_synergy_requires_agreement') !== false &&
     DECIDIENDO.includes(programa.state ?? '')
-  const pestanas: { id: string; label: string; render: () => ReactNode }[] = [
-    { id: 'resumen', label: t('fichaPrograma.pestanas.resumen'), render: () => <Resumen programa={programa} /> },
-    { id: 'presupuesto', label: t('fichaPrograma.pestanas.presupuesto'), render: () => <Presupuestos programa={programa} /> },
-    { id: 'indicadores', label: t('fichaPrograma.pestanas.indicadores'), render: () => <Indicadores programa={programa} escribe={escribe} /> },
-    { id: 'iniciativas', label: t('fichaPrograma.pestanas.iniciativas'), render: () => <IniciativasEHitos programa={programa} /> },
-    { id: 'beneficiarios', label: t('fichaPrograma.pestanas.beneficiarios'), render: () => <Beneficiarios programa={programa} /> },
+  // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
+  // decisión con el fin del programa como vencimiento, pestañas con conteo y trazabilidad en tres grupos
+  useMigaDelRegistro(texto(programa, 'code') || texto(programa, 'name'))
+  const siguiente = useSiguienteAccion('social_program', programa, COMPROBAR)
+  const evidencias = useEvidenciasDe('social_program', programa.id)
+  const pestanas: PestanaDeFicha[] = [
+    { id: 'resumen', etiqueta: t('fichaPrograma.pestanas.resumen'), render: () => <Resumen programa={programa} /> },
+    { id: 'presupuesto', etiqueta: t('fichaPrograma.pestanas.presupuesto'), render: () => <Presupuestos programa={programa} /> },
+    { id: 'indicadores', etiqueta: t('fichaPrograma.pestanas.indicadores'), render: () => <Indicadores programa={programa} escribe={escribe} /> },
+    { id: 'iniciativas', etiqueta: t('fichaPrograma.pestanas.iniciativas'), render: () => <IniciativasEHitos programa={programa} /> },
+    { id: 'beneficiarios', etiqueta: t('fichaPrograma.pestanas.beneficiarios'), render: () => <Beneficiarios programa={programa} /> },
     {
       id: 'evidencias',
-      label: t('fichaPrograma.pestanas.evidencias'),
+      etiqueta: t('fichaPrograma.pestanas.evidencias'),
       render: () => <EvidenciasDelRegistro objeto="social_program" registro={programa} escribe={escribe} />
     },
     {
       id: 'actividad',
-      label: t('fichaPrograma.pestanas.actividad'),
+      etiqueta: t('fichaPrograma.pestanas.actividad'),
       render: () => (
         <div className="pt-3">
           <Historia objeto="social_program" id={programa.id} vacio={t('fichaPrograma.sinActividad')} />
@@ -87,44 +104,37 @@ function Ficha({ programa }: { programa: Registro }) {
   ]
   return (
     <article className="space-y-4">
-      <Link to={`/projects/${encodeURIComponent(proyecto)}/programs`} className="text-sm text-sg-primary-text underline">
-        {t('fichaPrograma.volver')}
-      </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{texto(programa, 'code')}</p>
-          <h1 className="text-sg-h1 font-semibold">{texto(programa, 'name')}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+      <EncabezadoDePagina
+        antetitulo={[t('fichaPrograma.tipo'), texto(programa, 'code')].filter(Boolean).join(' · ')}
+        titulo={texto(programa, 'name')}
+        chips={
+          <>
             <EstadoChip objeto="social_program" estado={programa.state} />
-            <span>
-              {t('fichaPrograma.socio')}:{' '}
-              {texto(programa, 'partner_organization') ? (
-                <RegistroVinculado objeto="organization" id={texto(programa, 'partner_organization')} />
-              ) : (
-                t('fichaPrograma.sinSocio')
-              )}
-            </span>
-            <span>
-              {t('fichaPrograma.convenio')}:{' '}
-              {texto(programa, 'agreement') ? <RegistroVinculado objeto="agreement" id={texto(programa, 'agreement')} /> : t('fichaPrograma.sinConvenio')}
-            </span>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {edita ? (
+          </>
+        }
+        primaria={<BotonesDeTransicion objeto="social_program" registro={programa} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        secundarias={
+          edita ? (
             <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
               {t('fichaPrograma.editar')}
             </Button>
-          ) : null}
-          <BotonesDeTransicion objeto="social_program" registro={programa} proyecto={proyecto} comprobarAntes={COMPROBAR} />
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
+      <CaminoDelFlujo objeto="social_program" estado={programa.state} camino={CAMINO} />
+      <PanelDeDecision
+        objeto="social_program"
+        estado={programa.state}
+        desde={texto(programa, 'state_changed_at') || null}
+        por={texto(programa, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={texto(programa, 'owner_user_email') || null}
+        vencimiento={texto(programa, 'end_date') || null}
+      />
       {avisaSinergia ? <Alert tone="notice">{t('fichaPrograma.sinergia')}</Alert> : null}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs label={texto(programa, 'name')} tabs={pestanas} />
-        <aside className="space-y-4">
-          <Trazabilidad programa={programa} />
-        </aside>
+        <PestanasDeFicha etiqueta={texto(programa, 'name')} pestanas={pestanas} />
+        <Trazabilidad programa={programa} evidencias={evidencias.data?.content ?? []} />
       </div>
       <Drawer titulo={t('fichaPrograma.editarTitulo')} abierto={editando} alCerrar={() => setEditando(false)}>
         {editando ? (
@@ -176,20 +186,34 @@ function Resumen({ programa }: { programa: Registro }) {
   )
 }
 
-// las tareas que nacen del programa (task.social_program, spec F5 §3.1), con su enlace a «Mis tareas» del proyecto
-function Trazabilidad({ programa }: { programa: Registro }) {
+// la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (el convenio y el socio), qué generó (sus aportes y
+// las tareas que nacen de él, task.social_program, spec F5 §3.1) y lo que lo sustenta (sus evidencias)
+function Trazabilidad({ programa, evidencias }: { programa: Registro; evidencias: Registro[] }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const leeTareas = can('task', 'READ')
   const tareas = useTodos('task', { social_program: programa.id }, leeTareas)
   const proyecto = texto(programa, 'project')
+  const nombreDeEvidencia = useNombreDeEvidencia()
   return (
-    <section aria-label={t('fichaPrograma.trazabilidad.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('fichaPrograma.trazabilidad.titulo')}</h2>
-      {leeTareas ? (
-        <>
-          <h3 className="font-medium">{t('fichaPrograma.trazabilidad.tareas')}</h3>
-          {tareas.isPending ? (
+    <PanelDeTrazabilidad
+      deDondeViene={[
+        {
+          clave: 'convenio',
+          titulo: t('fichaPrograma.convenio'),
+          contenido: texto(programa, 'agreement') ? <RegistroVinculado objeto="agreement" id={texto(programa, 'agreement')} /> : null
+        },
+        {
+          clave: 'socio',
+          titulo: t('fichaPrograma.socio'),
+          contenido: texto(programa, 'partner_organization') ? <RegistroVinculado objeto="organization" id={texto(programa, 'partner_organization')} /> : null
+        }
+      ]}
+      queGenero={[
+        {
+          clave: 'tareas',
+          titulo: t('fichaPrograma.trazabilidad.tareas'),
+          contenido: !leeTareas ? null : tareas.isPending ? (
             <Cargando compacto />
           ) : tareas.isError && !tareas.data ? (
             <FalloDeLectura error={tareas.error} alReintentar={() => void tareas.refetch()} />
@@ -199,16 +223,29 @@ function Trazabilidad({ programa }: { programa: Registro }) {
             <ul>
               {tareas.data.map((x) => (
                 <li key={x.id} className="flex flex-wrap items-center gap-2">
-                  <Link to={`/projects/${encodeURIComponent(proyecto)}/tasks?task=${encodeURIComponent(x.id)}`} className="text-sg-primary-text underline">
-                    {texto(x, 'title')}
-                  </Link>
+                  <EnlaceDeRegistro titulo={texto(x, 'title')} ruta={`/projects/${encodeURIComponent(proyecto)}/tasks?task=${encodeURIComponent(x.id)}`} />
                   <EstadoChip objeto="task" estado={x.state} />
                 </li>
               ))}
             </ul>
-          )}
-        </>
-      ) : null}
-    </section>
+          )
+        }
+      ]}
+      loSustenta={[
+        {
+          clave: 'evidencias',
+          titulo: t('fichaPrograma.pestanas.evidencias'),
+          contenido: evidencias.length ? (
+            <ul>
+              {evidencias.map((e) => (
+                <li key={e.id}>
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                </li>
+              ))}
+            </ul>
+          ) : null
+        }
+      ]}
+    />
   )
 }
