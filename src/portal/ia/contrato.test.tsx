@@ -7,7 +7,7 @@ import { montar } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
 import { useMensajeDeError } from '../componentes/errores'
 import { ErrorDeSgspe } from '../datos/http'
-import { disponibilidadDe, useAceptarSugerencia, useCorrida, useEstadoDeIa, usePreguntarALosDatos } from './contrato'
+import { disponibilidadDe, estadoDe, useAceptarSugerencia, useCorrida, useEstadoDeIa, usePreguntarALosDatos } from './contrato'
 
 // el contrato de F7 que lee el portal (api.md §3.3 y §4.14): el estado, las corridas con su clave, las preguntas sin clave,
 // la aceptación con IK, IM y CR, y los textos de los errores de la IA
@@ -53,6 +53,17 @@ describe('contrato de F7', () => {
     expect(disponibilidadDe({ ...ESTADO_ACTIVO, providerAvailable: false }, 'AI-05')).toEqual({ disponible: false, motivo: 'proveedor' })
     expect(disponibilidadDe({ ...ESTADO_ACTIVO, useCases: ['AI-05'] }, 'AI-06')).toEqual({ disponible: false, motivo: 'rol' })
     expect(disponibilidadDe(ESTADO_ACTIVO, 'AI-03')).toEqual({ disponible: true })
+  })
+
+  it('un estado fuera de contrato se lee como «no»: sin useCases no ofrece ningún caso', () => {
+    expect(estadoDe({ enabled: true, providerAvailable: true })).toEqual({ enabled: true, providerAvailable: true, useCases: [] })
+    expect(estadoDe(null)).toEqual({ enabled: false, providerAvailable: false, useCases: [] })
+    expect(estadoDe({ enabled: 'si', providerAvailable: true, useCases: ['AI-05', 3] })).toEqual({
+      enabled: false,
+      providerAvailable: true,
+      useCases: ['AI-05']
+    })
+    expect(disponibilidadDe(estadoDe({ enabled: true, providerAvailable: true }), 'AI-05')).toEqual({ disponible: false, motivo: 'rol' })
   })
 
   it('lee el estado de la IA; un backend sin F7 responde 404 y no hay estado', async () => {

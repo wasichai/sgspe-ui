@@ -1,6 +1,7 @@
 // S05 · el panel del asistente (screens.md §13): preguntar a los datos (AI-05) y a los documentos (AI-06)
 export const ES_ASISTENTE = {
   titulo: 'Asistente de IA',
+  fallo: 'El asistente no se pudo mostrar. Ciérrelo y vuelva a abrirlo; si sigue igual, avise a soporte.',
   modos: { datos: 'Preguntar a los datos', documentos: 'Preguntar a los documentos' },
   contexto: 'Contexto: {{contexto}}',
   sobreElRegistro: 'Sobre el registro {{objeto}} {{id}}: ',
@@ -31,6 +32,7 @@ export const ES_ASISTENTE = {
 
 export const EN_ASISTENTE: typeof ES_ASISTENTE = {
   titulo: 'AI assistant',
+  fallo: 'The assistant could not be shown. Close it and open it again; if it keeps happening, contact support.',
   modos: { datos: 'Ask the data', documentos: 'Ask the documents' },
   contexto: 'Context: {{contexto}}',
   sobreElRegistro: 'About the record {{objeto}} {{id}}: ',

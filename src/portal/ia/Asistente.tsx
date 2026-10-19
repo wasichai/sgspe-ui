@@ -7,6 +7,7 @@ import { Link } from 'react-router'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { Cargando } from '../componentes/Estados'
+import { LimiteDeError } from '../componentes/LimiteDeError'
 import { correlacionDe, useMensajeDeError } from '../componentes/errores'
 import { rutaParaAbrir } from '../datos/fichas'
 import { campoDelError, codigoDelError } from '../datos/http'
@@ -47,7 +48,17 @@ const Contexto = createContext<ValorDelAsistente | null>(null)
 // null fuera del AppShell (las pruebas de una pantalla sola): quien abre el asistente no se dibuja
 export const useAsistente = (): ValorDelAsistente | null => useContext(Contexto)
 
+function FalloDelAsistente({ abierto, alCerrar }: { abierto: boolean; alCerrar: () => void }) {
+  const { t } = useTranslation(NS)
+  return (
+    <Drawer titulo={t('asistente.titulo')} abierto={abierto} alCerrar={alCerrar}>
+      <Alert tone="danger">{t('asistente.fallo')}</Alert>
+    </Drawer>
+  )
+}
+
 export function ProveedorDelAsistente({ children }: { children: ReactNode }) {
+  const { t } = useTranslation(NS)
   const [abierto, setAbierto] = useState(false)
   const [contexto, setContexto] = useState<ContextoDelAsistente>({})
   // cada apertura cuenta: el panel prellena la pregunta y elige el modo al abrirse, no en cada render
@@ -65,7 +76,10 @@ export function ProveedorDelAsistente({ children }: { children: ReactNode }) {
   return (
     <Contexto.Provider value={valor}>
       {children}
-      <PanelDelAsistente abierto={abierto} contexto={contexto} vez={vez} alCerrar={() => setAbierto(false)} />
+      {/* un fallo del panel no tumba el shell que lo contiene (D1): lo dice en el drawer y cada apertura lo intenta de nuevo */}
+      <LimiteDeError key={vez} mensaje={t('asistente.fallo')} alternativa={<FalloDelAsistente abierto={abierto} alCerrar={() => setAbierto(false)} />}>
+        <PanelDelAsistente abierto={abierto} contexto={contexto} vez={vez} alCerrar={() => setAbierto(false)} />
+      </LimiteDeError>
     </Contexto.Provider>
   )
 }

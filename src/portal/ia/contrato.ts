@@ -29,11 +29,22 @@ export function disponibilidadDe(estado: EstadoDeIa | undefined, caso: CasoDeIa)
   return { disponible: true }
 }
 
+// la respuesta tal como llega: un despliegue a medias puede no traer useCases (D1 de la revisión de UX). lo que falta se
+// lee como «no»: sin casos, sin organización activa, sin proveedor
+export function estadoDe(cuerpo: unknown): EstadoDeIa {
+  const e = (cuerpo ?? {}) as Partial<Record<keyof EstadoDeIa, unknown>>
+  return {
+    enabled: e.enabled === true,
+    providerAvailable: e.providerAvailable === true,
+    useCases: Array.isArray(e.useCases) ? e.useCases.filter((c): c is string => typeof c === 'string') : []
+  }
+}
+
 // responde siempre 200 en un backend con F7 (api.md §4.14); un 404 es un backend sin F7. se relee al minuto: activar la IA
 // pide redesplegar (spec §8), así que no cambia a menudo
 export function useEstadoDeIa() {
   const pedir = usePedir()
-  return useQuery({ queryKey: ['ia', 'estado'], queryFn: () => pedir<EstadoDeIa>('/sgspe/ai/status'), staleTime: 60_000 })
+  return useQuery({ queryKey: ['ia', 'estado'], queryFn: async () => estadoDe(await pedir<unknown>('/sgspe/ai/status')), staleTime: 60_000 })
 }
 
 export function useCasoDeIa(caso: CasoDeIa): Disponibilidad {
