@@ -184,6 +184,16 @@ export const EN: Textos = {
     sinRoles: 'No roles',
     sinPermisos: 'Your permissions could not be read',
     modulos: 'Your sections',
+    trabajo: {
+      titulo: 'Your work',
+      nada: 'Nothing pending on you.',
+      tareas_one: '{{count}} open task',
+      tareas_other: '{{count}} open tasks',
+      compromisos_one: '{{count}} commitment you own',
+      compromisos_other: '{{count}} commitments you own',
+      qcs_one: '{{count}} case you own',
+      qcs_other: '{{count}} cases you own'
+    },
     rolesAsignados_one: '{{count}} role assigned',
     rolesAsignados_other: '{{count}} roles assigned',
     resumen: '{{disponibles, number}} of {{total, number}} sections available to your account'

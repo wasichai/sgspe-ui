@@ -1,3 +1,4 @@
+import { EN_OPCIONES } from './opcionesEnIngles'
 import palabras from './option-words.json'
 import { texto, type Registro } from './registros'
 
@@ -10,9 +11,16 @@ const TILDES: Record<string, string> = palabras.accents
 // una palabra de opción es solo letras mayúsculas: un código («DEMO-C-04», «T5») o un número no se tocan
 const PALABRA_DE_OPCION = /^[A-ZÁÉÍÓÚÜÑ]+$/
 
-// un valor que no está todo en mayúsculas ya lo escribió una persona y se ve igual
-export function rotuloDeOpcion(valor: string): string {
+// el idioma de la interfaz, el de <html lang> (idiomaHtml.ts lo sigue): es-PE o en
+const idiomaActual = (): string => (typeof document === 'undefined' ? 'es' : document.documentElement.lang || 'es')
+
+// un valor que no está todo en mayúsculas ya lo escribió una persona y se ve igual. en inglés, el valor traducido de
+// EN_OPCIONES (ASM-084) si lo tiene; si no, el rótulo en español
+export const rotuloDeOpcion = (valor: string): string => rotuloEnIdioma(valor, idiomaActual(), EN_OPCIONES)
+
+export function rotuloEnIdioma(valor: string, idioma: string, enIngles: Readonly<Record<string, string>>): string {
   if (valor === '' || valor !== valor.toUpperCase()) return valor
+  if (idioma.startsWith('en') && enIngles[valor]) return enIngles[valor]
   const rotulo = valor
     .split(' ')
     .map((p) => (SIGLAS.has(p) || !PALABRA_DE_OPCION.test(p) ? p : (TILDES[p] ?? p.toLowerCase())))

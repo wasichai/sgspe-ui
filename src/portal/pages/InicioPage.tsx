@@ -8,6 +8,7 @@ import { useNombresDeRol } from '../proyectos/usuarios'
 import { useCuenta, useOrganizacion } from '../queries'
 import { estadoDe, NAV_TREE, useOferta } from '../shell/navTree'
 import { RevisionEjecutivaPage } from '../tableros/RevisionEjecutivaPage'
+import { SuTrabajo } from './SuTrabajo'
 
 // el inicio del portal (S02, ASM-078): la variante del rol si la cuenta tiene una (inicios.ts); si no, desde F8 la revisión
 // ejecutiva S51 para quien el catálogo le ofrece el tablero executive (decisión 7 del plan 8.3); si no, la bienvenida de F1.
@@ -47,6 +48,7 @@ function Bienvenida() {
         <h1 className="text-sg-h1 font-semibold text-sg-text">{t('inicio.titulo')}</h1>
         <p className="text-sg-body text-sg-text-secondary">{t('inicio.bienvenida', { nombre: user?.displayName ?? '' })}</p>
       </div>
+      <SuTrabajo />
       <section aria-labelledby="inicio-cuenta" className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-5">
         <h2 id="inicio-cuenta" className="text-sg-h3 font-semibold text-sg-text">
           {t('inicio.cuenta')}
