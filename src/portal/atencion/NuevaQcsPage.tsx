@@ -1,6 +1,7 @@
+import { useCodigoPropuesto } from '../datos/codigos'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
@@ -100,6 +101,17 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     request_medium: '',
     requested_resource: ''
   })
+  // el código que propone el backend para el tipo elegido (decisión 6 de la revisión de UX), editable: cambia con el tipo mientras
+  // la persona no lo haya tocado, y no cuenta como un cambio por avisar al salir
+  const codigoPropuesto = useCodigoPropuesto(tipo, projectId).codigo
+  const ultimoPropuesto = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (!codigoPropuesto) return
+    // el anterior se toma ahora: el actualizador de setValores corre después, ya con la referencia cambiada
+    const anterior = ultimoPropuesto.current
+    ultimoPropuesto.current = codigoPropuesto
+    setValores((v) => (v.code === '' || v.code === anterior ? { ...v, code: codigoPropuesto } : v))
+  }, [codigoPropuesto])
   const [anonima, setAnonima] = useState(false)
   const salida = useSalidaPermitida()
   const [confidencial, setConfidencial] = useState(false)
@@ -172,7 +184,12 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
 
   // un alta corta de una sola página (revisión de UX, etapa 5): el encabezado común, «Cancelar» junto a «Registrar» y, con
   // cambios, salir pide confirmar como en el formulario por pasos. la fecha de recepción propuesta no cuenta como cambio
-  const conCambios = CON_CAMBIOS.some((c) => valores[c].trim() !== '') || motivo.trim() !== '' || responsable !== null || grupo !== '' || persona !== null
+  const conCambios =
+    CON_CAMBIOS.some((c) => valores[c].trim() !== '' && !(c === 'code' && valores.code === codigoPropuesto)) ||
+    motivo.trim() !== '' ||
+    responsable !== null ||
+    grupo !== '' ||
+    persona !== null
   const volverA = origen
     ? `/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(origen)}`
     : `/projects/${encodeURIComponent(projectId)}/attention`

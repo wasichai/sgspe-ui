@@ -28,6 +28,32 @@ const COMUNIDAD = definicion('community', [
 ])
 
 describe('FormularioDeRegistro', () => {
+  // revisión de UX, decisión 6: en un alta del proyecto, el código que propone el backend, editable; sin el endpoint, vacío
+  it('un alta propone el código del backend, editable, y sin la propuesta deja el campo vacío', async () => {
+    const ACUERDO = definicion('agreement', [
+      ['code', { label: 'Código', required: true }],
+      ['title', { label: 'Título' }]
+    ])
+    fetch = mockFetch([
+      { path: '/metadata/objects/agreement', body: ACUERDO },
+      { path: /^\/sgspe\/codes\/next\?object=agreement&project=p1$/, body: { code: 'ACU-2026-004' } },
+      { method: 'POST', path: '/objects/agreement/records', body: registro('a1', {}) }
+    ])
+    red = espiarRed()
+    const guardado = vi.fn()
+    const { unmount } = montar(<FormularioDeRegistro objeto="agreement" fijos={{ project: 'p1' }} alGuardar={guardado} />)
+    const codigo = await screen.findByLabelText(/^Código/)
+    expect(codigo).toHaveValue('ACU-2026-004')
+    await userEvent.clear(codigo)
+    await userEvent.type(codigo, 'ACU-ESPECIAL')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(guardado).toHaveBeenCalled())
+    expect(red.a('POST', '/objects/agreement/records')[0].cuerpo).toMatchObject({ attributes: { code: 'ACU-ESPECIAL' } })
+    unmount()
+    montar(<FormularioDeRegistro objeto="agreement" fijos={{ project: 'p2' }} alGuardar={guardado} />)
+    expect(await screen.findByLabelText(/^Código/)).toHaveValue('')
+  })
+
   it('no muestra ni manda derivados ni geometrías', async () => {
     fetch = mockFetch([
       { path: '/metadata/objects/community', body: COMUNIDAD },

@@ -132,6 +132,21 @@ describe('S30 · crear compromiso', () => {
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments'))
   })
 
+  // revisión de UX, decisión 6: el código propuesto llega como valor por defecto: no es un borrador por guardar
+  it('propone el código del backend sin guardarlo como borrador, y no pisa el de un borrador recuperado', async () => {
+    fetch = mockFetch(rutas([{ path: /^\/sgspe\/codes\/next\?object=commitment&project=p1$/, body: { code: 'COM-2026-012' } }]))
+    const { unmount } = abrir()
+    await siguiente()
+    await waitFor(() => expect(screen.getByLabelText('Código')).toHaveValue('COM-2026-012'))
+    await new Promise((r) => setTimeout(r, 700))
+    expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toBeNull()
+    unmount()
+    localStorage.setItem('sgspe.borrador.compromiso.p1', JSON.stringify({ valores: { code: 'C-MIO', title: 'Canal' }, guardado: '2026-10-19T15:00:00Z' }))
+    abrir()
+    await siguiente()
+    expect(await screen.findByLabelText('Código')).toHaveValue('C-MIO')
+  })
+
   it('la barra del tope suma lo aprobado en la campaña y avisa si este compromiso lo supera', async () => {
     fetch = mockFetch(rutas())
     abrir()
