@@ -12,7 +12,6 @@ import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useRotuloDeRegistro } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro } from '../contexto/Rastro'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
 import { texto, usePuedeEditar, useRegistro, useTodos, useTodosConTope, type Registro } from '../datos/registros'
@@ -135,7 +134,6 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
   const nuevoRiesgo = `/projects/${encodeURIComponent(proyecto)}/risks/register?nuevo=1&origin_incident=${encodeURIComponent(incidente.id)}`
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <Rastro />
       <Link to={volver} className="text-sm text-sg-primary-text underline">
         {t('incidentes.ficha.volver')}
       </Link>

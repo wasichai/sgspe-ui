@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
+import { useVistaActual } from '../componentes/Pagina'
 import { NS } from '../i18n'
 
 // el rastro de ux-architecture.md §8.1: lo recorrido en esta sesión (Mapa · CC Tunas Pampa › Junta directiva › …). vive
@@ -15,11 +16,19 @@ export function useRastro(): Paso[] {
   return Array.isArray(rastro) ? rastro : []
 }
 
-// el estado para un Link que agrega la vista actual al rastro
-export function useSiguientePaso(): (etiqueta: string) => { rastro: Paso[] } {
+// el estado para un Link que agrega la vista actual al rastro. sin etiqueta, la vista se nombra con el título de la página
+// (useVistaActual): todo enlace a un registro suma su paso (revisión de UX, etapa 6). un enlace a la misma vista (destino) no
+// suma nada, y la vista que ya es el último paso no se repite
+export function useSiguientePaso(): (etiqueta?: string, destino?: string) => { rastro: Paso[] } {
   const rastro = useRastro()
+  const vista = useVistaActual()
   const { pathname, search } = useLocation()
-  return (etiqueta) => ({ rastro: [...rastro, { etiqueta, ruta: pathname + search }].slice(-8) })
+  return (etiqueta, destino) => {
+    const ruta = pathname + search
+    const nombre = etiqueta || vista
+    if (!nombre || destino === ruta || destino === pathname || rastro.at(-1)?.ruta === ruta) return { rastro }
+    return { rastro: [...rastro, { etiqueta: nombre, ruta }].slice(-8) }
+  }
 }
 
 export function Rastro() {

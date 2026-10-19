@@ -17,7 +17,6 @@ import { seccionDeRuta } from '../shell/seccionActual'
 import { BarraDeContexto } from './BarraDeContexto'
 import { useConteosDelProyecto } from './conteos'
 import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyectos'
-import { Rastro } from './Rastro'
 
 // el ProjectLayout de screens.md §2: dentro de un proyecto, la barra de contexto y la sub-navegación de Project 360; por
 // debajo de lg pasa a una fila desplazable. con el alcance por proyecto (ADR-0029) solo llega aquí sin asignación quien lee
@@ -118,7 +117,6 @@ export function ProyectoLayout() {
     <ProveedorDeMigas value={setRegistro}>
       <div className="mx-auto max-w-[1440px] space-y-4">
         <BarraDeContexto principal={<MigasDelProyecto pestana={marcada} registro={registro ?? undefined} />} />
-        <Rastro />
         <div className="flex items-end gap-1 border-b border-sg-border">
           <PestanasDesplazables etiqueta={t('contexto.subnav')} className="min-w-0 flex-1 [&>nav]:border-b-0">
             {visibles.map((p) => (

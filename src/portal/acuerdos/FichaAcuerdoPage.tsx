@@ -27,7 +27,6 @@ import { montoPe } from '../componentes/Monto'
 import { nombreDe } from '../componentes/NombreDeActor'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro } from '../contexto/Rastro'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { usePedir } from '../datos/http'
 import { atributo, texto, useRegistro, useRelacionados, useTodos, usePuedeEditar, type Registro } from '../datos/registros'
@@ -133,7 +132,6 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
   const siguiente = useSiguienteAccion('agreement', acuerdo, ['activate', 'activate_from_draft', 'resume'])
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={[t('acuerdos.ficha.tipo'), texto(acuerdo, 'code'), rotuloDeOpcion(tipo)].filter(Boolean).join(' · ')}
         titulo={texto(acuerdo, 'title')}

@@ -26,7 +26,6 @@ import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro } from '../contexto/Rastro'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { atributo, texto, usePuedeEditar, useRegistro, useRegistros, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
@@ -119,7 +118,6 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   const evidencias = useEvidenciasDe('commitment', compromiso.id)
   return (
     <article className="space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={[t('fichaCompromiso.titulo'), texto(compromiso, 'code'), opcion(compromiso, 'resource_type')].filter(Boolean).join(' · ')}
         titulo={texto(compromiso, 'title')}

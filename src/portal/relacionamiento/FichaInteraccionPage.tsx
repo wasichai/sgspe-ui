@@ -28,7 +28,6 @@ import { AcuerdosDeLaInteraccion } from '../acuerdos/AcuerdosDeLaInteraccion'
 import { DialogoDeDerivacion, QcsDeLaPregunta } from '../atencion/Derivacion'
 import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro } from '../contexto/Rastro'
 import { DocumentosEmitidos } from '../documentos/DocumentosEmitidos'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { AccionesDeIa, casosDeInteraccion } from '../ia/AccionesDeIa'
@@ -101,7 +100,6 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
   const evidencias = useEvidenciasDe('engagement', interaccion.id)
   return (
     <article className="space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={[t('relacionamiento.ficha.tipo'), opcion(interaccion, 'engagement_type')].filter(Boolean).join(' · ')}
         titulo={texto(interaccion, 'title')}

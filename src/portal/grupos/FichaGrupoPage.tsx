@@ -12,7 +12,7 @@ import { Cargando, Consulta, NoDisponible, Restringido, NoEsDeSusProyectos } fro
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useActorDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { Rastro, useSiguientePaso } from '../contexto/Rastro'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
 import {
   atributo,
@@ -112,7 +112,6 @@ function Ficha({ grupo }: { grupo: Registro }) {
   useMigaDelRegistro(nombre)
   return (
     <article className="space-y-4">
-      <Rastro />
       <EncabezadoDePagina
         antetitulo={[t('grupos.ficha.tipo'), opcion(grupo, 'stakeholder_type')].filter(Boolean).join(' · ')}
         titulo={nombre}

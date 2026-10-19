@@ -1,7 +1,7 @@
 import { useWasichaiConfig } from '@wasichai/core'
 import { cn } from '@wasichai/ui'
 import { ChevronDown, MoreHorizontal } from 'lucide-react'
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { texto, useRegistro } from '../datos/registros'
@@ -24,12 +24,30 @@ export function ContenedorDePagina({ variante = 'pagina', className, children }:
 // los efectos de los hijos corren antes que los del padre: gana la de mayor prioridad (el shell, 0, con la sección; el
 // proyecto, 1, con su pestaña; la pantalla, 2) y, entre iguales, la última. al salir la capa, vuelve la siguiente
 export type PrioridadDeTitulo = 0 | 1 | 2
-const PILA: { id: number; titulo: string; prioridad: PrioridadDeTitulo }[] = []
+const PILA: { id: number; titulo: string; vista: string; prioridad: PrioridadDeTitulo }[] = []
 let siguienteId = 0
+// el nombre de la vista actual (el título de la capa que gana, sin el proyecto ni la aplicación): el paso que un enlace suma
+// al rastro (revisión de UX, etapa 6). quien lo usa se vuelve a dibujar cuando cambia
+let vistaActual = ''
+const oyentes = new Set<() => void>()
 
 function aplicar(appName: string | undefined) {
   const mejor = PILA.reduce<(typeof PILA)[number] | undefined>((a, b) => (!a || b.prioridad >= a.prioridad ? b : a), undefined)
   document.title = mejor ? mejor.titulo : (appName ?? '')
+  const vista = mejor?.vista ?? ''
+  if (vista === vistaActual) return
+  vistaActual = vista
+  for (const oyente of oyentes) oyente()
+}
+
+export function useVistaActual(): string {
+  return useSyncExternalStore(
+    (oyente) => {
+      oyentes.add(oyente)
+      return () => oyentes.delete(oyente)
+    },
+    () => vistaActual
+  )
 }
 
 export function useTituloDeDocumento(titulo: string, prioridad: PrioridadDeTitulo = 2) {
@@ -40,7 +58,7 @@ export function useTituloDeDocumento(titulo: string, prioridad: PrioridadDeTitul
   const id = useRef(0)
   if (id.current === 0) id.current = ++siguienteId
   useEffect(() => {
-    const entrada = { id: id.current, titulo: [titulo, nombre, appName].filter(Boolean).join(' · '), prioridad }
+    const entrada = { id: id.current, titulo: [titulo, nombre, appName].filter(Boolean).join(' · '), vista: titulo, prioridad }
     const i = PILA.findIndex((e) => e.id === entrada.id)
     if (i >= 0) PILA[i] = entrada
     else PILA.push(entrada)
