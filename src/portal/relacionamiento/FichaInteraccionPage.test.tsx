@@ -79,6 +79,19 @@ describe('S23 · ficha de interacción', () => {
     { path: '/objects/engagement/records/e1/related/engagement_topic', body: pagina([registro('t1', { name: 'Agua' })]) }
   ]
 
+  // revisión de UX, etapa 4: la anatomía común; la siguiente acción es la del camino (redactar el acta), no cerrar sin ella
+  it('dice el camino del flujo, la siguiente acción del camino y los tres grupos de trazabilidad', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
+    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(await within(screen.getByRole('group', { name: 'Siguiente acción' })).findByText('Redactar acta')).toBeInTheDocument()
+    const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
+    expect(
+      within(panel)
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label'))
+    ).toEqual(['De dónde viene', 'Qué generó', 'Lo sustenta'])
+  })
+
   it('"Cerrar sin acta" sale deshabilitado con la razón mientras haya preguntas pendientes', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
     const cerrar = await screen.findByRole('button', { name: 'Cerrar sin acta' })
@@ -122,7 +135,8 @@ describe('S23 · ficha de interacción', () => {
       }
     ])
     await userEvent.click(await screen.findByRole('tab', { name: 'Evidencias' }))
-    expect(await screen.findByRole('link', { name: 'Acta firmada' })).toHaveAttribute('href', '/projects/p1/documents/ev1')
+    // también en «Lo sustenta» del panel de trazabilidad: aquí, la de la pestaña
+    expect(await within(screen.getByRole('tabpanel')).findByRole('link', { name: 'Acta firmada' })).toHaveAttribute('href', '/projects/p1/documents/ev1')
     await userEvent.click(screen.getByRole('tab', { name: 'Documentos emitidos' }))
     expect(await screen.findByRole('button', { name: 'Abrir MIN-2026-004' })).toBeInTheDocument()
   })
@@ -142,7 +156,8 @@ describe('S23 · ficha de interacción', () => {
     ])
     await userEvent.click(await screen.findByRole('tab', { name: 'Acuerdos' }))
     expect(await screen.findByRole('link', { name: 'A-001 · Autorización de la asamblea' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
-    expect(await screen.findByRole('link', { name: 'C-001 · Reservorio' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
+    // también en «Qué generó» del panel de trazabilidad: aquí, el de la pestaña
+    expect(await within(screen.getByRole('tabpanel')).findByRole('link', { name: 'C-001 · Reservorio' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
   })
 
   it('la cabecera dice la fecha con su hora de Lima, no solo el día (revisión final, M12)', async () => {

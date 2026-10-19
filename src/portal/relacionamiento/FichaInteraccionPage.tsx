@@ -1,6 +1,17 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
+import { useRotuloDeRegistro } from '../componentes/RegistroVinculado'
+import { rutaDeFicha } from '../datos/fichas'
+import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Button, Table, Tabs, Td, Textarea, Th } from '@wasichai/ui'
+import { Button, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -29,6 +40,7 @@ import {
   useDefinicion,
   useRegistro,
   useRelacionados,
+  useTodos,
   useTodosConTope,
   type Registro
 } from '../datos/registros'
@@ -72,25 +84,33 @@ export function FichaInteraccionPage() {
   )
 }
 
+// el camino de WF-B sin sus excepciones (posponer, cancelar, cerrar sin acta); un estado de excepción se agrega
+const CAMINO = ['planned', 'scheduled', 'held', 'minutes_drafted', 'minutes_in_review', 'minutes_approved', 'closed']
+
 function Ficha({ interaccion }: { interaccion: Registro }) {
   const { t } = useTranslation(NS)
   const proyecto = String(atributo(interaccion, 'project'))
   const convocante = useRegistro('stakeholder', atributo<string>(interaccion, 'convener'))
   const instante = atributo<string>(interaccion, 'held_at') ?? atributo<string>(interaccion, 'scheduled_at')
   const escribe = useEscribeEnProyecto(proyecto)
+  // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el título, encabezado, camino del flujo, panel de
+  // decisión, pestañas con conteo y trazabilidad en tres grupos
+  useMigaDelRegistro(texto(interaccion, 'title'))
+  const siguiente = useSiguienteAccion('engagement', interaccion, ['close', 'close_light'])
+  const evidencias = useEvidenciasDe('engagement', interaccion.id)
   return (
     <article className="space-y-4">
       <Rastro />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(interaccion, 'engagement_type')}</p>
-          <h1 className="text-sg-h1 font-semibold">{texto(interaccion, 'title')}</h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
+      <EncabezadoDePagina
+        antetitulo={[t('relacionamiento.ficha.tipo'), opcion(interaccion, 'engagement_type')].filter(Boolean).join(' · ')}
+        titulo={texto(interaccion, 'title')}
+        chips={
+          <>
             <EstadoChip objeto="engagement" estado={interaccion.state} />
-            {instante ? <span>{fechaYHoraPe(new Date(instante))}</span> : null}
-            {texto(interaccion, 'place') ? <span>{texto(interaccion, 'place')}</span> : null}
+            {instante ? <span className="text-sg-text-secondary">{fechaYHoraPe(new Date(instante))}</span> : null}
+            {texto(interaccion, 'place') ? <span className="text-sg-text-secondary">{texto(interaccion, 'place')}</span> : null}
             {convocante.data ? (
-              <span>
+              <span className="text-sg-text-secondary">
                 {t('relacionamiento.ficha.convocante')}:{' '}
                 <Link
                   to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(convocante.data.id)}`}
@@ -100,10 +120,10 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
                 </Link>
               </span>
             ) : null}
-          </div>
-        </div>
-        <BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />
-      </header>
+          </>
+        }
+        primaria={<BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />}
+      />
       <AccionesDeIa
         objeto="engagement"
         registro={interaccion}
@@ -111,35 +131,46 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         rotulo={texto(interaccion, 'title')}
         casos={casosDeInteraccion(interaccion)}
       />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <Tabs
-          label={texto(interaccion, 'title')}
-          tabs={[
-            { id: 'resumen', label: t('relacionamiento.ficha.pestanas.resumen'), render: () => <Resumen interaccion={interaccion} /> },
-            { id: 'participantes', label: t('relacionamiento.ficha.pestanas.participantes'), render: () => <Participantes interaccion={interaccion} /> },
-            { id: 'preguntas', label: t('relacionamiento.ficha.pestanas.preguntas'), render: () => <Preguntas interaccion={interaccion} /> },
-            { id: 'acta', label: t('relacionamiento.ficha.pestanas.acta'), render: () => <Acta interaccion={interaccion} /> },
+      <CaminoDelFlujo objeto="engagement" estado={interaccion.state} camino={CAMINO} />
+      <PanelDeDecision
+        objeto="engagement"
+        estado={interaccion.state}
+        desde={texto(interaccion, 'state_changed_at') || null}
+        por={texto(interaccion, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={null}
+        vencimiento={null}
+      />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <PestanasDeFicha
+          etiqueta={texto(interaccion, 'title')}
+          pestanas={[
+            { id: 'resumen', etiqueta: t('relacionamiento.ficha.pestanas.resumen'), render: () => <Resumen interaccion={interaccion} /> },
+            { id: 'participantes', etiqueta: t('relacionamiento.ficha.pestanas.participantes'), render: () => <Participantes interaccion={interaccion} /> },
+            { id: 'preguntas', etiqueta: t('relacionamiento.ficha.pestanas.preguntas'), render: () => <Preguntas interaccion={interaccion} /> },
+            { id: 'acta', etiqueta: t('relacionamiento.ficha.pestanas.acta'), render: () => <Acta interaccion={interaccion} /> },
             {
               // F3: los acuerdos que autoriza esta asamblea y los compromisos que nacen de ella
               id: 'acuerdos',
-              label: t('relacionamiento.ficha.pestanas.acuerdos'),
+              etiqueta: t('relacionamiento.ficha.pestanas.acuerdos'),
               render: () => <AcuerdosDeLaInteraccion interaccion={interaccion} />
             },
             {
               // F3: el acta firmada, las fotos y la lista de asistentes como evidencias; la «Minuta de reunión» y la «Lista de
               // asistentes» que emite AUT-05 al aprobar el acta
               id: 'evidencias',
-              label: t('relacionamiento.ficha.pestanas.evidencias'),
+              etiqueta: t('relacionamiento.ficha.pestanas.evidencias'),
+              conteo: evidencias.data?.totalElements ?? null,
               render: () => <EvidenciasDelRegistro objeto="engagement" registro={interaccion} escribe={escribe} />
             },
             {
               id: 'documentos',
-              label: t('relacionamiento.ficha.pestanas.documentos'),
+              etiqueta: t('relacionamiento.ficha.pestanas.documentos'),
               render: () => <DocumentosEmitidos objeto="engagement" registroId={interaccion.id} escribe={escribe} />
             },
             {
               id: 'actividad',
-              label: t('relacionamiento.ficha.pestanas.actividad'),
+              etiqueta: t('relacionamiento.ficha.pestanas.actividad'),
               render: () => (
                 <div className="pt-3">
                   <Historia objeto="engagement" id={interaccion.id} vacio={t('relacionamiento.ficha.sinActividad')} />
@@ -148,7 +179,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             }
           ]}
         />
-        <DeDondeViene interaccion={interaccion} />
+        <Trazabilidad interaccion={interaccion} />
       </div>
     </article>
   )
@@ -438,45 +469,87 @@ function FilaDePregunta({
   )
 }
 
-function DeDondeViene({ interaccion }: { interaccion: Registro }) {
+// la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la visita de campo, los grupos de interés y los
+// temas), qué generó (los compromisos y las QCS que nacieron de ella) y lo que la sustenta (sus evidencias)
+function Trazabilidad({ interaccion }: { interaccion: Registro }) {
   const { t } = useTranslation(NS)
+  const { can } = useAuth()
   const proyecto = String(atributo(interaccion, 'project'))
+  const base = `/projects/${encodeURIComponent(proyecto)}`
   const visita = useRegistro('field_visit', atributo<string>(interaccion, 'field_visit'))
   const grupos = useRelacionados('engagement', interaccion.id, 'engagement_stakeholder')
   const temas = useRelacionados('engagement', interaccion.id, 'engagement_topic')
+  const compromisos = useTodos('commitment', { origin_engagement: interaccion.id }, can('commitment', 'READ'))
+  const evidencias = useEvidenciasDe('engagement', interaccion.id)
+  const nombreDeEvidencia = useNombreDeEvidencia()
+  const rotulo = useRotuloDeRegistro()
   return (
-    <aside aria-label={t('relacionamiento.ficha.deDondeViene')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('relacionamiento.ficha.deDondeViene')}</h2>
-      {visita.isError ? (
-        <FalloDeLectura error={visita.error} alReintentar={() => void visita.refetch()} />
-      ) : visita.data ? (
-        <p>
-          {t('relacionamiento.ficha.visita')}:{' '}
-          <Link to={`/projects/${encodeURIComponent(proyecto)}/field-visits/${encodeURIComponent(visita.data.id)}`} className="text-sg-primary-text underline">
-            {texto(visita.data, 'title')}
-          </Link>
-        </p>
-      ) : null}
-      <div>
-        <h3 className="font-medium">{t('relacionamiento.ficha.grupos')}</h3>
-        {grupos.isPending ? <Cargando compacto /> : null}
-        {grupos.isError ? <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} /> : null}
-        <ul>
-          {(grupos.data?.content ?? []).map((g) => (
-            <li key={g.id}>
-              <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
-                <NombreDelGrupo grupo={g} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <h3 className="font-medium">{t('relacionamiento.ficha.temas')}</h3>
-        {temas.isPending ? <Cargando compacto /> : null}
-        {temas.isError ? <FalloDeLectura error={temas.error} alReintentar={() => void temas.refetch()} /> : null}
-        {temas.data ? <p>{temas.data.content.map((x) => texto(x, 'name')).join(', ') || '—'}</p> : null}
-      </div>
-    </aside>
+    <PanelDeTrazabilidad
+      deDondeViene={[
+        {
+          clave: 'visita',
+          titulo: t('relacionamiento.ficha.visita'),
+          contenido: visita.data ? (
+            <EnlaceDeRegistro titulo={texto(visita.data, 'title')} ruta={`${base}/field-visits/${encodeURIComponent(visita.data.id)}`} />
+          ) : null
+        },
+        {
+          clave: 'grupos',
+          titulo: t('relacionamiento.ficha.grupos'),
+          contenido: grupos.isPending ? (
+            <Cargando compacto />
+          ) : grupos.data?.content.length ? (
+            <ul>
+              {grupos.data.content.map((g) => (
+                <li key={g.id}>
+                  <Link to={`${base}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
+                    <NombreDelGrupo grupo={g} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null
+        },
+        { clave: 'temas', titulo: t('relacionamiento.ficha.temas'), contenido: temas.data?.content.map((x) => texto(x, 'name')).join(', ') || null }
+      ]}
+      queGenero={[
+        {
+          clave: 'compromisos',
+          titulo: t('relacionamiento.ficha.compromisos'),
+          contenido: compromisos.data?.length ? (
+            <ul>
+              {compromisos.data.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center gap-2">
+                  <EnlaceDeRegistro titulo={rotulo(c)} ruta={rutaDeFicha('commitment', c)} />
+                  <EstadoChip objeto="commitment" estado={c.state} />
+                </li>
+              ))}
+            </ul>
+          ) : null
+        }
+      ]}
+      loSustenta={[
+        {
+          clave: 'evidencias',
+          titulo: t('relacionamiento.ficha.pestanas.evidencias'),
+          contenido: evidencias.data?.content.length ? (
+            <ul>
+              {evidencias.data.content.map((e) => (
+                <li key={e.id}>
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                </li>
+              ))}
+            </ul>
+          ) : null
+        }
+      ]}
+      pie={
+        <>
+          {visita.isError ? <FalloDeLectura error={visita.error} alReintentar={() => void visita.refetch()} /> : null}
+          {grupos.isError ? <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} /> : null}
+          {temas.isError ? <FalloDeLectura error={temas.error} alReintentar={() => void temas.refetch()} /> : null}
+        </>
+      }
+    />
   )
 }

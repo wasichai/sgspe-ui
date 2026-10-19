@@ -23,7 +23,8 @@ export function PanelDeDecision({
   siguiente,
   responsable,
   vencimiento,
-  situacion
+  situacion,
+  tipoDeSituacion = 'plazo'
 }: {
   objeto: string
   estado: string | null | undefined
@@ -32,8 +33,9 @@ export function PanelDeDecision({
   siguiente: SiguienteAccion | null
   responsable: string | null | undefined
   vencimiento: string | null | undefined
-  // deadline_status del registro (JOB-01)
+  // deadline_status del registro (JOB-01), o review_status de un riesgo y validity_status de un acuerdo
   situacion?: unknown
+  tipoDeSituacion?: 'plazo' | 'revision' | 'vigencia'
 }) {
   const { t } = useTranslation(NS)
   return (
@@ -66,7 +68,7 @@ export function PanelDeDecision({
         {vencimiento ? (
           <div className="flex flex-wrap items-center gap-2">
             <Dia valor={vencimiento} />
-            <SituacionDePlazo valor={situacion} />
+            <SituacionDePlazo valor={situacion} revision={tipoDeSituacion === 'revision'} vigencia={tipoDeSituacion === 'vigencia'} />
           </div>
         ) : (
           <p className="text-sg-text-muted">{t('paginas.decision.sinVencimiento')}</p>

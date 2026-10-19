@@ -166,10 +166,11 @@ describe('S40 · ficha de riesgo', () => {
     expect(estaAtrasada(registro('m', { planned_date: '2026-10-01', completed: true }), '2026-10-09')).toBe(false)
   })
 
-  it('a la derecha, las quejas y alertas que lo alimentan', async () => {
+  // revisión de UX, etapa 4: «Lo alimentan» pasa a «De dónde viene» del panel de trazabilidad común
+  it('a la derecha, las quejas y alertas que lo alimentan, en «De dónde viene»', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    const lado = await screen.findByRole('complementary', { name: 'Lo alimentan' })
+    const lado = await screen.findByRole('region', { name: 'De dónde viene' })
     expect(await within(lado).findByRole('link', { name: /Q-001/ })).toHaveAttribute('href', '/projects/p1/grievances/g1')
     expect(await within(lado).findByRole('link', { name: /Señales de conflicto/ })).toHaveAttribute('href', '/projects/p1/risks/warnings/w1')
   })
@@ -183,7 +184,7 @@ describe('S40 · ficha de riesgo', () => {
       ])
     )
     abrir()
-    const lado = await screen.findByRole('complementary', { name: 'Lo alimentan' })
+    const lado = await screen.findByRole('region', { name: 'De dónde viene' })
     expect(await within(lado).findByText(/Q-001/)).toBeInTheDocument()
     expect(await within(lado).findByText(/Señales de conflicto/)).toBeInTheDocument()
     expect(within(lado).queryByRole('link', { name: /Q-001/ })).not.toBeInTheDocument()
