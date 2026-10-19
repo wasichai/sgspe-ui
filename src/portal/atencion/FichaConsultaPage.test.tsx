@@ -73,6 +73,25 @@ describe('S57 · ficha de consulta', () => {
     expect(await screen.findByRole('button', { name: 'Subir carta firmada' })).toBeInTheDocument()
   })
 
+  // revisión de UX, etapa 4: la anatomía común (camino del flujo, panel de decisión y los tres grupos de trazabilidad)
+  it('dice el camino del flujo, el panel de decisión y los tres grupos de trazabilidad', async () => {
+    fetch = mockFetch([
+      { path: '/objects/inquiry/records/i1', body: CONSULTA },
+      transiciones('inquiry', 'i1', [['answer', 'Responder']]),
+      ...comunes('inquiry', 'i1')
+    ])
+    abrir()
+    const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
+    expect(within(camino).getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.getByRole('region', { name: 'Situación' })).toBeInTheDocument()
+    const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
+    expect(
+      within(panel)
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label'))
+    ).toEqual(['De dónde viene', 'Qué generó', 'Lo sustenta'])
+  })
+
   it('una consulta que no existe o que la cuenta no lee lo dice sin delatar cuál', async () => {
     fetch = mockFetch([{ path: '/objects/inquiry/records/i1', status: 404, body: { title: 'Not Found', status: 404 } }, ...comunes('inquiry', 'i1')])
     abrir()
