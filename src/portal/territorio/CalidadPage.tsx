@@ -1,6 +1,7 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
 import { Cargando, ErrorDeCarga, esProhibido, NoDisponible } from '../componentes/Estados'
 import { useProyectos } from '../contexto/proyectos'
@@ -153,9 +154,9 @@ export function CalidadPage() {
                   <Td>{t(`calidad.objetos.${f.object}`, { defaultValue: f.object })}</Td>
                   <Td>
                     {OBJETOS_CON_FICHA.has(f.object) ? (
-                      <Link to={rutaParaAbrir(f.object, f.id)} className="text-sg-primary-text underline">
+                      <EnlaceConRastro to={rutaParaAbrir(f.object, f.id)} className="text-sg-primary-text underline">
                         {f.label ?? t('calidad.sinNombre')}
-                      </Link>
+                      </EnlaceConRastro>
                     ) : (
                       (f.label ?? t('calidad.sinNombre'))
                     )}

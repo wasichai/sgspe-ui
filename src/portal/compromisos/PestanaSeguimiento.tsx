@@ -1,8 +1,8 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo } from '../componentes/Campo'
@@ -230,9 +230,12 @@ function FilaDeDependencia({ dependencia, proyecto }: { dependencia: Registro; p
         {otro.isPending ? (
           <Cargando compacto />
         ) : otro.data ? (
-          <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(otro.data.id)}`} className="text-sg-primary-text underline">
+          <EnlaceConRastro
+            to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(otro.data.id)}`}
+            className="text-sg-primary-text underline"
+          >
             {texto(otro.data, 'code')} · {texto(otro.data, 'title')}
-          </Link>
+          </EnlaceConRastro>
         ) : (
           <FalloDeLectura error={otro.error} alReintentar={() => void otro.refetch()} />
         )}

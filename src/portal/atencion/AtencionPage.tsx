@@ -270,6 +270,7 @@ export function AtencionPage() {
                           titulo={asuntoDe(f.registro)}
                           ruta={rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)}
                           desde={t('atencion.titulo')}
+                          previa={{ objeto: f.objeto, id: f.registro.id }}
                           codigoEnElEnlace
                         />
                       </>
@@ -354,6 +355,7 @@ function FilaDeQcs({
           titulo={asuntoDe(registro)}
           ruta={rutaDeQcs(texto(registro, 'project'), objeto, registro.id)}
           desde={t('atencion.titulo')}
+          previa={{ objeto, id: registro.id }}
           codigoEnElEnlace
         />
       </Td>

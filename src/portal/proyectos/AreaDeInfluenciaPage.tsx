@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -5,7 +6,7 @@ import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { BotonRecargar, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
@@ -127,13 +128,13 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
         <ol className="flex flex-wrap gap-2 text-sm">
           {(versiones.data ?? []).map((v) => (
             <li key={v.id}>
-              <Link
+              <EnlaceConRastro
                 to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(v.id)}`}
                 aria-current={v.id === area.id ? 'page' : undefined}
                 className="rounded-sg-sm border border-sg-border px-2 py-0.5"
               >
                 v{texto(v, 'version_number')} · {etiquetas[v.state ?? ''] ?? v.state}
-              </Link>
+              </EnlaceConRastro>
             </li>
           ))}
         </ol>
@@ -439,12 +440,12 @@ function NuevaVersion({ area, miembros, versionesListas }: { area: Registro; mie
           {creada ? (
             <p className="mt-1">
               {t('areas.versionCreada', { version: texto(creada, 'version_number') })}{' '}
-              <Link
+              <EnlaceConRastro
                 to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(creada.id)}`}
                 className="font-medium text-sg-primary-text underline"
               >
                 {t('areas.continuarEnLaCreada')}
-              </Link>
+              </EnlaceConRastro>
             </p>
           ) : null}
         </Alert>

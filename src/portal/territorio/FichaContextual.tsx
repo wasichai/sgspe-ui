@@ -9,7 +9,7 @@ import { montoPe } from '../componentes/Monto'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { useProyectos } from '../contexto/proyectos'
 import { valorDeTerritorio } from '../contexto/rutas'
-import { useSiguientePaso } from '../contexto/Rastro'
+import { EnlaceConRastro, useSiguientePaso } from '../contexto/Rastro'
 import { codigoDelError } from '../datos/http'
 import { componentesDeFicha, useIndicador, type ComponenteDeFicha, type FilaDeDesglose, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { texto } from '../datos/registros'
@@ -154,9 +154,9 @@ function AreaDeInfluencia({ area: a }: { area: AreaDeLaFicha }) {
   return (
     <li>
       {a.project ? (
-        <Link to={`/projects/${encodeURIComponent(a.project)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
+        <EnlaceConRastro to={`/projects/${encodeURIComponent(a.project)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
           {rotulo}
-        </Link>
+        </EnlaceConRastro>
       ) : (
         <span>{rotulo}</span>
       )}{' '}

@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
@@ -569,9 +570,12 @@ function Trazabilidad({ riesgo, medidas, evidencias }: { riesgo: Registro; medid
             <ul>
               {grupos.data.content.map((g) => (
                 <li key={g.id}>
-                  <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`} className="text-sg-primary-text underline">
+                  <EnlaceConRastro
+                    to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(g.id)}`}
+                    className="text-sg-primary-text underline"
+                  >
                     <NombreDelGrupo grupo={g} />
-                  </Link>
+                  </EnlaceConRastro>
                 </li>
               ))}
             </ul>

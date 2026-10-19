@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -186,9 +187,12 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
         <ul className="max-h-[420px] overflow-y-auto">
           {puntos.map((p) => (
             <li key={p.key}>
-              <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(p.key)}`} className="text-sg-primary-text underline">
+              <EnlaceConRastro
+                to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(p.key)}`}
+                className="text-sg-primary-text underline"
+              >
                 {nombre(p)}
-              </Link>{' '}
+              </EnlaceConRastro>{' '}
               · {rotuloDeOpcion(p.influenceGroup ?? '')} ({numeroPe(p.interest!)}, {numeroPe(p.power!)})
               {p.overridden ? (
                 <span className="text-sg-caption text-sg-text-muted" title={p.overrideReason}>

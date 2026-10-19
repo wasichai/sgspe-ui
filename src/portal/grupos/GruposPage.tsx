@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -50,6 +51,7 @@ export function GruposPage() {
   // la explicación única de la columna Postura cuando sus celdas están restringidas
   const idDeLaPostura = useId()
   const conTablero = useTableroDisponible('stakeholders')
+  const telefono = useEsTelefono()
   // ni la postura ni la tolerancia de inactividad se deciden antes de que lleguen la definición y el proyecto: sin ellas, una
   // cuenta con acceso vería "Restringido" un instante y la vista "Sin contacto" usaría 90 días. en el alcance global no hay
   // un proyecto: la tolerancia es la de 90 días de la etiqueta y de la vista (cada proyecto tiene la suya)
@@ -187,67 +189,81 @@ export function GruposPage() {
             </VacioDeLista>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-                <Table aria-label={t('grupos.titulo')}>
-                  <thead>
-                    <tr>
-                      {proyecto ? (
-                        <Th>
-                          <span className="sr-only">{t('comun.seleccionar')}</span>
-                        </Th>
-                      ) : null}
-                      {(
-                        [
-                          'grupo',
-                          ...(proyecto ? [] : ['proyecto']),
-                          'territorio',
-                          'influencia',
-                          'postura',
-                          'prioridad',
-                          'estado',
-                          'relacion',
-                          'responsable',
-                          'evaluacion',
-                          'contacto'
-                        ] as const
-                      ).map((c) =>
-                        c === 'postura' && !leePostura ? (
-                          <ThConExplicacion key={c} explicacion={idDeLaPostura} tipo="restringido">
-                            {t(`grupos.columnas.${c}`)}
-                          </ThConExplicacion>
-                        ) : (
-                          // Responsable se oculta por debajo de 1440 px: así la evaluación se ve sin desplazar (revisión de UX)
-                          <Th key={c} scope="col" className={c === 'responsable' ? 'hidden 2xl:table-cell' : undefined}>
-                            {t(`grupos.columnas.${c}`)}
+              {telefono ? (
+                // en el teléfono, tarjetas con el nombre, su vista previa, el estado y el proyecto (revisión de UX, etapa 8)
+                <ListaEnTarjetas
+                  etiqueta={t('grupos.titulo')}
+                  tarjetas={pagina.map((g) => ({
+                    id: g.id,
+                    titulo: <TituloDeGrupo grupo={g} />,
+                    estado: <EstadoChip objeto="stakeholder" estado={g.state} />,
+                    proyecto: proyecto ? undefined : <ProyectoDelGrupo grupo={g} />,
+                    detalle: [opcion(g, 'stakeholder_type'), opcion(g, 'influence_group')].filter(Boolean).join(' · ') || undefined
+                  }))}
+                />
+              ) : (
+                <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+                  <Table aria-label={t('grupos.titulo')}>
+                    <thead>
+                      <tr>
+                        {proyecto ? (
+                          <Th>
+                            <span className="sr-only">{t('comun.seleccionar')}</span>
                           </Th>
-                        )
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagina.map((g) => (
-                      <Fila
-                        key={g.id}
-                        grupo={g}
-                        global={!proyecto}
-                        leePostura={leePostura}
-                        idDeLaPostura={idDeLaPostura}
-                        seleccionado={seleccion.has(g.id)}
-                        alSeleccionar={
-                          proyecto
-                            ? (si) => {
-                                const siguiente = new Set(seleccion)
-                                if (si) siguiente.add(g.id)
-                                else siguiente.delete(g.id)
-                                setSeleccion(siguiente)
-                              }
-                            : undefined
-                        }
-                      />
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
+                        ) : null}
+                        {(
+                          [
+                            'grupo',
+                            ...(proyecto ? [] : ['proyecto']),
+                            'territorio',
+                            'influencia',
+                            'postura',
+                            'prioridad',
+                            'estado',
+                            'relacion',
+                            'responsable',
+                            'evaluacion',
+                            'contacto'
+                          ] as const
+                        ).map((c) =>
+                          c === 'postura' && !leePostura ? (
+                            <ThConExplicacion key={c} explicacion={idDeLaPostura} tipo="restringido">
+                              {t(`grupos.columnas.${c}`)}
+                            </ThConExplicacion>
+                          ) : (
+                            // Responsable se oculta por debajo de 1440 px: así la evaluación se ve sin desplazar (revisión de UX)
+                            <Th key={c} scope="col" className={c === 'responsable' ? 'hidden 2xl:table-cell' : undefined}>
+                              {t(`grupos.columnas.${c}`)}
+                            </Th>
+                          )
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagina.map((g) => (
+                        <Fila
+                          key={g.id}
+                          grupo={g}
+                          global={!proyecto}
+                          leePostura={leePostura}
+                          idDeLaPostura={idDeLaPostura}
+                          seleccionado={seleccion.has(g.id)}
+                          alSeleccionar={
+                            proyecto
+                              ? (si) => {
+                                  const siguiente = new Set(seleccion)
+                                  if (si) siguiente.add(g.id)
+                                  else siguiente.delete(g.id)
+                                  setSeleccion(siguiente)
+                                }
+                              : undefined
+                          }
+                        />
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
               {filtrados.length > POR_PAGINA ? (
                 <Pagination
                   page={lista.pagina}
@@ -336,4 +352,27 @@ function Fila({
       </Td>
     </tr>
   )
+}
+
+// el título de la tarjeta de un grupo en el teléfono: su nombre como enlace (con su paso en el rastro) y su vista previa
+function TituloDeGrupo({ grupo }: { grupo: Registro }) {
+  const nombre = useNombreDelGrupo(grupo)
+  const paso = useSiguientePaso()
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      <Link
+        to={`/projects/${encodeURIComponent(String(atributo(grupo, 'project')))}/stakeholders/${encodeURIComponent(grupo.id)}`}
+        state={paso()}
+        className="font-medium text-sg-primary-text underline"
+      >
+        {nombre}
+      </Link>
+      <BotonDeVistaPrevia objeto="stakeholder" id={grupo.id} nombre={nombre} />
+    </span>
+  )
+}
+
+function ProyectoDelGrupo({ grupo }: { grupo: Registro }) {
+  const del = useRegistro('project', String(atributo(grupo, 'project')))
+  return <ProyectoEnLista proyecto={del.data} />
 }

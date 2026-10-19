@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { Button, cn } from '@wasichai/ui'
 import { useAvailableTransitions } from '@wasichai/workflow'
 import { useTranslation } from 'react-i18next'
@@ -138,7 +139,7 @@ export function TarjetaDeSugerencia({ sugerencia, proyecto, alAceptar }: { suger
         ) : null}
         {fila?.fila === 'borrador' && destinoId ? (
           <Button asChild size="sm" variant="secondary">
-            <Link to={`${base}/engagements/${encodeURIComponent(destinoId)}/minutes`}>{t('bandejaIa.abrirEditor')}</Link>
+            <EnlaceConRastro to={`${base}/engagements/${encodeURIComponent(destinoId)}/minutes`}>{t('bandejaIa.abrirEditor')}</EnlaceConRastro>
           </Button>
         ) : null}
         <BotonesDeTransicion objeto="ai_suggestion" registro={sugerencia} solo={fila ? ['reject', 'mark_duplicate'] : ['reject']} proyecto={proyecto} />

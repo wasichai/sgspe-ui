@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
@@ -72,9 +73,9 @@ export function AlertasPage() {
                 <tr key={a.id}>
                   <Td className="text-sm">{texto(a, 'detected_at') ? fechaPe(new Date(texto(a, 'detected_at'))) : '—'}</Td>
                   <Td className="text-sm">
-                    <Link to={rutaDeFicha('early_warning', a) ?? ''} className="text-sg-primary-text underline">
+                    <EnlaceConRastro to={rutaDeFicha('early_warning', a) ?? ''} className="text-sg-primary-text underline">
                       {texto(a, 'title')}
-                    </Link>
+                    </EnlaceConRastro>
                   </Td>
                   <Td className="text-sm">{opcion(a, 'severity') || '—'}</Td>
                   <Td className="text-sm">

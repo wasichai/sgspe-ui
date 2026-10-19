@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import type { ReactNode } from 'react'
@@ -255,9 +256,12 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               .filter((a) => a.state === 'approved')
               .map((a) => (
                 <li key={a.id}>
-                  <Link to={`/projects/${encodeURIComponent(proyecto.id)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
+                  <EnlaceConRastro
+                    to={`/projects/${encodeURIComponent(proyecto.id)}/areas/${encodeURIComponent(a.id)}`}
+                    className="text-sg-primary-text underline"
+                  >
                     {opcion(a, 'area_type')} · v{texto(a, 'version_number')}
-                  </Link>
+                  </EnlaceConRastro>
                 </li>
               ))}
           </ul>

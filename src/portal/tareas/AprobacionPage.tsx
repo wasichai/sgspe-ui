@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { Alert, Button, Textarea } from '@wasichai/ui'
 import { useAvailableTransitions } from '@wasichai/workflow'
 import { useState } from 'react'
@@ -124,12 +125,12 @@ function Decision({ compromiso }: { compromiso: Registro }) {
           <div>
             {t('aprobaciones.decision.origen')}:{' '}
             {origen.data ? (
-              <Link
+              <EnlaceConRastro
                 to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(origen.data.id)}`}
                 className="text-sg-primary-text underline"
               >
                 {texto(origen.data, 'title')} · {opcion(origen.data, 'engagement_type')}
-              </Link>
+              </EnlaceConRastro>
             ) : !atributo(compromiso, 'origin_engagement') ? (
               t('aprobaciones.decision.sinOrigen')
             ) : origen.isError ? (
@@ -138,9 +139,12 @@ function Decision({ compromiso }: { compromiso: Registro }) {
               '…'
             )}
           </div>
-          <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(compromiso.id)}`} className="text-sg-primary-text underline">
+          <EnlaceConRastro
+            to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(compromiso.id)}`}
+            className="text-sg-primary-text underline"
+          >
             {t('aprobaciones.decision.abrirFicha')}
-          </Link>
+          </EnlaceConRastro>
         </section>
         <section aria-label={t('aprobaciones.decision.decidir')} className="space-y-3">
           <h2 className="text-sg-h3 font-semibold">{t('aprobaciones.decision.decidir')}</h2>

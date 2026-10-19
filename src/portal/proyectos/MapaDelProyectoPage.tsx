@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAuth } from '@wasichai/core'
 import { Button, cn, Table, Tabs, Td, Th } from '@wasichai/ui'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
@@ -283,9 +284,9 @@ function Areas({ proyecto, seleccion, alElegir }: { proyecto: string; seleccion:
           aria-current={a.id === seleccion ? 'true' : undefined}
           className={cn('flex items-center gap-2', a.id === seleccion && 'bg-sg-primary-soft')}
         >
-          <Link to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
+          <EnlaceConRastro to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
             {opcion(a, 'area_type')} · v{texto(a, 'version_number')}
-          </Link>
+          </EnlaceConRastro>
           <EstadoChip objeto="area_of_influence" estado={a.state} />
           {atributo(a, 'calculated_area_ha') !== undefined && atributo(a, 'calculated_area_ha') !== null ? (
             <span className="text-sg-caption">{numeroPe(Number(atributo(a, 'calculated_area_ha')))} ha</span>

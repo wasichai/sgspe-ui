@@ -1,10 +1,10 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import type { SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
 import { Lock } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
@@ -86,12 +86,12 @@ function Grupo({ id }: { id: string }) {
   const grupo = useRegistro('stakeholder', id)
   if (!grupo.data) return <RegistroVinculado objeto="stakeholder" id={id} />
   return (
-    <Link
+    <EnlaceConRastro
       to={`/projects/${encodeURIComponent(texto(grupo.data, 'project'))}/stakeholders/${encodeURIComponent(id)}`}
       className="text-sg-primary-text underline"
     >
       <NombreDelGrupo grupo={grupo.data} />
-    </Link>
+    </EnlaceConRastro>
   )
 }
 

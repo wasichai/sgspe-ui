@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, type LinkProps } from 'react-router'
 import { useVistaActual } from '../componentes/Pagina'
 import { NS } from '../i18n'
 
@@ -50,4 +50,11 @@ export function Rastro() {
       </ol>
     </nav>
   )
+}
+
+// un enlace a un registro que suma la vista actual al rastro (revisión de UX, etapa 6): el Link de las pantallas que llevan a una
+// ficha. un state propio gana
+export function EnlaceConRastro({ state, ...props }: LinkProps) {
+  const paso = useSiguientePaso()
+  return <Link {...props} state={state ?? paso(undefined, typeof props.to === 'string' ? props.to : undefined)} />
 }

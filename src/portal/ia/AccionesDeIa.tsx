@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useRef } from 'react'
@@ -127,9 +128,9 @@ export function AccionesDeIa({
           {borrador ? (
             <>
               {t('accionesIa.borradorListo')}{' '}
-              <Link to={`${base}/engagements/${encodeURIComponent(registro.id)}/minutes`} className="text-sg-primary-text underline">
+              <EnlaceConRastro to={`${base}/engagements/${encodeURIComponent(registro.id)}/minutes`} className="text-sg-primary-text underline">
                 {t('accionesIa.abrirEditor')}
-              </Link>
+              </EnlaceConRastro>
             </>
           ) : resultado.suggestions.length + resultado.candidates.length === 0 ? (
             t('accionesIa.sinResultado')

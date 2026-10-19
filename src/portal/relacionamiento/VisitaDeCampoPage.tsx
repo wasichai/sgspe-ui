@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -296,12 +297,12 @@ function Visita({ visita }: { visita: Registro }) {
                     {lista.map((i) => (
                       <tr key={i.id}>
                         <Td>
-                          <Link
+                          <EnlaceConRastro
                             to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(i.id)}`}
                             className="text-sg-primary-text underline"
                           >
                             {texto(i, 'title')}
-                          </Link>
+                          </EnlaceConRastro>
                         </Td>
                         <Td>
                           <EstadoChip objeto="engagement" estado={i.state} />
@@ -568,12 +569,12 @@ export function VisitasPage() {
                 {lista.map((v) => (
                   <tr key={v.id}>
                     <Td>
-                      <Link
+                      <EnlaceConRastro
                         to={`/projects/${encodeURIComponent(String(atributo(v, 'project')))}/field-visits/${encodeURIComponent(v.id)}`}
                         className="text-sg-primary-text underline"
                       >
                         {texto(v, 'title')}
-                      </Link>
+                      </EnlaceConRastro>
                     </Td>
                     {projectId ? null : (
                       <Td className="font-sg-mono text-sg-caption">

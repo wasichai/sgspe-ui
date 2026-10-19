@@ -1,3 +1,5 @@
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
@@ -29,6 +31,7 @@ export function ProyectosPage() {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const navegar = useNavigate()
+  const telefono = useEsTelefono()
   const leeTodo = useLeeTodosLosProyectos()
   // quien lee todos los proyectos abre en «Todos»: sus asignaciones pueden no existir, y el
   // selector de la cabecera ya le dice «Todos los proyectos»
@@ -140,6 +143,17 @@ export function ProyectosPage() {
           {/* «Nuevo proyecto» solo se le sugiere a quien puede crearlo, no a quien solo lee todos */}
           {can('project', 'CREATE') ? t('proyectos.vacio') : null}
         </VacioDeLista>
+      ) : telefono ? (
+        // en el teléfono, tarjetas (revisión de UX, etapa 8)
+        <ListaEnTarjetas
+          etiqueta={t('proyectos.titulo')}
+          tarjetas={filtrados.map((p) => ({
+            id: p.id,
+            titulo: <EnlaceDeRegistro codigo={texto(p, 'code')} titulo={texto(p, 'name')} ruta={`/projects/${encodeURIComponent(p.id)}/overview`} />,
+            estado: <EstadoChip objeto="project" estado={p.state} />,
+            detalle: [opcion(p, 'project_type'), opcion(p, 'stage')].filter(Boolean).join(' · ') || undefined
+          }))}
+        />
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('proyectos.titulo')}>

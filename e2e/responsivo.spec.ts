@@ -52,7 +52,7 @@ test('a 390 px la lista de compromisos es de tarjetas con su estado y su plazo',
   await page.goto('/projects/p1/commitments')
   const tarjetas = page.getByRole('list', { name: 'Compromisos' })
   const tarjeta = tarjetas.getByRole('listitem').filter({ hasText: 'Reservorio de agua' })
-  await expect(tarjeta.getByRole('link', { name: 'Reservorio de agua' })).toBeVisible()
+  await expect(tarjeta.getByRole('link', { name: 'Reservorio de agua', exact: true })).toBeVisible()
   await expect(tarjeta.getByText('En ejecución')).toBeVisible()
   await expect(page.getByRole('table', { name: 'Compromisos' })).toHaveCount(0)
 })
@@ -71,3 +71,16 @@ test('a 390 px las acciones de la ficha van en una barra fija sobre la barra de 
   await page.locator('main').evaluate((m) => m.scrollTo(0, m.scrollHeight))
   expect((await barra.boundingBox())!.y).toBeCloseTo(caja.y, 0)
 })
+
+// las demás listas también son de tarjetas en el teléfono
+for (const [ruta, lista, titulo] of [
+  ['/projects/p1/stakeholders', 'Grupos de interés', 'Junta directiva comunal'],
+  ['/projects', 'Proyectos', 'Pukaqaqa'],
+  ['/projects/p1/engagements?view=lista', 'Relacionamiento', 'Asamblea de agosto']
+] as const)
+  test(`a 390 px ${ruta} es una lista de tarjetas`, async ({ page }) => {
+    await page.goto(ruta)
+    const tarjetas = page.getByRole('list', { name: lista })
+    await expect(tarjetas.getByRole('listitem').filter({ hasText: titulo }).first()).toBeVisible()
+    await expect(page.getByRole('table', { name: lista })).toHaveCount(0)
+  })

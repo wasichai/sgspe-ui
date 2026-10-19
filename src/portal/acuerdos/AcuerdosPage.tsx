@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -48,6 +49,7 @@ export function AcuerdosPage() {
   const escribe = useEscribeEnProyecto(proyecto)
   const acuerdos = useTodosConTope('agreement', { project: proyecto, sort: 'code', dir: 'asc' })
   const proyectos = useProyectos()
+  const telefono = useEsTelefono()
   const lista = acuerdos.data ?? []
   // ?nuevo=1 abre el alta: así llega BotonCrear desde lo global, ya con el proyecto elegido
   const [busqueda] = useSearchParams()
@@ -78,6 +80,32 @@ export function AcuerdosPage() {
         <FalloDeLectura error={acuerdos.error} alReintentar={() => void acuerdos.refetch()} />
       ) : lista.length === 0 ? (
         <Vacio titulo={t('acuerdos.vacio')}>{t('acuerdos.vacioAyuda')}</Vacio>
+      ) : telefono ? (
+        // en el teléfono, tarjetas con el título, el estado, la vigencia y el proyecto (revisión de UX, etapa 8)
+        <ListaEnTarjetas
+          etiqueta={t('acuerdos.tabla')}
+          tarjetas={lista.map((a) => ({
+            id: a.id,
+            titulo: (
+              <EnlaceDeRegistro
+                codigo={texto(a, 'code')}
+                titulo={texto(a, 'title')}
+                ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
+                desde={t('acuerdos.titulo')}
+                previa={{ objeto: 'agreement', id: a.id }}
+              />
+            ),
+            estado: <EstadoChip objeto="agreement" estado={a.state} />,
+            plazo: (
+              <>
+                <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
+                <Dia valor={texto(a, 'expiry_date')} />
+              </>
+            ),
+            proyecto: proyecto ? undefined : <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === texto(a, 'project'))} />,
+            detalle: opcion(a, 'agreement_type') || undefined
+          }))}
+        />
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('acuerdos.tabla')}>
@@ -102,6 +130,7 @@ export function AcuerdosPage() {
                         titulo={texto(a, 'title')}
                         ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
                         desde={t('acuerdos.titulo')}
+                        previa={{ objeto: 'agreement', id: a.id }}
                       />
                     </Td>
                     {proyecto ? null : (

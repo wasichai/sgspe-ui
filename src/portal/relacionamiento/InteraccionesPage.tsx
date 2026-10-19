@@ -1,3 +1,5 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -167,7 +169,7 @@ function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boo
     : undefined
   return (
     <span className="group block">
-      <Link
+      <EnlaceConRastro
         to={`/projects/${encodeURIComponent(texto(interaccion, 'project'))}/engagements/${encodeURIComponent(interaccion.id)}`}
         title={motivo}
         aria-describedby={motivo ? idMotivo : undefined}
@@ -178,7 +180,7 @@ function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boo
       >
         {texto(interaccion, 'title')}
         {sinActa ? <span className="ml-1 text-sg-warning">· {t('relacionamiento.sinActa')}</span> : null}
-      </Link>
+      </EnlaceConRastro>
       {motivo ? (
         <span id={idMotivo} className={cn('block text-sg-caption text-sg-text-muted', !enLista && 'sr-only group-focus-within:not-sr-only')}>
           {motivo}
@@ -265,6 +267,7 @@ function Calendario({
 function Lista({ interacciones, global }: { interacciones: Registro[]; global: boolean }) {
   const { t } = useTranslation(NS)
   const idDeProyecto = useId()
+  const telefono = useEsTelefono()
   if (interacciones.length === 0)
     return (
       <VacioDeLista conFiltros={false} alLimpiar={() => undefined}>
@@ -273,6 +276,21 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
     )
   // por su día de Lima, la más reciente primero; las que no tienen fecha, al final
   const ordenadas = [...interacciones].sort((a, b) => (diaDe(b) ?? '').localeCompare(diaDe(a) ?? ''))
+  // en el teléfono, tarjetas con el título, el estado, el día y el proyecto (revisión de UX, etapa 8)
+  if (telefono)
+    return (
+      <ListaEnTarjetas
+        etiqueta={t('relacionamiento.titulo')}
+        tarjetas={ordenadas.map((i) => ({
+          id: i.id,
+          titulo: <Evento interaccion={i} enLista />,
+          estado: <EstadoChip objeto="engagement" estado={i.state} />,
+          plazo: <Dia valor={diaDe(i)} />,
+          proyecto: global ? <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} /> : undefined,
+          detalle: [opcion(i, 'engagement_type'), texto(i, 'place')].filter(Boolean).join(' · ') || undefined
+        }))}
+      />
+    )
   return (
     <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
       <Table aria-label={t('relacionamiento.titulo')}>
@@ -435,12 +453,12 @@ function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes
                   elementos={delEstado.map((i) => ({
                     clave: i.id,
                     contenido: (
-                      <Link
+                      <EnlaceConRastro
                         to={`/projects/${encodeURIComponent(texto(i, 'project'))}/engagements/${encodeURIComponent(i.id)}${i.state === 'held' ? '/minutes' : ''}`}
                         className="text-sg-primary-text underline"
                       >
                         {texto(i, 'title')}
-                      </Link>
+                      </EnlaceConRastro>
                     )
                   }))}
                 />

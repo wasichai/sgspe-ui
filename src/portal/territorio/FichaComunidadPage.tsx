@@ -1,3 +1,4 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
@@ -6,7 +7,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
 import { Cargando, Consulta, ErrorDeCarga } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
@@ -197,9 +198,9 @@ function Representante({ organizacion }: { organizacion: Registro }) {
     <div className="mt-3 space-y-1 text-sm">
       <p>
         {t('territorio.comunidad.representa')}:{' '}
-        <Link to={`/actors/${encodeURIComponent(organizacion.id)}`} className="text-sg-primary-text underline">
+        <EnlaceConRastro to={`/actors/${encodeURIComponent(organizacion.id)}`} className="text-sg-primary-text underline">
           {texto(organizacion, 'name')}
-        </Link>
+        </EnlaceConRastro>
       </p>
       {cargos.isPending ? <Cargando /> : null}
       {cargos.isError && !cargos.data ? <ErrorDeCarga error={cargos.error} alReintentar={() => void cargos.refetch()} /> : null}
@@ -258,12 +259,12 @@ function FilaDeGrupo({ grupo }: { grupo: Registro }) {
   const nombre = useNombreDelGrupo(grupo)
   return (
     <li>
-      <Link
+      <EnlaceConRastro
         to={`/projects/${encodeURIComponent(String(atributo(grupo, 'project')))}/stakeholders/${encodeURIComponent(grupo.id)}`}
         className="text-sg-primary-text underline"
       >
         {nombre}
-      </Link>{' '}
+      </EnlaceConRastro>{' '}
       · {opcion(grupo, 'influence_group') || '—'}
     </li>
   )
@@ -299,12 +300,12 @@ function AreasDeMiembros({ miembros }: { miembros: Registro[] }) {
       <ul>
         {areas.registros.map((a) => (
           <li key={a.id}>
-            <Link
+            <EnlaceConRastro
               to={`/projects/${encodeURIComponent(String(atributo(a, 'project')))}/areas/${encodeURIComponent(a.id)}`}
               className="text-sg-primary-text underline"
             >
               {opcion(a, 'area_type')} · v{texto(a, 'version_number')}
-            </Link>{' '}
+            </EnlaceConRastro>{' '}
             · {condicionDe(a.id)}
           </li>
         ))}

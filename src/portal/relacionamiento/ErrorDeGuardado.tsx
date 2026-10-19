@@ -1,6 +1,6 @@
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { Alert } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { useMensajeDeError } from '../componentes/errores'
 import { texto } from '../datos/registros'
 import { NS } from '../i18n'
@@ -15,9 +15,9 @@ export function ErrorDeGuardado({ error, proyecto }: { error: unknown; proyecto:
       <Alert tone="danger">
         <p>{t('relacionamiento.registro.parcial')}</p>
         <p>{mensaje(error.causa)}</p>
-        <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(error.interaccion.id)}`} className="underline">
+        <EnlaceConRastro to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(error.interaccion.id)}`} className="underline">
           {t('relacionamiento.registro.abrirCreada', { titulo: texto(error.interaccion, 'title') })}
-        </Link>
+        </EnlaceConRastro>
       </Alert>
     )
   return <Alert tone="danger">{mensaje(error)}</Alert>
