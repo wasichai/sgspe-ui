@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
@@ -124,22 +125,25 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         }
         primaria={<BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />}
         secundarias={
-          // lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5)
-          <CrearRelacionado
-            proyecto={proyecto}
-            acciones={[
-              {
-                objeto: 'commitment',
-                etiqueta: t('paginas.relacionados.compromiso'),
-                a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
-              },
-              {
-                objeto: [...OBJETOS_DE_QCS],
-                etiqueta: t('paginas.relacionados.qcs'),
-                a: `/projects/${encodeURIComponent(proyecto)}/attention/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
-              }
-            ]}
-          />
+          <>
+            <VerEnElMapa objeto="engagement" registro={interaccion} />
+            {/* lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5) */}
+            <CrearRelacionado
+              proyecto={proyecto}
+              acciones={[
+                {
+                  objeto: 'commitment',
+                  etiqueta: t('paginas.relacionados.compromiso'),
+                  a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
+                },
+                {
+                  objeto: [...OBJETOS_DE_QCS],
+                  etiqueta: t('paginas.relacionados.qcs'),
+                  a: `/projects/${encodeURIComponent(proyecto)}/attention/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
+                }
+              ]}
+            />
+          </>
         }
       />
       <AccionesDeIa

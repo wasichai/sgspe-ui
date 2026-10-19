@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -129,6 +130,7 @@ function Ficha({ queja }: { queja: Registro }) {
         primaria={<BotonesDeTransicion objeto="grievance" registro={queja} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
         secundarias={
           <>
+            <VerEnElMapa objeto="grievance" registro={queja} />
             {edita ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('fichaQueja.comun.editar')}

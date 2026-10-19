@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import type { UseQueryResult } from '@tanstack/react-query'
@@ -86,6 +87,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
         primaria={<TrabajarEnProyecto tipo="locality" id={localidad.id} />}
         secundarias={
           <>
+            <VerEnElMapa objeto="locality" registro={localidad} />
             {puedeEditar ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('territorio.editar')}

@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
@@ -165,6 +166,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
         }
         secundarias={
           <>
+            <VerEnElMapa objeto="social_risk" registro={riesgo} />
             {edita ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('fichaRiesgo.editar')}

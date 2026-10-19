@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -136,16 +137,19 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         }
         primaria={<BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
         secundarias={
-          edita ? (
-            <>
-              <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
-                {t('fichaCompromiso.editar')}
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
-                {t('fichaCompromiso.riesgo')}
-              </Button>
-            </>
-          ) : undefined
+          <>
+            <VerEnElMapa objeto="commitment" registro={compromiso} />
+            {edita ? (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
+                  {t('fichaCompromiso.editar')}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
+                  {t('fichaCompromiso.riesgo')}
+                </Button>
+              </>
+            ) : null}
+          </>
         }
       />
       {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}

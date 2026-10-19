@@ -1,3 +1,4 @@
+import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { useQueries, type UseQueryResult } from '@tanstack/react-query'
@@ -63,9 +64,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
         primaria={<TrabajarEnProyecto tipo="community" id={comunidad.id} />}
         secundarias={
           <>
-            <Button asChild size="sm" variant="secondary">
-              <Link to="/territory">{t('territorio.verEnMapa')}</Link>
-            </Button>
+            <VerEnElMapa objeto="community" registro={comunidad} />
             {puedeEditar ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('territorio.editar')}
