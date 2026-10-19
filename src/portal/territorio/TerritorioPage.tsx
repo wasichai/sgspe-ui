@@ -186,7 +186,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
           </span>
         </Alert>
       ) : null}
-      <div className="grid gap-3 lg:grid-cols-[260px_1fr_300px]">
+      <div className="grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)_300px]">
         <div className="space-y-3">
           <ControlDeCapas
             ids={ids}

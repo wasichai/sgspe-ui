@@ -55,7 +55,7 @@ function Bienvenida() {
         <h2 id="inicio-cuenta" className="text-sg-h3 font-semibold text-sg-text">
           {t('inicio.cuenta')}
         </h2>
-        <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sg-body">
+        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-6 gap-y-2 text-sg-body">
           <dt className="text-sg-text-muted">{t('inicio.usuario')}</dt>
           <dd>{user ? `${user.displayName} (${user.email})` : ''}</dd>
           <dt className="text-sg-text-muted">{t('inicio.organizacion')}</dt>

@@ -30,6 +30,8 @@ import type { Advertencia } from './api'
 import { Advertencias } from './Advertencias'
 import { EvaluacionDrawer } from './EvaluacionDrawer'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
+import { Correo } from '../componentes/Correo'
 
 // S17 · ficha de grupo de interés (screens.md §5): para decidir cómo relacionarse, su peso, su postura (restringida), su
 // historia de evaluaciones hasta la línea base y lo que generó. la postura y la confianza del grupo de interés son las
@@ -109,7 +111,9 @@ function Ficha({ grupo }: { grupo: Registro }) {
           <div className="flex flex-wrap items-center gap-3 text-sm text-sg-text-secondary">
             <EstadoChip objeto="stakeholder" estado={grupo.state} />
             <span>{opcion(grupo, 'stakeholder_scope')}</span>
-            <span>{texto(grupo, 'owner_user_email')}</span>
+            <span>
+              <Correo valor={texto(grupo, 'owner_user_email')} />
+            </span>
             {actor.id ? (
               <Link
                 to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
@@ -179,7 +183,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
           <p className="text-sg-caption text-sg-text-muted">{t('grupos.ficha.pendientesLlegan')}</p>
         </Tarjeta>
       </section>
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           {ultima && definicionDeEvaluacion.data ? (
             <section
@@ -297,7 +301,12 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
             <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`} className="text-sg-primary-text underline">
               {texto(e, 'title')}
             </Link>
-            {dia(e) ? <> · {dia(e)}</> : null}
+            {dia(e) ? (
+              <>
+                {' · '}
+                <Dia valor={dia(e)} />
+              </>
+            ) : null}
           </li>
         ))}
       </ul>

@@ -25,6 +25,7 @@ import { Ejecutado, PestanaEntregas } from './PestanaEntregas'
 import { PestanaReprogramaciones } from './PestanaReprogramaciones'
 import { Verificacion } from './Verificacion'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
 
 // S29 · ficha de compromiso (screens.md §7, flujos 9 a 11): la anatomía de design-system.md §6.1 con las transiciones de WF-D del
 // rol (las de envío, aprobación, cumplimiento, verificación y cierre se comprueban antes con transition-checks), las pestañas
@@ -108,7 +109,11 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <EstadoChip objeto="commitment" estado={compromiso.state} />
             <SituacionDePlazo valor={atributo(compromiso, 'deadline_status')} />
-            {texto(compromiso, 'due_date') ? <span>{diaPe(texto(compromiso, 'due_date'))}</span> : null}
+            {texto(compromiso, 'due_date') ? (
+              <span>
+                <Dia valor={texto(compromiso, 'due_date')} />
+              </span>
+            ) : null}
             <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
           </div>
           {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
@@ -127,7 +132,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
           <BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} />
         </div>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Tabs
           label={texto(compromiso, 'title')}
           tabs={[
@@ -207,7 +212,8 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
   const { t } = useTranslation(NS)
   const solicitantes = useRelacionados('commitment', compromiso.id, 'commitment_stakeholder')
   const proyecto = texto(compromiso, 'project')
-  const valor = (campo: string) => texto(compromiso, campo) || '—'
+  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
+  const valor = (campo: string) => opcion(compromiso, campo) || '—'
   const dia = (campo: string) => (texto(compromiso, campo) ? diaPe(texto(compromiso, campo)) : '—')
   const n = (campo: string) =>
     atributo(compromiso, campo) === null || atributo(compromiso, campo) === undefined ? '—' : numeroPe(Number(atributo(compromiso, campo)))

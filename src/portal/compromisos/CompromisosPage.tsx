@@ -10,13 +10,16 @@ import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
+import { useProyectos } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
-import { diaPe, NS, numeroPe } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { Candidatos } from './Candidatos'
+import { Dia } from '../componentes/Dia'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
+import { Correo } from '../componentes/Correo'
 
 // S28 · lista de compromisos (screens.md §7): lo que se debe, a quién y desde cuándo, con lo vencido a un clic. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076), con el chip de territorio (localidad o comunidad). la API
@@ -67,10 +70,7 @@ export function CompromisosPage() {
       (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
   )
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
-  const nombreDelProyecto = (id: string) => {
-    const p = proyectos.data?.find((x) => x.id === id)
-    return p ? nombreDeProyecto(p) : '…'
-  }
+  const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -138,14 +138,16 @@ export function CompromisosPage() {
                       <Th scope="col">{t('compromisos.columnas.situacion')}</Th>
                       <Th scope="col">{t('compromisos.columnas.vence')}</Th>
                       <Th scope="col">{t('compromisos.columnas.responsable')}</Th>
-                      <Th scope="col">{t('compromisos.columnas.monto')}</Th>
+                      <Th scope="col" className="text-right">
+                        {t('compromisos.columnas.monto')}
+                      </Th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagina.map((c) => (
                       <tr key={c.id}>
                         <Td className="font-sg-mono text-sm">{texto(c, 'code')}</Td>
-                        <Td className="text-sm">
+                        <Td className="min-w-56 text-sm">
                           <Link
                             to={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
                             className="text-sg-primary-text underline"
@@ -160,9 +162,13 @@ export function CompromisosPage() {
                         <Td>
                           <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
                         </Td>
-                        <Td className="text-sm">{texto(c, 'due_date') ? diaPe(texto(c, 'due_date')) : '—'}</Td>
-                        <Td className="text-sm">{texto(c, 'owner_user_email') || '—'}</Td>
-                        <Td className="text-sm tabular-nums">{montoPe(atributo(c, 'amount'), atributo(c, 'currency'))}</Td>
+                        <Td className="text-sm">
+                          <Dia valor={texto(c, 'due_date')} />
+                        </Td>
+                        <Td className="text-sm">
+                          <Correo valor={texto(c, 'owner_user_email')} />
+                        </Td>
+                        <Td className="text-right text-sm tabular-nums">{montoPe(atributo(c, 'amount'), atributo(c, 'currency'))}</Td>
                       </tr>
                     ))}
                   </tbody>

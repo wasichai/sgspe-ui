@@ -130,7 +130,7 @@ export function MapaDelProyectoPage() {
           ) : null}
         </div>
       </div>
-      <div className="grid gap-3 lg:grid-cols-[260px_1fr]">
+      <div className="grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="space-y-3">
           <ControlDeCapas
             ids={IDS}

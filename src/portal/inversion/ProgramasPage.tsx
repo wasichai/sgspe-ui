@@ -13,7 +13,7 @@ import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
+import { useProyectos } from '../contexto/proyectos'
 import { rutaDeFicha } from '../datos/fichas'
 import { desglose, useTablero, type Indicador } from '../datos/indicadores'
 import { anioEnLima, APORTE_TERMINADO, MONEDA_POR_DEFECTO } from '../datos/inversion'
@@ -23,6 +23,7 @@ import { useContextFilters } from '../shell/context'
 import { ConsultaDeTablero, indicadorDe, useTableroDisponible } from '../tableros/comunes'
 import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, presupuestoDelPrograma, PresupuestoPorMoneda } from './cifras'
 import { opcion } from '../datos/opciones'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 
 // S42 · programas e inversión (screens.md §10): ¿cuánto del tope de la campaña queda, cómo avanzan los programas y qué aportes están
 // en curso? la misma página con alcance global (columna Proyecto, sin altas) o de un proyecto (ASM-076). las cifras salen del
@@ -124,12 +125,9 @@ function Cifras({ indicadores }: { indicadores: Indicador[] }) {
   )
 }
 
-function useNombreDelProyecto(): (id: string) => string {
+function useNombreDelProyecto(): (id: string) => React.ReactNode {
   const proyectos = useProyectos()
-  return (id) => {
-    const p = proyectos.data?.find((x) => x.id === id)
-    return p ? nombreDeProyecto(p) : '…'
-  }
+  return (id) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
 }
 
 function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?: Indicador[] }) {

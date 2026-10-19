@@ -137,7 +137,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
           <BotonesDeTransicion objeto="social_contribution" registro={aporte} proyecto={proyecto} comprobarAntes={COMPROBAR} />
         </div>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Tabs label={titulo} tabs={pestanas} />
         {/* en teléfono, «Antes de aprobar» sube antes de los ítems (screens.md S44, Responsive) */}
         <aside className="order-first space-y-4 lg:order-none">
@@ -189,7 +189,8 @@ function Resumen({ aporte }: { aporte: Registro }) {
 
 function ParaQue({ aporte }: { aporte: Registro }) {
   const { t } = useTranslation(NS)
-  const valor = (campo: string) => texto(aporte, campo) || '—'
+  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
+  const valor = (campo: string) => opcion(aporte, campo) || '—'
   const vinculo = (objeto: string, campo: string) => (texto(aporte, campo) ? <RegistroVinculado objeto={objeto} id={texto(aporte, campo)} /> : '—')
   const beneficiarios = atributo(aporte, 'beneficiaries_count')
   return (

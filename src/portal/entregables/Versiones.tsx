@@ -11,6 +11,8 @@ import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { rutaDeLaVersion, seccionDelTipo, useTiposDeEntregable, type FormatoDeArchivo } from './contrato'
 import { rotuloDeOpcion } from '../datos/opciones'
+import { Huella } from '../componentes/Huella'
+import { Correo } from '../componentes/Correo'
 
 // las versiones emitidas de S50 (deliverables.md §8.4 y §12): cada una con su número, su revisión, su nivel, quién y cuándo, la
 // huella de su PDF y las secciones asistidas por IA. las descargas, por nivel y permiso: INTERNO (PDF y DOCX) con
@@ -72,8 +74,10 @@ export function Versiones({ entregable }: { entregable: Registro }) {
                         <Td className="text-sm">{texto(v, 'revision')}</Td>
                         <Td className="text-sm">{rotuloDeOpcion(nivel)}</Td>
                         <Td className="text-sm">{texto(v, 'issued_at') ? fechaYHoraPe(new Date(texto(v, 'issued_at'))) : '—'}</Td>
-                        <Td className="text-sm">{texto(v, 'issued_by_user_email') || '—'}</Td>
-                        <Td className="break-all font-sg-mono text-sg-caption">{texto(v, 'pdf_sha256')}</Td>
+                        <Td className="text-sm">
+                          <Correo valor={texto(v, 'issued_by_user_email')} />
+                        </Td>
+                        <Td>{texto(v, 'pdf_sha256') ? <Huella valor={texto(v, 'pdf_sha256')} /> : '—'}</Td>
                         <Td className="text-sm">{conIa(v) || '—'}</Td>
                         <Td className="text-sm">
                           <div className="flex flex-wrap gap-1">

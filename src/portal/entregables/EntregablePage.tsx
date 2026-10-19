@@ -103,12 +103,12 @@ function Entregable({ entregable }: { entregable: Registro }) {
               hasta: diaPe(texto(entregable, 'period_end_date')) || '—'
             })}
           </span>
-          <span>{t('entregables.pagina.niveles', { niveles: NIVELES_DE_ENTREGABLE.join(', ') })}</span>
+          <span>{t('entregables.pagina.niveles', { niveles: NIVELES_DE_ENTREGABLE.map(rotuloDeOpcion).join(', ') })}</span>
         </div>
       </header>
       <CaminoDeEstados estado={entregable.state} />
       <AccionesDelEntregable entregable={entregable} />
-      <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="space-y-3">
           <PanelDelBorrador entregable={entregable} secciones={lista} />
           {tipos.isError ? <p className="text-sg-caption text-sg-warning">{t('entregables.seccion.tiposConError')}</p> : null}
@@ -146,7 +146,7 @@ function Entregable({ entregable }: { entregable: Registro }) {
         </aside>
         <div className="space-y-4">
           {actual ? (
-            <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+            <div className="grid gap-4 xl:grid-cols-[2fr_minmax(0,1fr)]">
               <EditorDeSeccion
                 key={`${vigente?.id}:${vigente?.updatedAt}`}
                 entregable={entregable}

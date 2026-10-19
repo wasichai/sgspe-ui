@@ -15,6 +15,8 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { hoyEnLima } from '../datos/fechas'
 import { atributo, texto, useActualizar, useCrear, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
+import { Dia } from '../componentes/Dia'
+import { Correo } from '../componentes/Correo'
 
 // las pestañas «Acciones e hitos» y «Dependencias» de S29 (screens.md §7; RF-COM-004, RF-COM-006): las acciones internas y
 // los plazos parciales no cambian el estado del compromiso; una dependencia bloqueante abierta impide registrar el
@@ -75,8 +77,12 @@ export function PestanaSeguimiento({ compromiso, escribe }: { compromiso: Regist
                 return (
                   <tr key={a.id}>
                     <Td className="text-sm">{texto(a, 'description')}</Td>
-                    <Td className="text-sm">{texto(a, 'action_date') ? diaPe(texto(a, 'action_date')) : '—'}</Td>
-                    <Td className="text-sm">{texto(a, 'owner_user_email') || '—'}</Td>
+                    <Td className="text-sm">
+                      <Dia valor={texto(a, 'action_date')} />
+                    </Td>
+                    <Td className="text-sm">
+                      <Correo valor={texto(a, 'owner_user_email')} />
+                    </Td>
                     <Td className="text-sm">
                       <input
                         type="checkbox"
@@ -126,7 +132,9 @@ export function PestanaSeguimiento({ compromiso, escribe }: { compromiso: Regist
               {hitos.data.map((h) => (
                 <tr key={h.id}>
                   <Td className="text-sm">{texto(h, 'description')}</Td>
-                  <Td className="text-sm">{texto(h, 'due_date') ? diaPe(texto(h, 'due_date')) : '—'}</Td>
+                  <Td className="text-sm">
+                    <Dia valor={texto(h, 'due_date')} />
+                  </Td>
                   <Td className="text-sm">
                     {texto(h, 'reached_date') ? (
                       diaPe(texto(h, 'reached_date'))

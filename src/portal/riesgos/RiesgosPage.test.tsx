@@ -141,7 +141,7 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     fetch = mockFetch(rutas())
     abrir('/risks/register', RELACIONISTA, RELACIONES_EN_RIESGOS)
     const tabla = await screen.findByRole('table', { name: 'Riesgos' })
-    expect(within(tabla).getAllByText('PRJ-01 · Pukaqaqa').length).toBeGreaterThan(0)
+    expect(within(tabla).getAllByTitle('Pukaqaqa')[0]).toHaveTextContent('PRJ-01 · Pukaqaqa')
     expect(screen.queryByRole('button', { name: 'Identificar riesgo' })).not.toBeInTheDocument()
   })
 

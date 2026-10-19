@@ -111,7 +111,7 @@ function ParteTerritorial({ objeto, consulta }: { objeto: 'locality' | 'communit
   const sinUnidad = noLee(f, ['administrative_unit'], [`${objeto}.administrative_unit`])
   const sinAreas = noLee(f, ['area_of_influence', 'area_of_influence_member'])
   return (
-    <dl role="group" aria-label={t('fichaTerritorial.zonas')} className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+    <dl role="group" aria-label={t('fichaTerritorial.zonas')} className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1">
       <dt className="text-sg-text-muted">{t('fichaTerritorial.distrito')}</dt>
       <dd>{f.administrativeUnit?.name ?? (sinUnidad ? <NoDisponible /> : '—')}</dd>
       {objeto === 'locality' ? (

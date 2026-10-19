@@ -8,7 +8,7 @@ import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { desglose, useTablero, type Indicador } from '../datos/indicadores'
 import { Grafico } from '../graficos/Grafico'
-import { NS, numeroPe } from '../i18n'
+import { NS, numeroPe, periodoPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { Barras, ConsultaDeTablero, FiltrosDeTablero, indicadorDe, NotasDeIndicador, useFiltrosDeTablero, Zona } from '../tableros/comunes'
 import { rotuloDeFila } from '../datos/opciones'
@@ -177,7 +177,7 @@ function Tendencia({ indicador }: { indicador: Indicador }) {
   const opciones = useMemo(
     () => ({
       grid: { left: 40, right: 16, top: 24, bottom: 32 },
-      xAxis: { type: 'category', data: serie.map((s) => s.period) },
+      xAxis: { type: 'category', data: serie.map((s) => periodoPe(s.period)) },
       yAxis: { type: 'value' },
       tooltip: { trigger: 'axis' },
       legend: {},
@@ -195,7 +195,7 @@ function Tendencia({ indicador }: { indicador: Indicador }) {
       opciones={opciones}
       datos={{
         columnas: [t('tableroAtencion.tendencia.periodo'), t('tableroAtencion.tendencia.recibidas'), t('tableroAtencion.tendencia.cerradas')],
-        filas: serie.map((s) => [s.period, cifra(s.received), cifra(s.closed)])
+        filas: serie.map((s) => [periodoPe(s.period), cifra(s.received), cifra(s.closed)])
       }}
     />
   )

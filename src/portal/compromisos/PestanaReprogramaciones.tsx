@@ -10,6 +10,7 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { diaPe, fechaPe, NS } from '../i18n'
 import { ESTADOS_REPROGRAMABLES, useReprogramar } from './reprogramaciones'
+import { Dia } from '../componentes/Dia'
 
 // la pestaña Reprogramaciones de S29 (screens.md §7, RF-COM-003): el historial inmutable de fechas y el diálogo de
 // reprogramación (fecha anterior, nueva, motivo y «acordado con el grupo de interés»). solo en approved, in_progress o blocked,
@@ -65,8 +66,12 @@ export function PestanaReprogramaciones({ compromiso, escribe }: { compromiso: R
             {historial.data.map((r) => (
               <tr key={r.id}>
                 <Td className="text-sm">{r.createdAt ? fechaPe(new Date(r.createdAt)) : '—'}</Td>
-                <Td className="text-sm">{diaPe(texto(r, 'previous_due_date'))}</Td>
-                <Td className="text-sm">{diaPe(texto(r, 'new_due_date'))}</Td>
+                <Td className="text-sm">
+                  <Dia valor={texto(r, 'previous_due_date')} />
+                </Td>
+                <Td className="text-sm">
+                  <Dia valor={texto(r, 'new_due_date')} />
+                </Td>
                 <Td className="text-sm">{texto(r, 'reschedule_reason')}</Td>
                 <Td className="text-sm">{atributo(r, 'agreed_with_stakeholder') === true ? t('comun.si') : t('comun.no')}</Td>
               </tr>

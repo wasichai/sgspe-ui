@@ -340,7 +340,7 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
         </AvisoDeConflicto>
       ) : null}
       {leeActa ? (
-        <div className="grid gap-4 lg:grid-cols-[200px_1fr_260px]">
+        <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)_260px]">
           <nav aria-label={t('relacionamiento.acta.estructura')} className="space-y-1 text-sm">
             <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('relacionamiento.acta.estructura')}</h2>
             {secciones.map((s) => (

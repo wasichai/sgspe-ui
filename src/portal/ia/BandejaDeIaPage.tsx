@@ -84,7 +84,7 @@ export function BandejaDeIaPage() {
       </header>
       {estado.data && !estado.data.enabled ? <Alert tone="notice">{t('bandejaIa.sinIaOrganizacion')}</Alert> : null}
       {sugerencias.truncado || candidatos.truncado ? <Alert tone="warning">{t('bandejaIa.truncado', { n: numeroPe(propuestas.length) })}</Alert> : null}
-      <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-3">
           <div className="flex flex-wrap gap-3">
             <Campo etiqueta={t('bandejaIa.filtros.tipo')}>

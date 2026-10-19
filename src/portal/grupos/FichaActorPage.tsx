@@ -14,6 +14,7 @@ import { usePedir } from '../datos/http'
 import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
 
 // S18 · ficha de actor (screens.md §5): la persona u organización detrás de uno o varios grupos de interés, con sus cargos,
 // su red de relaciones, los proyectos donde es grupo de interés y sus medios de contacto con consentimiento. el actor es
@@ -99,7 +100,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
           ) : null}
         </div>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <section aria-label={t('grupos.actor.cargos')} className="space-y-2">
             <Table aria-label={t('grupos.actor.tablaCargos')}>
@@ -210,7 +211,8 @@ function FilaDeCargo({ cargo, tipo }: { cargo: Registro; tipo: Tipo }) {
       </Td>
       <Td className="text-sm">{opcion(cargo, 'position_status')}</Td>
       <Td className="text-sm">
-        {texto(cargo, 'term_start_date') || '…'} – {texto(cargo, 'term_end_date') || '…'}
+        {texto(cargo, 'term_start_date') ? <Dia valor={texto(cargo, 'term_start_date')} /> : '…'} –{' '}
+        {texto(cargo, 'term_end_date') ? <Dia valor={texto(cargo, 'term_end_date')} /> : '…'}
       </Td>
     </tr>
   )
@@ -224,7 +226,9 @@ function FilaDeRelacion({ relacion, otro }: { relacion: Registro; otro: 'to' | '
       <Td className="text-sm">
         <ActorVinculado objeto={persona ? 'person' : 'organization'} id={persona ?? atributo<string>(relacion, `${otro}_organization`)} enlazar />
       </Td>
-      <Td className="text-sm">{texto(relacion, 'start_date') || '—'}</Td>
+      <Td className="text-sm">
+        <Dia valor={texto(relacion, 'start_date')} />
+      </Td>
     </tr>
   )
 }

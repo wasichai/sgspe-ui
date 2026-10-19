@@ -12,7 +12,7 @@ import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { desglose, useTablero, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { atributo, texto, useRegistros } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
-import { diaPe, NS, numeroPe } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import {
   Barras,
@@ -26,6 +26,8 @@ import {
   Zona
 } from '../tableros/comunes'
 import { rotuloDeFila } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
+import { Correo } from '../componentes/Correo'
 
 // S27 · tablero de compromisos (dashboards.md §5.6, screens.md §12): GET /api/sgspe/dashboards/commitments en una llamada, con
 // los filtros de periodo, territorio, campaña y responsable (owner, que aplican KPI-COM-03, 04, 06 y 09; los demás lo declaran
@@ -299,8 +301,12 @@ function Pendientes({ proyecto, filtros }: { proyecto?: string; filtros: Filtros
                   <Td>
                     <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
                   </Td>
-                  <Td className="text-sm">{texto(c, 'due_date') ? diaPe(texto(c, 'due_date')) : '—'}</Td>
-                  <Td className="text-sm">{texto(c, 'owner_user_email') || '—'}</Td>
+                  <Td className="text-sm">
+                    <Dia valor={texto(c, 'due_date')} />
+                  </Td>
+                  <Td className="text-sm">
+                    <Correo valor={texto(c, 'owner_user_email')} />
+                  </Td>
                 </tr>
               ))}
             </tbody>

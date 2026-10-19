@@ -167,7 +167,7 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
           <BotonesDeTransicion objeto="incident" registro={incidente} proyecto={proyecto} comprobarAntes={['close']} />
         </div>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Tabs
           label={texto(incidente, 'code')}
           tabs={[

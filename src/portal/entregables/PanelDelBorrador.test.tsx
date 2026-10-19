@@ -75,15 +75,18 @@ describe('panel del borrador', () => {
     expect(await screen.findByText('Estado del borrador: LISTO')).toBeInTheDocument()
   })
 
-  it('abre el PDF de cada nivel con su marca, descarga el DOCX INTERNO y dice la huella de cada candidata', async () => {
+  it('abre el PDF de cada nivel con su marca, descarga el DOCX INTERNO y dice la huella de cada candidata, abreviada y copiable', async () => {
     abrir([
       estado([() => jsonResponse(BORRADOR_LISTO)]),
       { path: '/sgspe/deliverables/d1/draft/content', responder: () => new Response('%PDF-1.7', { headers: { 'Content-Type': 'application/pdf' } }) }
     ])
     const panel = await screen.findByRole('region', { name: 'Borrador' })
-    expect(await within(panel).findByText(`Huella de lo que se emitirá (INTERNO): ${SHA_INTERNO}`)).toBeInTheDocument()
-    await usuario().click(within(panel).getByRole('button', { name: 'Ver el PDF EXTERNO' }))
-    expect(await screen.findByRole('dialog', { name: 'Borrador EXTERNO (con la marca BORRADOR)' })).toBeInTheDocument()
+    const huella = await within(panel).findByRole('group', { name: 'Huella de lo que se emitirá («Interno»)' })
+    expect(within(huella).getByText(`${SHA_INTERNO.slice(0, 12)}…`)).toHaveAttribute('title', SHA_INTERNO)
+    expect(within(huella).getByText(SHA_INTERNO)).toBeInTheDocument()
+    expect(within(huella).getByRole('button', { name: 'Copiar la huella' })).toBeInTheDocument()
+    await usuario().click(within(panel).getByRole('button', { name: 'Ver el PDF «Externo»' }))
+    expect(await screen.findByRole('dialog', { name: 'Borrador «Externo» (con la marca BORRADOR)' })).toBeInTheDocument()
     await waitFor(() => expect(red!.a('GET', /\/draft\/content\?level=EXTERNO&format=pdf$/)).toHaveLength(1))
     // el diálogo es modal: se cierra antes de tocar el panel
     await usuario().keyboard('{Escape}')

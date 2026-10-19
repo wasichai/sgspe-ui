@@ -94,7 +94,7 @@ describe('tablero de relacionamiento', () => {
       within(screen.getByRole('table', { name: 'Reuniones al mes frente a la meta' }))
         .getAllByRole('cell')
         .map((c) => c.textContent)
-    ).toEqual(['2026-10', '3', '2'])
+    ).toEqual(['oct. 2026', '3', '2'])
     expect(screen.getByText('3 / 4 · %')).toBeInTheDocument()
     // F4: las preguntas derivadas a QCS confidenciales que la cuenta no lee no cuentan, y la cifra lo dice
     expect(within(screen.getAllByRole('region', { name: 'Inquietudes resueltas' }).at(-1)!).getByRole('note')).toHaveTextContent(

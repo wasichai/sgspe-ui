@@ -11,13 +11,15 @@ import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
+import { useProyectos } from '../contexto/proyectos'
 import { estaAbierta, OBJETOS_DE_QCS, plazoQueCorre, rutaDeQcs, type ObjetoDeQcs } from '../datos/atencion'
 import { useIndicador, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { atributo, campoDe, texto, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { opcion } from '../datos/opciones'
+import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
+import { Correo } from '../componentes/Correo'
 
 // S35 · lista unificada de QCS (screens.md §8): ¿qué QCS vence primero y quién la tiene? tres objetos con ciclos distintos (WF-E1,
 // WF-E2, WF-E3) que la lista une para atender por plazo, sin mezclar sus estados: cada fila lleva el estado de su workflow y el plazo
@@ -113,10 +115,7 @@ export function AtencionPage() {
   const tarjeta = (titulo: string, consulta: { data?: Indicador; error: unknown; isPending: boolean }) => (
     <KpiCard titulo={titulo} indicador={consulta.data} cargando={consulta.isPending} error={consulta.error} />
   )
-  const nombreDelProyecto = (id: string) => {
-    const p = proyectos.data?.find((x) => x.id === id)
-    return p ? nombreDeProyecto(p) : '…'
-  }
+  const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -244,7 +243,7 @@ function FilaDeQcs({
   fila: Fila
   conProyecto: boolean
   conSeveridad: boolean
-  nombreDelProyecto: (id: string) => string
+  nombreDelProyecto: (id: string) => React.ReactNode
 }) {
   const { t } = useTranslation(NS)
   const { objeto, registro } = fila
@@ -274,7 +273,9 @@ function FilaDeQcs({
           <span className="text-sg-text-muted">{t('atencion.sinPlazo')}</span>
         )}
       </Td>
-      <Td className="text-sm">{texto(registro, 'owner_user_email') || '—'}</Td>
+      <Td className="text-sm">
+        <Correo valor={texto(registro, 'owner_user_email')} />
+      </Td>
       <Td className="text-sm">{atributo(registro, 'anonymous') === true ? t('atencion.anonima') : t('atencion.identificada')}</Td>
     </tr>
   )

@@ -3,6 +3,7 @@ import { Alert, cn } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
+import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
 import { NS } from '../i18n'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
 import { LEE_PROPUESTAS } from '../shell/leePropuestas'
@@ -74,7 +75,7 @@ export function ProyectoLayout() {
     <div className="mx-auto max-w-[1440px] space-y-4">
       <BarraDeContexto />
       <Rastro />
-      <nav aria-label={t('contexto.subnav')} className="flex gap-1 overflow-x-auto border-b border-sg-border">
+      <PestanasDesplazables etiqueta={t('contexto.subnav')}>
         {pestanas.map((p) => (
           <NavLink
             key={p}
@@ -89,7 +90,7 @@ export function ProyectoLayout() {
             {t(`contexto.pestanas.${p}`)}
           </NavLink>
         ))}
-      </nav>
+      </PestanasDesplazables>
       {asignaciones.isSuccess && !escribe ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
       <Outlet />
     </div>

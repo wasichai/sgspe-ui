@@ -213,7 +213,7 @@ describe('S42 · programas e inversión', () => {
     abrir({ ruta: '/programs', camino: '/programs' })
     const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
     expect(within(programas).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
-    expect(await within(programas).findByText('PRJ-01 · Pukaqaqa')).toBeInTheDocument()
+    expect(await within(programas).findByTitle('Pukaqaqa')).toHaveTextContent('PRJ-01 · Pukaqaqa')
     expect(screen.getByText('Para registrar un aporte o un programa, elija un proyecto.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo aporte' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Tablero de inversión' })).toHaveAttribute('href', '/programs/dashboard')

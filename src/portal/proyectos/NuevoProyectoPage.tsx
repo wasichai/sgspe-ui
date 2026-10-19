@@ -282,7 +282,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   }
 
   return (
-    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_1fr]">
+    <div className="mx-auto grid max-w-[1200px] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
       <div className="space-y-2">
         <h1 className="text-sg-h2 font-semibold">{proyecto ? t('proyectos.asistente.completar') : t('proyectos.asistente.titulo')}</h1>
         <Pasos pasos={pasos} actual={paso} visitados={visitados} alIr={(i) => void moverA(i, true)()} />
@@ -447,7 +447,7 @@ function Revision({ proyecto }: { proyecto: Registro }) {
   return (
     <section className="space-y-3">
       <h3 className="font-medium">{t('proyectos.asistente.revisar')}</h3>
-      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+      <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
         {CAMPOS_DEL_PROYECTO.map((c) => (
           <div key={c} className="contents">
             <dt className="text-sg-text-muted">{campoDe(definicion.data, c)?.label ?? c}</dt>

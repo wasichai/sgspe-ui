@@ -38,7 +38,7 @@ export function LugaresDelPunto({
       {datos ? (
         datos.locality || datos.community || datos.administrativeUnit || datos.unavailable.length > 0 ? (
           <>
-            <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1">
               <dt className="text-sg-text-muted">{t('ubicar.unidad')}</dt>
               <dd>{celda('administrative_unit', datos.administrativeUnit, datos.administrativeUnit?.level)}</dd>
               <dt className="text-sg-text-muted">{t('ubicar.localidad')}</dt>

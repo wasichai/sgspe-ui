@@ -101,7 +101,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
       </header>
       {descargar.isError ? <Alert tone="danger">{mensaje(descargar.error)}</Alert> : null}
       {!puedeDescargar ? <Alert tone="notice">{t('documentos.ficha.noDescarga')}</Alert> : null}
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           {proyecto ? (
             <AccionesDeIa

@@ -10,10 +10,11 @@ import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { hoyEnLima } from '../datos/fechas'
 import { rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
-import { diaPe, NS, numeroPe } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { origenDe, TareaDrawer } from './TareaDrawer'
 import { opcion } from '../datos/opciones'
+import { Dia } from '../componentes/Dia'
 
 // S47 · mis tareas (screens.md §11, WF-N): ¿qué tengo que hacer hoy y qué se me venció? en /tasks, las asignadas a quien mira
 // (assignee_user_id, indexado); en /projects/:projectId/tasks, las del proyecto, con «Para tomar»: las de escalamiento de
@@ -139,7 +140,9 @@ function TablaDeTareas({ tareas, vacio, alAbrir }: { tareas: Registro[]; vacio: 
                 </Td>
                 <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td>
                 <Td className="space-x-2 text-sm">
-                  <span>{texto(x, 'due_date') ? diaPe(texto(x, 'due_date')) : '—'}</span>
+                  <span>
+                    <Dia valor={texto(x, 'due_date')} />
+                  </span>
                   <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
                 </Td>
                 <Td>
@@ -177,7 +180,7 @@ function Tablero({ tareas, alAbrir }: { tareas: Registro[]; alAbrir: (tarea: Reg
                   >
                     <span className="block font-medium">{texto(x, 'title')}</span>
                     <span className="flex flex-wrap items-center gap-1 text-sg-caption text-sg-text-muted">
-                      {texto(x, 'due_date') ? diaPe(texto(x, 'due_date')) : '—'}
+                      <Dia valor={texto(x, 'due_date')} />
                       <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
                     </span>
                   </button>

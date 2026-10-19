@@ -111,7 +111,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         rotulo={texto(interaccion, 'title')}
         casos={casosDeInteraccion(interaccion)}
       />
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Tabs
           label={texto(interaccion, 'title')}
           tabs={[

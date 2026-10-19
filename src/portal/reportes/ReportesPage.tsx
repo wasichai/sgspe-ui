@@ -22,6 +22,7 @@ import { RegistroDeRiesgos } from './RegistroDeRiesgos'
 import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { EntregablesDeReportes } from '../entregables/EntregablesDeReportes'
 import { opcion } from '../datos/opciones'
+import { Correo } from '../componentes/Correo'
 
 // S49: desde F8 los entregables (EntregablesDeReportes); de F2 a F4 · reportes y exportaciones: el registro de grupos de interés, desde F3 la matriz de compromisos
 // (MatrizDeCompromisos, con EXPORT sobre commitment) y desde F4 el registro de quejas, consultas y solicitudes (RegistroDeAtencion,
@@ -120,7 +121,9 @@ export function ReportesPage() {
                 {(historial.data?.content ?? []).map((e) => (
                   <tr key={e.id}>
                     <Td className="text-sm">{atributo(e, 'exported_at') ? fechaPe(new Date(String(atributo(e, 'exported_at')))) : '—'}</Td>
-                    <Td className="text-sm">{texto(e, 'exporter_user_email') || '—'}</Td>
+                    <Td className="text-sm">
+                      <Correo valor={texto(e, 'exporter_user_email')} />
+                    </Td>
                     <Td className="text-sm">{texto(e, 'object_name')}</Td>
                     <Td className="text-sm">{opcion(e, 'disclosure_level')}</Td>
                     <Td className="text-sm tabular-nums">

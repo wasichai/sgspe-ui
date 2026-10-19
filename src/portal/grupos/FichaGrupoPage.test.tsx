@@ -284,7 +284,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
       ...base(GERENCIA_SOCIAL, true)
     ])
     const cola = await screen.findByRole('complementary', { name: 'Qué generó' })
-    expect(await within(cola).findByText(/2026-08-20/)).toBeInTheDocument()
+    expect(await within(cola).findByText('20 ago. 2026')).toBeInTheDocument()
   })
 
   it('sin leer el historial de evaluaciones la sección dice "No disponible" y no lo pide', async () => {

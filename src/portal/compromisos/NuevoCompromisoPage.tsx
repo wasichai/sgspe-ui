@@ -358,7 +358,7 @@ function Asistente() {
     <section className="mx-auto max-w-[1100px] space-y-4">
       <h1 className="text-sg-h1 font-semibold">{t('nuevoCompromiso.titulo')}</h1>
       <p className="text-sm text-sg-text-secondary">{t('nuevoCompromiso.ayuda')}</p>
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <Pasos pasos={PASOS.map((p) => t(`nuevoCompromiso.pasos.${p}`))} actual={actual} visitados={visitados} alIr={(i) => void ir(i)} />
         <form
           className="space-y-3"
