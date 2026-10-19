@@ -1,3 +1,4 @@
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -324,6 +325,8 @@ function TopeDeLaCampana({ aporte, total }: { aporte: Registro; total: string | 
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la solicitud de origen, el acuerdo, el compromiso
 // y la campaña) y lo que lo sustenta (sus evidencias)
 function Trazabilidad({ aporte, evidencias }: { aporte: Registro; evidencias: Registro[] }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const leeSolicitudes = can('stakeholder_request', 'READ')
@@ -365,7 +368,7 @@ function Trazabilidad({ aporte, evidencias }: { aporte: Registro; evidencias: Re
             <ul>
               {evidencias.map((e) => (
                 <li key={e.id}>
-                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                 </li>
               ))}
             </ul>

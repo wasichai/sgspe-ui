@@ -1,3 +1,4 @@
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -489,6 +490,8 @@ function FilaDePregunta({
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la visita de campo, los grupos de interés y los
 // temas), qué generó (los compromisos y las QCS que nacieron de ella) y lo que la sustenta (sus evidencias)
 function Trazabilidad({ interaccion }: { interaccion: Registro }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const proyecto = String(atributo(interaccion, 'project'))
@@ -553,7 +556,7 @@ function Trazabilidad({ interaccion }: { interaccion: Registro }) {
             <ul>
               {evidencias.data.content.map((e) => (
                 <li key={e.id}>
-                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                 </li>
               ))}
             </ul>

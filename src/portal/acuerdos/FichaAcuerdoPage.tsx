@@ -1,3 +1,4 @@
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -63,6 +64,8 @@ const CAMINO = ['draft', 'in_negotiation', 'active', 'concluded']
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la asamblea que lo autoriza y la comunidad),
 // qué generó (los compromisos que lo implementan) y lo que lo sustenta (sus evidencias)
 function Trazabilidad({ acuerdo }: { acuerdo: Registro }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const compromisos = useTodos('commitment', { agreement: acuerdo.id }, can('commitment', 'READ'))
@@ -107,7 +110,7 @@ function Trazabilidad({ acuerdo }: { acuerdo: Registro }) {
             <ul>
               {evidencias.data.content.map((e) => (
                 <li key={e.id}>
-                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                 </li>
               ))}
             </ul>

@@ -1,10 +1,10 @@
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { useSumasDeConteos } from '../datos/conteos'
-import { rutaDeFicha } from '../datos/fichas'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import type { UseQueryResult } from '@tanstack/react-query'
@@ -321,6 +321,8 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
 // evidencias), con los grupos fijos de PanelDeTrazabilidad. una queja confidencial que quien mira no lee se dice «Registro
 // reservado» (RegistroVinculado); una lectura que falló lo dice al pie
 function Trazabilidad({ compromiso }: { compromiso: Registro }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const proyecto = texto(compromiso, 'project')
   const interaccion = useRegistro('engagement', atributo<string>(compromiso, 'origin_engagement'))
@@ -400,7 +402,7 @@ function Trazabilidad({ compromiso }: { compromiso: Registro }) {
               <ul>
                 {evidencias.data.content.map((e) => (
                   <li key={e.id}>
-                    <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                    <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                   </li>
                 ))}
               </ul>

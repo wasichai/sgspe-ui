@@ -17,7 +17,7 @@ export function useRastro(): Paso[] {
 }
 
 // el estado para un Link que agrega la vista actual al rastro. sin etiqueta, la vista se nombra con el título de la página
-// (useVistaActual): todo enlace a un registro suma su paso (revisión de UX, etapa 6). un enlace a la misma vista (destino) no
+// (useVistaActual): todo enlace a un registro suma su paso (revisión de UX, etapa 6). un enlace a la misma pantalla (destino) no
 // suma nada, y la vista que ya es el último paso no se repite
 export function useSiguientePaso(): (etiqueta?: string, destino?: string) => { rastro: Paso[] } {
   const rastro = useRastro()
@@ -26,7 +26,8 @@ export function useSiguientePaso(): (etiqueta?: string, destino?: string) => { r
   return (etiqueta, destino) => {
     const ruta = pathname + search
     const nombre = etiqueta || vista
-    if (!nombre || destino === ruta || destino === pathname || rastro.at(-1)?.ruta === ruta) return { rastro }
+    // la misma pantalla con otra búsqueda (una vista previa, ?peek=) tampoco es un paso
+    if (!nombre || destino?.split('?')[0] === pathname || rastro.at(-1)?.ruta === ruta) return { rastro }
     return { rastro: [...rastro, { etiqueta: nombre, ruta }].slice(-8) }
   }
 }

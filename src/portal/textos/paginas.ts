@@ -38,6 +38,7 @@ export const ES_PAGINAS = {
     terminales: 'Otros cierres'
   },
   crearRelacionado: 'Crear relacionado',
+  vistaPrevia: { titulo: 'Vista previa', abrirFicha: 'Abrir ficha', abrir: 'Vista previa de {{nombre}}' },
   relacionados: { compromiso: 'Registrar compromiso', qcs: 'Registrar queja, consulta o solicitud' },
   formulario: {
     anterior: 'Anterior',
@@ -96,6 +97,7 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     terminales: 'Other endings'
   },
   crearRelacionado: 'Create related',
+  vistaPrevia: { titulo: 'Preview', abrirFicha: 'Open record', abrir: 'Preview of {{nombre}}' },
   relacionados: { compromiso: 'Record a commitment', qcs: 'Record a grievance, inquiry or request' },
   formulario: {
     anterior: 'Previous',

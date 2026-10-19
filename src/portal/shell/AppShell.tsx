@@ -1,3 +1,4 @@
+import { VistaPrevia } from '../componentes/VistaPrevia'
 import { Rastro } from '../contexto/Rastro'
 import { useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
@@ -100,6 +101,7 @@ export function AppShell() {
               <Rastro />
             </div>
             <Outlet />
+            <VistaPrevia />
           </main>
         </div>
       </div>

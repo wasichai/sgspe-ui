@@ -1,3 +1,4 @@
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CrearRelacionado } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -512,6 +513,8 @@ function NuevaRevision({
 // el incidente de origen y su contexto: lugar, conflicto, tema y grupos), «Qué generó» suma sus medidas de mitigación (cuántas
 // y cuántas atrasadas) y los compromisos que lo atienden, y «Lo sustenta», sus evidencias
 function Trazabilidad({ riesgo, medidas, evidencias }: { riesgo: Registro; medidas: Registro[] | undefined; evidencias: Registro[] }) {
+  // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
+  const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const proyecto = texto(riesgo, 'project')
@@ -595,7 +598,7 @@ function Trazabilidad({ riesgo, medidas, evidencias }: { riesgo: Registro; medid
             <ul>
               {evidencias.map((e) => (
                 <li key={e.id}>
-                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} />
+                  <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={previa('evidence', e.id)} />
                 </li>
               ))}
             </ul>
