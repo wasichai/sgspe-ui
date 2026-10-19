@@ -136,6 +136,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('acuerdos.ficha.tipo'), texto(acuerdo, 'code'), rotuloDeOpcion(tipo)].filter(Boolean).join(' · ')}
         titulo={texto(acuerdo, 'title')}
         chips={

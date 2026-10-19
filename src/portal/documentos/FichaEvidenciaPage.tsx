@@ -81,6 +81,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
         </Link>
       )}
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('documentos.ficha.tipo'), opcion(evidencia, 'evidence_type')].filter(Boolean).join(' · ')}
         titulo={nombreDeEvidencia(evidencia)}
         chips={

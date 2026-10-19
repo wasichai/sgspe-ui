@@ -129,6 +129,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('fichaAporte.tipo'), texto(aporte, 'code'), opcion(aporte, 'contribution_type'), texto(aporte, 'occasion')].filter(Boolean).join(' · ')}
         titulo={titulo}
         chips={

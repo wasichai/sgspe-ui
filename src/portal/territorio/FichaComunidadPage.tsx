@@ -46,6 +46,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
       {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, la situación orgánica y las partidas por verificar
           como chips, y las acciones en su lugar */}
       <EncabezadoDePagina
+        ficha
         antetitulo={opcion(comunidad, 'community_type')}
         titulo={texto(comunidad, 'name')}
         chips={

@@ -117,6 +117,7 @@ function Ficha({ queja }: { queja: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('comun.qcs.grievance'), texto(queja, 'code'), opcion(queja, 'channel'), opcion(queja, 'category')].filter(Boolean).join(' · ')}
         titulo={t('fichaQueja.titulo', { codigo: texto(queja, 'code') })}
         chips={

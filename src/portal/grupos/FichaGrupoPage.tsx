@@ -113,6 +113,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('grupos.ficha.tipo'), opcion(grupo, 'stakeholder_type')].filter(Boolean).join(' · ')}
         titulo={nombre}
         chips={

@@ -105,6 +105,7 @@ function Ficha({ programa }: { programa: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('fichaPrograma.tipo'), texto(programa, 'code')].filter(Boolean).join(' · ')}
         titulo={texto(programa, 'name')}
         chips={

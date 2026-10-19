@@ -56,3 +56,18 @@ test('a 390 px la lista de compromisos es de tarjetas con su estado y su plazo',
   await expect(tarjeta.getByText('En ejecución')).toBeVisible()
   await expect(page.getByRole('table', { name: 'Compromisos' })).toHaveCount(0)
 })
+
+// en el teléfono, las acciones de la ficha quedan en una barra fija sobre la barra de accesos: a mano mientras se lee
+test('a 390 px las acciones de la ficha van en una barra fija sobre la barra de accesos', async ({ page }) => {
+  await page.goto('/projects/p1/commitments/k1')
+  await expect(page.getByRole('heading', { name: 'Reservorio de agua', level: 1 })).toBeVisible()
+  const barra = page.locator('[data-barra-de-acciones]')
+  await expect(barra.getByRole('link', { name: 'Ver en el mapa' })).toBeVisible()
+  expect(await barra.evaluate((e) => getComputedStyle(e).position)).toBe('fixed')
+  const accesos = (await page.getByRole('navigation', { name: 'Accesos' }).boundingBox())!
+  const caja = (await barra.boundingBox())!
+  expect(caja.y + caja.height).toBeLessThanOrEqual(accesos.y + 1)
+  // desplazarse hasta el final no la mueve
+  await page.locator('main').evaluate((m) => m.scrollTo(0, m.scrollHeight))
+  expect((await barra.boundingBox())!.y).toBeCloseTo(caja.y, 0)
+})

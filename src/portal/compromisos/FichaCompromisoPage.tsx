@@ -120,6 +120,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   return (
     <article className="space-y-4">
       <EncabezadoDePagina
+        ficha
         antetitulo={[t('fichaCompromiso.titulo'), texto(compromiso, 'code'), opcion(compromiso, 'resource_type')].filter(Boolean).join(' · ')}
         titulo={texto(compromiso, 'title')}
         tituloDelDocumento={[texto(compromiso, 'code'), texto(compromiso, 'title')].filter(Boolean).join(' ')}

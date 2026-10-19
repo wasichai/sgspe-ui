@@ -81,6 +81,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
       {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, el reconocimiento como chip y los datos de la
           localidad debajo */}
       <EncabezadoDePagina
+        ficha
         antetitulo={opcion(localidad, 'locality_type')}
         titulo={texto(localidad, 'name')}
         chips={<span>{opcion(localidad, 'recognition_status')}</span>}
