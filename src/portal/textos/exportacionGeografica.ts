@@ -34,8 +34,8 @@ export const ES_EXPORTACION_GEOGRAFICA = {
     PUBLICO: 'solo capas públicas'
   },
   filtroExterno: {
-    project_component: 'En EXTERNO solo salen los accesos del proyecto.',
-    land_parcel: 'En EXTERNO solo salen los predios de propiedad, posesión y comunales, sin su partida registral.'
+    project_component: 'En «Externo» solo salen los accesos del proyecto.',
+    land_parcel: 'En «Externo» solo salen los predios de propiedad, posesión y comunales, sin su partida registral.'
   },
   checklist: 'Revisé que el archivo puede salir con este nivel: sin datos personales, sin componentes confidenciales y con su fuente citada',
   exportar: 'Exportar',
@@ -77,8 +77,8 @@ export const EN_EXPORTACION_GEOGRAFICA: typeof ES_EXPORTACION_GEOGRAFICA = {
     PUBLICO: 'public layers only'
   },
   filtroExterno: {
-    project_component: 'At EXTERNO only the project access roads are exported.',
-    land_parcel: 'At EXTERNO only owned, possessed and communal parcels are exported, without their registry record.'
+    project_component: 'At «Externo» only the project access roads are exported.',
+    land_parcel: 'At «Externo» only owned, possessed and communal parcels are exported, without their registry record.'
   },
   checklist: 'I checked the file can leave at this level: no personal data, no confidential components and its source cited',
   exportar: 'Export',

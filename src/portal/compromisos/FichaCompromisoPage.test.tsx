@@ -61,7 +61,7 @@ describe('S29 · ficha de compromiso', () => {
     fetch = mockFetch(rutas())
     abrir()
     expect(await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeInTheDocument()
-    expect(screen.getByLabelText('Situación de plazo: AL DIA')).toBeInTheDocument()
+    expect(screen.getByLabelText('Situación de plazo: Al día')).toBeInTheDocument()
     const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
     await waitFor(() => expect(cumplimiento).toBeDisabled())
     expect(cumplimiento).toHaveAccessibleDescription('Falta una entrega con conformidad')

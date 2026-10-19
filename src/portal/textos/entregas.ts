@@ -12,8 +12,8 @@ export const ES_ENTREGAS = {
   sinActa: 'El «Acta de entrega» todavía no se emite desde el sistema: por ahora, súbala como evidencia.',
   ayuda: 'Guardar la entrega no cambia el estado: después se registra el cumplimiento.',
   minima: {
-    MATERIAL: 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un ACTA DE ENTREGA y una FOTO.',
-    'NO MATERIAL': 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un ACTA, una CARTA u OTRO.'
+    MATERIAL: 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un «Acta de entrega» y una «Foto».',
+    'NO MATERIAL': 'Para registrar el cumplimiento, la entrega con conformidad necesita al menos un «Acta», una «Carta» u «Otro».'
   },
   campos: {
     delivery_date: 'Fecha de la entrega',
@@ -67,8 +67,8 @@ export const EN_ENTREGAS: typeof ES_ENTREGAS = {
   sinActa: 'The system does not issue the “Acta de entrega” yet: for now, upload it as evidence.',
   ayuda: 'Saving the delivery does not change the status: fulfillment is recorded afterwards.',
   minima: {
-    MATERIAL: 'To record fulfillment, the delivery with conformity needs at least one ACTA DE ENTREGA and one FOTO.',
-    'NO MATERIAL': 'To record fulfillment, the delivery with conformity needs at least one ACTA, CARTA or OTRO.'
+    MATERIAL: 'To record fulfillment, the delivery with conformity needs at least one «Acta de entrega» and one «Foto».',
+    'NO MATERIAL': 'To record fulfillment, the delivery with conformity needs at least one «Acta», «Carta» or «Otro».'
   },
   campos: {
     delivery_date: 'Delivery date',

@@ -13,6 +13,7 @@ import { atributo, texto, useRegistro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
 import { useComprobacion } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
+import { opcion } from '../datos/opciones'
 
 // S48 · aprobaciones y escalamientos (screens.md §11): las aprobaciones son transiciones, no objetos (domain-model.md §6.13).
 // «Por aprobar» sale de los avisos approval_pending de wasichai-notifications (fuente sgspe.approvals, ACTION, con su enlace
@@ -178,7 +179,7 @@ function FilaDeAprobacion({ aviso }: { aviso: Aviso }) {
         {registro.isPending ? (
           <Cargando compacto />
         ) : registro.data ? (
-          [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name') || texto(registro.data, 'category')]
+          [texto(registro.data, 'code'), texto(registro.data, 'title') || texto(registro.data, 'name') || opcion(registro.data, 'category')]
             .filter(Boolean)
             .join(' · ')
         ) : reservada ? (

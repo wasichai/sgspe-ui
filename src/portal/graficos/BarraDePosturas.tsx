@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { Indicador } from '../datos/indicadores'
+import { rotuloDeFila } from '../datos/opciones'
 import { NS, numeroPe } from '../i18n'
 import { NoDisponible } from '../componentes/Estados'
 
@@ -37,7 +38,7 @@ export function BarraDePosturas({ indicador, titulo }: { indicador: Indicador; t
         {ordenadas.map((f) => (
           <li key={f.key} className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full" style={{ backgroundColor: COLOR_DE_POSTURA[f.key] ?? 'var(--sg-neutral-soft)' }} aria-hidden />
-            {f.key}: {numeroPe(f.value ?? 0)}
+            {rotuloDeFila(f)}: {numeroPe(f.value ?? 0)}
           </li>
         ))}
       </ul>

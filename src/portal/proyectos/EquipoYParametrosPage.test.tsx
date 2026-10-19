@@ -298,7 +298,7 @@ describe('S11 · equipo y parámetros', () => {
   it('el estado y el tipo de actividad de una campaña salen con la etiqueta de su campo en la metadata, no solos', async () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     await userEvent.click(await screen.findByRole('tab', { name: 'Campañas' }))
-    expect(await screen.findByText('Estado de la campaña: EN EJECUCION · Tipo de actividad: PERFORACION')).toBeInTheDocument()
+    expect(await screen.findByText('Estado de la campaña: En ejecución · Tipo de actividad: Perforación')).toBeInTheDocument()
   })
 
   it('los parámetros dicen si son por defecto o cambiados y se guardan con la versión leída', async () => {
@@ -607,7 +607,7 @@ describe('S11 · parámetros de F4', () => {
     await userEvent.click(await screen.findByRole('tab', { name: 'Parámetros y políticas' }))
     expect(await screen.findByRole('group', { name: 'Quejas, consultas y solicitudes' })).toBeInTheDocument()
     expect(screen.getByLabelText(/Días hábiles para acusar recibo/)).toHaveValue('5')
-    expect(screen.getByLabelText(/Una queja ALTA o CRITICA la resuelve quien aprueba/)).toBeChecked()
+    expect(screen.getByLabelText(/Una queja «Alta» o «Crítica» la resuelve quien aprueba/)).toBeChecked()
     const cadencia = screen.getByLabelText(/Días entre revisiones de un riesgo/)
     await userEvent.clear(cadencia)
     await userEvent.type(cadencia, '14')
@@ -623,7 +623,7 @@ describe('S11 · parámetros de F4', () => {
     const acuse = await screen.findByLabelText(/Días hábiles para acusar recibo/)
     await userEvent.clear(acuse)
     await userEvent.type(acuse, '400')
-    const alto = screen.getByLabelText(/Puntaje desde el que un riesgo es ALTO/)
+    const alto = screen.getByLabelText(/Puntaje desde el que un riesgo es «Alto»/)
     await userEvent.clear(alto)
     await userEvent.type(alto, '20')
     expect(await screen.findByText('Escriba un número entero de 1 a 365.')).toBeInTheDocument()
@@ -748,7 +748,7 @@ describe('partes del proyecto', () => {
       }
     ])
     montar(<PartesDelProyecto proyecto="p1" editable={false} />, { permisos: permisos({ project_party: ['READ'] }) })
-    expect(await screen.findByText(/CLIENTE · No disponible/)).toBeInTheDocument()
+    expect(await screen.findByText(/Cliente · No disponible/)).toBeInTheDocument()
     expect(screen.queryByText(/9b1d7e2a/)).not.toBeInTheDocument()
   })
 })

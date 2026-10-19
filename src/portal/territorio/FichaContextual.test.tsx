@@ -43,7 +43,7 @@ describe('ficha contextual', () => {
     expect(within(panel).getByText('Comunidad Ejemplo')).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: 'AIDS · v1' })).toHaveAttribute('href', '/projects/p1/areas/ai0')
     // el área trae solo el id del proyecto: el código sale de los proyectos que la cuenta lee (hueco H9)
-    expect((await within(panel).findByText(/PRJ-01/)).textContent).toBe('PRJ-01 · INCLUIDO')
+    expect((await within(panel).findByText(/PRJ-01/)).textContent).toBe('PRJ-01 · Incluido')
     expect(within(panel).getByRole('link', { name: 'Abrir la ficha' })).toHaveAttribute('href', '/territory/localities/l1?project=p1')
     expect(within(panel).getByRole('link', { name: 'Filtrar el proyecto por este lugar' })).toHaveAttribute(
       'href',
@@ -54,7 +54,7 @@ describe('ficha contextual', () => {
     expect(within(within(panel).getByRole('region', { name: 'Riesgos altos' })).getByText('0')).toBeInTheDocument()
     // las cinco posturas, con su texto y su cifra; la que no tiene grupos dice 0, que sí es una cifra
     const posturas = within(panel).getByRole('list', { name: 'Posturas' })
-    expect(posturas).toHaveTextContent('A FAVOR3')
+    expect(posturas).toHaveTextContent('A favor3')
     expect(within(posturas).getAllByRole('listitem')).toHaveLength(5)
     // los montos por moneda, nunca sumados entre monedas (ASM-063), y los avisos del servidor
     const inversion = within(panel).getByRole('region', { name: 'Inversión ejecutada' })
@@ -218,7 +218,7 @@ describe('ficha contextual', () => {
     expect(within(panel).getByText('Comunidad')).toBeInTheDocument()
     expect(within(panel).getByText('Sector Ejemplo')).toBeInTheDocument()
     // un proyecto que la cuenta no lee: «Proyecto reservado», nunca su id
-    expect((await within(panel).findByText(/Proyecto reservado/)).textContent).toBe('Proyecto reservado · PROVISIONAL')
+    expect((await within(panel).findByText(/Proyecto reservado/)).textContent).toBe('Proyecto reservado · Provisional')
     expect(within(panel).getByRole('link', { name: 'Abrir la ficha' })).toHaveAttribute('href', '/territory/communities/c1?project=p1')
     await waitFor(() => expect(red!.a('GET', '/sgspe/dashboards/indicators/KPI-TER-01')).toHaveLength(1))
     expect(red.a('GET', '/sgspe/dashboards/indicators/KPI-TER-01')[0].ruta).toContain('community=c1&project=p1')

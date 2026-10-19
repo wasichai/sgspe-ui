@@ -277,7 +277,7 @@ describe('S13 · ficha de comunidad', () => {
   it('muestra la organización que la representa con sus cargos, sus sectores, sus grupos y solo las áreas legibles', async () => {
     fetch = abrirPortal('/territory/communities/c1', RELACIONISTA, LEE_TERRITORIO, rutas)
     expect(await screen.findByRole('link', { name: 'Junta directiva comunal' })).toHaveAttribute('href', '/actors/o1')
-    expect(await screen.findByText('Presidente · VACANTE')).toBeInTheDocument()
+    expect(await screen.findByText('Presidente · Vacante')).toBeInTheDocument()
     expect(screen.getByText('Sector alto · 3 delegados')).toBeInTheDocument()
     const areas = screen.getByRole('complementary', { name: 'Áreas de influencia que la incluyen' })
     expect(await within(areas).findByRole('link', { name: 'AIDS · v2' })).toBeInTheDocument()

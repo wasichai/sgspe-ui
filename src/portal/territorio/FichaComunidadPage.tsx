@@ -15,6 +15,7 @@ import { NS, numeroPe } from '../i18n'
 import { Dato, TrabajarEnProyecto, useRegistrosPorId } from './comunes'
 import { EditorDeGeometria } from './EditorDeGeometria'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
+import { opcion } from '../datos/opciones'
 
 // S13 · ficha de comunidad (screens.md §4, flujos 2 y 17): quién es la comunidad (registros, vida orgánica, sectores y la
 // organización que la representa con sus cargos), sus grupos de interés y las áreas que la incluyen. los registros del lugar
@@ -42,9 +43,9 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
       <Rastro />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-territory">{texto(comunidad, 'community_type')}</p>
+          <p className="text-sg-overline font-semibold uppercase text-sg-territory">{opcion(comunidad, 'community_type')}</p>
           <h1 className="text-sg-h1 font-semibold">{texto(comunidad, 'name')}</h1>
-          <p className="text-sm text-sg-text-secondary">{texto(comunidad, 'organic_status')}</p>
+          <p className="text-sm text-sg-text-secondary">{opcion(comunidad, 'organic_status')}</p>
           {atributo(comunidad, 'registry_records_unverified') ? (
             <p
               className="inline-flex rounded-sg-sm bg-sg-warning-soft px-2 py-0.5 text-sg-caption font-medium text-sg-warning"
@@ -131,7 +132,7 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
       <section aria-label={t('territorio.comunidad.vidaOrganica')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-4">
         <h2 className="mb-2 font-medium">{t('territorio.comunidad.vidaOrganica')}</h2>
         <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
-          <Dato etiqueta={t('territorio.comunidad.estadoOrganico')}>{texto(comunidad, 'organic_status') || '—'}</Dato>
+          <Dato etiqueta={t('territorio.comunidad.estadoOrganico')}>{opcion(comunidad, 'organic_status') || '—'}</Dato>
           <Dato etiqueta={t('territorio.comunidad.juntaInscrita')}>{atributo(comunidad, 'board_registered') ? t('comun.si') : t('comun.no')}</Dato>
           <Dato etiqueta={t('territorio.comunidad.comuneros')}>
             {atributo(comunidad, 'registered_members_count') === undefined || atributo(comunidad, 'registered_members_count') === null
@@ -199,7 +200,7 @@ function Representante({ organizacion }: { organizacion: Registro }) {
         <ul aria-label={t('territorio.comunidad.cargos')} className="ml-4 list-disc">
           {cargos.data.map((c) => (
             <li key={c.id}>
-              {texto(c, 'position_title')} · {texto(c, 'position_status')}
+              {texto(c, 'position_title')} · {opcion(c, 'position_status')}
             </li>
           ))}
         </ul>
@@ -256,7 +257,7 @@ function FilaDeGrupo({ grupo }: { grupo: Registro }) {
       >
         {nombre}
       </Link>{' '}
-      · {texto(grupo, 'influence_group') || '—'}
+      · {opcion(grupo, 'influence_group') || '—'}
     </li>
   )
 }
@@ -281,7 +282,7 @@ function AreasDeMiembros({ miembros }: { miembros: Registro[] }) {
   const condicionDe = (area: string) =>
     miembros
       .filter((m) => String(atributo(m, 'area_of_influence')) === area)
-      .map((m) => texto(m, 'member_condition'))
+      .map((m) => opcion(m, 'member_condition'))
       .filter(Boolean)
       .join(', ')
   return (
@@ -295,7 +296,7 @@ function AreasDeMiembros({ miembros }: { miembros: Registro[] }) {
               to={`/projects/${encodeURIComponent(String(atributo(a, 'project')))}/areas/${encodeURIComponent(a.id)}`}
               className="text-sg-primary-text underline"
             >
-              {texto(a, 'area_type')} · v{texto(a, 'version_number')}
+              {opcion(a, 'area_type')} · v{texto(a, 'version_number')}
             </Link>{' '}
             · {condicionDe(a.id)}
           </li>

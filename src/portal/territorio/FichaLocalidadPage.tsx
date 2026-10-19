@@ -26,6 +26,7 @@ import { NS, numeroPe } from '../i18n'
 import { Dato, TrabajarEnProyecto } from './comunes'
 import { EditorDeGeometria } from './EditorDeGeometria'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
+import { opcion } from '../datos/opciones'
 
 // S14 · ficha de localidad y línea base social (screens.md §4): el lugar con datos fechados y su confiabilidad. cada perfil
 // es una foto: un dato nuevo es otro perfil. las cifras se comparan con el perfil anterior y una ausente dice "no disponible
@@ -77,7 +78,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
       <Rastro />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-territory">{texto(localidad, 'locality_type')}</p>
+          <p className="text-sg-overline font-semibold uppercase text-sg-territory">{opcion(localidad, 'locality_type')}</p>
           <h1 className="text-sg-h1 font-semibold">{texto(localidad, 'name')}</h1>
           <dl className="grid grid-cols-[max-content_1fr] gap-x-3 text-sm text-sg-text-secondary">
             <Dato etiqueta={t('territorio.localidad.codigo')}>{texto(localidad, 'populated_center_code') || '—'}</Dato>
@@ -98,7 +99,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
               </Dato>
             ) : null}
           </dl>
-          <p className="text-sm">{texto(localidad, 'recognition_status')}</p>
+          <p className="text-sm">{opcion(localidad, 'recognition_status')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <TrabajarEnProyecto tipo="locality" id={localidad.id} />
@@ -172,7 +173,7 @@ function LineaBase({ localidad }: { localidad: string }) {
             >
               {lista.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {texto(p, 'data_date')} · {texto(p, 'reliability')}
+                  {texto(p, 'data_date')} · {opcion(p, 'reliability')}
                 </option>
               ))}
             </select>
@@ -191,7 +192,7 @@ function LineaBase({ localidad }: { localidad: string }) {
         <>
           <p className="text-sm text-sg-text-secondary">
             {t('territorio.localidad.perfilDe', { fecha: texto(perfil, 'data_date'), fuente: texto(perfil, 'data_source') })}{' '}
-            <span className="rounded-sg-xs border border-sg-border-strong px-1.5 text-sg-caption">{texto(perfil, 'reliability')}</span>
+            <span className="rounded-sg-xs border border-sg-border-strong px-1.5 text-sg-caption">{opcion(perfil, 'reliability')}</span>
           </p>
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {CIFRAS.map((c) => (
@@ -350,7 +351,7 @@ function Servicios({ localidad }: { localidad: string }) {
         titulo={t('territorio.localidad.conflictos')}
         consulta={conflictos}
         filas={deLista}
-        rotulo={(r) => `${texto(r, 'title')} · ${texto(r, 'conflict_type')} · ${texto(r, 'conflict_status')}`}
+        rotulo={(r) => `${texto(r, 'title')} · ${opcion(r, 'conflict_type')} · ${opcion(r, 'conflict_status')}`}
       />
     </div>
   )
@@ -367,7 +368,7 @@ function Percepciones({ estudio }: { estudio: string }) {
         {(percepciones.data ?? []).map((p) => (
           <li key={p.id}>
             <p>
-              {texto(p, 'subject')} · {texto(p, 'polarity')}: {texto(p, 'statement')}
+              {opcion(p, 'subject')} · {opcion(p, 'polarity')}: {texto(p, 'statement')}
             </p>
             {texto(p, 'quote') ? (
               <blockquote className="border-l-2 border-sg-border pl-2 italic text-sg-text-secondary">

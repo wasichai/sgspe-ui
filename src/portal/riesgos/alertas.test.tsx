@@ -111,7 +111,7 @@ describe('S41 · ficha de alerta', () => {
     expect(await screen.findByRole('heading', { name: 'Señales de conflicto: CONTEO DE SEÑALES', level: 1 })).toBeInTheDocument()
     expect(screen.getByText('4 señales en 7 días (umbral 3)')).toBeInTheDocument()
     const regla = screen.getByRole('region', { name: 'Regla que la creó' })
-    expect(await within(regla).findByText('CONTEO DE SEÑALES')).toBeInTheDocument()
+    expect(await within(regla).findByText('Conteo de señales')).toBeInTheDocument()
     expect(within(regla).getByText('7 días')).toBeInTheDocument()
     expect(within(regla).getByText(/La creó la regla/)).toBeInTheDocument()
     expect(screen.queryByText(/warning_rule:rg1/)).not.toBeInTheDocument()

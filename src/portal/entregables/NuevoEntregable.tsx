@@ -9,6 +9,7 @@ import { texto, useCrear, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { usePlantillas, useTiposDeEntregable } from './contrato'
 import { PARAMETROS, T1 } from './tipos'
+import { opcion } from '../datos/opciones'
 
 // «Nuevo entregable» de S49 (screens.md): el tipo (de los que registra el backend, GET /api/sgspe/deliverable-types), código, título, periodo, corte, el alcance que pide el tipo (PARAMETROS: la
 // comunidad en T2; el estudio y un AIDS aprobado en T1, que el pedido del borrador exige), las organizaciones y la plantilla
@@ -166,7 +167,7 @@ export function NuevoEntregable({ proyecto, alCerrar }: { proyecto: string; alCe
               {(p) => (
                 <SelectNativo
                   {...p}
-                  opciones={aprobadas.map((a) => ({ valor: a.id, etiqueta: `${texto(a, 'area_type')} · v${texto(a, 'version_number')}` }))}
+                  opciones={aprobadas.map((a) => ({ valor: a.id, etiqueta: `${opcion(a, 'area_type')} · v${texto(a, 'version_number')}` }))}
                   value={alcance.area}
                   onChange={(e) => setAlcance({ ...alcance, area: e.target.value })}
                 />

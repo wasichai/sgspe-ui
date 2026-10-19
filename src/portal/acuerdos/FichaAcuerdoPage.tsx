@@ -24,6 +24,7 @@ import { atributo, texto, useRegistro, useRelacionados, useTodos, usePuedeEditar
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { CAMPOS_DEL_ACUERDO } from './AcuerdosPage'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S33 · acuerdo o convenio (screens.md §7, WF-I): tipo, estado y vigencia (validity_status como insignia derivada; vencer no
 // concluye el acuerdo), sus cláusulas con los compromisos que originan, las partes con su firma, la comunidad titular, la
@@ -64,7 +65,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {texto(acuerdo, 'code')} · {tipo}
+            {texto(acuerdo, 'code')} · {rotuloDeOpcion(tipo)}
           </p>
           <h1 className="text-sg-h1 font-semibold">{texto(acuerdo, 'title')}</h1>
           <div className="flex flex-wrap items-center gap-2">
@@ -310,7 +311,7 @@ function Titulares({ acuerdo }: { acuerdo: Registro }) {
       <h2 className="font-semibold">{t('acuerdos.ficha.asamblea')}</h2>
       {asamblea.data ? (
         <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(asamblea.data.id)}`} className="text-sg-primary-text underline">
-          {texto(asamblea.data, 'title')} · {texto(asamblea.data, 'engagement_type')}
+          {texto(asamblea.data, 'title')} · {opcion(asamblea.data, 'engagement_type')}
         </Link>
       ) : atributo(acuerdo, 'assembly_engagement') ? (
         asamblea.isError ? (

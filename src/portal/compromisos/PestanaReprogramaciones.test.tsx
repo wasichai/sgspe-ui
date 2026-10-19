@@ -169,13 +169,13 @@ describe('S29 · reprogramaciones', () => {
       }
     ])
     montar(<FichaConPlazo />, { usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
-    expect(await screen.findByLabelText('Situación de plazo: VENCIDO')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Reprogramar' }))
     const dialogo = await screen.findByRole('dialog')
     await userEvent.type(within(dialogo).getByLabelText('Fecha nueva'), '2027-01-15')
     await userEvent.type(within(dialogo).getByLabelText('Motivo de la reprogramación'), 'Paro regional')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Reprogramar' }))
-    expect(await screen.findByLabelText('Situación de plazo: AL DIA')).toBeInTheDocument()
+    expect(await screen.findByLabelText('Situación de plazo: Al día')).toBeInTheDocument()
     expect(red.a('GET', '/objects/commitment/records/c1')).toHaveLength(1)
   })
 

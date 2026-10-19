@@ -8,7 +8,7 @@ export const ES_GRUPOS = {
   tablero: 'Tablero',
   exportar: 'Exportar',
   vistas: {
-    prioridad: 'Prioridad MUY ALTA y ALTA',
+    prioridad: 'Prioridad muy alta y alta',
     mios: 'Míos',
     sinEvaluar: 'Sin evaluar',
     sinContacto: 'Sin contacto en {{dias}} días',
@@ -109,7 +109,7 @@ export const ES_GRUPOS = {
     puntos: 'Puntos de la matriz',
     interes: 'Interés',
     poder: 'Poder',
-    cuadrantes: { ESTRATEGICO: 'ESTRATEGICO', POLITICO: 'POLITICO', 'PARA MONITOREO': 'PARA MONITOREO', VULNERABLE: 'VULNERABLE' },
+    cuadrantes: { ESTRATEGICO: 'Estratégico', POLITICO: 'Político', 'PARA MONITOREO': 'Para monitoreo', VULNERABLE: 'Vulnerable' },
     ajustado: 'grupo ajustado a mano',
     unSoloProyecto: 'La matriz usa los umbrales de un proyecto: elija uno.'
   },
@@ -187,7 +187,7 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
   tablero: 'Dashboard',
   exportar: 'Export',
   vistas: {
-    prioridad: 'Priority VERY HIGH and HIGH',
+    prioridad: 'Priority very high and high',
     mios: 'Mine',
     sinEvaluar: 'Not assessed',
     sinContacto: 'No contact in {{dias}} days',
@@ -286,7 +286,7 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     puntos: 'Matrix points',
     interes: 'Interest',
     poder: 'Power',
-    cuadrantes: { ESTRATEGICO: 'ESTRATEGICO', POLITICO: 'POLITICO', 'PARA MONITOREO': 'PARA MONITOREO', VULNERABLE: 'VULNERABLE' },
+    cuadrantes: { ESTRATEGICO: 'Estratégico', POLITICO: 'Político', 'PARA MONITOREO': 'Para monitoreo', VULNERABLE: 'Vulnerable' },
     ajustado: 'group manually adjusted',
     unSoloProyecto: 'The matrix uses the thresholds of one project: pick one.'
   },

@@ -39,7 +39,7 @@ test('la barra de posturas dibuja NEUTRAL en dos series, una a cada lado del cen
   expect(aFavor.ancho / unidad).toBeCloseTo(3, 1)
   // la tabla "Ver datos" dice el conteo real de NEUTRAL, no su mitad
   await figura.getByText('Ver datos').click()
-  await expect(figura.getByRole('row', { name: /NEUTRAL/ }).getByRole('cell', { name: '4', exact: true })).toBeVisible()
+  await expect(figura.getByRole('row', { name: /Neutral/ }).getByRole('cell', { name: '4', exact: true })).toBeVisible()
 })
 
 test('el motivo de una interacción cancelada aparece al enfocar su enlace con el teclado', async ({ page }) => {

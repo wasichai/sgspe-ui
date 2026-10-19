@@ -17,6 +17,7 @@ import { MiniMatriz } from '../graficos/MiniMatriz'
 import { NS, numeroPe } from '../i18n'
 import { INDICADORES, INDICADORES_DE_INTERES, INDICADORES_DE_PODER, useGuardarEvaluacion, useVistaPreviaDeEvaluacion, type EvaluacionGuardada } from './api'
 import { Advertencias } from './Advertencias'
+import { rotuloDeOpcion } from '../datos/opciones'
 
 // S20 · nueva evaluación (screens.md §5, flujo 3): fecha, base, los 15 indicadores de 1 a 5 con su valor anterior, postura
 // (restringida), apertura, confianza, razones, preocupaciones y expectativas, y el motivo obligatorio. la vista previa se
@@ -259,11 +260,11 @@ export function EvaluacionDrawer({
                 <dt>{t('grupos.evaluacion.influencia')}</dt>
                 <dd>{numeroPe(previa.data.computed.influence_score)}</dd>
                 <dt>{t('grupos.evaluacion.grupo')}</dt>
-                <dd>{previa.data.computed.influence_group}</dd>
+                <dd>{rotuloDeOpcion(previa.data.computed.influence_group)}</dd>
                 {previa.data.computed.information_priority ? (
                   <>
                     <dt>{t('grupos.evaluacion.prioridad')}</dt>
-                    <dd>{previa.data.computed.information_priority}</dd>
+                    <dd>{rotuloDeOpcion(previa.data.computed.information_priority)}</dd>
                   </>
                 ) : null}
               </dl>

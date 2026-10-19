@@ -17,6 +17,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { NuevoGrupo } from './NuevoGrupo'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S16 · lista de grupos de interés (screens.md §5): la misma página con alcance global (agrega la columna Proyecto) o de un
 // proyecto (ASM-076). vistas del sistema, filtros en la URL, selección para registrar una interacción con varios y el chip
@@ -80,7 +81,7 @@ export function GruposPage() {
     setSeleccion(new Set())
   }
   const elegidos = pagina.filter((g) => seleccion.has(g.id)).map((g) => g.id)
-  const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${lista.filtro(f)}` }))
+  const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` }))
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
 
@@ -291,17 +292,17 @@ function Fila({
         <Link to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(grupo.id)}`} className="font-medium text-sg-primary-text">
           <NombreDelGrupo grupo={grupo} />
         </Link>
-        <p className="text-sg-caption text-sg-text-muted">{texto(grupo, 'stakeholder_type')}</p>
+        <p className="text-sg-caption text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
       </Td>
       {global ? <Td className="font-sg-mono text-sg-caption">{texto(del.data, 'code')}</Td> : null}
       <Td className="text-sm">{texto(localidad.data, 'name') || '—'}</Td>
-      <Td className="text-sm">{evaluado ? texto(grupo, 'influence_group') || '—' : t('grupos.sinEvaluarValor')}</Td>
-      <Td className="text-sm">{leePostura ? texto(grupo, 'stance') || '—' : <Restringido describedPor={idDeLaPostura} />}</Td>
-      <Td className="text-sm">{evaluado ? texto(grupo, 'information_priority') || '—' : t('grupos.sinEvaluarValor')}</Td>
+      <Td className="text-sm">{evaluado ? opcion(grupo, 'influence_group') || '—' : t('grupos.sinEvaluarValor')}</Td>
+      <Td className="text-sm">{leePostura ? opcion(grupo, 'stance') || '—' : <Restringido describedPor={idDeLaPostura} />}</Td>
+      <Td className="text-sm">{evaluado ? opcion(grupo, 'information_priority') || '—' : t('grupos.sinEvaluarValor')}</Td>
       <Td>
         <EstadoChip objeto="stakeholder" estado={grupo.state} />
       </Td>
-      <Td className="text-sm">{texto(grupo, 'relationship_status') || '—'}</Td>
+      <Td className="text-sm">{opcion(grupo, 'relationship_status') || '—'}</Td>
       <Td className="text-sm">{texto(grupo, 'owner_user_email') || '—'}</Td>
       <Td className="text-sm">{texto(grupo, 'last_assessment_date') || '—'}</Td>
       <Td className="text-sm">{texto(grupo, 'last_contact_date') || '—'}</Td>

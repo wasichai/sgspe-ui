@@ -60,7 +60,7 @@ export const ES_REPORTES = {
     estados: 'Estados',
     estadosAyuda: 'Sin ninguno marcado, todos los estados.',
     estadosCargando: 'Leyendo los estados…',
-    plazo: 'La situación de plazo (AL DIA, POR VENCER, VENCIDO) solo se imprime en los compromisos pendientes: aprobados, en ejecución o bloqueados.',
+    plazo: 'La situación de plazo («Al día», «Por vencer», «Vencido») solo se imprime en los compromisos pendientes: aprobados, en ejecución o bloqueados.',
     exportar: 'Exportar la matriz',
     errores: {
       INVALID_FILTER: 'Uno de los estados elegidos ya no es un estado de compromiso: recargue la página.',
@@ -108,7 +108,7 @@ export const ES_REPORTES = {
   },
   riesgos: {
     titulo: 'Matriz de riesgos',
-    ayuda: 'XLSX con la matriz de riesgos con su última revisión, y en INTERNO también las revisiones, las medidas y los impactos potenciales.',
+    ayuda: 'XLSX con la matriz de riesgos con su última revisión, y en «Interno» también las revisiones, las medidas y los impactos potenciales.',
     niveles: {
       INTERNO: 'Uso interno: las hojas «Matriz», «Revisiones», «Medidas» e «Impactos» con todos los campos que su cuenta lee',
       EXTERNO: 'Externo: sin texto libre ni correos, con los grupos de interés por código GI- y las medidas contadas en la matriz',
@@ -191,7 +191,7 @@ export const EN_REPORTES: typeof ES_REPORTES = {
     estados: 'Statuses',
     estadosAyuda: 'With none checked, every status.',
     estadosCargando: 'Reading the statuses…',
-    plazo: 'The deadline situation (AL DIA, POR VENCER, VENCIDO) is only printed for pending commitments: approved, in progress or blocked.',
+    plazo: 'The deadline situation («Al día», «Por vencer», «Vencido») is only printed for pending commitments: approved, in progress or blocked.',
     exportar: 'Export the matrix',
     errores: {
       INVALID_FILTER: 'One of the chosen statuses is no longer a commitment status: reload the page.',
@@ -238,7 +238,7 @@ export const EN_REPORTES: typeof ES_REPORTES = {
   },
   riesgos: {
     titulo: 'Risk matrix',
-    ayuda: 'XLSX with the risk matrix and its last review and, in INTERNO, also the reviews, measures and potential impacts.',
+    ayuda: 'XLSX with the risk matrix and its last review and, in «Interno», also the reviews, measures and potential impacts.',
     niveles: {
       INTERNO: 'Internal use: the «Matriz», «Revisiones», «Medidas» and «Impactos» sheets with every field your account reads',
       EXTERNO: 'External: no free text or emails, stakeholders by GI- code and measures counted in the matrix',

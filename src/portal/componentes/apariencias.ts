@@ -174,6 +174,22 @@ export const APARIENCIAS: Record<string, Record<string, Apariencia>> = {
     cancelled: a('final', X)
   },
   // WF-P
+  // WF-K (F7): una propuesta de la IA espera a que una persona decida
+  ai_suggestion: {
+    proposed: a('info', Inbox),
+    accepted: a('success', CircleCheck),
+    rejected: a('final', X),
+    duplicate: a('final', Copy)
+  },
+  // WF-H (F8): el entregable; emitido es un estado intermedio (puede abrir una nueva revisión) pero ya salió
+  deliverable: {
+    draft: a('neutral', CircleDashed),
+    in_review: a('info', Clock),
+    observed: a('warning', Eye),
+    approved: a('success', CircleCheck),
+    issued: a('success', BadgeCheck),
+    voided: a('final', X)
+  },
   social_contribution: {
     requested: a('neutral', Inbox),
     approved: a('info', CircleCheck),
@@ -195,5 +211,6 @@ export const CLASE_DE_TONO: Record<Tono, string> = {
   final: 'border border-sg-border-strong text-sg-text-muted'
 }
 
+// un estado sin apariencia propia es neutro y sin juicio: nunca el ícono de prohibido, que se lee como «rechazado»
 export const aparienciaDe = (objeto: string, estado: string | null | undefined): Apariencia =>
-  (estado ? APARIENCIAS[objeto]?.[estado] : undefined) ?? a('neutral', Ban)
+  (estado ? APARIENCIAS[objeto]?.[estado] : undefined) ?? a('neutral', CircleDashed)

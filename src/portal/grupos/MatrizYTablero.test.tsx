@@ -88,7 +88,7 @@ describe('S19 · matriz y tablero de grupos de interés', () => {
                   by: 'influence_group',
                   rows: [
                     { key: 'ESTRATEGICO', value: 2 },
-                    { key: 'SIN EVALUAR', value: 3 }
+                    { key: 'Sin evaluar', value: 3 }
                   ]
                 }
               ]
@@ -112,7 +112,7 @@ describe('S19 · matriz y tablero de grupos de interés', () => {
     ])
     red = espiarRed()
     const clasificacion = await screen.findByRole('region', { name: 'Clasificación por grupo de influencia y ámbito' })
-    expect(within(clasificacion).getByRole('cell', { name: 'SIN EVALUAR' })).toBeInTheDocument()
+    expect(within(clasificacion).getByRole('cell', { name: 'Sin evaluar' })).toBeInTheDocument()
     expect(within(clasificacion).getByRole('note')).toHaveTextContent('Esta cifra no aplica el filtro de comunidad')
     expect(within(screen.getByRole('region', { name: 'Confianza promedio' })).queryByRole('note')).not.toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Posturas' })).getByText('No disponible')).toBeInTheDocument()
@@ -159,7 +159,7 @@ describe('S19 · matriz y tablero de grupos de interés', () => {
     red = espiarRed()
     expect(await screen.findByRole('heading', { name: 'Grupos de interés contactados', level: 1 })).toBeInTheDocument()
     expect(screen.getByText('12')).toBeInTheDocument()
-    expect(within(screen.getByRole('table', { name: 'Por sexo' })).getByRole('cell', { name: 'FEMENINO' })).toBeInTheDocument()
+    expect(within(screen.getByRole('table', { name: 'Por sexo' })).getByRole('cell', { name: 'Femenino' })).toBeInTheDocument()
     expect(within(screen.getByRole('table', { name: 'Por institución' })).getByRole('cell', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Volver al tablero' })).toHaveAttribute('href', '/projects/p1/stakeholders/dashboard?periodStart=2026-09-01')
     await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }))
@@ -348,11 +348,11 @@ describe('S19 · estados y límites', () => {
       }
     ])
     const clasificacion = await screen.findByRole('region', { name: 'Clasificación por grupo de influencia y ámbito' })
-    const fila = within(clasificacion).getByRole('cell', { name: 'ESTRATEGICO' }).closest('tr')!
+    const fila = within(clasificacion).getByRole('cell', { name: 'Estratégico' }).closest('tr')!
     expect(within(fila).getByRole('cell', { name: '—' })).toBeInTheDocument()
     const posturas = within(screen.getByRole('region', { name: 'Posturas' }))
-    expect(posturas.getByRole('cell', { name: 'NEUTRAL' }).closest('tr')).toHaveTextContent('—')
-    expect(posturas.getByRole('cell', { name: 'A FAVOR' }).closest('tr')).toHaveTextContent('3')
+    expect(posturas.getByRole('cell', { name: 'Neutral' }).closest('tr')).toHaveTextContent('—')
+    expect(posturas.getByRole('cell', { name: 'A favor' }).closest('tr')).toHaveTextContent('3')
   })
 
   it('la matriz con un solo sin evaluar usa el singular y sin etiqueta dice "Persona registrada"', async () => {
@@ -629,8 +629,8 @@ describe('S19 · matriz: umbrales, filtros y postura', () => {
     ])
     const puntos = await screen.findByRole('navigation', { name: 'Puntos de la matriz' })
     const [primero, segundo] = within(puntos).getAllByRole('listitem')
-    expect(primero).toHaveTextContent('A FAVOR')
-    expect(segundo).not.toHaveTextContent(/A FAVOR|EN CONTRA|NEUTRAL/)
+    expect(primero).toHaveTextContent('A favor')
+    expect(segundo).not.toHaveTextContent(/A favor|En contra|Neutral/)
     expect(screen.queryByLabelText(/postura/i)).not.toBeInTheDocument()
   })
 

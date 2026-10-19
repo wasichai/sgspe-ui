@@ -20,6 +20,7 @@ import { DialogoDeExportacion } from '../territorio/DialogoDeExportacion'
 import { capasExportables } from '../territorio/exportacion'
 import { importaA } from '../territorio/importacion'
 import { AnalisisDelProyecto } from './AnalisisDelProyecto'
+import { opcion } from '../datos/opciones'
 
 // S09 · mapa del proyecto (screens.md §3, flujo 16): las dieciséis capas básicas por grupo, capturar PNG, importar, la
 // barra de coordenadas en el CRS de trabajo y la tabla sincronizada: elegir en el mapa o en la tabla fija ?selected=. un
@@ -243,8 +244,8 @@ function Componentes({ proyecto, seleccion, alElegir }: { proyecto: string; sele
               <Td className="font-sg-mono text-sg-caption">
                 <BotonDeFila alElegir={() => alElegir(c.id)}>{texto(c, 'code')}</BotonDeFila>
               </Td>
-              <Td className="text-sm">{texto(c, 'component_type')}</Td>
-              <Td className="text-sm">{texto(c, 'component_status')}</Td>
+              <Td className="text-sm">{opcion(c, 'component_type')}</Td>
+              <Td className="text-sm">{opcion(c, 'component_status')}</Td>
               <Td className="text-sm">{texto(c, 'version_number')}</Td>
             </tr>
           ))}
@@ -283,7 +284,7 @@ function Areas({ proyecto, seleccion, alElegir }: { proyecto: string; seleccion:
           className={cn('flex items-center gap-2', a.id === seleccion && 'bg-sg-primary-soft')}
         >
           <Link to={`/projects/${encodeURIComponent(proyecto)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
-            {texto(a, 'area_type')} · v{texto(a, 'version_number')}
+            {opcion(a, 'area_type')} · v{texto(a, 'version_number')}
           </Link>
           <EstadoChip objeto="area_of_influence" estado={a.state} />
           {atributo(a, 'calculated_area_ha') !== undefined && atributo(a, 'calculated_area_ha') !== null ? (
@@ -292,7 +293,7 @@ function Areas({ proyecto, seleccion, alElegir }: { proyecto: string; seleccion:
           <button
             type="button"
             className="text-sg-caption underline"
-            aria-label={`${t('mapa.verEnElMapa')}: ${texto(a, 'area_type')} v${texto(a, 'version_number')}`}
+            aria-label={`${t('mapa.verEnElMapa')}: ${opcion(a, 'area_type')} v${texto(a, 'version_number')}`}
             onClick={() => alElegir(a.id)}
           >
             {t('mapa.verEnElMapa')}

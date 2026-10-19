@@ -25,6 +25,7 @@ import { Mapa } from '../mapa/Mapa'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { vigente, PARAMETROS_F2 } from './parametros'
 import { TableroDelProyecto, useIndicadoresDelProyecto } from './TableroDelProyecto'
+import { opcion } from '../datos/opciones'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
 // project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
@@ -94,10 +95,10 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               )}
             </span>
             <span>
-              {t('p360.resumen.etapa')}: {texto(proyecto, 'stage') || '—'}
+              {t('p360.resumen.etapa')}: {opcion(proyecto, 'stage') || '—'}
             </span>
             <span>
-              {t('p360.resumen.fase')}: {texto(proyecto, 'exploration_phase') || '—'}
+              {t('p360.resumen.fase')}: {opcion(proyecto, 'exploration_phase') || '—'}
             </span>
           </div>
         </div>
@@ -214,7 +215,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               .map((a) => (
                 <li key={a.id}>
                   <Link to={`/projects/${encodeURIComponent(proyecto.id)}/areas/${encodeURIComponent(a.id)}`} className="text-sg-primary-text underline">
-                    {texto(a, 'area_type')} · v{texto(a, 'version_number')}
+                    {opcion(a, 'area_type')} · v{texto(a, 'version_number')}
                   </Link>
                 </li>
               ))}

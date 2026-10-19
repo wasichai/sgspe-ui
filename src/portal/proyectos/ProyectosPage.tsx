@@ -11,6 +11,7 @@ import { ROL_DE_JEFATURA } from '../config'
 import { useLeeTodosLosProyectos, useMisAsignaciones } from '../contexto/proyectos'
 import { atributo, texto, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S06 · lista de proyectos (screens.md §3): vistas "Mis proyectos", "Activos", "En revisión" y "Todos"; filtros por tipo,
 // etapa y fase en la URL; la jefatura son las asignaciones activas con el rol de jefatura (ASM-080) y la campaña en curso,
@@ -77,7 +78,7 @@ export function ProyectosPage() {
   })
   const chips = FILTROS.filter(([campo]) => lista.filtro(campo)).map(([campo, clave]) => ({
     clave: campo,
-    etiqueta: `${t(`proyectos.filtros.${clave}`)}: ${lista.filtro(campo)}`
+    etiqueta: `${t(`proyectos.filtros.${clave}`)}: ${rotuloDeOpcion(lista.filtro(campo))}`
   }))
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
 
@@ -155,8 +156,8 @@ export function ProyectosPage() {
                       {texto(p, 'name')}
                     </Link>
                   </Td>
-                  <Td className="text-sm">{texto(p, 'project_type')}</Td>
-                  <Td className="text-sm">{texto(p, 'stage')}</Td>
+                  <Td className="text-sm">{opcion(p, 'project_type')}</Td>
+                  <Td className="text-sm">{opcion(p, 'stage')}</Td>
                   <Td>
                     <EstadoChip objeto="project" estado={p.state} />
                   </Td>

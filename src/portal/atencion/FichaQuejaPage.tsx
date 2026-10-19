@@ -18,6 +18,7 @@ import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { AvisoDeConfidencial, Dato, DatosDelCaso, DeDondeViene, EditarQcs, MarcasDeQcs, PlazoQueCorre } from './comunesDeFicha'
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
+import { opcion } from '../datos/opciones'
 
 // S36 · ficha de queja (screens.md §8, WF-E1, flujos 12 y 13): llevar la queja de la recepción al cierre con sus plazos, su evidencia
 // y su decisión a la vista. las transiciones del rol (motivo siempre: grievance es requiresReason) se comprueban antes con
@@ -100,12 +101,12 @@ function Ficha({ queja }: { queja: Registro }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-            {[texto(queja, 'channel'), texto(queja, 'category')].filter(Boolean).join(' · ') || '—'}
+            {[opcion(queja, 'channel'), opcion(queja, 'category')].filter(Boolean).join(' · ') || '—'}
           </p>
           <h1 className="text-sg-h1 font-semibold">{t('fichaQueja.titulo', { codigo: texto(queja, 'code') })}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <EstadoChip objeto="grievance" estado={queja.state} />
-            {texto(queja, 'severity') ? <span>{t('fichaQueja.severidad', { valor: texto(queja, 'severity') })}</span> : null}
+            {opcion(queja, 'severity') ? <span>{t('fichaQueja.severidad', { valor: opcion(queja, 'severity') })}</span> : null}
             <PlazoQueCorre objeto="grievance" qcs={queja} />
             <MarcasDeQcs qcs={queja} />
           </div>
@@ -140,7 +141,7 @@ function Ficha({ queja }: { queja: Registro }) {
         </div>
       </header>
       <AvisoDeConfidencial qcs={queja} />
-      {grave ? <Alert tone="notice">{t('fichaQueja.grave', { severidad: texto(queja, 'severity') })}</Alert> : null}
+      {grave ? <Alert tone="notice">{t('fichaQueja.grave', { severidad: opcion(queja, 'severity') })}</Alert> : null}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <Tabs
           label={t('fichaQueja.titulo', { codigo: texto(queja, 'code') })}
@@ -150,7 +151,7 @@ function Ficha({ queja }: { queja: Registro }) {
               label: t('fichaQueja.pestanas.resumen'),
               render: () => (
                 <DatosDelCaso qcs={queja}>
-                  <Dato termino={t('fichaQueja.campos.severity')}>{texto(queja, 'severity') || '—'}</Dato>
+                  <Dato termino={t('fichaQueja.campos.severity')}>{opcion(queja, 'severity') || '—'}</Dato>
                   <div className="sm:col-span-2">
                     <Dato termino={t('fichaQueja.campos.resolution')}>{texto(queja, 'resolution') || '—'}</Dato>
                   </div>

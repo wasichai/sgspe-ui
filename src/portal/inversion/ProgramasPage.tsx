@@ -22,6 +22,7 @@ import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ConsultaDeTablero, indicadorDe, useTableroDisponible } from '../tableros/comunes'
 import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, presupuestoDelPrograma, PresupuestoPorMoneda } from './cifras'
+import { opcion } from '../datos/opciones'
 
 // S42 · programas e inversión (screens.md §10): ¿cuánto del tope de la campaña queda, cómo avanzan los programas y qué aportes están
 // en curso? la misma página con alcance global (columna Proyecto, sin altas) o de un proyecto (ASM-076). las cifras salen del
@@ -261,7 +262,7 @@ function Aportes({ proyecto }: { proyecto?: string }) {
                     </Link>
                   </Td>
                   {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(a, 'project'))}</Td>}
-                  <Td className="text-sm">{texto(a, 'contribution_type') || '—'}</Td>
+                  <Td className="text-sm">{opcion(a, 'contribution_type') || '—'}</Td>
                   <Td className="text-sm">
                     {texto(a, 'recipient_organization') ? (
                       <RegistroVinculado objeto="organization" id={texto(a, 'recipient_organization')} />

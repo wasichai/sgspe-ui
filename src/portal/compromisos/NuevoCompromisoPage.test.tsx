@@ -57,7 +57,7 @@ async function llenarHastaLaRevision() {
   await escribir('Unidad', 'km')
   await siguiente()
   await userEvent.type(await screen.findByLabelText('Buscar la interacción por título'), 'Ta')
-  await userEvent.click(await screen.findByRole('button', { name: 'Taller de riego · TALLER' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Taller de riego · Taller' }))
   await elegir('Cómo se pidió', 'ACUERDO EN REUNION')
   await escribir('Fecha del acuerdo', '2026-09-10')
   await siguiente()

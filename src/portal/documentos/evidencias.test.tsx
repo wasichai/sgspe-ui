@@ -300,7 +300,7 @@ describe('evidencias de un registro', () => {
     expect(within(fila('Lista de beneficiarios')).getByText(/hace falta permiso para descargar archivos restringidos/)).toBeInTheDocument()
     // sin leer la clasificación, la ayuda no insinúa cuál es
     expect(within(fila('Foto')).getByText(/Su rol no lee la clasificación de esta evidencia/)).toBeInTheDocument()
-    expect(within(fila('Foto')).queryByText(/CONFIDENCIAL/)).not.toBeInTheDocument()
+    expect(within(fila('Foto')).queryByText(/Confidencial/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Subir evidencia' })).not.toBeInTheDocument()
     await userEvent.click(within(fila('Acta de entrega')).getByRole('button', { name: 'Descargar Acta de entrega' }))
     await waitFor(() => expect(red!.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1))
@@ -322,7 +322,7 @@ describe('evidencias de un registro', () => {
     const tabla = await screen.findByRole('table', { name: 'Evidencias' })
     expect(within(tabla).getByRole('columnheader', { name: 'Clasificación' })).toBeInTheDocument()
     expect(within(tabla).queryByText('Su rol no puede leer este dato')).not.toBeInTheDocument()
-    expect(within(tabla).getByText('CONFIDENCIAL')).toBeInTheDocument()
+    expect(within(tabla).getByText('Confidencial')).toBeInTheDocument()
   })
 
   it('una clasificación ilegible lo explica en su celda; el nombre del encabezado sigue siendo «Clasificación»', async () => {

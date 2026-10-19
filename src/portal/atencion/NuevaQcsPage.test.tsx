@@ -49,7 +49,7 @@ describe('S37 · registrar QCS', () => {
     expect(await screen.findByText(/El acuse vence 5 días hábiles después de la recepción/)).toBeInTheDocument()
     await llenar('Q-009')
     await userEvent.selectOptions(screen.getByLabelText('Severidad'), 'CRITICA')
-    expect(screen.getByText('Una queja ALTA o CRITICA la resuelve otra persona: quien aprueba.')).toBeInTheDocument()
+    expect(screen.getByText('Una queja «Alta» o «Crítica» la resuelve otra persona: quien aprueba.')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByLabelText('Grupo de interés'), 's1')
     await userEvent.click(screen.getByRole('button', { name: 'Registrar queja' }))
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/grievances/g9'))

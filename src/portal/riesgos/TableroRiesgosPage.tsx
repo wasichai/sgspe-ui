@@ -9,6 +9,7 @@ import { Grafico } from '../graficos/Grafico'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, NotasDeIndicador, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import { rotuloDeFila } from '../datos/opciones'
 
 // S62 · tablero de riesgos (dashboards.md §5.8, screens.md §12): GET /api/sgspe/dashboards/risks en una llamada con los filtros de
 // periodo, territorio y ámbito, y los cinco KPI-RSK en su orden: el mapa de calor 5 × 5 (KPI-RSK-02, vigente o residual, como una
@@ -184,7 +185,7 @@ function PorTerritorio({ indicador }: { indicador: Indicador }) {
             <tbody>
               {filas.map((f) => (
                 <tr key={f.key}>
-                  <Td className="text-sm">{f.label ?? f.key}</Td>
+                  <Td className="text-sm">{rotuloDeFila(f)}</Td>
                   {NIVELES.map((n) => (
                     <Td key={n} className="text-sm tabular-nums">
                       {cifra(f, n)}
@@ -266,7 +267,7 @@ function Atrasadas({ indicador }: { indicador: Indicador }) {
           <tbody>
             {filas.map((f) => (
               <tr key={f.key}>
-                <Td className="text-sm">{f.label ?? f.key}</Td>
+                <Td className="text-sm">{rotuloDeFila(f)}</Td>
                 <Td className="text-sm tabular-nums">{f.value === null ? '—' : numeroPe(f.value)}</Td>
               </tr>
             ))}

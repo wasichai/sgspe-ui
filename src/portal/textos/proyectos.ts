@@ -36,7 +36,7 @@ export const ES_PROYECTOS = {
     revisar: 'Revise antes de enviar',
     precondiciones: 'Precondiciones para activar',
     preCrs: 'CRS de trabajo informado',
-    preParte: 'Una parte CLIENTE u OPERADOR',
+    preParte: 'Una parte «Cliente» u «Operador»',
     quePasara: 'Qué pasará',
     quePasaraTexto: 'El proyecto pasa a «En revisión» y la administración del proyecto decide si lo aprueba o lo devuelve.',
     sinCrear: 'Su cuenta no puede crear proyectos: abra un borrador existente para completarlo.',

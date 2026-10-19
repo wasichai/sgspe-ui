@@ -269,7 +269,7 @@ describe('S46 · ficha de evidencia', () => {
     expect(foto).toHaveAttribute('src', 'blob:x')
     expect(foto).toHaveClass('blur-md')
     expect(within(vista).getByText(/la vista previa va difuminada/)).toBeInTheDocument()
-    expect(screen.getByText(/No sale en una salida EXTERNO/)).not.toHaveTextContent(/RNF-/)
+    expect(screen.getByText(/No sale en una salida «Externo»/)).not.toHaveTextContent(/RNF-/)
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(1)
   })
 

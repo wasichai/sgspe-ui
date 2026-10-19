@@ -188,7 +188,7 @@ describe('S48 · aprobaciones', () => {
       permisos: permisos({ grievance: ['READ', 'UPDATE', 'APPROVE'], social_risk: ['READ'] })
     })
     const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
-    const fila = (await within(tabla).findByText('Q-001 · AGUA Y MEDIO AMBIENTE')).closest('tr') as HTMLElement
+    const fila = (await within(tabla).findByText('Q-001 · Agua y medio ambiente')).closest('tr') as HTMLElement
     expect(within(fila).getByText('Queja grave por resolver')).toBeInTheDocument()
     expect(await within(fila).findByText('Sí')).toBeInTheDocument()
     expect(within(fila).getByRole('link', { name: 'Ver' })).toHaveAttribute('href', '/r/grievance/g1')
@@ -308,7 +308,7 @@ describe('S31 · aprobación de compromiso', () => {
       usuario: APROBADORA,
       permisos: APROBACION
     })
-    expect(await screen.findByRole('link', { name: 'Mesa de diálogo de agosto · MESA DE DIALOGO' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
+    expect(await screen.findByRole('link', { name: 'Mesa de diálogo de agosto · Mesa de diálogo' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     const reglasDelPanel = screen.getByRole('complementary', { name: 'Reglas' })
     expect(
       await within(reglasDelPanel).findByText(

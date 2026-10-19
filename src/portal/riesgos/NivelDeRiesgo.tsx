@@ -13,10 +13,10 @@ export function NivelDeRiesgo({ valor, residual = false }: { valor: unknown; res
   return (
     <span
       data-nivel={valor}
-      aria-label={`${nombre}: ${valor}`}
+      aria-label={`${nombre}: ${t(`tableroRiesgos.niveles.${valor}`)}`}
       className={cn('inline-flex items-center rounded-sg-sm px-2 py-0.5 text-sg-caption font-medium', CLASE_DE_TONO[TONO_DE_NIVEL[valor]])}
     >
-      {valor}
+      {t(`tableroRiesgos.niveles.${valor}`)}
     </span>
   )
 }

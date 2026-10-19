@@ -13,6 +13,7 @@ import { atributo, texto, useTodosConTope, type Registro } from '../datos/regist
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { origenDe, TareaDrawer } from './TareaDrawer'
+import { opcion } from '../datos/opciones'
 
 // S47 · mis tareas (screens.md §11, WF-N): ¿qué tengo que hacer hoy y qué se me venció? en /tasks, las asignadas a quien mira
 // (assignee_user_id, indexado); en /projects/:projectId/tasks, las del proyecto, con «Para tomar»: las de escalamiento de
@@ -136,7 +137,7 @@ function TablaDeTareas({ tareas, vacio, alAbrir }: { tareas: Registro[]; vacio: 
                     t('tareas.sinOrigen')
                   )}
                 </Td>
-                <Td className="text-sm">{texto(x, 'priority') || '—'}</Td>
+                <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td>
                 <Td className="space-x-2 text-sm">
                   <span>{texto(x, 'due_date') ? diaPe(texto(x, 'due_date')) : '—'}</span>
                   <SituacionDePlazo valor={atributo(x, 'deadline_status')} />

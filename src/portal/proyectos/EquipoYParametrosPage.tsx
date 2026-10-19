@@ -28,6 +28,7 @@ import { useNombresDeRol } from './usuarios'
 import { ParametroNumerico } from './ParametroNumerico'
 import { TemasPriorizados } from './TemasPriorizados'
 import { PARAMETROS_F2, PARAMETROS_F4, PARAMETROS_INVERSION, problemasDeParametros, vigente, type Parametro } from './parametros'
+import { opcion } from '../datos/opciones'
 
 // S11 · equipo y parámetros del proyecto (screens.md §3): asignaciones con su vigencia (una vencida no da escritura,
 // RQ-SEC-006), campañas con su tope y lo ejecutado por moneda (ASM-063), partes y concesiones, y los parámetros de F2 con
@@ -184,7 +185,7 @@ function Campanas({ proyecto, editable }: { proyecto: string; editable: boolean 
   // los valores ENUM se guardan en español MAYÚSCULAS (ASM-025) y la metadata no trae etiquetas por valor: cada uno sale con la
   // etiqueta de su campo, y sin ella (mientras llega la metadata) solo el valor
   const conEtiqueta = (c: Registro, campo: string) => {
-    const valor = texto(c, campo)
+    const valor = opcion(c, campo)
     const etiqueta = campoDe(definicion.data, campo)?.label
     return valor && etiqueta ? `${etiqueta}: ${valor}` : valor
   }

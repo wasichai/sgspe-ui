@@ -4,6 +4,7 @@ import { RegistrosSimples } from '../componentes/RegistrosSimples'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { atributo, texto, type Registro } from '../datos/registros'
 import { fechaYHoraPe, NS } from '../i18n'
+import { opcion } from '../datos/opciones'
 
 // S59 · señales de alerta (screens.md §9): lo que puede anticipar un conflicto, registrado a mano con su fuente, para que una
 // persona lo lleve a una alerta (la vincula desde S41) o la regla CONTEO DE SEÑALES de JOB-04 lo cuente. una señal sin alerta lo
@@ -25,7 +26,7 @@ export function SenalesPage() {
       encabezado: t('registrosDeAlerta.senales.columnas.recibida'),
       celda: (r: Registro) => (texto(r, 'received_at') ? fechaYHoraPe(new Date(texto(r, 'received_at'))) : '—')
     },
-    { id: 'fuente', encabezado: t('registrosDeAlerta.senales.columnas.fuente'), celda: (r: Registro) => texto(r, 'source_type') || '—' },
+    { id: 'fuente', encabezado: t('registrosDeAlerta.senales.columnas.fuente'), celda: (r: Registro) => opcion(r, 'source_type') || '—' },
     {
       id: 'alerta',
       encabezado: t('registrosDeAlerta.senales.columnas.alerta'),

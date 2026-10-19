@@ -5,6 +5,7 @@ import { aDiezmilesimos, deDiezmilesimos } from '../datos/decimales'
 import { desglose, type FilaDeDesglose, type Indicador } from '../datos/indicadores'
 import { porcentaje } from '../datos/inversion'
 import { NS, numeroPe } from '../i18n'
+import { rotuloDeFila } from '../datos/opciones'
 
 // las cifras de la inversión que comparten S42 y el tablero de inversión (dashboards.md §4.7 y §5.10, spec F5 §3.9). la forma de
 // cada KPI-INV es la de InvestmentKpis (plan 5.2b; «Dependencias de otros planes» del plan 5.3): los montos llegan como texto o
@@ -29,7 +30,7 @@ export function CampanasFrenteAlTope({ indicador }: { indicador: Indicador }) {
       <ul className="grid gap-3 md:grid-cols-2">
         {filas.map((f) => {
           const enMoneda = moneda(f.currency)
-          const nombre = f.label ?? f.key
+          const nombre = rotuloDeFila(f)
           // los porcentajes y los conteos los da el servidor (InvestmentKpis.campaigns, plan 5.2b): no se recalculan aquí
           const avance = cifraDe(f.executedPercent)
           const comprometido = cifraDe(f.committedPercent)

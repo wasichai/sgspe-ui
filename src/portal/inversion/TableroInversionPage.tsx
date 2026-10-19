@@ -13,6 +13,7 @@ import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero, Zona } from '../tableros/comunes'
 import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, programaPorAprobar } from './cifras'
+import { rotuloDeFila } from '../datos/opciones'
 
 // el tablero de inversión social (screens.md §12, dashboards.md §5.10, spec F5 §3.9): GET /api/sgspe/dashboards/investment en una
 // llamada con los filtros del tablero (la campaña es explorationCampaign, el filtro común, que FiltrosDeTablero ofrece con
@@ -151,7 +152,7 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
   const titulo = enMoneda ? t('tableroInversion.programas.deMoneda', { moneda: enMoneda }) : t('tableroInversion.programas.sinMoneda')
   const codigo = enMoneda || null
   const porAprobar = programaPorAprobar
-  const nombre = (f: FilaDeDesglose) => `${f.label ?? f.key} ${String(f.year ?? '')}`.trim()
+  const nombre = (f: FilaDeDesglose) => `${rotuloDeFila(f)} ${String(f.year ?? '')}`.trim()
   // la tabla «Ver datos» y el texto accesible del gráfico dicen lo mismo: un programa por aprobar no tiene barra de ejecutado (null,
   // que ECharts no dibuja) y su descripción dice «Por aprobar», no el NaN que ECharts diría de esa barra
   const datos = {
@@ -193,7 +194,7 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
             const avance = cifraDe(f.percent)
             return (
               <tr key={f.key}>
-                <Td className="text-sm">{f.label ?? f.key}</Td>
+                <Td className="text-sm">{rotuloDeFila(f)}</Td>
                 <Td className="text-sm tabular-nums">{String(f.year ?? '—')}</Td>
                 <Td className="text-sm tabular-nums">{montoPe(f.allocated, codigo)}</Td>
                 <Td className="text-sm tabular-nums">{porAprobar(f) ? t('tableroInversion.programas.porAprobar') : montoPe(f.executed, codigo)}</Td>
@@ -275,7 +276,7 @@ export function BeneficiariosPorPrograma({ indicador }: { indicador: Indicador }
           <tbody>
             {filas.map((f) => (
               <tr key={f.key}>
-                <Td className="text-sm">{f.label ?? f.key}</Td>
+                <Td className="text-sm">{rotuloDeFila(f)}</Td>
                 <Td className="text-sm tabular-nums">{conteo(f.target)}</Td>
                 <Td className="text-sm tabular-nums">{conteo(f.reached)}</Td>
               </tr>

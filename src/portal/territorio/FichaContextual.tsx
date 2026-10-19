@@ -16,6 +16,7 @@ import { texto } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { NotasDeIndicador } from '../tableros/comunes'
 import { useFichaTerritorial, type AreaDeLaFicha, type FichaTerritorial } from './consultas'
+import { rotuloDeFila, rotuloDeOpcion } from '../datos/opciones'
 
 // la ficha contextual de S12 (screens.md S12, spec F6 §3.2 y §3.7): la parte territorial sale de sgspe.territory (…/card) y todas
 // las cifras de KPI-TER-01, que calcula sgspe.dashboard (dashboards.md §4.8 y §5.9), con el proyecto y el periodo del mapa. cada
@@ -149,7 +150,7 @@ function AreaDeInfluencia({ area: a }: { area: AreaDeLaFicha }) {
   if (proyecto) nombreDelProyecto = texto(proyecto, 'code') || texto(proyecto, 'name')
   else if (!a.project || proyectos.data) nombreDelProyecto = t('fichaTerritorial.proyectoReservado')
   const rotulo = `${a.areaType ?? '—'} · v${a.versionNumber ?? '—'}`
-  const detalle = [nombreDelProyecto, a.memberCondition].filter(Boolean).join(' · ')
+  const detalle = [nombreDelProyecto, a.memberCondition ? rotuloDeOpcion(a.memberCondition) : ''].filter(Boolean).join(' · ')
   return (
     <li>
       {a.project ? (
@@ -209,7 +210,7 @@ function montosPorMoneda(c: ComponenteDeFicha): { moneda: string; monto: number 
 function Cifra({ componente: c }: { componente: ComponenteDeFicha }) {
   const { t } = useTranslation(NS)
   // programs y lastActivity no traen label: el título es siempre del portal
-  const titulo = t(`fichaTerritorial.cifras.${c.key}`, { defaultValue: c.label ?? c.key })
+  const titulo = t(`fichaTerritorial.cifras.${c.key}`, { defaultValue: rotuloDeFila(c) })
   const numero = (v: ComponenteDeFicha['value']) => (typeof v === 'number' ? numeroPe(v) : '—')
   let valor
   if (!c.available) valor = <NoDisponible motivo={c.unavailableReason} />
@@ -236,7 +237,7 @@ function Cifra({ componente: c }: { componente: ComponenteDeFicha }) {
         {programas.length > 0 ? (
           <ul aria-label={t('fichaTerritorial.programas')} className="text-sg-caption">
             {programas.map((p) => (
-              <li key={p.key}>{p.label ?? p.key}</li>
+              <li key={p.key}>{rotuloDeFila(p)}</li>
             ))}
           </ul>
         ) : null}
@@ -265,7 +266,7 @@ function Posturas({ filas }: { filas: FilaDeDesglose[] }) {
       {filas.map((f) => (
         <li key={f.key} className="space-y-0.5">
           <span className="flex justify-between gap-2">
-            <span>{f.label ?? f.key}</span>
+            <span>{rotuloDeFila(f)}</span>
             <span className="tabular-nums">{f.value === null ? '—' : numeroPe(f.value)}</span>
           </span>
           <span aria-hidden className="block h-1.5 rounded-sg-sm bg-sg-surface-sunken">

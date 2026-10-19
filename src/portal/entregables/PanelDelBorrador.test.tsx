@@ -88,7 +88,7 @@ describe('panel del borrador', () => {
     // el diálogo es modal: se cierra antes de tocar el panel
     await usuario().keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await usuario().click(within(panel).getByRole('button', { name: 'Descargar el DOCX INTERNO' }))
+    await usuario().click(within(panel).getByRole('button', { name: 'Descargar el DOCX «Interno»' }))
     await waitFor(() => expect(red!.a('GET', /\/draft\/content\?level=INTERNO&format=docx$/)).toHaveLength(1))
   })
 

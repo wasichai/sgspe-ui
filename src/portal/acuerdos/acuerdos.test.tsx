@@ -131,7 +131,7 @@ describe('S33 · acuerdos', () => {
     red = espiarRed()
     montar(<AcuerdosPage />, { ruta: '/projects/p1/agreements', camino: '/projects/:projectId/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
     const tabla = await screen.findByRole('table', { name: 'Acuerdos' })
-    expect(within(tabla).getByLabelText('Situación de vigencia: VIGENTE')).toBeInTheDocument()
+    expect(within(tabla).getByLabelText('Situación de vigencia: Vigente')).toBeInTheDocument()
     expect(within(tabla).getByRole('link', { name: 'Servidumbre del acceso norte' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
     await userEvent.click(screen.getByRole('button', { name: 'Nuevo acuerdo' }))
     const panel = await screen.findByRole('dialog')

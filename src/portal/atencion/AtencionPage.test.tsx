@@ -7,6 +7,7 @@ import { P1 } from '../../test/compromisos'
 import { montar, pagina, registro } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { AtencionPage, enVista, grupoDe, porPlazo } from './AtencionPage'
+import { rotuloDeOpcion } from '../datos/opciones'
 
 // S35 (screens.md §8): las tres QCS unidas por plazo, cada una con el estado de su workflow y el plazo que corre en él; las vistas,
 // los filtros, «anónima» en lugar de la persona, las cifras con la nota de confidenciales y nunca un vacío mientras carga
@@ -52,7 +53,7 @@ describe('S35 · lista unificada de QCS', () => {
     const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
     expect(within(vencidas).getByRole('link', { name: 'Q-002' })).toHaveAttribute('href', '/projects/p1/grievances/g2')
     expect(within(vencidas).getByText('anónima')).toBeInTheDocument()
-    expect(within(vencidas).getByLabelText('Situación de plazo: VENCIDO')).toBeInTheDocument()
+    expect(within(vencidas).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
     const porVencer = screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Por vencer' })
     expect(within(porVencer).getByRole('link', { name: 'C-002' })).toHaveAttribute('href', '/projects/p1/inquiries/i2')
     const alDia = screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Al día o sin plazo' })
@@ -104,7 +105,7 @@ describe('S35 · lista unificada de QCS', () => {
     abrir(permisos({ project: ['READ'], project_assignment: ['READ'], inquiry: ['READ'] }))
     await screen.findByRole('link', { name: 'C-001' })
     const canal = screen.getByLabelText('Canal')
-    expect(within(canal).getByRole('option', { name: CANALES[0] })).toBeInTheDocument()
+    expect(within(canal).getByRole('option', { name: rotuloDeOpcion(CANALES[0]) })).toBeInTheDocument()
     expect(screen.queryByLabelText('Severidad')).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Severidad' })).not.toBeInTheDocument()
     expect(fetch.calls.some((c) => c.url.includes('/metadata/objects/grievance'))).toBe(false)

@@ -18,6 +18,7 @@ import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
 import { texto, usePuedeEditar, useRegistro, useTodos, useTodosConTope, type Registro } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { opcion } from '../datos/opciones'
 
 // los incidentes (screens.md §9, ficha de incidente; WF-M): la lista del proyecto con «Registrar incidente» y la ficha con qué pasó,
 // la respuesta inmediata y sus consecuencias (cerrar exige las dos: FIELD_REQUIRED, que transition-checks dice antes), lo que generó
@@ -68,7 +69,7 @@ export function IncidentesPage() {
                     </Link>
                   </Td>
                   <Td className="text-sm">{texto(i, 'occurred_at') ? fechaPe(new Date(texto(i, 'occurred_at'))) : '—'}</Td>
-                  <Td className="text-sm">{texto(i, 'incident_type') || '—'}</Td>
+                  <Td className="text-sm">{opcion(i, 'incident_type') || '—'}</Td>
                   <Td className="text-sm">{texto(i, 'place') || '—'}</Td>
                   <Td>
                     <EstadoChip objeto="incident" estado={i.state} />
@@ -140,7 +141,7 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
       </Link>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{texto(incidente, 'incident_type') || '—'}</p>
+          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(incidente, 'incident_type') || '—'}</p>
           <h1 className="text-sg-h1 font-semibold">{texto(incidente, 'code')}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <EstadoChip objeto="incident" estado={incidente.state} />

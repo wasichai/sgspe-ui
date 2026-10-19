@@ -12,6 +12,7 @@ import { diaPe, NS } from '../i18n'
 import { FalloDeProyectos, SelectorDeProyecto, useProyectoElegido } from '../reportes/exportacion'
 import { NuevoEntregable } from './NuevoEntregable'
 import { NIVELES_DE_ENTREGABLE } from './tipos'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // los entregables de S49 (screens.md): del proyecto elegido (el de la URL o el del selector) o de todos los que la cuenta lee,
 // los más recientes primero. el código lleva a S50. «Nuevo entregable» pide un proyecto, CREATE sobre deliverable y la asignación
@@ -74,14 +75,14 @@ export function EntregablesDeReportes() {
                         </Link>
                       </Td>
                       <Td className="text-sm">{texto(e, 'title')}</Td>
-                      <Td className="text-sm">{texto(e, 'deliverable_type')}</Td>
+                      <Td className="text-sm">{opcion(e, 'deliverable_type')}</Td>
                       <Td className="text-sm">{diaPe(texto(e, 'cutoff_date') || texto(e, 'period_end_date')) || '—'}</Td>
                       <Td className="text-sm">
                         <EstadoChip objeto="deliverable" estado={e.state} />
                       </Td>
-                      <Td className="text-sm">{texto(e, 'draft_generation_status') || '—'}</Td>
+                      <Td className="text-sm">{opcion(e, 'draft_generation_status') || '—'}</Td>
                       <Td className="text-sm">{texto(e, 'current_revision') || texto(e, 'draft_revision') || '—'}</Td>
-                      <Td className="text-sm">{NIVELES_DE_ENTREGABLE.join(', ')}</Td>
+                      <Td className="text-sm">{NIVELES_DE_ENTREGABLE.map(rotuloDeOpcion).join(', ')}</Td>
                     </tr>
                   ))}
                 </tbody>
