@@ -42,6 +42,20 @@ const llenar = async (codigo: string) => {
 }
 
 describe('S37 · registrar QCS', () => {
+  it('«Cancelar» vuelve a la interacción de origen o a la lista de atención, sin escribir (revisión de UX, etapa 5)', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed()
+    const { unmount } = abrir('/projects/p1/attention/new?origin_engagement=e7')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Registrar queja, consulta o solicitud' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/engagements/e7'))
+    unmount()
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/attention'))
+    expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
+  })
+
   it('registra una queja con quien registra como quien la recibe, el motivo y la clave, y abre su ficha', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed()

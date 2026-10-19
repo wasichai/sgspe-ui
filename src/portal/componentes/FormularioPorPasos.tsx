@@ -59,14 +59,6 @@ export function FormularioPorPasos({
   children
 }: PropsDeFormularioPorPasos) {
   const { t } = useTranslation(NS)
-  const conRouterDeDatos = useContext(UNSAFE_DataRouterContext) !== null
-  // cerrar la pestaña o recargar con cambios pide confirmar (el navegador dice su propio texto)
-  useEffect(() => {
-    if (!conCambios) return
-    const avisar = (e: BeforeUnloadEvent) => e.preventDefault()
-    window.addEventListener('beforeunload', avisar)
-    return () => window.removeEventListener('beforeunload', avisar)
-  }, [conCambios])
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
       <EncabezadoDePagina titulo={titulo} descripcion={descripcion} />
@@ -99,14 +91,28 @@ export function FormularioPorPasos({
           </div>
         </form>
       </div>
-      {conRouterDeDatos ? <AvisoDeSalida conCambios={conCambios} salidaPermitida={salidaPermitida} /> : null}
+      <AvisoAlSalir conCambios={conCambios} salidaPermitida={salidaPermitida} />
     </section>
   )
 }
 
-// salir por un enlace del portal con cambios sin guardar: se confirma. «Guardar y salir» y el alta terminada ponen
-// salidaPermitida antes de navegar, así que no lo disparan
-function AvisoDeSalida({ conCambios, salidaPermitida }: { conCambios: boolean; salidaPermitida?: MutableRefObject<boolean> }) {
+// salir con cambios sin guardar pide confirmar: por un enlace del portal (solo bajo un router de datos, que es el del portal) y
+// al cerrar o recargar la pestaña (el navegador dice su propio texto). «Guardar y salir» y el alta terminada ponen
+// salidaPermitida antes de navegar, así que no lo disparan. también la usa un alta de una sola página (la QCS)
+export function AvisoAlSalir({ conCambios, salidaPermitida }: { conCambios: boolean; salidaPermitida?: MutableRefObject<boolean> }) {
+  const conRouterDeDatos = useContext(UNSAFE_DataRouterContext) !== null
+  useEffect(() => {
+    if (!conCambios) return
+    const avisar = (e: BeforeUnloadEvent) => {
+      if (!salidaPermitida?.current) e.preventDefault()
+    }
+    window.addEventListener('beforeunload', avisar)
+    return () => window.removeEventListener('beforeunload', avisar)
+  }, [conCambios, salidaPermitida])
+  return conRouterDeDatos ? <ConfirmarSalida conCambios={conCambios} salidaPermitida={salidaPermitida} /> : null
+}
+
+function ConfirmarSalida({ conCambios, salidaPermitida }: { conCambios: boolean; salidaPermitida?: MutableRefObject<boolean> }) {
   const { t } = useTranslation(NS)
   // la condición se lee al navegar: la marca de salidaPermitida ya está puesta aunque el estado no se haya vuelto a dibujar
   const bloqueo = useBlocker(() => conCambios && !salidaPermitida?.current)
