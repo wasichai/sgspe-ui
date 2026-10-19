@@ -1,3 +1,5 @@
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
@@ -96,28 +98,31 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
   const comparacion = (m: Registro): ComparacionDeMiembro =>
     !vigente ? null : deLaVigente.isError ? 'sinDato' : !deLaVigente.isSuccess ? 'cargando' : anteriores.has(claveDe(m)) ? 'igual' : 'nuevo'
 
+  // el área y su versión en las migas del proyecto (revisión de UX, etapa 4)
+  useMigaDelRegistro(t('areas.titulo', { tipo: opcion(area, 'area_type'), version }))
   return (
     <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-sg-h2 font-semibold">{t('areas.titulo', { tipo: opcion(area, 'area_type'), version })}</h1>
-          <EstadoChip objeto="area_of_influence" estado={area.state} />
-        </div>
-        <div className="flex gap-2">
-          {borrador && escribeEnElProyecto && can('area_of_influence', 'APPROVE') ? (
+      <EncabezadoDePagina
+        titulo={t('areas.titulo', { tipo: opcion(area, 'area_type'), version })}
+        chips={<EstadoChip objeto="area_of_influence" estado={area.state} />}
+        primaria={
+          borrador && escribeEnElProyecto && can('area_of_influence', 'APPROVE') ? (
             <Button
+              size="sm"
               onClick={() => setAprobando(true)}
               disabled={!miembros.isSuccess || sinMiembros}
               title={sinMiembros ? t('areas.sinMiembros') : miembros.isError ? t('areas.miembrosNoCargaron') : undefined}
             >
               {t('areas.aprobar', { version })}
             </Button>
-          ) : null}
-          {!borrador && escribeEnElProyecto && can('area_of_influence', 'CREATE') && can('area_of_influence_member', 'CREATE') ? (
+          ) : undefined
+        }
+        secundarias={
+          !borrador && escribeEnElProyecto && can('area_of_influence', 'CREATE') && can('area_of_influence_member', 'CREATE') ? (
             <NuevaVersion area={area} miembros={miembros.data ?? []} versionesListas={versiones.isSuccess} />
-          ) : null}
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
       <nav aria-label={t('areas.versiones')}>
         <ol className="flex flex-wrap gap-2 text-sm">
           {(versiones.data ?? []).map((v) => (
