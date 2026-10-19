@@ -399,10 +399,10 @@ describe('S26 · visita de campo', () => {
       },
       ...rutas()
     ])
-    const pasos = await screen.findByRole('list', { name: 'Pasos' })
-    expect(within(pasos).getAllByRole('listitem')).toHaveLength(3)
-    for (const paso of within(pasos).getAllByRole('listitem')) expect(paso).not.toHaveAttribute('aria-current')
-    expect(await screen.findByText('Cancelada')).toBeInTheDocument()
+    // el camino del flujo común (revisión de UX, etapa 4): la cancelada no es un paso del camino, se dice como el estado actual
+    const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
+    expect(within(camino).getByText('Cancelada').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect((await screen.findAllByText('Cancelada')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Agregar observación aquí' })).not.toBeInTheDocument()
   })
 

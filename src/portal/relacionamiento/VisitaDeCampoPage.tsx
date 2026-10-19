@@ -1,6 +1,11 @@
+import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Input, Table, Td, Textarea, Th, cn } from '@wasichai/ui'
+import { Alert, Button, Input, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -206,8 +211,6 @@ function Visita({ visita }: { visita: Registro }) {
   const observaciones = useTodosConTope('field_observation', { field_visit: visita.id, sort: 'observed_at', dir: 'asc' })
   const [observando, setObservando] = useState(false)
   const [resumiendo, setResumiendo] = useState(false)
-  const pasos = t('relacionamiento.visita.pasos', { returnObjects: true }) as string[]
-  const actual = visita.state === 'partial' ? 2 : CAMINO.indexOf((visita.state ?? 'planned') as (typeof CAMINO)[number])
   const capas = [
     { id: 'ruta', color: '--sg-primary', seleccionable: false, datos: coleccion(elementos([visita], 'route')) },
     { id: 'interacciones', color: '--sg-data-1', seleccionable: false, datos: coleccion(elementos(interacciones.data ?? [], 'location')) },
@@ -215,49 +218,62 @@ function Visita({ visita }: { visita: Registro }) {
   ]
   const enCurso = visita.state === 'in_progress'
 
+  // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el título, encabezado, camino del flujo (el común, en
+  // lugar de los pasos propios) y panel de decisión con quien lidera la visita y su fin previsto
+  useMigaDelRegistro(texto(visita, 'title'))
+  const siguiente = useSiguienteAccion('field_visit', visita)
   return (
     <article className="space-y-4">
       <Rastro />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <h1 className="text-sg-h1 font-semibold">{texto(visita, 'title')}</h1>
-          <div className="flex items-center gap-3">
+      <EncabezadoDePagina
+        antetitulo={t('relacionamiento.visita.tipo')}
+        titulo={texto(visita, 'title')}
+        chips={
+          <>
             <EstadoChip objeto="field_visit" estado={visita.state} />
-            <span className="text-sm text-sg-text-secondary">
+            <span className="text-sg-text-secondary">
               {t('relacionamiento.visita.periodo', {
                 desde: diaPe(texto(visita, 'actual_start_date') || texto(visita, 'planned_start_date')) || '…',
                 hasta: diaPe(texto(visita, 'actual_end_date') || texto(visita, 'planned_end_date')) || '…'
               })}
             </span>
+          </>
+        }
+        primaria={
+          <div className="flex flex-wrap gap-2">
+            {escribe && enCurso && can('field_observation', 'CREATE') ? (
+              <Button size="sm" onClick={() => setObservando(true)}>
+                {t('relacionamiento.visita.agregarObservacion')}
+              </Button>
+            ) : null}
+            <BotonesDeTransicion
+              objeto="field_visit"
+              registro={visita}
+              proyecto={proyecto}
+              sinPrimaria={escribe && enCurso && can('field_observation', 'CREATE')}
+            />
           </div>
-          <ol aria-label={t('comun.pasos')} className="flex gap-2 text-sg-caption">
-            {pasos.map((p, i) => (
-              <li
-                key={p}
-                aria-current={i === actual ? 'step' : undefined}
-                className={cn('rounded-sg-sm px-2 py-0.5', i === actual ? 'bg-sg-primary-soft font-medium' : 'text-sg-text-muted')}
-              >
-                {p}
-              </li>
-            ))}
-          </ol>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {escribe && enCurso && can('field_observation', 'CREATE') ? (
-            <Button size="sm" onClick={() => setObservando(true)}>
-              {t('relacionamiento.visita.agregarObservacion')}
-            </Button>
-          ) : null}
-          {escribe && can('engagement', 'CREATE') && (enCurso || visita.state === 'planned') ? (
+        }
+        secundarias={
+          escribe && can('engagement', 'CREATE') && (enCurso || visita.state === 'planned') ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?field_visit=${encodeURIComponent(visita.id)}`}>
                 {t('relacionamiento.visita.registrarInteraccion')}
               </Link>
             </Button>
-          ) : null}
-          <BotonesDeTransicion objeto="field_visit" registro={visita} proyecto={proyecto} />
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
+      <CaminoDelFlujo objeto="field_visit" estado={visita.state} camino={[...CAMINO]} />
+      <PanelDeDecision
+        objeto="field_visit"
+        estado={visita.state}
+        desde={texto(visita, 'state_changed_at') || null}
+        por={texto(visita, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={texto(visita, 'leader_user_email') || null}
+        vencimiento={texto(visita, 'planned_end_date') || null}
+      />
       {enCurso ? <Alert tone="notice">{t('relacionamiento.visita.concluirAviso')}</Alert> : null}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
