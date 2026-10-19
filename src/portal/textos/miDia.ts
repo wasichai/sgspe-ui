@@ -19,6 +19,20 @@ export const ES_MI_DIA = {
     compromiso: 'Nuevo compromiso',
     proyecto: 'Nuevo proyecto'
   },
+  proyectos: {
+    titulo: 'Mis proyectos',
+    jefatura: 'Jefatura',
+    sinJefatura: 'Sin jefatura asignada',
+    compromisos_one: '{{count}} compromiso vencido',
+    compromisos_other: '{{count}} compromisos vencidos',
+    qcs_one: '{{count}} QCS vencida',
+    qcs_other: '{{count}} QCS vencidas',
+    riesgos_one: '{{count}} riesgo alto o crítico',
+    riesgos_other: '{{count}} riesgos altos o críticos',
+    nombres: { compromisos: 'Compromisos vencidos', qcs: 'QCS vencidas', riesgos: 'Riesgos altos o críticos' },
+    sinDato: '{{cifra}}: —',
+    verTodos: 'Ver todos sus proyectos ({{count}})'
+  },
   tipos: {
     task: 'Tarea',
     commitment: 'Compromiso',
@@ -47,6 +61,20 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     qcs: 'Record grievance, inquiry or request',
     compromiso: 'New commitment',
     proyecto: 'New project'
+  },
+  proyectos: {
+    titulo: 'My projects',
+    jefatura: 'Project lead',
+    sinJefatura: 'No project lead assigned',
+    compromisos_one: '{{count}} overdue commitment',
+    compromisos_other: '{{count}} overdue commitments',
+    qcs_one: '{{count}} overdue grievance, inquiry or request',
+    qcs_other: '{{count}} overdue grievances, inquiries or requests',
+    riesgos_one: '{{count}} high or critical risk',
+    riesgos_other: '{{count}} high or critical risks',
+    nombres: { compromisos: 'Overdue commitments', qcs: 'Overdue grievances, inquiries or requests', riesgos: 'High or critical risks' },
+    sinDato: '{{cifra}}: —',
+    verTodos: 'See all your projects ({{count}})'
   },
   tipos: {
     task: 'Task',
