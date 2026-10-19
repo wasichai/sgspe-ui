@@ -23,7 +23,7 @@ export const ES_TAREAS = {
     social_risk: 'Riesgo',
     early_warning: 'Alerta'
   },
-  verOrigen: 'Abrir el origen',
+  origen: 'Origen',
   sinOrigen: '—',
   abrir: 'Abrir {{tarea}}',
   columnasDelTablero: { open: 'Abiertas', in_progress: 'En curso', blocked: 'Bloqueadas', done: 'Hechas' },
@@ -67,7 +67,7 @@ export const EN_TAREAS: typeof ES_TAREAS = {
     social_risk: 'Risk',
     early_warning: 'Alert'
   },
-  verOrigen: 'Open the origin',
+  origen: 'Origin',
   sinOrigen: '—',
   abrir: 'Open {{tarea}}',
   columnasDelTablero: { open: 'Open', in_progress: 'In progress', blocked: 'Blocked', done: 'Done' },

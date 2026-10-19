@@ -1,13 +1,12 @@
+import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
-import { rutaParaAbrir } from '../datos/fichas'
 import { atributo, texto, useActualizar, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
@@ -31,6 +30,19 @@ export const ORIGENES: readonly string[] = [
 export const origenDe = (tarea: Registro): { objeto: string; id: string } | null => {
   const objeto = ORIGENES.find((o) => atributo<string>(tarea, o))
   return objeto ? { objeto, id: String(atributo(tarea, objeto)) } : null
+}
+
+// el origen de una tarea con su tipo y su nombre («Interacción · Asamblea de agosto», revisión de UX, etapa 6): el registro se lee
+// como quien mira, así que uno que no se lee (una QCS confidencial, otro proyecto) es «Registro reservado», sin enlace
+export function OrigenDeTarea({ tarea }: { tarea: Registro }) {
+  const { t } = useTranslation(NS)
+  const origen = origenDe(tarea)
+  if (!origen) return <>{t('tareas.sinOrigen')}</>
+  return (
+    <span>
+      {t(`tareas.origenes.${origen.objeto}`)} · <RegistroVinculado objeto={origen.objeto} id={origen.id} />
+    </span>
+  )
 }
 
 // una tarea abierta desde la lista, el tablero o el calendario (?task=id): sus datos, su origen y las transiciones de WF-N
@@ -75,9 +87,9 @@ export function TareaDrawer({ tarea, alCerrar }: { tarea: Registro; alCerrar: ()
         </div>
       </dl>
       {origen ? (
-        <Link to={rutaParaAbrir(origen.objeto, origen.id)} className="text-sm text-sg-primary-text underline">
-          {t('tareas.verOrigen')}: {t(`tareas.origenes.${origen.objeto}`)}
-        </Link>
+        <p className="text-sm">
+          {t('tareas.origen')}: <OrigenDeTarea tarea={tarea} />
+        </p>
       ) : null}
       {sinAsignar && abierta && escribe && can('task', 'UPDATE') && user ? (
         <Button

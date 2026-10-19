@@ -85,7 +85,7 @@ const rutas = (extra: MockRoute[] = []): MockRoute[] => [
 
 describe('S47 · mis tareas', () => {
   it('lee las asignadas a quien mira, cuenta las vencidas y abre una con su origen y sus transiciones', async () => {
-    fetch = mockFetch(rutas())
+    fetch = mockFetch(rutas([{ path: '/objects/commitment/records/c1', body: registro('c1', { project: 'p1', code: 'C-001', title: 'Reservorio' }) }]))
     red = espiarRed()
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
@@ -94,7 +94,9 @@ describe('S47 · mis tareas', () => {
     expect(within(contadores).getByRole('button', { name: 'Vencidas 1' })).toHaveAttribute('aria-pressed', 'false')
     expect(within(contadores).getByRole('button', { name: 'Abiertas 2' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(tabla).queryByText('Revisar el acta')).not.toBeInTheDocument()
-    expect(within(tabla).getByRole('link', { name: 'Compromiso' })).toHaveAttribute('href', '/r/commitment/c1')
+    // el origen con su tipo y su nombre, leído como quien mira (revisión de UX, etapa 6)
+    expect(await within(tabla).findByRole('link', { name: /^C-001 · / })).toHaveAttribute('href', '/projects/p1/commitments/c1')
+    expect(within(tabla).getByText(/^Compromiso ·/)).toBeInTheDocument()
     await userEvent.click(within(tabla).getByRole('button', { name: 'Abrir Ejecutar compromiso C-001' }))
     const drawer = await screen.findByRole('dialog')
     expect(await within(drawer).findByRole('button', { name: 'Iniciar' })).toBeInTheDocument()
@@ -180,14 +182,24 @@ describe('S47 · mis tareas', () => {
     await waitFor(() => expect(within(drawer).queryByRole('button', { name: 'Tomar la tarea' })).not.toBeInTheDocument())
   })
 
-  it('una tarea de una QCS, un riesgo o una alerta (F4) lleva a su origen por /r/…', async () => {
+  it('una tarea de una QCS, un riesgo o una alerta (F4) lleva a la ficha de su origen, con su tipo y su nombre', async () => {
     const acuse = registro('t5', { project: 'p1', title: 'Acusar recibo de la queja Q-001', grievance: 'g1', assignee_user_id: 'u-cmm' }, { state: 'open' })
     const revision = registro('t6', { project: 'p1', title: 'Revisar el riesgo R-001', social_risk: 'k1', assignee_user_id: 'u-cmm' }, { state: 'open' })
-    fetch = mockFetch(rutas([{ path: '/objects/task/records', body: pagina([acuse, revision]) }]))
+    const conOtroProyecto = registro('t7', { project: 'p1', title: 'Revisar la alerta', early_warning: 'w9', assignee_user_id: 'u-cmm' }, { state: 'open' })
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/task/records', body: pagina([acuse, revision, conOtroProyecto]) },
+        { path: '/objects/grievance/records/g1', body: registro('g1', { project: 'p1', code: 'Q-001' }) },
+        { path: '/objects/social_risk/records/k1', body: registro('k1', { project: 'p1', code: 'R-001', title: 'Polvo en la vía' }) },
+        { path: '/objects/early_warning/records/w9', status: 404, body: { title: 'Not Found', status: 404 } }
+      ])
+    )
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
-    expect(within(tabla).getByRole('link', { name: 'Queja' })).toHaveAttribute('href', '/r/grievance/g1')
-    expect(within(tabla).getByRole('link', { name: 'Riesgo' })).toHaveAttribute('href', '/r/social_risk/k1')
+    expect(await within(tabla).findByRole('link', { name: 'Q-001' })).toHaveAttribute('href', '/projects/p1/grievances/g1')
+    expect(await within(tabla).findByRole('link', { name: 'R-001 · Polvo en la vía' })).toHaveAttribute('href', '/projects/p1/risks/k1')
+    // un origen que no se lee es «Registro reservado», sin enlace
+    expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
   })
 
   // plan 4.2a: el escalamiento de nivel 2 de una QCS confidencial no lleva vínculo a la QCS, sino un título genérico: la lista dice
