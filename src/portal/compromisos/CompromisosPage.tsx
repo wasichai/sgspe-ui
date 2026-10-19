@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
@@ -63,6 +64,7 @@ export function CompromisosPage() {
   const proyectos = useProyectos()
   const etiquetas = useEtiquetasDeEstado('commitment')
   const conTablero = useTableroDisponible('commitments')
+  const telefono = useEsTelefono()
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const q = lista.filtro('q').trim().toLowerCase()
   const estado = lista.filtro('state')
@@ -150,51 +152,76 @@ export function CompromisosPage() {
             )
           ) : (
             <>
-              <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-                <Table aria-label={t('compromisos.tabla')}>
-                  <thead>
-                    <tr>
-                      <Th scope="col">{t('compromisos.columnas.compromiso')}</Th>
-                      {proyecto ? null : <Th scope="col">{t('compromisos.columnas.proyecto')}</Th>}
-                      <Th scope="col">{t('compromisos.columnas.estado')}</Th>
-                      <Th scope="col">{t('compromisos.columnas.situacion')}</Th>
-                      <Th scope="col">{t('compromisos.columnas.vence')}</Th>
-                      <Th scope="col">{t('compromisos.columnas.responsable')}</Th>
-                      <Th scope="col" className="text-right">
-                        {t('compromisos.columnas.monto')}
-                      </Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagina.map((c) => (
-                      <tr key={c.id}>
-                        <Td className="min-w-64 text-sm">
-                          <EnlaceDeRegistro
-                            codigo={texto(c, 'code')}
-                            titulo={texto(c, 'title')}
-                            ruta={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
-                            desde={t('compromisos.titulo')}
-                          />
-                        </Td>
-                        {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(c, 'project'))}</Td>}
-                        <Td>
-                          <EstadoChip objeto="commitment" estado={c.state} />
-                        </Td>
-                        <Td>
-                          <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
-                        </Td>
-                        <Td className="text-sm">
-                          <Dia valor={texto(c, 'due_date')} />
-                        </Td>
-                        <Td className="text-sm">
-                          <Persona correo={texto(c, 'owner_user_email')} />
-                        </Td>
-                        <Td className="text-right text-sm tabular-nums">{montoPe(atributo(c, 'amount'), atributo(c, 'currency'))}</Td>
+              {telefono ? (
+                <ListaEnTarjetas
+                  etiqueta={t('compromisos.tabla')}
+                  tarjetas={pagina.map((c) => ({
+                    id: c.id,
+                    titulo: (
+                      <EnlaceDeRegistro
+                        codigo={texto(c, 'code')}
+                        titulo={texto(c, 'title')}
+                        ruta={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
+                        desde={t('compromisos.titulo')}
+                      />
+                    ),
+                    estado: <EstadoChip objeto="commitment" estado={c.state} />,
+                    plazo: (
+                      <>
+                        <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
+                        <Dia valor={texto(c, 'due_date')} />
+                      </>
+                    ),
+                    proyecto: proyecto ? undefined : nombreDelProyecto(texto(c, 'project'))
+                  }))}
+                />
+              ) : (
+                <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+                  <Table aria-label={t('compromisos.tabla')}>
+                    <thead>
+                      <tr>
+                        <Th scope="col">{t('compromisos.columnas.compromiso')}</Th>
+                        {proyecto ? null : <Th scope="col">{t('compromisos.columnas.proyecto')}</Th>}
+                        <Th scope="col">{t('compromisos.columnas.estado')}</Th>
+                        <Th scope="col">{t('compromisos.columnas.situacion')}</Th>
+                        <Th scope="col">{t('compromisos.columnas.vence')}</Th>
+                        <Th scope="col">{t('compromisos.columnas.responsable')}</Th>
+                        <Th scope="col" className="text-right">
+                          {t('compromisos.columnas.monto')}
+                        </Th>
                       </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {pagina.map((c) => (
+                        <tr key={c.id}>
+                          <Td className="min-w-64 text-sm">
+                            <EnlaceDeRegistro
+                              codigo={texto(c, 'code')}
+                              titulo={texto(c, 'title')}
+                              ruta={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
+                              desde={t('compromisos.titulo')}
+                            />
+                          </Td>
+                          {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(c, 'project'))}</Td>}
+                          <Td>
+                            <EstadoChip objeto="commitment" estado={c.state} />
+                          </Td>
+                          <Td>
+                            <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
+                          </Td>
+                          <Td className="text-sm">
+                            <Dia valor={texto(c, 'due_date')} />
+                          </Td>
+                          <Td className="text-sm">
+                            <Persona correo={texto(c, 'owner_user_email')} />
+                          </Td>
+                          <Td className="text-right text-sm tabular-nums">{montoPe(atributo(c, 'amount'), atributo(c, 'currency'))}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
               {filtrados.length > POR_PAGINA ? (
                 <Pagination
                   page={lista.pagina}

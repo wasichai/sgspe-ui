@@ -1,3 +1,4 @@
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { ApiError, useAuth } from '@wasichai/core'
@@ -86,6 +87,7 @@ export function AtencionPage() {
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const lista = useParametrosDeLista('atencion')
+  const telefono = useEsTelefono()
   const quejas = useTodosConTope('grievance', { project: proyecto }, can('grievance', 'READ'))
   const consultas = useTodosConTope('inquiry', { project: proyecto }, can('inquiry', 'READ'))
   const solicitudes = useTodosConTope('stakeholder_request', { project: proyecto }, can('stakeholder_request', 'READ'))
@@ -255,40 +257,78 @@ export function AtencionPage() {
               <h2 className="text-sg-h3 font-semibold">
                 {t(`atencion.grupos.${grupo}`)} <span className="text-sg-text-muted">({numeroPe(delGrupo.length)})</span>
               </h2>
-              <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-                <Table aria-label={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}>
-                  <thead>
-                    <tr>
-                      <Th scope="col">{t('atencion.columnas.tipo')}</Th>
-                      <Th scope="col">{t('atencion.columnas.codigo')}</Th>
-                      {proyecto ? null : <Th scope="col">{t('atencion.columnas.proyecto')}</Th>}
-                      <Th scope="col">{t('atencion.columnas.canal')}</Th>
-                      <Th scope="col">{t('atencion.columnas.categoria')}</Th>
-                      {conSeveridad ? <Th scope="col">{t('atencion.columnas.severidad')}</Th> : null}
-                      <Th scope="col">{t('atencion.columnas.estado')}</Th>
-                      <Th scope="col">{t('atencion.columnas.plazo')}</Th>
-                      <Th scope="col">{t('atencion.columnas.responsable')}</Th>
-                      <Th scope="col">{t('atencion.columnas.planteaQuien')}</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {delGrupo.map((f) => (
-                      <FilaDeQcs
-                        key={`${f.objeto}:${f.registro.id}`}
-                        fila={f}
-                        conProyecto={!proyecto}
-                        conSeveridad={conSeveridad}
-                        nombreDelProyecto={nombreDelProyecto}
-                      />
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
+              {telefono ? (
+                <ListaEnTarjetas
+                  etiqueta={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}
+                  tarjetas={delGrupo.map((f) => ({
+                    id: `${f.objeto}:${f.registro.id}`,
+                    titulo: (
+                      <>
+                        <span className="text-sg-caption text-sg-text-muted">{t(`comun.qcs.${f.objeto}`)} · </span>
+                        <EnlaceDeRegistro
+                          codigo={texto(f.registro, 'code')}
+                          titulo={asuntoDe(f.registro)}
+                          ruta={rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)}
+                          desde={t('atencion.titulo')}
+                          codigoEnElEnlace
+                        />
+                      </>
+                    ),
+                    estado: <EstadoChip objeto={f.objeto} estado={f.registro.state} />,
+                    plazo: <PlazoDeQcs fila={f} />,
+                    proyecto: proyecto ? undefined : nombreDelProyecto(texto(f.registro, 'project'))
+                  }))}
+                />
+              ) : (
+                <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+                  <Table aria-label={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}>
+                    <thead>
+                      <tr>
+                        <Th scope="col">{t('atencion.columnas.tipo')}</Th>
+                        <Th scope="col">{t('atencion.columnas.codigo')}</Th>
+                        {proyecto ? null : <Th scope="col">{t('atencion.columnas.proyecto')}</Th>}
+                        <Th scope="col">{t('atencion.columnas.canal')}</Th>
+                        <Th scope="col">{t('atencion.columnas.categoria')}</Th>
+                        {conSeveridad ? <Th scope="col">{t('atencion.columnas.severidad')}</Th> : null}
+                        <Th scope="col">{t('atencion.columnas.estado')}</Th>
+                        <Th scope="col">{t('atencion.columnas.plazo')}</Th>
+                        <Th scope="col">{t('atencion.columnas.responsable')}</Th>
+                        <Th scope="col">{t('atencion.columnas.planteaQuien')}</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {delGrupo.map((f) => (
+                        <FilaDeQcs
+                          key={`${f.objeto}:${f.registro.id}`}
+                          fila={f}
+                          conProyecto={!proyecto}
+                          conSeveridad={conSeveridad}
+                          nombreDelProyecto={nombreDelProyecto}
+                        />
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
             </section>
           )
         })
       )}
     </section>
+  )
+}
+
+// el plazo que corre en su estado, con su situación; fuera de esos estados, «sin plazo»
+function PlazoDeQcs({ fila: { objeto, registro } }: { fila: Fila }) {
+  const { t } = useTranslation(NS)
+  const plazo = plazoQueCorre(objeto, registro)
+  return plazo ? (
+    <span className="flex flex-wrap items-center gap-1">
+      <SituacionDePlazo valor={atributo(registro, 'deadline_status')} />
+      {plazo.fecha ? diaPe(plazo.fecha) : t('atencion.plazoPorCalcular')}
+    </span>
+  ) : (
+    <span className="text-sg-text-muted">{t('atencion.sinPlazo')}</span>
   )
 }
 
@@ -305,7 +345,6 @@ function FilaDeQcs({
 }) {
   const { t } = useTranslation(NS)
   const { objeto, registro } = fila
-  const plazo = plazoQueCorre(objeto, registro)
   return (
     <tr>
       <Td className="text-sm">{t(`comun.qcs.${objeto}`)}</Td>
@@ -326,14 +365,7 @@ function FilaDeQcs({
         <EstadoChip objeto={objeto} estado={registro.state} />
       </Td>
       <Td className="text-sm">
-        {plazo ? (
-          <span className="flex flex-wrap items-center gap-1">
-            <SituacionDePlazo valor={atributo(registro, 'deadline_status')} />
-            {plazo.fecha ? diaPe(plazo.fecha) : t('atencion.plazoPorCalcular')}
-          </span>
-        ) : (
-          <span className="text-sg-text-muted">{t('atencion.sinPlazo')}</span>
-        )}
+        <PlazoDeQcs fila={fila} />
       </Td>
       <Td className="text-sm">
         <Persona correo={texto(registro, 'owner_user_email')} />
