@@ -27,7 +27,7 @@ import {
 } from '../tableros/comunes'
 import { rotuloDeFila } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // S27 · tablero de compromisos (dashboards.md §5.6, screens.md §12): GET /api/sgspe/dashboards/commitments en una llamada, con
 // los filtros de periodo, territorio, campaña y responsable (owner, que aplican KPI-COM-03, 04, 06 y 09; los demás lo declaran
@@ -305,7 +305,7 @@ function Pendientes({ proyecto, filtros }: { proyecto?: string; filtros: Filtros
                     <Dia valor={texto(c, 'due_date')} />
                   </Td>
                   <Td className="text-sm">
-                    <Correo valor={texto(c, 'owner_user_email')} />
+                    <Persona correo={texto(c, 'owner_user_email')} />
                   </Td>
                 </tr>
               ))}

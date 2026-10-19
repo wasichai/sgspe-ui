@@ -37,6 +37,7 @@ import { diaDe } from './fechas'
 import { CodigoDeProyecto } from './InteraccionesPage'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 import { Dia } from '../componentes/Dia'
+import { Persona } from '../componentes/Persona'
 
 // S26 · visita de campo (screens.md §6, WF-L): el camino Planificada → En curso → Concluida o Parcial, el mapa con la ruta,
 // las interacciones y las observaciones, y "Agregar observación aquí" con la ubicación del teléfono o con coordenadas
@@ -150,7 +151,7 @@ function LiderDeLaVisita({ proyecto, alElegir }: { proyecto: string; alElegir: (
           <option value="">{t('comun.ninguno')}</option>
           {miembros.map((a) => (
             <option key={texto(a, 'member_user_id')} value={texto(a, 'member_user_id')}>
-              {texto(a, 'member_user_email') || texto(a, 'member_user_id')}
+              {texto(a, 'member_user_email') ? <Persona correo={texto(a, 'member_user_email')} /> : texto(a, 'member_user_id')}
               {texto(a, 'role_name') ? ` (${texto(a, 'role_name')})` : ''}
             </option>
           ))}

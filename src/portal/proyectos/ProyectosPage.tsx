@@ -12,6 +12,7 @@ import { atributo, texto, useDefinicion, useTodos, type Registro } from '../dato
 import { NS } from '../i18n'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
+import { Persona } from '../componentes/Persona'
 
 // S06 · lista de proyectos (screens.md §3): vistas "Mis proyectos", "Activos", "En revisión" y "Todos"; filtros por tipo,
 // etapa y fase en la URL; la jefatura son las asignaciones activas con el rol de jefatura (ASM-080) y la campaña en curso,
@@ -53,13 +54,18 @@ export function ProyectosPage() {
   const enCurso = porProyecto(campanas.data, 'name')
   // la jefatura y la campaña son de otras consultas: mientras cargan no se afirma nada, y si fallan o dan 403 se dice. solo
   // sin datos: un refetch fallido (volver a la pestaña) no reemplaza lo ya cargado por «No disponible»
-  const celda = (consulta: { isPending: boolean; isError: boolean; data: unknown }, valores: Set<string> | undefined, vacio: ReactNode) =>
+  const celda = (
+    consulta: { isPending: boolean; isError: boolean; data: unknown },
+    valores: Set<string> | undefined,
+    vacio: ReactNode,
+    mostrar: (valores: Set<string>) => ReactNode = (v) => [...v].join(', ')
+  ) =>
     consulta.isError && !consulta.data ? (
       <NoDisponible />
     ) : consulta.isPending ? (
       <span className="text-sg-text-muted">…</span>
     ) : valores ? (
-      [...valores].join(', ')
+      mostrar(valores)
     ) : (
       vacio
     )
@@ -160,7 +166,16 @@ export function ProyectosPage() {
                   <Td>
                     <EstadoChip objeto="project" estado={p.state} />
                   </Td>
-                  <Td className="text-sm">{celda(jefaturas, jefes.get(p.id), <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>)}</Td>
+                  <Td className="text-sm">
+                    {celda(jefaturas, jefes.get(p.id), <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>, (correos) =>
+                      [...correos].map((c, i) => (
+                        <span key={c}>
+                          {i ? ', ' : ''}
+                          <Persona correo={c} />
+                        </span>
+                      ))
+                    )}
+                  </Td>
                   <Td className="text-sm">{celda(campanas, enCurso.get(p.id), '—')}</Td>
                 </tr>
               ))}

@@ -29,7 +29,7 @@ import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { nivelDePuntaje, umbralesDe } from './niveles'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // S40 · ficha de riesgo (screens.md §9, flujos 14 y 15): el nivel vigente, cómo llegó ahí y qué se hace para bajarlo. «Nueva
 // revisión» es el endpoint de revisiones (api.md §4.7): las revisiones son inmutables y una se corrige con otra; la primera aplica
@@ -132,7 +132,8 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
             {texto(riesgo, 'next_review_date') ? <span>{t('fichaRiesgo.proxima', { fecha: diaPe(texto(riesgo, 'next_review_date')) })}</span> : null}
           </div>
           <p className="text-sm text-sg-text-secondary">
-            {t('fichaRiesgo.responsable')}: {texto(riesgo, 'owner_user_email') || t('fichaRiesgo.sinResponsable')} ·{' '}
+            {t('fichaRiesgo.responsable')}:{' '}
+            {texto(riesgo, 'owner_user_email') ? <Persona correo={texto(riesgo, 'owner_user_email')} /> : t('fichaRiesgo.sinResponsable')} ·{' '}
             {cadencia ? t('fichaRiesgo.cadencia', { n: cadencia, count: Number(cadencia) }) : t('fichaRiesgo.cadenciaDelProyecto')}
           </p>
           {hecha ? (
@@ -266,7 +267,7 @@ export const estaAtrasada = (medida: Registro, hoy: string = hoyEnLima()): boole
 function columnasDeMedidas(t: (clave: string) => string) {
   return [
     { id: 'medida', encabezado: t('fichaRiesgo.medidas.columnas.medida'), celda: (m: Registro) => texto(m, 'description') },
-    { id: 'responsable', encabezado: t('fichaRiesgo.medidas.columnas.responsable'), celda: (m: Registro) => texto(m, 'owner_user_email') || '—' },
+    { id: 'responsable', encabezado: t('fichaRiesgo.medidas.columnas.responsable'), celda: (m: Registro) => <Persona correo={texto(m, 'owner_user_email')} /> },
     {
       id: 'prevista',
       encabezado: t('fichaRiesgo.medidas.columnas.prevista'),
@@ -350,7 +351,7 @@ function Revisiones({ consulta }: { consulta: ReturnType<typeof useTodos> }) {
                 <Td className="text-sm">{atributo(r, 'residual') === true ? t('fichaRiesgo.revisiones.residual') : t('fichaRiesgo.revisiones.vigente')}</Td>
                 <Td className="whitespace-pre-line text-sm">{texto(r, 'notes') || '—'}</Td>
                 <Td className="text-sm">
-                  <Correo valor={texto(r, 'assessor_user_email')} />
+                  <Persona correo={texto(r, 'assessor_user_email')} />
                 </Td>
               </tr>
             ))}

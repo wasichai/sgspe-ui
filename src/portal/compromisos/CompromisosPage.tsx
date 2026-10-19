@@ -19,7 +19,7 @@ import { useTableroDisponible } from '../tableros/comunes'
 import { Candidatos } from './Candidatos'
 import { Dia } from '../componentes/Dia'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // S28 · lista de compromisos (screens.md §7): lo que se debe, a quién y desde cuándo, con lo vencido a un clic. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076), con el chip de territorio (localidad o comunidad). la API
@@ -167,7 +167,7 @@ export function CompromisosPage() {
                           <Dia valor={texto(c, 'due_date')} />
                         </Td>
                         <Td className="text-sm">
-                          <Correo valor={texto(c, 'owner_user_email')} />
+                          <Persona correo={texto(c, 'owner_user_email')} />
                         </Td>
                         <Td className="text-right text-sm tabular-nums">{montoPe(atributo(c, 'amount'), atributo(c, 'currency'))}</Td>
                       </tr>

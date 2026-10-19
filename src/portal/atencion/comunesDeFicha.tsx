@@ -17,6 +17,7 @@ import { atributo, puedeEscribir, texto, useActualizar, useDefinicion, useRegist
 import { diaPe, fechaYHoraPe, NS } from '../i18n'
 import { Dia } from '../componentes/Dia'
 import { opcion } from '../datos/opciones'
+import { Persona as PersonaDelEquipo } from '../componentes/Persona'
 
 // lo que comparten la ficha de queja (S36) y las de consulta y solicitud (S57): las marcas de anonimato y confidencialidad, el plazo
 // que corre en el estado, los datos del caso (la persona solo para quien la lee, security.md §7.9), la edición con motivo (las QCS
@@ -109,8 +110,12 @@ export function DatosDelCaso({ qcs, children }: { qcs: Registro; children?: Reac
       <Dato termino={t('fichaQueja.campos.priority')}>{valor('priority')}</Dato>
       <Dato termino={t('fichaQueja.campos.channel')}>{valor('channel')}</Dato>
       <Dato termino={t('fichaQueja.campos.received_at')}>{momento('received_at')}</Dato>
-      <Dato termino={t('fichaQueja.campos.received_by')}>{valor('received_by_user_email')}</Dato>
-      <Dato termino={t('fichaQueja.campos.owner')}>{valor('owner_user_email')}</Dato>
+      <Dato termino={t('fichaQueja.campos.received_by')}>
+        <PersonaDelEquipo correo={texto(qcs, 'received_by_user_email')} />
+      </Dato>
+      <Dato termino={t('fichaQueja.campos.owner')}>
+        <PersonaDelEquipo correo={texto(qcs, 'owner_user_email')} />
+      </Dato>
       <Dato termino={t('fichaQueja.campos.person')}>
         <Persona qcs={qcs} />
       </Dato>

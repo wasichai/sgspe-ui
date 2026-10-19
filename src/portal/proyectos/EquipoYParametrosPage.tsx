@@ -29,6 +29,7 @@ import { ParametroNumerico } from './ParametroNumerico'
 import { TemasPriorizados } from './TemasPriorizados'
 import { PARAMETROS_F2, PARAMETROS_F4, PARAMETROS_INVERSION, problemasDeParametros, vigente, type Parametro } from './parametros'
 import { opcion } from '../datos/opciones'
+import { Persona } from '../componentes/Persona'
 
 // S11 · equipo y parámetros del proyecto (screens.md §3): asignaciones con su vigencia (una vencida no da escritura,
 // RQ-SEC-006), campañas con su tope y lo ejecutado por moneda (ASM-063), partes y concesiones, y los parámetros de F2 con
@@ -119,7 +120,9 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
                 const correo = texto(a, 'member_user_email')
                 return (
                   <tr key={a.id}>
-                    <Td>{correo}</Td>
+                    <Td>
+                      <Persona correo={correo} />
+                    </Td>
                     <Td className={roles.data?.some((r) => r.name === texto(a, 'role_name')) ? 'text-sm' : 'font-sg-mono text-sg-caption'}>
                       {rolDicho(texto(a, 'role_name'))}
                     </Td>

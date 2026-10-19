@@ -18,7 +18,7 @@ import { useTextoDeAviso } from '../transiciones/avisos'
 import { APROBACIONES_DE, rutaDeDecision, useAprobacionesPendientes } from './AprobacionesPage'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
-import { Correo } from '../componentes/Correo'
+import { Persona } from '../componentes/Persona'
 
 // S31 · aprobación de compromiso (/tasks/approvals/commitment/:recordId; screens.md §7, flujo 8): la bandeja a la izquierda,
 // el compromiso con su origen y la decisión con motivo obligatorio (commitment es requiresReason); a la derecha, las reglas de
@@ -111,7 +111,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
             <div>
               <dt className="text-sg-text-muted">{t('aprobaciones.decision.responsable')}</dt>
               <dd>
-                <Correo valor={texto(compromiso, 'owner_user_email')} />
+                <Persona correo={texto(compromiso, 'owner_user_email')} />
               </dd>
             </div>
             <div>
