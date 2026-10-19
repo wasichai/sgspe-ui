@@ -1,5 +1,6 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
+import { PanelRightOpen } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
@@ -78,15 +79,18 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   }
   const [encendidas, setEncendidas] = useState(() => new Set<string>(['LYR-02', 'LYR-05']))
   const [encuadre, setEncuadre] = useState<Encuadre | null>(null)
-  // el mapa abre sobre el proyecto del filtro (su ubicación y su área de interés) o sobre el Perú entero, y recién con esa vista
-  // se piden las capas: nunca sin bbox (revisión final del plan 6.3, m1)
+  // el mapa abre sobre el proyecto del filtro (su ubicación y su área de interés); sin filtro, sobre todos los proyectos que la
+  // cuenta lee, y sobre el Perú entero solo si ninguno tiene ubicación. recién con esa vista se piden las capas: nunca sin bbox
+  // (revisión final del plan 6.3, m1)
   const delFiltro = useProyecto(proyecto)
+  const todos = useProyectos()
   const geometrias = delFiltro.data?.geometries
-  const esperandoProyecto = Boolean(proyecto) && delFiltro.isPending
-  const vistaInicial = useMemo(
-    () => (esperandoProyecto ? ('esperar' as const) : proyecto ? encuadreDeGeometrias([geometrias?.location, geometrias?.interest_area]) : null),
-    [esperandoProyecto, proyecto, geometrias]
-  )
+  const esperandoProyecto = proyecto ? delFiltro.isPending : todos.isPending
+  const vistaInicial = useMemo(() => {
+    if (esperandoProyecto) return 'esperar' as const
+    if (proyecto) return encuadreDeGeometrias([geometrias?.location, geometrias?.interest_area])
+    return encuadreDeGeometrias((todos.data ?? []).flatMap((p) => [p.geometries?.location, p.geometries?.interest_area]))
+  }, [esperandoProyecto, proyecto, geometrias, todos.data])
   const [creando, setCreando] = useState(false)
   const [exportando, setExportando] = useState(false)
   const capturar = useRef<() => string | null>(() => null)
@@ -277,13 +281,15 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
                     {l.nombre || t('territorio.sinNombre')}
                   </Link>
                   {/* la alternativa de teclado del clic en el mapa: abre la ficha contextual */}
+                  {/* un ícono y no «Ver resumen» repetido en cada fila; el nombre accesible y el title dicen de qué lugar */}
                   <button
                     type="button"
-                    className="ml-2 text-sg-caption text-sg-text-secondary underline"
+                    className="ml-2 inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
                     aria-label={t('fichaTerritorial.verResumen', { nombre: l.nombre || t('territorio.sinNombre') })}
+                    title={t('fichaTerritorial.verResumenCorto')}
                     onClick={() => elegir(l.objeto, l.id)}
                   >
-                    {t('fichaTerritorial.verResumenCorto')}
+                    <PanelRightOpen aria-hidden className="size-4" />
                   </button>
                 </li>
               ))}

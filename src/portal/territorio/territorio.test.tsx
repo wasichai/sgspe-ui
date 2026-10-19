@@ -71,8 +71,8 @@ describe('S12 · mapa territorial', () => {
     ])
     const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
     expect(await within(lugares).findByRole('link', { name: 'Tunas' })).toHaveAttribute('href', '/territory/localities/l1')
-    // el nombre accesible contiene el texto visible (WCAG 2.5.3)
-    expect(within(lugares).getByRole('button', { name: 'Ver resumen de Tunas' })).toHaveTextContent('Ver resumen')
+    // un ícono por fila: el nombre accesible dice de qué lugar y el title, qué hace
+    expect(within(lugares).getByRole('button', { name: 'Ver resumen de Tunas' })).toHaveAttribute('title', 'Ver resumen')
     await userEvent.click(within(screen.getByRole('list', { name: 'Mapa territorial' })).getByRole('button', { name: 'CC Tunas Pampa' }))
     await waitFor(() => expect(rutaActual()).toBe('/territory?selected=community%3Ac1'))
     const panel = await screen.findByRole('complementary', { name: 'Ficha del lugar' })

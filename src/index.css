@@ -58,3 +58,45 @@ table th[scope='row'] {
     text-transform: none;
     letter-spacing: normal;
 }
+
+/* las pestañas internas de una ficha (Tabs de @wasichai/ui: Resumen, Seguimiento… Actividad) se desplazan en horizontal si no
+   caben; sin indicio, la última se cortaba sin decir que había más. el borde por el que queda algo se desvanece: una animación
+   ligada al desplazamiento (scroll(self inline)) mueve la máscara, y si la fila no desplaza la línea de tiempo queda inactiva y
+   no hay máscara. un navegador sin animation-timeline la ve como antes. el relleno lateral del core se reduce para que quepan
+   más. las del proyecto usan PestanasDesplazables, con botones */
+@property --sg-pestanas-antes {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+@property --sg-pestanas-despues {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+@keyframes sg-pestanas-borde {
+    from {
+        --sg-pestanas-antes: 0px;
+        --sg-pestanas-despues: 3rem;
+    }
+    1% {
+        --sg-pestanas-antes: 3rem;
+    }
+    99% {
+        --sg-pestanas-despues: 3rem;
+    }
+    to {
+        --sg-pestanas-antes: 3rem;
+        --sg-pestanas-despues: 0px;
+    }
+}
+[data-slot='tabs-list'] {
+    padding-inline: 0;
+}
+@supports (animation-timeline: scroll()) {
+    [data-slot='tabs-list'] {
+        mask-image: linear-gradient(to right, transparent, #000 var(--sg-pestanas-antes), #000 calc(100% - var(--sg-pestanas-despues)), transparent);
+        animation: sg-pestanas-borde linear both;
+        animation-timeline: scroll(self inline);
+    }
+}
