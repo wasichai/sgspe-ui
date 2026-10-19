@@ -8,6 +8,7 @@ import { ADMIN_PERMISOS, permisos, RELACIONISTA } from '../../test/portal'
 import { BarraDeContexto } from './BarraDeContexto'
 import { useLeeTodosLosProyectos, useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
+import { useMigaDelRegistro } from '../componentes/Migas'
 import { filtroDeTerritorio, rutaEquivalente } from './rutas'
 import { SelectorDeProyecto } from './SelectorDeProyecto'
 
@@ -218,6 +219,90 @@ describe('barra de contexto y Project 360', () => {
     expect(screen.queryByText(AVISO)).not.toBeInTheDocument()
   })
 
+  // etapa 1 de la revisión de UX: migas en lugar del nombre suelto, nueve pestañas y «Más», y Acuerdos como vista de Compromisos
+  it('las migas dicen dónde se está, con el registro que la ficha declara', async () => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    function Ficha() {
+      useMigaDelRegistro('C-001')
+      return <p>Ficha</p>
+    }
+    montar(
+      <Routes>
+        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+          <Route path="commitments/:commitmentId" element={<Ficha />} />
+        </Route>
+      </Routes>,
+      { ruta: '/projects/p1/commitments/c1', permisos: ADMIN_PERMISOS }
+    )
+    const migas = await screen.findByRole('navigation', { name: 'Ubicación' })
+    expect(await within(migas).findByRole('link', { name: 'PRJ-01 · Pukaqaqa' })).toHaveAttribute('href', '/projects/p1/overview')
+    expect(within(migas).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('href', '/projects/p1/commitments')
+    expect(within(migas).getByText('C-001')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('en el resumen, las migas terminan en el proyecto', async () => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
+    const migas = await screen.findByRole('navigation', { name: 'Ubicación' })
+    expect(await within(migas).findByText('PRJ-01 · Pukaqaqa')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('nueve pestañas y «Más» con Tareas, Revisión de IA, Reportes y Equipo; la de «Más» abierta se marca en el botón', async () => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    montar(
+      <Routes>
+        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+          <Route path="*" element={null} />
+        </Route>
+      </Routes>,
+      { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS }
+    )
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(
+      within(subnav)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('aria-label') ?? a.textContent)
+    ).toEqual([
+      'Resumen',
+      'Mapa',
+      'Grupos de interés',
+      'Relacionamiento',
+      'Compromisos',
+      'Quejas, consultas y solicitudes',
+      'Riesgos',
+      'Programas sociales',
+      'Documentos'
+    ])
+    const mas = screen.getByRole('button', { name: 'Más secciones del proyecto' })
+    await userEvent.click(mas)
+    const grupo = screen.getByRole('group', { name: 'Más secciones del proyecto' })
+    expect(
+      within(grupo)
+        .getAllByRole('link')
+        .map((a) => a.textContent)
+    ).toEqual(['Tareas', 'Bandeja de IA', 'Reportes', 'Equipo y parámetros'])
+    await userEvent.click(within(grupo).getByRole('link', { name: 'Equipo y parámetros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/settings')
+    expect(screen.getByRole('button', { name: 'Más secciones del proyecto: Equipo y parámetros' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('Acuerdos es una vista de Compromisos: la pestaña Compromisos queda marcada y la vista ofrece volver', async () => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    montar(
+      <Routes>
+        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+          <Route path="agreements" element={<p>Acuerdos</p>} />
+        </Route>
+      </Routes>,
+      { ruta: '/projects/p1/agreements', permisos: ADMIN_PERMISOS }
+    )
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(within(subnav).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('aria-current', 'page')
+    const vistas = screen.getByRole('navigation', { name: 'Vistas de Compromisos' })
+    expect(within(vistas).getByRole('link', { name: 'Acuerdos' })).toHaveAttribute('aria-current', 'page')
+    expect(within(vistas).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('href', '/projects/p1/commitments')
+  })
+
   it('las pestañas de otra sección se ofrecen con sus permisos (revisión final, M7)', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: permisos({ project: ['READ'] }) })
@@ -226,17 +311,18 @@ describe('barra de contexto y Project 360', () => {
       within(subnav)
         .getAllByRole('link')
         .map((a) => a.textContent)
-    ).toEqual(['Resumen', 'Mapa', 'Equipo y parámetros'])
+    ).toEqual(['Resumen', 'Mapa'])
   })
 
-  it('con los permisos de cada sección, las seis pestañas', async () => {
+  it('con los permisos de cada sección, sus pestañas (unas a la vista y otras en «Más»)', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(LAYOUT, {
       ruta: '/projects/p1/overview',
       permisos: permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], engagement: ['READ'] })
     })
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
-    expect(within(subnav).getAllByRole('link')).toHaveLength(6)
+    // Resumen, Mapa, Grupos de interés y Relacionamiento a la vista; Reportes y Equipo en «Más»
+    expect(within(subnav).getAllByRole('link')).toHaveLength(4)
   })
 
   // con el alcance por proyecto, un proyecto ajeno responde 404 como uno inexistente (spec 4.4 §3.6): no se distingue y

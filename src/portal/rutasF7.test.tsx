@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ANALISTA, baseDeIa, EQUIPO_IA, GERENCIA_IA, SOLO_ASISTENTE, SUG_DUPLICADO, TRANSICIONES_DE_SUGERENCIA } from '../test/ia'
@@ -25,7 +26,14 @@ describe('rutas de F7', () => {
       ...baseDeIa()
     ])
     expect(await screen.findByRole('heading', { name: 'Bandeja de revisión de IA' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Bandeja de IA' })).toHaveAttribute('href', '/projects/p1/ai-review')
+    // la pestaña vive en «Más» (revisión de UX, decisión 2): abierta, el botón la nombra y la marca
+    const mas = screen.getByRole('button', { name: 'Más secciones del proyecto: Bandeja de IA' })
+    expect(mas).toHaveAttribute('aria-current', 'page')
+    await userEvent.click(mas)
+    expect(within(screen.getByRole('group', { name: 'Más secciones del proyecto' })).getByRole('link', { name: 'Bandeja de IA' })).toHaveAttribute(
+      'href',
+      '/projects/p1/ai-review'
+    )
   })
 
   it('el posible duplicado vive bajo la bandeja', async () => {

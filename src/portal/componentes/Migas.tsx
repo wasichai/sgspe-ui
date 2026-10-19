@@ -1,3 +1,4 @@
+import { createContext, useContext, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'react-router'
 import { useRegistro } from '../datos/registros'
@@ -39,6 +40,18 @@ export function Migas({ pasos }: { pasos: Miga[] }) {
   )
 }
 
+// el registro abierto lo declara su ficha (useMigaDelRegistro) y lo dibujan las migas de ProyectoLayout, que no lo conoce
+const ContextoDeMigas = createContext<((etiqueta: string | null) => void) | null>(null)
+export const ProveedorDeMigas = ContextoDeMigas.Provider
+
+export function useMigaDelRegistro(etiqueta: string | null | undefined) {
+  const fijar = useContext(ContextoDeMigas)
+  useEffect(() => {
+    fijar?.(etiqueta || null)
+    return () => fijar?.(null)
+  }, [fijar, etiqueta])
+}
+
 // las de una pantalla dentro de un proyecto: la pestaña es el segmento de la ruta tras el proyecto, o la que se diga cuando
 // la ruta no la nombra (la ficha de una queja vive en /grievances/:id y su pestaña es attention). sin registro, la pestaña
 // es la página actual
@@ -51,8 +64,9 @@ export function MigasDelProyecto({ pestana, registro }: { pestana?: string; regi
   const base = `/projects/${encodeURIComponent(projectId)}`
   const pasos: Miga[] = [
     { etiqueta: t('secciones.projects'), ruta: '/projects' },
-    { etiqueta: proyecto.data ? nombreDeProyecto(proyecto.data) : projectId, ruta: `${base}/overview` },
-    { etiqueta: t(`contexto.pestanas.${p}`, { defaultValue: '' }) || p, ruta: `${base}/${p}` }
+    { etiqueta: proyecto.data ? nombreDeProyecto(proyecto.data) : projectId, ruta: `${base}/overview` }
   ]
+  // el resumen es el proyecto mismo: las migas terminan en él
+  if (p !== 'overview' || registro) pasos.push({ etiqueta: t(`contexto.pestanas.${p}`, { defaultValue: '' }) || p, ruta: `${base}/${p}` })
   return <Migas pasos={registro ? [...pasos, { etiqueta: registro }] : pasos} />
 }
