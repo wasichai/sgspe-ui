@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
+import { pagina, registro } from '../../test/montar'
 import { ADMIN_PERMISOS, ADMINISTRACION } from '../../test/portal'
+
+const P1 = registro('p1', { code: 'PRJ-01', name: 'Proyecto Ejemplo A' }, { state: 'active' })
+const P2 = registro('p2', { code: 'PRJ-02', name: 'Proyecto Ejemplo B' }, { state: 'active' })
 
 // el shell en tableta y teléfono (ux-architecture.md §7.1, design-system.md §8): por debajo de md la navegación lateral se
 // oculta y el botón de menú abre un panel con las secciones, el idioma y el tema; en el teléfono, una barra inferior de cuatro
@@ -27,6 +31,25 @@ describe('shell responsive', () => {
     expect(within(panel).getByRole('combobox', { name: 'Idioma' })).toBeInTheDocument()
     expect(within(panel).getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
     await userEvent.click(within(within(panel).getByRole('navigation', { name: 'Secciones del menú' })).getByRole('link', { name: 'Inicio' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument())
+  })
+
+  // D2 de la revisión de UX: en el teléfono el selector de la barra superior no se ve; el panel del menú lo trae arriba y un
+  // chip en la barra superior dice el proyecto actual y abre el panel
+  it('en el teléfono, el chip del proyecto abre el panel con el selector, que lleva al proyecto elegido', async () => {
+    fetch = abrirPortal('/projects/p1/overview', ADMINISTRACION, ADMIN_PERMISOS, [
+      { path: '/objects/project/records/p1', body: P1 },
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    const chip = await within(screen.getByRole('banner')).findByRole('button', { name: 'Proyecto: PRJ-01. Cambiar de proyecto' })
+    expect(chip).toHaveClass('md:hidden')
+    await userEvent.click(chip)
+    const panel = await screen.findByRole('dialog', { name: 'Menú' })
+    const selector = await within(panel).findByRole('combobox', { name: 'Proyecto' })
+    expect(selector.closest('label')).not.toHaveClass('hidden')
+    await userEvent.selectOptions(selector, 'p2')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p2/overview'))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument())
   })
 

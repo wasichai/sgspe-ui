@@ -2,6 +2,7 @@
 // y sub-navegación de Project 360
 export const ES_CONTEXTO = {
   proyecto: 'Proyecto',
+  cambiarProyecto: 'Proyecto: {{proyecto}}. Cambiar de proyecto',
   todos: 'Todos mis proyectos',
   // con la acción de leer todos los proyectos (o ADMIN), el alcance global no es «mis» proyectos (plan 4.4b)
   todosLosProyectos: 'Todos los proyectos',
@@ -40,6 +41,7 @@ export const ES_CONTEXTO = {
 
 export const EN_CONTEXTO: typeof ES_CONTEXTO = {
   proyecto: 'Project',
+  cambiarProyecto: 'Project: {{proyecto}}. Change project',
   todos: 'All my projects',
   todosLosProyectos: 'All projects',
   sinProyectos: 'You have no assigned projects. Ask the project administrator for an assignment.',

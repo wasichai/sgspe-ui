@@ -1,11 +1,11 @@
 import { useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
 import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Campana } from '../avisos/Campana'
-import { SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
+import { ChipDeProyecto, SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
 import { BotonPreguntar, ProveedorDelAsistente } from '../ia/Asistente'
 import { BotonBuscar } from '../busqueda/BusquedaGlobal'
 import { NS } from '../i18n'
@@ -40,6 +40,9 @@ export function AppShell() {
     .filter(Boolean)
     .join(', ')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  // el panel del menú se cierra al cambiar de ruta: al elegir una sección o un proyecto en su selector
+  const { pathname } = useLocation()
+  useEffect(() => setMenuAbierto(false), [pathname])
   return (
     <ProveedorDelAsistente>
       <TituloDeSeccion />
@@ -62,6 +65,7 @@ export function AppShell() {
           {/* el selector de proyecto ("Todos mis proyectos" o uno) lee y escribe el alcance de la URL (./context.ts); la
             búsqueda con ⌘K (S03) queda para después de F2 */}
           <SelectorDeProyecto />
+          <ChipDeProyecto alAbrir={() => setMenuAbierto(true)} />
           <div className="flex-1" />
           {/* el asistente no es una sección (ASM-073): su botón vive aquí y se dibuja si el servidor tiene la IA (F7) */}
           <BotonBuscar />
@@ -105,6 +109,7 @@ export function AppShell() {
             <span className="block text-sg-text">{user?.displayName}</span>
             {rotulosDeRol ? <span className="block text-sg-caption text-sg-text-muted">{rotulosDeRol}</span> : null}
           </p>
+          <SelectorDeProyecto siempre />
           <nav aria-label={t('shell.seccionesDelMenu')} className="min-h-0 flex-1 overflow-y-auto">
             <ListaDeSecciones rotulo={ROTULO_VISIBLE} alElegir={() => setMenuAbierto(false)} />
           </nav>
