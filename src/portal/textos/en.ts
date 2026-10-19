@@ -148,6 +148,10 @@ export const EN: Textos = {
   },
   shell: {
     salir: 'Sign out',
+    menu: 'Menu',
+    seccionesDelMenu: 'Menu sections',
+    accesos: 'Quick access',
+    mas: 'More',
     secciones: 'Sections',
     leyendoPermisos: 'Reading your account permissions…',
     sinPermisos: 'Your permissions could not be read',

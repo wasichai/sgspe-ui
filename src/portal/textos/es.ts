@@ -148,6 +148,10 @@ export const ES = {
   },
   shell: {
     salir: 'Cerrar sesión',
+    menu: 'Menú',
+    seccionesDelMenu: 'Secciones del menú',
+    accesos: 'Accesos rápidos',
+    mas: 'Más',
     secciones: 'Secciones',
     leyendoPermisos: 'Leyendo los permisos de su cuenta…',
     sinPermisos: 'No se pudieron leer sus permisos',
