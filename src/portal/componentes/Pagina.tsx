@@ -109,7 +109,10 @@ export function EncabezadoDePagina({
   ficha = false,
   tituloDelDocumento
 }: PropsDeEncabezado) {
+  const { t } = useTranslation(NS)
   useTituloDeDocumento(tituloDelDocumento ?? titulo)
+  // «Más acciones» con su nombre a la vista, como en las fichas: un «⋯» solo no dice qué hay detrás (rediseño de UX, 2026-10-20)
+  const menu = mas ? <MasAcciones etiqueta={t('paginas.mas')}>{mas}</MasAcciones> : null
   const acciones = primaria || secundarias || mas || vistas
   return (
     // un div y no un <header>: dentro de main no es la barra superior, y así nada lo confunde con ella (el banner de la página)
@@ -132,7 +135,7 @@ export function EncabezadoDePagina({
               data-barra-de-acciones=""
               className="flex flex-wrap items-center gap-2 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-12 max-sm:z-20 max-sm:justify-end max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2"
             >
-              {mas ? <MasAcciones>{mas}</MasAcciones> : null}
+              {menu}
               {primaria}
             </div>
           ) : null}
@@ -141,7 +144,7 @@ export function EncabezadoDePagina({
         <div className="flex flex-wrap items-center gap-2">
           {vistas}
           {secundarias}
-          {mas ? <MasAcciones>{mas}</MasAcciones> : null}
+          {menu}
           {primaria}
         </div>
       ) : null}
