@@ -66,7 +66,7 @@ export function AppShell() {
             <Mountain aria-hidden className="size-5" />
             {appName}
           </Link>
-          <span className="hidden truncate text-sg-body-sm text-sg-text-muted lg:inline">{t('app.lema')}</span>
+          <span className="hidden truncate text-sg-body-sm text-sg-text-muted 2xl:inline">{t('app.lema')}</span>
           {/* el selector de proyecto ("Todos mis proyectos" o uno) lee y escribe el alcance de la URL (./context.ts); la
             búsqueda con ⌘K (S03) queda para después de F2 */}
           <SelectorDeProyecto />
@@ -76,20 +76,8 @@ export function AppShell() {
           <BotonBuscar />
           <BotonPreguntar />
           <Campana />
-          <span className="hidden items-center gap-3 sm:flex">
-            <LanguageMenu />
-            <ThemeMenu />
-          </span>
+          {/* el idioma, el tema y la salida viven en el menú del perfil (ux-architecture.md §7.1); en el teléfono, en el panel */}
           <MenuDePerfil rotulosDeRol={rotulosDeRol} />
-          <button
-            type="button"
-            onClick={signOut}
-            aria-label={t('shell.salir')}
-            title={t('shell.salir')}
-            className="hidden size-8 items-center justify-center rounded-sg-md text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text sm:flex"
-          >
-            <LogOut className="size-4" />
-          </button>
         </header>
         <div className="flex min-h-0 flex-1">
           <nav aria-label={t('shell.secciones')} className="hidden w-[52px] shrink-0 border-r border-sg-border bg-sg-surface p-1.5 md:block xl:w-60 xl:p-3">

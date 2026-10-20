@@ -45,7 +45,12 @@ describe('i18n del portal', () => {
 
   it('el español es el idioma por defecto', async () => {
     start()
-    expect(await screen.findByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
+    // el idioma, el tema y la salida viven en el menú del perfil (ux-architecture.md §7.1; rediseño de UX, 2026-10-20)
+    const cuenta = await screen.findByRole('button', { name: 'Su cuenta' })
+    // la barra superior ya no los tiene sueltos
+    expect(screen.queryByRole('combobox', { name: 'Idioma' })).not.toBeInTheDocument()
+    await userEvent.click(cuenta)
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Idioma' })).toHaveValue('es')
     // WCAG 3.1.1: el idioma de la página es el del portal
     expect(document.documentElement.lang).toBe('es-PE')
@@ -62,6 +67,7 @@ describe('i18n del portal', () => {
 
   it('elegir inglés cambia los textos y lo guarda en sgspe.lang, la clave de /admin', async () => {
     start()
+    await userEvent.click(await screen.findByRole('button', { name: 'Su cuenta' }))
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Idioma' }), 'en')
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument()
@@ -73,6 +79,7 @@ describe('i18n del portal', () => {
   it('elegir inglés lo guarda también en el servidor, como /admin', async () => {
     // el servidor contesta el PUT con lo guardado
     start({ method: 'PUT', path: '/auth/me/preferences', body: { theme: 'system', locale: 'en' } }, preferencias('es'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Su cuenta' }))
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Idioma' }), 'en')
     await screen.findByRole('button', { name: 'Sign out' })
     await waitFor(() => {
@@ -85,6 +92,7 @@ describe('i18n del portal', () => {
   // si el servidor rechaza el PUT, core devuelve el idioma anterior y vuelve a lanzar: el menú lo dice y no queda sin atender
   it('si el servidor rechaza guardar el idioma, vuelve al anterior y lo dice', async () => {
     start({ method: 'PUT', path: '/auth/me/preferences', status: 500, body: { title: 'Error', status: 500, detail: 'Fallo de prueba' } }, preferencias('es'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Su cuenta' }))
     const selector = await screen.findByRole('combobox', { name: 'Idioma' })
     await userEvent.selectOptions(selector, 'en')
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo guardar el idioma')
@@ -96,6 +104,7 @@ describe('i18n del portal', () => {
 
   it('el idioma guardado en el servidor se aplica al cargar y se recuerda en sgspe.lang', async () => {
     start(preferencias('en'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Your account' }))
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en')
     expect(localStorage.getItem('sgspe.lang')).toBe('en')
