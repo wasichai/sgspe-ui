@@ -160,12 +160,15 @@ describe('S12 · capas por WMS', () => {
 })
 
 describe('S12 · filtros, leyenda y captura', () => {
+  // el proyecto del mapa es el selector de la barra superior (rediseño de UX, 2026-10-20): un solo control de proyecto
   it('el proyecto y el periodo viajan en la URL y las capas se piden con el proyecto', async () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())
     red = espiarRed()
     const filtros = await screen.findByRole('group', { name: 'Filtros del mapa' })
-    await within(filtros).findByRole('option', { name: 'PRJ-01 · Proyecto Ejemplo A' })
-    await userEvent.selectOptions(within(filtros).getByLabelText('Proyecto del mapa'), 'p1')
+    expect(within(filtros).queryByLabelText('Proyecto del mapa')).not.toBeInTheDocument()
+    const barra = within(screen.getByRole('banner'))
+    await barra.findByRole('option', { name: 'PRJ-01 · Proyecto Ejemplo A' })
+    await userEvent.selectOptions(barra.getByRole('combobox', { name: 'Proyecto' }), 'p1')
     await waitFor(() => expect(rutaActual()).toBe('/territory?project=p1'))
     await waitFor(() => expect(red!.a('GET', '/sgspe/territory/layers/LYR-05').some((l) => l.ruta.includes('project=p1'))).toBe(true))
     await userEvent.type(within(filtros).getByLabelText('Desde'), '2026-07-01')

@@ -13,7 +13,6 @@ import { useProyecto, useProyectos } from '../contexto/proyectos'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
 import { rutaParaAbrir } from '../datos/fichas'
-import { texto } from '../datos/registros'
 import { NS } from '../i18n'
 import { useTableroDisponible } from '../tableros/comunes'
 import { destinoDe, encuadreDeGeometrias, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
@@ -353,7 +352,6 @@ export function problemaDelPeriodo(desde: string, hasta: string, hoy: string = h
 export function FiltrosDelMapa() {
   const { t } = useTranslation(NS)
   const [busqueda, fijar] = useSearchParams()
-  const proyectos = useProyectos()
   // las fechas tecleadas que no forman un periodo válido: se muestran y se dicen, sin escribirlas en la URL. valen mientras el
   // periodo de la URL sea el mismo que cuando se teclearon: si cambia por otro camino (atrás, un enlace), mandan las de la URL
   const enLaUrl = `${busqueda.get('periodStart') ?? ''}|${busqueda.get('periodEnd') ?? ''}`
@@ -382,17 +380,7 @@ export function FiltrosDelMapa() {
   return (
     <div role="group" aria-label={t('sig.filtros')} className="space-y-1 text-sm">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('sig.proyecto')}</span>
-          <select className={CONTROL} value={busqueda.get('project') ?? ''} onChange={(e) => escribir({ project: e.target.value })}>
-            <option value="">{t('sig.todosLosLugares')}</option>
-            {(proyectos.data ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {texto(p, 'code')} · {texto(p, 'name')}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* el proyecto del mapa es el selector de la barra superior (rediseño de UX, 2026-10-20) */}
         <label className="space-y-1">
           <span className="block text-sg-label">{t('sig.desde')}</span>
           <input

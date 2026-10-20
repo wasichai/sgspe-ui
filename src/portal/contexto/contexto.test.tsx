@@ -102,6 +102,32 @@ describe('selector de proyecto', () => {
     expect(ubicacion.actual).toBe('/projects/p1/stakeholders')
   })
 
+  // rediseño de UX (2026-10-20): el territorio es del tenant y el proyecto es su lente (ux-architecture.md §6.1). en Territorio, el
+  // selector de la barra es ese lente (?project=) y la pantalla ya no tiene su propio «Proyecto del mapa»
+  it('en Territorio el selector es el lente del mapa: dice «Todo el territorio» y escribe ?project= sin salir de la pantalla', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/territory?periodStart=2026-07-01', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() => expect(screen.getAllByRole('option')[0]).toHaveTextContent('Todo el territorio'))
+    await userEvent.selectOptions(selector, 'p1')
+    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01&project=p1')
+    expect(selector).toHaveValue('p1')
+    await userEvent.selectOptions(selector, '')
+    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01')
+  })
+
+  it('en la ficha de una comunidad lee el proyecto del lente', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/territory/communities/c1?project=p2', permisos: LEE_PROYECTOS })
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto' })).toHaveValue('p2'))
+  })
+
   it('sin READ sobre project no se dibuja', () => {
     fetch = mockFetch([])
     montar(<SelectorDeProyecto />, { permisos: { admin: false, objects: {} } })
