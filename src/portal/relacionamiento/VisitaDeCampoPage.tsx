@@ -31,9 +31,11 @@ import {
   useDefinicion,
   usePuedeEditar,
   useRegistro,
+  useRegistros,
   useTodosConTope,
   type Registro
 } from '../datos/registros'
+import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { diaPe, fechaPe, NS, numeroPe } from '../i18n'
 import type { Elemento } from '../mapa/api'
 import { Mapa } from '../mapa/Mapa'
@@ -49,6 +51,7 @@ import { Persona } from '../componentes/Persona'
 // tecleadas (un punto no se dibuja, decisión 14). concluir no cambia las interacciones pendientes: cada una se posterga o
 // cancela con su motivo
 const CAMINO = ['planned', 'in_progress', 'completed'] as const
+const POR_PAGINA = 25
 // el líder (leader_user_id y leader_user_email) no es un campo del formulario: se elige del equipo del proyecto y se manda con
 // los fijos, el identificador y el correo juntos (LiderDeLaVisita)
 const CAMPOS_DE_LA_VISITA = [
@@ -545,7 +548,16 @@ export function VisitasPage() {
   const { t } = useTranslation(NS)
   const { projectId } = useParams()
   const idDeProyecto = useId()
-  const visitas = useTodosConTope('field_visit', { ...(projectId ? { project: projectId } : {}), sort: 'planned_start_date', dir: 'desc' })
+  // la página la da el servidor con su total (D10 de la revisión de UX)
+  const lista = useParametrosDeLista('todas')
+  const pagina = useRegistros('field_visit', {
+    ...(projectId ? { project: projectId } : {}),
+    sort: 'planned_start_date',
+    dir: 'desc',
+    page: lista.pagina,
+    size: POR_PAGINA
+  })
+  const visitas = { ...pagina, data: pagina.data?.content, truncado: false }
   return (
     <section className="mx-auto max-w-[1440px] space-y-3">
       <h1 className="text-sg-h1 font-semibold">{t('relacionamiento.visitas')}</h1>
@@ -594,6 +606,7 @@ export function VisitasPage() {
           </div>
         )}
       </CuerpoDeLista>
+      <PaginacionDelServidor datos={pagina.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
     </section>
   )
 }
