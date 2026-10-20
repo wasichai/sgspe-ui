@@ -182,8 +182,17 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
   it('mientras los riesgos cargan no dice que no hay ninguno', async () => {
     fetch = mockFetch(rutas([], []))
     abrir()
-    expect(screen.queryByText('No hay riesgos en esta vista.')).not.toBeInTheDocument()
-    expect(await screen.findByText('No hay riesgos en esta vista.')).toBeInTheDocument()
+    expect(screen.queryByText('Aún no hay riesgos registrados.')).not.toBeInTheDocument()
+    expect(await screen.findByText('Aún no hay riesgos registrados.')).toBeInTheDocument()
+  })
+
+  // rediseño de UX (2026-10-20): sin ningún riesgo, la matriz 5 × 5 llena de ceros tapaba el vacío, que no decía cómo seguir
+  it('sin ningún riesgo en el alcance no dibuja la matriz y dice cómo registrar el primero', async () => {
+    fetch = mockFetch(rutas([], []))
+    abrir()
+    expect(await screen.findByText('Aún no hay riesgos registrados.')).toBeInTheDocument()
+    expect(screen.getByText(/Identifique el primero con «Identificar riesgo»/)).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Mapa de calor' })).not.toBeInTheDocument()
   })
 })
 

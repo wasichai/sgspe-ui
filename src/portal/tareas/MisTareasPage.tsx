@@ -69,7 +69,7 @@ export function MisTareasPage() {
   const paraTomar = useRegistros(
     'task',
     { project: proyecto, empty: 'assignee_user_id', state: estados(ABIERTAS), sort: 'due_date', dir: 'asc', page: paginaParaTomar, size: POR_PAGINA },
-    Boolean(proyecto) && vista === 'lista'
+    Boolean(user) && vista === 'lista'
   )
   const cifras = useConteos(
     'task',
@@ -132,19 +132,24 @@ export function MisTareasPage() {
           <GrupoDeTareas titulo={t('tareas.grupos.mias')} lectura={enLaLista} alPagina={(p) => lista.cambiar({ page: String(p) })}>
             {(tareas) => <TablaDeTareas tareas={tareas} vacio={t('tareas.vacia')} alAbrir={abrir} conProyecto={!proyecto} />}
           </GrupoDeTareas>
-          {proyecto ? (
-            <GrupoDeTareas titulo={t('tareas.grupos.paraTomar')} lectura={paraTomar} alPagina={(p) => lista.cambiar({ pt: String(p), page: pagina })}>
-              {(tareas) => (
-                <>
-                  <p className="text-sm text-sg-text-secondary">{t('tareas.paraTomarAyuda')}</p>
-                  <TablaDeTareas tareas={tareas} vacio={t('tareas.vaciaParaTomar')} alAbrir={abrir} etiqueta={t('tareas.grupos.paraTomar')} />
-                </>
-              )}
-            </GrupoDeTareas>
-          ) : null}
+          {/* también fuera de un proyecto, con el proyecto de cada tarea: el servidor acota la lectura a los de la cuenta (rediseño
+            de UX, 2026-10-20; antes mandaba al selector) */}
+          <GrupoDeTareas titulo={t('tareas.grupos.paraTomar')} lectura={paraTomar} alPagina={(p) => lista.cambiar({ pt: String(p), page: pagina })}>
+            {(tareas) => (
+              <>
+                <p className="text-sm text-sg-text-secondary">{t('tareas.paraTomarAyuda')}</p>
+                <TablaDeTareas
+                  tareas={tareas}
+                  vacio={t('tareas.vaciaParaTomar')}
+                  alAbrir={abrir}
+                  etiqueta={t('tareas.grupos.paraTomar')}
+                  conProyecto={!proyecto}
+                />
+              </>
+            )}
+          </GrupoDeTareas>
         </>
       )}
-      {!proyecto ? <p className="text-sm text-sg-text-muted">{t('tareas.paraTomarGlobal')}</p> : null}
       {abierta.data ? <TareaDrawer tarea={abierta.data} alCerrar={() => lista.cambiar({ task: null, page: pagina })} /> : null}
     </section>
   )

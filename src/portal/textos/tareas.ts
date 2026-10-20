@@ -11,7 +11,6 @@ export const ES_TAREAS = {
   vacia: 'No tiene tareas abiertas.',
   vaciaParaTomar: 'No hay tareas sin asignar en este proyecto.',
   paraTomarAyuda: 'Las tareas de escalamiento llegan sin asignar: las toma una de las personas avisadas.',
-  paraTomarGlobal: 'Las tareas para tomar se ven dentro de cada proyecto: elija uno en el selector.',
   columnas: { tarea: 'Tarea', proyecto: 'Proyecto', origen: 'Origen', prioridad: 'Prioridad', vence: 'Vence', estado: 'Estado' },
   origenes: {
     commitment: 'Compromiso',
@@ -56,7 +55,6 @@ export const EN_TAREAS: typeof ES_TAREAS = {
   vacia: 'You have no open tasks.',
   vaciaParaTomar: 'There are no unassigned tasks in this project.',
   paraTomarAyuda: 'Escalation tasks arrive unassigned: one of the notified people takes them.',
-  paraTomarGlobal: 'Tasks to take are shown inside each project: pick one in the selector.',
   columnas: { tarea: 'Task', proyecto: 'Project', origen: 'Origin', prioridad: 'Priority', vence: 'Due', estado: 'Status' },
   origenes: {
     commitment: 'Commitment',

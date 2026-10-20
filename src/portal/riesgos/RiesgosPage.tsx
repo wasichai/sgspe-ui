@@ -158,6 +158,10 @@ export function RiesgosPage() {
         <Cargando />
       ) : riesgos.isError && !riesgos.data ? (
         <FalloDeLectura error={riesgos.error} alReintentar={() => void riesgos.refetch()} />
+      ) : (riesgos.data ?? []).length === 0 ? (
+        // sin ningún riesgo, ni la matriz llena de ceros ni «esta vista»: el registro está vacío y se dice cómo empezarlo (rediseño de
+        // UX, 2026-10-20)
+        <Vacio titulo={t('riesgos.sinRiesgos')}>{can('social_risk', 'CREATE') ? t('riesgos.sinRiesgosAyuda') : null}</Vacio>
       ) : (
         <div className="grid gap-4 min-[105rem]:grid-cols-[360px_minmax(0,1fr)]">
           <section
