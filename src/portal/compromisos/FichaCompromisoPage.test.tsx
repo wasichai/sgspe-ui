@@ -71,6 +71,15 @@ describe('S29 · ficha de compromiso', () => {
     expect(screen.getByRole('button', { name: 'Bloquear' })).toBeEnabled()
   })
 
+  // rediseño de UX (2026-10-20): sin monto, los chips no terminan en un «—» suelto
+  it('sin monto, el encabezado no dibuja un «—» entre sus chips', async () => {
+    fetch = mockFetch(rutas({ ...C1, attributes: { ...C1.attributes, amount: null } }))
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })
+    const chips = titulo.nextElementSibling as HTMLElement
+    expect(chips).not.toHaveTextContent('—')
+  })
+
   // revisión de UX, etapa 4: la anatomía común de la ficha (design-system.md §6.1)
   it('dice el camino del flujo, la siguiente acción con lo que falta, y los conteos de sus pestañas', async () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/delivery/records', body: pagina([], { totalElements: 2 }) }]))
