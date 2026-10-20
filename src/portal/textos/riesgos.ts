@@ -12,7 +12,6 @@ export const ES_RIESGOS = {
     impacts: 'Impactos potenciales',
     rules: 'Reglas de alerta'
   },
-  truncado: 'Se muestran los primeros {{n}} riesgos: elija un proyecto para ver el resto.',
   filtroAltos: 'Nivel alto o crítico',
   vacio: 'No hay riesgos en esta vista.',
   tabla: 'Riesgos',
@@ -62,7 +61,6 @@ export const EN_RIESGOS: typeof ES_RIESGOS = {
     impacts: 'Potential impacts',
     rules: 'Warning rules'
   },
-  truncado: 'The first {{n}} risks are shown: pick a project to see the rest.',
   filtroAltos: 'High or critical level',
   vacio: 'There are no risks in this view.',
   tabla: 'Risks',

@@ -1,4 +1,6 @@
-import { atributo, type Registro } from './registros'
+import { useQuery } from '@tanstack/react-query'
+import { usePedir } from './http'
+import { atributo, consulta, type Parametros, type Registro } from './registros'
 
 // las quejas, consultas y solicitudes de BC-07 (domain-model.md §6.7, ASM-011): tres objetos con ciclos distintos (WF-E1, WF-E2 y
 // WF-E3) que el portal une para atender por plazo. aquí, lo que comparten las pantallas de F4: sus nombres, sus rutas, el plazo
@@ -61,3 +63,33 @@ export const esGrave = (registro: Registro): boolean => SEVERIDADES_GRAVES.inclu
 
 // la acción declarada que deja leer toda QCS confidencial (security.md §9.6): hoy solo la gestión de quejas
 export const LEE_CONFIDENCIALES = 'READ_CONFIDENTIAL'
+
+// la cola de atención del servidor (GET /api/sgspe/attention/queue, decisión 5 y D10 de la revisión de UX): las tres QCS en una
+// lista por plazo, paginada y contada allí, leída como quien mira. `views` y `groups` cuentan con los filtros, `unfiltered` la vista
+// sin ellos y `openDueSoon` las abiertas por vencer. se vuelve a pedir al montar la pantalla: al volver de una ficha, está al día
+export type GrupoDePlazo = 'overdue' | 'dueSoon' | 'onTime'
+export const VISTAS_DE_LA_COLA = ['attention', 'grievances', 'inquiries', 'requests', 'mine', 'all'] as const
+export type VistaDeLaCola = (typeof VISTAS_DE_LA_COLA)[number]
+
+export interface ColaDeAtencion {
+  content: { type: ObjetoDeQcs; group: GrupoDePlazo; record: Registro }[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  views: Record<VistaDeLaCola, number>
+  groups: Record<GrupoDePlazo, number>
+  unfiltered: number
+  openDueSoon: number
+  readable: ObjetoDeQcs[]
+}
+
+export function useColaDeAtencion(parametros: Parametros, activo = true) {
+  const pedir = usePedir()
+  const busqueda = consulta(parametros)
+  return useQuery({
+    queryKey: ['cola-de-atencion', busqueda],
+    queryFn: () => pedir<ColaDeAtencion>(`/sgspe/attention/queue?${busqueda}`),
+    enabled: activo
+  })
+}

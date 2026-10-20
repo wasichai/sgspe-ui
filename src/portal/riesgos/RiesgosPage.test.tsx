@@ -158,6 +158,27 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     expect(screen.queryByRole('button', { name: 'Identificar riesgo' })).not.toBeInTheDocument()
   })
 
+  it('lee todos los riesgos del alcance, sin tope: sigue el cursor más allá de 1000 y no avisa de un recorte', async () => {
+    const pagina200 = (n: number) =>
+      Array.from({ length: 200 }, (_, i) => registro(`r${n}-${i}`, { ...RIESGO.attributes, code: `R-${n}-${i}` }, { state: 'identified' }))
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        path: '/objects/social_risk/records',
+        responder: ({ ruta }) => {
+          const n = Number(new URLSearchParams(ruta.split('?')[1]).get('after') ?? 0)
+          return new Response(JSON.stringify(pagina(pagina200(n), { nextCursor: n < 5 ? String(n + 1) : null })), {
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+      }
+    ])
+    abrir('/risks/register')
+    await waitFor(() => expect(red!.a('GET', '/objects/social_risk/records')).toHaveLength(6))
+    expect(await screen.findByRole('tab', { name: 'Registro y matriz' })).toHaveAccessibleDescription('1200 registros')
+    expect(screen.queryByText(/Se muestran los primeros/)).not.toBeInTheDocument()
+  })
+
   it('mientras los riesgos cargan no dice que no hay ninguno', async () => {
     fetch = mockFetch(rutas([], []))
     abrir()

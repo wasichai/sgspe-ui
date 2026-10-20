@@ -18,11 +18,12 @@ import { filtroDeTerritorio } from '../contexto/rutas'
 import { hoyEnLima } from '../datos/fechas'
 import { usePedir } from '../datos/http'
 import { useIndicador } from '../datos/indicadores'
-import { atributo, leerTodos, texto, useRegistro, useTodosConTope, type Registro } from '../datos/registros'
+import { atributo, leerTodos, texto, useConteo, useRegistro, useRegistros, useTodosConTope, type Parametros, type Registro } from '../datos/registros'
+import { PaginacionDelServidor } from '../componentes/Lista'
 import { diaPe, mesPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
-import { diaDe, esDia, esFormal, esMes, mesActual, semanaDe, semanasDelMes, sumarMeses } from './fechas'
+import { diaDe, diaSiguiente, esDia, esFormal, esMes, mesActual, semanaDe, semanasDelMes, sumarMeses } from './fechas'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { ListaPlegable } from '../componentes/ListaPlegable'
@@ -34,6 +35,7 @@ import { ListaPlegable } from '../componentes/ListaPlegable'
 type Vista = 'mes' | 'semana' | 'lista'
 const VISTAS: readonly Vista[] = ['mes', 'semana', 'lista']
 const CINCO_MINUTOS = 300_000
+const POR_PAGINA = 25
 
 export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const { t } = useTranslation(NS)
@@ -50,9 +52,10 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const diaPedido = busqueda.get('day')
   const mes = esMes(mesPedido) ? mesPedido : mesActual()
   const territorio = filtroDeTerritorio(territory, { locality: 'locality', community: 'community' })
-  // descendente por fecha programada: si el tope de lectura corta la lista, lo que queda fuera son, en general, las más antiguas.
-  // una interacción solo con held_at (sin scheduled_at) queda donde el servidor ordene los nulos, así que no se promete más
-  const interacciones = useTodosConTope('engagement', { project: proyecto, ...(territorio ?? {}), sort: 'scheduled_at', dir: 'desc' })
+  // cada vista pide lo suyo al servidor (D10 de la revisión de UX): la lista, su página; el calendario, los días que dibuja por el
+  // rango de su fecha (la realizada o, si no, la programada: range_field=held_at,scheduled_at); y el panel, lo pendiente por estado
+  const alcance: Parametros = { project: proyecto, ...(territorio ?? {}) }
+  const paginaDeLista = Number(busqueda.get('page') ?? '0') || 0
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const cambiar = (cambios: Record<string, string>) => {
     const siguiente = new URLSearchParams(busqueda)
@@ -66,8 +69,20 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const semanas = vista === 'mes' ? semanasDelMes(mes) : [semanaDe(dia)]
   // se dibuja cada interacción en el día de Lima de la celda que ocupa, también los días de otros meses que la grilla muestra
   const visibles = new Set(semanas.flat())
-  const enPantalla = (interacciones.data ?? []).filter((i) => visibles.has(diaDe(i) ?? ''))
-  const sinFecha = (interacciones.data ?? []).filter((i) => diaDe(i) === null).length
+  const desde = semanas[0][0]
+  const hasta = diaSiguiente(semanas[semanas.length - 1][6])
+  const enLista = vista === 'lista'
+  const pagina = useRegistros('engagement', { ...alcance, sort: 'scheduled_at', dir: 'desc', page: paginaDeLista, size: POR_PAGINA }, enLista)
+  // el servidor lee un día como su comienzo en Lima: el rango [primer día, día siguiente al último) cubre justo los días de la grilla
+  const delCalendario = useTodosConTope(
+    'engagement',
+    { ...alcance, range_field: 'held_at,scheduled_at', range_from: desde, range_to: hasta, sort: 'scheduled_at', dir: 'asc' },
+    !enLista
+  )
+  const total = useConteo('engagement', alcance)
+  const sinFecha = useConteo('engagement', { ...alcance, empty: 'held_at,scheduled_at' }, !enLista) ?? 0
+  const interacciones = enLista ? { ...pagina, data: pagina.data?.content, truncado: false } : delCalendario
+  const enPantalla = (delCalendario.data ?? []).filter((i) => visibles.has(diaDe(i) ?? ''))
   const mesesVisibles = [...new Set(semanas.flat().map((d) => Number(d.slice(5, 7))))]
 
   return (
@@ -75,7 +90,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
       <EncabezadoDePagina
         vistas={<VistasDelModulo modulo="engagements" actual="lista" conTablero={conTablero} />}
         titulo={t('relacionamiento.titulo')}
-        conteo={interacciones.data ? t('relacionamiento.conteo', { count: interacciones.data.length }) : undefined}
+        conteo={total !== null ? t('relacionamiento.conteo', { count: total }) : undefined}
         primaria={<BotonCrear objeto="engagement" etiqueta={t('relacionamiento.registrar')} resto="engagements/new" />}
         secundarias={
           <>
@@ -142,12 +157,22 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
               <ErrorDeCarga error={interacciones.error} alReintentar={() => void interacciones.refetch()} />
             )
           ) : vista === 'lista' ? (
-            <Lista interacciones={interacciones.data ?? []} global={!proyecto} />
+            <>
+              <Lista interacciones={interacciones.data ?? []} global={!proyecto} />
+              <PaginacionDelServidor
+                datos={pagina.data}
+                alPagina={(p) => {
+                  const siguiente = new URLSearchParams(busqueda)
+                  siguiente.set('page', String(p))
+                  fijar(siguiente, { replace: true })
+                }}
+              />
+            </>
           ) : (
             <Calendario mes={mesVisible} meses={mesesVisibles} interacciones={enPantalla} semanas={semanas} proyecto={proyecto} />
           )}
         </div>
-        <PanelLateral proyecto={proyecto} mes={mesVisible} interacciones={interacciones} />
+        <PanelLateral proyecto={proyecto} mes={mesVisible} alcance={alcance} />
       </div>
     </section>
   )
@@ -401,11 +426,13 @@ function useFestividades(proyecto: string | undefined, meses: number[]): Festivi
   }
 }
 
-function PanelLateral({ proyecto, mes, interacciones }: { proyecto?: string; mes: string; interacciones: ReturnType<typeof useTodosConTope> }) {
+function PanelLateral({ proyecto, mes, alcance }: { proyecto?: string; mes: string; alcance: Parametros }) {
   const { t } = useTranslation(NS)
   const eng02 = useIndicador('KPI-ENG-02', { ...(proyecto ? { project: [proyecto] } : {}), periodStart: `${mes}-01`, periodEnd: `${sumarMeses(mes, 1)}-01` })
   const festividades = useFestividades(proyecto, [Number(mes.slice(5, 7))])
   const delMes = eng02.data?.series?.find((s) => s.period === mes)
+  // lo pendiente, por estado: las actas por redactar (realizadas y formales) y las postergadas
+  const interacciones = useTodosConTope('engagement', { ...alcance, state: 'held,postponed', sort: 'scheduled_at', dir: 'desc' })
   const pendientes = (interacciones.data ?? []).filter((i) => (i.state === 'held' && esFormal(i)) || i.state === 'postponed')
   return (
     <aside className="space-y-3 text-sm">

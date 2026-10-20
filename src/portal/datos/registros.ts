@@ -130,6 +130,18 @@ export function useTodos(objeto: string, parametros: Parametros, activo = true) 
   })
 }
 
+// todos los registros de una consulta, sin tope: para lo que necesita el conjunto entero del alcance (la matriz de calor de los
+// riesgos, que cuenta cada celda), por cursor y de 200 en 200 (D10 de la revisión de UX)
+export function useTodosSinTope(objeto: string, parametros: Parametros, activo = true) {
+  const pedir = usePedir()
+  const busqueda = consulta(parametros)
+  return useQuery({
+    queryKey: ['records', objeto, 'todos-sin-tope', busqueda],
+    queryFn: () => leerTodos(pedir, objeto, parametros, Number.POSITIVE_INFINITY),
+    enabled: activo
+  })
+}
+
 // como useTodos, pero dice si el tope cortó la lectura (`truncado`); `data` sigue siendo la lista. para las pantallas que
 // leen un alcance sin rango y no pueden afirmar que lo ven completo (el calendario de interacciones)
 export function useTodosConTope(objeto: string, parametros: Parametros, activo = true) {

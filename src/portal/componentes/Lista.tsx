@@ -227,7 +227,13 @@ export function TablaDeRegistros({
 }
 
 // la paginación de una lista que pagina el servidor (D10 de la revisión de UX): el total y las páginas son los de su conteo
-export function PaginacionDelServidor({ datos, alPagina }: { datos: Pagina | undefined; alPagina: (pagina: number) => void }) {
+export function PaginacionDelServidor({
+  datos,
+  alPagina
+}: {
+  datos: Pick<Pagina<unknown>, 'page' | 'totalPages' | 'totalElements'> | undefined
+  alPagina: (pagina: number) => void
+}) {
   if (!datos?.totalPages || datos.totalPages <= 1) return null
   return <Pagination page={datos.page} totalPages={datos.totalPages} totalElements={datos.totalElements ?? 0} onPage={alPagina} />
 }
