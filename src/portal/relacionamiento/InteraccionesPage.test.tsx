@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
 import { ADMINISTRACION, RELACIONISTA } from '../../test/portal'
+import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { E1, E2, E3, EQUIPO, base } from '../../test/relacionamiento'
 
@@ -176,15 +177,31 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
         }
       }
     ])
-    const aviso = await screen.findByText(/Se leyeron solo 1.*000 interacciones del alcance, ordenadas por fecha programada: pueden faltar otras/)
+    const aviso = await screen.findByText(/Se leyeron solo 1.*000 interacciones de estas fechas: pueden faltar otras/)
     expect(aviso).toBeInTheDocument()
-    // no promete «las más recientes»: una interacción solo con held_at queda donde el servidor ordene los nulos
-    expect(aviso.textContent).not.toMatch(/recientes/)
     expect(screen.getByRole('table', { name: 'Calendario de interacciones' })).toBeInTheDocument()
-    // sin el conteo de la pestaña del proyecto (size=1, revisión de UX): las lecturas de la lista
-    const lecturas = red.a('GET', '/objects/engagement/records').filter((l) => !/[?&]size=1(&|$)/.test(l.ruta))
+    // el calendario pide solo los días que dibuja, por la fecha realizada o, si no, la programada (D10 de la revisión de UX)
+    const lecturas = red.a('GET', '/objects/engagement/records').filter((l) => l.ruta.includes('range_field='))
     expect(lecturas).toHaveLength(5)
-    expect(lecturas.every((l) => l.ruta.includes('dir=desc'))).toBe(true)
+    expect(lecturas.every((l) => l.ruta.includes('range_field=held_at%2Cscheduled_at&range_from=2026-09-28'))).toBe(true)
+  })
+
+  it('la lista se pagina en el servidor: el total del encabezado es el del conteo y la segunda página se pide con page=1', async () => {
+    const muchas = Array.from({ length: 30 }, (_, i) =>
+      registro(
+        `l${i}`,
+        { project: 'p1', title: `Visita ${i}`, engagement_type: 'VISITA', scheduled_at: `2026-10-${String((i % 28) + 1).padStart(2, '0')}T15:00:00Z` },
+        { state: 'planned' }
+      )
+    )
+    fetch = abrirPortal('/projects/p1/engagements?view=lista', RELACIONISTA, EQUIPO, base())
+    red = espiarRed([listaDelServidor('engagement', muchas)])
+    const tabla = await screen.findByRole('table', { name: 'Relacionamiento' })
+    expect(within(tabla).getAllByRole('row')).toHaveLength(26)
+    expect(await screen.findByText('30 interacciones')).toBeInTheDocument()
+    screen.getByRole('button', { name: /siguiente|next/i }).click()
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Relacionamiento' })).getAllByRole('row')).toHaveLength(6))
+    expect(red.a('GET', '/objects/engagement/records').map((l) => l.ruta)).toContainEqual(expect.stringContaining('dir=desc&page=1&size=25'))
   })
 
   it('con todas las interacciones leídas no hay aviso de truncamiento', async () => {
@@ -198,10 +215,8 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
 
   it('las interacciones sin fecha se avisan en el calendario y salen con guion en la lista', async () => {
     const sinFecha = registro('n1', { project: 'p1', title: 'Sin fecha aún', engagement_type: 'REUNION' }, { state: 'planned' })
-    fetch = abrirPortal('/projects/p1/engagements/calendar?month=2026-10', RELACIONISTA, EQUIPO, [
-      ...base(),
-      { path: '/objects/engagement/records', body: pagina([E1, sinFecha]) }
-    ])
+    fetch = abrirPortal('/projects/p1/engagements/calendar?month=2026-10', RELACIONISTA, EQUIPO, base())
+    red = espiarRed([listaDelServidor('engagement', [E1, sinFecha])])
     expect(await screen.findByText('Interacciones sin fecha, que no aparecen en el calendario: 1.')).toBeInTheDocument()
     screen.getByRole('button', { name: 'Lista' }).click()
     const tabla = await screen.findByRole('table', { name: 'Relacionamiento' })

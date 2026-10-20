@@ -48,6 +48,9 @@ export function semanasDelMes(mes: string): string[][] {
 }
 
 // la semana (de lunes a domingo) que contiene un día
+// el día siguiente (AAAA-MM-DD), de calendario: el límite excluido de un rango que termina en `dia`
+export const diaSiguiente = (dia: string): string => new Date(Date.parse(`${dia}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
+
 export function semanaDe(dia: string): string[] {
   const fecha = new Date(`${dia}T00:00:00Z`)
   const lunes = new Date(fecha.getTime() - ((fecha.getUTCDay() + 6) % 7) * 86_400_000)

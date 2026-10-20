@@ -48,7 +48,6 @@ export const ES_ATENCION = {
   sinPlazo: 'Sin plazo',
   plazoPorCalcular: 'Por calcular',
   vacio: 'No hay quejas, consultas ni solicitudes en esta vista.',
-  truncado: 'Se muestran las primeras {{n}} de cada tipo: acote con el proyecto o los filtros.',
   sinLectura: 'Su cuenta no lee ningún tipo de queja, consulta o solicitud.'
 }
 
@@ -101,6 +100,5 @@ export const EN_ATENCION: typeof ES_ATENCION = {
   sinPlazo: 'No deadline',
   plazoPorCalcular: 'Not computed yet',
   vacio: 'There are no grievances, inquiries or requests in this view.',
-  truncado: 'The first {{n}} of each type are shown: narrow with the project or the filters.',
   sinLectura: 'Your account reads no type of grievance, inquiry or request.'
 }

@@ -20,7 +20,7 @@ import { EncabezadoDePagina } from '../componentes/Pagina'
 import { rutaDeFicha } from '../datos/fichas'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto, useProyectos } from '../contexto/proyectos'
-import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
+import { atributo, texto, useTodosSinTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
@@ -90,7 +90,8 @@ export function RiesgosPage() {
   const lista = useParametrosDeLista('registro')
   const telefono = useEsTelefono()
   const [busqueda, fijar] = useSearchParams()
-  const riesgos = useTodosConTope('social_risk', { project: proyecto, sort: 'code', dir: 'asc' })
+  // todos los riesgos del alcance, sin tope: la matriz de calor cuenta cada celda con el conjunto entero (D10 de la revisión de UX)
+  const riesgos = useTodosSinTope('social_risk', { project: proyecto, sort: 'code', dir: 'asc' })
   const registroDelProyecto = useProyecto(proyecto)
   const proyectos = useProyectos()
   const umbrales = umbralesDe(registroDelProyecto.data)
@@ -153,7 +154,6 @@ export function RiesgosPage() {
         alQuitar={(clave) => lista.cambiar({ [clave]: null })}
         alLimpiar={() => lista.cambiar({ level: null })}
       />
-      {riesgos.truncado ? <Alert tone="warning">{t('riesgos.truncado', { n: numeroPe(riesgos.data?.length ?? 0) })}</Alert> : null}
       {riesgos.isPending ? (
         <Cargando />
       ) : riesgos.isError && !riesgos.data ? (

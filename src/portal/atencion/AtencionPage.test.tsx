@@ -1,21 +1,27 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeAtencion, CANALES, CONSULTA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA, SOLICITUD } from '../../test/atencion'
 import { P1 } from '../../test/compromisos'
 import { montar, pagina, registro } from '../../test/montar'
 import { permisos } from '../../test/portal'
-import { AtencionPage, enVista, grupoDe, porPlazo } from './AtencionPage'
+import { AtencionPage } from './AtencionPage'
+import { colaDelServidor } from '../../test/colaDeAtencion'
+import { espiarRed, type Red, type RutaEspecial } from '../../test/red'
+import type { ObjetoDeQcs } from '../datos/atencion'
+import type { Registro } from '../datos/registros'
 import { rotuloDeOpcion } from '../datos/opciones'
 
 // S35 (screens.md §8): las tres QCS unidas por plazo, cada una con el estado de su workflow y el plazo que corre en él; las vistas,
 // los filtros, «anónima» en lugar de la persona, las cifras con la nota de confidenciales y nunca un vacío mientras carga
 let fetch: FetchMock | null = null
+let red: Red | null = null
 beforeEach(() => localStorage.clear())
 afterEach(() => {
+  red?.restaurar()
   fetch?.restore()
-  fetch = null
+  red = fetch = null
 })
 
 const VENCIDA = registro(
@@ -34,17 +40,30 @@ const indicador = (code: string, value: number, extra: Record<string, unknown> =
 const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   ...extra,
   ...baseDeAtencion(),
-  { path: '/objects/grievance/records', body: pagina([QUEJA, VENCIDA, CERRADA]) },
-  { path: '/objects/inquiry/records', body: pagina([CONSULTA, POR_VENCER]) },
-  { path: '/objects/stakeholder_request/records', body: pagina([SOLICITUD]) },
   { path: '/objects/project/records', body: pagina([P1]) },
   indicador('KPI-GRV-02', 4),
   indicador('KPI-GRV-06', 1),
   indicador('KPI-GRV-07', 2, { confidentialHidden: true })
 ]
 
-const abrir = (p = EQUIPO_DE_QUEJAS, ruta = '/projects/p1/attention') =>
-  montar(<AtencionPage />, { ruta, camino: '/projects/:projectId/attention', usuario: GESTORA_DE_QUEJAS, permisos: p })
+// la cola la contesta el servidor emulado (decisión 5 y D10 de la revisión de UX), con los tipos que la cuenta lee
+const TODAS: Partial<Record<ObjetoDeQcs, Registro[]>> = {
+  grievance: [QUEJA, VENCIDA, CERRADA],
+  inquiry: [CONSULTA, POR_VENCER],
+  stakeholder_request: [SOLICITUD]
+}
+const abrir = (
+  p = EQUIPO_DE_QUEJAS,
+  ruta = '/projects/p1/attention',
+  {
+    porTipo = TODAS,
+    legibles,
+    especiales = []
+  }: { porTipo?: Partial<Record<ObjetoDeQcs, Registro[]>>; legibles?: ObjetoDeQcs[]; especiales?: RutaEspecial[] } = {}
+) => {
+  red = espiarRed([...especiales, colaDelServidor(porTipo, { legibles })])
+  return montar(<AtencionPage />, { ruta, camino: '/projects/:projectId/attention', usuario: GESTORA_DE_QUEJAS, permisos: p })
+}
 
 describe('S35 · lista unificada de QCS', () => {
   it('agrupa las abiertas por su situación de plazo, con el plazo que corre en su estado y el registro para quien escribe', async () => {
@@ -92,17 +111,18 @@ describe('S35 · lista unificada de QCS', () => {
 
   it('solo lee los tipos que la cuenta lee y, mientras carga, no dice que no hay QCS', async () => {
     fetch = mockFetch(rutas())
-    abrir(permisos({ project: ['READ'], project_assignment: ['READ'], inquiry: ['READ'] }))
+    abrir(permisos({ project: ['READ'], project_assignment: ['READ'], inquiry: ['READ'] }), undefined, { legibles: ['inquiry'] })
     expect(screen.queryByText('No hay quejas, consultas ni solicitudes en esta vista.')).not.toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /^C-001\b/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /^Q-001\b/ })).not.toBeInTheDocument()
-    expect(fetch.calls.some((c) => c.url.includes('/objects/grievance/records'))).toBe(false)
+    // la cola es una sola lectura del servidor, que junta lo que la cuenta lee
+    expect(red!.a('GET', '/sgspe/attention/queue')[0].ruta).toContain('project=p1&view=attention')
     expect(screen.queryByRole('link', { name: 'Registrar QCS' })).not.toBeInTheDocument()
   })
 
   it('los filtros salen de la definición de un tipo que la cuenta lee; «Severidad» solo para quien lee quejas', async () => {
     fetch = mockFetch(rutas())
-    abrir(permisos({ project: ['READ'], project_assignment: ['READ'], inquiry: ['READ'] }))
+    abrir(permisos({ project: ['READ'], project_assignment: ['READ'], inquiry: ['READ'] }), undefined, { legibles: ['inquiry'] })
     await screen.findByRole('link', { name: /^C-001\b/ })
     const canal = screen.getByLabelText('Canal')
     expect(within(canal).getByRole('option', { name: rotuloDeOpcion(CANALES[0]) })).toBeInTheDocument()
@@ -120,8 +140,10 @@ describe('S35 · lista unificada de QCS', () => {
   })
 
   it('un fallo de lectura se dice con su reintento, no como una lista vacía', async () => {
-    fetch = mockFetch(rutas([{ path: '/objects/inquiry/records', status: 500, body: { title: 'Error', status: 500, detail: 'caído' } }]))
-    abrir()
+    fetch = mockFetch(rutas())
+    abrir(EQUIPO_DE_QUEJAS, undefined, {
+      especiales: [{ path: '/sgspe/attention/queue', responder: () => jsonResponse({ title: 'Error', status: 500, detail: 'caído' }, 500) }]
+    })
     expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByText('No hay quejas, consultas ni solicitudes en esta vista.')).not.toBeInTheDocument()
   })
@@ -144,12 +166,11 @@ describe('S35 · lista unificada de QCS', () => {
     const delGrupo = registro('g8', { ...VENCIDA.attributes, code: 'Q-008', stakeholder: 's2' }, { state: 'received' })
     fetch = mockFetch(
       rutas([
-        { path: '/objects/grievance/records', body: pagina([VENCIDA, delGrupo]) },
         { path: '/objects/stakeholder/records/s2', body: registro('s2', { project: 'p1', organization: 'o2' }) },
         { path: '/objects/organization/records/o2', body: registro('o2', { name: 'Junta de regantes' }) }
       ])
     )
-    abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?stakeholder=s2')
+    abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?stakeholder=s2', { porTipo: { grievance: [VENCIDA, delGrupo] } })
     expect(await screen.findByText('Grupo de interés: Junta de regantes')).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /^Q-008/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /^Q-002/ })).not.toBeInTheDocument()
@@ -179,33 +200,14 @@ describe('S35 · lista unificada de QCS', () => {
     expect(within(otra).getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
   })
 
-  it('una QCS cerrada no está en Atención y un plazo solo cuenta en su estado', () => {
-    expect(enVista('atencion', { objeto: 'grievance', registro: CERRADA }, 'u-gvm')).toBe(false)
-    expect(grupoDe({ objeto: 'grievance', registro: registro('x', { deadline_status: 'VENCIDO' }, { state: 'resolved' }) })).toBe('alDia')
-  })
-
   it('la tabla de cada grupo muestra primero la que vence antes', async () => {
     const antes = registro('g9', { ...VENCIDA.attributes, code: 'Q-010', ack_due_date: '2026-10-01' }, { state: 'received' })
-    fetch = mockFetch(rutas([{ path: '/objects/grievance/records', body: pagina([VENCIDA, antes]) }]))
-    abrir()
+    fetch = mockFetch(rutas())
+    abrir(EQUIPO_DE_QUEJAS, undefined, { porTipo: { grievance: [VENCIDA, antes] } })
     const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
     const codigos = within(vencidas)
       .getAllByRole('link', { name: /^Q-/ })
       .map((a) => a.textContent?.split(' ')[0])
     expect(codigos).toEqual(['Q-010', 'Q-002'])
-  })
-
-  it('dentro de cada grupo ordena por el plazo que corre, sin plazo al final, y desempata por recepción y código', () => {
-    const q = (id: string, code: string, vence: string | null, recibida: string, state = 'received') => ({
-      objeto: 'grievance' as const,
-      registro: registro(id, { code, ack_due_date: vence, resolution_due_date: vence, received_at: recibida }, { state })
-    })
-    const sinPlazo = q('a', 'Q-001', null, '2026-10-01T00:00:00Z')
-    const tarde = q('b', 'Q-002', '2026-10-09', '2026-10-01T00:00:00Z')
-    const pronto = q('c', 'Q-003', '2026-10-05', '2026-10-03T00:00:00Z')
-    const mismoPlazoAntes = q('d', 'Q-009', '2026-10-05', '2026-10-02T00:00:00Z')
-    const mismoDiaYCodigo = q('e', 'Q-004', '2026-10-05', '2026-10-02T00:00:00Z')
-    const filas = [sinPlazo, tarde, pronto, mismoDiaYCodigo, mismoPlazoAntes]
-    expect([...filas].sort(porPlazo).map((f) => f.registro.id)).toEqual(['e', 'd', 'c', 'b', 'a'])
   })
 })

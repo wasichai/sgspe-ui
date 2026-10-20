@@ -5,15 +5,29 @@ import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useProyectos } from '../contexto/proyectos'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
+import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { PaginacionDelServidor, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { hoyEnLima } from '../datos/fechas'
-import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
+import {
+  atributo,
+  estados,
+  texto,
+  useConteo,
+  useConteos,
+  useRegistro,
+  useRegistros,
+  useTodosConTope,
+  type Pagina,
+  type Parametros,
+  type Registro
+} from '../datos/registros'
+import type { UseQueryResult } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { OrigenDeTarea, TareaDrawer } from './TareaDrawer'
@@ -21,12 +35,15 @@ import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 
 // S47 · mis tareas (screens.md §11, WF-N): ¿qué tengo que hacer hoy y qué se me venció? en /tasks, las asignadas a quien mira
-// (assignee_user_id, indexado); en /projects/:projectId/tasks, las del proyecto, con «Para tomar»: las de escalamiento de
-// JOB-01, que llegan sin asignar. la API genérica no filtra por estado ni por «sin asignar»: se lee con tope y se arma aquí.
-// lista, tablero por estado y calendario del mes por vencimiento; una tarea se abre en su drawer (?task=id) con sus
+// (assignee_user_id, indexado); en /projects/:projectId/tasks, las del proyecto. la lista va en grupos (D10 de la revisión de UX):
+// «Mis tareas», las abiertas asignadas a quien mira, y, en un proyecto, «Para tomar», las de escalamiento de JOB-01 que llegan sin
+// asignar (empty=assignee_user_id). cada grupo es una consulta del servidor por estado, con su página y su total; el tablero pide
+// cada columna y el calendario el rango del mes (range_field=due_date). una tarea se abre en su drawer (?task=id) con sus
 // transiciones. una tarea vencida sigue en su estado: la situación es deadline_status (RN-WFL-001)
 const ABIERTAS = ['open', 'in_progress', 'blocked']
 const COLUMNAS = ['open', 'in_progress', 'blocked', 'done'] as const
+const VISTAS = ['lista', 'tablero', 'calendario']
+const POR_PAGINA = 25
 
 export function MisTareasPage() {
   const { t } = useTranslation(NS)
@@ -34,42 +51,49 @@ export function MisTareasPage() {
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const lista = useParametrosDeLista('lista')
-  const vistas = ['lista', 'tablero', 'calendario', ...(proyecto ? ['paraTomar'] : [])]
-  // una vista que aquí no existe (?view=paraTomar fuera de un proyecto) es la lista: «Para tomar» filtraría solo las propias
-  const vista = vistas.includes(lista.vista) ? lista.vista : 'lista'
-  const tareas = useTodosConTope(
-    'task',
-    proyecto ? { project: proyecto, sort: 'due_date', dir: 'asc' } : { assignee_user_id: user?.id, sort: 'due_date', dir: 'asc' },
-    Boolean(user)
-  )
-  const todas = tareas.data ?? []
-  const mias = todas.filter((x) => atributo(x, 'assignee_user_id') === user?.id)
-  const paraTomar = todas.filter((x) => !atributo(x, 'assignee_user_id') && ABIERTAS.includes(x.state ?? ''))
-  const abiertas = mias.filter((x) => ABIERTAS.includes(x.state ?? ''))
-  const abierta = todas.find((x) => x.id === lista.filtro('task'))
-  // abrir o cerrar una tarea no cambia de página ni de vista
-  const pagina = lista.pagina ? String(lista.pagina) : null
-  const abrir = (tarea: Registro) => lista.cambiar({ task: tarea.id, page: pagina })
-  const contar = (situacion: string) => abiertas.filter((x) => atributo(x, 'deadline_status') === situacion).length
+  // una vista que ya no existe (?view=paraTomar, hoy un grupo de la lista) es la lista
+  const vista = VISTAS.includes(lista.vista) ? lista.vista : 'lista'
+  // las mías: del proyecto o de todos los proyectos que se leen
+  const mias: Parametros = { ...(proyecto ? { project: proyecto } : {}), assignee_user_id: user?.id }
+  const abiertasMias: Parametros = { ...mias, state: estados(ABIERTAS) }
   // las cifras de arriba son filtros (revisión de UX, etapa 3): «Vencidas» y «Por vencer» filtran la lista por su situación de
   // plazo, en la URL (?situacion=), y «Abiertas» los quita
   const situacion = lista.filtro('situacion')
   const filtrar = (valor: string | null) => lista.cambiar({ situacion: valor, view: null })
-  const enLaLista = situacion ? abiertas.filter((x) => atributo(x, 'deadline_status') === situacion) : abiertas
+  const enLaLista = useRegistros(
+    'task',
+    { ...abiertasMias, deadline_status: situacion, sort: 'due_date', dir: 'asc', page: lista.pagina, size: POR_PAGINA },
+    Boolean(user) && vista === 'lista'
+  )
+  const paginaParaTomar = Number(lista.filtro('pt')) || 0
+  const paraTomar = useRegistros(
+    'task',
+    { project: proyecto, empty: 'assignee_user_id', state: estados(ABIERTAS), sort: 'due_date', dir: 'asc', page: paginaParaTomar, size: POR_PAGINA },
+    Boolean(proyecto) && vista === 'lista'
+  )
+  const cifras = useConteos(
+    'task',
+    { vencidas: { ...abiertasMias, deadline_status: 'VENCIDO' }, porVencer: { ...abiertasMias, deadline_status: 'POR VENCER' }, abiertas: abiertasMias },
+    Boolean(user)
+  )
+  const abierta = useRegistro('task', lista.filtro('task') || undefined)
+  // abrir o cerrar una tarea no cambia de página ni de vista
+  const pagina = lista.pagina ? String(lista.pagina) : null
+  const abrir = (tarea: Registro) => lista.cambiar({ task: tarea.id, page: pagina })
   const chips = situacion ? [{ clave: 'situacion', etiqueta: t(`tareas.contadores.${situacion === 'VENCIDO' ? 'vencidas' : 'porVencer'}`) }] : []
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
         titulo={proyecto ? t('tareas.delProyecto') : t('tareas.titulo')}
-        conteo={tareas.data ? t('tareas.conteo', { count: abiertas.length }) : undefined}
+        conteo={cifras.abiertas !== null ? t('tareas.conteo', { count: cifras.abiertas }) : undefined}
       />
-      {tareas.isPending ? null : tareas.isError && !tareas.data ? null : (
+      {cifras.abiertas === null ? null : (
         <div role="group" aria-label={t('tareas.titulo')} className="grid grid-cols-3 gap-3 sm:max-w-md">
           {(
             [
-              ['vencidas', contar('VENCIDO'), 'VENCIDO'],
-              ['porVencer', contar('POR VENCER'), 'POR VENCER'],
-              ['abiertas', abiertas.length, null]
+              ['vencidas', cifras.vencidas, 'VENCIDO'],
+              ['porVencer', cifras.porVencer, 'POR VENCER'],
+              ['abiertas', cifras.abiertas, null]
             ] as const
           ).map(([clave, n, valor]) => {
             const activo = vista === 'lista' && (valor ? situacion === valor : !situacion)
@@ -82,7 +106,7 @@ export function MisTareasPage() {
                 className={cn('rounded-sg-lg border bg-sg-surface p-3 text-left hover:bg-sg-surface-hover', activo ? 'border-sg-primary' : 'border-sg-border')}
               >
                 <span className="block text-sg-overline font-semibold uppercase text-sg-text-muted">{t(`tareas.contadores.${clave}`)}</span>{' '}
-                <span className="block text-sg-h2 font-semibold tabular-nums">{numeroPe(n)}</span>
+                <span className="block text-sg-h2 font-semibold tabular-nums">{n === null ? '—' : numeroPe(n)}</span>
               </button>
             )
           })}
@@ -90,34 +114,71 @@ export function MisTareasPage() {
       )}
       <ChipsDeFiltro chips={chips} alQuitar={() => filtrar(null)} alLimpiar={() => filtrar(null)} />
       <VistasGuardadas
-        vistas={vistas.map((v) => ({ id: v, etiqueta: t(`tareas.vistas.${v}`) }))}
+        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`tareas.vistas.${v}`) }))}
         actual={vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
-      {tareas.truncado ? <Alert tone="warning">{t('tareas.truncado', { n: numeroPe(tareas.data?.length ?? 0) })}</Alert> : null}
-      {tareas.isPending ? (
-        <Cargando />
-      ) : tareas.isError && !tareas.data ? (
-        <FalloDeLectura error={tareas.error} alReintentar={() => void tareas.refetch()} />
-      ) : vista === 'tablero' ? (
-        <Tablero tareas={mias} alAbrir={abrir} />
+      {vista === 'tablero' ? (
+        <Tablero consulta={mias} alAbrir={abrir} />
       ) : vista === 'calendario' ? (
         <Calendario
-          tareas={mias}
+          consulta={mias}
           mes={lista.filtro('month') || hoyEnLima().slice(0, 7)}
           alCambiarMes={(mes) => lista.cambiar({ month: mes })}
           alAbrir={abrir}
         />
-      ) : vista === 'paraTomar' ? (
-        <>
-          <p className="text-sm text-sg-text-secondary">{t('tareas.paraTomarAyuda')}</p>
-          <TablaDeTareas tareas={paraTomar} vacio={t('tareas.vaciaParaTomar')} alAbrir={abrir} />
-        </>
       ) : (
-        <TablaDeTareas tareas={enLaLista} vacio={t('tareas.vacia')} alAbrir={abrir} conProyecto={!proyecto} />
+        <>
+          <GrupoDeTareas titulo={t('tareas.grupos.mias')} lectura={enLaLista} alPagina={(p) => lista.cambiar({ page: String(p) })}>
+            {(tareas) => <TablaDeTareas tareas={tareas} vacio={t('tareas.vacia')} alAbrir={abrir} conProyecto={!proyecto} />}
+          </GrupoDeTareas>
+          {proyecto ? (
+            <GrupoDeTareas titulo={t('tareas.grupos.paraTomar')} lectura={paraTomar} alPagina={(p) => lista.cambiar({ pt: String(p), page: pagina })}>
+              {(tareas) => (
+                <>
+                  <p className="text-sm text-sg-text-secondary">{t('tareas.paraTomarAyuda')}</p>
+                  <TablaDeTareas tareas={tareas} vacio={t('tareas.vaciaParaTomar')} alAbrir={abrir} etiqueta={t('tareas.grupos.paraTomar')} />
+                </>
+              )}
+            </GrupoDeTareas>
+          ) : null}
+        </>
       )}
       {!proyecto ? <p className="text-sm text-sg-text-muted">{t('tareas.paraTomarGlobal')}</p> : null}
-      {abierta ? <TareaDrawer tarea={abierta} alCerrar={() => lista.cambiar({ task: null, page: pagina })} /> : null}
+      {abierta.data ? <TareaDrawer tarea={abierta.data} alCerrar={() => lista.cambiar({ task: null, page: pagina })} /> : null}
+    </section>
+  )
+}
+
+// un grupo de la lista con su título, su total, su página del servidor y su paginación; mientras carga o si falla no se dibuja
+// como vacío
+function GrupoDeTareas({
+  titulo,
+  lectura,
+  alPagina,
+  children
+}: {
+  titulo: string
+  lectura: UseQueryResult<Pagina>
+  alPagina: (pagina: number) => void
+  children: (tareas: Registro[]) => ReactNode
+}) {
+  return (
+    <section aria-label={titulo} className="space-y-2">
+      <h2 className="text-sg-h3 font-semibold">
+        {titulo}
+        {lectura.data?.totalElements != null ? <span className="text-sg-text-muted">{` (${numeroPe(lectura.data.totalElements)})`}</span> : null}
+      </h2>
+      {lectura.isPending ? (
+        <Cargando />
+      ) : lectura.isError && !lectura.data ? (
+        <FalloDeLectura error={lectura.error} alReintentar={() => void lectura.refetch()} />
+      ) : (
+        <>
+          {children(lectura.data.content)}
+          <PaginacionDelServidor datos={lectura.data} alPagina={alPagina} />
+        </>
+      )}
     </section>
   )
 }
@@ -126,12 +187,14 @@ function TablaDeTareas({
   tareas,
   vacio,
   alAbrir,
-  conProyecto = false
+  conProyecto = false,
+  etiqueta
 }: {
   tareas: Registro[]
   vacio: string
   alAbrir: (tarea: Registro) => void
   conProyecto?: boolean
+  etiqueta?: string
 }) {
   const { t } = useTranslation(NS)
   const proyectos = useProyectos()
@@ -140,7 +203,7 @@ function TablaDeTareas({
   if (telefono)
     return (
       <ListaEnTarjetas
-        etiqueta={t('tareas.titulo')}
+        etiqueta={etiqueta ?? t('tareas.titulo')}
         tarjetas={tareas.map((x) => ({
           id: x.id,
           titulo: (
@@ -167,7 +230,7 @@ function TablaDeTareas({
     )
   return (
     <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-      <Table aria-label={t('tareas.titulo')}>
+      <Table aria-label={etiqueta ?? t('tareas.titulo')}>
         <thead>
           <tr>
             {(['tarea', ...(conProyecto ? (['proyecto'] as const) : []), 'origen', 'prioridad', 'vence', 'estado'] as const).map((c) => (
@@ -218,40 +281,57 @@ function TablaDeTareas({
   )
 }
 
-// el tablero por estado: una columna por estado de WF-N (las canceladas no se muestran); cada tarjeta abre la tarea, donde
-// están las transiciones con el teclado y con motivo, en lugar de arrastrar (screens.md S47)
-function Tablero({ tareas, alAbrir }: { tareas: Registro[]; alAbrir: (tarea: Registro) => void }) {
-  const { t } = useTranslation(NS)
+// el tablero por estado: una columna por estado de WF-N (las canceladas no se muestran), cada una con su consulta y su total; cada
+// tarjeta abre la tarea, donde están las transiciones con el teclado y con motivo, en lugar de arrastrar (screens.md S47)
+function Tablero({ consulta, alAbrir }: { consulta: Parametros; alAbrir: (tarea: Registro) => void }) {
   return (
     <div className="grid gap-3 md:grid-cols-4">
-      {COLUMNAS.map((estado) => {
-        const deLaColumna = tareas.filter((x) => x.state === estado)
-        return (
-          <section key={estado} aria-label={t(`tareas.columnasDelTablero.${estado}`)} className="space-y-2 rounded-sg-lg bg-sg-surface-sunken p-2">
-            <h2 className="text-sm font-semibold">
-              {t(`tareas.columnasDelTablero.${estado}`)} · {numeroPe(deLaColumna.length)}
-            </h2>
-            <ul className="space-y-2">
-              {deLaColumna.map((x) => (
-                <li key={x.id}>
-                  <button
-                    type="button"
-                    onClick={() => alAbrir(x)}
-                    className="w-full space-y-1 rounded-sg-md border border-sg-border bg-sg-surface p-2 text-left text-sm"
-                  >
-                    <span className="block font-medium">{texto(x, 'title')}</span>
-                    <span className="flex flex-wrap items-center gap-1 text-sg-caption text-sg-text-muted">
-                      <Dia valor={texto(x, 'due_date')} />
-                      <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
+      {COLUMNAS.map((estado) => (
+        <ColumnaDelTablero key={estado} consulta={consulta} estado={estado} alAbrir={alAbrir} />
+      ))}
     </div>
+  )
+}
+
+const POR_COLUMNA = 50
+
+function ColumnaDelTablero({ consulta, estado, alAbrir }: { consulta: Parametros; estado: string; alAbrir: (tarea: Registro) => void }) {
+  const { t } = useTranslation(NS)
+  const lectura = useRegistros('task', { ...consulta, state: estado, sort: 'due_date', dir: 'asc', size: POR_COLUMNA })
+  const tareas = lectura.data?.content ?? []
+  const total = lectura.data?.totalElements ?? null
+  return (
+    <section aria-label={t(`tareas.columnasDelTablero.${estado}`)} className="space-y-2 rounded-sg-lg bg-sg-surface-sunken p-2">
+      <h2 className="text-sm font-semibold">
+        {t(`tareas.columnasDelTablero.${estado}`)} · {total === null ? '—' : numeroPe(total)}
+      </h2>
+      {lectura.isPending ? (
+        <Cargando compacto />
+      ) : lectura.isError && !lectura.data ? (
+        <FalloDeLectura error={lectura.error} alReintentar={() => void lectura.refetch()} />
+      ) : (
+        <ul className="space-y-2">
+          {tareas.map((x) => (
+            <li key={x.id}>
+              <button
+                type="button"
+                onClick={() => alAbrir(x)}
+                className="w-full space-y-1 rounded-sg-md border border-sg-border bg-sg-surface p-2 text-left text-sm"
+              >
+                <span className="block font-medium">{texto(x, 'title')}</span>
+                <span className="flex flex-wrap items-center gap-1 text-sg-caption text-sg-text-muted">
+                  <Dia valor={texto(x, 'due_date')} />
+                  <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {total !== null && total > tareas.length ? (
+        <p className="text-sg-caption text-sg-text-muted">{t('tareas.masEnLaColumna', { n: numeroPe(total - tareas.length) })}</p>
+      ) : null}
+    </section>
   )
 }
 
@@ -263,12 +343,12 @@ const sumarMes = (mes: string, n: number): string => {
 
 // el calendario del mes por fecha de vencimiento (días de calendario, sin huso): una cuadrícula de lunes a domingo
 function Calendario({
-  tareas,
+  consulta,
   mes,
   alCambiarMes,
   alAbrir
 }: {
-  tareas: Registro[]
+  consulta: Parametros
   mes: string
   alCambiarMes: (mes: string) => void
   alAbrir: (tarea: Registro) => void
@@ -279,8 +359,11 @@ function Calendario({
   const dias = new Date(Date.UTC(a, m, 0)).getUTCDate()
   const primero = (new Date(Date.UTC(a, m - 1, 1)).getUTCDay() + 6) % 7
   const celdas = [...Array.from({ length: primero }, () => null), ...Array.from({ length: dias }, (_, i) => i + 1)]
+  // las del mes, por su rango de vencimiento, y cuántas no tienen fecha (D10 de la revisión de UX)
+  const delMes = useTodosConTope('task', { ...consulta, range_field: 'due_date', range_from: `${valido}-01`, range_to: `${sumarMes(valido, 1)}-01` })
+  const tareas = delMes.data ?? []
   const delDia = (dia: number) => tareas.filter((x) => texto(x, 'due_date') === `${valido}-${String(dia).padStart(2, '0')}`)
-  const sinFecha = tareas.filter((x) => !texto(x, 'due_date')).length
+  const sinFecha = useConteo('task', { ...consulta, empty: 'due_date' }) ?? 0
   const nombreDelMes = new Intl.DateTimeFormat(i18n.language === 'en' ? 'en' : 'es-PE', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
     new Date(Date.UTC(a, m - 1, 1))
   )

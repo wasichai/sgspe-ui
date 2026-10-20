@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeCompromisos, EQUIPO_DE_COMPROMISOS, GESTORA } from '../../test/compromisos'
-import { definicion, montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
-import { espiarRed, problema, type Red } from '../../test/red'
+import { definicion, montar, registro, ubicacion, workflow } from '../../test/montar'
+import { fichaDelServidor, listaDelServidor } from '../../test/listaDelServidor'
+import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
+import type { Registro } from '../datos/registros'
 import { MisTareasPage } from './MisTareasPage'
 
 // S47 (WF-N): las tareas de quien mira con sus conteos, el tablero por estado, el calendario por vencimiento y «Para tomar» en
@@ -62,7 +64,6 @@ const rutas = (extra: MockRoute[] = []): MockRoute[] => [
       ['done', 'Hecha']
     ])
   },
-  { path: '/objects/task/records', body: pagina([T1, T2, T3, ESCALAMIENTO]) },
   {
     path: '/metadata/objects/task',
     body: definicion('task', [
@@ -83,10 +84,14 @@ const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   }
 ]
 
+// las tareas las contesta el servidor emulado: cada grupo, columna y mes es una consulta (D10 de la revisión de UX)
+const servidor = (tareas: Registro[] | (() => Registro[]) = [T1, T2, T3, ESCALAMIENTO], especiales: RutaEspecial[] = []) =>
+  espiarRed([...especiales, listaDelServidor('task', tareas), fichaDelServidor('task', tareas)])
+
 describe('S47 · mis tareas', () => {
   it('lee las asignadas a quien mira, cuenta las vencidas y abre una con su origen y sus transiciones', async () => {
     fetch = mockFetch(rutas([{ path: '/objects/commitment/records/c1', body: registro('c1', { project: 'p1', code: 'C-001', title: 'Reservorio' }) }]))
-    red = espiarRed()
+    red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
     expect(red.a('GET', '/objects/task/records')[0].ruta).toContain('assignee_user_id=u-cmm')
@@ -106,13 +111,14 @@ describe('S47 · mis tareas', () => {
   // revisión de UX, etapa 3: las cifras de arriba son filtros; en lo global, la columna Proyecto
   it('pulsar «Vencidas» filtra la lista, queda como chip y «Abiertas» lo quita; en lo global se dice el proyecto', async () => {
     fetch = mockFetch(rutas())
+    red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
     expect(within(tabla).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
     expect(within(tabla).getAllByRole('row')).toHaveLength(3)
     await userEvent.click(screen.getByRole('button', { name: 'Vencidas 1' }))
     expect(ubicacion.actual).toBe('/tasks?situacion=VENCIDO')
-    expect(within(screen.getByRole('table', { name: 'Mis tareas' })).getAllByRole('row')).toHaveLength(2)
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Mis tareas' })).getAllByRole('row')).toHaveLength(2))
     expect(screen.getByRole('button', { name: 'Quitar Vencidas' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Abiertas 2' }))
     expect(ubicacion.actual).toBe('/tasks')
@@ -122,20 +128,27 @@ describe('S47 · mis tareas', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-09T15:00:00Z'))
     fetch = mockFetch(rutas())
+    red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks?view=tablero', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
-    expect(await screen.findByRole('region', { name: 'Hechas' })).toHaveTextContent('Revisar el acta')
-    expect(screen.getByRole('region', { name: 'En curso' })).toHaveTextContent('Reprogramar el taller')
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Hechas' })).toHaveTextContent('Revisar el acta'))
+    await waitFor(() => expect(screen.getByRole('region', { name: 'En curso' })).toHaveTextContent('Reprogramar el taller'))
+    // cada columna es una consulta por estado
+    expect(red.a('GET', '/objects/task/records').map((l) => l.ruta)).toContainEqual(expect.stringContaining('state=done'))
     await userEvent.click(screen.getByRole('tab', { name: 'Calendario' }))
     const mes = await screen.findByRole('region', { name: /octubre/ })
-    expect(within(mes).getByRole('button', { name: 'Ejecutar compromiso C-001' }).closest('div')).toHaveTextContent(/^5/)
-    expect(within(mes).getByText('Sin fecha de vencimiento: 1')).toBeInTheDocument()
+    expect((await within(mes).findByRole('button', { name: 'Ejecutar compromiso C-001' })).closest('div')).toHaveTextContent(/^5/)
+    expect(await within(mes).findByText('Sin fecha de vencimiento: 1')).toBeInTheDocument()
+    // el mes se pide por su rango de vencimiento
+    expect(red.a('GET', '/objects/task/records').map((l) => l.ruta)).toContainEqual(
+      expect.stringContaining('range_field=due_date&range_from=2026-10-01&range_to=2026-11-01')
+    )
     await userEvent.click(within(mes).getByRole('button', { name: 'Mes siguiente' }))
     expect(await screen.findByRole('region', { name: /noviembre/ })).toBeInTheDocument()
   })
 
   it('en el proyecto, «Para tomar» lista las sin asignar y tomar una manda quien mira con la versión leída', async () => {
     fetch = mockFetch(rutas())
-    red = espiarRed([{ method: 'PUT', path: '/objects/task/records/t4', responder: () => problema(412, 'otra persona la tomó') }])
+    red = servidor(undefined, [{ method: 'PUT', path: '/objects/task/records/t4', responder: () => problema(412, 'otra persona la tomó') }])
     montar(<MisTareasPage />, {
       ruta: '/projects/p1/tasks?view=paraTomar',
       camino: '/projects/:projectId/tasks',
@@ -158,17 +171,19 @@ describe('S47 · mis tareas', () => {
     let tomada = false
     const ASIGNADA = { ...ESCALAMIENTO, attributes: { ...ESCALAMIENTO.attributes, assignee_user_id: 'u-cmm', assignee_user_email: 'cmm@sgspe.test' } }
     fetch = mockFetch(rutas())
-    red = espiarRed([
-      { path: /^\/objects\/task\/records\?/, responder: () => jsonResponse(pagina([T1, T2, T3, tomada ? ASIGNADA : ESCALAMIENTO])) },
-      {
-        method: 'PUT',
-        path: '/objects/task/records/t4',
-        responder: () => {
-          tomada = true
-          return jsonResponse(ASIGNADA)
+    red = servidor(
+      () => [T1, T2, T3, tomada ? ASIGNADA : ESCALAMIENTO],
+      [
+        {
+          method: 'PUT',
+          path: '/objects/task/records/t4',
+          responder: () => {
+            tomada = true
+            return jsonResponse(ASIGNADA)
+          }
         }
-      }
-    ])
+      ]
+    )
     montar(<MisTareasPage />, {
       ruta: '/projects/p1/tasks?view=paraTomar',
       camino: '/projects/:projectId/tasks',
@@ -188,12 +203,12 @@ describe('S47 · mis tareas', () => {
     const conOtroProyecto = registro('t7', { project: 'p1', title: 'Revisar la alerta', early_warning: 'w9', assignee_user_id: 'u-cmm' }, { state: 'open' })
     fetch = mockFetch(
       rutas([
-        { path: '/objects/task/records', body: pagina([acuse, revision, conOtroProyecto]) },
         { path: '/objects/grievance/records/g1', body: registro('g1', { project: 'p1', code: 'Q-001' }) },
         { path: '/objects/social_risk/records/k1', body: registro('k1', { project: 'p1', code: 'R-001', title: 'Polvo en la vía' }) },
         { path: '/objects/early_warning/records/w9', status: 404, body: { title: 'Not Found', status: 404 } }
       ])
     )
+    red = servidor([acuse, revision, conOtroProyecto])
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
     expect(await within(tabla).findByRole('link', { name: 'Q-001' })).toHaveAttribute('href', '/projects/p1/grievances/g1')
@@ -217,8 +232,8 @@ describe('S47 · mis tareas', () => {
       },
       { state: 'open', updatedAt: '2026-10-09T05:00:00Z' }
     )
-    fetch = mockFetch(rutas([{ path: '/objects/task/records', body: pagina([NIVEL_2]) }]))
-    red = espiarRed([{ method: 'PUT', path: '/objects/task/records/t7', responder: () => jsonResponse(NIVEL_2) }])
+    fetch = mockFetch(rutas())
+    red = servidor([NIVEL_2], [{ method: 'PUT', path: '/objects/task/records/t7', responder: () => jsonResponse(NIVEL_2) }])
     montar(<MisTareasPage />, {
       ruta: '/projects/p1/tasks?view=paraTomar',
       camino: '/projects/:projectId/tasks',
@@ -244,8 +259,8 @@ describe('S47 · mis tareas', () => {
     const respuesta = new Promise<Response>((resolver) => {
       fallar = () => resolver(problema(500, 'caído'))
     })
-    fetch = mockFetch(rutas().filter((r) => r.path !== '/objects/task/records'))
-    red = espiarRed([{ path: '/objects/task/records', responder: () => respuesta }])
+    fetch = mockFetch(rutas())
+    red = espiarRed([{ path: '/objects/task/records', responder: () => respuesta.then((r) => r.clone()) }])
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     // la lectura sigue pendiente: «Cargando», sin conteos ni lista vacía
     expect(await screen.findByRole('status')).toHaveTextContent('Cargando…')
@@ -257,17 +272,26 @@ describe('S47 · mis tareas', () => {
     expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
   })
 
-  it('una lista que el tope cortó lo dice con cuántas muestra', async () => {
-    const muchas = Array.from({ length: 200 }, (_, i) =>
-      registro(`x${i}`, { project: 'p1', title: `Tarea ${i}`, assignee_user_id: 'u-cmm' }, { state: 'open' })
+  it('en el proyecto, la lista agrupa «Mis tareas» y «Para tomar», cada grupo con su consulta y su total', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/projects/p1/tasks', camino: '/projects/:projectId/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const mias = await screen.findByRole('region', { name: 'Mis tareas' })
+    await waitFor(() => expect(within(mias).getByRole('heading')).toHaveTextContent('Mis tareas (2)'))
+    const paraTomar = screen.getByRole('region', { name: 'Para tomar' })
+    await waitFor(() => expect(within(paraTomar).getByRole('heading')).toHaveTextContent('Para tomar (1)'))
+    expect(within(paraTomar).getByRole('button', { name: 'Abrir Escalamiento C-002 nivel 1' })).toBeInTheDocument()
+    const consultas = red.a('GET', '/objects/task/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    expect(consultas).toContainEqual(
+      expect.objectContaining({ project: 'p1', assignee_user_id: 'u-cmm', state: 'open,in_progress,blocked', page: '0', size: '25' })
     )
-    fetch = mockFetch(rutas([{ path: /^\/objects\/task\/records\?/, body: pagina(muchas, { nextCursor: 'siguiente' }) }]))
-    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
-    expect(await screen.findByText('Se muestran las primeras 1,000 tareas: acote con un proyecto para ver el resto.')).toBeInTheDocument()
+    expect(consultas).toContainEqual(expect.objectContaining({ project: 'p1', empty: 'assignee_user_id', state: 'open,in_progress,blocked', page: '0' }))
+    expect(screen.queryByText(/Se muestran las primeras/)).not.toBeInTheDocument()
   })
 
   it('fuera de un proyecto, ?view=paraTomar muestra la lista: «Para tomar» solo existe en el proyecto', async () => {
     fetch = mockFetch(rutas())
+    red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks?view=paraTomar', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     expect(await screen.findByRole('button', { name: 'Abrir Ejecutar compromiso C-001' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Lista' })).toHaveAttribute('aria-selected', 'true')
