@@ -66,6 +66,8 @@ describe('S29 · ficha de compromiso', () => {
     const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
     await waitFor(() => expect(cumplimiento).toBeDisabled())
     expect(cumplimiento).toHaveAccessibleDescription('Falta una entrega con conformidad')
+    // las demás transiciones van en «Más acciones» (rediseño de UX, 2026-10-20)
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('button', { name: 'Bloquear' })).toBeEnabled()
   })
 

@@ -113,7 +113,7 @@ function Ficha({ programa }: { programa: Registro }) {
             <EstadoChip objeto="social_program" estado={programa.state} />
           </>
         }
-        primaria={<BotonesDeTransicion objeto="social_program" registro={programa} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        primaria={<BotonesDeTransicion agrupadas objeto="social_program" registro={programa} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
         secundarias={
           edita ? (
             <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>

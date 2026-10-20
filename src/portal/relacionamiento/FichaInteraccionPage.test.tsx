@@ -105,6 +105,8 @@ describe('S23 · ficha de interacción', () => {
 
   it('"Cerrar sin acta" sale deshabilitado con la razón mientras haya preguntas pendientes', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
+    // «Cerrar sin acta» no es la siguiente acción: va en «Más acciones», con su razón a la vista (rediseño de UX, 2026-10-20)
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     const cerrar = await screen.findByRole('button', { name: 'Cerrar sin acta' })
     await waitFor(() => expect(cerrar).toBeDisabled())
     expect(cerrar).toHaveAccessibleDescription('Hay 1 pregunta sin respuesta ni derivación')
@@ -259,6 +261,7 @@ describe('S23 · ficha de interacción', () => {
       ...rutas()
     ])
     red = espiarRed()
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cerrar sin acta' })).toBeDisabled())
     const comprobaciones = () => red!.a('POST', '/sgspe/transition-checks').length
     const antes = comprobaciones()

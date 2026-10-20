@@ -64,6 +64,8 @@ describe('S57 · ficha de consulta', () => {
     expect(screen.getByText(/Respuesta hasta el 17 oct/)).toBeInTheDocument()
     expect(screen.getByText(/Responder pide la respuesta y cuándo se comunicó/)).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Responder' })).toBeInTheDocument()
+    // las demás transiciones van en «Más acciones» (rediseño de UX, 2026-10-20)
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Reclasificar…' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Escribir la respuesta' }))

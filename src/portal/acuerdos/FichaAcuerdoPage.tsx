@@ -147,7 +147,13 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
           </>
         }
         primaria={
-          <BotonesDeTransicion objeto="agreement" registro={acuerdo} proyecto={proyecto} comprobarAntes={['activate', 'activate_from_draft', 'resume']} />
+          <BotonesDeTransicion
+            agrupadas
+            objeto="agreement"
+            registro={acuerdo}
+            proyecto={proyecto}
+            comprobarAntes={['activate', 'activate_from_draft', 'resume']}
+          />
         }
         secundarias={
           edita ? (

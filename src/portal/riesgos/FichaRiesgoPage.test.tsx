@@ -91,10 +91,11 @@ describe('S40 · ficha de riesgo', () => {
     expect(screen.queryByRole('button', { name: 'Evaluar' })).not.toBeInTheDocument()
   })
 
-  it('«Crear relacionado» lleva al compromiso que atiende el riesgo (revisión de UX, etapa 5)', async () => {
+  // el alta relacionada va en «Más acciones», con las transiciones que no son la siguiente (rediseño de UX, 2026-10-20)
+  it('«Más acciones» lleva al compromiso que atiende el riesgo (revisión de UX, etapa 5)', async () => {
     fetch = mockFetch(rutas())
     abrir(GESTOR_DE_RIESGOS, { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, commitment: ['READ', 'CREATE'] } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Crear relacionado' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new?social_risk=k1')
   })
 
