@@ -3,7 +3,7 @@
 export const ES_COMUN = {
   cargando: 'Cargando…',
   reintentar: 'Reintentar',
-  errorDeCarga: 'No se pudo cargar esta información. Los filtros se conservan.',
+  errorDeCarga: 'No se pudo cargar esta información.',
   correlacion: 'Código para soporte: {{id}}',
   restringido: 'Restringido',
   restringidoAyuda: 'Su rol no puede leer este dato',
@@ -338,7 +338,7 @@ export const ES_COMUN = {
 export const EN_COMUN: typeof ES_COMUN = {
   cargando: 'Loading…',
   reintentar: 'Retry',
-  errorDeCarga: 'This information could not be loaded. Your filters are kept.',
+  errorDeCarga: 'This information could not be loaded.',
   correlacion: 'Support code: {{id}}',
   restringido: 'Restricted',
   restringidoAyuda: 'Your role cannot read this data',

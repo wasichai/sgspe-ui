@@ -234,7 +234,7 @@ describe('Trabajar en el proyecto con este lugar', () => {
     ])
     // el encabezado común (revisión de UX, etapa 5) ya no es un <header>: el aviso va junto a sus acciones
     const cabecera = (await screen.findByRole('heading', { name: 'CC Tunas Pampa', level: 1 })).parentElement!.parentElement!
-    expect(await within(cabecera).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(await within(cabecera).findByText('No se pudo cargar esta información.')).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Trabajar en el proyecto con este lugar' })).not.toBeInTheDocument()
   })
 })
@@ -317,12 +317,12 @@ describe('S13 · ficha de comunidad', () => {
     ])
     for (const nombre of ['Sectores comunales', 'Grupos de interés del lugar']) {
       const seccion = await screen.findByRole('region', { name: nombre })
-      expect(await within(seccion).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+      expect(await within(seccion).findByText('No se pudo cargar esta información.')).toBeInTheDocument()
       expect(within(seccion).queryByText('Aún no hay registros')).not.toBeInTheDocument()
       expect(within(seccion).queryByText(/Ningún grupo/)).not.toBeInTheDocument()
     }
     const areas = screen.getByRole('complementary', { name: 'Áreas de influencia que la incluyen' })
-    expect(await within(areas).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(await within(areas).findByText('No se pudo cargar esta información.')).toBeInTheDocument()
     expect(within(areas).queryByText(/Ningún área/)).not.toBeInTheDocument()
   })
 
@@ -532,7 +532,7 @@ describe('S14 · ficha de localidad y línea base', () => {
       falla('/objects/locality_profile/records'),
       ...sin(rutas(def), '/objects/locality_profile/records')
     ])
-    expect(await screen.findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(await screen.findByText('No se pudo cargar esta información.')).toBeInTheDocument()
     expect(screen.queryByText('Esta localidad aún no tiene perfil de línea base.')).not.toBeInTheDocument()
   })
 
@@ -585,7 +585,7 @@ describe('S14 · ficha de localidad y línea base', () => {
     expect(within(escuelas).queryByText('Aún no hay registros')).not.toBeInTheDocument()
     for (const nombre of ['Establecimientos de salud', 'Calendario de festividades']) {
       const seccion = screen.getByRole('region', { name: nombre })
-      expect(await within(seccion).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+      expect(await within(seccion).findByText('No se pudo cargar esta información.')).toBeInTheDocument()
       expect(within(seccion).queryByText('Aún no hay registros')).not.toBeInTheDocument()
     }
     expect(await within(screen.getByRole('region', { name: 'Vías de acceso' })).findByText('Aún no hay registros')).toBeInTheDocument()

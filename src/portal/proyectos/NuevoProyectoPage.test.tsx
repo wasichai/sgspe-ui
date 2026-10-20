@@ -353,7 +353,7 @@ describe('S07 · borradores y errores', () => {
       { path: '/objects/project/records/roto', status: 500, body: { title: 'Error', status: 500 } },
       ...rutas()
     ])
-    expect(await screen.findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(await screen.findByText('No se pudo cargar esta información.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument()
   })
 
