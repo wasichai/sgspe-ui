@@ -53,6 +53,12 @@ describe('caminoDe', () => {
   it('un camino dado por la ficha manda; los cierres que no nombra van aparte', () => {
     expect(caminoDe(DEFINICION, ['draft', 'approved', 'verified'])).toEqual({ camino: ['draft', 'approved', 'verified'], otros: ['cancelled'] })
   })
+
+  // rediseño de UX (2026-10-20): un estado del camino de la ficha que el workflow desplegado no tiene salía con su nombre
+  // técnico («pending_approval»)
+  it('un estado del camino dado que el workflow no tiene no se dibuja', () => {
+    expect(caminoDe(DEFINICION, ['draft', 'pending_approval', 'approved']).camino).toEqual(['draft', 'approved'])
+  })
 })
 
 describe('CaminoDelFlujo', () => {
