@@ -10,7 +10,7 @@ export const ES_COMPROMISOS = {
   buscar: 'Buscar por código o título',
   estado: 'Estado',
   tabla: 'Compromisos',
-  truncado: 'Se muestran los primeros {{n}} compromisos del alcance: elija un proyecto o un territorio para ver el resto.',
+  truncado: 'Se muestran los primeros {{n}} compromisos del grupo de interés.',
   territorioNoAplica: 'Ese territorio no filtra compromisos: se muestran todos los del alcance.',
   vistas: {
     abiertos: 'Abiertos',
@@ -96,7 +96,7 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
   buscar: 'Search by code or title',
   estado: 'Status',
   tabla: 'Commitments',
-  truncado: 'The first {{n}} commitments of the scope are shown: pick a project or a territory to see the rest.',
+  truncado: 'The first {{n}} commitments of the stakeholder are shown.',
   territorioNoAplica: 'That territory does not filter commitments: all of the scope are shown.',
   vistas: {
     abiertos: 'Open',
