@@ -11,19 +11,22 @@ import { Cargando, Consulta, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { useRotuloDeRegistro } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
-import { texto, usePuedeEditar, useRegistro, useTodos, useTodosConTope, type Registro } from '../datos/registros'
-import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
+import { texto, usePuedeEditar, useRegistro, useRegistros, useTodos, type Registro } from '../datos/registros'
+import { fechaPe, fechaYHoraPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { opcion } from '../datos/opciones'
 
-// los incidentes (screens.md §9, ficha de incidente; WF-M): la lista del proyecto con «Registrar incidente» y la ficha con qué pasó,
+// los incidentes (screens.md §9, ficha de incidente; WF-M): la lista del proyecto, paginada en el servidor (D10 de la revisión de
+// UX), con «Registrar incidente» y la ficha con qué pasó,
 // la respuesta inmediata y sus consecuencias (cerrar exige las dos: FIELD_REQUIRED, que transition-checks dice antes), lo que generó
 // (riesgos con origin_incident, quejas con incident y señales con incident; una queja confidencial que quien mira no lee no aparece)
 // y sus evidencias. «Identificar un riesgo desde este incidente» abre el alta del registro de riesgos con el incidente de origen
+const POR_PAGINA = 25
 const CAMPOS_DEL_ALTA = ['code', 'incident_type', 'occurred_at', 'place', 'description', 'locality', 'community']
 const CAMPOS = ['code', 'incident_type', 'occurred_at', 'place', 'description', 'immediate_response', 'consequences', 'locality', 'community']
 
@@ -33,7 +36,9 @@ export function IncidentesPage() {
   const { projectId = '' } = useParams()
   const navegar = useNavigate()
   const escribe = useEscribeEnProyecto(projectId)
-  const incidentes = useTodosConTope('incident', { project: projectId, sort: 'occurred_at', dir: 'desc' })
+  const lista = useParametrosDeLista('todos')
+  const incidentes = useRegistros('incident', { project: projectId, sort: 'occurred_at', dir: 'desc', page: lista.pagina, size: POR_PAGINA })
+  const filas = incidentes.data?.content ?? []
   const [registrando, setRegistrando] = useState(false)
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
@@ -41,12 +46,11 @@ export function IncidentesPage() {
         <h1 className="text-sg-h1 font-semibold">{t('incidentes.titulo')}</h1>
         {escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : null}
       </div>
-      {incidentes.truncado ? <Alert tone="warning">{t('incidentes.truncado', { n: numeroPe(incidentes.data?.length ?? 0) })}</Alert> : null}
       {incidentes.isPending ? (
         <Cargando />
       ) : incidentes.isError && !incidentes.data ? (
         <FalloDeLectura error={incidentes.error} alReintentar={() => void incidentes.refetch()} />
-      ) : (incidentes.data ?? []).length === 0 ? (
+      ) : filas.length === 0 ? (
         <Vacio titulo={t('incidentes.vacio')} />
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
@@ -61,7 +65,7 @@ export function IncidentesPage() {
               </tr>
             </thead>
             <tbody>
-              {(incidentes.data ?? []).map((i) => (
+              {filas.map((i) => (
                 <tr key={i.id}>
                   <Td className="text-sm">
                     <EnlaceConRastro to={rutaDeFicha('incident', i) ?? rutaParaAbrir('incident', i.id)} className="font-sg-mono text-sg-primary-text underline">
@@ -80,6 +84,7 @@ export function IncidentesPage() {
           </Table>
         </div>
       )}
+      <PaginacionDelServidor datos={incidentes.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
       <Drawer titulo={t('incidentes.registrar')} abierto={registrando} alCerrar={() => setRegistrando(false)}>
         {registrando ? (
           <FormularioDeRegistro

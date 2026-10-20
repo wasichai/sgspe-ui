@@ -17,7 +17,7 @@ import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useProyectos } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
-import { atributo, estados, texto, useConteo, useConteos, useRegistros, useRelacionados, type Parametros, type Registro } from '../datos/registros'
+import { atributo, conEstado, estados, texto, useConteo, useConteos, useRegistros, useRelacionados, type Parametros, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
@@ -71,15 +71,6 @@ export function consultaDeVista(vista: string, usuario: string | undefined): Par
     default:
       return { state_not: estados(CERRADOS) }
   }
-}
-
-// la vista con el estado elegido en el filtro: null si la vista no lo admite (un bloqueado entre los cerrados)
-export function conEstado(consulta: Parametros | null, estado: string): Parametros | null {
-  if (!consulta || !estado) return consulta
-  const dentro = typeof consulta.state === 'string' ? consulta.state.split(',') : null
-  const fuera = typeof consulta.state_not === 'string' ? consulta.state_not.split(',') : []
-  if ((dentro && !dentro.includes(estado)) || fuera.includes(estado)) return null
-  return { ...consulta, state: estado }
 }
 
 export function CompromisosPage() {

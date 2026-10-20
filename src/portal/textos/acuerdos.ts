@@ -9,7 +9,6 @@ export const ES_ACUERDOS = {
   vacio: 'Todavía no hay acuerdos.',
   vacioAyuda:
     'Un acuerdo o convenio formaliza lo pactado con una comunidad o una institución, con sus partes y su vigencia; se registra dentro de su proyecto.',
-  truncado: 'Se muestran los primeros {{n}} acuerdos: elija un proyecto para ver el resto.',
   columnas: {
     acuerdo: 'Acuerdo',
     codigo: 'Código',
@@ -85,7 +84,6 @@ export const EN_ACUERDOS: typeof ES_ACUERDOS = {
   tabla: 'Agreements',
   vacio: 'There are no agreements yet.',
   vacioAyuda: 'An agreement formalizes what was agreed with a community or an institution, with its parties and validity; it is recorded inside its project.',
-  truncado: 'The first {{n}} agreements are shown: pick a project to see the rest.',
   columnas: {
     acuerdo: 'Agreement',
     codigo: 'Code',

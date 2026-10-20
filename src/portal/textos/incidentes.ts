@@ -3,7 +3,6 @@ export const ES_INCIDENTES = {
   titulo: 'Incidentes',
   tabla: 'Incidentes del proyecto',
   vacio: 'No hay incidentes registrados',
-  truncado: 'Se muestran los primeros {{n}} incidentes: hay más.',
   registrar: 'Registrar incidente',
   columnas: { codigo: 'Código', ocurrio: 'Ocurrió', tipo: 'Tipo', lugar: 'Lugar', estado: 'Estado' },
   ficha: {
@@ -33,7 +32,6 @@ export const EN_INCIDENTES: typeof ES_INCIDENTES = {
   titulo: 'Incidents',
   tabla: 'Project incidents',
   vacio: 'There are no recorded incidents',
-  truncado: 'The first {{n}} incidents are shown: there are more.',
   registrar: 'Record incident',
   columnas: { codigo: 'Code', ocurrio: 'Occurred', tipo: 'Type', lugar: 'Place', estado: 'State' },
   ficha: {

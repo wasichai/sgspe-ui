@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeCompromisos } from '../../test/compromisos'
 import { definicion, montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { GERENCIA_SOCIAL, permisos } from '../../test/portal'
+import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { AcuerdosPage } from './AcuerdosPage'
 import { FichaAcuerdoPage } from './FichaAcuerdoPage'
@@ -136,6 +137,20 @@ describe('S33 · acuerdos', () => {
     global.unmount()
     montar(<AcuerdosPage />, { ruta: '/projects/p1/agreements?nuevo=1', camino: '/projects/:projectId/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
     expect(await within(await screen.findByRole('dialog')).findByLabelText('Motivo del registro o del cambio (obligatorio)')).toBeInTheDocument()
+  })
+
+  it('la lista global se pagina en el servidor: el total es el del conteo y la segunda página se pide con page=1', async () => {
+    const muchos = Array.from({ length: 27 }, (_, i) => registro(`ag${i + 10}`, { ...SERVIDUMBRE.attributes, code: `A-${100 + i}`, title: `Acuerdo ${i}` }))
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('agreement', muchos)])
+    montar(<AcuerdosPage />, { ruta: '/agreements', camino: '/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
+    const tabla = await screen.findByRole('table', { name: 'Acuerdos' })
+    expect(within(tabla).getAllByRole('row')).toHaveLength(26)
+    expect(screen.getByText('27 acuerdos')).toBeInTheDocument()
+    expect(screen.queryByText(/Se muestran los primeros/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /siguiente|next/i }))
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Acuerdos' })).getAllByRole('row')).toHaveLength(3))
+    expect(red.a('GET', '/objects/agreement/records').map((l) => l.ruta)).toContain('/objects/agreement/records?sort=code&dir=asc&page=1&size=25')
   })
 
   it('lista el acuerdo con su vigencia y lo registra con el proyecto fijo y el motivo', async () => {

@@ -63,6 +63,15 @@ export function useRegistros(objeto: string, parametros: Parametros, activo = tr
 // que no están en ellos; los estados van separados por comas, porque la lista lee un solo valor por parámetro
 export const estados = (lista: readonly string[]): string => lista.join(',')
 
+// la consulta de una vista con el estado elegido en un filtro: null si la vista no lo admite (un bloqueado entre los cerrados)
+export function conEstado(consulta: Parametros | null, estado: string): Parametros | null {
+  if (!consulta || !estado) return consulta
+  const dentro = typeof consulta.state === 'string' ? consulta.state.split(',') : null
+  const fuera = typeof consulta.state_not === 'string' ? consulta.state_not.split(',') : []
+  if ((dentro && !dentro.includes(estado)) || fuera.includes(estado)) return null
+  return { ...consulta, state: estado }
+}
+
 // cuántos registros tiene una consulta, sin traerlos: una página de uno con su conteo (api.md §3.4). una consulta null no puede
 // tener registros (cuenta 0 sin pedir nada); mientras llega, o si falla, el conteo es null y no se dice
 const leerConteo = async (pedir: Pedido, objeto: string, parametros: Parametros): Promise<number | null> =>

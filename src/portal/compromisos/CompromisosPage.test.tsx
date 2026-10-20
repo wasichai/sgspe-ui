@@ -7,7 +7,8 @@ import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar
 import { permisos } from '../../test/portal'
 import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
-import { CompromisosPage, conEstado, consultaDeVista, enVista } from './CompromisosPage'
+import { conEstado } from '../datos/registros'
+import { CompromisosPage, consultaDeVista, enVista } from './CompromisosPage'
 
 // S28 (screens.md §7, flujo 7): las vistas de lo vencido, por vencer y bloqueado, el alta solo con asignación, y los candidatos
 // decididos por una persona con IK, IM y CR; un código de error se dice con su texto
