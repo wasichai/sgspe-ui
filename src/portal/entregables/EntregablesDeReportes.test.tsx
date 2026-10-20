@@ -106,18 +106,28 @@ describe('S49 · entregables', () => {
     expect(within(dialogo).queryByLabelText('Buscar la comunidad')).not.toBeInTheDocument()
   })
 
-  it('sin un proyecto elegido no deja crear; sin CREATE no se ofrece', async () => {
+  // rediseño de UX (2026-10-20): sin proyecto en la barra, «Nuevo entregable» salía deshabilitado y un texto mandaba al selector;
+  // ahora pide el proyecto (o va directo al único donde escribe), como toda alta con el alcance global (BotonCrear), y abre el formulario en el elegido
+  it('sin un proyecto en la barra pide el proyecto y abre el formulario; sin CREATE no se ofrece', async () => {
     abrir('/projects/p1/reports', EJECUTIVA, SOLO_LECTURA_F8)
     await screen.findByRole('table', { name: 'Entregables' })
     expect(screen.queryByRole('button', { name: 'Nuevo entregable' })).not.toBeInTheDocument()
     fetch!.restore()
     red!.restaurar()
     cleanup()
-    fetch = mockFetch([{ path: '/objects/deliverable/records', body: pagina([ENTREGABLE]) }, ...baseDeF8(GERENCIA_SOCIAL)])
+    fetch = mockFetch([
+      { path: '/objects/deliverable/records', body: pagina([ENTREGABLE]) },
+      { path: '/sgspe/deliverable-templates', body: [PLANTILLA] },
+      ...baseDeF8(GERENCIA_SOCIAL)
+    ])
     red = espiarRed()
     montar(<EntregablesDeReportes />, { ruta: '/reports', camino: '/reports', usuario: GERENCIA_SOCIAL, permisos: EQUIPO_DE_ENTREGABLES })
-    expect(await screen.findByRole('button', { name: 'Nuevo entregable' })).toBeDisabled()
-    expect(screen.getByText('Elija un proyecto para crear un entregable.')).toBeInTheDocument()
+    const nuevo = await screen.findByRole('button', { name: 'Nuevo entregable' })
+    await waitFor(() => expect(nuevo).toBeEnabled())
+    expect(screen.queryByText('Elija un proyecto para crear un entregable.')).not.toBeInTheDocument()
+    // con una sola asignación vigente no hay qué elegir: abre el formulario en ese proyecto
+    await userEvent.click(nuevo)
+    expect(await screen.findByRole('dialog', { name: 'Nuevo entregable' })).toBeInTheDocument()
   })
 
   it('«Plantillas» solo para la administración', async () => {
