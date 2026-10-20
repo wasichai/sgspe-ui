@@ -1,5 +1,5 @@
 import { Alert, Table, Td, Th } from '@wasichai/ui'
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 import { NoDisponible, Vacio } from '../componentes/Estados'
@@ -11,7 +11,9 @@ import { desglose, useTablero, type FiltrosDeIndicador, type Indicador } from '.
 import { porcentaje } from '../datos/inversion'
 import { texto } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
-import { NS, numeroPe, periodoPe } from '../i18n'
+import { diaPe, NS, numeroPe, periodoPe } from '../i18n'
+import { rotuloDeOpcion } from '../datos/opciones'
+import { AtencionRequerida } from '../pages/AtencionRequerida'
 import { itemsDeAtencion } from './atencionEjecutiva'
 import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero } from './comunes'
 import { CODIGOS_DE_LAS_TILES, mesesDeTendencia, TOPE_DE_PROYECTOS, type MesDeTendencia, type TableroEjecutivo } from './contratoF8'
@@ -43,10 +45,49 @@ export function RevisionEjecutivaPage() {
           {t('tablerosF8.ejecutivo.monitoreo')}
         </Link>
       </header>
-      <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
-      <ProyectosDeLaRevision />
+      {/* lo propio antes que la cartera, solo si hay algo (rediseño de UX, 2026-10-20) */}
+      <AtencionRequerida soloConPendientes titulo={t('tablerosF8.ejecutivo.suTrabajo')} />
+      <FiltrosPlegados>
+        <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
+        <ProyectosDeLaRevision />
+      </FiltrosPlegados>
       <ConsultaDeTablero consulta={tablero}>{(datos) => <Revision datos={datos} />}</ConsultaDeTablero>
     </div>
+  )
+}
+
+// el periodo, el ámbito y los proyectos, plegados en una línea que dice lo que aplican (rediseño de UX, 2026-10-20): la revisión
+// abría con siete controles antes de decir qué pide atención. con alguno puesto en la URL (un enlace guardado), abiertos
+const FILTROS_DE_LA_REVISION = ['periodStart', 'periodEnd', 'scope', 'project']
+
+function FiltrosPlegados({ children }: { children: ReactNode }) {
+  const { t } = useTranslation(NS)
+  const [busqueda] = useSearchParams()
+  const desde = busqueda.get('periodStart')
+  const hasta = busqueda.get('periodEnd')
+  const ambito = busqueda.get('scope')
+  const proyectos = busqueda.getAll('project').length
+  const periodo =
+    desde && hasta
+      ? t('tablerosF8.ejecutivo.filtros.rango', { desde: diaPe(desde), hasta: diaPe(hasta) })
+      : desde
+        ? t('tablerosF8.ejecutivo.filtros.desde', { desde: diaPe(desde) })
+        : hasta
+          ? t('tablerosF8.ejecutivo.filtros.hasta', { hasta: diaPe(hasta) })
+          : t('tablerosF8.ejecutivo.filtros.mesEnCurso')
+  const resumen = [
+    periodo,
+    ambito ? rotuloDeOpcion(ambito) : t('tableros.todosLosAmbitos'),
+    proyectos ? t('tablerosF8.ejecutivo.filtros.proyectos', { count: proyectos }) : t('tablerosF8.ejecutivo.filtros.susProyectos')
+  ].join(' · ')
+  return (
+    <details open={FILTROS_DE_LA_REVISION.some((f) => busqueda.has(f))} className="group rounded-sg-lg border border-sg-border bg-sg-surface px-4 py-2">
+      <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+        <span className="font-medium text-sg-text">{t('tablerosF8.ejecutivo.filtros.titulo')}</span>
+        <span className="text-sg-text-muted">{resumen}</span>
+      </summary>
+      <div className="space-y-3 pt-3 pb-2">{children}</div>
+    </details>
   )
 }
 

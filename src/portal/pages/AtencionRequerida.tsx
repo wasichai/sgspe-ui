@@ -18,7 +18,9 @@ interface Elemento {
   ruta: string | null
 }
 
-export function AtencionRequerida() {
+// soloConPendientes es el de la revisión ejecutiva (rediseño de UX, 2026-10-20): ahí la cartera ya tiene su «Lo que necesita
+// atención hoy», así que lo propio se dibuja solo si hay algo, con su propio título, y sin «Cargando» mientras se lee
+export function AtencionRequerida({ soloConPendientes = false, titulo }: { soloConPendientes?: boolean; titulo?: string } = {}) {
   const { t } = useTranslation(NS)
   const trabajo = useSuTrabajo()
   const { avisos, pendientes } = useAprobacionesPendientes()
@@ -42,6 +44,7 @@ export function AtencionRequerida() {
   if (!trabajo.lee && !avisos.data) return null
   const cargando = trabajo.cargando || avisos.isPending
   const nada = !cargando && vencidos.length + porVencer.length + decisiones.length + otros.length === 0
+  if (soloConPendientes && (cargando || nada)) return null
   const lista = (elementos: Elemento[]) =>
     elementos.map((e) => ({
       clave: e.clave,
@@ -56,7 +59,7 @@ export function AtencionRequerida() {
   return (
     <section aria-labelledby="atencion-requerida" className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-5">
       <h2 id="atencion-requerida" className="text-sg-h3 font-semibold">
-        {t('miDia.atencion.titulo')}
+        {titulo ?? t('miDia.atencion.titulo')}
       </h2>
       {cargando ? <Cargando compacto /> : null}
       {nada ? <p className="text-sm text-sg-text-muted">{t('miDia.atencion.nada')}</p> : null}

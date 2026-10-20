@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeF8, EJECUTIVA, SOLO_LECTURA_F8, TABLERO_EJECUTIVO } from '../../test/f8'
-import { montar } from '../../test/montar'
+import { montar, pagina, registro } from '../../test/montar'
+import { permisos } from '../../test/portal'
 import { abrirPortal } from '../../test/pantalla'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { RevisionEjecutivaPage } from './RevisionEjecutivaPage'
@@ -83,6 +84,7 @@ describe('S51 · revisión ejecutiva', () => {
   it('elegir proyectos pide el tablero con ellos; pasarse del tope pide acotar los filtros', async () => {
     abrir()
     await screen.findByRole('table', { name: 'Por proyecto' })
+    await userEvent.click(screen.getByText('Periodo, ámbito y proyectos'))
     await userEvent.click(screen.getByText('Proyectos de la tabla (0 elegidos)'))
     await userEvent.click(screen.getByRole('checkbox', { name: 'PRJ-02 · Proyecto Ejemplo B' }))
     await waitFor(() => expect(red!.a('GET', '/sgspe/dashboards/executive').some((l) => l.ruta.includes('project=p2'))).toBe(true))
@@ -93,6 +95,44 @@ describe('S51 · revisión ejecutiva', () => {
     red = espiarRed([{ path: '/sgspe/dashboards/executive', responder: () => problema(400, 'x', [{ field: 'project', message: 'TOO_MANY_RECORDS' }]) }])
     montar(<RevisionEjecutivaPage />, { usuario: EJECUTIVA, permisos: SOLO_LECTURA_F8 })
     expect(await screen.findByText('Acote los filtros')).toBeInTheDocument()
+  })
+
+  // rediseño de UX (2026-10-20): la revisión abría con las fechas, el ámbito y los proyectos antes de decir qué pide atención
+  it('los filtros quedan plegados con lo que aplican; con uno puesto en la URL se abren', async () => {
+    abrir()
+    await screen.findByRole('table', { name: 'Por proyecto' })
+    const filtros = screen.getByText('Periodo, ámbito y proyectos').closest('details')!
+    expect(filtros).not.toHaveAttribute('open')
+    expect(within(filtros).getByText('Mes en curso · Todos los ámbitos · Sus proyectos')).toBeInTheDocument()
+    fetch!.restore()
+    red!.restaurar()
+    document.body.innerHTML = ''
+    abrir(TABLERO_EJECUTIVO, '/?periodStart=2026-09-01&periodEnd=2026-09-30')
+    await screen.findByRole('table', { name: 'Por proyecto' })
+    expect(screen.getByText('Periodo, ámbito y proyectos').closest('details')).toHaveAttribute('open')
+  })
+
+  // y quien tiene trabajo propio lo ve antes que la cartera
+  it('lo vencido a su cargo va antes que la revisión de la cartera; sin nada pendiente no se dibuja', async () => {
+    const vencida = registro('t1', { title: 'Enviar el acta firmada', deadline_status: 'VENCIDO', assignee_user_id: EJECUTIVA.id }, { state: 'open' })
+    fetch = mockFetch([
+      { path: '/sgspe/dashboards/executive', body: TABLERO_EJECUTIVO },
+      { path: '/objects/task/records', body: pagina([vencida]) },
+      ...baseDeF8(EJECUTIVA)
+    ])
+    montar(<RevisionEjecutivaPage />, {
+      usuario: EJECUTIVA,
+      permisos: { ...SOLO_LECTURA_F8, objects: { ...SOLO_LECTURA_F8.objects, ...permisos({ task: ['READ'] }).objects } }
+    })
+    const propio = await screen.findByRole('region', { name: 'Su trabajo pendiente' })
+    expect(await within(propio).findByText('1 vencido a su cargo')).toBeInTheDocument()
+    const cartera = await screen.findByRole('region', { name: 'Lo que necesita atención hoy' })
+    expect(propio.compareDocumentPosition(cartera) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    fetch!.restore()
+    document.body.innerHTML = ''
+    abrir()
+    await screen.findByRole('region', { name: 'Lo que necesita atención hoy' })
+    expect(screen.queryByRole('region', { name: 'Su trabajo pendiente' })).not.toBeInTheDocument()
   })
 
   it('sin proyectos asignados dice que no tiene y lleva a Proyectos', async () => {
