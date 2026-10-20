@@ -1,0 +1,105 @@
+{
+  "antes": {
+    "barraSuperior": [
+      "SGSPE",
+      "Proyecto",
+      "Buscar⌘K",
+      "Preguntar",
+      "Avisos, ninguno sin leer",
+      "Idioma",
+      "Tema: Sistema",
+      "Su cuenta",
+      "Cerrar sesión",
+      "Monitoreo del plan de relaciones comunit"
+    ],
+    "inicioYAtencion": 317,
+    "inicioControlesAntesDeAtencion": 5,
+    "quejaAccionesDelEncabezado": [
+      "Editar",
+      "Reclasificar…",
+      "Crear compromiso desde esta queja",
+      "Acusar recibo",
+      "Rechazar",
+      "Registrar desistimiento"
+    ],
+    "interaccionAccionesDelEncabezado": [
+      "Crear relacionado",
+      "Programar",
+      "Registrar realización",
+      "Cancelar la interacción"
+    ],
+    "territorioAcciones": [
+      "Tablero territorial",
+      "Calidad de datos",
+      "Capturar PNG",
+      "Exportar",
+      "Nueva comunidad",
+      "Importar",
+      "Reintentar",
+      "Sin fondo"
+    ],
+    "rutaInexistente": {
+      "h1": 0,
+      "enlaces": 0,
+      "texto": ""
+    },
+    "telefonoBarraFija": {
+      "alto": 169,
+      "porcientoDePantalla": 20,
+      "botones": [
+        "Editar",
+        "Reclasificar…",
+        "Crear compromiso desde esta queja",
+        "Acusar recibo",
+        "Rechazar",
+        "Registrar desistimiento"
+      ]
+    },
+    "telefonoBotonBuscarConNombre": false
+  },
+  "despues": {
+    "barraSuperior": [
+      "SGSPE",
+      "Proyecto",
+      "Buscar",
+      "Preguntar",
+      "Avisos, ninguno sin leer",
+      "Su cuenta",
+      "Monitoreo del plan de relaciones comunit"
+    ],
+    "inicioYAtencion": 227,
+    "inicioControlesAntesDeAtencion": 1,
+    "quejaAccionesDelEncabezado": [
+      "Editar",
+      "Más acciones",
+      "Acusar recibo"
+    ],
+    "interaccionAccionesDelEncabezado": [
+      "Crear relacionado",
+      "Más acciones",
+      "Programar"
+    ],
+    "territorioAcciones": [
+      "Mapa",
+      "Tablero",
+      "Importar",
+      "Exportar",
+      "Más acciones",
+      "Nueva comunidad"
+    ],
+    "rutaInexistente": {
+      "h1": 1,
+      "enlaces": 2,
+      "texto": "Esta página no existe\n\nPuede que el enlace esté incompleto o"
+    },
+    "telefonoBarraFija": {
+      "alto": 49,
+      "porcientoDePantalla": 6,
+      "botones": [
+        "Más acciones",
+        "Acusar recibo"
+      ]
+    },
+    "telefonoBotonBuscarConNombre": true
+  }
+}
