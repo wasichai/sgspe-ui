@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useAuth, useObjectDefinition, type FieldMeta, type ObjectDefinition, type RecordItem } from '@wasichai/core'
 import { useRef } from 'react'
 import { enviarComando, esClaveReusada, type Esperar } from './comandos'
@@ -57,6 +57,35 @@ export function useRegistros(objeto: string, parametros: Parametros, activo = tr
     queryFn: () => pedir<Pagina>(`/objects/${objeto}/records?${busqueda}`),
     enabled: activo
   })
+}
+
+// el estado del workflow como filtro de la lista genérica (api.md §3.4): state deja los registros en esos estados y state_not los
+// que no están en ellos; los estados van separados por comas, porque la lista lee un solo valor por parámetro
+export const estados = (lista: readonly string[]): string => lista.join(',')
+
+// cuántos registros tiene una consulta, sin traerlos: una página de uno con su conteo (api.md §3.4). una consulta null no puede
+// tener registros (cuenta 0 sin pedir nada); mientras llega, o si falla, el conteo es null y no se dice
+const leerConteo = async (pedir: Pedido, objeto: string, parametros: Parametros): Promise<number | null> =>
+  (await pedir<Pagina>(`/objects/${objeto}/records?${consulta({ ...parametros, size: 1 })}`)).totalElements ?? null
+
+const lecturaDeConteo = (pedir: Pedido, objeto: string, parametros: Parametros | null, activo: boolean) => ({
+  queryKey: ['records', objeto, 'conteo', parametros ? consulta(parametros) : null],
+  queryFn: () => leerConteo(pedir, objeto, parametros ?? {}),
+  enabled: activo && parametros !== null
+})
+
+export function useConteo(objeto: string, parametros: Parametros | null, activo = true): number | null {
+  const pedir = usePedir()
+  const lectura = useQuery(lecturaDeConteo(pedir, objeto, parametros, activo))
+  return parametros === null ? 0 : (lectura.data ?? null)
+}
+
+// el conteo de cada vista de una lista, por su clave
+export function useConteos(objeto: string, consultas: Record<string, Parametros | null>, activo = true): Record<string, number | null> {
+  const pedir = usePedir()
+  const claves = Object.keys(consultas)
+  const lecturas = useQueries({ queries: claves.map((clave) => lecturaDeConteo(pedir, objeto, consultas[clave], activo)) })
+  return Object.fromEntries(claves.map((clave, i) => [clave, consultas[clave] === null ? 0 : (lecturas[i].data ?? null)]))
 }
 
 // todos los registros de una consulta, por cursor y sin conteo (api.md §3.4), hasta un tope: para conjuntos acotados

@@ -5,8 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA, P1 } from '../../test/compromisos'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import { permisos } from '../../test/portal'
-import { espiarRed, problema, type Red } from '../../test/red'
-import { CompromisosPage, enVista } from './CompromisosPage'
+import { listaDelServidor } from '../../test/listaDelServidor'
+import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
+import { CompromisosPage, conEstado, consultaDeVista, enVista } from './CompromisosPage'
 
 // S28 (screens.md §7, flujo 7): las vistas de lo vencido, por vencer y bloqueado, el alta solo con asignación, y los candidatos
 // decididos por una persona con IK, IM y CR; un código de error se dice con su texto
@@ -40,7 +41,6 @@ const RECHAZADO = registro(
 const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   ...extra,
   ...baseDeCompromisos(),
-  { path: '/objects/commitment/records', body: pagina([C1, C2, C3, C4]) },
   { path: '/objects/commitment_candidate/records', body: pagina([PROPUESTO, RECHAZADO]) },
   {
     path: '/objects/commitment_candidate/workflow',
@@ -56,12 +56,17 @@ const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   { path: '/objects/project/records', body: pagina([P1]) },
   { path: '/sgspe/dashboards/indicators', body: [] }
 ]
+// la lista de compromisos la contesta el servidor emulado: la página y el conteo de cada vista son consultas (D10)
+const conServidor = (especiales: RutaEspecial[] = [], compromisos = [C1, C2, C3, C4]) => espiarRed([...especiales, listaDelServidor('commitment', compromisos)])
+const consultasA = (r: Red, objeto = 'commitment') =>
+  r.a('GET', `/objects/${objeto}/records`).map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1] ?? '')))
 const enProyecto = (p = EQUIPO_DE_COMPROMISOS, ruta = '/projects/p1/commitments') =>
   montar(<CompromisosPage />, { ruta, camino: '/projects/:projectId/commitments', usuario: GESTORA, permisos: p })
 
 describe('S28 · lista de compromisos', () => {
   it('abiertos por defecto; vencidos, por vencer y bloqueados en su vista; el alta con la asignación vigente', async () => {
     fetch = mockFetch(rutas())
+    red = conServidor()
     enProyecto()
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
     expect(within(tabla).getAllByRole('row')).toHaveLength(4)
@@ -92,7 +97,7 @@ describe('S28 · lista de compromisos', () => {
 
   it('sin asignación vigente no se ofrece el alta; mientras carga no dice que no hay compromisos', async () => {
     fetch = mockFetch([...rutas().filter((r) => !(r.path instanceof RegExp)), { path: /^\/objects\/project_assignment\/records/, body: pagina([]) }])
-    red = espiarRed([{ path: '/objects/commitment/records', responder: () => problema(500, 'caído') }])
+    red = conServidor([{ path: '/objects/commitment/records', responder: () => problema(500, 'caído') }])
     enProyecto()
     expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByText('No hay compromisos en esta vista.')).not.toBeInTheDocument()
@@ -102,6 +107,7 @@ describe('S28 · lista de compromisos', () => {
   // revisión de UX, etapa 3: crear no depende del selector de proyecto
   it('en el alcance global dice el proyecto de cada compromiso y ofrece crear eligiendo el proyecto', async () => {
     fetch = mockFetch(rutas())
+    red = conServidor()
     montar(<CompromisosPage />, { ruta: '/commitments', camino: '/commitments', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     expect(await screen.findByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
     expect((await screen.findAllByRole('link', { name: 'PRJ-01 · Pukaqaqa' }))[0]).toHaveAttribute('href', '/projects/p1/overview')
@@ -111,6 +117,7 @@ describe('S28 · lista de compromisos', () => {
 
   it('cada vista dice cuántos tiene, el código va junto al título y el total va en el encabezado', async () => {
     fetch = mockFetch(rutas())
+    red = conServidor()
     enProyecto()
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
     expect(screen.getByRole('tab', { name: 'Abiertos' })).toHaveAccessibleDescription('3 registros')
@@ -123,6 +130,7 @@ describe('S28 · lista de compromisos', () => {
 
   it('los filtros son chips en la URL con «Limpiar», y el vacío por filtros dice cuántos hay sin ellos', async () => {
     fetch = mockFetch(rutas())
+    red = conServidor()
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=inexistente')
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
     expect(screen.getByText('Sin los filtros hay 3.')).toBeInTheDocument()
@@ -131,11 +139,94 @@ describe('S28 · lista de compromisos', () => {
     expect(ubicacion.actual).toBe('/projects/p1/commitments')
     expect(await screen.findByRole('table', { name: 'Compromisos' })).toBeInTheDocument()
   })
+
+  it('cada vista es una consulta del servidor: «Abiertos» pide su página con state_not, y cada vista cuenta con una página de uno', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto()
+    await screen.findByRole('table', { name: 'Compromisos' })
+    const consultas = consultasA(red)
+    expect(consultas).toContainEqual({ project: 'p1', state_not: 'closed,cancelled', sort: 'due_date', dir: 'asc', page: '0', size: '25' })
+    expect(consultas).toContainEqual({ project: 'p1', state: 'blocked', size: '1' })
+    expect(consultas).toContainEqual({ project: 'p1', owner_user_id: 'u-cmm', state_not: 'closed,cancelled', size: '1' })
+    expect(consultas).toContainEqual({ project: 'p1', deadline_status: 'POR VENCER', size: '1' })
+    // ninguna lectura del alcance entero con tope
+    expect(consultas.some((c) => c.count === 'false')).toBe(false)
+  })
+
+  it('la búsqueda y el estado viajan en la consulta; un estado que la vista no admite no pide nada y dice el vacío', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=costura&state=blocked')
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    expect(within(tabla).getByText('Taller de costura')).toBeInTheDocument()
+    expect(consultasA(red)).toContainEqual({
+      project: 'p1',
+      state_not: 'closed,cancelled',
+      state: 'blocked',
+      q: 'costura',
+      sort: 'due_date',
+      dir: 'asc',
+      page: '0',
+      size: '25'
+    })
+    await userEvent.click(screen.getByRole('tab', { name: 'Cerrados y cancelados' }))
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('0 registros')
+    expect(consultasA(red).some((c) => c.state === 'closed,cancelled' && c.size === '25')).toBe(false)
+  })
+
+  it('la paginación es la del servidor: la segunda página se pide con page=1 y el total es el del conteo', async () => {
+    const muchos = Array.from({ length: 30 }, (_, i) =>
+      registro(
+        `m${i}`,
+        { ...C1.attributes, code: `C-${String(i + 100)}`, title: `Compromiso ${i}`, due_date: `2026-11-${String((i % 28) + 1).padStart(2, '0')}` },
+        { state: 'in_progress' }
+      )
+    )
+    fetch = mockFetch(rutas())
+    red = conServidor([], muchos)
+    enProyecto()
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    expect(within(tabla).getAllByRole('row')).toHaveLength(26)
+    expect(screen.getByText('30 compromisos')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /siguiente|next/i }))
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Compromisos' })).getAllByRole('row')).toHaveLength(6))
+    expect(consultasA(red)).toContainEqual(expect.objectContaining({ state_not: 'closed,cancelled', page: '1', size: '25' }))
+  })
+
+  it('con el filtro de un grupo de interés, la fuente son sus compromisos relacionados, con las vistas armadas en el portal', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/stakeholder/records/s1', body: registro('s1', { project: 'p1', name: 'Junta directiva' }) },
+        { path: '/objects/stakeholder/records/s1/related/commitment_stakeholder', body: pagina([C1, C2, C4]) }
+      ])
+    )
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?stakeholder=s1')
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    expect(within(tabla).getAllByRole('row')).toHaveLength(3)
+    expect(within(tabla).queryByText('Becas escolares')).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('1 registro')
+    expect(consultasA(red)).toEqual([])
+  })
+
+  it('consultaDeVista dice lo mismo que enVista; «Míos» sin quien mira no pide nada; conEstado cruza el estado con la vista', () => {
+    expect(consultaDeVista('abiertos', 'u-cmm')).toEqual({ state_not: 'closed,cancelled' })
+    expect(consultaDeVista('cerrados', 'u-cmm')).toEqual({ state: 'closed,cancelled' })
+    expect(consultaDeVista('mios', undefined)).toBeNull()
+    expect(conEstado({ state: 'closed,cancelled' }, 'closed')).toEqual({ state: 'closed' })
+    expect(conEstado({ state: 'closed,cancelled' }, 'blocked')).toBeNull()
+    expect(conEstado({ state_not: 'closed,cancelled' }, 'closed')).toBeNull()
+    expect(conEstado({ deadline_status: 'VENCIDO' }, 'blocked')).toEqual({ deadline_status: 'VENCIDO', state: 'blocked' })
+    expect(conEstado(null, 'blocked')).toBeNull()
+  })
 })
 
 describe('S28 · candidatos', () => {
   it('lista los propuestos y los decididos; la cita que la cuenta no lee dice Restringido', async () => {
     fetch = mockFetch(rutas())
+    red = conServidor()
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
     const region = await screen.findByRole('region', { name: 'Candidatos a compromiso' })
     expect(await within(region).findByText('Mejorar el camino al anexo Huallpa')).toBeInTheDocument()
@@ -148,6 +239,7 @@ describe('S28 · candidatos', () => {
   it('una lista de candidatos que el tope cortó lo dice con su propio texto', async () => {
     const muchos = Array.from({ length: 200 }, (_, i) => registro(`k${i}`, { project: 'p1', proposed_text: `Propuesta ${i}` }, { state: 'proposed' }))
     fetch = mockFetch(rutas([{ path: /^\/objects\/commitment_candidate\/records\?/, body: pagina(muchos, { nextCursor: 'siguiente' }) }]))
+    red = conServidor()
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
     expect(await screen.findByText('Se muestran los 1,000 candidatos más recientes: elija un proyecto para ver el resto.')).toBeInTheDocument()
     expect(screen.queryByText(/compromisos del alcance/)).not.toBeInTheDocument()
@@ -155,7 +247,7 @@ describe('S28 · candidatos', () => {
 
   it('aceptar valida el monto, manda IK, If-Match y motivo sin el proyecto, y abre el compromiso creado', async () => {
     fetch = mockFetch(rutas())
-    red = espiarRed([
+    red = conServidor([
       {
         method: 'POST',
         path: '/sgspe/commitment-candidates/k1/accept',
@@ -196,7 +288,7 @@ describe('S28 · candidatos', () => {
 
   it('otra persona ya lo decidió: dice el texto propio del STATE_MISMATCH, nunca el código', async () => {
     fetch = mockFetch(rutas())
-    red = espiarRed([
+    red = conServidor([
       { method: 'POST', path: '/sgspe/commitment-candidates/k1/accept', responder: () => problema(409, 'x', [{ field: 'state', message: 'STATE_MISMATCH' }]) }
     ])
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
@@ -212,7 +304,7 @@ describe('S28 · candidatos', () => {
 
   it('«Es duplicado de…» exige el compromiso y el motivo, y manda duplicateOf con la versión', async () => {
     fetch = mockFetch(rutas())
-    red = espiarRed([
+    red = conServidor([
       { method: 'POST', path: '/sgspe/commitment-candidates/k1/duplicate', responder: () => jsonResponse({ candidate: { ...PROPUESTO, state: 'duplicate' } }) }
     ])
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
@@ -235,7 +327,7 @@ describe('S28 · candidatos', () => {
 
   it('registrar un candidato manda el proyecto y su clave; sin el texto no se envía', async () => {
     fetch = mockFetch(rutas())
-    red = espiarRed([
+    red = conServidor([
       { method: 'POST', path: '/sgspe/commitment-candidates', responder: () => jsonResponse(registro('k9', { project: 'p1' }, { state: 'proposed' }), 201) }
     ])
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
@@ -253,6 +345,7 @@ describe('S28 · candidatos', () => {
 
   it('quien solo lee los candidatos no ve las decisiones', async () => {
     fetch = mockFetch(rutas())
+    red = conServidor()
     enProyecto(permisos({ project: ['READ'], commitment: ['READ'], commitment_candidate: ['READ'] }), '/projects/p1/commitments?view=candidatos')
     await userEvent.click(await screen.findByRole('button', { name: 'Revisar' }))
     const panel = await screen.findByRole('dialog')

@@ -17,7 +17,7 @@ import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useProyectos } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
-import { atributo, texto, useRelacionados, useTodosConTope, type Registro } from '../datos/registros'
+import { atributo, estados, texto, useConteo, useConteos, useRegistros, useRelacionados, type Parametros, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
@@ -27,12 +27,14 @@ import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 
 // S28 · lista de compromisos (screens.md §7): lo que se debe, a quién y desde cuándo, con lo vencido a un clic. la misma página
-// con alcance global (columna Proyecto) o de un proyecto (ASM-076), con el chip de territorio (localidad o comunidad). la API
-// genérica filtra solo por igualdad y no por estado de workflow, así que, como la lista de grupos de interés de F2, se leen los
-// compromisos del alcance con tope (useTodosConTope, que avisa del recorte) y las vistas se arman aquí. la vista Candidatos es
-// la de WF-K
+// con alcance global (columna Proyecto) o de un proyecto (ASM-076), con el chip de territorio (localidad o comunidad). la página
+// y el conteo de cada vista los da el servidor (D10 de la revisión de UX): una vista es una consulta de la lista genérica, con el
+// estado del workflow en state y state_not (api.md §3.4), y la búsqueda es su q. el filtro por grupo de interés es una relación de
+// muchos a muchos que la lista no filtra: con él, la fuente son los compromisos relacionados del grupo y las vistas se arman aquí
+// con enVista. la vista Candidatos es la de WF-K
 const VISTAS = ['abiertos', 'vencidos', 'porVencer', 'bloqueados', 'mios', 'cerrados', 'candidatos'] as const
 type VistaDeCompromisos = (typeof VISTAS)[number]
+const DE_LA_LISTA = VISTAS.filter((v) => v !== 'candidatos')
 const CERRADOS = ['closed', 'cancelled']
 const POR_PAGINA = 25
 
@@ -53,6 +55,33 @@ export function enVista(vista: string, c: Registro, usuario: string | undefined)
   }
 }
 
+// lo mismo que enVista, como consulta del servidor; null si la vista no puede tener registros («Míos» sin saber quién mira)
+export function consultaDeVista(vista: string, usuario: string | undefined): Parametros | null {
+  switch (vista as VistaDeCompromisos) {
+    case 'vencidos':
+      return { deadline_status: 'VENCIDO' }
+    case 'porVencer':
+      return { deadline_status: 'POR VENCER' }
+    case 'bloqueados':
+      return { state: 'blocked' }
+    case 'mios':
+      return usuario ? { owner_user_id: usuario, state_not: estados(CERRADOS) } : null
+    case 'cerrados':
+      return { state: estados(CERRADOS) }
+    default:
+      return { state_not: estados(CERRADOS) }
+  }
+}
+
+// la vista con el estado elegido en el filtro: null si la vista no lo admite (un bloqueado entre los cerrados)
+export function conEstado(consulta: Parametros | null, estado: string): Parametros | null {
+  if (!consulta || !estado) return consulta
+  const dentro = typeof consulta.state === 'string' ? consulta.state.split(',') : null
+  const fuera = typeof consulta.state_not === 'string' ? consulta.state_not.split(',') : []
+  if ((dentro && !dentro.includes(estado)) || fuera.includes(estado)) return null
+  return { ...consulta, state: estado }
+}
+
 export function CompromisosPage() {
   const { t } = useTranslation(NS)
   const { user, can } = useAuth()
@@ -60,48 +89,65 @@ export function CompromisosPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const lista = useParametrosDeLista('abiertos')
   const territorio = filtroDeTerritorio(territory, { locality: 'locality', community: 'community' })
-  const compromisos = useTodosConTope('commitment', { project: proyecto, ...(territorio ?? {}), sort: 'due_date', dir: 'asc' }, lista.vista !== 'candidatos')
   const proyectos = useProyectos()
   const etiquetas = useEtiquetasDeEstado('commitment')
   const conTablero = useTableroDisponible('commitments')
   const telefono = useEsTelefono()
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
-  const q = lista.filtro('q').trim().toLowerCase()
+  const busqueda = lista.filtro('q').trim()
+  const q = busqueda.toLowerCase()
   const estado = lista.filtro('state')
+  const enCandidatos = lista.vista === 'candidatos'
   // ?stakeholder=<id>: los compromisos que pidió un grupo de interés (commitment_stakeholder), desde las cifras de su ficha
   const grupo = lista.filtro('stakeholder')
   const delGrupo = useRelacionados('stakeholder', grupo || undefined, 'commitment_stakeholder')
-  const idsDelGrupo = new Set((delGrupo.data?.content ?? []).map((c) => c.id))
   const chipDeGrupo = useChipDeGrupo(grupo)
-  const filtrados = (compromisos.data ?? []).filter(
-    (c) =>
-      enVista(lista.vista, c, user?.id) &&
-      (!estado || c.state === estado) &&
-      (!grupo || idsDelGrupo.has(c.id)) &&
-      (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
-  )
-  const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
-  const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
-  // la etapa 3 de la revisión de UX: cada vista dice cuántos tiene (con la búsqueda y el estado puestos), los filtros activos
-  // son chips con «Limpiar» y el vacío por filtros dice cuántos hay sin ellos
-  const conFiltros = (c: Registro) =>
-    (!estado || c.state === estado) &&
-    (!grupo || idsDelGrupo.has(c.id)) &&
-    (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
-  const conteoDe = (vista: string) => (compromisos.data ? compromisos.data.filter((c) => enVista(vista, c, user?.id) && conFiltros(c)).length : null)
-  const enLaVista = (compromisos.data ?? []).filter((c) => enVista(lista.vista, c, user?.id)).length
   const chips = [
     ...(grupo ? [{ clave: 'stakeholder', etiqueta: chipDeGrupo }] : []),
     ...(estado ? [{ clave: 'state', etiqueta: t('compromisos.filtroEstado', { estado: etiquetas[estado] ?? estado }) }] : []),
-    ...(q ? [{ clave: 'q', etiqueta: t('compromisos.filtroBusqueda', { texto: lista.filtro('q').trim() }) }] : [])
+    ...(q ? [{ clave: 'q', etiqueta: t('compromisos.filtroBusqueda', { texto: busqueda }) }] : [])
   ]
   const limpiar = () => lista.cambiar({ state: null, q: null, stakeholder: null })
+
+  // sin grupo: el servidor. la consulta de una vista lleva el alcance, el territorio, el estado elegido y la búsqueda
+  const alcance: Parametros = { project: proyecto, ...(territorio ?? {}) }
+  const consultaDe = (vista: string): Parametros | null => {
+    const deLaVista = conEstado(consultaDeVista(vista, user?.id), estado)
+    return deLaVista && { ...alcance, ...deLaVista, q: busqueda }
+  }
+  const actual = consultaDe(lista.vista)
+  const servidor = !grupo && !enCandidatos
+  const pedida = useRegistros('commitment', { ...actual, sort: 'due_date', dir: 'asc', page: lista.pagina, size: POR_PAGINA }, servidor && actual !== null)
+  const conteos = useConteos('commitment', Object.fromEntries(DE_LA_LISTA.map((v) => [v, consultaDe(v)])), !grupo)
+  // el vacío por filtros dice cuántos hay en la vista sin ellos
+  const deLaVista = consultaDeVista(lista.vista, user?.id)
+  const sinFiltrosDelServidor = useConteo('commitment', deLaVista && { ...alcance, ...deLaVista }, servidor && chips.length > 0)
+
+  // con grupo: sus compromisos relacionados, del alcance y del territorio, con las vistas armadas aquí
+  const relacionados = (delGrupo.data?.content ?? []).filter((c) =>
+    Object.entries(alcance).every(([campo, valor]) => valor === undefined || valor === null || valor === '' || texto(c, campo) === String(valor))
+  )
+  const conFiltros = (c: Registro) =>
+    (!estado || c.state === estado) && (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
+  const filtrados = relacionados.filter((c) => enVista(lista.vista, c, user?.id) && conFiltros(c))
+
+  const lectura = grupo ? delGrupo : pedida
+  const filas = grupo ? filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA) : actual ? (pedida.data?.content ?? []) : []
+  const total = grupo ? (delGrupo.data ? filtrados.length : null) : actual ? (pedida.data?.totalElements ?? null) : 0
+  const cargando = (grupo || actual !== null) && lectura.isPending
+  const fallo = (grupo || actual !== null) && lectura.isError && !lectura.data
+  const conteoDe = (vista: string) =>
+    grupo ? (delGrupo.data ? relacionados.filter((c) => enVista(vista, c, user?.id) && conFiltros(c)).length : null) : (conteos[vista] ?? null)
+  const sinFiltros = grupo ? relacionados.filter((c) => enVista(lista.vista, c, user?.id)).length : (sinFiltrosDelServidor ?? undefined)
+  // la lista relacionada llega en una página de 200: si el grupo tiene más, se dice
+  const truncado = Boolean(grupo && delGrupo.data && (delGrupo.data.totalElements ?? 0) > delGrupo.data.content.length)
+  const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
         vistas={<VistasDelModulo modulo="commitments" actual="lista" conTablero={conTablero} />}
         titulo={t('compromisos.titulo')}
-        conteo={lista.vista !== 'candidatos' && compromisos.data ? t('compromisos.conteo', { count: filtrados.length }) : undefined}
+        conteo={!enCandidatos && total !== null ? t('compromisos.conteo', { count: total }) : undefined}
         primaria={<BotonCrear objeto="commitment" etiqueta={t('compromisos.nuevo')} resto="commitments/new" />}
         secundarias={
           <>
@@ -118,7 +164,7 @@ export function CompromisosPage() {
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
-      {lista.vista === 'candidatos' ? (
+      {enCandidatos ? (
         <Candidatos proyecto={proyecto} />
       ) : (
         <>
@@ -139,14 +185,14 @@ export function CompromisosPage() {
             </label>
           </div>
           <ChipsDeFiltro chips={chips} alQuitar={(clave) => lista.cambiar({ [clave]: null })} alLimpiar={limpiar} />
-          {compromisos.truncado ? <Alert tone="warning">{t('compromisos.truncado', { n: numeroPe(compromisos.data?.length ?? 0) })}</Alert> : null}
-          {compromisos.isPending ? (
+          {truncado ? <Alert tone="warning">{t('compromisos.truncado', { n: numeroPe(delGrupo.data?.content.length ?? 0) })}</Alert> : null}
+          {cargando ? (
             <Cargando />
-          ) : compromisos.isError && !compromisos.data ? (
-            <FalloDeLectura error={compromisos.error} alReintentar={() => void compromisos.refetch()} />
-          ) : filtrados.length === 0 ? (
+          ) : fallo ? (
+            <FalloDeLectura error={lectura.error} alReintentar={() => void lectura.refetch()} />
+          ) : filas.length === 0 ? (
             chips.length > 0 ? (
-              <VacioDeLista conFiltros alLimpiar={limpiar} sinFiltros={enLaVista} />
+              <VacioDeLista conFiltros alLimpiar={limpiar} sinFiltros={sinFiltros} />
             ) : (
               <Vacio titulo={t('compromisos.vacio')} />
             )
@@ -155,7 +201,7 @@ export function CompromisosPage() {
               {telefono ? (
                 <ListaEnTarjetas
                   etiqueta={t('compromisos.tabla')}
-                  tarjetas={pagina.map((c) => ({
+                  tarjetas={filas.map((c) => ({
                     id: c.id,
                     titulo: (
                       <EnlaceDeRegistro
@@ -193,7 +239,7 @@ export function CompromisosPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pagina.map((c) => (
+                      {filas.map((c) => (
                         <tr key={c.id}>
                           <Td className="min-w-64 text-sm">
                             <EnlaceDeRegistro
@@ -224,11 +270,11 @@ export function CompromisosPage() {
                   </Table>
                 </div>
               )}
-              {filtrados.length > POR_PAGINA ? (
+              {total !== null && total > POR_PAGINA ? (
                 <Pagination
                   page={lista.pagina}
-                  totalPages={Math.ceil(filtrados.length / POR_PAGINA)}
-                  totalElements={filtrados.length}
+                  totalPages={Math.ceil(total / POR_PAGINA)}
+                  totalElements={total}
                   onPage={(p) => lista.cambiar({ page: String(p) })}
                 />
               ) : null}
