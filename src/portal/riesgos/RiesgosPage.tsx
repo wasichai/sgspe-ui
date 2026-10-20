@@ -12,7 +12,7 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { ChipsDeFiltro, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -100,6 +100,7 @@ export function RiesgosPage() {
   const soloAltos = lista.filtro('level') === 'alto'
   const enLaVista = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id) && (!soloAltos || NIVELES_ALTOS.includes(texto(r, 'risk_level'))))
   const filtrados = celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista
+  const enLaVistaSinFiltros = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id)).length
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
   const crea = proyecto !== undefined && escribe && can('social_risk', 'CREATE')
   const nuevo = busqueda.get('nuevo') === '1'
@@ -178,7 +179,12 @@ export function RiesgosPage() {
             ) : null}
           </section>
           {filtrados.length === 0 ? (
-            <Vacio titulo={t('riesgos.vacio')} />
+            // con la celda o el nivel puestos, el vacío los quita (rediseño de UX, 2026-10-20); sin ellos, la vista está vacía
+            celda || soloAltos ? (
+              <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ cell: null, level: null })} sinFiltros={enLaVistaSinFiltros || undefined} />
+            ) : (
+              <Vacio titulo={t('riesgos.vacio')} />
+            )
           ) : telefono ? (
             <ListaEnTarjetas
               etiqueta={t('riesgos.tabla')}

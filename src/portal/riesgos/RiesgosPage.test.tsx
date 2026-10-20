@@ -93,6 +93,15 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     expect(within(screen.getByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(4)
   })
 
+  // rediseño de UX (2026-10-20): un filtro que deja la vista vacía se puede quitar desde el vacío, que dice cuántos hay sin él
+  it('con la celda o el nivel puestos y nada que mostrar, el vacío ofrece limpiar los filtros', async () => {
+    fetch = mockFetch(rutas())
+    abrir('/projects/p1/risks/register?cell=1-1')
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(within(await screen.findByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(4)
+  })
+
   // revisión de UX, etapa 6: «Riesgos altos» del resumen y del tablero llegan con ?level=alto
   it('?level=alto deja los de nivel alto o crítico, con su chip, y quitarlo devuelve la tabla entera', async () => {
     fetch = mockFetch(rutas())
