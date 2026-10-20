@@ -169,7 +169,13 @@ export const EN: Textos = {
     sinAcceso: 'Your account cannot open “{{seccion}}”.',
     preguntar: 'Ask',
     idioma: 'Language',
-    idiomaNoGuardado: 'Could not save the language'
+    idiomaNoGuardado: 'Could not save the language',
+    grupos: {
+      proyectos: 'Projects and territory',
+      comunidades: 'Community work',
+      gestion: 'Risks and social investment',
+      seguimiento: 'Documents and follow-up'
+    }
   },
   seccionesCortas: {
     attention: 'GIR'

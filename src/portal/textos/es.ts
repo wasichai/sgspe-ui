@@ -169,7 +169,14 @@ export const ES = {
     sinAcceso: 'Su cuenta no puede abrir «{{seccion}}».',
     preguntar: 'Preguntar',
     idioma: 'Idioma',
-    idiomaNoGuardado: 'No se pudo guardar el idioma'
+    idiomaNoGuardado: 'No se pudo guardar el idioma',
+    // los bloques de la navegación, en el orden de las secciones (RNF-USA-001)
+    grupos: {
+      proyectos: 'Proyectos y territorio',
+      comunidades: 'Trabajo con las comunidades',
+      gestion: 'Riesgos e inversión social',
+      seguimiento: 'Documentos y seguimiento'
+    }
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
   // el rótulo corto de una sección cuyo nombre no cabe en la barra lateral; el completo va en aria-label y title

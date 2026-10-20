@@ -12,7 +12,7 @@ import { BotonPreguntar, ProveedorDelAsistente } from '../ia/Asistente'
 import { BotonBuscar } from '../busqueda/BusquedaGlobal'
 import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
-import { useArbol } from './navTree'
+import { agrupar, useArbol, type SeccionNav } from './navTree'
 import { seccionDeRuta } from './seccionActual'
 import { useInsignias } from './insignias'
 import { DatosDeLaCuenta, MenuDePerfil } from './Perfil'
@@ -142,47 +142,71 @@ function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () 
   const actual = seccionDeRuta(useLocation().pathname)
   const insignias = useInsignias()
   const idInsignia = useId()
+  // contraída (52 px, por debajo de xl), los títulos de los bloques quedan para los lectores y una línea separa cada bloque
+  const contraida = rotulo === ROTULO
+  const item = (seccion: SeccionNav) => {
+    const Icono = seccion.icon ?? LayoutDashboard
+    const nombre = t(`secciones.${seccion.clave}`)
+    const corto = t(`seccionesCortas.${seccion.clave}`, { defaultValue: '' })
+    const marcada = seccion.clave === actual
+    const pendientes = seccion.clave === 'tasks' ? insignias.tareas : null
+    const idDeEsta = `${idInsignia}-${seccion.clave}`
+    return (
+      <li key={seccion.clave}>
+        {seccion.external ? (
+          <a href={seccion.to} title={nombre} onClick={alElegir} className={cn(ENLACE, REPOSO)}>
+            <Icono aria-hidden className="size-4 shrink-0" />
+            <span className={rotulo}>{nombre}</span>
+            <ExternalLink aria-hidden className="ml-auto hidden size-3 xl:block" />
+          </a>
+        ) : (
+          <Link
+            to={seccion.to}
+            title={nombre}
+            aria-label={corto ? nombre : undefined}
+            aria-current={marcada ? 'page' : undefined}
+            aria-describedby={pendientes ? idDeEsta : undefined}
+            onClick={alElegir}
+            className={cn(ENLACE, 'relative', marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
+          >
+            <Icono aria-hidden className="size-4 shrink-0" />
+            <span className={rotulo}>{corto || nombre}</span>
+            <Insignia
+              n={pendientes}
+              id={idDeEsta}
+              descripcion={t('shell.insignias.tareas', { count: pendientes ?? 0 })}
+              className={contraida ? 'absolute top-0.5 right-0.5 xl:static xl:ml-auto' : 'ml-auto'}
+            />
+          </Link>
+        )}
+      </li>
+    )
+  }
   return (
-    <ul className="space-y-0.5">
-      {secciones.map((seccion) => {
-        const Icono = seccion.icon ?? LayoutDashboard
-        const nombre = t(`secciones.${seccion.clave}`)
-        const corto = t(`seccionesCortas.${seccion.clave}`, { defaultValue: '' })
-        const marcada = seccion.clave === actual
-        const pendientes = seccion.clave === 'tasks' ? insignias.tareas : null
-        const idDeEsta = `${idInsignia}-${seccion.clave}`
+    <div className="space-y-3">
+      {agrupar(secciones).map((grupo, i) => {
+        const separador = i > 0 ? (contraida ? 'border-t border-sg-border pt-3 xl:border-t-0 xl:pt-0' : '') : ''
+        if (!grupo.conTitulo)
+          return (
+            <ul key={grupo.clave} className={cn('space-y-0.5', separador, grupo.clave === 'administracion' && 'border-t border-sg-border pt-3')}>
+              {grupo.secciones.map(item)}
+            </ul>
+          )
+        const idTitulo = `${idInsignia}-grupo-${grupo.clave}`
         return (
-          <li key={seccion.clave}>
-            {seccion.external ? (
-              <a href={seccion.to} title={nombre} onClick={alElegir} className={cn(ENLACE, REPOSO)}>
-                <Icono aria-hidden className="size-4 shrink-0" />
-                <span className={rotulo}>{nombre}</span>
-                <ExternalLink aria-hidden className="ml-auto hidden size-3 xl:block" />
-              </a>
-            ) : (
-              <Link
-                to={seccion.to}
-                title={nombre}
-                aria-label={corto ? nombre : undefined}
-                aria-current={marcada ? 'page' : undefined}
-                aria-describedby={pendientes ? idDeEsta : undefined}
-                onClick={alElegir}
-                className={cn(ENLACE, 'relative', marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
-              >
-                <Icono aria-hidden className="size-4 shrink-0" />
-                <span className={rotulo}>{corto || nombre}</span>
-                <Insignia
-                  n={pendientes}
-                  id={idDeEsta}
-                  descripcion={t('shell.insignias.tareas', { count: pendientes ?? 0 })}
-                  className={rotulo === ROTULO ? 'absolute top-0.5 right-0.5 xl:static xl:ml-auto' : 'ml-auto'}
-                />
-              </Link>
-            )}
-          </li>
+          <div key={grupo.clave} role="group" aria-labelledby={idTitulo} className={cn('space-y-1', separador)}>
+            {/* sin cn(): text-sg-overline es un tamaño y tailwind-merge lo confundiría con el color */}
+            <p
+              id={idTitulo}
+              className={`px-2.5 text-sg-overline font-semibold uppercase tracking-wide text-sg-text-muted ${contraida ? 'sr-only xl:not-sr-only' : ''}`}
+            >
+              {t(`shell.grupos.${grupo.clave}`)}
+            </p>
+            <ul className="space-y-0.5">{grupo.secciones.map(item)}</ul>
+          </div>
         )
       })}
-    </ul>
+    </div>
   )
 }
 

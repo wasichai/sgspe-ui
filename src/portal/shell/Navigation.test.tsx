@@ -242,6 +242,32 @@ describe('navegación del portal', () => {
     expect(enlaces()).toHaveLength(13)
   })
 
+  // rediseño de UX (2026-10-20): las 13 secciones en su orden (RNF-USA-001), en bloques contiguos con su título, para no leer
+  // una lista plana de trece
+  it('agrupa las secciones en bloques con título sin cambiar su orden', async () => {
+    for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
+    await waitFor(() => expect(enlaces()).toHaveLength(13))
+    const grupo = (nombre: string) =>
+      within(within(lateral()).getByRole('group', { name: nombre }))
+        .getAllByRole('link')
+        .map((l) => l.getAttribute('aria-label') ?? l.textContent)
+    expect(grupo('Proyectos y territorio')).toEqual(['Proyectos', 'Territorio'])
+    expect(grupo('Trabajo con las comunidades')).toEqual(['Grupos de interés', 'Relacionamiento', 'Compromisos', 'Quejas, consultas y solicitudes'])
+    expect(grupo('Riesgos e inversión social')).toEqual(['Riesgos', 'Programas sociales'])
+    expect(grupo('Documentos y seguimiento')).toEqual(['Documentos', 'Tareas', 'Reportes'])
+    expect(enlaces()).toEqual(NAV_TREE.map((s) => s.label))
+  })
+
+  it('un bloque sin secciones para la cuenta no se dibuja', async () => {
+    registradas.projects = Prueba
+    registradas.risks = Prueba
+    start(RELACIONISTA, rutasDeSesion(RELACIONISTA, { admin: false, objects: { project: ['READ'] } }))
+    await within(await screen.findByRole('navigation', { name: 'Secciones' })).findByRole('link', { name: 'Proyectos' })
+    expect(within(lateral()).getByRole('group', { name: 'Proyectos y territorio' })).toBeInTheDocument()
+    expect(within(lateral()).queryByRole('group', { name: 'Riesgos e inversión social' })).not.toBeInTheDocument()
+  })
+
   // design-system.md §6.5: una sección que aún no llega lo dice, sin un error técnico; llega en la primera de sus fases
   it.each([
     ['/projects', 'Esta sección todavía no está disponible en su organización.'],

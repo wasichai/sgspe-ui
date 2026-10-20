@@ -121,6 +121,25 @@ export const NAV_TREE: SeccionNav[] = [
   { clave: 'admin', label: 'Administración', to: '/admin', icon: Settings, external: true, soloAdmin: true, fases: ['F1'] }
 ]
 
+// los bloques de la navegación (rediseño de UX, 2026-10-20): las 13 secciones en su orden (RNF-USA-001), en grupos contiguos con
+// un título que dice para qué sirven, para no leer una lista plana de trece. Inicio y Administración van sin título; un bloque
+// sin secciones para la cuenta no se dibuja
+export type ClaveDeGrupo = 'inicio' | 'proyectos' | 'comunidades' | 'gestion' | 'seguimiento' | 'administracion'
+
+export const GRUPOS_DE_NAVEGACION: { clave: ClaveDeGrupo; secciones: ClaveDeSeccion[]; conTitulo: boolean }[] = [
+  { clave: 'inicio', secciones: ['dashboard'], conTitulo: false },
+  { clave: 'proyectos', secciones: ['projects', 'territory'], conTitulo: true },
+  { clave: 'comunidades', secciones: ['stakeholders', 'engagements', 'commitments', 'attention'], conTitulo: true },
+  { clave: 'gestion', secciones: ['risks', 'programs'], conTitulo: true },
+  { clave: 'seguimiento', secciones: ['documents', 'tasks', 'reports'], conTitulo: true },
+  { clave: 'administracion', secciones: ['admin'], conTitulo: false }
+]
+
+// las secciones de la cuenta, por bloque y en su orden; los bloques vacíos no van
+export function agrupar(secciones: SeccionNav[]): { clave: ClaveDeGrupo; conTitulo: boolean; secciones: SeccionNav[] }[] {
+  return GRUPOS_DE_NAVEGACION.map((g) => ({ ...g, secciones: secciones.filter((s) => g.secciones.includes(s.clave)) })).filter((g) => g.secciones.length > 0)
+}
+
 // la guarda de una pantalla que vive bajo una sección pero lee otro objeto: la sección (su nombre y su pantalla) con otros
 // permisos (LEE_ACUERDOS, de leeAcuerdos.ts)
 export function guardaDe(clave: ClaveDeSeccion, seOfreceCon?: Par[][]): SeccionNav {
