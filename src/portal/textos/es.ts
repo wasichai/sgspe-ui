@@ -220,6 +220,8 @@ export const ES = {
   },
   seccionPorLlegar: 'Esta sección todavía no está disponible en su organización.',
   noEncontrada: 'Esta página no existe',
+  noEncontradaAyuda: 'Puede que el enlace esté incompleto o que lo que buscaba haya cambiado de lugar. También puede encontrarlo con «Buscar».',
+  irA: 'Ir a {{seccion}}',
   irAlInicio: 'Ir al inicio'
 }
 

@@ -218,5 +218,7 @@ export const EN: Textos = {
   },
   seccionPorLlegar: 'This section is not available in your organization yet.',
   noEncontrada: 'This page does not exist',
+  noEncontradaAyuda: 'The link may be incomplete, or what you were looking for may have moved. You can also find it with “Search”.',
+  irA: 'Go to {{seccion}}',
   irAlInicio: 'Go to the home page'
 }

@@ -240,6 +240,33 @@ describe('barra de contexto y Project 360', () => {
     expect(within(migas).getByText('C-001')).toHaveAttribute('aria-current', 'page')
   })
 
+  // rediseño de UX (2026-10-20): una ficha que no vive bajo el segmento de su pestaña (una queja en /grievances/:id) decía
+  // «grievances» en las migas y no marcaba ninguna pestaña
+  it.each([
+    ['grievances', 'Quejas, consultas y solicitudes', 'Quejas, consultas y solicitudes', '/attention'],
+    ['contributions', 'Programas sociales', 'Programas sociales', '/programs'],
+    ['field-visits', 'Relacionamiento', 'Relacionamiento', '/engagements']
+  ])('la ficha bajo /%s marca su pestaña y la nombra en las migas', async (segmento, pestana, miga, ruta) => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    function Ficha() {
+      useMigaDelRegistro('R-001')
+      return <p>Ficha</p>
+    }
+    montar(
+      <Routes>
+        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+          <Route path={`${segmento}/:id`} element={<Ficha />} />
+        </Route>
+      </Routes>,
+      { ruta: `/projects/p1/${segmento}/r1`, permisos: ADMIN_PERMISOS }
+    )
+    const migas = await screen.findByRole('navigation', { name: 'Ubicación' })
+    expect(await within(migas).findByRole('link', { name: miga })).toHaveAttribute('href', `/projects/p1${ruta}`)
+    expect(within(migas).queryByText(segmento)).not.toBeInTheDocument()
+    const subnav = screen.getByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(within(subnav).getByRole('link', { name: pestana })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('en el resumen, las migas terminan en el proyecto', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
