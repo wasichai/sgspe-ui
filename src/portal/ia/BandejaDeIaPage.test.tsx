@@ -87,6 +87,9 @@ describe('S52 · bandeja de revisión de IA', () => {
     )
     expect(screen.queryByText(/EMPLEO/)).not.toBeInTheDocument()
     expect(within(await lista()).getAllByText('Clasificación')).toHaveLength(1)
+    // solo se pide lo propuesto: lo decidido no gasta el tope (D10 de la revisión de UX)
+    for (const objeto of ['ai_suggestion', 'commitment_candidate'])
+      expect(fetch!.calls.filter((l) => l.path.startsWith(`/objects/${objeto}/records?`)).every((l) => l.path.includes('state=proposed'))).toBe(true)
   })
 
   it('cada tarjeta dice confianza, modelo, instrucción, el registro, lo propuesto y la cita con su fuente', async () => {

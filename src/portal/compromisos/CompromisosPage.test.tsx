@@ -4,6 +4,7 @@ import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasich
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA, P1 } from '../../test/compromisos'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
+import type { Registro } from '../datos/registros'
 import { permisos } from '../../test/portal'
 import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
@@ -58,7 +59,8 @@ const rutas = (extra: MockRoute[] = []): MockRoute[] => [
   { path: '/sgspe/dashboards/indicators', body: [] }
 ]
 // la lista de compromisos la contesta el servidor emulado: la página y el conteo de cada vista son consultas (D10)
-const conServidor = (especiales: RutaEspecial[] = [], compromisos = [C1, C2, C3, C4]) => espiarRed([...especiales, listaDelServidor('commitment', compromisos)])
+const conServidor = (especiales: RutaEspecial[] = [], compromisos = [C1, C2, C3, C4], candidatos: Registro[] | null = [PROPUESTO, RECHAZADO]) =>
+  espiarRed([...especiales, listaDelServidor('commitment', compromisos), ...(candidatos ? [listaDelServidor('commitment_candidate', candidatos)] : [])])
 const consultasA = (r: Red, objeto = 'commitment') =>
   r.a('GET', `/objects/${objeto}/records`).map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1] ?? '')))
 const enProyecto = (p = EQUIPO_DE_COMPROMISOS, ruta = '/projects/p1/commitments') =>
@@ -240,9 +242,9 @@ describe('S28 · candidatos', () => {
   it('una lista de candidatos que el tope cortó lo dice con su propio texto', async () => {
     const muchos = Array.from({ length: 200 }, (_, i) => registro(`k${i}`, { project: 'p1', proposed_text: `Propuesta ${i}` }, { state: 'proposed' }))
     fetch = mockFetch(rutas([{ path: /^\/objects\/commitment_candidate\/records\?/, body: pagina(muchos, { nextCursor: 'siguiente' }) }]))
-    red = conServidor()
+    red = conServidor([], undefined, null)
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
-    expect(await screen.findByText('Se muestran los 1,000 candidatos más recientes: elija un proyecto para ver el resto.')).toBeInTheDocument()
+    expect(await screen.findByText('Se muestran los 1,000 candidatos propuestos más recientes: elija un proyecto para ver el resto.')).toBeInTheDocument()
     expect(screen.queryByText(/compromisos del alcance/)).not.toBeInTheDocument()
   })
 

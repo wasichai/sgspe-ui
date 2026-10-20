@@ -2,7 +2,7 @@ import { EnlaceConRastro } from '../contexto/Rastro'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
@@ -19,7 +19,8 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { codigoDelError } from '../datos/http'
-import { atributo, campoDe, texto, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
+import { atributo, campoDe, texto, useDefinicion, useRegistros, useTodosConTope, type Registro } from '../datos/registros'
+import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { CitaDelCandidato } from '../ia/Cita'
 import { personasCitadas, quedanMarcadores, recortar, reidentificar } from '../ia/marcadores'
@@ -36,13 +37,26 @@ export function Candidatos({ proyecto }: { proyecto?: string }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const escribe = useEscribeEnProyecto(proyecto)
-  const candidatos = useTodosConTope('commitment_candidate', { project: proyecto, sort: 'created_at', dir: 'desc' })
+  // los propuestos, todos (con tope); los decididos, en páginas del servidor con su total (D10 de la revisión de UX)
+  const lista = useParametrosDeLista('candidatos')
+  const candidatos = useTodosConTope('commitment_candidate', { project: proyecto, state: 'proposed', sort: 'created_at', dir: 'desc' })
+  const paginaDeDecididos = useRegistros('commitment_candidate', {
+    project: proyecto,
+    state_not: 'proposed',
+    sort: 'created_at',
+    dir: 'desc',
+    page: lista.pagina,
+    size: 25
+  })
   const [registrando, setRegistrando] = useState(false)
   const [revisando, setRevisando] = useState<string | null>(null)
-  const lista = candidatos.data ?? []
-  const propuestos = lista.filter((c) => c.state === 'proposed')
-  const decididos = lista.filter((c) => c.state !== 'proposed')
-  const enRevision = lista.find((c) => c.id === revisando)
+  const propuestos = candidatos.data ?? []
+  const decididos = paginaDeDecididos.data?.content ?? []
+  // el candidato en revisión sale de lo leído; decidido, deja los propuestos y el diálogo sigue con su última lectura
+  const ultimo = useRef<Registro | undefined>(undefined)
+  const leido = [...propuestos, ...decididos].find((c) => c.id === revisando)
+  if (leido) ultimo.current = leido
+  const enRevision = revisando ? (leido ?? (ultimo.current?.id === revisando ? ultimo.current : undefined)) : undefined
   return (
     <section aria-label={t('compromisos.candidatos.titulo')} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -53,7 +67,7 @@ export function Candidatos({ proyecto }: { proyecto?: string }) {
           </Button>
         ) : null}
       </div>
-      {candidatos.truncado ? <Alert tone="warning">{t('compromisos.candidatos.truncado', { n: numeroPe(lista.length) })}</Alert> : null}
+      {candidatos.truncado ? <Alert tone="warning">{t('compromisos.candidatos.truncado', { n: numeroPe(propuestos.length) })}</Alert> : null}
       {candidatos.isPending ? (
         <Cargando />
       ) : candidatos.isError && !candidatos.data ? (
@@ -71,7 +85,11 @@ export function Candidatos({ proyecto }: { proyecto?: string }) {
             </ul>
           )}
           <h2 className="text-sg-h3 font-semibold">{t('compromisos.candidatos.decididos')}</h2>
-          {decididos.length === 0 ? (
+          {paginaDeDecididos.isPending ? (
+            <Cargando />
+          ) : paginaDeDecididos.isError && !paginaDeDecididos.data ? (
+            <FalloDeLectura error={paginaDeDecididos.error} alReintentar={() => void paginaDeDecididos.refetch()} />
+          ) : decididos.length === 0 ? (
             <p className="text-sm text-sg-text-muted">{t('compromisos.candidatos.sinDecididos')}</p>
           ) : (
             <ul className="space-y-2">
@@ -80,6 +98,7 @@ export function Candidatos({ proyecto }: { proyecto?: string }) {
               ))}
             </ul>
           )}
+          <PaginacionDelServidor datos={paginaDeDecididos.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
         </>
       )}
       {proyecto ? <RegistrarCandidato proyecto={proyecto} abierto={registrando} alCerrar={() => setRegistrando(false)} /> : null}
