@@ -23,7 +23,8 @@ de ese diseño queda en «Decisiones pendientes»: no se aplicó.
   - El backend local no tiene el objeto `deliverable` (los entregables responden 404) ni el WMS (503). No hubo
     pruebas con personas.
   - Las listas (QCS, tareas, interacciones, riesgos) las estaba cambiando a la vez otra sesión (rama
-    `ux/listas-por-rango-y-atencion`): esta pasada no tocó esos archivos (§7).
+    `ux/listas-por-rango-y-atencion`, #74). Esta pasada esperó a que se integrara y se rebasó sobre ella antes de tocar
+    Tareas, Riesgos y QCS (A18 a A20).
 
 Las capturas están en [`capturas/`](capturas) (JPEG, calidad 60): `antes/` y `despues/`; las que empiezan por `simulada-`
 son de la API simulada. Las métricas crudas están en [`metricas.json`](metricas.json).
@@ -63,16 +64,16 @@ personas.
 | A15 | Panel de decisión | «Desde —» cuando el registro no trae `state_changed_at` | Fichas de humo | Ruido sin información | Baja | La línea no se dibuja | Ninguno | `PanelDeDecision.test.tsx` |
 | A16 | Ficha de compromiso | Un «—» suelto entre los chips cuando no hay monto | `simulada-compromiso-ficha-telefono.jpg` | Ruido | Baja | Sin monto, sin chip | Ninguno | `FichaCompromisoPage.test.tsx` |
 | A17 | Página no encontrada | Sin `<h1>` ni título de documento | — | El historial y los lectores no la nombran | Baja | `h1` y «Esta página no existe · SGSPE» | Ninguno | `NoEncontrada.test.tsx` |
+| A18 | Mis tareas (global) | «Las tareas para tomar se ven dentro de cada proyecto: elija uno en el selector» | `antes/tareas-escritorio.jpg` | Tomar una tarea exige saber de qué proyecto es | Media | «Para tomar» también en lo global, con la columna Proyecto: el servidor ya acota la lectura a los proyectos de la cuenta (ADR-0029) | Ninguno: la lectura y «Tomar» siguen con sus guardas | `MisTareasPage.test.tsx` |
+| A19 | Riesgos sin ningún riesgo | Matriz 5×5 llena de ceros sobre «No hay riesgos en esta vista», sin siguiente paso | `antes/riesgos-escritorio.jpg` | Ruido y ninguna orientación | Media | Sin riesgos en el alcance: «Aún no hay riesgos registrados» y, a quien crea, cómo identificar el primero | Ninguno | `RiesgosPage.test.tsx` |
+| A20 | Lista de QCS a 1440 px | Diez columnas en lo global: «Responsable» queda cortada y la tabla se desplaza | `antes/qcs-escritorio.jpg` | Lo que importa al final de la fila no se ve sin desplazar | Media | Ocho columnas: el tipo como línea gris sobre el código y el canal bajo la categoría | Ninguno: los mismos datos | `AtencionPage.test.tsx` |
 
 ### 3.2 Observados y no resueltos
 
 | # | Pantalla o flujo | Problema | Evidencia | Gravedad | Por qué no se hizo | Propuesta |
 |---|---|---|---|---|---|---|
-| P1 | Mis tareas (global) | «Las tareas para tomar se ven dentro de cada proyecto: elija uno en el selector» | `antes/tareas-escritorio.jpg` | Media | `MisTareasPage` lo cambia la otra sesión (D10) | La vista «Para tomar» global con el proyecto como columna (plan anterior, etapa 3) |
-| P2 | Listas | El vacío no dice el siguiente paso («No hay riesgos en esta vista.») | Riesgos, Tareas | Media | Listas en D10 | `Vacio` con la acción de crear (`BotonCrear`) y, si hay filtros, «Quitar filtros» |
-| P3 | Lista de QCS a 1440 px | Nueve columnas: «Responsable» queda cortada y la tabla se desplaza | `antes/qcs-escritorio.jpg` | Media | `AtencionPage` en D10 | Bajar Canal y Categoría a una segunda línea de la fila, o mostrarlas solo desde 1600 px |
+| P2 | Listas con filtros | El vacío de una vista filtrada no ofrece quitar el filtro | Riesgos («No hay riesgos en esta vista»), Tareas | Baja | Cada lista arma su vacío; conviene una pieza común | `Vacio` con «Quitar filtros» cuando hay filtros puestos |
 | P4 | Territorio | Su propio «Proyecto del mapa» además del selector de la barra | `despues/territorio-escritorio.jpg` | Media | El mapa necesita «Todo el territorio», que no es «Todos los proyectos»: es una decisión de diseño | Decidir en `docs/ux` si el mapa sigue a la barra y suma «Todo el territorio» |
-| P5 | Riesgos sin riesgos | Matriz 5×5 llena de ceros sobre «No hay riesgos en esta vista» | `antes/riesgos-escritorio.jpg` | Baja | `RiesgosPage` en D10 | Sin riesgos, solo el vacío con «Identificar riesgo» |
 | P6 | Camino del flujo | Sin etiqueta en el workflow, muestra el nombre técnico (`pending_approval`) | `simulada-compromiso-ficha-escritorio.jpg` | Baja | Con el backend real las etiquetas existen | Mientras no llega la etiqueta, no dibujar el paso |
 
 ### 3.3 Hipótesis que necesitan personas
@@ -183,6 +184,8 @@ Rama `ux/rediseno-orientacion`, un commit por cambio (Conventional Commits), con
 - `fix`: la página que no existe tiene su título y el panel de decisión no dice «Desde —» (A15, A17).
 - `fix`: un error de carga no dice que conserva filtros donde no los hay (A14).
 - `fix`: sin monto, el encabezado del compromiso no dibuja un «—» suelto (A16).
+- `feat`: «Para tomar» fuera de un proyecto y el registro de riesgos vacío dice cómo empezar (A18, A19).
+- `feat`: la lista de QCS cabe a 1440 px con ocho columnas (A20).
 
 Archivos principales:
 
@@ -219,15 +222,17 @@ Contratos que no cambiaron:
    barra actual (y la búsqueda ahora más útil)?
 2. **El mapa y la barra (P4).** Decidir si Territorio sigue al selector de la barra.
 3. **Lo que vuelve de «Más acciones» (H3).** Medir el uso de reclasificar y de crear un compromiso desde la queja.
-4. **Listas (P1, P2, P3, P5).** Retomarlas cuando la rama de listas por rango y atención se integre, con el mismo criterio:
-   una primaria, el vacío con su siguiente paso y la tabla sin desplazarse a 1440 px.
+4. **Listas (P2).** La rama de listas por rango y atención (#74) se integró durante esta pasada; A18, A19 y A20 ya se
+   hicieron sobre ella. Falta el vacío con «Quitar filtros», mejor como una pieza común.
 5. **Riesgo.** El documento `docs/ux/design-system.md` §6.1 describe la barra de la ficha: hay que sumarle la regla de
    «una primaria + Más acciones» para que el diseño y el portal no diverjan.
 
 ## 9. Pruebas ejecutadas
 
 - `yarn format`, `yarn lint` y `yarn typecheck`: sin cambios ni errores.
-- `yarn test`: 2166 pruebas en 188 archivos, todas en verde (antes de esta pasada: 2143 en 186).
+- `yarn test`: 2169 pruebas en 188 archivos (antes de esta pasada: 2143 en 186). Con la máquina muy cargada (carga
+  promedio 37), dos corridas completas tuvieron cada una un tiempo agotado distinto, en pruebas pesadas que esta pasada no
+  cambió: `RiesgosPage` «sin tope» (más de 1000 registros) y `FichaAportePage` «tope de lectura». Aisladas pasan siempre.
 - `yarn build` y las e2e de Playwright contra la build en otro puerto: 62 recorridos en verde, incluidos los 2 nuevos de
   `orientacion.spec.ts`.
 - Recorrido manual con Playwright contra el backend real a 1440 y 390 px: sin errores de página, salvo las respuestas
