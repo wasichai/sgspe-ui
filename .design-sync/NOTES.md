@@ -35,8 +35,9 @@
 - El render check y la captura usan `DS_CHROMIUM_PATH=/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell`
   y `NODE_PATH=$PWD/node_modules` (playwright del repositorio). `yarn e2e` pide el build 1243: en este contenedor se
   enlazó a 1194.
-- Subida: DesignSync no tiene autorización en una sesión de claude.ai/code («/design-login cannot run in this
-  non-interactive session»). La subida queda para una sesión autorizada; nada se subió aún y no hay `projectId`.
+- Subida: en una sesión de claude.ai/code DesignSync pide `/design-consent` (con él, todo el flujo corre en la sesión).
+  Primera subida el 2026-10-20 al proyecto «SGSPE Design System» (`3e0d73eb-…`, fijado en `config.json`): 334 archivos,
+  ruta incremental en un solo lote porque todo ya estaba calificado; `_ds_sync.json` al final.
 
 ## Re-sync risks
 
