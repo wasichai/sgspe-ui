@@ -69,24 +69,24 @@ personas.
 | A20 | Lista de QCS a 1440 px | Diez columnas en lo global: «Responsable» queda cortada y la tabla se desplaza | `antes/qcs-escritorio.jpg` | Lo que importa al final de la fila no se ve sin desplazar | Media | Ocho columnas: el tipo como línea gris sobre el código y el canal bajo la categoría | Ninguno: los mismos datos | `AtencionPage.test.tsx` |
 | A21 | Riesgos, Avisos y la bandeja de IA con filtros | El vacío por filtros no ofrecía quitarlos («No hay riesgos en esta vista», «Ninguna propuesta coincide con los filtros») | Compromisos y QCS ya usaban `VacioDeLista` | Se cree que no hay registros cuando es el filtro | Baja | `VacioDeLista`: «Nada coincide con los filtros», cuántas hay sin ellos donde se sabe y «Limpiar filtros» | Ninguno | `RiesgosPage.test.tsx`, `avisos.test.tsx`, `BandejaDeIaPage.test.tsx` |
 | A22 | Camino del flujo | Un estado del camino de la ficha que el workflow desplegado no define sale con su nombre técnico (`pending_approval`) | `antes/simulada-compromiso-ficha-escritorio.jpg` | Ruido técnico ante la persona | Baja | Del camino dado solo se dibujan los estados que el workflow tiene | Ninguno | `CaminoDelFlujo.test.tsx` |
+| A23 | Navegación principal | 13 secciones en una lista plana | `antes/inicio-escritorio.jpg` | Hay que leer las trece para ubicar la que se busca | Media | Bloques contiguos con título, sin cambiar el orden de RNF-USA-001; contraída, una línea entre bloques | Ninguno: mismas secciones, mismo orden, mismas guardas | `Navigation.test.tsx` |
+| A24 | Territorio | Dos selectores de proyecto: el de la barra («Todos los proyectos») y el propio «Proyecto del mapa», que podían decir cosas distintas | `antes/territorio-escritorio.jpg` | No se sabe cuál manda | Media | En Territorio, el selector de la barra es el lente del mapa (`?project=`, «Todo el territorio»); la pantalla ya no tiene uno propio | Desde Territorio, elegir un proyecto ya no lleva a su pestaña Mapa: se queda en el mapa del tenant con ese lente (se llega al del proyecto por Proyectos) | `contexto.test.tsx`, `TerritorioPage.test.tsx` |
 
 ### 3.2 Observados y no resueltos
 
-| # | Pantalla o flujo | Problema | Evidencia | Gravedad | Por qué no se hizo | Propuesta |
-|---|---|---|---|---|---|---|
-| P4 | Territorio | Su propio «Proyecto del mapa» además del selector de la barra | `despues/territorio-escritorio.jpg` | Media | El mapa necesita «Todo el territorio», que no es «Todos los proyectos»: es una decisión de diseño | Decidir en `docs/ux` si el mapa sigue a la barra y suma «Todo el territorio» |
+Todos los observados (P1 a P6) se resolvieron en esta misma pasada: A18 a A22 y A24. Lo que queda abierto son hipótesis
+(§3.3) y la decisión de §8.
 
 ### 3.3 Hipótesis que necesitan personas
 
-- **H1. Navegación por grupos de tareas.** 13 secciones planas pueden ser muchas para quien usa el portal de vez en
-  cuando. Agruparlas («Mi trabajo», «Proyectos y territorio», «Relacionamiento y compromisos», «Riesgos», «Inversión»,
-  «Documentos e informes») choca con RNF-USA-001 (el mismo orden para todos) y con `ux-architecture.md` §6.2 y §7.2. No se
-  aplicó: ver §8.
+- **H1. Navegación por grupos de tareas.** Aplicada sin reordenar (A23): los bloques respetan el orden de RNF-USA-001, así
+  que «Tareas» no pudo ir junto a «Inicio» en un «Mi trabajo». Falta ver con personas si los títulos ayudan a encontrar la
+  sección sin ayuda.
 - **H2. «QCS».** La sigla de la barra lateral lleva el nombre completo en `title` y para lectores de pantalla. Falta saber
   si quien no es de la gestión de quejas la entiende.
 - **H3. Lo que pasó a «Más acciones».** Reclasificar, crear un compromiso desde la queja, «Informar riesgo de atraso» y
-  las transiciones de excepción quedan a un clic más. Hay que medir cuánto se usan antes de decidir si alguna vuelve a la
-  vista.
+  las transiciones de excepción quedan a un clic más. `sgspe/model/uso_de_acciones.py` (wasichai/sgspe#145) lo mide con la
+  auditoría de producción de un periodo; con datos reales se decide si alguna vuelve a la vista.
 - **H4. Interacción con 8 pestañas.** Puede ser demasiado; se necesita ver qué pestañas usa el relacionista en campo.
 
 ## 4. Arquitectura de información y navegación
@@ -94,13 +94,16 @@ personas.
 **Se conserva la estructura** de `ux-architecture.md` §6: tres contextos (global, proyecto, territorio), las 13 secciones
 en su orden, Project 360 con nueve pestañas y «Más», y las fichas bajo su proyecto con una sola URL. La revisión anterior
 ya había resuelto la sección marcada dentro de un proyecto, los conteos de las pestañas y el selector en el teléfono. Lo
-que faltaba para responder «¿dónde estoy y cómo vuelvo?» eran casos sueltos: A1, A2 y A17.
+que faltaba para responder «¿dónde estoy y cómo vuelvo?» eran casos sueltos: A1, A2 y A17. Dos cambios sí tocan la
+navegación, sin cambiar rutas ni orden: las secciones van en bloques con título (A23) y, en Territorio, el selector de la
+barra es el lente del mapa (A24).
 
 El contexto se lee así, sin elementos nuevos:
 
 | Contexto | Lo dice | Cómo se vuelve |
 |---|---|---|
 | Global | El selector de la barra superior («Todos los proyectos»), sin migas | La barra lateral |
+| Territorio | El selector de la barra superior: «Todo el territorio» o el proyecto que hace de lente | La barra lateral o el selector |
 | Proyecto | El selector con el proyecto, las migas «Proyectos / código · nombre / pestaña», la pestaña marcada y la barra lateral en la sección del módulo | Las migas o las pestañas |
 | Ficha | Las migas terminan en el registro; antetítulo con tipo y código; pestaña del módulo marcada | La miga de la pestaña (la lista) o el rastro |
 | Pantalla abierta desde una ficha | El rastro (el recorrido) sobre las migas | El rastro |
@@ -188,6 +191,8 @@ Rama `ux/rediseno-orientacion`, un commit por cambio (Conventional Commits), con
 - `feat`: la lista de QCS cabe a 1440 px con ocho columnas (A20).
 - `feat`: un vacío por filtros en Riesgos, Avisos y la bandeja de IA los limpia (A21).
 - `fix`: el camino del flujo no dibuja un estado que el workflow no tiene (A22).
+- `feat`: la navegación agrupa las secciones en bloques con título (A23).
+- `feat`: en Territorio el selector de la barra es el proyecto del mapa (A24).
 
 Archivos principales:
 
@@ -219,11 +224,11 @@ Contratos que no cambiaron:
 
 ## 8. Decisiones pendientes y riesgos
 
-1. **Navegación por grupos (H1).** Cambiar la barra lateral a grupos exige revisar RNF-USA-001 y `ux-architecture.md` §6.2
-   y §7.2 en `sgspe`. Antes conviene un recorrido con dos o tres personas nuevas: ¿encuentran la sección sin ayuda con la
-   barra actual (y la búsqueda ahora más útil)?
-2. **El mapa y la barra (P4).** Decidir si Territorio sigue al selector de la barra.
-3. **Lo que vuelve de «Más acciones» (H3).** Medir el uso de reclasificar y de crear un compromiso desde la queja.
+1. **Navegación por grupos (H1).** Implementada respetando RNF-USA-001 (A23) y registrada en `ux-architecture.md` §7.1 con
+   wasichai/sgspe#142. Falta un recorrido con dos o tres personas nuevas: ¿encuentran la sección sin ayuda?
+2. **El mapa y la barra (P4).** Implementado (A24) y registrado en `ux-architecture.md` §6.1 con wasichai/sgspe#142.
+3. **Lo que vuelve de «Más acciones» (H3).** Correr `uso_de_acciones.py` (wasichai/sgspe#145) sobre un trimestre de
+   producción y mover a la vista lo que se use tanto como la primaria.
 4. **El diseño canónico.** La regla «una primaria + Más acciones», la razón de un bloqueo a la vista y los estados de §6.5
    (ruta inexistente, 404 de un módulo, error de carga) se proponen en `design-system.md` con wasichai/sgspe#142. A14 cambió
    antes que el diseño: §6.5 pedía decir «que los filtros se conservan» en todo error de carga. Si la revisión de #142
@@ -232,7 +237,7 @@ Contratos que no cambiaron:
 ## 9. Pruebas ejecutadas
 
 - `yarn format`, `yarn lint` y `yarn typecheck`: sin cambios ni errores.
-- `yarn test`: 2173 pruebas en 188 archivos (antes de esta pasada: 2143 en 186). Con la máquina muy cargada (carga
+- `yarn test`: 2177 pruebas en 188 archivos (antes de esta pasada: 2143 en 186). Con la máquina muy cargada (carga
   promedio 37), dos corridas completas tuvieron cada una un tiempo agotado distinto, en pruebas pesadas que esta pasada no
   cambió: `RiesgosPage` «sin tope» (más de 1000 registros) y `FichaAportePage` «tope de lectura». Aisladas pasan siempre.
 - `yarn build` y las e2e de Playwright contra la build en otro puerto: 62 recorridos en verde, incluidos los 2 nuevos de
