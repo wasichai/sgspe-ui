@@ -4,6 +4,7 @@ import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasich
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro } from '../../test/montar'
 import { RELACIONISTA } from '../../test/portal'
+import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { ALERTA, baseDeRiesgos, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, REGLA, RELACIONES_EN_RIESGOS, RIESGO } from '../../test/riesgos'
 import { AlertasPage, FichaAlertaPage } from './AlertasPage'
@@ -71,11 +72,9 @@ const abrirFicha = (usuario = GESTOR_DE_RIESGOS, permisos = EQUIPO_DE_RIESGOS) =
 
 describe('S41 · lista de alertas', () => {
   it('abre en las alertas por triar, con su origen; otra vista muestra las confirmadas', async () => {
-    fetch = mockFetch([
-      ...baseDeRiesgos(),
-      { path: '/objects/early_warning/records', body: pagina([ALERTA, CONFIRMADA]) },
-      { path: '/objects/early_warning_rule/records/rg1', body: REGLA }
-    ])
+    fetch = mockFetch([...baseDeRiesgos(), { path: '/objects/early_warning_rule/records/rg1', body: REGLA }])
+    // cada vista es una consulta del servidor con su página y su conteo (D10 de la revisión de UX)
+    red = espiarRed([listaDelServidor('early_warning', [ALERTA, CONFIRMADA])])
     montar(<AlertasPage />, {
       ruta: '/projects/p1/risks/warnings',
       camino: '/projects/:projectId/risks/warnings',
@@ -89,6 +88,9 @@ describe('S41 · lista de alertas', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Confirmadas' }))
     expect(await screen.findByRole('link', { name: 'Bloqueo anunciado' })).toBeInTheDocument()
     expect(screen.getByText('Registrada a mano')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Todas' })).toHaveAccessibleDescription('2 registros')
+    const consultas = red.a('GET', '/objects/early_warning/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    expect(consultas).toContainEqual({ project: 'p1', state: 'confirmed,responding', sort: 'detected_at', dir: 'desc', page: '0', size: '25' })
   })
 
   it('mientras carga no dice que no hay alertas', async () => {

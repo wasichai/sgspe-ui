@@ -12,7 +12,6 @@ export const ES_INVERSION = {
     tabla: 'Programas del alcance',
     vacio: 'No hay programas registrados',
     vacioAyuda: 'Un programa social reúne las iniciativas, el presupuesto y los beneficiarios de un proyecto; se crea dentro del proyecto.',
-    truncado: 'Se muestran los primeros {{n}} programas: hay más.',
     columnas: {
       programa: 'Programa',
       proyecto: 'Proyecto',
@@ -30,7 +29,6 @@ export const ES_INVERSION = {
     tabla: 'Aportes del alcance',
     vacio: 'No hay aportes en esta vista',
     vacioAyuda: 'Un aporte es un apoyo puntual a una comunidad u organización, con su tope de campaña; pruebe otra vista o regístrelo dentro de su proyecto.',
-    truncado: 'Se muestran los primeros {{n}} aportes: hay más.',
     estado: 'Estado',
     vistas: { enCurso: 'En curso', terminados: 'Terminados', todos: 'Todos' },
     columnas: { codigo: 'Código', proyecto: 'Proyecto', tipo: 'Tipo', recibe: 'Quién recibe', estado: 'Estado', monto: 'Monto', campana: 'Campaña' }
@@ -78,7 +76,6 @@ export const EN_INVERSION: typeof ES_INVERSION = {
     tabla: 'Programs in scope',
     vacio: 'There are no recorded programs',
     vacioAyuda: 'A social program brings together a project’s initiatives, budget and beneficiaries; it is created inside the project.',
-    truncado: 'The first {{n}} programs are shown: there are more.',
     columnas: {
       programa: 'Program',
       proyecto: 'Project',
@@ -97,7 +94,6 @@ export const EN_INVERSION: typeof ES_INVERSION = {
     vacio: 'There are no contributions in this view',
     vacioAyuda:
       'A contribution is a one-off support to a community or organization, within its campaign cap; try another view or record it inside its project.',
-    truncado: 'The first {{n}} contributions are shown: there are more.',
     estado: 'State',
     vistas: { enCurso: 'In progress', terminados: 'Finished', todos: 'All' },
     columnas: { codigo: 'Code', proyecto: 'Project', tipo: 'Type', recibe: 'Recipient', estado: 'State', monto: 'Amount', campana: 'Campaign' }

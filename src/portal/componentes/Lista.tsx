@@ -226,6 +226,12 @@ export function TablaDeRegistros({
   )
 }
 
+// la paginación de una lista que pagina el servidor (D10 de la revisión de UX): el total y las páginas son los de su conteo
+export function PaginacionDelServidor({ datos, alPagina }: { datos: Pagina | undefined; alPagina: (pagina: number) => void }) {
+  if (!datos?.totalPages || datos.totalPages <= 1) return null
+  return <Pagination page={datos.page} totalPages={datos.totalPages} totalElements={datos.totalElements ?? 0} onPage={alPagina} />
+}
+
 // sinFiltros: cuántos habría sin los filtros (revisión de UX, etapa 3: «Sin los filtros hay 3»); así se sabe que no es la lista
 // la que está vacía
 export function VacioDeLista({

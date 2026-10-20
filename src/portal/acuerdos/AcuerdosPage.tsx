@@ -4,7 +4,7 @@ import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Td, Textarea, Th } from '@wasichai/ui'
+import { Button, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
@@ -17,15 +17,18 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyectos } from '../contexto/proyectos'
-import { atributo, texto, useTodosConTope } from '../datos/registros'
-import { NS, numeroPe } from '../i18n'
+import { atributo, texto, useRegistros } from '../datos/registros'
+import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 
 // S33, la lista: los acuerdos del alcance (global con la columna Proyecto, o de un proyecto) con su tipo, su estado de WF-I y su
-// vigencia (validity_status, de JOB-01: vencer no concluye el acuerdo). el alta va en un drawer con los campos de la ficha y
+// vigencia (validity_status, de JOB-01: vencer no concluye el acuerdo), paginados en el servidor (D10 de la revisión de UX). el alta va en un drawer con los campos de la ficha y
 // el motivo, porque agreement es requiresReason (un alta sin motivo es 400)
+const POR_PAGINA = 25
+
 export const CAMPOS_DEL_ACUERDO = [
   'code',
   'title',
@@ -47,10 +50,11 @@ export function AcuerdosPage() {
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const escribe = useEscribeEnProyecto(proyecto)
-  const acuerdos = useTodosConTope('agreement', { project: proyecto, sort: 'code', dir: 'asc' })
+  const parametros = useParametrosDeLista('todos')
+  const acuerdos = useRegistros('agreement', { project: proyecto, sort: 'code', dir: 'asc', page: parametros.pagina, size: POR_PAGINA })
   const proyectos = useProyectos()
   const telefono = useEsTelefono()
-  const lista = acuerdos.data ?? []
+  const lista = acuerdos.data?.content ?? []
   // ?nuevo=1 abre el alta: así llega BotonCrear desde lo global, ya con el proyecto elegido
   const [busqueda] = useSearchParams()
   const [creando, setCreando] = useState(busqueda.get('nuevo') === '1')
@@ -60,7 +64,7 @@ export function AcuerdosPage() {
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
         titulo={t('acuerdos.titulo')}
-        conteo={acuerdos.data ? t('acuerdos.conteo', { count: lista.length }) : undefined}
+        conteo={acuerdos.data?.totalElements != null ? t('acuerdos.conteo', { count: acuerdos.data.totalElements }) : undefined}
         primaria={
           proyecto ? (
             escribe && can('agreement', 'CREATE') ? (
@@ -73,7 +77,6 @@ export function AcuerdosPage() {
           )
         }
       />
-      {acuerdos.truncado ? <Alert tone="warning">{t('acuerdos.truncado', { n: numeroPe(acuerdos.data?.length ?? 0) })}</Alert> : null}
       {acuerdos.isPending ? (
         <Cargando />
       ) : acuerdos.isError && !acuerdos.data ? (
@@ -155,6 +158,7 @@ export function AcuerdosPage() {
           </Table>
         </div>
       )}
+      <PaginacionDelServidor datos={acuerdos.data} alPagina={(p) => parametros.cambiar({ page: String(p) })} />
       {proyecto && fijos ? (
         <Drawer titulo={t('acuerdos.nuevoTitulo')} abierto={creando} alCerrar={() => setCreando(false)}>
           <Campo etiqueta={t('acuerdos.motivo')} ayuda={t('acuerdos.motivoAyuda')}>

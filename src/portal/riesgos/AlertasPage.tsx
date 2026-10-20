@@ -10,17 +10,17 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { PaginacionDelServidor, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { rutaDeFicha } from '../datos/fichas'
-import { atributo, texto, useActualizar, useRegistro, useTodos, useTodosConTope, type Registro } from '../datos/registros'
-import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
+import { atributo, estados, texto, useActualizar, useConteos, useRegistro, useRegistros, useTodos, type Parametros, type Registro } from '../datos/registros'
+import { fechaPe, fechaYHoraPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { opcion } from '../datos/opciones'
 
 // S41 · centro de alerta temprana (screens.md §9, flujo 14): las alertas del proyecto por vista (por triar, confirmadas, todas,
-// cerradas), creadas por JOB-04 o a mano, y la ficha de una alerta: qué la disparó, la regla que la creó (nunca su clave de origen,
+// cerradas, cada una una consulta del servidor con su página y su conteo, D10 de la revisión de UX), creadas por JOB-04 o a mano, y la ficha de una alerta: qué la disparó, la regla que la creó (nunca su clave de origen,
 // que es de la plataforma), sus señales, «Vincular señal…» y el riesgo vinculado, con las transiciones de WF-J. solo una persona con
 // la acción declarada CONFIRM_ALERT confirma o descarta (RN-EWS-001); a las demás se les dice por qué no ven esos botones
 const VISTAS = ['triaje', 'activas', 'todas', 'cerradas'] as const
@@ -30,6 +30,11 @@ const ESTADOS_DE_VISTA: Record<(typeof VISTAS)[number], readonly string[] | null
   todas: null,
   cerradas: ['resolved', 'dismissed', 'closed']
 }
+const POR_PAGINA = 25
+const consultaDe = (projectId: string, v: (typeof VISTAS)[number]): Parametros => {
+  const deLaVista = ESTADOS_DE_VISTA[v]
+  return { project: projectId, ...(deLaVista ? { state: estados(deLaVista) } : {}) }
+}
 const CONFIRMAR_ALERTA = 'CONFIRM_ALERT'
 const DECISIONES = ['confirm', 'dismiss']
 
@@ -37,19 +42,18 @@ export function AlertasPage() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
   const lista = useParametrosDeLista('triaje')
-  const alertas = useTodosConTope('early_warning', { project: projectId, sort: 'detected_at', dir: 'desc' })
   const vista = (VISTAS as readonly string[]).includes(lista.vista) ? (lista.vista as (typeof VISTAS)[number]) : 'triaje'
-  const estados = ESTADOS_DE_VISTA[vista]
-  const visibles = (alertas.data ?? []).filter((a) => !estados || estados.includes(a.state ?? ''))
+  const alertas = useRegistros('early_warning', { ...consultaDe(projectId, vista), sort: 'detected_at', dir: 'desc', page: lista.pagina, size: POR_PAGINA })
+  const conteos = useConteos('early_warning', Object.fromEntries(VISTAS.map((v) => [v, consultaDe(projectId, v)])))
+  const visibles = alertas.data?.content ?? []
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <h1 className="text-sg-h1 font-semibold">{t('alertas.titulo')}</h1>
       <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`alertas.vistas.${v}`) }))}
+        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`alertas.vistas.${v}`), conteo: conteos[v] }))}
         actual={vista}
         alCambiar={(v) => lista.cambiar({ view: v })}
       />
-      {alertas.truncado ? <Alert tone="warning">{t('alertas.truncado', { n: numeroPe(alertas.data?.length ?? 0) })}</Alert> : null}
       {alertas.isPending ? (
         <Cargando />
       ) : alertas.isError && !alertas.data ? (
@@ -94,6 +98,7 @@ export function AlertasPage() {
           </Table>
         </div>
       )}
+      <PaginacionDelServidor datos={alertas.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
     </section>
   )
 }

@@ -6,6 +6,7 @@ import { P1 } from '../../test/compromisos'
 import { APORTE, baseDeInversion, EQUIPO_DE_INVERSION, INVERSION, PROGRAMA } from '../../test/inversion'
 import { definicion, montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos, RELACIONISTA } from '../../test/portal'
+import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, type Red } from '../../test/red'
 import { ProgramasPage } from './ProgramasPage'
 
@@ -153,6 +154,8 @@ describe('S42 · programas e inversión', () => {
 
   it('lista los programas y los aportes con su enlace, su socio y su monto en su moneda; filtra los terminados', async () => {
     fetch = mockFetch(rutas())
+    // las vistas de los aportes son consultas del servidor, con su página y su conteo (D10 de la revisión de UX)
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
     abrir()
     const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
     expect(await within(programas).findByRole('link', { name: 'Programa Ejemplo de agua segura' })).toHaveAttribute('href', '/projects/p1/programs/sp1')
@@ -165,6 +168,10 @@ describe('S42 · programas e inversión', () => {
     expect(within(aportes).queryByText('AP-002')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Terminados' }))
     expect(await screen.findByRole('link', { name: 'AP-002' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAccessibleDescription('2 registros')
+    const consultas = red.a('GET', '/objects/social_contribution/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    expect(consultas).toContainEqual(expect.objectContaining({ state: expect.stringContaining('closed'), page: '0', size: '25' }))
+    expect(consultas).toContainEqual(expect.objectContaining({ state_not: expect.stringContaining('closed'), size: '1' }))
   })
 
   it('«Nuevo aporte» pide el motivo, propone PEN, manda el proyecto y abre la ficha del aporte creado', async () => {

@@ -4,7 +4,7 @@ import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Td, Textarea, Th } from '@wasichai/ui'
+import { Button, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
@@ -14,7 +14,7 @@ import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, NoDisponible, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { PaginacionDelServidor, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -22,7 +22,7 @@ import { useProyectos } from '../contexto/proyectos'
 import { rutaDeFicha } from '../datos/fichas'
 import { desglose, useTablero, type Indicador } from '../datos/indicadores'
 import { anioEnLima, APORTE_TERMINADO, MONEDA_POR_DEFECTO } from '../datos/inversion'
-import { atributo, texto, useTodosConTope, type Registro } from '../datos/registros'
+import { atributo, conEstado, estados, texto, useConteos, useRegistros, type Parametros } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ConsultaDeTablero, indicadorDe, useTableroDisponible } from '../tableros/comunes'
@@ -55,6 +55,7 @@ const CAMPOS_DEL_APORTE = [
 ]
 const CAMPOS_DEL_PROGRAMA = ['code', 'name', 'description', 'topic', 'partner_organization', 'agreement', 'start_date', 'end_date', 'currency']
 const VISTAS = ['enCurso', 'terminados', 'todos'] as const
+const POR_PAGINA = 25
 
 export function ProgramasPage() {
   const { t } = useTranslation(NS)
@@ -146,7 +147,11 @@ function useNombreDelProyecto(): (id: string) => React.ReactNode {
 
 function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?: Indicador[] }) {
   const { t } = useTranslation(NS)
-  const programas = useTodosConTope('social_program', { project: proyecto, sort: 'code', dir: 'asc' })
+  // los programas y los aportes se paginan en el servidor (D10 de la revisión de UX); la página de los programas va en ?pp=
+  const lista = useParametrosDeLista('enCurso')
+  const paginaDeProgramas = Number(lista.filtro('pp')) || 0
+  const programas = useRegistros('social_program', { project: proyecto, sort: 'code', dir: 'asc', page: paginaDeProgramas, size: POR_PAGINA })
+  const filas = programas.data?.content ?? []
   const nombreDelProyecto = useNombreDelProyecto()
   const telefono = useEsTelefono()
   const anio = anioEnLima()
@@ -162,18 +167,17 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
   return (
     <section aria-label={t('inversion.programas.titulo')} className="space-y-2">
       <h2 className="text-sg-h2 font-semibold">{t('inversion.programas.titulo')}</h2>
-      {programas.truncado ? <Alert tone="warning">{t('inversion.programas.truncado', { n: numeroPe(programas.data?.length ?? 0) })}</Alert> : null}
       {programas.isPending ? (
         <Cargando />
       ) : programas.isError && !programas.data ? (
         <FalloDeLectura error={programas.error} alReintentar={() => void programas.refetch()} />
-      ) : (programas.data ?? []).length === 0 ? (
+      ) : filas.length === 0 ? (
         <Vacio titulo={t('inversion.programas.vacio')}>{t('inversion.programas.vacioAyuda')}</Vacio>
       ) : telefono ? (
         // en el teléfono, tarjetas (revisión de UX, etapa 8)
         <ListaEnTarjetas
           etiqueta={t('inversion.programas.tabla')}
-          tarjetas={(programas.data ?? []).map((p) => ({
+          tarjetas={filas.map((p) => ({
             id: p.id,
             titulo: (
               <EnlaceDeRegistro
@@ -204,7 +208,7 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
               </tr>
             </thead>
             <tbody>
-              {(programas.data ?? []).map((p) => (
+              {filas.map((p) => (
                 <tr key={p.id}>
                   <Td className="text-sm">
                     <EnlaceDeRegistro
@@ -235,24 +239,30 @@ function Programas({ proyecto, indicadores }: { proyecto?: string; indicadores?:
           </Table>
         </div>
       )}
+      <PaginacionDelServidor datos={programas.data} alPagina={(p) => lista.cambiar({ pp: String(p), page: lista.filtro('page') || null })} />
     </section>
   )
 }
 
-const enVista = (vista: string, aporte: Registro): boolean => {
-  const terminado = APORTE_TERMINADO.includes(aporte.state ?? '')
-  return vista === 'todos' ? true : vista === 'terminados' ? terminado : !terminado
-}
+// la consulta de una vista de los aportes: los terminados, los que siguen en curso o todos
+const consultaDeVista = (vista: string): Parametros =>
+  vista === 'todos' ? {} : vista === 'terminados' ? { state: estados(APORTE_TERMINADO) } : { state_not: estados(APORTE_TERMINADO) }
 
 function Aportes({ proyecto }: { proyecto?: string }) {
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista('enCurso')
-  const aportes = useTodosConTope('social_contribution', { project: proyecto, sort: 'code', dir: 'desc' })
+  const estado = lista.filtro('state')
+  const consultaDe = (vista: string) => {
+    const deLaVista = conEstado(consultaDeVista(vista), estado)
+    return deLaVista && { project: proyecto, ...deLaVista }
+  }
+  const actual = consultaDe(lista.vista)
+  const aportes = useRegistros('social_contribution', { ...actual, sort: 'code', dir: 'desc', page: lista.pagina, size: POR_PAGINA }, actual !== null)
+  const conteos = useConteos('social_contribution', Object.fromEntries(VISTAS.map((v) => [v, consultaDe(v)])))
   const etiquetas = useEtiquetasDeEstado('social_contribution')
   const nombreDelProyecto = useNombreDelProyecto()
   const telefono = useEsTelefono()
-  const estado = lista.filtro('state')
-  const filtrados = (aportes.data ?? []).filter((a) => enVista(lista.vista, a) && (!estado || a.state === estado))
+  const filtrados = actual ? (aportes.data?.content ?? []) : []
   return (
     <section aria-label={t('inversion.aportes.titulo')} className="space-y-2">
       <h2 className="text-sg-h2 font-semibold">{t('inversion.aportes.titulo')}</h2>
@@ -260,7 +270,7 @@ function Aportes({ proyecto }: { proyecto?: string }) {
         vistas={VISTAS.map((v) => ({
           id: v,
           etiqueta: t(`inversion.aportes.vistas.${v}`),
-          conteo: aportes.data ? aportes.data.filter((a) => enVista(v, a) && (!estado || a.state === estado)).length : null
+          conteo: conteos[v]
         }))}
         actual={lista.vista}
         alCambiar={(vista) => lista.cambiar({ view: vista })}
@@ -275,10 +285,9 @@ function Aportes({ proyecto }: { proyecto?: string }) {
           opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}
         />
       </label>
-      {aportes.truncado ? <Alert tone="warning">{t('inversion.aportes.truncado', { n: numeroPe(aportes.data?.length ?? 0) })}</Alert> : null}
-      {aportes.isPending ? (
+      {actual && aportes.isPending ? (
         <Cargando />
-      ) : aportes.isError && !aportes.data ? (
+      ) : actual && aportes.isError && !aportes.data ? (
         <FalloDeLectura error={aportes.error} alReintentar={() => void aportes.refetch()} />
       ) : filtrados.length === 0 ? (
         <Vacio titulo={t('inversion.aportes.vacio')}>{t('inversion.aportes.vacioAyuda')}</Vacio>
@@ -349,6 +358,7 @@ function Aportes({ proyecto }: { proyecto?: string }) {
           </Table>
         </div>
       )}
+      <PaginacionDelServidor datos={aportes.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
     </section>
   )
 }
