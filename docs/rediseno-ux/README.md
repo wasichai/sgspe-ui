@@ -67,14 +67,14 @@ personas.
 | A18 | Mis tareas (global) | «Las tareas para tomar se ven dentro de cada proyecto: elija uno en el selector» | `antes/tareas-escritorio.jpg` | Tomar una tarea exige saber de qué proyecto es | Media | «Para tomar» también en lo global, con la columna Proyecto: el servidor ya acota la lectura a los proyectos de la cuenta (ADR-0029) | Ninguno: la lectura y «Tomar» siguen con sus guardas | `MisTareasPage.test.tsx` |
 | A19 | Riesgos sin ningún riesgo | Matriz 5×5 llena de ceros sobre «No hay riesgos en esta vista», sin siguiente paso | `antes/riesgos-escritorio.jpg` | Ruido y ninguna orientación | Media | Sin riesgos en el alcance: «Aún no hay riesgos registrados» y, a quien crea, cómo identificar el primero | Ninguno | `RiesgosPage.test.tsx` |
 | A20 | Lista de QCS a 1440 px | Diez columnas en lo global: «Responsable» queda cortada y la tabla se desplaza | `antes/qcs-escritorio.jpg` | Lo que importa al final de la fila no se ve sin desplazar | Media | Ocho columnas: el tipo como línea gris sobre el código y el canal bajo la categoría | Ninguno: los mismos datos | `AtencionPage.test.tsx` |
+| A21 | Riesgos, Avisos y la bandeja de IA con filtros | El vacío por filtros no ofrecía quitarlos («No hay riesgos en esta vista», «Ninguna propuesta coincide con los filtros») | Compromisos y QCS ya usaban `VacioDeLista` | Se cree que no hay registros cuando es el filtro | Baja | `VacioDeLista`: «Nada coincide con los filtros», cuántas hay sin ellos donde se sabe y «Limpiar filtros» | Ninguno | `RiesgosPage.test.tsx`, `avisos.test.tsx`, `BandejaDeIaPage.test.tsx` |
+| A22 | Camino del flujo | Un estado del camino de la ficha que el workflow desplegado no define sale con su nombre técnico (`pending_approval`) | `antes/simulada-compromiso-ficha-escritorio.jpg` | Ruido técnico ante la persona | Baja | Del camino dado solo se dibujan los estados que el workflow tiene | Ninguno | `CaminoDelFlujo.test.tsx` |
 
 ### 3.2 Observados y no resueltos
 
 | # | Pantalla o flujo | Problema | Evidencia | Gravedad | Por qué no se hizo | Propuesta |
 |---|---|---|---|---|---|---|
-| P2 | Listas con filtros | El vacío de una vista filtrada no ofrece quitar el filtro | Riesgos («No hay riesgos en esta vista»), Tareas | Baja | Cada lista arma su vacío; conviene una pieza común | `Vacio` con «Quitar filtros» cuando hay filtros puestos |
 | P4 | Territorio | Su propio «Proyecto del mapa» además del selector de la barra | `despues/territorio-escritorio.jpg` | Media | El mapa necesita «Todo el territorio», que no es «Todos los proyectos»: es una decisión de diseño | Decidir en `docs/ux` si el mapa sigue a la barra y suma «Todo el territorio» |
-| P6 | Camino del flujo | Sin etiqueta en el workflow, muestra el nombre técnico (`pending_approval`) | `simulada-compromiso-ficha-escritorio.jpg` | Baja | Con el backend real las etiquetas existen | Mientras no llega la etiqueta, no dibujar el paso |
 
 ### 3.3 Hipótesis que necesitan personas
 
@@ -186,6 +186,8 @@ Rama `ux/rediseno-orientacion`, un commit por cambio (Conventional Commits), con
 - `fix`: sin monto, el encabezado del compromiso no dibuja un «—» suelto (A16).
 - `feat`: «Para tomar» fuera de un proyecto y el registro de riesgos vacío dice cómo empezar (A18, A19).
 - `feat`: la lista de QCS cabe a 1440 px con ocho columnas (A20).
+- `feat`: un vacío por filtros en Riesgos, Avisos y la bandeja de IA los limpia (A21).
+- `fix`: el camino del flujo no dibuja un estado que el workflow no tiene (A22).
 
 Archivos principales:
 
@@ -222,15 +224,15 @@ Contratos que no cambiaron:
    barra actual (y la búsqueda ahora más útil)?
 2. **El mapa y la barra (P4).** Decidir si Territorio sigue al selector de la barra.
 3. **Lo que vuelve de «Más acciones» (H3).** Medir el uso de reclasificar y de crear un compromiso desde la queja.
-4. **Listas (P2).** La rama de listas por rango y atención (#74) se integró durante esta pasada; A18, A19 y A20 ya se
-   hicieron sobre ella. Falta el vacío con «Quitar filtros», mejor como una pieza común.
-5. **Riesgo.** El documento `docs/ux/design-system.md` §6.1 describe la barra de la ficha: hay que sumarle la regla de
-   «una primaria + Más acciones» para que el diseño y el portal no diverjan.
+4. **El diseño canónico.** La regla «una primaria + Más acciones», la razón de un bloqueo a la vista y los estados de §6.5
+   (ruta inexistente, 404 de un módulo, error de carga) se proponen en `design-system.md` con wasichai/sgspe#142. A14 cambió
+   antes que el diseño: §6.5 pedía decir «que los filtros se conservan» en todo error de carga. Si la revisión de #142
+   prefiere mantener la frase en las listas, el portal tiene que volver a decirla solo ahí.
 
 ## 9. Pruebas ejecutadas
 
 - `yarn format`, `yarn lint` y `yarn typecheck`: sin cambios ni errores.
-- `yarn test`: 2169 pruebas en 188 archivos (antes de esta pasada: 2143 en 186). Con la máquina muy cargada (carga
+- `yarn test`: 2173 pruebas en 188 archivos (antes de esta pasada: 2143 en 186). Con la máquina muy cargada (carga
   promedio 37), dos corridas completas tuvieron cada una un tiempo agotado distinto, en pruebas pesadas que esta pasada no
   cambió: `RiesgosPage` «sin tope» (más de 1000 registros) y `FichaAportePage` «tope de lectura». Aisladas pasan siempre.
 - `yarn build` y las e2e de Playwright contra la build en otro puerto: 62 recorridos en verde, incluidos los 2 nuevos de
