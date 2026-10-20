@@ -4,7 +4,7 @@ import type { FetchMock, MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal } from '../../test/pantalla'
-import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
+import { ADMIN_PERMISOS, ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
 
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -221,6 +221,32 @@ describe('S08 · Project 360, resumen', () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
     expect(await screen.findByText('oct. 2026: 3 de 2')).toBeInTheDocument()
     expect(await screen.findByText(/cambio de etapa/)).toBeInTheDocument()
+  })
+
+  // rediseño de UX (2026-10-20): un proyecto en revisión ofrecía «Registrar interacción», «Devolver», «Aprobar» y «Anular el
+  // proyecto» con el mismo peso. mientras no está activo, su decisión es la primaria y lo demás va en «Más acciones»
+  it('en revisión, «Aprobar» es la primaria y «Devolver» y «Anular» van en «Más acciones»', async () => {
+    const enRevision = registro('p1', { ...P1.attributes }, { state: 'in_review' })
+    const transicion = (name: string, label: string, to: string) => ({ name, label, to, toLabel: to, allowed: true, reason: null })
+    fetch = abrirPortal('/projects/p1/overview', ADMINISTRACION, ADMIN_PERMISOS, [
+      { path: '/objects/project/records/p1', body: enRevision },
+      {
+        path: '/objects/project/records/p1/transitions',
+        body: [
+          transicion('return_to_draft', 'Devolver', 'draft'),
+          transicion('approve', 'Aprobar', 'active'),
+          transicion('cancel_in_review', 'Anular', 'cancelled')
+        ]
+      },
+      ...rutas(SIN_STANCE)
+    ])
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar' })
+    expect(aprobar).toHaveAttribute('data-variant', 'primary')
+    expect(screen.getByRole('link', { name: 'Registrar interacción' })).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.queryByRole('button', { name: 'Devolver' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
+    expect(screen.getByRole('button', { name: 'Devolver' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Anular el proyecto' })).toBeInTheDocument()
   })
 
   it('sin asignación no ofrece las transiciones del proyecto; con ella, sí (re-revisión, menor 4)', async () => {
