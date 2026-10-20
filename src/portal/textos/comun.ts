@@ -49,6 +49,9 @@ export const ES_COMUN = {
   sinResultados: 'Nada coincide con los filtros',
   vacio: 'Aún no hay registros',
   sinDatosEnElPeriodo: 'Sin datos en el periodo',
+  // la base de un porcentaje en una tarjeta de cifra
+  nDeN: '{{n}} de {{total}}',
+  listaNoDisponible: 'Esta información no está disponible en su organización.',
   seleccionar: 'Seleccionar…',
   todos: 'Todos',
   verTodos_one: 'Ver el {{count}}',
@@ -377,6 +380,8 @@ export const EN_COMUN: typeof ES_COMUN = {
   sinResultados: 'Nothing matches the filters',
   vacio: 'No records yet',
   sinDatosEnElPeriodo: 'No data for the period',
+  nDeN: '{{n}} of {{total}}',
+  listaNoDisponible: 'This information is not available in your organization.',
   seleccionar: 'Select…',
   todos: 'All',
   verTodos_one: 'Show {{count}}',

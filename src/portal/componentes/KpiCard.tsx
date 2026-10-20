@@ -45,26 +45,34 @@ export function KpiCard({
   else if (!indicador.available) cuerpo = <NoDisponible motivo={indicador.unavailableReason} />
   // sin valor en el periodo (un porcentaje sin base, una mediana sin casos) se dice, sin «—» ni la unidad suelta
   else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
-  else
+  else {
+    // un porcentaje lleva su signo junto a la cifra y debajo su base, «n de N» (rediseño de UX, 2026-10-20: se leía «0 / 1 · %»);
+    // otra unidad («QCS», «compromisos») va debajo
+    const porcentaje = indicador.unit === '%'
+    const valor = `${numeroPe(indicador.value)}${porcentaje ? ' %' : ''}`
+    const base =
+      porcentaje && indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
+        ? t('comun.nDeN', { n: numeroPe(indicador.numerator), total: numeroPe(indicador.denominator) })
+        : ''
     cuerpo = (
       <>
         <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">
           {a ? (
-            <Link to={a} aria-label={`${titulo}: ${numeroPe(indicador.value)}`} className="hover:underline">
-              {numeroPe(indicador.value)}
+            <Link to={a} aria-label={`${titulo}: ${valor}`} className="hover:underline">
+              <span>{numeroPe(indicador.value)}</span>
+              {porcentaje ? <span className="text-sg-h3"> %</span> : null}
             </Link>
           ) : (
-            numeroPe(indicador.value)
+            <>
+              <span>{numeroPe(indicador.value)}</span>
+              {porcentaje ? <span className="text-sg-h3"> %</span> : null}
+            </>
           )}
         </p>
-        <p className="text-sg-caption text-sg-text-muted">
-          {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
-            ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `
-            : ''}
-          {indicador.unit ?? ''}
-        </p>
+        <p className="text-sg-caption text-sg-text-muted">{porcentaje ? base : (indicador.unit ?? '')}</p>
       </>
     )
+  }
   return (
     <section aria-label={titulo} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
