@@ -257,11 +257,11 @@ export function AtencionPage() {
                     <Table aria-label={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}>
                       <thead>
                         <tr>
-                          <Th scope="col">{t('atencion.columnas.tipo')}</Th>
+                          {/* ocho columnas y no diez (rediseño de UX, 2026-10-20): el tipo va con la QCS y el canal con la
+                            categoría, para que «Responsable» no quede cortada a 1440 px */}
                           <Th scope="col">{t('atencion.columnas.codigo')}</Th>
                           {proyecto ? null : <Th scope="col">{t('atencion.columnas.proyecto')}</Th>}
-                          <Th scope="col">{t('atencion.columnas.canal')}</Th>
-                          <Th scope="col">{t('atencion.columnas.categoria')}</Th>
+                          <Th scope="col">{t('atencion.columnas.categoriaYCanal')}</Th>
                           {conSeveridad ? <Th scope="col">{t('atencion.columnas.severidad')}</Th> : null}
                           <Th scope="col">{t('atencion.columnas.estado')}</Th>
                           <Th scope="col">{t('atencion.columnas.plazo')}</Th>
@@ -322,8 +322,8 @@ function FilaDeQcs({
   const { objeto, registro } = fila
   return (
     <tr>
-      <Td className="text-sm">{t(`comun.qcs.${objeto}`)}</Td>
       <Td className="min-w-56 text-sm" title={texto(registro, 'description') || undefined}>
+        <span className="block text-sg-caption text-sg-text-muted">{t(`comun.qcs.${objeto}`)}</span>
         <EnlaceDeRegistro
           codigo={texto(registro, 'code')}
           titulo={asuntoDe(registro)}
@@ -334,8 +334,10 @@ function FilaDeQcs({
         />
       </Td>
       {conProyecto ? <Td className="text-sm">{nombreDelProyecto(texto(registro, 'project'))}</Td> : null}
-      <Td className="text-sm">{opcion(registro, 'channel') || '—'}</Td>
-      <Td className="text-sm">{opcion(registro, 'category') || '—'}</Td>
+      <Td className="text-sm">
+        <span className="block">{opcion(registro, 'category') || '—'}</span>
+        {opcion(registro, 'channel') ? <span className="block text-sg-caption text-sg-text-muted">{opcion(registro, 'channel')}</span> : null}
+      </Td>
       {conSeveridad ? <Td className="text-sm">{opcion(registro, 'severity') || '—'}</Td> : null}
       <Td>
         <EstadoChip objeto={objeto} estado={registro.state} />
