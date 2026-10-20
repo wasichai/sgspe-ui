@@ -93,6 +93,12 @@ export function GruposPage() {
     setSeleccion(new Set())
   }
   const elegidos = pagina.filter((g) => seleccion.has(g.id)).map((g) => g.id)
+  const alternar = (id: string, si: boolean) => {
+    const siguiente = new Set(seleccion)
+    if (si) siguiente.add(id)
+    else siguiente.delete(id)
+    setSeleccion(siguiente)
+  }
   const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` }))
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
@@ -190,12 +196,13 @@ export function GruposPage() {
           ) : (
             <>
               {telefono ? (
-                // en el teléfono, tarjetas con el nombre, su vista previa, el estado y el proyecto (revisión de UX, etapa 8)
+                // en el teléfono, tarjetas con el nombre, su vista previa, el estado y el proyecto (revisión de UX, etapa 8); en un
+                // proyecto, cada una con su casilla para registrar una interacción con los elegidos
                 <ListaEnTarjetas
                   etiqueta={t('grupos.titulo')}
                   tarjetas={pagina.map((g) => ({
                     id: g.id,
-                    titulo: <TituloDeGrupo grupo={g} />,
+                    titulo: <TituloDeGrupo grupo={g} seleccionado={seleccion.has(g.id)} alSeleccionar={proyecto ? (si) => alternar(g.id, si) : undefined} />,
                     estado: <EstadoChip objeto="stakeholder" estado={g.state} />,
                     proyecto: proyecto ? undefined : <ProyectoDelGrupo grupo={g} />,
                     detalle: [opcion(g, 'stakeholder_type'), opcion(g, 'influence_group')].filter(Boolean).join(' · ') || undefined
@@ -248,16 +255,7 @@ export function GruposPage() {
                           leePostura={leePostura}
                           idDeLaPostura={idDeLaPostura}
                           seleccionado={seleccion.has(g.id)}
-                          alSeleccionar={
-                            proyecto
-                              ? (si) => {
-                                  const siguiente = new Set(seleccion)
-                                  if (si) siguiente.add(g.id)
-                                  else siguiente.delete(g.id)
-                                  setSeleccion(siguiente)
-                                }
-                              : undefined
-                          }
+                          alSeleccionar={proyecto ? (si) => alternar(g.id, si) : undefined}
                         />
                       ))}
                     </tbody>
@@ -354,12 +352,23 @@ function Fila({
   )
 }
 
-// el título de la tarjeta de un grupo en el teléfono: su nombre como enlace (con su paso en el rastro) y su vista previa
-function TituloDeGrupo({ grupo }: { grupo: Registro }) {
+// el título de la tarjeta de un grupo en el teléfono: su casilla (en un proyecto), su nombre como enlace (con su paso en el
+// rastro) y su vista previa
+function TituloDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro; seleccionado: boolean; alSeleccionar?: (si: boolean) => void }) {
+  const { t } = useTranslation(NS)
   const nombre = useNombreDelGrupo(grupo)
   const paso = useSiguientePaso()
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
+      {alSeleccionar ? (
+        <input
+          type="checkbox"
+          aria-label={`${t('comun.seleccionar')} ${nombre}`}
+          checked={seleccionado}
+          onChange={(e) => alSeleccionar(e.target.checked)}
+          className="mr-1 size-5"
+        />
+      ) : null}
       <Link
         to={`/projects/${encodeURIComponent(String(atributo(grupo, 'project')))}/stakeholders/${encodeURIComponent(grupo.id)}`}
         state={paso()}

@@ -129,6 +129,29 @@ describe('S16 · lista de grupos de interés', () => {
     expect(rutaActual()).toBe('/projects/p1/engagements/new?stakeholders=s1,s2')
   })
 
+  it('en el teléfono, cada tarjeta lleva su casilla y la selección abre el registro de interacción con ellos', async () => {
+    const original = window.matchMedia
+    window.matchMedia = ((consulta: string) => ({
+      matches: true,
+      media: consulta,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    })) as unknown as typeof window.matchMedia
+    try {
+      fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+      const tarjetas = await screen.findByRole('list', { name: 'Grupos de interés' })
+      const casillas = await within(tarjetas).findAllByRole('checkbox')
+      expect(casillas).toHaveLength(2)
+      await userEvent.click(casillas[0])
+      await userEvent.click(casillas[1])
+      expect(screen.getByText('2 seleccionados')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Registrar una interacción con ellos' }))
+      expect(rutaActual()).toBe('/projects/p1/engagements/new?stakeholders=s1,s2')
+    } finally {
+      window.matchMedia = original
+    }
+  })
+
   it('en el alcance global agrega la columna Proyecto y no ofrece la matriz', async () => {
     fetch = abrirPortal('/stakeholders', RELACIONISTA, LEE, [
       ...base(),
