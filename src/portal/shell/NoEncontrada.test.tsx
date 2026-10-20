@@ -16,9 +16,10 @@ afterEach(() => {
 describe('NoEncontrada', () => {
   it('dentro de una sección, lleva a su lista y al inicio', () => {
     montar(<NoEncontrada />, { ruta: '/commitments/abc/def' })
-    expect(screen.getByText('Esta página no existe')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Esta página no existe' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Ir a Compromisos' })).toHaveAttribute('href', '/commitments')
     expect(screen.getByRole('link', { name: 'Ir al inicio' })).toHaveAttribute('href', '/')
+    expect(document.title).toBe('Esta página no existe · SGSPE')
   })
 
   it('fuera de toda sección, solo al inicio', () => {
