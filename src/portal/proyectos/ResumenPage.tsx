@@ -30,6 +30,7 @@ import { TableroDelProyecto, useIndicadoresDelProyecto } from './TableroDelProye
 import { opcion } from '../datos/opciones'
 import { ListaPlegable } from '../componentes/ListaPlegable'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
 // project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
@@ -170,8 +171,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
         />
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
-        <section aria-label={t('p360.resumen.paisaje')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.paisaje')}</h2>
+        <Seccion titulo={t('p360.resumen.paisaje')} className="space-y-3">
           <div className="flex flex-wrap gap-6">
             <div className="space-y-1">
               <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('p360.resumen.matriz')}</h3>
@@ -208,9 +208,8 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               )}
             </div>
           </div>
-        </section>
-        <section aria-label={t('p360.resumen.reuniones')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.reuniones')}</h2>
+        </Seccion>
+        <Seccion titulo={t('p360.resumen.reuniones')}>
           {eng02.isPending ? (
             <Cargando />
           ) : eng02.isError ? (
@@ -243,12 +242,11 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               })}
             </ul>
           )}
-        </section>
+        </Seccion>
       </div>
       <TableroDelProyecto tablero={tablero} proyecto={proyecto.id} />
       <div className="grid gap-4 lg:grid-cols-2">
-        <section aria-label={t('p360.resumen.areas')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.areas')}</h2>
+        <Seccion titulo={t('p360.resumen.areas')}>
           {areas.isPending ? <Cargando /> : null}
           {areas.isError ? <FalloDeLectura error={areas.error} alReintentar={() => void areas.refetch()} /> : null}
           <ul className="space-y-1 text-sm">
@@ -283,7 +281,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
           <Link to={`/projects/${encodeURIComponent(proyecto.id)}/map`} className="text-sg-caption text-sg-primary-text underline">
             {t('p360.resumen.verMapa')}
           </Link>
-        </section>
+        </Seccion>
         <Actividad proyecto={proyecto.id} />
       </div>
     </div>
@@ -346,8 +344,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   const cargando = fuentes.some((f) => f.consulta.isPending)
   const fallidas = fuentes.filter((f) => f.consulta.isError)
   return (
-    <section aria-label={t('p360.resumen.atencion')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.atencion')}</h2>
+    <Seccion titulo={t('p360.resumen.atencion')}>
       {hayAvisos ? (
         <div className="grid gap-4 lg:grid-cols-3">
           {grupos_.map((g) => (
@@ -363,7 +360,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
         </div>
       ))}
       {!hayAvisos && !cargando && fallidas.length === 0 ? <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinAtencion')}</p> : null}
-    </section>
+    </Seccion>
   )
 }
 
@@ -377,9 +374,8 @@ function AvisoDeGrupo({ grupo, nunca = false }: { grupo: Registro; nunca?: boole
 function Actividad({ proyecto }: { proyecto: string }) {
   const { t } = useTranslation(NS)
   return (
-    <section aria-label={t('p360.resumen.actividad')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.actividad')}</h2>
+    <Seccion titulo={t('p360.resumen.actividad')}>
       <Historia objeto="project" id={proyecto} limite={10} vacio={t('p360.resumen.sinActividad')} />
-    </section>
+    </Seccion>
   )
 }
