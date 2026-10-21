@@ -81,14 +81,27 @@ describe('S28 · lista de compromisos', () => {
       '/projects/p1/commitments?peek=commitment%3Ac1'
     )
     expect(within(tabla).getAllByText('S/ 25,000.00')).toHaveLength(3)
-    await userEvent.click(screen.getByRole('tab', { name: 'Vencidos' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Vencidos\b/ }))
     expect(await within(await screen.findByRole('table', { name: 'Compromisos' })).findByText('Taller de costura')).toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(2)
-    await userEvent.click(screen.getByRole('tab', { name: 'Bloqueados' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Bloqueados\b/ }))
     expect(screen.getByText('Taller de costura')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Por vencer' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Por vencer\b/ }))
     expect(screen.getByText('Becas escolares')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Nuevo compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new')
+  })
+
+  // hallazgo U-18 (CA-1.3.1): las vistas van en una sola fila, sin una segunda fila de pestañas
+  it('elegir «Vencidos» deja ?view=vencidos en la URL y conserva los demás parámetros', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=Taller&state=blocked')
+    await screen.findByRole('table', { name: 'Compromisos' })
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Vistas' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /^Vencidos\b/ }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?q=Taller&state=blocked&view=vencidos')
+    expect(screen.getByRole('radio', { name: /^Vencidos\b/ })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('«Míos» lista los abiertos de quien mira; «Cerrados y cancelados», los cerrados', () => {
@@ -123,10 +136,12 @@ describe('S28 · lista de compromisos', () => {
     red = conServidor()
     enProyecto()
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
-    expect(screen.getByRole('tab', { name: 'Abiertos' })).toHaveAccessibleDescription('3 registros')
-    expect(screen.getByRole('tab', { name: 'Vencidos' })).toHaveAccessibleDescription('1 registro')
-    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('1 registro')
-    expect(screen.getByRole('tab', { name: 'Candidatos' })).not.toHaveAccessibleDescription()
+    // el conteo va en el nombre de cada vista (SelectorDeVista); las que no caben, en «Más vistas», también con su conteo
+    expect(await screen.findByRole('radio', { name: 'Abiertos, 3' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Vencidos, 1' })).toHaveAttribute('aria-checked', 'false')
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.getByRole('button', { name: 'Cerrados y cancelados, 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Candidatos' })).toHaveTextContent(/^Candidatos$/)
     expect(screen.getByText('3 compromisos')).toBeInTheDocument()
     expect(within(tabla).getByText('C-002')).toHaveClass('font-sg-mono')
   })
@@ -173,9 +188,11 @@ describe('S28 · lista de compromisos', () => {
       page: '0',
       size: '25'
     })
-    await userEvent.click(screen.getByRole('tab', { name: 'Cerrados y cancelados' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Cerrados y cancelados\b/ }))
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('0 registros')
+    // la vista elegida del menú entra a la fila, con su conteo
+    expect(screen.getByRole('radio', { name: 'Cerrados y cancelados, 0' })).toHaveAttribute('aria-checked', 'true')
     expect(consultasA(red).some((c) => c.state === 'closed,cancelled' && c.size === '25')).toBe(false)
   })
 
@@ -210,7 +227,8 @@ describe('S28 · lista de compromisos', () => {
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
     expect(within(tabla).getAllByRole('row')).toHaveLength(3)
     expect(within(tabla).queryByText('Becas escolares')).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('1 registro')
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.getByRole('button', { name: 'Cerrados y cancelados, 1' })).toBeInTheDocument()
     expect(consultasA(red)).toEqual([])
   })
 

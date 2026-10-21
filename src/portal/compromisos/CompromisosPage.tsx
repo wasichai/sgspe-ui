@@ -9,7 +9,8 @@ import { CONTROL, SelectNativo } from '../componentes/Campo'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
+import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -150,10 +151,12 @@ export function CompromisosPage() {
           </>
         }
       />
-      <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`compromisos.vistas.${v}`), conteo: v === 'candidatos' ? undefined : conteoDe(v) }))}
+      {/* las vistas en una sola fila, con su conteo (hallazgo U-18): ?view= conserva los demás parámetros */}
+      <SelectorDeVista
+        etiqueta={t('comun.vistas')}
+        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`compromisos.vistas.${v}`), n: v === 'candidatos' ? undefined : conteoDe(v) }))}
         actual={lista.vista}
-        alCambiar={(vista) => lista.cambiar({ view: vista })}
+        alElegir={(vista) => lista.cambiar({ view: vista })}
       />
       {enCandidatos ? (
         <Candidatos proyecto={proyecto} />

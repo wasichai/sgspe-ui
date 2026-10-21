@@ -36,6 +36,11 @@ export const ES_COMUN = {
     igualEnTodas: 'Igual en todas las filas',
     uniforme: '{{encabezado}}: <valor/>'
   },
+  // las vistas de un módulo en una sola fila, con su conteo (hallazgo U-18): «Vencidos, 1» es el nombre accesible
+  selectorDeVista: {
+    conConteo: '{{etiqueta}}, {{n}}',
+    mas: 'Más vistas'
+  },
   llegaEn: 'Todavía no está disponible en su organización.',
   guardar: 'Guardar',
   guardando: 'Guardando…',
@@ -393,6 +398,10 @@ export const EN_COMUN: typeof ES_COMUN = {
   tablaPriorizada: {
     igualEnTodas: 'Same in every row',
     uniforme: '{{encabezado}}: <valor/>'
+  },
+  selectorDeVista: {
+    conConteo: '{{etiqueta}}, {{n}}',
+    mas: 'More views'
   },
   llegaEn: 'Not available in your organization yet.',
   guardar: 'Save',
