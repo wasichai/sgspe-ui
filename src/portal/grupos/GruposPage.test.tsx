@@ -7,7 +7,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { base, LEE, P1 } from '../../test/grupos'
+import { base, LEE, P1, S1, S2 } from '../../test/grupos'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -51,14 +51,57 @@ describe('S16 · lista de grupos de interés', () => {
     expect(screen.getByRole('table', { name: 'Grupos de interés', hidden: true })).toBeInTheDocument()
   })
 
-  // revisión de UX, etapa 3: vistas con conteo, el total en el encabezado y Responsable solo desde 1440 px
-  it('cada vista dice cuántos tiene, el encabezado el total, y Responsable se oculta por debajo de 1440 px', async () => {
+  // revisión de UX, etapa 3: vistas con conteo y el total en el encabezado
+  it('cada vista dice cuántos tiene y el encabezado el total', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAccessibleDescription('2 registros')
     expect(screen.getByRole('tab', { name: 'Retirados' })).toHaveAccessibleDescription('1 registro')
     expect(screen.getByText('2 grupos de interés')).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Responsable' })).toHaveClass('hidden', '2xl:table-cell')
+  })
+
+  // hallazgo U-06 (DD-05): la tabla cabe a 1440 px por la prioridad de sus columnas
+  it('las columnas van por prioridad: las secundarias desde xl, las opcionales no se dibujan y las uniformes van a una nota', async () => {
+    const conResponsable = (id: string, extra: Record<string, unknown>) => {
+      const g = [S1, S2].find((r) => r.id === id)!
+      return { ...g, attributes: { ...g.attributes, owner_user_email: 'gestion@sgspe.test', ...extra } }
+    }
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
+      { path: '/sgspe/people', body: [{ email: 'gestion@sgspe.test', displayName: 'Gestión de compromisos (demo)' }] },
+      { path: '/objects/locality/records/l1', body: registro('l1', { name: 'Tunas' }) },
+      { path: '/objects/locality/records/l2', body: registro('l2', { name: 'Huaylla' }) },
+      { path: '/objects/stakeholder/records', body: pagina([conResponsable('s1', { locality: 'l1' }), conResponsable('s2', { locality: 'l2' })]) },
+      ...base()
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    const tabla = within(screen.getByRole('table', { name: 'Grupos de interés' }))
+    // esenciales, siempre
+    for (const c of ['Grupo de interés', 'Grupo de influencia', 'Postura', 'Prioridad', 'Estado'])
+      expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
+    // secundarias, desde xl
+    for (const c of ['Territorio', 'Último contacto']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'xl:table-cell')
+    // opcionales, para el selector «Columnas»
+    for (const c of ['Relación', 'Evaluación']) expect(tabla.queryByRole('columnheader', { name: c })).not.toBeInTheDocument()
+    // el mismo responsable en toda la página: sale de la tabla y queda en la nota, con su nombre
+    expect(tabla.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
+    const nota = screen.getByRole('list', { name: 'Igual en todas las filas' })
+    await waitFor(() => expect(within(nota).getByRole('listitem')).toHaveTextContent('Responsable: Gestión de compromisos (demo)'))
+    expect(await within(filas()[0]).findByText('Tunas')).toBeInTheDocument()
+  })
+
+  it('en «Míos» no se dibuja el responsable: es quien mira', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders?view=mios', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(screen.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Responsable:/)).not.toBeInTheDocument()
+  })
+
+  it('Enter en una fila enfocada abre la ficha del grupo', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    filas()[1].focus()
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s2'))
   })
 
   it('la postura restringida se explica una vez, en el encabezado: las celdas no llevan botón de ayuda', async () => {
