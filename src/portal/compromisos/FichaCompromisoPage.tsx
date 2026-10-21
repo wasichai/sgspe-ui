@@ -137,7 +137,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
             <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
           </>
         }
-        primaria={<BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        primaria={<BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} destructivasEnMenu />}
         secundarias={
           <>
             <VerEnElMapa objeto="commitment" registro={compromiso} />

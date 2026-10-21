@@ -2,7 +2,9 @@ import { Button } from '@wasichai/ui'
 import { useAvailableTransitions, type AvailableTransition } from '@wasichai/workflow'
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MasAcciones } from '../componentes/Pagina'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
+import { siguienteTransicion } from '../fichas/siguienteAccion'
 import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useComprobacion } from './api'
@@ -11,10 +13,11 @@ import { DialogoDeTransicion } from './DialogoDeTransicion'
 import { esDeComando } from './reglas'
 
 // las transiciones del estado actual para quien mira (GET …/transitions, de @wasichai/workflow). las que su rol no tiene
-// no aparecen (design-system.md §6.2); las de comando tampoco: tienen su propia pantalla. la primera es la primaria, salvo
-// con sinPrimaria (la ficha ya tiene la suya: un solo botón primario por encabezado). las que anulan, cancelan, retiran o
-// resuelven van al final, como secundarias con texto de peligro y nombrando el objeto («Anular el proyecto»), para que no se
-// confundan con «cerrar el diálogo». las de comprobarAntes consultan transition-checks al dibujarse y, si una regla las
+// no aparecen (design-system.md §6.2); las de comando tampoco: tienen su propia pantalla. la primaria es la siguiente acción
+// del camino del flujo (siguienteTransicion, la misma del panel de decisión; DD-02 del rediseño de UX) o, si no hay una del
+// camino, la primera; salvo con sinPrimaria (la ficha ya tiene la suya: un solo botón primario por encabezado). las que anulan,
+// cancelan, retiran o terminan van al final, como secundarias con texto de peligro y nombrando el objeto («Anular el
+// proyecto»), para que no se confundan con «cerrar el diálogo»; con destructivasEnMenu, en «Más acciones», lejos de la primaria. las de comprobarAntes consultan transition-checks al dibujarse y, si una regla las
 // bloquea, salen deshabilitadas con la razón
 const DURACION_DE_LA_CONFIRMACION = 6000
 const DESTINOS_DESTRUCTIVOS = new Set(['cancelled', 'voided', 'retired', 'terminated'])
@@ -28,7 +31,8 @@ export function BotonesDeTransicion({
   comprobarAntes = [],
   proyecto,
   anexos,
-  sinPrimaria = false
+  sinPrimaria = false,
+  destructivasEnMenu = false
 }: {
   objeto: string
   registro: Registro
@@ -42,6 +46,8 @@ export function BotonesDeTransicion({
   // por transición, lo que se agrega al motivo (DialogoDeTransicion.anexo)
   anexos?: Partial<Record<string, string>>
   sinPrimaria?: boolean
+  // las destructivas en «Más acciones» (el encabezado de una ficha, DD-02): no quedan junto a la primaria
+  destructivasEnMenu?: boolean
 }) {
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, registro.id)
@@ -59,26 +65,33 @@ export function BotonesDeTransicion({
   const permitidas = ofrece
     ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name) && (!solo || solo.includes(tr.name)))
     : []
-  const visibles = [...permitidas.filter((tr) => !esDestructiva(tr)), ...permitidas.filter(esDestructiva)]
-  if (visibles.length === 0 && !hecha) return null
+  const avanzan = permitidas.filter((tr) => !esDestructiva(tr))
+  const destructivas = permitidas.filter(esDestructiva)
+  const primaria = sinPrimaria ? null : (siguienteTransicion(objeto, avanzan) ?? avanzan[0] ?? null)
+  const visibles = [...(primaria ? [primaria] : []), ...avanzan.filter((tr) => tr !== primaria), ...(destructivasEnMenu ? [] : destructivas)]
+  const enMenu = destructivasEnMenu ? destructivas : []
+  const abrir = (tr: AvailableTransition) => {
+    setHecha(null)
+    setAbierta(tr)
+  }
+  const boton = (tr: AvailableTransition) => (
+    <BotonDeTransicion
+      key={tr.name}
+      objeto={objeto}
+      registro={registro}
+      transicion={tr}
+      primaria={tr === primaria}
+      comprobar={comprobarAntes.includes(tr.name)}
+      alAbrir={() => abrir(tr)}
+    />
+  )
+  if (visibles.length === 0 && enMenu.length === 0 && !hecha) return null
   return (
     <div className="space-y-2">
-      {visibles.length > 0 ? (
+      {visibles.length > 0 || enMenu.length > 0 ? (
         <div role="group" aria-label={t('transiciones.acciones')} className="flex flex-wrap gap-2">
-          {visibles.map((tr, i) => (
-            <BotonDeTransicion
-              key={tr.name}
-              objeto={objeto}
-              registro={registro}
-              transicion={tr}
-              primaria={!sinPrimaria && i === 0 && !esDestructiva(tr)}
-              comprobar={comprobarAntes.includes(tr.name)}
-              alAbrir={() => {
-                setHecha(null)
-                setAbierta(tr)
-              }}
-            />
-          ))}
+          {visibles.map(boton)}
+          {enMenu.length > 0 ? <MasAcciones>{enMenu.map(boton)}</MasAcciones> : null}
         </div>
       ) : null}
       {hecha ? (

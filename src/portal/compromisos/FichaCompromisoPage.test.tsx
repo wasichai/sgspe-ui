@@ -69,6 +69,31 @@ describe('S29 · ficha de compromiso', () => {
     expect(screen.getByRole('button', { name: 'Bloquear' })).toBeEnabled()
   })
 
+  // U-02 y U-03 del rediseño (DD-02): la primaria es la siguiente acción del flujo aunque el servidor la liste después, y la
+  // que cancela va en «Más acciones», lejos de la primaria
+  it('la primaria es «Registrar cumplimiento», la siguiente acción, y cancelar va en «Más acciones»', async () => {
+    fetch = mockFetch(
+      rutas(C1, [
+        {
+          path: '/objects/commitment/records/c1/transitions',
+          body: [
+            { name: 'block', label: 'Bloquear', to: 'blocked', toLabel: 'Bloqueado', allowed: true, reason: null },
+            { name: 'cancel', label: 'Cancelar', to: 'cancelled', toLabel: 'Cancelado', allowed: true, reason: null },
+            { name: 'register_fulfillment', label: 'Registrar cumplimiento', to: 'fulfilled', toLabel: 'Cumplido', allowed: true, reason: null }
+          ]
+        }
+      ])
+    )
+    abrir()
+    const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    expect(cumplimiento).toHaveAttribute('data-variant', 'primary')
+    expect(within(acciones).getByRole('button', { name: 'Bloquear' })).toHaveAttribute('data-variant', 'secondary')
+    expect(within(acciones).queryByRole('button', { name: /^Cancelar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Cancelar/ })).toBeInTheDocument()
+  })
+
   // revisión de UX, etapa 4: la anatomía común de la ficha (design-system.md §6.1)
   it('dice el camino del flujo, la siguiente acción con lo que falta, y los conteos de sus pestañas', async () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/delivery/records', body: pagina([], { totalElements: 2 }) }]))

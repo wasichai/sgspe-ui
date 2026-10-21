@@ -152,9 +152,11 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
         }
         primaria={
           <div className="flex flex-wrap gap-2">
+            {/* la siguiente acción del flujo es la primaria (DD-02 del rediseño de UX); sin una del camino, la nueva revisión */}
             {revisa ? (
               <Button
                 size="sm"
+                variant={siguiente ? 'secondary' : 'primary'}
                 onClick={() => {
                   setHecha(null)
                   setRevisando(true)
@@ -163,7 +165,14 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
                 {t('fichaRiesgo.revision.nueva')}
               </Button>
             ) : null}
-            <BotonesDeTransicion objeto="social_risk" registro={riesgo} proyecto={proyecto} comprobarAntes={COMPROBAR} sinPrimaria={revisa} />
+            <BotonesDeTransicion
+              objeto="social_risk"
+              registro={riesgo}
+              proyecto={proyecto}
+              comprobarAntes={COMPROBAR}
+              sinPrimaria={revisa && !siguiente}
+              destructivasEnMenu
+            />
           </div>
         }
         secundarias={

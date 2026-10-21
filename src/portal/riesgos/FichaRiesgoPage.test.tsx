@@ -91,6 +91,22 @@ describe('S40 · ficha de riesgo', () => {
     expect(screen.queryByRole('button', { name: 'Evaluar' })).not.toBeInTheDocument()
   })
 
+  // U-02 del rediseño (DD-02): la primaria es la siguiente acción del flujo, aunque la regla la bloquee (dice qué falta), y
+  // «Nueva revisión» pasa a secundaria; sin una transición del camino, «Nueva revisión» es la primaria
+  it('la primaria es la siguiente acción del flujo y «Nueva revisión» es secundaria', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const monitoreo = await screen.findByRole('button', { name: 'Pasar a monitoreo' })
+    expect(monitoreo).toHaveAttribute('data-variant', 'primary')
+    expect(screen.getByRole('button', { name: 'Nueva revisión' })).toHaveAttribute('data-variant', 'secondary')
+  })
+
+  it('sin una transición del camino, «Nueva revisión» es la primaria', async () => {
+    fetch = mockFetch(rutas([{ path: '/objects/social_risk/records/k1/transitions', body: [] }]))
+    abrir()
+    expect(await screen.findByRole('button', { name: 'Nueva revisión' })).toHaveAttribute('data-variant', 'primary')
+  })
+
   it('«Crear relacionado» lleva al compromiso que atiende el riesgo (revisión de UX, etapa 5)', async () => {
     fetch = mockFetch(rutas())
     abrir(GESTOR_DE_RIESGOS, { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, commitment: ['READ', 'CREATE'] } })
