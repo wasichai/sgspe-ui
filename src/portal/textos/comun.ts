@@ -41,6 +41,15 @@ export const ES_COMUN = {
     conConteo: '{{etiqueta}}, {{n}}',
     mas: 'Más vistas'
   },
+  // la barra de filtros de una lista (hallazgo U-22): «Filtros (N)» en el teléfono, con N los filtros aplicados
+  barraDeFiltros: {
+    masFiltros: 'Más filtros',
+    filtrosConConteo: 'Filtros ({{n}})',
+    aplicados: 'Filtros aplicados',
+    quitar: 'Quitar el filtro {{etiqueta}}',
+    limpiar: 'Limpiar filtros',
+    cerrar: 'Ver resultados'
+  },
   llegaEn: 'Todavía no está disponible en su organización.',
   guardar: 'Guardar',
   guardando: 'Guardando…',
@@ -402,6 +411,14 @@ export const EN_COMUN: typeof ES_COMUN = {
   selectorDeVista: {
     conConteo: '{{etiqueta}}, {{n}}',
     mas: 'More views'
+  },
+  barraDeFiltros: {
+    masFiltros: 'More filters',
+    filtrosConConteo: 'Filters ({{n}})',
+    aplicados: 'Applied filters',
+    quitar: 'Remove the filter {{etiqueta}}',
+    limpiar: 'Clear filters',
+    cerrar: 'Show results'
   },
   llegaEn: 'Not available in your organization yet.',
   guardar: 'Save',

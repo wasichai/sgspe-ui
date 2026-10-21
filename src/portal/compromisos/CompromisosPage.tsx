@@ -5,11 +5,12 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { CONTROL, SelectNativo } from '../componentes/Campo'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -151,34 +152,36 @@ export function CompromisosPage() {
           </>
         }
       />
-      {/* las vistas en una sola fila, con su conteo (hallazgo U-18): ?view= conserva los demás parámetros */}
-      <SelectorDeVista
-        etiqueta={t('comun.vistas')}
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`compromisos.vistas.${v}`), n: v === 'candidatos' ? undefined : conteoDe(v) }))}
-        actual={lista.vista}
-        alElegir={(vista) => lista.cambiar({ view: vista })}
+      {/* la barra de filtros (hallazgos U-18 y U-22): las vistas en una sola fila, con su conteo, la búsqueda, el estado y un
+          chip por filtro. ?view= y los parámetros de filtro siguen siendo los mismos; los candidatos no se filtran */}
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`compromisos.vistas.${v}`), n: v === 'candidatos' ? undefined : conteoDe(v) }))}
+            actual={lista.vista}
+            alElegir={(vista) => lista.cambiar({ view: vista })}
+          />
+        }
+        busqueda={enCandidatos ? undefined : { etiqueta: t('compromisos.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
+        frecuentes={
+          enCandidatos ? undefined : (
+            <FiltroDeLista
+              etiqueta={t('compromisos.estado')}
+              value={estado}
+              onChange={(e) => lista.cambiar({ state: e.target.value })}
+              opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}
+            />
+          )
+        }
+        aplicados={enCandidatos ? [] : chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
+        alLimpiar={limpiar}
       />
       {enCandidatos ? (
         <Candidatos proyecto={proyecto} />
       ) : (
         <>
           {territorio === null ? <Alert tone="notice">{t('compromisos.territorioNoAplica')}</Alert> : null}
-          <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-            <label className="space-y-1">
-              <span className="block">{t('compromisos.buscar')}</span>
-              <input type="search" className={CONTROL} value={lista.filtro('q')} onChange={(e) => lista.cambiar({ q: e.target.value })} />
-            </label>
-            <label className="space-y-1">
-              <span className="block">{t('compromisos.estado')}</span>
-              <SelectNativo
-                textoVacio={t('comun.todos')}
-                value={estado}
-                onChange={(e) => lista.cambiar({ state: e.target.value })}
-                opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}
-              />
-            </label>
-          </div>
-          <ChipsDeFiltro chips={chips} alQuitar={(clave) => lista.cambiar({ [clave]: null })} alLimpiar={limpiar} />
           {truncado ? <Alert tone="warning">{t('compromisos.truncado', { n: numeroPe(delGrupo.data?.content.length ?? 0) })}</Alert> : null}
           {cargando ? (
             <Cargando />

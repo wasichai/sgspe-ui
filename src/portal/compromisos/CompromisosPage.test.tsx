@@ -152,10 +152,34 @@ describe('S28 · lista de compromisos', () => {
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=inexistente')
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
     expect(screen.getByText('Sin los filtros hay 3.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Quitar Contiene «inexistente»' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quitar el filtro Contiene «inexistente»' })).toBeInTheDocument()
     await userEvent.click(screen.getAllByRole('button', { name: 'Limpiar filtros' })[0])
     expect(ubicacion.actual).toBe('/projects/p1/commitments')
     expect(await screen.findByRole('table', { name: 'Compromisos' })).toBeInTheDocument()
+  })
+
+  // hallazgo U-22 (CA-1.4.1 a CA-1.4.3): la vista, la búsqueda y el estado van en la barra de filtros, con un chip por filtro
+  it('quitar un chip quita solo su parámetro; «Limpiar filtros» deja solo la vista; «Filtros (N)» cuenta los chips', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=vencidos&q=Taller&state=blocked')
+    const barra = await screen.findByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('radiogroup', { name: 'Vistas' })).toBeInTheDocument()
+    expect(within(barra).getByRole('searchbox', { name: 'Buscar por código o título' })).toHaveValue('Taller')
+    const chips = within(within(barra).getByRole('list', { name: 'Filtros aplicados' })).getAllByRole('listitem')
+    expect(chips).toHaveLength(2)
+    expect(within(barra).getByRole('button', { name: `Filtros (${chips.length})` })).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('button', { name: /^Quitar el filtro Estado:/ }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos&q=Taller')
+    expect(screen.getByRole('button', { name: 'Filtros (1)' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros (1)' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Filtros' })
+    await userEvent.selectOptions(within(drawer).getByLabelText('Estado'), 'blocked')
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos&q=Taller&state=blocked')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Ver resultados' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Filtros' })).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos')
+    expect(screen.queryByRole('list', { name: 'Filtros aplicados' })).not.toBeInTheDocument()
   })
 
   it('cada vista es una consulta del servidor: «Abiertos» pide su página con state_not, y cada vista cuenta con una página de uno', async () => {
@@ -251,6 +275,9 @@ describe('S28 · candidatos', () => {
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
     const region = await screen.findByRole('region', { name: 'Candidatos a compromiso' })
     expect(await within(region).findByText('Mejorar el camino al anexo Huallpa')).toBeInTheDocument()
+    // los candidatos no se filtran: la barra solo trae la vista
+    expect(screen.getByRole('radio', { name: 'Candidatos' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
     expect(within(region).getByText('Propuesto por la IA · confianza 82 %')).toBeInTheDocument()
     expect(within(region).getByText('Restringido')).toBeInTheDocument()
     // la cita que sí se lee se dice tal cual
