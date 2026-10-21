@@ -28,8 +28,9 @@ export const ES_COMUN = {
   // ListaPriorizada (hallazgo U-05): el enlace sin conteo y lo que queda cuando no hay una lista a la que ir
   listaPriorizada: {
     verTodos: 'Ver todos',
-    yMas_one: 'y {{count}} más',
-    yMas_other: 'y {{count}} más'
+    mostrarMas_one: 'Mostrar {{count}} más',
+    mostrarMas_other: 'Mostrar {{count}} más',
+    mostrarMenos: 'Mostrar menos'
   },
   tablaPriorizada: {
     igualEnTodas: 'Igual en todas las filas',
@@ -385,8 +386,9 @@ export const EN_COMUN: typeof ES_COMUN = {
   eligeUnProyecto: 'Pick a project',
   listaPriorizada: {
     verTodos: 'Show all',
-    yMas_one: 'and {{count}} more',
-    yMas_other: 'and {{count}} more'
+    mostrarMas_one: 'Show {{count}} more',
+    mostrarMas_other: 'Show {{count}} more',
+    mostrarMenos: 'Show less'
   },
   tablaPriorizada: {
     igualEnTodas: 'Same in every row',

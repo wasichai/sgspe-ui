@@ -325,7 +325,7 @@ describe('S08 · Project 360, resumen', () => {
     await waitFor(() => expect(within(evaluaciones).getAllByRole('listitem')).toHaveLength(3))
     expect(within(evaluaciones).getAllByRole('listitem')[0]).toHaveTextContent(`Evaluada hace ${diasDesde(44)} días`)
     expect(within(evaluaciones).queryByRole('link', { name: /^Ver/ })).not.toBeInTheDocument()
-    expect(within(evaluaciones).getByText('y 2 más')).toBeInTheDocument()
+    expect(within(evaluaciones).getByRole('button', { name: 'Mostrar 2 más' })).toBeInTheDocument()
   })
 
   it('un grupo que nunca tuvo contacto entra en "sin contacto" con su propio motivo', async () => {

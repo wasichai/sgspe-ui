@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { montar } from '../../test/montar'
 import { ListaPriorizada, type EntradaPriorizada } from './ListaPriorizada'
@@ -38,13 +39,20 @@ describe('ListaPriorizada', () => {
     expect(within(grupo()).getByRole('link', { name: 'Ir a la lista' })).toHaveAttribute('href', '/commitments')
   })
 
-  it('sin más de lo dibujado no ofrece «Ver los N»; sin destino dice cuántos quedan, sin enlace', () => {
+  // sin una lista a la que ir, lo que no se dibuja se despliega en el lugar: ninguna entrada queda sin forma de verse
+  it('sin más de lo dibujado no ofrece «Ver los N»; sin destino despliega el resto en el lugar', async () => {
     const { unmount } = montar(<ListaPriorizada titulo="Compromisos vencidos" total={2} entradas={entradas(2)} verTodos={{ a: '/commitments' }} />)
     expect(within(grupo()).queryByRole('link', { name: /Ver/ })).not.toBeInTheDocument()
     unmount()
     montar(<ListaPriorizada titulo="Compromisos vencidos" total={5} entradas={entradas(5)} />)
     expect(within(grupo()).queryByRole('link', { name: /Ver/ })).not.toBeInTheDocument()
-    expect(within(grupo()).getByText('y 2 más')).toBeInTheDocument()
+    const mostrar = within(grupo()).getByRole('button', { name: 'Mostrar 2 más' })
+    expect(mostrar).toHaveAttribute('aria-expanded', 'false')
+    expect(within(grupo()).getAllByRole('listitem')).toHaveLength(3)
+    await userEvent.click(mostrar)
+    expect(within(grupo()).getAllByRole('listitem')).toHaveLength(5)
+    await userEvent.click(within(grupo()).getByRole('button', { name: 'Mostrar menos' }))
+    expect(within(grupo()).getAllByRole('listitem')).toHaveLength(3)
   })
 
   it('CA-1.7.2: los títulos no van subrayados y cada entrada dice su motivo como texto, además del borde de su tono', () => {

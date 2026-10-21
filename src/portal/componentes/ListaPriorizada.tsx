@@ -1,5 +1,5 @@
 import { cn } from '@wasichai/ui'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { NS, numeroPe } from '../i18n'
@@ -7,7 +7,8 @@ import { Seccion } from './Seccion'
 
 // un grupo de avisos que muestra solo lo más urgente, con su motivo, y «Ver los N» hacia la lista filtrada (hallazgo U-05,
 // DD-13): reemplaza los «muros» de títulos subrayados. el orden lo da quien llama; el tono se marca con el borde izquierdo y,
-// siempre, con el texto del motivo (nunca solo con color)
+// siempre, con el texto del motivo (nunca solo con color). sin una lista a la que ir, el resto se despliega en el lugar:
+// ninguna entrada queda sin forma de verse
 export type TonoDeEntrada = 'peligro' | 'aviso' | 'neutro'
 
 export interface EntradaPriorizada {
@@ -38,8 +39,10 @@ const BORDE: Record<TonoDeEntrada, string> = {
 
 export function ListaPriorizada({ titulo, total, entradas, limite = 3, verTodos, vacio }: PropsDeListaPriorizada) {
   const { t } = useTranslation(NS)
+  const [desplegada, setDesplegada] = useState(false)
   if (entradas.length === 0 && !vacio) return null
-  const visibles = entradas.slice(0, limite)
+  const plegables = !verTodos && entradas.length > limite
+  const visibles = plegables && desplegada ? entradas : entradas.slice(0, limite)
   // sin conteo no se sabe si quedan más: el enlace se ofrece igual, sin número
   const quedan = total === null ? null : Math.max(0, total - visibles.length)
   const enlace =
@@ -47,8 +50,15 @@ export function ListaPriorizada({ titulo, total, entradas, limite = 3, verTodos,
       <Link to={verTodos.a} className="text-sg-caption font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
         {verTodos.etiqueta ?? (total === null ? t('comun.listaPriorizada.verTodos') : t('comun.verTodos', { count: total }))}
       </Link>
-    ) : quedan ? (
-      <p className="text-sg-caption text-sg-text-muted">{t('comun.listaPriorizada.yMas', { count: quedan })}</p>
+    ) : plegables ? (
+      <button
+        type="button"
+        aria-expanded={desplegada}
+        onClick={() => setDesplegada((d) => !d)}
+        className="text-sg-caption font-medium text-sg-primary-text hover:underline focus-visible:underline"
+      >
+        {desplegada ? t('comun.listaPriorizada.mostrarMenos') : t('comun.listaPriorizada.mostrarMas', { count: entradas.length - limite })}
+      </button>
     ) : null
   return (
     <Seccion
