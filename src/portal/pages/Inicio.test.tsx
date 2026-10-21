@@ -209,3 +209,52 @@ describe('inicio por rol', () => {
     expect(screen.queryByRole('heading', { name: 'Inicio de prueba' })).not.toBeInTheDocument()
   })
 })
+
+// U-01 del rediseño (DD-01): el inicio es «Mi día» para toda cuenta, aunque el catálogo ofrezca la revisión ejecutiva; la
+// visión ejecutiva es un bloque con las cifras que la cuenta lee, su fecha de cálculo y el enlace a la revisión completa
+describe('visión ejecutiva en el inicio', () => {
+  const CATALOGO = { path: '/sgspe/dashboards/indicators', body: [{ code: 'KPI-EXE-01', label: 'Proyectos activos', dashboard: 'executive', available: true }] }
+  const tablero = (indicators: unknown[]) => ({
+    path: '/sgspe/dashboards/executive',
+    body: { dashboard: 'executive', computedAt: '2026-10-20T15:00:00Z', filters: {}, indicators }
+  })
+  const pidioElTablero = () => fetch?.calls.some((c) => c.url.includes('/sgspe/dashboards/executive')) ?? false
+
+  it('a quien no lee ninguna cifra ejecutiva le muestra «Mi día» sin ningún «No disponible»', async () => {
+    start(RELACIONISTA, SIN_PERMISOS, [
+      CATALOGO,
+      tablero([
+        { code: 'KPI-EXE-01', label: 'Proyectos activos', available: false, unavailableReason: 'FORBIDDEN' },
+        { code: 'KPI-COM-02', label: 'Compromisos vencidos', available: false, unavailableReason: 'FORBIDDEN' }
+      ])
+    ])
+    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
+    await waitFor(() => expect(pidioElTablero()).toBe(true))
+    expect(screen.queryByRole('heading', { name: 'Revisión ejecutiva', level: 1 })).not.toBeInTheDocument()
+    expect(pagina().queryByRole('region', { name: 'Visión ejecutiva' })).not.toBeInTheDocument()
+    expect(pagina().queryByText('No disponible')).not.toBeInTheDocument()
+  })
+
+  it('a quien lee alguna, el bloque con esas cifras, su fecha de cálculo y el enlace a la revisión completa', async () => {
+    start(RELACIONISTA, SIN_PERMISOS, [
+      CATALOGO,
+      tablero([
+        { code: 'KPI-EXE-01', label: 'Proyectos activos', available: true, value: 3 },
+        { code: 'KPI-COM-02', label: 'Compromisos vencidos', available: false, unavailableReason: 'FORBIDDEN' }
+      ])
+    ])
+    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
+    const bloque = within(await pagina().findByRole('region', { name: 'Visión ejecutiva' }))
+    expect(bloque.getByText('Proyectos activos')).toBeInTheDocument()
+    expect(bloque.queryByText('Compromisos vencidos')).not.toBeInTheDocument()
+    expect(bloque.getByText(/^Calculado el /)).toBeInTheDocument()
+    expect(bloque.getByRole('link', { name: 'Ver la revisión ejecutiva' })).toHaveAttribute('href', '/dashboards/executive')
+  })
+
+  it('sin la revisión ejecutiva en el catálogo, no pide el tablero', async () => {
+    start(RELACIONISTA, SIN_PERMISOS, [{ path: '/sgspe/dashboards/indicators', body: [] }])
+    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
+    await waitFor(() => expect(fetch?.calls.some((c) => c.url.includes('/sgspe/dashboards/indicators'))).toBe(true))
+    expect(pidioElTablero()).toBe(false)
+  })
+})

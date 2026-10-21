@@ -193,7 +193,11 @@ test.beforeEach(async ({ page }) => {
 
 test('la revisión ejecutiva y el cierre de un periodo con su razón', async ({ page }) => {
   const { escrituras } = await prepararF8(page)
+  // desde el rediseño de UX (DD-01) el inicio es «Mi día» con la visión ejecutiva, y S51 vive en /dashboards/executive
   await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Inicio' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Visión ejecutiva' })).toBeVisible()
+  await page.getByRole('link', { name: 'Ver la revisión ejecutiva' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Proyecto Ejemplo A: 3 compromisos vencidos' })).toHaveAttribute('href', '/projects/p1/commitments')
   await page.goto('/dashboards/monitoring?project=p1&month=2026-09')

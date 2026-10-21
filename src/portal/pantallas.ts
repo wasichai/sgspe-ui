@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { CatalogoDeIndicadoresPage } from './tableros/CatalogoDeIndicadoresPage'
 import { DetalleDeIndicadorPage } from './tableros/DetalleDeIndicadorPage'
 import { MonitoreoPage } from './tableros/MonitoreoPage'
+import { RevisionEjecutivaPage } from './tableros/RevisionEjecutivaPage'
 import { AcuerdosPage } from './acuerdos/AcuerdosPage'
 import { AtencionRutas } from './atencion/AtencionRutas'
 import { CompromisosRutas } from './compromisos/CompromisosRutas'
@@ -51,6 +52,8 @@ export const RUTAS_ADICIONALES: RutaAdicional[] = [
   { ruta: '/field-visits', seccion: 'engagements', Pantalla: VisitasPage },
   { ruta: '/agreements', seccion: 'commitments', seOfreceCon: LEE_ACUERDOS, Pantalla: AcuerdosPage },
   // F8 (decisión 2 del plan 8.3): el monitoreo de la Tabla 9.5 y el detalle de un indicador viven bajo Dashboard
+  // el rediseño de UX (DD-01): la revisión ejecutiva S51 deja de ser el inicio y tiene su ruta
+  { ruta: '/dashboards/executive', seccion: 'dashboard', Pantalla: RevisionEjecutivaPage },
   { ruta: '/dashboards/monitoring', seccion: 'dashboard', Pantalla: MonitoreoPage },
   { ruta: '/dashboards/indicators', seccion: 'dashboard', Pantalla: CatalogoDeIndicadoresPage },
   { ruta: '/dashboards/indicators/:code', seccion: 'dashboard', Pantalla: DetalleDeIndicadorPage }

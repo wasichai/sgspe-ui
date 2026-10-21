@@ -101,9 +101,20 @@ describe('S51 · revisión ejecutiva', () => {
     expect(screen.getByRole('link', { name: 'Ir a Proyectos' })).toHaveAttribute('href', '/projects')
   })
 
-  it('/ dibuja la revisión ejecutiva si el catálogo la ofrece', async () => {
-    fetch = abrirPortal('/', EJECUTIVA, SOLO_LECTURA_F8, [{ path: '/sgspe/dashboards/executive', body: TABLERO_EJECUTIVO }, ...baseDeF8(EJECUTIVA)])
+  // desde el rediseño de UX (DD-01) S51 vive en /dashboards/executive y el inicio es «Mi día», con la visión ejecutiva
+  it('/dashboards/executive dibuja la revisión ejecutiva', async () => {
+    fetch = abrirPortal('/dashboards/executive', EJECUTIVA, SOLO_LECTURA_F8, [
+      { path: '/sgspe/dashboards/executive', body: TABLERO_EJECUTIVO },
+      ...baseDeF8(EJECUTIVA)
+    ])
     expect(await screen.findByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Monitoreo del plan de relaciones comunitarias' })).toHaveAttribute('href', '/dashboards/monitoring')
+  })
+
+  it('/ ya no es la revisión ejecutiva aunque el catálogo la ofrezca: es «Mi día» con su visión ejecutiva', async () => {
+    fetch = abrirPortal('/', EJECUTIVA, SOLO_LECTURA_F8, [{ path: '/sgspe/dashboards/executive', body: TABLERO_EJECUTIVO }, ...baseDeF8(EJECUTIVA)])
+    expect(await screen.findByRole('heading', { level: 1, name: 'Inicio' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Ver la revisión ejecutiva' })).toHaveAttribute('href', '/dashboards/executive')
   })
 })

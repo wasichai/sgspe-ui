@@ -12,6 +12,10 @@ export const ES_MI_DIA = {
     avisos_one: '{{count}} aviso que pide acción',
     avisos_other: '{{count}} avisos que piden acción'
   },
+  vision: {
+    titulo: 'Visión ejecutiva',
+    ver: 'Ver la revisión ejecutiva'
+  },
   atajos: {
     titulo: 'Registrar',
     interaccion: 'Registrar interacción',
@@ -54,6 +58,10 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     decisiones_other: '{{count}} await your decision',
     avisos_one: '{{count}} notification needs action',
     avisos_other: '{{count}} notifications need action'
+  },
+  vision: {
+    titulo: 'Executive overview',
+    ver: 'See the executive review'
   },
   atajos: {
     titulo: 'Record',
