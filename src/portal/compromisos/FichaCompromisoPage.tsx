@@ -1,9 +1,9 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
-import { VerEnElMapa } from '../componentes/VerEnElMapa'
+import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { useSumasDeConteos } from '../datos/conteos'
@@ -31,7 +31,6 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { atributo, texto, usePuedeEditar, useRegistro, useRegistros, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { PestanaDependencias, PestanaSeguimiento } from './PestanaSeguimiento'
 import { Ejecutado, PestanaEntregas } from './PestanaEntregas'
 import { PestanaReprogramaciones } from './PestanaReprogramaciones'
@@ -120,14 +119,12 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   const evidencias = useEvidenciasDe('commitment', compromiso.id)
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('fichaCompromiso.titulo'), texto(compromiso, 'code'), opcion(compromiso, 'resource_type')].filter(Boolean).join(' · ')}
         titulo={texto(compromiso, 'title')}
         tituloDelDocumento={[texto(compromiso, 'code'), texto(compromiso, 'title')].filter(Boolean).join(' ')}
         chips={
           <>
-            <EstadoChip objeto="commitment" estado={compromiso.state} />
             <SituacionDePlazo valor={atributo(compromiso, 'deadline_status')} />
             {texto(compromiso, 'due_date') ? (
               <span>
@@ -137,22 +134,34 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
             <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
           </>
         }
-        primaria={<BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} destructivasEnMenu />}
-        secundarias={
-          <>
-            <VerEnElMapa objeto="commitment" registro={compromiso} />
-            {edita ? (
-              <>
-                <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
-                  {t('fichaCompromiso.editar')}
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
-                  {t('fichaCompromiso.riesgo')}
-                </Button>
-              </>
-            ) : null}
-          </>
-        }
+        objeto="commitment"
+        registro={compromiso}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
+        secundarias={[
+          ...(rutaEnElMapa('commitment', compromiso) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="commitment" registro={compromiso} /> }] : []),
+          ...(edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
+                      {t('fichaCompromiso.editar')}
+                    </Button>
+                  )
+                },
+                {
+                  clave: 'riesgo',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
+                      {t('fichaCompromiso.riesgo')}
+                    </Button>
+                  )
+                }
+              ]
+            : [])
+        ]}
       />
       {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
       {/* el camino de WF-D sin la excepción (bloqueado): si el compromiso está bloqueado, se agrega igual al camino */}

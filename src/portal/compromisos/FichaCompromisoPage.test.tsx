@@ -66,7 +66,27 @@ describe('S29 · ficha de compromiso', () => {
     const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
     await waitFor(() => expect(cumplimiento).toBeDisabled())
     expect(cumplimiento).toHaveAccessibleDescription('Falta una entrega con conformidad')
-    expect(screen.getByRole('button', { name: 'Bloquear' })).toBeEnabled()
+    // CabeceraDeFicha (DD-02): a la vista, las dos secundarias de la ficha; las demás transiciones, en «Más acciones»
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    expect(within(acciones).getByRole('button', { name: 'Editar el compromiso' })).toBeInTheDocument()
+    expect(within(acciones).getByRole('button', { name: 'Informar riesgo de retraso' })).toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Bloquear' })).toBeEnabled()
+  })
+
+  // U-25 y U-27 del rediseño (DD-06): la cabecera dice tipo, código y categoría en la letra del texto, y el estado del flujo
+  // no va en sus chips (lo dicen el panel de decisión y el camino); lo que falta para la siguiente acción, bajo las acciones
+  it('la cabecera lleva el antetítulo en sans, sin el estado, y dice lo que falta para la primaria', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText('Compromiso · C-001 · Material')).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).queryByText('En ejecución')).not.toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Registrar cumplimiento' })
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByText('Falta una entrega con conformidad')).toBeVisible()
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
   })
 
   // U-02 y U-03 del rediseño (DD-02): la primaria es la siguiente acción del flujo aunque el servidor la liste después, y la
@@ -88,10 +108,12 @@ describe('S29 · ficha de compromiso', () => {
     const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
     const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
     expect(cumplimiento).toHaveAttribute('data-variant', 'primary')
-    expect(within(acciones).getByRole('button', { name: 'Bloquear' })).toHaveAttribute('data-variant', 'secondary')
     expect(within(acciones).queryByRole('button', { name: /^Cancelar/ })).not.toBeInTheDocument()
     await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
-    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Cancelar/ })).toBeInTheDocument()
+    const mas = screen.getByRole('group', { name: 'Más acciones' })
+    // con las dos secundarias de la ficha a la vista, «Bloquear» va en «Más acciones», como secundaria
+    expect(within(mas).getByRole('button', { name: 'Bloquear' })).toHaveAttribute('data-variant', 'secondary')
+    expect(within(mas).getByRole('button', { name: /^Cancelar/ })).toBeInTheDocument()
   })
 
   // revisión de UX, etapa 4: la anatomía común de la ficha (design-system.md §6.1)

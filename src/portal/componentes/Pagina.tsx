@@ -94,6 +94,12 @@ export interface PropsDeEncabezado {
   ficha?: boolean
   // si el título visible no basta para el documento (el código de una ficha)
   tituloDelDocumento?: string
+  // el antetítulo en la letra del texto y no en la monoespaciada (la ficha de un registro, U-27 y DD-06 del rediseño de UX)
+  antetituloEnSans?: boolean
+  // la barra de acciones como un grupo con nombre (las acciones del registro de una ficha)
+  etiquetaDeAcciones?: string
+  // lo que va bajo las acciones, en la misma barra: lo que impide la primaria, la confirmación de una transición
+  pieDeAcciones?: ReactNode
 }
 
 export function EncabezadoDePagina({
@@ -107,7 +113,10 @@ export function EncabezadoDePagina({
   mas,
   vistas,
   ficha = false,
-  tituloDelDocumento
+  tituloDelDocumento,
+  antetituloEnSans = false,
+  etiquetaDeAcciones,
+  pieDeAcciones
 }: PropsDeEncabezado) {
   useTituloDeDocumento(tituloDelDocumento ?? titulo)
   const acciones = primaria || secundarias || mas || vistas
@@ -115,7 +124,7 @@ export function EncabezadoDePagina({
     // un div y no un <header>: dentro de main no es la barra superior, y así nada lo confunde con ella (el banner de la página)
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1">
-        {antetitulo ? <p className="font-sg-mono text-sg-caption text-sg-text-muted">{antetitulo}</p> : null}
+        {antetitulo ? <p className={`${antetituloEnSans ? '' : 'font-sg-mono '}text-sg-caption text-sg-text-muted`}>{antetitulo}</p> : null}
         <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
         {chips ? <div className="flex flex-wrap items-center gap-2 text-sm">{chips}</div> : null}
         {descripcion ? <p className="text-sm text-sg-text-secondary">{descripcion}</p> : null}
@@ -123,6 +132,8 @@ export function EncabezadoDePagina({
       </div>
       {acciones ? (
         <div
+          role={etiquetaDeAcciones ? 'group' : undefined}
+          aria-label={etiquetaDeAcciones}
           data-barra-de-acciones={ficha ? '' : undefined}
           className={cn(
             'flex flex-wrap items-center gap-2',
@@ -134,6 +145,7 @@ export function EncabezadoDePagina({
           {secundarias}
           {mas ? <MasAcciones>{mas}</MasAcciones> : null}
           {primaria}
+          {pieDeAcciones ? <div className="basis-full space-y-1 sm:text-right">{pieDeAcciones}</div> : null}
         </div>
       ) : null}
     </div>

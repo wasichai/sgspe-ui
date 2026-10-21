@@ -1,6 +1,6 @@
 import { Button } from '@wasichai/ui'
 import { useAvailableTransitions, type AvailableTransition } from '@wasichai/workflow'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MasAcciones } from '../componentes/Pagina'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -23,17 +23,13 @@ const DURACION_DE_LA_CONFIRMACION = 6000
 const DESTINOS_DESTRUCTIVOS = new Set(['cancelled', 'voided', 'retired', 'terminated'])
 export const esDestructiva = (tr: AvailableTransition): boolean => DESTINOS_DESTRUCTIVOS.has(tr.to)
 
-export function BotonesDeTransicion({
-  objeto,
-  registro,
-  ocultar = [],
-  solo,
-  comprobarAntes = [],
-  proyecto,
-  anexos,
-  sinPrimaria = false,
-  destructivasEnMenu = false
-}: {
+// una transición ofrecida, lista para dibujarse donde la pantalla la ponga (la cabecera de una ficha la reparte)
+export interface TransicionOfrecida {
+  clave: string
+  nodo: ReactNode
+}
+
+export interface OpcionesDeTransiciones {
   objeto: string
   registro: Registro
   ocultar?: readonly string[]
@@ -46,9 +42,27 @@ export function BotonesDeTransicion({
   // por transición, lo que se agrega al motivo (DialogoDeTransicion.anexo)
   anexos?: Partial<Record<string, string>>
   sinPrimaria?: boolean
-  // las destructivas en «Más acciones» (el encabezado de una ficha, DD-02): no quedan junto a la primaria
-  destructivasEnMenu?: boolean
-}) {
+  // la ficha tiene una acción propia que es primaria cuando no hay una transición del camino: entonces no se elige otra
+  primariaSoloDelCamino?: boolean
+  // lo que impide la primaria, dicho en la pantalla con este id (CabeceraDeFicha): la primaria lo referencia y sale
+  // deshabilitada (DD-02)
+  faltaDeLaPrimaria?: { id: string; texto: string }
+}
+
+// las transiciones del registro repartidas: la primaria, las que avanzan, las destructivas, la confirmación de la última
+// aplicada y el diálogo abierto
+export function useTransicionesOfrecidas({
+  objeto,
+  registro,
+  ocultar = [],
+  solo,
+  comprobarAntes = [],
+  proyecto,
+  anexos,
+  sinPrimaria = false,
+  primariaSoloDelCamino = false,
+  faltaDeLaPrimaria
+}: OpcionesDeTransiciones) {
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, registro.id)
   const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
@@ -67,48 +81,71 @@ export function BotonesDeTransicion({
     : []
   const avanzan = permitidas.filter((tr) => !esDestructiva(tr))
   const destructivas = permitidas.filter(esDestructiva)
-  const primaria = sinPrimaria ? null : (siguienteTransicion(objeto, avanzan) ?? avanzan[0] ?? null)
-  const visibles = [...(primaria ? [primaria] : []), ...avanzan.filter((tr) => tr !== primaria), ...(destructivasEnMenu ? [] : destructivas)]
-  const enMenu = destructivasEnMenu ? destructivas : []
+  const delCamino = siguienteTransicion(objeto, avanzan)
+  const primaria = sinPrimaria ? null : (delCamino ?? (primariaSoloDelCamino ? null : (avanzan[0] ?? null)))
   const abrir = (tr: AvailableTransition) => {
     setHecha(null)
     setAbierta(tr)
   }
-  const boton = (tr: AvailableTransition) => (
-    <BotonDeTransicion
-      key={tr.name}
-      objeto={objeto}
-      registro={registro}
-      transicion={tr}
-      primaria={tr === primaria}
-      comprobar={comprobarAntes.includes(tr.name)}
-      alAbrir={() => abrir(tr)}
-    />
-  )
-  if (visibles.length === 0 && enMenu.length === 0 && !hecha) return null
+  const ofrecida = (tr: AvailableTransition): TransicionOfrecida => ({
+    clave: tr.name,
+    nodo: (
+      <BotonDeTransicion
+        key={tr.name}
+        objeto={objeto}
+        registro={registro}
+        transicion={tr}
+        primaria={tr === primaria}
+        comprobar={comprobarAntes.includes(tr.name)}
+        falta={tr === primaria ? faltaDeLaPrimaria : undefined}
+        alAbrir={() => abrir(tr)}
+      />
+    )
+  })
+  return {
+    primaria: primaria ? ofrecida(primaria) : null,
+    otras: avanzan.filter((tr) => tr !== primaria).map(ofrecida),
+    destructivas: destructivas.map(ofrecida),
+    confirmacion: hecha ? (
+      <p role="status" className="text-sm text-sg-success">
+        {t('transiciones.hecho', { a: hecha })}
+      </p>
+    ) : null,
+    dialogo: abierta ? (
+      <DialogoDeTransicion
+        objeto={objeto}
+        registro={registro}
+        transicion={abierta}
+        alCerrar={() => setAbierta(null)}
+        alAplicar={() => setHecha(abierta.toLabel)}
+        anexo={anexos?.[abierta.name]}
+      />
+    ) : null
+  }
+}
+
+export function BotonesDeTransicion({
+  destructivasEnMenu = false,
+  ...opciones
+}: Omit<OpcionesDeTransiciones, 'primariaSoloDelCamino' | 'faltaDeLaPrimaria'> & {
+  // las destructivas en «Más acciones» (el encabezado de una ficha, DD-02): no quedan junto a la primaria
+  destructivasEnMenu?: boolean
+}) {
+  const { t } = useTranslation(NS)
+  const { primaria, otras, destructivas, confirmacion, dialogo } = useTransicionesOfrecidas(opciones)
+  const visibles = [...(primaria ? [primaria] : []), ...otras, ...(destructivasEnMenu ? [] : destructivas)]
+  const enMenu = destructivasEnMenu ? destructivas : []
+  if (visibles.length === 0 && enMenu.length === 0 && !confirmacion) return null
   return (
     <div className="space-y-2">
       {visibles.length > 0 || enMenu.length > 0 ? (
         <div role="group" aria-label={t('transiciones.acciones')} className="flex flex-wrap gap-2">
-          {visibles.map(boton)}
-          {enMenu.length > 0 ? <MasAcciones>{enMenu.map(boton)}</MasAcciones> : null}
+          {visibles.map((x) => x.nodo)}
+          {enMenu.length > 0 ? <MasAcciones>{enMenu.map((x) => x.nodo)}</MasAcciones> : null}
         </div>
       ) : null}
-      {hecha ? (
-        <p role="status" className="text-sm text-sg-success">
-          {t('transiciones.hecho', { a: hecha })}
-        </p>
-      ) : null}
-      {abierta ? (
-        <DialogoDeTransicion
-          objeto={objeto}
-          registro={registro}
-          transicion={abierta}
-          alCerrar={() => setAbierta(null)}
-          alAplicar={() => setHecha(abierta.toLabel)}
-          anexo={anexos?.[abierta.name]}
-        />
-      ) : null}
+      {confirmacion}
+      {dialogo}
     </div>
   )
 }
@@ -119,6 +156,7 @@ function BotonDeTransicion({
   transicion,
   primaria,
   comprobar,
+  falta,
   alAbrir
 }: {
   objeto: string
@@ -126,6 +164,7 @@ function BotonDeTransicion({
   transicion: AvailableTransition
   primaria: boolean
   comprobar: boolean
+  falta?: { id: string; texto: string }
   alAbrir: () => void
 }) {
   const id = useId()
@@ -138,6 +177,9 @@ function BotonDeTransicion({
   const { t } = useTranslation(NS)
   const destructiva = esDestructiva(transicion)
   const elObjeto = destructiva ? t(`transiciones.elObjeto.${objeto}`, { defaultValue: '' }) : ''
+  // la razón propia y lo que falta, dicho en la pantalla, se combinan; si son el mismo texto, se dice una vez
+  const propia = razon && razon !== falta?.texto ? id : null
+  const describidoPor = [propia, falta?.id].filter(Boolean).join(' ') || undefined
   return (
     <>
       <Button
@@ -145,13 +187,13 @@ function BotonDeTransicion({
         size="sm"
         className={destructiva ? 'text-sg-danger' : undefined}
         onClick={alAbrir}
-        disabled={bloqueado}
-        title={razon}
-        aria-describedby={razon ? id : undefined}
+        disabled={bloqueado || Boolean(falta)}
+        title={razon ?? falta?.texto}
+        aria-describedby={describidoPor}
       >
         {elObjeto ? `${transicion.label} ${elObjeto}` : transicion.label}
       </Button>
-      {razon ? (
+      {propia ? (
         <span id={id} className="sr-only">
           {razon}
         </span>
