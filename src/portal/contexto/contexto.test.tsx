@@ -240,6 +240,37 @@ describe('barra de contexto y Project 360', () => {
     expect(within(migas).getByText('C-001')).toHaveAttribute('aria-current', 'page')
   })
 
+  // U-04 del rediseño: una ficha que no vive bajo el segmento de su pestaña (una queja en /grievances/:id) marca esa pestaña
+  // y la nombra en las migas, nunca con el segmento de la ruta
+  it.each([
+    ['grievances/q1', 'Quejas, consultas y solicitudes', 'attention'],
+    ['inquiries/q2', 'Quejas, consultas y solicitudes', 'attention'],
+    ['requests/q3', 'Quejas, consultas y solicitudes', 'attention'],
+    ['contributions/a1', 'Programas sociales', 'programs'],
+    ['field-visits/v1', 'Relacionamiento', 'engagements'],
+    ['incidents/i1', 'Riesgos', 'risks'],
+    ['areas/z1', 'Mapa', 'map']
+  ])('en %s marca la pestaña %s y la nombra en las migas', async (ruta, pestana, segmento) => {
+    fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
+    function Ficha() {
+      useMigaDelRegistro('R-001')
+      return <p>Ficha</p>
+    }
+    montar(
+      <Routes>
+        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+          <Route path="*" element={<Ficha />} />
+        </Route>
+      </Routes>,
+      { ruta: `/projects/p1/${ruta}`, permisos: ADMIN_PERMISOS }
+    )
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(within(subnav).getByRole('link', { name: pestana })).toHaveAttribute('aria-current', 'page')
+    const migas = await screen.findByRole('navigation', { name: 'Ubicación' })
+    expect(await within(migas).findByRole('link', { name: pestana })).toHaveAttribute('href', `/projects/p1/${segmento}`)
+    expect(within(migas).getByText('R-001')).toHaveAttribute('aria-current', 'page')
+  })
+
   it('en el resumen, las migas terminan en el proyecto', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })

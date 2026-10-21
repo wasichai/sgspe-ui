@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { Insignia } from '../componentes/Insignia'
-import { MigasDelProyecto, ProveedorDeMigas } from '../componentes/Migas'
+import { MigasDelProyecto, pestanaDeSegmento, ProveedorDeMigas } from '../componentes/Migas'
 import { useTituloDeDocumento } from '../componentes/Pagina'
 import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
 import { NS } from '../i18n'
@@ -71,7 +71,8 @@ export function ProyectoLayout() {
   const oferta = useOferta()
   const { pathname } = useLocation()
   const [registro, setRegistro] = useState<string | null>(null)
-  const pestanaActual = pathname.split('/')[3] ?? 'overview'
+  // la ficha de una queja vive en /grievances/:id y su pestaña es la de QCS: se marca esa y las migas la nombran
+  const pestanaActual = pestanaDeSegmento(pathname.split('/')[3] ?? 'overview')
   const seccion = seccionDeRuta(pathname)
   // D7: la pestaña (o la sección de la ruta, si no es una pestaña) y el proyecto en el título del documento
   useTituloDeDocumento(t(`contexto.pestanas.${pestanaActual}`, { defaultValue: '' }) || (seccion ? t(`secciones.${seccion}`) : ''), 1)
