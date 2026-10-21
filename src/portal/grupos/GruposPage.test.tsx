@@ -449,7 +449,7 @@ describe('la ruta de los grupos de interés', () => {
   it('una cuenta sin la sección stakeholders no entra a /projects/:p/stakeholders: lee que no puede y no se pide la lista', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, permisos({ project: ['READ'] }), base())
     red = espiarRed()
-    expect(await screen.findByText('Su cuenta no puede abrir «Grupos de interés».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Grupos de interés»' })).toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
     expect(red.a('GET', '/objects/stakeholder/records')).toHaveLength(0)
   })

@@ -62,7 +62,7 @@ describe('rutas de F3', () => {
 
   it('sin READ sobre compromisos, la ruta lo dice y la sección no se ofrece', async () => {
     fetch = abrirPortal('/projects/p1/commitments', GESTORA, permisos({ project: ['READ'], project_assignment: ['READ'] }), rutas())
-    expect(await screen.findByText('Su cuenta no puede abrir «Compromisos».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Compromisos»' })).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Compromisos' })).not.toBeInTheDocument()
   })
 
@@ -80,7 +80,7 @@ describe('rutas de F3', () => {
 
   it.each(['/projects/p1/agreements', '/agreements'])('sin READ sobre acuerdos, %s lo dice y no los lee', async (ruta) => {
     fetch = abrirPortal(ruta, GESTORA, sinAcuerdos, rutas())
-    expect(await screen.findByText('Su cuenta no puede abrir «Compromisos».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Compromisos»' })).toBeInTheDocument()
     expect(fetch.calls.some((c) => c.url.includes('/objects/agreement/records'))).toBe(false)
   })
 
@@ -101,7 +101,7 @@ describe('rutas de F3', () => {
     ['/tasks', 'Tareas']
   ])('sin READ, %s lo dice y no se ofrece', async (ruta, seccion) => {
     fetch = abrirPortal(ruta, GESTORA, permisos({ project: ['READ'], project_assignment: ['READ'], commitment: ['READ'] }), rutas())
-    expect(await screen.findByText(`Su cuenta no puede abrir «${seccion}».`)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: `No puede abrir «${seccion}»` })).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: seccion })).not.toBeInTheDocument()
   })
 

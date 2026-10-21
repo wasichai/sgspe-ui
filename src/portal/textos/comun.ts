@@ -83,6 +83,15 @@ export const ES_COMUN = {
   registroReservado: 'Registro reservado',
   registroReservadoAyuda: 'Su cuenta no lee este registro: es de un proyecto al que no está asignada, es confidencial o ya no existe.',
   confidencialesOcultas: 'Esta cifra no incluye las QCS confidenciales que su cuenta no puede leer. Para el total, pídala a la gestión de quejas.',
+  // quien llega por la URL a una sección o pantalla que su cuenta no abre (EstadoSinAcceso, hallazgo U-09): qué, por qué en
+  // lenguaje llano, a quién pedirlo y cómo volver. sin nombres de rol ni de permisos
+  sinAcceso: {
+    titulo: 'No puede abrir «{{que}}»',
+    explicacion: 'Su cuenta no tiene acceso a esta sección. El acceso depende de los permisos que su organización le da según su trabajo.',
+    aQuien: 'Si lo necesita, pídalo a {{aQuien}}.',
+    administracion: 'la administración de su organización',
+    volverAlInicio: 'Volver al inicio'
+  },
   usuario: {
     deLaLista: 'Elija a la persona',
     correo: '{{etiqueta}} · correo',
@@ -410,6 +419,13 @@ export const EN_COMUN: typeof ES_COMUN = {
     'Your account cannot read this record: it belongs to a project your account is not assigned to, it is confidential or it no longer exists.',
   confidencialesOcultas:
     'This figure does not include the confidential grievances, inquiries and requests your account cannot read. Ask grievance management for the total.',
+  sinAcceso: {
+    titulo: 'You cannot open “{{que}}”',
+    explicacion: 'Your account does not have access to this section. Access depends on the permissions your organization gives you for your work.',
+    aQuien: 'If you need it, ask {{aQuien}}.',
+    administracion: 'your organization’s administration',
+    volverAlInicio: 'Back to home'
+  },
   usuario: {
     deLaLista: 'Pick the person',
     correo: '{{etiqueta}} · email',

@@ -47,7 +47,7 @@ describe('rutas de F7', () => {
 
   it('quien no lee propuestas no ve la pestaña y la ruta dice que no puede abrirla', async () => {
     fetch = abrirPortal('/projects/p1/ai-review', ANALISTA, SOLO_ASISTENTE, baseDeIa())
-    expect(await screen.findByText('Su cuenta no puede abrir «Proyectos».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Proyectos»' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Bandeja de IA' })).not.toBeInTheDocument()
   })
 })

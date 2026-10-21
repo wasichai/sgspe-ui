@@ -166,7 +166,6 @@ export const ES = {
     secciones: 'Secciones',
     leyendoPermisos: 'Leyendo los permisos de su cuenta…',
     sinPermisos: 'No se pudieron leer sus permisos',
-    sinAcceso: 'Su cuenta no puede abrir «{{seccion}}».',
     preguntar: 'Preguntar',
     idioma: 'Idioma',
     idiomaNoGuardado: 'No se pudo guardar el idioma'

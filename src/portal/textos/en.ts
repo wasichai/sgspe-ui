@@ -166,7 +166,6 @@ export const EN: Textos = {
     secciones: 'Sections',
     leyendoPermisos: 'Reading your account permissions…',
     sinPermisos: 'Your permissions could not be read',
-    sinAcceso: 'Your account cannot open “{{seccion}}”.',
     preguntar: 'Ask',
     idioma: 'Language',
     idiomaNoGuardado: 'Could not save the language'

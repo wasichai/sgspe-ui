@@ -99,7 +99,7 @@ describe('rutas de F4', () => {
 
   it('sin READ sobre las QCS, la ruta lo dice y la sección no se ofrece', async () => {
     fetch = abrirPortal('/attention', GESTOR_DE_RIESGOS, permisos({ project: ['READ'], social_risk: ['READ'] }), deRiesgos())
-    expect(await screen.findByText('Su cuenta no puede abrir «Quejas, consultas y solicitudes».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Quejas, consultas y solicitudes»' })).toBeInTheDocument()
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })
     expect(within(secciones).queryByRole('link', { name: 'Quejas, consultas y solicitudes' })).not.toBeInTheDocument()
     expect(within(secciones).getByRole('link', { name: 'Riesgos' })).toBeInTheDocument()

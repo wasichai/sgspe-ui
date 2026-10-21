@@ -65,7 +65,7 @@ describe('rutas de F5', () => {
 
   it('sin READ sobre programas ni aportes, la ruta lo dice y la sección no se ofrece', async () => {
     fetch = abrirPortal('/programs', INVERSION, permisos({ project: ['READ'], commitment: ['READ'] }), deInversion())
-    expect(await screen.findByText('Su cuenta no puede abrir «Programas sociales».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Programas sociales»' })).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Programas sociales' })).not.toBeInTheDocument()
   })
 

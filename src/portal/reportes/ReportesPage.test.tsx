@@ -291,7 +291,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
 
   it('sin EXPORT ni el historial, Reportes no se ofrece y su ruta lo dice (revisión final, M7)', async () => {
     fetch = abrirPortal('/reports', RELACIONISTA, permisos({ project: ['READ'], stakeholder: ['READ'] }), rutas)
-    expect(await screen.findByText('Su cuenta no puede abrir «Reportes».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Reportes»' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Reportes' })).not.toBeInTheDocument()
   })
 

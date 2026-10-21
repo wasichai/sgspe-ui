@@ -178,7 +178,7 @@ describe('navegación del portal', () => {
       '/projects'
     )
     expect(await screen.findByText('No se pudieron leer sus permisos')).toBeInTheDocument()
-    expect(screen.queryByText(/no puede abrir/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/no puede abrir/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
   })
 
@@ -278,7 +278,11 @@ describe('navegación del portal', () => {
   it('sin el permiso, la URL de la sección dice que la cuenta no puede abrirla', async () => {
     registradas.projects = Prueba
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, SIN_PERMISOS), '/projects')
-    expect(await screen.findByText('Su cuenta no puede abrir «Proyectos».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Proyectos»' })).toBeInTheDocument()
+    // hallazgo U-09: dice a quién pedirlo (fuera de un proyecto no se sabe la jefatura) y ofrece la salida al inicio
+    const bloque = screen.getByRole('region', { name: 'No puede abrir «Proyectos»' })
+    expect(bloque).toHaveTextContent('pídalo a la administración de su organización')
+    expect(within(bloque).getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/')
     expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
     expect(enlaces()).toEqual(['Inicio'])
   })
