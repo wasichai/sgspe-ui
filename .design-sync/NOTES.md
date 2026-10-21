@@ -5,8 +5,12 @@
   `npm.pkg.github.com`): sin él, `yarn install` responde 401. En una sesión en la nube, el token va
   como secreto del entorno (`NODE_AUTH_TOKEN`), nunca en el repositorio.
 - `engines.node` pide Node >= 26; el contenedor por defecto trae Node 22.
-- Primera sincronización pendiente: aún no hay proyecto de Claude Design (sin `projectId`). Después
-  de sincronizar, sigue el rediseño integral de UX/UI con entregables en `sgspe/docs/ux/redesign/`.
+- Sincronizado el 2026-10-20 con el proyecto «SGSPE Design System» (`projectId` en `config.json`): 334
+  archivos, anclados con `_ds_sync.json`. Después de esa subida cambió el kit (`VistaSgspe` con `idioma`
+  y el CSS del kit con `@source` de `prototipos/`), así que la próxima corrida de `resync.mjs` subirá esa
+  diferencia. Los cambios son aditivos: las 61 previews no cambian.
+- Los prototipos del rediseño (`prototipos/`) usan el mismo kit y no se suben a Claude Design: sus
+  capturas viven en `sgspe/docs/ux/redesign/04-prototipos/`.
 - Sin token (2026-10-20): Node 26.12.0 de nodejs.org (SHA-256 verificado) en `~/.local/node26`;
   `wasichai/wasichai-ui` clonado en el tag `v1.0.0` (commit `609d1b7`), construido con
   `yarn install --frozen-lockfile --ignore-scripts && yarn build`, y cada paquete empacado con
