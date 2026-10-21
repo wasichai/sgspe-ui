@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import type { FetchMock, MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
+import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { abrirPortal } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
@@ -23,6 +24,8 @@ afterEach(() => {
 })
 
 const hace = (dias: number) => new Date(Date.now() - dias * 86_400_000).toISOString().slice(0, 10)
+// los días que la pantalla cuenta para una fecha de hace(n): contra hoy en Lima, que de madrugada UTC es un día menos
+const diasDesde = (dias: number) => diasEntre(hace(dias), hoyEnLima())
 const P1 = registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa', stage: 'EXPLORACION', inactivity_days: 90 }, { state: 'active' })
 const indicador = (code: string, extra: Record<string, unknown>) => ({ code, label: code, available: true, ...extra })
 const SIN_STANCE = {
@@ -190,6 +193,9 @@ describe('S08 · Project 360, resumen', () => {
     expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     expect(within(atencion).queryByText(/Llamada/)).not.toBeInTheDocument()
     expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
+    // cada entrada dice su motivo como texto (hallazgo U-05)
+    expect(within(atencion).getByText('Realizada, sin acta')).toBeInTheDocument()
+    expect(within(atencion).getByText(`Último contacto hace ${diasDesde(120)} días`)).toBeInTheDocument()
   })
 
   it('un borrador ofrece completarse solo a quien puede escribir algún campo del proyecto, no a un rol con "u"', async () => {
@@ -291,26 +297,45 @@ describe('S08 · Project 360, resumen', () => {
     expect(await within(atencion).findByText(/Nada pide atención hoy/)).toBeInTheDocument()
   })
 
-  it('"Atención requerida" agrupa por tipo con su conteo, muestra cinco y despliega el resto', async () => {
-    const siete = Array.from({ length: 7 }, (_, n) => registro(`s${n}`, { organization: 'o1', last_contact_date: hace(120) }, { state: 'profiled' }))
+  // desde la tarea 2.7 (hallazgo U-05, DD-13) cada grupo es una ListaPriorizada: tres a la vista, lo más urgente primero, y
+  // «Ver los N» hacia la lista filtrada en vez de desplegar todos los enlaces en el resumen
+  it('"Atención requerida" agrupa por tipo con su conteo, muestra tres y lleva a la lista filtrada', async () => {
+    const siete = Array.from({ length: 7 }, (_, n) => registro(`s${n}`, { organization: 'o1', last_contact_date: hace(100 + n) }, { state: 'profiled' }))
     abrir([{ path: '/objects/stakeholder/records', body: pagina(siete) }, ...rutas(SIN_STANCE)])
     const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
-    const sinContacto = await within(atencion).findByRole('group', { name: '7 grupos de interés sin contacto en más de 90 días' })
-    await waitFor(() => expect(within(sinContacto).getAllByRole('link')).toHaveLength(5))
-    expect(within(atencion).getByRole('group', { name: '1 acta por redactar' })).toBeInTheDocument()
-    await userEvent.click(within(sinContacto).getByRole('button', { name: 'Ver los 7' }))
-    expect(within(sinContacto).getAllByRole('link')).toHaveLength(7)
-    await userEvent.click(within(sinContacto).getByRole('button', { name: 'Ver menos' }))
-    expect(within(sinContacto).getAllByRole('link')).toHaveLength(5)
+    const sinContacto = await within(atencion).findByRole('region', { name: /^Sin contacto en más de 90 días/ })
+    expect(within(sinContacto).getByRole('heading')).toHaveTextContent('7')
+    await waitFor(() => expect(within(sinContacto).getAllByRole('listitem')).toHaveLength(3))
+    // primero el que lleva más tiempo sin contacto
+    expect(within(sinContacto).getAllByRole('listitem')[0]).toHaveTextContent(`Último contacto hace ${diasDesde(106)} días`)
+    expect(within(sinContacto).getByRole('link', { name: 'Ver los 7' })).toHaveAttribute('href', '/projects/p1/stakeholders?view=sinContacto')
+    // las actas no tienen una lista filtrada a la que ir: sin «Ver los N»
+    const actas = within(atencion).getByRole('region', { name: /^Actas por redactar/ })
+    expect(within(actas).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(actas).queryByRole('link', { name: /^Ver/ })).not.toBeInTheDocument()
   })
 
-  it('un grupo que nunca tuvo contacto entra en "sin contacto" con su propio texto', async () => {
+  it('las evaluaciones viejas dicen hace cuánto se evaluó, sin un enlace a una lista que no existe', async () => {
+    const cinco = Array.from({ length: 5 }, (_, n) =>
+      registro(`s${n}`, { organization: 'o1', last_contact_date: hace(1), last_assessment_date: hace(40 + n) }, { state: 'assessed' })
+    )
+    abrir([{ path: '/objects/stakeholder/records', body: pagina(cinco) }, ...rutas(SIN_STANCE)])
+    const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
+    const evaluaciones = await within(atencion).findByRole('region', { name: /^Evaluaciones con más de 30 días/ })
+    await waitFor(() => expect(within(evaluaciones).getAllByRole('listitem')).toHaveLength(3))
+    expect(within(evaluaciones).getAllByRole('listitem')[0]).toHaveTextContent(`Evaluada hace ${diasDesde(44)} días`)
+    expect(within(evaluaciones).queryByRole('link', { name: /^Ver/ })).not.toBeInTheDocument()
+    expect(within(evaluaciones).getByText('y 2 más')).toBeInTheDocument()
+  })
+
+  it('un grupo que nunca tuvo contacto entra en "sin contacto" con su propio motivo', async () => {
     abrir([
       { path: '/objects/stakeholder/records', body: pagina([registro('s9', { organization: 'o1', last_contact_date: null }, { state: 'identified' })]) },
       ...rutas(SIN_STANCE)
     ])
     const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
-    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas · nunca contactado' })).toBeInTheDocument()
+    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas' })).toHaveAttribute('href', '/projects/p1/stakeholders/s9')
+    expect(within(atencion).getByText('Nunca contactado')).toBeInTheDocument()
   })
 
   it('una cuenta que no lee last_contact_date no marca a nadie como "sin contacto registrado"', async () => {
@@ -321,7 +346,7 @@ describe('S08 · Project 360, resumen', () => {
     ])
     const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
     expect(await within(atencion).findByText(/Nada pide atención hoy/)).toBeInTheDocument()
-    expect(within(atencion).queryByText(/sin contacto/)).not.toBeInTheDocument()
+    expect(within(atencion).queryByText(/sin contacto/i)).not.toBeInTheDocument()
   })
 
   describe('con el reloj cerca de la medianoche de Lima', () => {
@@ -338,7 +363,7 @@ describe('S08 · Project 360, resumen', () => {
       abrir(con('2026-07-09'))
       const atencion = await screen.findByRole('region', { name: 'Atención requerida' })
       await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })
-      expect(within(atencion).queryByText(/sin contacto/)).not.toBeInTheDocument()
+      expect(within(atencion).queryByText(/sin contacto/i)).not.toBeInTheDocument()
       cerrar()
       abrir(con('2026-07-08'))
       const mas = await screen.findByRole('region', { name: 'Atención requerida' })

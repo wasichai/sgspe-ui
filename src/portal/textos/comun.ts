@@ -25,6 +25,12 @@ export const ES_COMUN = {
   },
   eligeUnProyecto: 'Elija un proyecto',
   // la nota de TablaPriorizada sobre una columna que dice lo mismo en todas las filas (hallazgo U-06): <valor/> es la celda
+  // ListaPriorizada (hallazgo U-05): el enlace sin conteo y lo que queda cuando no hay una lista a la que ir
+  listaPriorizada: {
+    verTodos: 'Ver todos',
+    yMas_one: 'y {{count}} más',
+    yMas_other: 'y {{count}} más'
+  },
   tablaPriorizada: {
     igualEnTodas: 'Igual en todas las filas',
     uniforme: '{{encabezado}}: <valor/>'
@@ -377,6 +383,11 @@ export const EN_COMUN: typeof ES_COMUN = {
     OBJECT_NOT_READABLE: 'Your role cannot read these records'
   },
   eligeUnProyecto: 'Pick a project',
+  listaPriorizada: {
+    verTodos: 'Show all',
+    yMas_one: 'and {{count}} more',
+    yMas_other: 'and {{count}} more'
+  },
   tablaPriorizada: {
     igualEnTodas: 'Same in every row',
     uniforme: '{{encabezado}}: <valor/>'

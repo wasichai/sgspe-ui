@@ -9,14 +9,19 @@ export const ES_P360 = {
     registrarInteraccion: 'Registrar interacción',
     atencion: 'Atención requerida',
     sinAtencion: 'Nada pide atención hoy.',
-    nuncaContactado: '{{nombre}} · nunca contactado',
+    // cada grupo de «Atención requerida» con su conteo al lado (ListaPriorizada) y el motivo de cada entrada
     grupos: {
-      actas_one: '{{count}} acta por redactar',
-      actas_other: '{{count}} actas por redactar',
-      sinContacto_one: '{{count}} grupo de interés sin contacto en más de {{dias}} días',
-      sinContacto_other: '{{count}} grupos de interés sin contacto en más de {{dias}} días',
-      evaluaciones_one: '{{count}} evaluación con más de {{dias}} días',
-      evaluaciones_other: '{{count}} evaluaciones con más de {{dias}} días'
+      actas: 'Actas por redactar',
+      sinContacto: 'Sin contacto en más de {{dias}} días',
+      evaluaciones: 'Evaluaciones con más de {{dias}} días'
+    },
+    motivos: {
+      acta: 'Realizada, sin acta',
+      nuncaContactado: 'Nunca contactado',
+      sinContacto_one: 'Último contacto hace {{count}} día',
+      sinContacto_other: 'Último contacto hace {{count}} días',
+      evaluacion_one: 'Evaluada hace {{count}} día',
+      evaluacion_other: 'Evaluada hace {{count}} días'
     },
     fuentes: { interacciones: 'Interacciones', grupos: 'Grupos de interés' },
     salud: 'Salud del proyecto',
@@ -184,15 +189,18 @@ export const EN_P360: typeof ES_P360 = {
     registrarInteraccion: 'Register engagement',
     atencion: 'Needs attention',
     sinAtencion: 'Nothing needs attention today.',
-
-    nuncaContactado: '{{nombre}} · never contacted',
     grupos: {
-      actas_one: '{{count}} minutes to draft',
-      actas_other: '{{count}} minutes to draft',
-      sinContacto_one: '{{count}} stakeholder with no contact for more than {{dias}} days',
-      sinContacto_other: '{{count}} stakeholders with no contact for more than {{dias}} days',
-      evaluaciones_one: '{{count}} assessment older than {{dias}} days',
-      evaluaciones_other: '{{count}} assessments older than {{dias}} days'
+      actas: 'Minutes to draft',
+      sinContacto: 'No contact for more than {{dias}} days',
+      evaluaciones: 'Assessments older than {{dias}} days'
+    },
+    motivos: {
+      acta: 'Held, minutes not drafted',
+      nuncaContactado: 'Never contacted',
+      sinContacto_one: 'Last contact {{count}} day ago',
+      sinContacto_other: 'Last contact {{count}} days ago',
+      evaluacion_one: 'Assessed {{count}} day ago',
+      evaluacion_other: 'Assessed {{count}} days ago'
     },
     fuentes: { interacciones: 'Engagements', grupos: 'Stakeholders' },
     salud: 'Project health',

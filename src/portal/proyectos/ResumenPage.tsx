@@ -1,7 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
-import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -28,7 +27,7 @@ import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { vigente, PARAMETROS_F2 } from './parametros'
 import { TableroDelProyecto, useIndicadoresDelProyecto } from './TableroDelProyecto'
 import { opcion } from '../datos/opciones'
-import { ListaPlegable } from '../componentes/ListaPlegable'
+import { ListaPriorizada, type EntradaPriorizada } from '../componentes/ListaPriorizada'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
 
@@ -297,46 +296,57 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   const interacciones = useTodos('engagement', { project: proyecto.id })
   const grupos = useTodos('stakeholder', { project: proyecto.id })
   const hoy = hoyEnLima()
-  const enlace = (ruta: string, contenido: ReactNode) => (
-    <Link to={ruta} className="text-sg-primary-text underline">
-      {contenido}
-    </Link>
-  )
-  const actas = (interacciones.data ?? [])
+  const base = `/projects/${encodeURIComponent(proyecto.id)}`
+  const aGrupo = (g: Registro) => `${base}/stakeholders/${encodeURIComponent(g.id)}`
+  // la más vieja primero: la que lleva más tiempo esperando su acta (la fecha realizada o, sin ella, la programada; sin ninguna, al final)
+  const instanteDe = (e: Registro) => texto(e, 'held_at') || texto(e, 'scheduled_at') || '9999'
+  const actas: EntradaPriorizada[] = (interacciones.data ?? [])
     .filter((e) => e.state === 'held' && TIPOS_FORMALES.includes(texto(e, 'engagement_type')))
+    .sort((x, y) => instanteDe(x).localeCompare(instanteDe(y)))
     .map((e) => ({
       clave: e.id,
-      contenido: enlace(`/projects/${encodeURIComponent(proyecto.id)}/engagements/${encodeURIComponent(e.id)}`, texto(e, 'title'))
+      titulo: texto(e, 'title'),
+      a: `${base}/engagements/${encodeURIComponent(e.id)}`,
+      motivo: t('p360.resumen.motivos.acta'),
+      tono: 'aviso'
     }))
-  const sinContacto = (grupos.data ?? [])
+  // primero quien nunca tuvo contacto y luego quien lleva más días sin él
+  const sinContacto: EntradaPriorizada[] = (grupos.data ?? [])
     // una cuenta que no lee last_contact_date (la clave no viene en el registro) no puede decir si hubo contacto
     .filter((g) => g.state !== 'retired' && 'last_contact_date' in g.attributes)
     .flatMap((g) => {
       const dias = diasEntre(atributo(g, 'last_contact_date'), hoy)
-      if (dias !== null && dias <= inactividad) return []
-      return [
-        {
-          clave: `c-${g.id}`,
-          contenido: enlace(
-            `/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`,
-            <AvisoDeGrupo grupo={g} nunca={dias === null} />
-          )
-        }
-      ]
+      return dias !== null && dias <= inactividad ? [] : [{ g, dias }]
     })
-  const evaluaciones = (grupos.data ?? [])
-    .filter((g) => g.state === 'assessed' && (diasEntre(atributo(g, 'last_assessment_date'), hoy) ?? 0) > revision)
-    .map((g) => ({
-      clave: `e-${g.id}`,
-      contenido: enlace(`/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`, <AvisoDeGrupo grupo={g} />)
+    .sort((x, y) => (y.dias ?? Infinity) - (x.dias ?? Infinity))
+    .map(({ g, dias }) => ({
+      clave: `c-${g.id}`,
+      titulo: <NombreDeGrupo grupo={g} />,
+      a: aGrupo(g),
+      motivo: dias === null ? t('p360.resumen.motivos.nuncaContactado') : t('p360.resumen.motivos.sinContacto', { count: dias }),
+      tono: dias === null ? 'peligro' : 'aviso'
     }))
-  // por tipo, con su conteo: cinco de cada uno y «Ver los N» (antes, una sola lista de más de cien enlaces)
-  const grupos_ = [
-    { clave: 'actas', elementos: actas, dias: 0 },
-    { clave: 'sinContacto', elementos: sinContacto, dias: inactividad },
-    { clave: 'evaluaciones', elementos: evaluaciones, dias: revision }
+  const evaluaciones: EntradaPriorizada[] = (grupos.data ?? [])
+    .flatMap((g) => {
+      const dias = g.state === 'assessed' ? (diasEntre(atributo(g, 'last_assessment_date'), hoy) ?? 0) : 0
+      return dias > revision ? [{ g, dias }] : []
+    })
+    .sort((x, y) => y.dias - x.dias)
+    .map(({ g, dias }) => ({
+      clave: `e-${g.id}`,
+      titulo: <NombreDeGrupo grupo={g} />,
+      a: aGrupo(g),
+      motivo: t('p360.resumen.motivos.evaluacion', { count: dias }),
+      tono: 'aviso'
+    }))
+  // por tipo, con su conteo: las tres más urgentes y «Ver los N» hacia la lista filtrada, si la hay (hallazgo U-05, DD-13). las
+  // actas por redactar y las evaluaciones viejas no tienen una vista propia en sus listas: dicen cuántas quedan, sin enlace
+  const grupos_: { clave: string; entradas: EntradaPriorizada[]; dias: number; verTodos?: string }[] = [
+    { clave: 'actas', entradas: actas, dias: 0 },
+    { clave: 'sinContacto', entradas: sinContacto, dias: inactividad, verTodos: `${base}/stakeholders?view=sinContacto` },
+    { clave: 'evaluaciones', entradas: evaluaciones, dias: revision }
   ]
-  const hayAvisos = grupos_.some((g) => g.elementos.length > 0)
+  const hayAvisos = grupos_.some((g) => g.entradas.length > 0)
   const fuentes = [
     { clave: 'interacciones', consulta: interacciones },
     { clave: 'grupos', consulta: grupos }
@@ -348,7 +358,13 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
       {hayAvisos ? (
         <div className="grid gap-4 lg:grid-cols-3">
           {grupos_.map((g) => (
-            <ListaPlegable key={g.clave} titulo={t(`p360.resumen.grupos.${g.clave}`, { count: g.elementos.length, dias: g.dias })} elementos={g.elementos} />
+            <ListaPriorizada
+              key={g.clave}
+              titulo={t(`p360.resumen.grupos.${g.clave}`, { dias: g.dias })}
+              total={g.entradas.length}
+              entradas={g.entradas}
+              verTodos={g.verTodos ? { a: g.verTodos } : undefined}
+            />
           ))}
         </div>
       ) : null}
@@ -364,11 +380,9 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   )
 }
 
-// el grupo de interés de un aviso, por su nombre: el título del grupo ya dice qué le pasa; uno que nunca tuvo contacto lo dice
-function AvisoDeGrupo({ grupo, nunca = false }: { grupo: Registro; nunca?: boolean }) {
-  const { t } = useTranslation(NS)
-  const nombre = useNombreDelGrupo(grupo)
-  return <>{nunca ? t('p360.resumen.nuncaContactado', { nombre }) : nombre}</>
+// el grupo de interés de un aviso, por su nombre: el motivo de la entrada dice qué le pasa
+function NombreDeGrupo({ grupo }: { grupo: Registro }) {
+  return <>{useNombreDelGrupo(grupo)}</>
 }
 
 function Actividad({ proyecto }: { proyecto: string }) {
