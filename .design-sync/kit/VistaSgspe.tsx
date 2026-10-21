@@ -30,17 +30,28 @@ function useTema(tema: 'light' | 'dark' | undefined) {
   }, [tema])
 }
 
+// el idioma pedido antes del primer dibujo, sin guardarlo (como el tema: pasaría a toda pantalla del mismo origen); sin
+// él, el que la persona eligió o el del navegador
+function conIdioma(i18n: ReturnType<typeof crearI18n>, idioma: 'es' | 'en' | undefined, clave: string) {
+  if (!idioma) return i18n
+  const guardado = localStorage.getItem(clave)
+  void i18n.changeLanguage(idioma)
+  if (guardado === null) localStorage.removeItem(clave)
+  else localStorage.setItem(clave, guardado)
+  return i18n
+}
+
 /** Raíz de toda pantalla de SGSPE: sesión, textos del portal (es-PE/en), TanStack Query con los 19 workflows del modelo
  * y un router en memoria. Sin ella los componentes del portal no tienen sus textos ni su contexto. `tema` fija `data-theme`
- * en <html> ('dark' para el tema oscuro; sin él, el del sistema). */
-export function VistaSgspe({ children, ruta = '/', tema }: { children: ReactNode; ruta?: string; tema?: 'light' | 'dark' }) {
+ * en <html> ('dark' para el tema oscuro; sin él, el del sistema); `idioma` ('es' o 'en') fija los textos del portal. */
+export function VistaSgspe({ children, ruta = '/', tema, idioma }: { children: ReactNode; ruta?: string; tema?: 'light' | 'dark'; idioma?: 'es' | 'en' }) {
   useTema(tema)
   const [valores] = useState(() => {
     const cliente = createApiClient({ baseUrl: '/api', storagePrefix: 'sgspe' })
     return {
       config: resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS, timeZone: ZONA_DE_LIMA }),
       cliente,
-      i18n: crearI18n(),
+      i18n: conIdioma(crearI18n(), idioma, cliente.keys.lang),
       consultas: consultasConFlujos()
     }
   })

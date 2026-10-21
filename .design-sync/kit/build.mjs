@@ -18,7 +18,7 @@ const indice = readFileSync(join(raiz, 'src', 'index.css'), 'utf8')
 const exclusion = "@source not '../.design-sync';"
 if (!indice.includes(exclusion)) throw new Error(`src/index.css ya no trae ${exclusion}`)
 const estilos = indice
-  .replace(exclusion, "@source '../../previews';")
+  .replace(exclusion, "@source '../../previews';\n@source '../../prototipos';")
   .replaceAll("'./", "'../../../src/")
   .replaceAll("'../node_modules/", "'../../../node_modules/")
 writeFileSync(join(salida, 'estilos.css'), estilos)
