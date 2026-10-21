@@ -1,7 +1,7 @@
 import { useWasichaiConfig } from '@wasichai/core'
 import { cn } from '@wasichai/ui'
 import { ChevronDown, MoreHorizontal } from 'lucide-react'
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent as ClicDeReact, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { texto, useRegistro } from '../datos/registros'
@@ -152,7 +152,8 @@ export function EncabezadoDePagina({
   )
 }
 
-// un desplegable sencillo (botón con aria-expanded y un grupo): Escape o un clic fuera lo cierran y el foco vuelve al botón
+// un desplegable sencillo (botón con aria-expanded y un grupo): Escape, un clic fuera o elegir una de sus opciones (un botón o
+// un enlace) lo cierran, y el foco vuelve al botón
 // el menú de acciones del encabezado: «Más» (solo el ícono) o, con etiqueta, un botón con su texto («Crear relacionado»)
 export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqueta?: string }) {
   const { t } = useTranslation(NS)
@@ -169,6 +170,13 @@ export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqu
     document.addEventListener('mousedown', fuera)
     return () => document.removeEventListener('mousedown', fuera)
   }, [abierto])
+  // elegida una opción, el menú ya cumplió: se cierra (una vista elegida pasa a la fila; una transición abre su diálogo, que
+  // al cerrarse devuelve el foco al botón del menú)
+  const alElegir = (e: ClicDeReact<HTMLDivElement>) => {
+    if (!(e.target as Element).closest('button, a')) return
+    setAbierto(false)
+    boton.current?.focus()
+  }
   const alTeclear = (e: KeyboardEvent) => {
     if (e.key !== 'Escape') return
     e.preventDefault()
@@ -201,6 +209,7 @@ export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqu
           id={id}
           role="group"
           aria-label={nombre}
+          onClick={alElegir}
           // en la barra de acciones del teléfono, abajo de todo, el menú se abre hacia arriba
           className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md max-sm:in-[[data-barra-de-acciones]]:top-auto max-sm:in-[[data-barra-de-acciones]]:bottom-full max-sm:in-[[data-barra-de-acciones]]:mb-1"
         >
