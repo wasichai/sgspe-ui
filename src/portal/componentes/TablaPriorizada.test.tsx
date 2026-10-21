@@ -78,11 +78,14 @@ describe('TablaPriorizada', () => {
     expect(within(filas()[0]).getByRole('cell', { name: 'Reservorio de Tunas' })).not.toHaveClass('hidden')
   })
 
-  it('las opcionales no se dibujan', () => {
+  // mientras no llegue el selector «Columnas», una opcional se ve desde 2xl (1536 px): ningún dato queda sin forma de verse
+  it('las opcionales se ven solo desde 2xl', () => {
     dibujar()
-    expect(within(tabla()).queryByRole('columnheader', { name: 'Notas' })).not.toBeInTheDocument()
-    expect(within(tabla()).getAllByRole('columnheader')).toHaveLength(4)
-    expect(within(filas()[0]).getAllByRole('cell')).toHaveLength(4)
+    const notas = within(tabla()).getByRole('columnheader', { name: 'Notas' })
+    expect(notas).toHaveClass('hidden', '2xl:table-cell')
+    expect(notas).not.toHaveClass('xl:table-cell')
+    expect(within(tabla()).getAllByRole('columnheader')).toHaveLength(5)
+    expect(within(filas()[0]).getAllByRole('cell')).toHaveLength(5)
   })
 
   it('una numérica va a la derecha y con cifras tabulares', () => {

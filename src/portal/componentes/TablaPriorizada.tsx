@@ -5,7 +5,8 @@ import { NS } from '../i18n'
 import { ExplicacionDeColumna } from './Estados'
 
 // la tabla ancha con prioridad de columnas (hallazgo U-06, DD-05): las esenciales siempre, las secundarias desde xl
-// (1280 px) y las opcionales, por ahora, no se dibujan (el selector «Columnas» llega después). con ocultarUniformes, una
+// (1280 px) y las opcionales, mientras no llegue el selector «Columnas», desde 2xl (1536 px): a 1440 px la tabla cabe y
+// ningún dato queda sin forma de verse. con ocultarUniformes, una
 // columna no esencial que dice lo mismo en todas las filas sale de la tabla y su valor queda en una nota encima
 export type PrioridadDeColumna = 'esencial' | 'secundaria' | 'opcional'
 
@@ -34,7 +35,12 @@ export interface PropsDeTablaPriorizada<T> {
   alAbrir?: (fila: T) => void
 }
 
-const visibilidad = (prioridad: PrioridadDeColumna) => (prioridad === 'secundaria' ? 'hidden xl:table-cell' : undefined)
+const VISIBILIDAD: Record<PrioridadDeColumna, string | undefined> = {
+  esencial: undefined,
+  secundaria: 'hidden xl:table-cell',
+  opcional: 'hidden 2xl:table-cell'
+}
+const visibilidad = (prioridad: PrioridadDeColumna) => VISIBILIDAD[prioridad]
 
 export function TablaPriorizada<T>({ etiqueta, columnas, filas, clave, celda, valorPlano, ocultarUniformes, alAbrir }: PropsDeTablaPriorizada<T>) {
   const { t } = useTranslation(NS)
@@ -42,9 +48,8 @@ export function TablaPriorizada<T>({ etiqueta, columnas, filas, clave, celda, va
   const esUniforme = (c: ColumnaPriorizada) =>
     Boolean(ocultarUniformes && valorPlano && c.prioridad !== 'esencial' && filas.length > 1) &&
     filas.every((f) => valorPlano!(f, c.id) === valorPlano!(filas[0], c.id))
-  const dibujables = columnas.filter((c) => c.prioridad !== 'opcional')
-  const uniformes = dibujables.filter(esUniforme)
-  const visibles = dibujables.filter((c) => !uniformes.includes(c))
+  const uniformes = columnas.filter(esUniforme)
+  const visibles = columnas.filter((c) => !uniformes.includes(c))
   const abrirConEnter = (fila: T) => (e: KeyboardEvent<HTMLTableRowElement>) => {
     // solo la fila enfocada: Enter en un enlace o una casilla de la fila es de ese control
     if (e.key === 'Enter' && e.target === e.currentTarget) {

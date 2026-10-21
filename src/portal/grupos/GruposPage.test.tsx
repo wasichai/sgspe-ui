@@ -61,7 +61,7 @@ describe('S16 · lista de grupos de interés', () => {
   })
 
   // hallazgo U-06 (DD-05): la tabla cabe a 1440 px por la prioridad de sus columnas
-  it('las columnas van por prioridad: las secundarias desde xl, las opcionales no se dibujan y las uniformes van a una nota', async () => {
+  it('las columnas van por prioridad: las secundarias desde xl, las opcionales desde 2xl y las uniformes van a una nota', async () => {
     const conResponsable = (id: string, extra: Record<string, unknown>) => {
       const g = [S1, S2].find((r) => r.id === id)!
       return { ...g, attributes: { ...g.attributes, owner_user_email: 'gestion@sgspe.test', ...extra } }
@@ -80,8 +80,8 @@ describe('S16 · lista de grupos de interés', () => {
       expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
     // secundarias, desde xl
     for (const c of ['Territorio', 'Último contacto']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'xl:table-cell')
-    // opcionales, para el selector «Columnas»
-    for (const c of ['Relación', 'Evaluación']) expect(tabla.queryByRole('columnheader', { name: c })).not.toBeInTheDocument()
+    // opcionales, desde 2xl hasta que llegue el selector «Columnas»
+    for (const c of ['Relación', 'Evaluación']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', '2xl:table-cell')
     // el mismo responsable en toda la página: sale de la tabla y queda en la nota, con su nombre
     expect(tabla.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
     const nota = screen.getByRole('list', { name: 'Igual en todas las filas' })
