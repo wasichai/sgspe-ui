@@ -6,6 +6,7 @@ import { baseDeAtencion, EQUIPO_DE_RELACIONES, sinPersona, DEF_QUEJA } from '../
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
+import { ahoraEnLima, instanteDeLima, textoDeDia } from '../datos/fechas'
 import { NuevaQcsPage } from './NuevaQcsPage'
 
 // S37 (screens.md §8): el tipo con su definición y la regla de sus plazos, quien registra como quien recibe, la anónima sin
@@ -83,6 +84,42 @@ describe('S37 · registrar QCS', () => {
     })
     expect(alta.cabeceras.get('X-Change-Reason')).toBe("UTF-8''recibida%20en%20la%20oficina")
     expect(alta.cabeceras.get('Idempotency-Key')).toBeTruthy()
+  })
+
+  // hallazgo U-07: la recepción se escribe como dd/mm/aaaa y hora de 24 h, y viaja el mismo instante que con el datetime-local
+  it('la fecha y hora de recepción se escriben en dd/mm/aaaa y 24 h, y viaja el instante de esa hora de Lima', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed()
+    abrir()
+    const dia = await screen.findByLabelText('Fecha y hora de recepción')
+    const hora = screen.getByLabelText('Fecha y hora de recepción (hora)')
+    // propone la hora de Lima de ahora, ya en dd/mm/aaaa
+    expect(dia).toHaveValue(textoDeDia(ahoraEnLima()))
+    await userEvent.clear(dia)
+    await userEvent.type(dia, '20102026')
+    await userEvent.clear(hora)
+    await userEvent.type(hora, '1015')
+    await llenar('Q-011')
+    expect(dia).toHaveValue('20/10/2026')
+    expect(hora).toHaveValue('10:15')
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar queja' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/grievance/records')).toHaveLength(1))
+    const { attributes } = red.a('POST', '/objects/grievance/records')[0].cuerpo as { attributes: Record<string, unknown> }
+    expect(attributes.received_at).toBe(instanteDeLima('2026-10-20T10:15'))
+    expect(attributes.received_at).toBe('2026-10-20T15:15:00.000Z')
+  })
+
+  it('una fecha de recepción que no es una fecha no se registra y lo dice en el campo', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed()
+    abrir()
+    const dia = await screen.findByLabelText('Fecha y hora de recepción')
+    await userEvent.clear(dia)
+    await userEvent.type(dia, '31/02/2026')
+    await llenar('Q-012')
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar queja' }))
+    expect(await screen.findByText('Escriba la fecha como día/mes/año, por ejemplo 20/10/2026')).toBeInTheDocument()
+    expect(red.a('POST', '/objects/grievance/records')).toHaveLength(0)
   })
 
   it('una anónima no ofrece ni manda grupo ni persona; la confidencial explica quién la leerá', async () => {

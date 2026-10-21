@@ -329,6 +329,16 @@ export const ES_COMUN = {
     seccionDeOtroProyecto: 'La sección es de otro proyecto que la sugerencia: no se copia.',
     seccionNoLegible: 'La sección no existe o su cuenta no puede leerla.'
   },
+  // CampoFecha (hallazgo U-07): el día como dd/mm/aaaa y la hora de 24 h en los dos idiomas, nunca el orden del navegador
+  campoFecha: {
+    marcador: 'dd/mm/aaaa',
+    marcadorHora: 'hh:mm',
+    hora: '{{etiqueta}} (hora)',
+    formato: 'Escriba la fecha como día/mes/año, por ejemplo 20/10/2026',
+    formatoHora: 'Escriba la hora como horas:minutos, de 00:00 a 23:59, por ejemplo 15:30',
+    antesDe: 'La fecha no puede ser anterior al {{min}}',
+    despuesDe: 'La fecha no puede ser posterior al {{max}}'
+  },
   errores: {
     '400': 'Revise los datos marcados.',
     '403': 'Su cuenta no tiene permiso para esta acción. Pídalo a la administración del proyecto.',
@@ -641,6 +651,15 @@ export const EN_COMUN: typeof ES_COMUN = {
     borradorNoListo: 'The draft is not ready or was already issued: request a new draft.',
     seccionDeOtroProyecto: 'The section belongs to another project than the suggestion: it is not copied.',
     seccionNoLegible: 'The section does not exist or your account cannot read it.'
+  },
+  campoFecha: {
+    marcador: 'dd/mm/yyyy',
+    marcadorHora: 'hh:mm',
+    hora: '{{etiqueta}} (time)',
+    formato: 'Write the date as day/month/year, for example 20/10/2026',
+    formatoHora: 'Write the time as hours:minutes, from 00:00 to 23:59, for example 15:30',
+    antesDe: 'The date cannot be before {{min}}',
+    despuesDe: 'The date cannot be after {{max}}'
   },
   errores: {
     '400': 'Check the highlighted data.',

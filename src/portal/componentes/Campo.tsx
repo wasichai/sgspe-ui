@@ -5,18 +5,22 @@ import { rotuloDeOpcion } from '../datos/opciones'
 import { NS } from '../i18n'
 
 // un campo con su etiqueta visible y su error enlazado por aria-describedby (design-system.md §3.8 y §7)
+// id: el del control, cuando la pantalla lo fija; si no, uno propio
 export function Campo({
   etiqueta,
   error,
   ayuda,
+  id: idPropio,
   children
 }: {
   etiqueta: string
   error?: string
   ayuda?: string
+  id?: string
   children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }) => ReactNode
 }) {
-  const id = useId()
+  const generado = useId()
+  const id = idPropio ?? generado
   const descripcion = error ? `${id}-error` : ayuda ? `${id}-ayuda` : undefined
   return (
     <div className="space-y-1">

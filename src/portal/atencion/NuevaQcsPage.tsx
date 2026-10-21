@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
 import { AvisoAlSalir, useSalidaPermitida } from '../componentes/FormularioPorPasos'
@@ -236,11 +237,15 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
             <Campo etiqueta={etiqueta('channel')} error={errorDe('channel')}>
               {(p) => <SelectNativo {...p} value={valores.channel} onChange={(e) => cambiar('channel', e.target.value)} opciones={opciones('channel')} />}
             </Campo>
-            <Campo etiqueta={etiqueta('received_at')} error={errorDe('received_at')}>
-              {(p) => (
-                <input {...p} type="datetime-local" className={CONTROL} value={valores.received_at} onChange={(e) => cambiar('received_at', e.target.value)} />
-              )}
-            </Campo>
+            {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
+            <CampoFecha
+              etiqueta={etiqueta('received_at')}
+              conHora
+              requerido
+              valor={valores.received_at || null}
+              alCambiar={(v) => cambiar('received_at', v ?? '')}
+              error={errorDe('received_at')}
+            />
             <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.recibidaPor', { correo: user?.email ?? '' })}</p>
             {origen ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.origen')}</p> : null}
             <label className="flex items-start gap-2 text-sm">
