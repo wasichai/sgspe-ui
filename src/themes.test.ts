@@ -54,7 +54,7 @@ const declaradas = (css: string) => new Set([...css.matchAll(/(--[a-z0-9-]+)\s*:
 // "Pino y piedra" (ASM-077, docs/ux/design-system.md §2 y §9): los tokens de SGSPE son una capa sobre los de wasichai
 describe('Pino y piedra', () => {
   const claro = declaradas(bloque(tokens, ':root {'))
-  const oscuro = declaradas(bloque(tokens, ':root[data-theme="dark"] {'))
+  const oscuro = declaradas(bloque(tokens, ':root[data-theme="dark"],'))
   const correspondencia = Object.fromEntries([...puente.matchAll(/(--[a-z-]+):\s*var\((--sg-[a-z-]+)\)/g)].map((m) => [m[1], m[2]]))
 
   it('index.css importa tailwind, el tema de wasichai, los tokens de SGSPE y el puente, en ese orden', () => {
@@ -83,5 +83,48 @@ describe('Pino y piedra', () => {
     expect(puente).toContain("--font-sans: 'IBM Plex Sans'")
     expect(puente).toContain("--font-mono: 'IBM Plex Mono'")
     for (const css of [indexCss, tokens, puente]) expect(css).not.toMatch(/url\(\s*['"]?(https?:)?\/\/|@import\s+(url\()?['"]?(https?:)?\/\//)
+  })
+})
+
+// DD-15 (docs/ux/redesign/03-direccion-visual-y-design-system.md §2): el borde de los campos, la superficie de lo que flota y los
+// tokens de datos como utilidades. vitest no calcula css: se lee la hoja; el contraste lo mide contraste.py de sgspe
+describe('borde de control, superficie flotante y tokens de datos', () => {
+  const temas = {
+    claro: bloque(tokens, ':root {'),
+    oscuro: bloque(tokens, ':root[data-theme="dark"],'),
+    sistema: bloque(tokens, ':root:not([data-theme]) {')
+  }
+  const valor = (css: string, variable: string) => new RegExp(`${variable}:\\s*([^;]+);`).exec(css)?.[1]
+  const tema = bloque(tokens, '@theme inline {')
+
+  it('el oscuro es el de wasichai o el de SGSPE, y el del sistema solo aplica sin data-theme', () => {
+    expect(tokens).toContain(':root[data-theme="dark"],\n:root[data-theme="sgspe-noche"] {')
+    expect(tokens).toContain('@media (prefers-color-scheme: dark) {\n  :root:not([data-theme]) {')
+    expect(tokens).not.toContain(':not([data-theme="light"])')
+    expect([...declaradas(temas.sistema)].sort()).toEqual([...declaradas(temas.oscuro)].sort())
+  })
+
+  it.each([
+    ['claro', '#ffffff'],
+    ['oscuro', '#1d2420'],
+    ['sistema', '#1d2420']
+  ] as const)('en %s, el borde de control es el borde fuerte y la superficie flotante es %s', (nombre, flotante) => {
+    expect(valor(temas[nombre], '--sg-border-control')).toBe('var(--sg-border-strong)')
+    expect(valor(temas[nombre], '--sg-surface-raised')).toBe(flotante)
+  })
+
+  it('cada color --sg-* es una utilidad de tailwind, también los de datos, postura, riesgo y suelo del mapa', () => {
+    const colores = [...declaradas(temas.claro)].filter((v) => !v.startsWith('--sg-shadow-'))
+    for (const v of ['--sg-border-control', '--sg-surface-raised', '--sg-data-1', '--sg-data-6', '--sg-stance-favor', '--sg-risk-critical', '--sg-map-ground'])
+      expect(colores).toContain(v)
+    expect(colores.filter((v) => valor(tema, `--color-${v.slice(2)}`) !== `var(${v})`)).toEqual([])
+  })
+
+  it('los campos de @wasichai/ui llevan el borde de control, salvo el inválido, y su texto de ejemplo en --sg-text-muted', () => {
+    const regla = (selector: string) => bloque(indexCss, selector)
+    const campos = ":where([data-slot='input'], [data-slot='textarea'], [data-slot='native-select'], [data-slot='select-trigger']):not([aria-invalid='true']) {"
+    expect(valor(regla(campos), 'border-color')).toBe('var(--sg-border-control)')
+    expect(valor(regla(":where([data-slot='input'], [data-slot='textarea'])::placeholder,"), 'color')).toBe('var(--sg-text-muted)')
+    expect(indexCss).toContain("[data-slot='select-trigger'][data-placeholder] {")
   })
 })
