@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { pagina, prepararApi, registro } from './api'
 
-// P-02 en las listas de QCS, Riesgos y Programas (rediseño de UX, área 4.3b), en un navegador de verdad: lo que jsdom no ve porque
+// P-02 en las listas de QCS, Riesgos, alerta temprana y Programas (rediseño de UX, área 4.3b), en un navegador de verdad: lo que jsdom no ve porque
 // depende del CSS compilado. una sola fila de pestañas (las vistas van en el selector de la barra de filtros), la tabla sin
 // desborde a 1440 px y, a 390 px, tarjetas en lugar de la tabla. la API se simula como en f4.spec.ts: estas rutas ganan a las
 // comunes
@@ -65,6 +65,12 @@ const ALERTA = registro(
   { project: 'p1', title: 'Asamblea de protesta anunciada en la radio local', detected_at: '2026-10-03T13:00:00Z', severity: 'ALTO' },
   'detected'
 )
+const PROGRAMA = registro('sp1', { project: 'p1', code: 'PS-001', name: 'Programa de agua segura para las comunidades de la cuenca alta' }, 'executing')
+const APORTE = registro(
+  'a1',
+  { project: 'p1', code: 'AP-001', contribution_type: 'DONACION', total_amount: '1750.5', currency: 'PEN', recipient_organization: 'o1' },
+  'requested'
+)
 
 const flujo = (objeto: string, estados: [string, string][]) => ({
   id: objeto,
@@ -85,7 +91,9 @@ async function prepararListas(page: Page): Promise<void> {
     stakeholder_request: ['READ'],
     social_risk: ['READ'],
     early_warning: ['READ'],
-    early_warning_rule: ['READ']
+    early_warning_rule: ['READ'],
+    social_program: ['READ'],
+    social_contribution: ['READ']
   }
   const rutas: [RegExp, unknown][] = [
     [/^\/auth\/me\/permissions$/, { admin: false, objects: permisos }],
@@ -119,6 +127,8 @@ async function prepararListas(page: Page): Promise<void> {
     [/^\/objects\/social_risk\/records$/, pagina(RIESGOS)],
     [/^\/objects\/early_warning\/workflow$/, flujo('early_warning', [['detected', 'Detectada']])],
     [/^\/objects\/early_warning\/records$/, pagina([ALERTA])],
+    [/^\/objects\/social_program\/records$/, pagina([PROGRAMA])],
+    [/^\/objects\/social_contribution\/records$/, pagina([APORTE])],
     [/^\/objects\/[a-z_]+\/records$/, pagina([])]
   ]
   await page.route('**/api/**', async (route) => {
@@ -181,6 +191,19 @@ test.describe('a 1440 px', () => {
     await expect(page.getByRole('tablist')).toHaveCount(0)
     await sinDesborde(page, page.getByRole('table', { name: 'Alertas del proyecto' }))
   })
+
+  test('programas: Programas y Aportes en un solo selector, nunca dos listados apilados, y la tabla sin desborde', async ({ page }) => {
+    await page.goto('/projects/p1/programs')
+    const barra = page.getByRole('group', { name: 'Filtros' })
+    await expect(barra.getByRole('radio', { name: 'Programas, 1' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+    await sinDesborde(page, page.getByRole('table', { name: 'Programas del alcance' }))
+    await expect(page.getByRole('table', { name: 'Aportes del alcance' })).toHaveCount(0)
+    await barra.getByRole('radio', { name: /^Aportes en curso\b/ }).click()
+    await expect(page).toHaveURL(/\/projects\/p1\/programs\?view=enCurso$/)
+    await sinDesborde(page, page.getByRole('table', { name: 'Aportes del alcance' }))
+    await expect(page.getByRole('table', { name: 'Programas del alcance' })).toHaveCount(0)
+  })
 })
 
 test.describe('a 390 px', () => {
@@ -205,5 +228,14 @@ test.describe('a 390 px', () => {
     const tarjetas = page.getByRole('list', { name: 'Alertas del proyecto' })
     await expect(tarjetas.getByRole('listitem').filter({ hasText: 'Asamblea de protesta' })).toBeVisible()
     await expect(page.getByRole('table', { name: 'Alertas del proyecto' })).toHaveCount(0)
+  })
+
+  test('los programas y los aportes son tarjetas', async ({ page }) => {
+    await page.goto('/projects/p1/programs')
+    await expect(page.getByRole('list', { name: 'Programas del alcance' }).getByRole('listitem').filter({ hasText: 'PS-001' })).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Programas del alcance' })).toHaveCount(0)
+    await page.goto('/projects/p1/programs?view=enCurso')
+    await expect(page.getByRole('list', { name: 'Aportes del alcance' }).getByRole('listitem').filter({ hasText: 'AP-001' })).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Aportes del alcance' })).toHaveCount(0)
   })
 })
