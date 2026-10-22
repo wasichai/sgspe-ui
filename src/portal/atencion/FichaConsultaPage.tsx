@@ -20,6 +20,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Consulta, esIlegible } from '../componentes/Estados'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Historia } from '../componentes/Historia'
@@ -501,8 +502,13 @@ function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Reg
           <Campo etiqueta={t('fichaConsulta.solicitud.aceptar.respuesta')} error={falta('respuesta') ?? delServidor.response}>
             {(p) => <Textarea {...p} value={valores.respuesta} maxLength={4000} onChange={cambiar('respuesta')} />}
           </Campo>
-          <Campo
+          {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
+          <CampoFecha
             etiqueta={t('fichaConsulta.solicitud.aceptar.respondida')}
+            conHora
+            requerido
+            valor={valores.respondida || null}
+            alCambiar={(v) => setValores((x) => ({ ...x, respondida: v ?? '' }))}
             error={
               intentado && instante === ''
                 ? t('fichaConsulta.solicitud.aceptar.falta')
@@ -510,9 +516,7 @@ function DialogoDeAceptacion({ solicitud, opciones, alCerrar }: { solicitud: Reg
                   ? t('fichaConsulta.solicitud.aceptar.respondidaInvalida')
                   : undefined
             }
-          >
-            {(p) => <Input {...p} type="datetime-local" value={valores.respondida} onChange={cambiar('respondida')} />}
-          </Campo>
+          />
           {esAporte ? (
             <fieldset className="space-y-3">
               <legend className="text-sg-body-sm font-medium">{t('fichaConsulta.solicitud.aceptar.aporte')}</legend>

@@ -4,7 +4,8 @@ import { Alert, Pagination, Table, Td, Th } from '@wasichai/ui'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
-import { CONTROL, SelectNativo } from '../componentes/Campo'
+import { SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, NoDisponible, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -112,14 +113,8 @@ export function ReporteQcsPage() {
       </div>
       <p className="text-sm text-sg-text-secondary">{t('reporteQcs.ayuda')}</p>
       <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-        <label className="space-y-1">
-          <span className="block">{t('reporteQcs.filtros.desde')}</span>
-          <input type="date" className={CONTROL} value={filtro('periodStart')} onChange={(e) => cambiar('periodStart', e.target.value)} />
-        </label>
-        <label className="space-y-1">
-          <span className="block">{t('reporteQcs.filtros.hasta')}</span>
-          <input type="date" className={CONTROL} value={filtro('periodEnd')} onChange={(e) => cambiar('periodEnd', e.target.value)} />
-        </label>
+        <CampoFecha etiqueta={t('reporteQcs.filtros.desde')} valor={filtro('periodStart') || null} alCambiar={(v) => cambiar('periodStart', v ?? '')} />
+        <CampoFecha etiqueta={t('reporteQcs.filtros.hasta')} valor={filtro('periodEnd') || null} alCambiar={(v) => cambiar('periodEnd', v ?? '')} />
         <label className="space-y-1">
           <span className="block">{t('reporteQcs.filtros.tipo')}</span>
           <SelectNativo

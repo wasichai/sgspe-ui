@@ -142,7 +142,9 @@ describe('S57 · ficha de solicitud', () => {
     expect(screen.queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
-    expect(within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima)')).toHaveValue('2026-10-09T21:30')
+    // hallazgo U-07 (DD-07): la hora de Lima propuesta se muestra como dd/mm/aaaa y HH:mm de 24 h
+    expect(within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima)')).toHaveValue('09/10/2026')
+    expect(within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima) (hora)')).toHaveValue('21:30')
     expect(within(dialogo).getByLabelText('Título del compromiso')).toHaveValue('Calaminas para el local comunal')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
     expect(within(dialogo).getAllByText('Este dato es obligatorio').length).toBeGreaterThanOrEqual(3)
@@ -164,6 +166,34 @@ describe('S57 · ficha de solicitud', () => {
     expect(aceptar.cabeceras.get('If-Match')).toBe(`"${SOLICITUD.updatedAt}"`)
     expect(aceptar.cabeceras.get('X-Change-Reason')).toBe("UTF-8''aprobada%20en%20comit%C3%A9")
     expect(aceptar.cabeceras.get('Idempotency-Key')).toBeTruthy()
+  })
+
+  // hallazgo U-07 (DD-07): la respuesta se escribe como 20/10/2026 y 10:15 y viaja como el instante de esa hora de Lima
+  it('la hora de la respuesta escrita como 20/10/2026 y 10:15 viaja como el instante de Lima', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholder-requests/r1/accept',
+        responder: () => new Response(JSON.stringify({ request: { ...SOLICITUD, state: 'accepted' }, commitment: COMPROMISO }), { status: 201 })
+      }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    const dia = within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima)')
+    const hora = within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima) (hora)')
+    await userEvent.clear(dia)
+    await userEvent.type(dia, '20/10/2026')
+    await userEvent.clear(hora)
+    await userEvent.type(hora, '10:15')
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta a la solicitud'), 'Sí')
+    await userEvent.type(within(dialogo).getByLabelText('Código del compromiso'), 'COM-010')
+    await userEvent.type(within(dialogo).getByLabelText('Monto'), '100')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'comité')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholder-requests/r1/accept')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/stakeholder-requests/r1/accept')[0].cuerpo).toMatchObject({ respondedAt: '2026-10-20T15:15:00.000Z' })
   })
 
   // plan 4.2a: un respondedAt mal formado es un 400 sobre respondedAt (con el texto libre de la validación): se dice junto a su
