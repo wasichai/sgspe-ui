@@ -150,7 +150,8 @@ test('aceptar una solicitud como aporte manda creates, If-Match, motivo y clave,
   await dialogo.getByLabel('Motivo (obligatorio)').fill('Aprobada en comité')
   await dialogo.getByRole('button', { name: 'Aceptar y crear' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/contributions\/a9$/)
-  await expect(page.getByRole('heading', { name: 'Aporte AP-010', level: 1 })).toBeVisible()
+  // el título dice para qué es (P-09 del rediseño de UX, U-27); el código va en el antetítulo
+  await expect(page.getByRole('heading', { name: 'Estantes para la biblioteca', level: 1 })).toBeVisible()
   const aceptacion = escrituras.find((r) => new URL(r.url()).pathname === '/api/sgspe/stakeholder-requests/r1/accept')!
   expect(aceptacion.postDataJSON()).toMatchObject({
     creates: 'social_contribution',
@@ -171,7 +172,7 @@ test('aceptar una solicitud como aporte manda creates, If-Match, motivo y clave,
 test('en S44 la única entrega de un aporte adquirido se registra sin monto, con su clave y su motivo; después no se ofrece otra', async ({ page }) => {
   const { escrituras } = await prepararF5(page)
   await page.goto('/projects/p1/contributions/a1')
-  await expect(page.getByRole('heading', { name: 'Aporte AP-001', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Equipar la biblioteca escolar', level: 1 })).toBeVisible()
   await page.getByRole('tab', { name: 'Entrega' }).click()
   await page.getByRole('button', { name: 'Registrar entrega' }).click()
   const panel = page.getByRole('dialog', { name: 'Registrar la entrega del aporte' })

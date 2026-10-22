@@ -17,6 +17,18 @@ export interface AccionDeFicha {
 
 const SECUNDARIAS_A_LA_VISTA = 2
 
+// un título que dice qué es (U-27 del rediseño de UX), sacado de un texto del registro (lo que plantea una QCS, el propósito de un
+// aporte): su primera línea, cortada en una palabra si es larga; sin texto, el tipo y el código
+const LARGO_DEL_TITULO = 120
+export function tituloQueDiceQueEs(textoDelRegistro: string, porCodigo: string): string {
+  const linea = textoDelRegistro.split('\n')[0].trim()
+  if (!linea) return porCodigo
+  if (linea.length <= LARGO_DEL_TITULO) return linea
+  const corte = linea.slice(0, LARGO_DEL_TITULO)
+  const espacio = corte.lastIndexOf(' ')
+  return `${corte.slice(0, espacio > 0 ? espacio : LARGO_DEL_TITULO)}…`
+}
+
 // la acción propia se dibuja con el peso que le toca: primaria si no hay una transición del camino, secundaria si la hay
 function conVariante(nodo: ReactNode, variante: 'primary' | 'secondary'): ReactNode {
   return isValidElement(nodo) ? cloneElement(nodo as ReactElement<{ variant?: string }>, { variant: variante }) : nodo

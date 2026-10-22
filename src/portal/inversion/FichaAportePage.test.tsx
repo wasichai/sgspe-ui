@@ -69,18 +69,53 @@ describe('S44 · ficha del aporte', () => {
   it('dice el aporte con su tipo, su estado, su campaña y el total que se aprobará; para qué y para quién; el tope sin contarlo dos veces', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    expect(await screen.findByRole('heading', { name: 'Aporte AP-001', level: 1 })).toBeInTheDocument()
-    // en el encabezado, el camino del flujo y el panel de decisión (revisión de UX, etapa 4)
+    // el título dice para qué es (U-27 del rediseño de UX); el código va en el antetítulo
+    expect(await screen.findByRole('heading', { name: 'Equipar la biblioteca escolar', level: 1 })).toBeInTheDocument()
+    // en el camino del flujo y el panel de decisión (revisión de UX, etapa 4); ya no en la cabecera (U-25)
     expect((await screen.findAllByText('Solicitado')).length).toBeGreaterThan(0)
     expect(await screen.findByRole('button', { name: 'Aprobar sin revisión interna' })).toBeInTheDocument()
     const paraQue = screen.getByRole('region', { name: 'Para qué y para quién' })
     expect(within(paraQue).getByText('Equipar la biblioteca escolar')).toBeInTheDocument()
     expect(await within(paraQue).findByRole('link', { name: 'Asociación Ejemplo' })).toBeInTheDocument()
-    expect(await within(paraQue).findByRole('link', { name: 'Empresa Ejemplo S.A.' })).toBeInTheDocument()
+    // quién paga, en su propia sección (DD-06 del rediseño de UX)
+    const financiacion = screen.getByRole('region', { name: 'Quién paga y a qué se vincula' })
+    expect(await within(financiacion).findByRole('link', { name: 'Empresa Ejemplo S.A.' })).toBeInTheDocument()
     expect(await screen.findByText('Total que se aprobará: S/ 1,750.50')).toBeInTheDocument()
     const tope = await screen.findByRole('region', { name: 'Tope de apoyo social de la campaña' })
     expect(within(tope).getByText('Este aporte').nextElementSibling).toHaveTextContent('S/ 1,750.50')
     expect(within(tope).getByText('Queda').nextElementSibling).toHaveTextContent('S/ 48,249.50')
+  })
+
+  // P-09 del rediseño de UX (DD-02 y DD-06; U-03, U-25, U-26 y U-27): el antetítulo en sans; una sola primaria; rechazar, en
+  // «Más acciones»; el estado una sola vez (en el panel de decisión); «Para qué y para quién» pliega sus campos sin dato
+  it('una sola primaria, rechazar en «Más acciones», el estado una sola vez y los campos sin dato plegados', async () => {
+    fetch = mockFetch(
+      rutas(APORTE, [
+        {
+          path: '/objects/social_contribution/records/a1/transitions',
+          body: [
+            { name: 'reject', label: 'Rechazar', to: 'rejected', toLabel: 'Rechazado', allowed: true, reason: null },
+            { name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }
+          ]
+        }
+      ])
+    )
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Equipar la biblioteca escolar', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText(/^Aporte · AP-001/)).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).queryByText('Solicitado')).not.toBeInTheDocument()
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByRole('button', { name: 'Aprobar' })).toHaveAttribute('data-variant', 'primary')
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    expect(within(acciones).queryByRole('button', { name: /^Rechazar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Rechazar/ })).toBeInTheDocument()
+    expect(await screen.findAllByText('Solicitado', { selector: '[data-estado]' })).toHaveLength(1)
+    const paraQue = screen.getByRole('region', { name: 'Para qué y para quién' })
+    expect(within(paraQue).queryByText('Festividad')).not.toBeInTheDocument()
+    await userEvent.click(within(paraQue).getByRole('button', { name: /^Mostrar los \d+ campos sin dato$/ }))
+    expect(within(paraQue).getByText('Festividad')).toBeInTheDocument()
   })
 
   it('en Solicitado ofrece «Nuevo ítem»; al guardar uno se relee el aporte con su total', async () => {

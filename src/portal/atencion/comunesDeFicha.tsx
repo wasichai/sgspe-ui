@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
+import { tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
 import { CamposPlegables, type CampoDeFicha } from '../componentes/CamposPlegables'
 import { Restringido } from '../componentes/Estados'
 import { Seccion } from '../componentes/Seccion'
@@ -95,16 +96,8 @@ function Grupo({ id }: { id: string }) {
   )
 }
 
-// el título de la ficha de una QCS dice lo que se planteó (U-27 del rediseño de UX): la primera línea de su descripción, cortada
-// en una palabra si es larga; sin descripción, el tipo y el código
-const LARGO_DEL_TITULO = 120
-export function tituloDeQcs(qcs: Registro, porCodigo: string): string {
-  const linea = texto(qcs, 'description').split('\n')[0].trim()
-  if (!linea) return porCodigo
-  if (linea.length <= LARGO_DEL_TITULO) return linea
-  const corte = linea.slice(0, LARGO_DEL_TITULO)
-  return `${corte.slice(0, corte.lastIndexOf(' ') > 0 ? corte.lastIndexOf(' ') : LARGO_DEL_TITULO)}…`
-}
+// el título de la ficha de una QCS dice lo que se planteó (U-27 del rediseño de UX)
+export const tituloDeQcs = (qcs: Registro, porCodigo: string): string => tituloQueDiceQueEs(texto(qcs, 'description'), porCodigo)
 
 // los datos del caso comunes a las tres QCS, por tema (DD-06 y U-26 del rediseño de UX): qué se plantea, cómo llegó y quién, y la
 // atención con su respuesta; cada sección pliega sus campos sin dato. planteamiento y atencion suman los propios del tipo

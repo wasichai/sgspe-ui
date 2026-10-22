@@ -77,8 +77,10 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
     <section aria-label={titulo} className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+        {/* una acción de la lista, secundaria: la primaria de la ficha que la contiene es su siguiente acción (P-09 y DD-02 del
+            rediseño de UX, una sola primaria por ficha) */}
         {crea ? (
-          <Button size="sm" onClick={() => abrir(NUEVO)}>
+          <Button size="sm" variant="secondary" onClick={() => abrir(NUEVO)}>
             {textoNuevo}
           </Button>
         ) : null}

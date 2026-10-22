@@ -15,6 +15,7 @@ export const ES_FICHA_APORTE = {
   sinActividad: 'Sin actividad registrada',
   paraQue: {
     titulo: 'Para qué y para quién',
+    financiacion: 'Quién paga y a qué se vincula',
     proposito: 'Propósito declarado',
     ocasion: 'Ocasión',
     festividad: 'Festividad',
@@ -136,6 +137,7 @@ export const EN_FICHA_APORTE: typeof ES_FICHA_APORTE = {
   sinActividad: 'No recorded activity',
   paraQue: {
     titulo: 'What for and for whom',
+    financiacion: 'Who pays and what it is linked to',
     proposito: 'Declared purpose',
     ocasion: 'Occasion',
     festividad: 'Festivity',

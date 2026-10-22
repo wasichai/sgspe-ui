@@ -60,7 +60,8 @@ describe('rutas de F5', () => {
 
   it('contributions/a1 es la ficha de un aporte bajo su proyecto', async () => {
     fetch = abrirPortal('/projects/p1/contributions/a1', INVERSION, EQUIPO_DE_INVERSION, deInversion())
-    expect(await screen.findByRole('heading', { name: 'Aporte AP-001', level: 1 })).toBeInTheDocument()
+    // el título dice para qué es (P-09 del rediseño de UX, U-27)
+    expect(await screen.findByRole('heading', { name: 'Equipar la biblioteca escolar', level: 1 })).toBeInTheDocument()
   })
 
   it('sin READ sobre programas ni aportes, la ruta lo dice y la sección no se ofrece', async () => {
