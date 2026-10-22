@@ -5,7 +5,9 @@ import { Link } from 'react-router'
 import { useMensajeDeError } from '../componentes/errores'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { useParametrosDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import {
   CLASE_DE_TIPO,
   FUENTES_DE_SGSPE,
@@ -68,17 +70,30 @@ export function AvisosPage() {
         }
       />
       {leerTodos.isError ? <Alert tone="danger">{mensaje(leerTodos.error)}</Alert> : null}
-      <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v.id, etiqueta: t(`avisos.filtros.${v.id}`), conteo: conteos[v.id] }))}
-        actual={lista.vista}
-        alCambiar={(vista) => lista.cambiar({ view: vista })}
-      />
-      <FiltroDeLista
-        etiqueta={t('avisos.tipo')}
-        className="max-w-xs"
-        value={tipo ?? ''}
-        onChange={(e) => lista.cambiar({ kind: e.target.value })}
-        opciones={TIPOS_DE_AVISO.map((k) => ({ valor: k, etiqueta: t(`avisos.tipos.${k}`) }))}
+      {/* la barra de filtros (hallazgos U-18 y U-22, DD-03 y DD-04): las vistas en el selector, con su conteo, en lugar de una
+          segunda fila de pestañas, y el tipo como filtro de la barra, de su ancho y no del de la pantalla, con su chip. ?view= y
+          ?kind= son los mismos */}
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({ id: v.id, etiqueta: t(`avisos.filtros.${v.id}`), n: conteos[v.id] }))}
+            actual={lista.vista}
+            alElegir={(vista) => lista.cambiar({ view: vista })}
+          />
+        }
+        frecuentes={
+          <FiltroDeLista
+            etiqueta={t('avisos.tipo')}
+            value={tipo ?? ''}
+            onChange={(e) => lista.cambiar({ kind: e.target.value })}
+            opciones={TIPOS_DE_AVISO.map((k) => ({ valor: k, etiqueta: t(`avisos.tipos.${k}`) }))}
+          />
+        }
+        aplicados={
+          tipo ? [{ clave: 'kind', etiqueta: `${t('avisos.tipo')}: ${t(`avisos.tipos.${tipo}`)}`, alQuitar: () => lista.cambiar({ kind: null }) }] : []
+        }
+        alLimpiar={() => lista.cambiar({ kind: null })}
       />
       {avisos.isPending ? (
         <Cargando />
