@@ -7,6 +7,7 @@ import type { Indicador } from '../datos/indicadores'
 import { NS, numeroPe } from '../i18n'
 import { Cargando, NoDisponible } from './Estados'
 import { correlacionDe, useMensajeDeError } from './errores'
+import { Seccion } from './Seccion'
 
 // una cifra con su contexto (design-system.md §5, dashboards.md §9.2): el valor, su unidad y, si es un porcentaje, el
 // "n de N" que deja ver la base. sin permiso dice "no disponible" y por qué; un módulo que no llegó dice en qué fase llega
@@ -84,11 +85,11 @@ export function KpiCard({
     )
   }
   return (
-    <section aria-label={titulo} className={anidada ? 'space-y-1' : 'space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4'}>
+    <Seccion etiqueta={titulo} anidada={anidada} className="space-y-1">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
       {cuerpo}
       {notas}
-    </section>
+    </Seccion>
   )
 }
 

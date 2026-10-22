@@ -85,4 +85,16 @@ describe('Seccion', () => {
     expect(region).toHaveClass('space-y-3', 'lg:col-span-2', 'border')
     expect(region).not.toHaveClass('space-y-2')
   })
+
+  it('como panel al costado es un complementary nombrado por su título', () => {
+    montar(
+      <Seccion titulo="Trazabilidad" elemento="aside">
+        <p>contenido</p>
+      </Seccion>
+    )
+    const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
+    expect(panel.tagName).toBe('ASIDE')
+    expect(panel).toHaveClass('border', 'p-4')
+    expect(screen.queryByRole('region')).not.toBeInTheDocument()
+  })
 })

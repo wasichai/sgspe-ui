@@ -20,6 +20,7 @@ import { ahoraEnLima, instanteDeLima, textoDeDia } from '../datos/fechas'
 import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
+import { Seccion } from '../componentes/Seccion'
 
 // los campos que, escritos, son cambios por perder al salir (la fecha de recepción ya viene propuesta)
 const CON_CAMBIOS = ['code', 'channel', 'category', 'description', 'priority', 'severity', 'request_medium', 'requested_resource'] as const
@@ -439,10 +440,7 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
       </FormularioPorPasos>
 
       {/* «Qué pasará al registrar» queda al costado en los tres pasos (P-04): los plazos con los parámetros del proyecto */}
-      <aside
-        aria-label={t('nuevaQcs.secciones.quePasara')}
-        className="h-fit space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm xl:sticky xl:top-4"
-      >
+      <Seccion elemento="aside" etiqueta={t('nuevaQcs.secciones.quePasara')} className="h-fit text-sm xl:sticky xl:top-4">
         <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('nuevaQcs.secciones.quePasara')}</h2>
         <p>{valores.code.trim() ? t('nuevaQcs.quePasara.codigo', { codigo: valores.code.trim() }) : t('nuevaQcs.quePasara.sinCodigo')}</p>
         <p>
@@ -456,7 +454,7 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
         {/* la tarea de acuse de una confidencial es genérica, sin vínculo con la queja (sgspe#20, D-1) */}
         {tipo === 'grievance' ? <p>{t(confidencial ? 'nuevaQcs.quePasara.tareaGenerica' : 'nuevaQcs.quePasara.tarea')}</p> : null}
         {confidencial ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.confidencialAyuda')}</p> : null}
-      </aside>
+      </Seccion>
     </div>
   )
 }

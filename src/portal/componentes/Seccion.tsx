@@ -19,17 +19,20 @@ export interface PropsDeSeccion {
   className?: string
   // el nombre de la región cuando no hay título visible
   etiqueta?: string
+  // «aside» para un panel al costado (trazabilidad, reglas, «Qué pasará»): sigue siendo un complementary con su nombre
+  elemento?: 'section' | 'aside'
   children?: ReactNode
 }
 
-export function Seccion({ titulo, descripcion, acciones, anidada, nivel, className, etiqueta, children }: PropsDeSeccion) {
+export function Seccion({ titulo, descripcion, acciones, anidada, nivel, className, etiqueta, elemento, children }: PropsDeSeccion) {
   const dentro = useContext(DentroDeSeccion)
   const idDelTitulo = useId()
   const sinCaja = anidada || dentro
   const Encabezado = `h${nivel ?? (sinCaja ? 3 : 2)}` as 'h2' | 'h3'
   const conTitulo = titulo !== undefined && titulo !== null
+  const Elemento = elemento ?? 'section'
   return (
-    <section
+    <Elemento
       aria-labelledby={conTitulo ? idDelTitulo : undefined}
       aria-label={conTitulo ? undefined : etiqueta}
       className={cn('space-y-2', !sinCaja && 'rounded-sg-lg border border-sg-border bg-sg-surface p-4', className)}
@@ -50,6 +53,6 @@ export function Seccion({ titulo, descripcion, acciones, anidada, nivel, classNa
         </header>
       )}
       <DentroDeSeccion.Provider value={true}>{children}</DentroDeSeccion.Provider>
-    </section>
+    </Elemento>
   )
 }

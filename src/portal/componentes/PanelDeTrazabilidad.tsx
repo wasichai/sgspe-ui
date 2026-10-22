@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
+import { Seccion } from './Seccion'
 
 // el panel de trazabilidad de design-system.md §6.1 y ux-architecture.md §8.1: tres grupos fijos y en este orden, «De dónde
 // viene» (el origen), «Qué generó» (las consecuencias) y «Lo sustenta» (las evidencias y documentos que lo respaldan). cada
@@ -25,7 +26,7 @@ export function PanelDeTrazabilidad({
 }: Partial<Record<Grupo, SeccionDeTrazabilidad[]>> & { vacios?: Partial<Record<Grupo, string>>; pie?: ReactNode }) {
   const { t } = useTranslation(NS)
   return (
-    <aside aria-label={t('paginas.trazabilidad.titulo')} className="space-y-4 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion elemento="aside" etiqueta={t('paginas.trazabilidad.titulo')} className="space-y-4 text-sm">
       {GRUPOS.map((grupo) => {
         const secciones = (grupos[grupo] ?? []).filter((s) => hay(s.contenido))
         const titulo = t(`paginas.trazabilidad.${grupo}`)
@@ -46,6 +47,6 @@ export function PanelDeTrazabilidad({
         )
       })}
       {pie}
-    </aside>
+    </Seccion>
   )
 }
