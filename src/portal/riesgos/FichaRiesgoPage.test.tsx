@@ -83,7 +83,8 @@ describe('S40 · ficha de riesgo', () => {
     abrir()
     expect(await screen.findByRole('heading', { name: 'Bloqueo de la vía de acceso por la comunidad', level: 1 })).toBeInTheDocument()
     expect(screen.getAllByLabelText('Nivel de riesgo: Crítico').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('4 × 4 = 16').length).toBeGreaterThan(0)
+    // el puntaje dice qué multiplica (U-28 del rediseño de UX)
+    expect(screen.getByText('Probabilidad 4 × impacto 4 = 16')).toBeInTheDocument()
     expect(screen.getByLabelText('Situación de revisión: Al día')).toBeInTheDocument()
     const monitoreo = await screen.findByRole('button', { name: 'Pasar a monitoreo' })
     await waitFor(() => expect(monitoreo).toBeDisabled())
@@ -107,11 +108,42 @@ describe('S40 · ficha de riesgo', () => {
     expect(await screen.findByRole('button', { name: 'Nueva revisión' })).toHaveAttribute('data-variant', 'primary')
   })
 
-  it('«Crear relacionado» lleva al compromiso que atiende el riesgo (revisión de UX, etapa 5)', async () => {
+  // el compromiso que atiende el riesgo (revisión de UX, etapa 5): con CabeceraDeFicha es una acción más de la cabecera (un menú
+  // dentro de «Más acciones» no se podría abrir), a la vista o en «Más acciones» según las que haya
+  it('«Registrar compromiso» lleva al compromiso que atiende el riesgo', async () => {
     fetch = mockFetch(rutas())
     abrir(GESTOR_DE_RIESGOS, { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, commitment: ['READ', 'CREATE'] } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Crear relacionado' }))
-    expect(screen.getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new?social_risk=k1')
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    await userEvent.click(await within(acciones).findByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute(
+      'href',
+      '/projects/p1/commitments/new?social_risk=k1'
+    )
+  })
+
+  // P-09 del rediseño de UX (DD-06; U-25, U-26, U-27 y U-28): el antetítulo en sans, el estado una sola vez (en el panel de
+  // decisión), los niveles con su rótulo de inherente y residual y el puntaje que dice qué multiplica; el resumen por tema, con
+  // los campos sin dato plegados
+  it('los niveles dicen si son inherente o residual, el estado va una sola vez y el resumen pliega lo vacío', async () => {
+    const conResidual = { ...RIESGO, attributes: { ...RIESGO.attributes, residual_level: 'MEDIO' } }
+    fetch = mockFetch(rutas([], conResidual))
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Bloqueo de la vía de acceso por la comunidad', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText(/^Riesgo · R-001/)).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).getByText('Inherente')).toBeInTheDocument()
+    expect(within(cabecera).getByText('Probabilidad 4 × impacto 4 = 16')).toBeInTheDocument()
+    expect(within(cabecera).getByText('Residual')).toBeInTheDocument()
+    expect(within(cabecera).getByLabelText('Nivel residual: Medio')).toBeInTheDocument()
+    expect(within(cabecera).queryByText('En mitigación')).not.toBeInTheDocument()
+    expect(await screen.findAllByText('En mitigación', { selector: '[data-estado]' })).toHaveLength(1)
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    expect(screen.getByRole('region', { name: 'Origen e impacto' })).toHaveTextContent('Expectativas de empleo local no atendidas')
+    const tratamiento = screen.getByRole('region', { name: 'Tratamiento' })
+    expect(within(tratamiento).getByText('Mitigar')).toBeInTheDocument()
+    expect(within(tratamiento).queryByText('Controles actuales')).not.toBeInTheDocument()
+    await userEvent.click(within(tratamiento).getByRole('button', { name: /^Mostrar los \d+ campos sin dato$/ }))
+    expect(within(tratamiento).getByText('Controles actuales')).toBeInTheDocument()
   })
 
   it('una nueva revisión manda la fecha de Lima, P e I, el motivo y anticipa el nivel; el reintento repite la clave', async () => {
