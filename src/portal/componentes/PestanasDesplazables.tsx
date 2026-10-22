@@ -6,7 +6,8 @@ import { useLocation } from 'react-router'
 import { NS } from '../i18n'
 
 // una fila de pestañas que no cabe (las de Project 360 en una pantalla mediana) se desplaza en horizontal: un botón a cada lado
-// dice que hay más y desplaza, y la pestaña activa (aria-current) se trae a la vista al cambiar de ruta. con rol «tablist»
+// dice que hay más y desplaza, y la pestaña activa (aria-current) se trae a la vista al cambiar de ruta y cuando aparece
+// después (las del proyecto llegan con los permisos; U-19); otro cambio de la fila, como un conteo, no la desplaza. con rol «tablist»
 // (las pestañas de una ficha, PestanasDeFicha) la fila es una lista de pestañas en lugar de una navegación, y la activa es la
 // de aria-selected
 export function PestanasDesplazables({
@@ -32,11 +33,21 @@ export function PestanasDesplazables({
   useEffect(() => {
     const el = nav.current
     if (!el) return
-    el.querySelector<HTMLElement>('[aria-current="page"], [aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-    medir()
+    // la última activa que se trajo a la vista: solo una activa nueva vuelve a desplazar la fila
+    let llevada: Element | null = null
+    const llevar = () => {
+      const activa = el.querySelector<HTMLElement>('[aria-current="page"], [aria-selected="true"]')
+      if (activa && activa !== llevada) activa.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+      llevada = activa
+      medir()
+    }
+    llevar()
+    const observador = typeof MutationObserver === 'undefined' ? null : new MutationObserver(llevar)
+    observador?.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-current', 'aria-selected'] })
     el.addEventListener('scroll', medir, { passive: true })
     window.addEventListener('resize', medir)
     return () => {
+      observador?.disconnect()
       el.removeEventListener('scroll', medir)
       window.removeEventListener('resize', medir)
     }

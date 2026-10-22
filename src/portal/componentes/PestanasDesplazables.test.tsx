@@ -65,3 +65,39 @@ describe('PestanasDesplazables', () => {
     }
   })
 })
+
+// U-19: las pestañas del proyecto llegan después de los permisos; la activa se trae a la vista cuando aparece, no solo al
+// cambiar de ruta, y un cambio que no es de la activa (un conteo que llega) no vuelve a desplazar la fila
+describe('PestanasDesplazables, con pestañas que llegan después', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  function Fila({ conActiva, conteo = '' }: { conActiva: boolean; conteo?: string }) {
+    return (
+      <I18nextProvider i18n={crearI18n()}>
+        <MemoryRouter>
+          <PestanasDesplazables etiqueta="Secciones del proyecto">
+            <a href="#a">Resumen {conteo}</a>
+            {conActiva ? (
+              <a href="#b" aria-current="page">
+                Documentos
+              </a>
+            ) : null}
+          </PestanasDesplazables>
+        </MemoryRouter>
+      </I18nextProvider>
+    )
+  }
+
+  it('trae a la vista la pestaña activa que aparece después y no vuelve a desplazar por otro cambio', async () => {
+    const llevar = vi.fn()
+    Element.prototype.scrollIntoView = llevar
+    const { rerender } = render(<Fila conActiva={false} />)
+    expect(llevar).not.toHaveBeenCalled()
+    rerender(<Fila conActiva />)
+    await vi.waitFor(() => expect(llevar).toHaveBeenCalledTimes(1))
+    expect(llevar.mock.contexts[0]).toBe(screen.getByRole('link', { name: 'Documentos' }))
+    rerender(<Fila conActiva conteo="12" />)
+    await new Promise((r) => setTimeout(r, 20))
+    expect(llevar).toHaveBeenCalledTimes(1)
+  })
+})
