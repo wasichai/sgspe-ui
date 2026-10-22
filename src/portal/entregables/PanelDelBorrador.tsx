@@ -16,6 +16,7 @@ import { rutaDelBorrador, useEstadoDelBorrador, usePedirBorrador } from './contr
 import { EDITABLE_EN } from './tipos'
 import { Huella } from '../componentes/Huella'
 import { rotuloDeOpcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // el panel del borrador de S50 (deliverables.md §8.2, api.md §4.12): el estado, la letra, los avisos con su sección y la huella de
 // cada candidata (que nunca se descarga). mientras está pendiente se consulta cada 5 s (useEstadoDelBorrador) y, al terminar, se
@@ -59,8 +60,7 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
       .catch(setFalloDeDescarga)
   }
   return (
-    <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo} className="text-sm">
       {estado.isPending ? (
         <Cargando compacto />
       ) : estado.isError && !estado.data ? (
@@ -134,7 +134,7 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
           renderError={(error) => <p>{mensaje(error)}</p>}
         />
       ) : null}
-    </section>
+    </Seccion>
   )
 }
 

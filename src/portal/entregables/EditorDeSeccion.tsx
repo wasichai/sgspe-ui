@@ -12,6 +12,7 @@ import { VistaMarkdown } from '../relacionamiento/markdown'
 import { partirMenciones } from './menciones'
 import { contenidoDe, esCalculada, ORIGEN_IA, seEditan } from './tipos'
 import { opcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // tiptap y ProseMirror bajan solo al abrir una sección que se edita (revisión final de 8.3, importante 3): el resto del portal
 // no los carga
@@ -83,7 +84,7 @@ export function EditorDeSeccion({
     actualizar.mutate({ registro: seccion, cambios: { content: contenido, reviewed: revisada }, motivo: motivo.trim() || null })
   }
   return (
-    <section aria-label={texto(seccion, 'title')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+    <Seccion etiqueta={texto(seccion, 'title')} className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sg-h3 font-semibold">{texto(seccion, 'title')}</h2>
         <Badge className={asistida ? 'border border-dashed border-sg-ai-border bg-sg-ai-soft text-sg-ai' : 'bg-sg-neutral-soft text-sg-neutral'}>
@@ -145,6 +146,6 @@ export function EditorDeSeccion({
           )}
         </>
       )}
-    </section>
+    </Seccion>
   )
 }

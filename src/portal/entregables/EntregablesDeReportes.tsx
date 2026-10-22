@@ -15,6 +15,7 @@ import { useContextFilters } from '../shell/context'
 import { NuevoEntregable } from './NuevoEntregable'
 import { NIVELES_DE_ENTREGABLE, rutaDeEntregable } from './tipos'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // los entregables de S49 (screens.md): del proyecto de la barra superior o de todos los que la cuenta lee,
 // los más recientes primero. el código lleva a S50: dentro de un proyecto, bajo el proyecto del entregable, para que «Volver» no
@@ -31,22 +32,26 @@ export function EntregablesDeReportes() {
   const crea = can('deliverable', 'CREATE')
   const titulo = t('entregables.lista.titulo')
   return (
-    <section aria-label={titulo} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          {isAdmin || can('deliverable', 'MANAGE_METADATA') ? (
-            <Link to="/reports/templates" className="text-sm text-sg-primary-text underline">
-              {t('entregables.lista.plantillas')}
-            </Link>
-          ) : null}
-          {crea ? (
-            <Button size="sm" disabled={!proyecto || !escribe} onClick={() => setNuevo(true)}>
-              {t('entregables.lista.nuevo')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
+    <Seccion
+      titulo={titulo}
+      className="space-y-3"
+      acciones={
+        isAdmin || can('deliverable', 'MANAGE_METADATA') || crea ? (
+          <>
+            {isAdmin || can('deliverable', 'MANAGE_METADATA') ? (
+              <Link to="/reports/templates" className="text-sm text-sg-primary-text underline">
+                {t('entregables.lista.plantillas')}
+              </Link>
+            ) : null}
+            {crea ? (
+              <Button size="sm" disabled={!proyecto || !escribe} onClick={() => setNuevo(true)}>
+                {t('entregables.lista.nuevo')}
+              </Button>
+            ) : null}
+          </>
+        ) : null
+      }
+    >
       <p className="text-sm text-sg-text-secondary">{t('entregables.lista.ayuda')}</p>
       <AlcanceDeLaExportacion proyecto={proyecto} />
       <FalloDeProyectos />
@@ -96,6 +101,6 @@ export function EntregablesDeReportes() {
         }
       </DeLista>
       {nuevo && proyecto ? <NuevoEntregable proyecto={proyecto} alCerrar={() => setNuevo(false)} /> : null}
-    </section>
+    </Seccion>
   )
 }

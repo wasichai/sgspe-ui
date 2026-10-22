@@ -38,6 +38,7 @@ import {
 } from './api'
 import { FormularioDeEvidencia } from './FormularioDeEvidencia'
 import { opcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // S46 · ficha de evidencia (screens.md §11): qué sustenta, quién puede descargarla y si puede salir en un reporte externo.
 // la descarga y la vista previa solo con READ y, para CONFIDENCIAL y DATOS PERSONALES, DOWNLOAD_RESTRICTED (RF-DOC-003); sin
@@ -128,7 +129,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
           <Sustenta evidencia={evidencia} escribe={escribe} />
           <Versiones evidencia={evidencia} />
         </div>
-        <aside aria-label={t('documentos.ficha.privacidad')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <Seccion elemento="aside" etiqueta={t('documentos.ficha.privacidad')} className="space-y-3 text-sm">
           <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.privacidad')}</h2>
           <dl className="space-y-1">
             <Dato termino={t('documentos.ficha.personas')} valor={atributo(evidencia, 'people_identifiable') === true ? t('comun.si') : t('comun.no')} />
@@ -180,7 +181,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
             />
             <Dato termino={t('evidencias.autor')} valor={texto(evidencia, 'author') || '—'} />
           </dl>
-        </aside>
+        </Seccion>
       </div>
       {editando ? <EditarEvidencia evidencia={evidencia} alCerrar={() => setEditando(false)} /> : null}
       <Drawer

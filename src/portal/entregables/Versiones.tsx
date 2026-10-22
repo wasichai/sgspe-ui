@@ -13,6 +13,7 @@ import { rutaDeLaVersion, seccionDelTipo, useTiposDeEntregable, type FormatoDeAr
 import { rotuloDeOpcion } from '../datos/opciones'
 import { Huella } from '../componentes/Huella'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // las versiones emitidas de S50 (deliverables.md §8.4 y §12): cada una con su número, su revisión, su nivel, quién y cuándo, la
 // huella de su PDF y las secciones asistidas por IA. las descargas, por nivel y permiso: INTERNO (PDF y DOCX) con
@@ -46,8 +47,7 @@ export function Versiones({ entregable }: { entregable: Registro }) {
   }
   const titulo = t('entregables.versiones.titulo')
   return (
-    <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo}>
       <DeLista consulta={versiones}>
         {(lista) =>
           lista.length === 0 ? (
@@ -99,6 +99,6 @@ export function Versiones({ entregable }: { entregable: Registro }) {
       </DeLista>
       {fallo ? <Alert tone="danger">{mensaje(fallo)}</Alert> : null}
       <DocumentosEmitidos objeto="deliverable" registroId={entregable.id} escribe={false} />
-    </section>
+    </Seccion>
   )
 }

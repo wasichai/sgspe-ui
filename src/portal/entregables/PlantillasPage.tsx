@@ -11,6 +11,7 @@ import { tamanoPe } from '../datos/archivos'
 import { guardarArchivo, usePedir } from '../datos/http'
 import { fechaPe, NS } from '../i18n'
 import { hallazgosDe, rutaDeLaPlantilla, usePlantillas, useSubirPlantilla, type Hallazgo, type PlantillaSubida } from './contrato'
+import { Seccion } from '../componentes/Seccion'
 
 // S64 · Plantillas de entregables (screens.md, api.md §4.12, ASM-135): solo para la administración (isAdmin o MANAGE_METADATA
 // sobre deliverable; decisión 20 del plan). una plantilla no se edita ni se borra: subir otra con la misma clave la reemplaza para
@@ -123,8 +124,7 @@ function Plantillas() {
         }
       </DeLista>
       {fallo ? <Alert tone="danger">{mensaje(fallo)}</Alert> : null}
-      <section aria-label={t('plantillas.reglas.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-        <h2 className="text-sg-h3 font-semibold">{t('plantillas.reglas.titulo')}</h2>
+      <Seccion titulo={t('plantillas.reglas.titulo')} className="text-sm">
         <p>{t('plantillas.reglas.ayuda')}</p>
         <h3 className="font-medium">{t('plantillas.reglas.marcadores')}</h3>
         <ul className="flex flex-wrap gap-2 font-sg-mono text-sg-caption">
@@ -145,7 +145,7 @@ function Plantillas() {
           ))}
         </ul>
         <p className="text-sg-caption text-sg-text-muted">{t('plantillas.reglas.prohibido')}</p>
-      </section>
+      </Seccion>
       {subiendo ? <SubirPlantilla alCerrar={() => setSubiendo(false)} /> : null}
     </div>
   )
