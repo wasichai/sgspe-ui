@@ -20,6 +20,7 @@ import {
   type TerritorioDeConcesion,
   type Titular
 } from '../territorio/consultas'
+import { Seccion } from '../componentes/Seccion'
 
 // el panel «Análisis» de S09 (screens.md S09, spec F6 §3.7, gis.md §5.3 casos 7 y 10 a 14): seis tablas que calcula SpatialGate.
 // sin READ sobre el principal, «No disponible»; sin un permiso secundario (available: false), la tabla se muestra con su aviso.
@@ -48,8 +49,7 @@ export function AnalisisDelProyecto({ proyecto, alResaltar }: { proyecto: string
   const primera = useAnalisis<PredioAfectado>(proyecto, 'component-parcels')
   if (primera.isError && esIlegible(primera.error) && !codigoDelError(primera.error)) return null
   return (
-    <section aria-label={t('analisisDelProyecto.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('analisisDelProyecto.titulo')}</h2>
+    <Seccion titulo={t('analisisDelProyecto.titulo')}>
       <Tabs
         label={t('analisisDelProyecto.titulo')}
         tabs={[
@@ -65,7 +65,7 @@ export function AnalisisDelProyecto({ proyecto, alResaltar }: { proyecto: string
           { id: 'conflictos', label: t('analisisDelProyecto.pestanas.conflictos'), render: () => <Conflictos proyecto={proyecto} /> }
         ]}
       />
-    </section>
+    </Seccion>
   )
 }
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Cargando, esIlegible, NoDisponible } from '../componentes/Estados'
 import { NS, numeroPe } from '../i18n'
 import { useResumenDelArea } from '../territorio/consultas'
+import { Seccion } from '../componentes/Seccion'
 
 // el resumen del área de S10 (spec F6 §3.1 caso 15, KPI-TER-02 a 04 del área): la superficie plana, las localidades por tipo y
 // los componentes sobre tierras comunales o privadas. una cifra que el servidor no da (permiso o dato que falta) es
@@ -14,8 +15,7 @@ export function ResumenDelArea({ area }: { area: string }) {
   // un 404 es un backend o un tenant sin F6: la pantalla sigue como en F2, sin resumen
   if (consulta.isError && esIlegible(consulta.error)) return null
   return (
-    <section aria-label={t('sugerencias.resumen.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="font-medium">{t('sugerencias.resumen.titulo')}</h2>
+    <Seccion titulo={t('sugerencias.resumen.titulo')} className="text-sm">
       {consulta.isPending && consulta.fetchStatus !== 'idle' ? <Cargando /> : null}
       {consulta.isError ? <p className="text-sg-text-muted">{t('sugerencias.resumen.sinResumen')}</p> : null}
       {consulta.data ? (
@@ -45,6 +45,6 @@ export function ResumenDelArea({ area }: { area: string }) {
           </dl>
         </>
       ) : null}
-    </section>
+    </Seccion>
   )
 }

@@ -34,6 +34,7 @@ import { ResumenDelArea } from './ResumenDelArea'
 import { SugerenciasDelArea } from './SugerenciasDelArea'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { Seccion } from '../componentes/Seccion'
 
 // S10 · área de influencia (screens.md §3, WF-O): versiones, criterios, miembros con su comparación frente a la vigente,
 // alta de miembros en borrador y aprobación por POST /api/sgspe/areas-of-influence/{id}/approve (If-Match y motivo, que
@@ -139,7 +140,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
           ))}
         </ol>
       </nav>
-      <section aria-label={t('areas.criterios')} className="grid gap-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm md:grid-cols-3">
+      <Seccion etiqueta={t('areas.criterios')} className="grid gap-2 space-y-0 text-sm md:grid-cols-3">
         <p className="md:col-span-3">{texto(area, 'criteria') || '—'}</p>
         <p>
           {t('areas.definida')}: <Dia valor={texto(area, 'defined_date')} />
@@ -150,7 +151,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
             ? '—'
             : `${numeroPe(Number(atributo(area, 'calculated_area_ha')))} ha`}
         </p>
-      </section>
+      </Seccion>
       <ResumenDelArea area={area.id} />
       {!borrador ? <Alert tone="notice">{t('areas.congelada', { estado: (etiquetas[area.state ?? ''] ?? area.state ?? '').toLowerCase() })}</Alert> : null}
       {versiones.isError && !versiones.data ? <FalloDeLectura error={versiones.error} alReintentar={() => void versiones.refetch()} /> : null}

@@ -19,6 +19,7 @@ import {
   useExportacion,
   useProyectoElegido
 } from './exportacion'
+import { Seccion } from '../componentes/Seccion'
 
 // S49 en F4 · el registro de quejas, consultas y solicitudes (POST /api/sgspe/exports/attention-register, api.md §4.13;
 // deliverables.md §10): el proyecto (o «todos mis proyectos»), el periodo de recepción en fechas de Lima, los tipos, los estados
@@ -81,8 +82,7 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
     (flujos[i].data?.definition.states ?? []).map((s) => ({ valor: `${o}:${s.name}`, etiqueta: `${t(`comun.qcs.${o}`)} · ${s.label}` }))
   )
   return (
-    <section aria-label={t('reportes.atencion.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('reportes.atencion.titulo')}</h2>
+    <Seccion titulo={t('reportes.atencion.titulo')} className="space-y-3">
       <p className="text-sm text-sg-text-secondary">{t('reportes.atencion.ayuda')}</p>
       <div className="grid gap-3 md:grid-cols-2">
         <AlcanceDeLaExportacion proyecto={proyecto} />
@@ -159,6 +159,6 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
         </p>
       ) : null}
       <ErrorYBotonDeExportar exportacion={exportacion} propios={propios} etiqueta={t('reportes.atencion.exportar')} />
-    </section>
+    </Seccion>
   )
 }

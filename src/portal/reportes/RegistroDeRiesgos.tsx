@@ -16,6 +16,7 @@ import {
   useExportacion,
   useProyectoElegido
 } from './exportacion'
+import { Seccion } from '../componentes/Seccion'
 
 // S49 en F4 · la matriz de riesgos (POST /api/sgspe/exports/risk-register, api.md §4.13; deliverables.md §10): el proyecto, los
 // estados de WF-F, las categorías, los niveles de riesgo y si se suman los cerrados, con el nivel de divulgación y la lista de
@@ -59,8 +60,7 @@ export function RegistroDeRiesgos({ niveles }: { niveles: string[] }) {
       : {})
   })
   return (
-    <section aria-label={t('reportes.riesgos.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('reportes.riesgos.titulo')}</h2>
+    <Seccion titulo={t('reportes.riesgos.titulo')} className="space-y-3">
       <p className="text-sm text-sg-text-secondary">{t('reportes.riesgos.ayuda')}</p>
       <div className="grid gap-3 md:grid-cols-2">
         <AlcanceDeLaExportacion proyecto={proyecto} />
@@ -111,6 +111,6 @@ export function RegistroDeRiesgos({ niveles }: { niveles: string[] }) {
         }}
       />
       <ErrorYBotonDeExportar exportacion={exportacion} propios={propios} etiqueta={t('reportes.riesgos.exportar')} />
-    </section>
+    </Seccion>
   )
 }
