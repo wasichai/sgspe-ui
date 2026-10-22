@@ -20,7 +20,8 @@ import { esDeComando } from './reglas'
 // proyecto»), para que no se confundan con «cerrar el diálogo»; con destructivasEnMenu, en «Más acciones», lejos de la primaria. las de comprobarAntes consultan transition-checks al dibujarse y, si una regla las
 // bloquea, salen deshabilitadas con la razón
 const DURACION_DE_LA_CONFIRMACION = 6000
-const DESTINOS_DESTRUCTIVOS = new Set(['cancelled', 'voided', 'retired', 'terminated'])
+// rechazar y desistir también (regla 4 de CabeceraDeFicha, P-09 del rediseño de UX): son estados finales de cierre
+const DESTINOS_DESTRUCTIVOS = new Set(['cancelled', 'voided', 'retired', 'terminated', 'rejected', 'withdrawn'])
 export const esDestructiva = (tr: AvailableTransition): boolean => DESTINOS_DESTRUCTIVOS.has(tr.to)
 
 // una transición ofrecida, lista para dibujarse donde la pantalla la ponga (la cabecera de una ficha la reparte)

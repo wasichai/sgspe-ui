@@ -3,7 +3,8 @@ import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import type { CampoDeFicha } from '../componentes/CamposPlegables'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad, type SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
@@ -19,7 +20,6 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
-import { EstadoChip } from '../componentes/EstadoChip'
 import { Consulta, esIlegible } from '../componentes/Estados'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Historia } from '../componentes/Historia'
@@ -33,9 +33,8 @@ import { atributo, campoDe, texto, useDefinicion, usePuedeEditar, useRegistro, t
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { AccionesDeIa } from '../ia/AccionesDeIa'
 import { NS } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarSolicitud, type ObjetoQueNace } from './comandos'
-import { AvisoDeConfidencial, Dato, DatosDelCaso, EditarQcs, MarcasDeQcs, PlazoQueCorre, useOrigenDeQcs } from './comunesDeFicha'
+import { AvisoDeConfidencial, DatosDelCaso, EditarQcs, MarcasDeQcs, PlazoQueCorre, tituloDeQcs, useOrigenDeQcs } from './comunesDeFicha'
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
 import { opcion } from '../datos/opciones'
 
@@ -194,15 +193,16 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
             ) : null}
           </>
         }
-        resumen={
-          <>
-            <Dato termino={t('fichaConsulta.solicitud.campos.request_medium')}>{opcion(solicitud, 'request_medium') || '—'}</Dato>
-            {/* el compromiso o el aporte creado van en «Qué generó» del panel de trazabilidad (revisión de UX, etapa 4) */}
-            <div className="sm:col-span-2">
-              <Dato termino={t('fichaConsulta.solicitud.campos.requested_resource')}>{texto(solicitud, 'requested_resource') || '—'}</Dato>
-            </div>
-          </>
-        }
+        planteamiento={[
+          { clave: 'request_medium', termino: t('fichaConsulta.solicitud.campos.request_medium'), valor: opcion(solicitud, 'request_medium') },
+          // el compromiso o el aporte creado van en «Qué generó» del panel de trazabilidad (revisión de UX, etapa 4)
+          {
+            clave: 'requested_resource',
+            termino: t('fichaConsulta.solicitud.campos.requested_resource'),
+            valor: texto(solicitud, 'requested_resource'),
+            ancho: true
+          }
+        ]}
       />
       {aceptando ? <DialogoDeAceptacion solicitud={solicitud} opciones={opciones} alCerrar={() => setAceptando(false)} /> : null}
     </>
@@ -224,7 +224,7 @@ function Ficha({
   comprobar,
   acciones,
   ayuda,
-  resumen,
+  planteamiento,
   generado
 }: {
   objeto: Exclude<ObjetoDeQcs, 'grievance'>
@@ -232,9 +232,11 @@ function Ficha({
   titulo: string
   editables: readonly string[]
   comprobar: readonly string[]
+  // la acción propia de la ficha («Escribir la respuesta», «Aceptar y crear…»): primaria si no hay una transición del camino
   acciones?: ReactNode
   ayuda?: ReactNode
-  resumen?: ReactNode
+  // los datos del planteamiento propios del tipo (qué se pide en una solicitud)
+  planteamiento?: readonly CampoDeFicha[]
   // lo que nació de la QCS (el compromiso o el aporte creado al aceptar una solicitud), para «Qué generó»
   generado?: SeccionDeTrazabilidad[]
 }) {
@@ -257,37 +259,48 @@ function Ficha({
   const plazo = plazoQueCorre(objeto, qcs)
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t(`comun.qcs.${objeto}`), texto(qcs, 'code'), opcion(qcs, 'channel'), opcion(qcs, 'category')].filter(Boolean).join(' · ')}
-        titulo={titulo}
+        titulo={tituloDeQcs(qcs, titulo)}
+        tituloDelDocumento={titulo}
         chips={
           <>
-            <EstadoChip objeto={objeto} estado={qcs.state} />
             <PlazoQueCorre objeto={objeto} qcs={qcs} />
             <MarcasDeQcs qcs={qcs} />
           </>
         }
-        primaria={
-          <div className="flex flex-wrap gap-2">
-            {acciones}
-            <BotonesDeTransicion objeto={objeto} registro={qcs} proyecto={proyecto} comprobarAntes={comprobar} sinPrimaria={Boolean(acciones)} />
-          </div>
-        }
-        secundarias={
-          <>
-            {edita ? (
-              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-                {t('fichaQueja.comun.editar')}
-              </Button>
-            ) : null}
-            {reclasifica ? (
-              <Button size="sm" variant="secondary" onClick={() => setReclasificando(true)}>
-                {t('piezas.reclasificar.boton')}
-              </Button>
-            ) : null}
-          </>
-        }
+        objeto={objeto}
+        registro={qcs}
+        proyecto={proyecto}
+        comprobarAntes={comprobar}
+        falta={siguiente?.falta}
+        primariaPropia={acciones ?? undefined}
+        secundarias={[
+          ...(edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                      {t('fichaQueja.comun.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          ...(reclasifica
+            ? [
+                {
+                  clave: 'reclasificar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setReclasificando(true)}>
+                      {t('piezas.reclasificar.boton')}
+                    </Button>
+                  )
+                }
+              ]
+            : [])
+        ]}
       />
       <AvisoDeConfidencial qcs={qcs} />
       {ayuda}
@@ -306,7 +319,7 @@ function Ficha({
         <PestanasDeFicha
           etiqueta={titulo}
           pestanas={[
-            { id: 'resumen', etiqueta: t('fichaQueja.pestanas.resumen'), render: () => <DatosDelCaso qcs={qcs}>{resumen}</DatosDelCaso> },
+            { id: 'resumen', etiqueta: t('fichaQueja.pestanas.resumen'), render: () => <DatosDelCaso qcs={qcs} planteamiento={planteamiento} /> },
             {
               id: 'evidencias',
               etiqueta: t('fichaQueja.pestanas.evidencias'),

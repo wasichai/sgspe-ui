@@ -60,7 +60,8 @@ describe('rutas de F4', () => {
 
   it('la ficha de una queja vive bajo su proyecto', async () => {
     fetch = abrirPortal('/projects/p1/grievances/g1', GESTORA_DE_QUEJAS, EQUIPO_DE_QUEJAS, deQuejas())
-    expect(await screen.findByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeInTheDocument()
+    // el título dice lo que se planteó (P-09 del rediseño de UX, U-27)
+    expect(await screen.findByRole('heading', { name: 'El canal de riego quedó turbio tras la perforación', level: 1 })).toBeInTheDocument()
   })
 
   // decisión 7 de la revisión de UX: la sección aterriza en el registro; el tablero (S62) es /risks/dashboard
