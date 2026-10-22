@@ -14,6 +14,8 @@ export const ES_CONTEXTO = {
   todos: 'Todos mis proyectos',
   // con la acción de leer todos los proyectos (o ADMIN), el alcance global no es «mis» proyectos (plan 4.4b)
   todosLosProyectos: 'Todos los proyectos',
+  buscarProyecto: 'Buscar un proyecto…',
+  sinCoincidencias: 'Ningún proyecto coincide con la búsqueda.',
   sinProyectos: 'No tiene proyectos asignados. Pida una asignación al administrador de proyectos.',
   contexto: 'Contexto',
   territorio: 'Territorio: {{nombre}}',
@@ -60,6 +62,8 @@ export const EN_CONTEXTO: typeof ES_CONTEXTO = {
   cambiarProyecto: 'Project: {{proyecto}}. Change project',
   todos: 'All my projects',
   todosLosProyectos: 'All projects',
+  buscarProyecto: 'Search for a project…',
+  sinCoincidencias: 'No project matches the search.',
   sinProyectos: 'You have no assigned projects. Ask the project administrator for an assignment.',
   contexto: 'Context',
   territorio: 'Territory: {{nombre}}',

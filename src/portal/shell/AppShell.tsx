@@ -102,6 +102,10 @@ export function AppShell() {
       <Dialog open={menuAbierto} onOpenChange={setMenuAbierto}>
         <DialogContent
           aria-describedby={undefined}
+          // el Escape de un combobox abierto (el selector de proyecto) cierra su lista, no el panel
+          onEscapeKeyDown={(e) => {
+            if (e.target instanceof Element && e.target.getAttribute('aria-expanded') === 'true') e.preventDefault()
+          }}
           className="left-0 top-0 flex h-full max-w-xs translate-x-0 translate-y-0 flex-col gap-4 rounded-none rounded-r-sg-xl p-4"
         >
           <DialogTitle className="text-sg-h3 font-semibold">{t('shell.menu')}</DialogTitle>

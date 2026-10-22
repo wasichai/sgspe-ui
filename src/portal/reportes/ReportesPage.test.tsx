@@ -389,7 +389,8 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       await waitFor(() => expect(within(seccion).getByRole('option', { name: 'Campaña 2026' })).toBeInTheDocument())
       await userEvent.selectOptions(within(seccion).getByRole('combobox', { name: 'Campaña de exploración' }), 'camp1')
       // el conmutador del shell (el primer combobox «Proyecto») cambia el proyecto de la URL
-      await userEvent.selectOptions(screen.getAllByRole('combobox', { name: 'Proyecto' })[0], 'p2')
+      await userEvent.click(screen.getAllByRole('combobox', { name: 'Proyecto' })[0])
+      await userEvent.click(await screen.findByRole('option', { name: 'PRJ-02 · Wayra Norte' }))
       await waitFor(() => expect(window.location.pathname).toBe('/projects/p2/reports'))
       const nueva = screen.getByRole('region', { name: 'Matriz de compromisos' })
       // el alcance es el de la barra superior (revisión de UX, etapa 7)

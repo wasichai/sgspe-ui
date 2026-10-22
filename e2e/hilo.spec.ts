@@ -39,10 +39,13 @@ test('quitar el chip de territorio devuelve el proyecto entero sin cambiar de pa
 test('el selector de proyecto monta la misma sección con el otro alcance (ASM-076)', async ({ page }) => {
   await page.goto('/stakeholders')
   await expect(page.getByRole('columnheader', { name: 'Proyecto' })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Proyecto' }).selectOption('p1')
+  // el selector es un combobox con búsqueda (DD-09): se escribe y se elige la opción
+  await page.getByRole('combobox', { name: 'Proyecto' }).fill('puka')
+  await page.getByRole('option', { name: 'PRJ-01 · Pukaqaqa' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/stakeholders$/)
   await expect(page.getByRole('columnheader', { name: 'Proyecto' })).toHaveCount(0)
-  await page.getByRole('combobox', { name: 'Proyecto' }).selectOption('')
+  await page.getByRole('combobox', { name: 'Proyecto' }).click()
+  await page.getByRole('option', { name: 'Todos mis proyectos' }).click()
   await expect(page).toHaveURL(/\/stakeholders$/)
 })
 

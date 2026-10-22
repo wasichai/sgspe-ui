@@ -87,6 +87,11 @@ describe('useLeeTodosLosProyectos', () => {
   })
 })
 
+// el selector de proyecto es un combobox con búsqueda (DD-09): un campo con rol combobox que abre una lista (listbox) con «Todos
+// mis proyectos» y los proyectos; se escribe para filtrar por código o nombre, las flechas mueven la opción activa, Enter elige
+// y Escape cierra sin cambiar
+const opciones = () => screen.getAllByRole('option').map((o) => o.textContent)
+
 describe('selector de proyecto', () => {
   it('lista primero los proyectos de la persona y lleva a la misma sección del proyecto elegido', async () => {
     fetch = mockFetch([
@@ -95,11 +100,65 @@ describe('selector de proyecto', () => {
     ])
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
     const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() =>
-      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos mis proyectos', 'PRJ-02 · Qorihuasi', 'PRJ-01 · Pukaqaqa'])
-    )
-    await userEvent.selectOptions(selector, 'p1')
+    expect(selector).toHaveValue('Todos mis proyectos')
+    expect(selector).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(selector)
+    expect(selector).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('listbox', { name: 'Proyecto' })).toBeInTheDocument()
+    await waitFor(() => expect(opciones()).toEqual(['Todos mis proyectos', 'PRJ-02 · Qorihuasi', 'PRJ-01 · Pukaqaqa']))
+    expect(screen.getByRole('option', { name: 'Todos mis proyectos' })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('option', { name: 'PRJ-01 · Pukaqaqa' }))
     expect(ubicacion.actual).toBe('/projects/p1/stakeholders')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('escribir filtra por código o nombre, sin distinguir tildes ni mayúsculas, y Enter elige la primera que coincide', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await userEvent.type(selector, 'QORÍ')
+    // «Todos mis proyectos» queda siempre a mano
+    await waitFor(() => expect(opciones()).toEqual(['Todos mis proyectos', 'PRJ-02 · Qorihuasi']))
+    expect(selector).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'PRJ-02 · Qorihuasi' }).id)
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe('/projects/p2/stakeholders')
+  })
+
+  it('sin coincidencias lo dice', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await userEvent.type(selector, 'zzz')
+    expect(await screen.findByText('Ningún proyecto coincide con la búsqueda.')).toBeInTheDocument()
+    expect(opciones()).toEqual(['Todos mis proyectos'])
+  })
+
+  it('las flechas mueven la opción activa, Enter la elige y Escape cierra sin cambiar', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/projects/p1/stakeholders', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() => expect(selector).toHaveValue('PRJ-01 · Pukaqaqa'))
+    selector.focus()
+    // abre con la elegida activa
+    await userEvent.keyboard('{ArrowDown}')
+    expect(selector).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'PRJ-01 · Pukaqaqa' }).id)
+    await userEvent.keyboard('{ArrowDown}')
+    expect(selector).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'PRJ-02 · Qorihuasi' }).id)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(selector).toHaveValue('PRJ-01 · Pukaqaqa')
+    expect(ubicacion.actual).toBe('/projects/p1/stakeholders')
+    await userEvent.keyboard('{ArrowUp}{ArrowUp}{Enter}')
+    expect(ubicacion.actual).toBe('/stakeholders')
   })
 
   it('sin READ sobre project no se dibuja', () => {
@@ -118,10 +177,9 @@ describe('selector de proyecto', () => {
     ])
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: p })
     const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() =>
-      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos los proyectos', 'PRJ-01 · Pukaqaqa', 'PRJ-02 · Qorihuasi'])
-    )
-    expect(selector).toHaveValue('')
+    await waitFor(() => expect(selector).toHaveValue('Todos los proyectos'))
+    await userEvent.click(selector)
+    await waitFor(() => expect(opciones()).toEqual(['Todos los proyectos', 'PRJ-01 · Pukaqaqa', 'PRJ-02 · Qorihuasi']))
   })
 
   it('con la acción de leer todos y una organización sin proyectos, sigue el selector y no el aviso de asignación', async () => {
@@ -130,7 +188,8 @@ describe('selector de proyecto', () => {
       { path: '/objects/project_assignment/records', body: pagina([]) }
     ])
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: permisos({ project: ['READ', 'READ_ALL_PROJECTS'] }) })
-    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos los proyectos']))
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Proyecto' }))
+    await waitFor(() => expect(opciones()).toEqual(['Todos los proyectos']))
     expect(screen.queryByText(/No tiene proyectos asignados/)).not.toBeInTheDocument()
   })
 

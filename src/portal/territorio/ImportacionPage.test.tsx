@@ -508,7 +508,8 @@ describe('S15 · importación geoespacial', () => {
     fetch = abrirPortal('/territory/imports/new?project=p1', RELACIONISTA, GAN, dos)
     const archivo = new File(['x'], 'a.csv', { type: 'text/csv' })
     await userEvent.upload(await screen.findByLabelText('Archivo (XLSX, CSV o GeoJSON)'), archivo)
-    await waitFor(() => expect(screen.getAllByRole('option', { name: /PRJ-02/ }).length).toBeGreaterThan(1))
+    // el selector de la barra superior es un combobox cerrado (DD-09): la opción es la del selector de la importación
+    await waitFor(() => expect(within(selectorDeProyecto()).getByRole('option', { name: /PRJ-02/ })).toBeInTheDocument())
     await userEvent.selectOptions(selectorDeProyecto(), 'p2')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     const casilla = await screen.findByRole('checkbox', { name: /Confirmo/ })
