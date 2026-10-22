@@ -38,7 +38,7 @@ test.describe('a 1440 px', () => {
     await expect(barra.getByRole('button', { name: /^Avisos/ })).toBeVisible()
     await expect(barra.getByRole('combobox', { name: 'Proyecto' })).toBeVisible()
     expect(await controlesVisibles(page)).toBe(6)
-    // el lema solo desde 2xl (1536 px)
+    // el lema solo desde 1536 px (el 2xl de SGSPE es 1440 px)
     await expect(barra.getByText('Gestión social de proyectos extractivos')).toBeHidden()
     await barra.getByRole('button', { name: 'Su cuenta' }).click()
     const menu = page.getByRole('group', { name: 'Su cuenta' })

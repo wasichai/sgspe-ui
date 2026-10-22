@@ -63,10 +63,10 @@ describe('barra superior', () => {
     expect(within(barra).queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
   })
 
-  it('el lema de la marca se oculta por debajo de 2xl', async () => {
+  it('el lema de la marca se oculta por debajo de 1536 px', async () => {
     fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [])
     const lema = await within(await screen.findByRole('banner')).findByText('Gestión social de proyectos extractivos')
-    expect(lema).toHaveClass('hidden', '2xl:inline')
+    expect(lema).toHaveClass('hidden', 'min-[96rem]:inline')
   })
 
   it('el menú de la cuenta trae el idioma, el tema y la salida', async () => {

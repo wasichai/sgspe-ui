@@ -112,8 +112,8 @@ export function AppShell() {
             <Mountain aria-hidden className="size-5" />
             {appName}
           </Link>
-          {/* el lema solo desde 2xl (DD-09): por debajo, la barra no da para él y los seis controles */}
-          <span className="hidden truncate text-sg-body-sm text-sg-text-muted 2xl:inline">{t('app.lema')}</span>
+          {/* el lema solo desde 1536 px (DD-09; el 2xl de SGSPE es 1440 px): por debajo, la barra no da para él y los seis controles */}
+          <span className="hidden truncate text-sg-body-sm text-sg-text-muted min-[96rem]:inline">{t('app.lema')}</span>
           {/* el selector de proyecto ("Todos mis proyectos" o uno) lee y escribe el alcance de la URL (./context.ts); la
             búsqueda con ⌘K (S03) queda para después de F2 */}
           <SelectorDeProyecto />

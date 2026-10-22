@@ -5,7 +5,7 @@ import { NS } from '../i18n'
 import { ExplicacionDeColumna } from './Estados'
 
 // la tabla ancha con prioridad de columnas (hallazgo U-06, DD-05): las esenciales siempre, las secundarias desde xl
-// (1280 px) y las opcionales, mientras no llegue el selector «Columnas», desde 2xl (1536 px): a 1440 px la tabla cabe y
+// (1280 px) y las opcionales, mientras no llegue el selector «Columnas», desde 1536 px (el 2xl de SGSPE es 1440 px): a 1440 px la tabla cabe y
 // ningún dato queda sin forma de verse. con ocultarUniformes, una
 // columna no esencial que dice lo mismo en todas las filas sale de la tabla y su valor queda en una nota encima
 export type PrioridadDeColumna = 'esencial' | 'secundaria' | 'opcional'
@@ -38,7 +38,7 @@ export interface PropsDeTablaPriorizada<T> {
 const VISIBILIDAD: Record<PrioridadDeColumna, string | undefined> = {
   esencial: undefined,
   secundaria: 'hidden xl:table-cell',
-  opcional: 'hidden 2xl:table-cell'
+  opcional: 'hidden min-[96rem]:table-cell'
 }
 const visibilidad = (prioridad: PrioridadDeColumna) => VISIBILIDAD[prioridad]
 

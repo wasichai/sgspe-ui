@@ -107,7 +107,7 @@ export function GruposPage() {
 
   // la tabla de escritorio con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px cabe sin desplazar. esenciales lo que
   // decide (quién, su grupo de influencia, su postura, su prioridad y su estado); secundarias, desde xl, el territorio, el
-  // responsable y el último contacto; la relación y la fecha de la evaluación son opcionales: desde 2xl, hasta que las elija
+  // responsable y el último contacto; la relación y la fecha de la evaluación son opcionales: desde 1536 px, hasta que las elija
   // «Columnas». en «Míos» el responsable es siempre quien mira: no se dibuja
   const columnas: ColumnaPriorizada[] = [
     ...(proyecto ? [{ id: 'seleccionar', encabezado: t('comun.seleccionar'), prioridad: 'esencial' as const, encabezadoOculto: true }] : []),

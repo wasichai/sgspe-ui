@@ -78,12 +78,13 @@ describe('TablaPriorizada', () => {
     expect(within(filas()[0]).getByRole('cell', { name: 'Reservorio de Tunas' })).not.toHaveClass('hidden')
   })
 
-  // mientras no llegue el selector «Columnas», una opcional se ve desde 2xl (1536 px): ningún dato queda sin forma de verse
-  it('las opcionales se ven solo desde 2xl', () => {
+  // mientras no llegue el selector «Columnas», una opcional se ve desde 1536 px (el 2xl de SGSPE es 1440 px): ningún dato queda sin forma de verse
+  it('las opcionales se ven solo desde 1536 px', () => {
     dibujar()
     const notas = within(tabla()).getByRole('columnheader', { name: 'Notas' })
-    expect(notas).toHaveClass('hidden', '2xl:table-cell')
+    expect(notas).toHaveClass('hidden', 'min-[96rem]:table-cell')
     expect(notas).not.toHaveClass('xl:table-cell')
+    expect(notas).not.toHaveClass('2xl:table-cell')
     expect(within(tabla()).getAllByRole('columnheader')).toHaveLength(5)
     expect(within(filas()[0]).getAllByRole('cell')).toHaveLength(5)
   })
