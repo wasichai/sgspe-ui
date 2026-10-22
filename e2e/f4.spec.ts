@@ -165,6 +165,14 @@ test('una revisión de riesgo va con su motivo y su clave, y dice el nivel que d
 test('registrar una queja en tres pasos con «Qué pasará al registrar» al costado en cada uno (P-04)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   const escrituras = await prepararF4(page)
+  // el portal escribe con la forma del GET (atributosDeEscritura): el modelo de la prueba declara los campos del alta
+  await page.route(/\/api\/metadata\/objects\/grievance$/, (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(definicion('grievance', ['project', 'code', 'description', 'category', 'severity', 'received_at', 'anonymous', 'response']))
+    })
+  )
   await page.goto('/projects/p1/attention/new')
   await expect(page.getByRole('heading', { name: 'Registrar queja, consulta o solicitud', level: 1 })).toBeVisible()
   const quePasara = page.getByRole('complementary', { name: 'Qué pasará al registrar' })
