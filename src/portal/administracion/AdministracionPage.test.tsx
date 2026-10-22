@@ -58,7 +58,7 @@ describe('S53 · Administración', () => {
 
     const cuidados = region('Cuidados')
     expect(cuidados).toHaveTextContent('se pierde')
-    expect(cuidados).toHaveTextContent('aprovisionamiento')
+    expect(cuidados).toHaveTextContent('próxima actualización')
     // el aviso se lee antes que el botón: viene primero en el orden del documento
     expect(cuidados.compareDocumentPosition(abrir) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // en lenguaje llano: ni un código de hallazgo o de requisito ni una ruta del repositorio

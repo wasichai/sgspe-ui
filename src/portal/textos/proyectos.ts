@@ -45,7 +45,7 @@ export const ES_PROYECTOS = {
     asignarse: {
       titulo: 'Asígnese a este proyecto para seguir',
       porQue:
-        'Un proyecto nuevo no tiene equipo, y el servidor solo acepta cambios de quien está asignado a él. Elija su rol en este proyecto: después podrá completar los demás pasos.',
+        'Un proyecto nuevo no tiene equipo, y solo pueden cambiarlo las personas asignadas a él. Elija su rol en este proyecto: después podrá completar los demás pasos.',
       sinPermiso: 'Su cuenta no puede asignarse a este proyecto: pida a quien administra los proyectos que la asigne para completar el borrador.',
       yaAsignada: 'Ya se asignó a este proyecto, pero no se pudo leer su asignación. Reintente la lectura; no hace falta asignarse otra vez.'
     },
@@ -100,7 +100,7 @@ export const EN_PROYECTOS: typeof ES_PROYECTOS = {
     asignarse: {
       titulo: 'Assign yourself to this project to continue',
       porQue:
-        'A new project has no team, and the server only accepts changes from people assigned to it. Choose your role in this project: then you can complete the other steps.',
+        'A new project has no team, and only people assigned to it can change it. Choose your role in this project: then you can complete the other steps.',
       sinPermiso: 'Your account cannot assign itself to this project: ask whoever manages projects to assign you so you can complete the draft.',
       yaAsignada: 'You are already assigned to this project, but your assignment could not be read. Retry the read; there is no need to assign yourself again.'
     },

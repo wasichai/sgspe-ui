@@ -92,7 +92,7 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     sinVencimiento: 'No due date'
   },
   flujo: {
-    titulo: 'Workflow path',
+    titulo: 'Path of steps',
     actual: 'Current status',
     hecho: 'Step done',
     pendiente: 'Pending step',

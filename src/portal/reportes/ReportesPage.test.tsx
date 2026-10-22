@@ -240,7 +240,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
     red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
-    expect(await within(seccion).findByText('Proyecto: PRJ-01 · Pukaqaqa, el de la barra superior.')).toBeInTheDocument()
+    expect(await within(seccion).findByText('Proyecto: PRJ-01 · Pukaqaqa, el que eligió en el selector.')).toBeInTheDocument()
     expect(within(seccion).queryByRole('combobox', { name: 'Proyecto' })).not.toBeInTheDocument()
     await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar XLSX' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
@@ -259,7 +259,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     )
     red = espiarRed([{ method: 'POST', path: '/sgspe/exports/stakeholder-register', responder: () => archivoXlsx('registro.xlsx') }])
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
-    expect(within(seccion).getByText('Todos los proyectos: elija uno en la barra superior para acotar.')).toBeInTheDocument()
+    expect(within(seccion).getByText('Todos los proyectos: elija uno en el selector para acotar.')).toBeInTheDocument()
     await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar XLSX' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/exports/stakeholder-register')).toHaveLength(1))
     expect(red.a('POST', '/sgspe/exports/stakeholder-register')[0].cuerpo).toMatchObject({ filters: { project: [] } })
@@ -268,7 +268,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
   it('sin la acción, el alcance de la exportación es «Todos sus proyectos»', async () => {
     fetch = abrirPortal('/reports', GERENCIA_SOCIAL, permisos({ project: ['READ'], stakeholder: ['READ', 'EXPORT'], export_log: ['READ'] }), rutas)
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
-    expect(within(seccion).getByText('Todos sus proyectos: elija uno en la barra superior para acotar.')).toBeInTheDocument()
+    expect(within(seccion).getByText('Todos sus proyectos: elija uno en el selector para acotar.')).toBeInTheDocument()
   })
 
   it('si la lista de proyectos falla, el alcance rotula el proyecto de la URL sin mostrar su identificador', async () => {
@@ -279,7 +279,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
     ])
     red = espiarRed([{ path: '/objects/project/records', responder: () => problema(422, 'Consulta no válida') }])
     const seccion = await screen.findByRole('region', { name: 'Registro de grupos de interés' })
-    expect(await within(seccion).findByText('Proyecto: Proyecto de la página, el de la barra superior.')).toBeInTheDocument()
+    expect(await within(seccion).findByText('Proyecto: Proyecto de la página, el que eligió en el selector.')).toBeInTheDocument()
     expect(within(seccion).queryByText(new RegExp(id))).not.toBeInTheDocument()
   })
 
@@ -394,7 +394,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       await waitFor(() => expect(window.location.pathname).toBe('/projects/p2/reports'))
       const nueva = screen.getByRole('region', { name: 'Matriz de compromisos' })
       // el alcance es el de la barra superior (revisión de UX, etapa 7)
-      expect(await within(nueva).findByText('Proyecto: PRJ-02 · Wayra Norte, el de la barra superior.')).toBeInTheDocument()
+      expect(await within(nueva).findByText('Proyecto: PRJ-02 · Wayra Norte, el que eligió en el selector.')).toBeInTheDocument()
       expect(within(nueva).getByRole('combobox', { name: 'Campaña de exploración' })).toHaveValue('')
       await userEvent.click(within(nueva).getByRole('button', { name: 'Exportar la matriz' }))
       await waitFor(() => expect(red!.a('POST', '/sgspe/exports/commitment-matrix')).toHaveLength(1))
@@ -406,7 +406,7 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       fetch = abrirPortal('/reports', GERENCIA_SOCIAL, conMatriz, rutasDeLaMatriz)
       red = espiarRed([{ method: 'POST', path: '/sgspe/exports/commitment-matrix', responder: () => archivoXlsx('matriz.xlsx') }])
       const seccion = await screen.findByRole('region', { name: 'Matriz de compromisos' })
-      expect(within(seccion).getByText('Todos sus proyectos: elija uno en la barra superior para acotar.')).toBeInTheDocument()
+      expect(within(seccion).getByText('Todos sus proyectos: elija uno en el selector para acotar.')).toBeInTheDocument()
       expect(within(seccion).queryByRole('combobox', { name: 'Campaña de exploración' })).not.toBeInTheDocument()
       await userEvent.click(within(seccion).getByRole('button', { name: 'Exportar la matriz' }))
       await waitFor(() => expect(red!.a('POST', '/sgspe/exports/commitment-matrix')).toHaveLength(1))

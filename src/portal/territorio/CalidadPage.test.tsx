@@ -45,7 +45,7 @@ describe('S63 · calidad de datos', () => {
     await userEvent.click(await screen.findByRole('tab', { name: 'Sin relación territorial' }))
     await waitFor(() => expect(ubicacion.actual).toBe('/territory/quality?check=NO_TERRITORY'))
     await waitFor(() => expect(red!.llamadas.some((l) => l.ruta.includes('check=NO_TERRITORY'))).toBe(true))
-    await userEvent.selectOptions(screen.getByLabelText('Objeto'), 'grievance')
+    await userEvent.selectOptions(screen.getByLabelText('Tipo de registro'), 'grievance')
     await waitFor(() => expect(red!.llamadas.some((l) => l.ruta.includes('check=NO_TERRITORY&object=grievance'))).toBe(true))
   })
 
@@ -61,7 +61,7 @@ describe('S63 · calidad de datos', () => {
   it('el selector de objeto solo ofrece los de la revisión, y con proyecto solo los que lo tienen', async () => {
     fetch = mockFetch(rutas())
     abrir('/territory/quality?check=NO_GEOMETRY')
-    const selector = await screen.findByLabelText('Objeto')
+    const selector = await screen.findByLabelText('Tipo de registro')
     expect(
       within(selector)
         .getAllByRole('option')
@@ -70,7 +70,7 @@ describe('S63 · calidad de datos', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Áreas desactualizadas' }))
     await waitFor(() =>
       expect(
-        within(screen.getByLabelText('Objeto'))
+        within(screen.getByLabelText('Tipo de registro'))
           .getAllByRole('option')
           .map((o) => o.getAttribute('value'))
       ).toEqual(['', 'area_of_influence', 'community', 'land_parcel', 'mining_concession'])
@@ -78,7 +78,7 @@ describe('S63 · calidad de datos', () => {
     await userEvent.selectOptions(screen.getByLabelText('Proyecto'), PROYECTO_UTM.id)
     await waitFor(() =>
       expect(
-        within(screen.getByLabelText('Objeto'))
+        within(screen.getByLabelText('Tipo de registro'))
           .getAllByRole('option')
           .map((o) => o.getAttribute('value'))
       ).toEqual(['', 'area_of_influence'])

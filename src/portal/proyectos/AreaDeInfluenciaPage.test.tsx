@@ -144,7 +144,7 @@ describe('S10 · área de influencia', () => {
   it('409 MEMBERS_REQUIRED ofrece agregar miembros', async () => {
     fetch = abrirPortal('/projects/p1/areas/a2', GERENCIA_SOCIAL, SMG, rutas())
     await aprobarCon(() => problema(409, 'Sin miembros', [{ field: 'area_of_influence_member', message: 'MEMBERS_REQUIRED' }]))
-    expect(await screen.findByText(/El servidor no encuentra miembros en esta versión/)).toBeInTheDocument()
+    expect(await screen.findByText(/Esta versión no tiene miembros/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Agregar miembros' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await waitFor(() => expect(screen.getByRole('region', { name: 'Agregar miembro' })).toHaveFocus())

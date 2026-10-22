@@ -486,7 +486,7 @@ describe('S12 · capas de gestión (LYR-17 a LYR-24)', () => {
       })
     )
     await userEvent.click(await within(await capas()).findByRole('checkbox', { name: /Interacciones, visitas y observaciones/ }))
-    expect(await within(await capas()).findByText('El periodo elegido está fuera del rango que admite el servidor: revise las fechas.')).toBeInTheDocument()
+    expect(await within(await capas()).findByText('El periodo elegido está fuera del rango permitido: revise las fechas.')).toBeInTheDocument()
   })
 
   it('una fecha ilegible que el servidor rechaza (INVALID_VALUE) no se dice como «fuera de rango»', async () => {

@@ -38,7 +38,7 @@ export const ES_TABLERO_COMPROMISOS = {
   ejecutado: 'Ejecutado',
   sinMontos: 'No hay compromisos con monto para estos filtros.',
   sinBase: 'Sin base de comparación: ningún compromiso tiene monto en la moneda principal.',
-  historiaAproximada: 'La historia anterior a la puesta en marcha es aproximada: el modelo no guarda la fecha de aprobación.',
+  historiaAproximada: 'La historia anterior a la puesta en marcha es aproximada: el sistema no guarda la fecha de aprobación.',
   sinPendientes: 'No hay compromisos vencidos ni por vencer.',
   // la tabla aplica el proyecto, la campaña y el responsable; el periodo, el territorio y el ámbito no
   pendientesNoAplica: 'Esta tabla no aplica el filtro de {{filtros}}',
@@ -83,7 +83,7 @@ export const EN_TABLERO_COMPROMISOS: typeof ES_TABLERO_COMPROMISOS = {
   ejecutado: 'Executed',
   sinMontos: 'There are no commitments with an amount for these filters.',
   sinBase: 'No basis for comparison: no commitment has an amount in the main currency.',
-  historiaAproximada: 'History before go-live is approximate: the model does not keep the approval date.',
+  historiaAproximada: 'History before go-live is approximate: the system does not keep the approval date.',
   sinPendientes: 'There are no overdue or due-soon commitments.',
   pendientesNoAplica: 'This table does not apply the {{filtros}} filter',
   truncadoPendientes: 'The first {{n}} are shown: open the list to see them all.',

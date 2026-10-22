@@ -34,9 +34,9 @@ export const ES_ADMINISTRACION = {
   },
   cuidados: {
     titulo: 'Cuidados',
-    aviso: 'El modelo de SGSPE no se cambia en la consola',
+    aviso: 'La estructura de SGSPE no se cambia en la consola',
     texto:
-      'El modelo de datos, los flujos de aprobación, los roles y los tipos de documento de SGSPE viven en el repositorio del producto y se aplican al aprovisionar la organización. Un cambio que se haga sobre ellos en la consola se pierde en el próximo aprovisionamiento.',
+      'Los tipos de datos, los flujos de aprobación, los roles y los tipos de documento de SGSPE los define el equipo del producto y se cargan al preparar o actualizar la organización. Un cambio que se haga sobre ellos en la consola se pierde en la próxima actualización.',
     motivo: 'La consola tampoco pide motivo: los cambios que lo necesitan se hacen en el portal.'
   }
 }
@@ -75,9 +75,9 @@ export const EN_ADMINISTRACION: typeof ES_ADMINISTRACION = {
   },
   cuidados: {
     titulo: 'Take care',
-    aviso: 'The SGSPE model is not changed in the console',
+    aviso: 'The SGSPE structure is not changed in the console',
     texto:
-      'The SGSPE data model, approval workflows, roles and document types live in the product repository and are applied when the organization is provisioned. A change made to them in the console is lost at the next provisioning.',
+      'SGSPE’s data types, approval flows, roles and document types are defined by the product team and loaded when the organization is set up or updated. A change made to them in the console is lost at the next update.',
     motivo: 'The console does not ask for a reason either: changes that need one are made in the portal.'
   }
 }

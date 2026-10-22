@@ -9,7 +9,7 @@ export const ES_MAPA = {
   capas: 'Capas',
   grupos: { referencia: 'Referencia', proyecto: 'Proyecto', tenencia: 'Tenencia', gestion: 'Gestión' },
   bloqueada: 'Su cuenta no puede ver esta capa',
-  periodoFueraDeRango: 'El periodo elegido está fuera del rango que admite el servidor: revise las fechas.',
+  periodoFueraDeRango: 'El periodo elegido está fuera del rango permitido: revise las fechas.',
   fechaInvalida: 'Una fecha del periodo no es válida: revise las fechas.',
   notas: {
     incompleta: 'Su cuenta no puede leer parte de los datos de esta capa.',
@@ -105,7 +105,7 @@ export const EN_MAPA: typeof ES_MAPA = {
   capas: 'Layers',
   grupos: { referencia: 'Reference', proyecto: 'Project', tenencia: 'Land tenure', gestion: 'Management' },
   bloqueada: 'Your account cannot see this layer',
-  periodoFueraDeRango: 'The chosen period is outside the range the server accepts: check the dates.',
+  periodoFueraDeRango: 'The chosen period is outside the allowed range: check the dates.',
   fechaInvalida: 'A date of the period is not valid: check the dates.',
   notas: {
     incompleta: 'Your account cannot read part of the data in this layer.',

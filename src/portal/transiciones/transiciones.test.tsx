@@ -352,7 +352,7 @@ describe('transiciones', () => {
     start([], { allowed: false, blocking: [], warnings: [] })
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
-    expect(await screen.findByText(/El servidor no permite este paso ahora/)).toBeInTheDocument()
+    expect(await screen.findByText(/Este paso no se puede dar ahora/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
     expect(screen.queryByText('Se cumplen las reglas para este paso.')).not.toBeInTheDocument()
   })

@@ -134,7 +134,7 @@ export const ES_COMUN = {
     correo: '{{etiqueta}} · correo',
     identificador: '{{etiqueta}} · identificador de usuario',
     aMano:
-      'Su cuenta no lista los usuarios de la organización: escriba el correo y el identificador; el servidor comprueba que nombren a alguien de su organización.',
+      'Su cuenta no lista los usuarios de la organización: escriba el correo y el identificador; el sistema comprueba que nombren a alguien de su organización.',
     noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.'
   },
   // la ayuda de un campo en un formulario armado desde el modelo (FormularioDeRegistro): la descripción del modelo es
@@ -158,7 +158,7 @@ export const ES_COMUN = {
     UNKNOWN_ROLE: 'Ese rol no está declarado en la organización.',
     REPRESENTED_PEOPLE: 'El número de personas representadas debe ser al menos 1.',
     POSITION_WITHOUT_PERSON: 'Un cargo sin persona solo puede estar «Vacante» o «Previsto».',
-    COMMAND_ONLY: 'Este paso se hace desde su propia pantalla, no como una transición.',
+    COMMAND_ONLY: 'Este paso se hace desde su propia pantalla, no desde las acciones del registro.',
     NOT_ASSIGNED: 'No tiene una asignación vigente a este proyecto: pídala a la administración del proyecto.',
     ACTION_REQUIRED: 'Su cuenta no tiene la acción que este paso exige (aprobar, verificar, emitir un documento o descargar lo restringido).',
     ROLE_REQUIRED: 'Su rol no puede dar este paso del flujo.',
@@ -182,14 +182,14 @@ export const ES_COMUN = {
     TOO_MANY_PROJECTS: 'Se pidieron demasiados proyectos a la vez: elija menos de 50.',
     INVALID_PROJECT: 'El proyecto pedido no es válido.',
     INVALID_BBOX: 'El encuadre del mapa no es válido: muévalo o acérquelo.',
-    LAYER_NOT_FOUND: 'Esa capa no existe en esta fase.',
-    DASHBOARD_NOT_FOUND: 'Ese tablero no existe en esta fase.',
+    LAYER_NOT_FOUND: 'Esa capa no está disponible.',
+    DASHBOARD_NOT_FOUND: 'Ese tablero no está disponible.',
     INDICATOR_NOT_FOUND: 'Ese indicador no existe.',
     INVALID_BREAKDOWN: 'Ese desglose no existe para este indicador.',
     INVALID_DISCLOSURE_LEVEL: 'Elija un nivel de divulgación: «Interno», «Externo» o «Público».',
     CHECKLIST_REQUIRED: 'Una salida fuera de la organización exige confirmar la lista de verificación.',
     INVALID_FILTER: 'Uno de los filtros no es válido.',
-    EXPORT_NOT_FOUND: 'Esa exportación no existe en esta fase.',
+    EXPORT_NOT_FOUND: 'Esa exportación no está disponible.',
     CATALOGUE_UNAVAILABLE: 'Falta el catálogo de uno de los datos: la salida pública necesita todos sus valores. Pida a la administración que lo cargue.',
     FILE_TYPE_NOT_ALLOWED: 'Ese tipo de archivo no se admite: elija un PDF, una imagen u otro tipo permitido.',
     FILE_EMPTY: 'El archivo está vacío: elija otro.',
@@ -217,12 +217,12 @@ export const ES_COMUN = {
     INVALID_VALUE: 'El valor no es válido.',
     // F6 (spec §3.1 a §3.6): importación por GDAL, exportación geográfica, proxy WMS, ficha contextual y consultas espaciales
     LAYER_REQUIRED: 'El archivo tiene varias capas: elija cuál importar.',
-    FORMAT_UNAVAILABLE: 'El servidor no puede leer ese formato todavía: use XLSX, CSV o GeoJSON, o pida que se instale el lector de formatos.',
+    FORMAT_UNAVAILABLE: 'Ese formato todavía no se puede leer: use XLSX, CSV o GeoJSON, o pida a soporte que lo habilite.',
     OBJECT_NOT_EXPORTABLE: 'Esa capa no se exporta como archivo geográfico.',
     DISCLOSURE_NOT_ALLOWED: 'Esa capa o ese filtro no se puede exportar con el nivel de divulgación elegido.',
     WMS_REQUEST_NOT_ALLOWED: 'El servicio de mapas de referencia solo entrega imágenes.',
     WMS_PARAMETER_NOT_ALLOWED: 'El servicio de mapas de referencia no acepta ese pedido.',
-    GEOSERVER_UNAVAILABLE: 'El servicio de mapas de referencia no responde: las capas se muestran por la API.',
+    GEOSERVER_UNAVAILABLE: 'El servicio de mapas de referencia no responde: las capas se muestran de otra forma, que puede tardar más.',
     TERRITORY_REQUIRED: 'Elija una localidad o una comunidad para ver sus cifras.',
     EXPORT_TIMEOUT: 'Generar el archivo tardó demasiado: acote los filtros o elija otro formato.',
     EXPORT_FAILED: 'No se pudo generar el archivo. Inténtelo de nuevo o elija otro formato.',
@@ -384,7 +384,7 @@ export const ES_COMUN = {
     '412': 'Otra persona cambió este registro. Recargue para ver la versión actual; lo escrito se conserva.',
     '422': 'La consulta no es válida.',
     '428': 'Falta la versión del registro. Recargue e intente de nuevo.',
-    red: 'No hubo respuesta del servidor. Revise su conexión.'
+    red: 'No se pudo conectar con SGSPE. Revise su conexión.'
   }
 }
 
@@ -508,7 +508,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     deLaLista: 'Pick the person',
     correo: '{{etiqueta}} · email',
     identificador: '{{etiqueta}} · user identifier',
-    aMano: 'Your account does not list the organization’s users: type the email and the identifier; the server checks they name someone in your organization.',
+    aMano: 'Your account does not list the organization’s users: type the email and the identifier; the system checks they name someone in your organization.',
     noLeido: 'The user list could not be read; type the email and the identifier.'
   },
   ayudas: {
@@ -527,10 +527,10 @@ export const EN_COMUN: typeof ES_COMUN = {
     UNKNOWN_ROLE: 'That role is not declared in the organization.',
     REPRESENTED_PEOPLE: 'The number of represented people must be at least 1.',
     POSITION_WITHOUT_PERSON: 'A position without a person can only be «Vacante» or «Previsto».',
-    COMMAND_ONLY: 'This step is done from its own screen, not as a transition.',
+    COMMAND_ONLY: 'This step is done from its own screen, not from the record actions.',
     NOT_ASSIGNED: 'You have no current assignment to this project: ask the project administration for one.',
     ACTION_REQUIRED: 'Your account lacks the action this step needs (approve, verify, issue a document or download restricted files).',
-    ROLE_REQUIRED: 'Your role cannot take this workflow step.',
+    ROLE_REQUIRED: 'Your role cannot take this step.',
     NOT_OWN_RECORD: 'Only whoever recorded this can change it: your account does not edit other people’s records.',
     FIELD_NOT_WRITABLE: 'This step writes a value your role cannot write.',
     OBJECT_NOT_READABLE: 'Your role cannot read data this rule needs to check.',
@@ -551,14 +551,14 @@ export const EN_COMUN: typeof ES_COMUN = {
     TOO_MANY_PROJECTS: 'Too many projects were requested at once: pick fewer than 50.',
     INVALID_PROJECT: 'The requested project is not valid.',
     INVALID_BBOX: 'The map extent is not valid: move or zoom the map.',
-    LAYER_NOT_FOUND: 'That layer does not exist in this phase.',
-    DASHBOARD_NOT_FOUND: 'That dashboard does not exist in this phase.',
+    LAYER_NOT_FOUND: 'That layer is not available.',
+    DASHBOARD_NOT_FOUND: 'That dashboard is not available.',
     INDICATOR_NOT_FOUND: 'That indicator does not exist.',
     INVALID_BREAKDOWN: 'That breakdown does not exist for this indicator.',
     INVALID_DISCLOSURE_LEVEL: 'Pick a disclosure level: «Interno», «Externo» or «Público».',
     CHECKLIST_REQUIRED: 'An output leaving the organization needs the checklist confirmed.',
     INVALID_FILTER: 'One of the filters is not valid.',
-    EXPORT_NOT_FOUND: 'That export does not exist in this phase.',
+    EXPORT_NOT_FOUND: 'That export is not available.',
     CATALOGUE_UNAVAILABLE: 'The catalogue of one of the fields is missing: the public output needs all its values. Ask the administration to load it.',
     FILE_TYPE_NOT_ALLOWED: 'That type of file is not accepted: pick a PDF, an image or another allowed type.',
     FILE_EMPTY: 'The file is empty: pick another.',
@@ -585,12 +585,12 @@ export const EN_COMUN: typeof ES_COMUN = {
     PROJECT_NOT_FOUND: 'The project does not exist or your account cannot read it.',
     INVALID_VALUE: 'The value is not valid.',
     LAYER_REQUIRED: 'The file has several layers: choose which one to import.',
-    FORMAT_UNAVAILABLE: 'The server cannot read that format yet: use XLSX, CSV or GeoJSON, or ask for the format reader to be installed.',
+    FORMAT_UNAVAILABLE: 'That format cannot be read yet: use XLSX, CSV or GeoJSON, or ask support to enable it.',
     OBJECT_NOT_EXPORTABLE: 'That layer is not exported as a geographic file.',
     DISCLOSURE_NOT_ALLOWED: 'That layer or filter cannot be exported at the chosen disclosure level.',
     WMS_REQUEST_NOT_ALLOWED: 'The reference map service only delivers images.',
     WMS_PARAMETER_NOT_ALLOWED: 'The reference map service does not accept that request.',
-    GEOSERVER_UNAVAILABLE: 'The reference map service is not responding: the layers are shown through the API.',
+    GEOSERVER_UNAVAILABLE: 'The reference map service is not responding: the layers are shown another way, which may be slower.',
     TERRITORY_REQUIRED: 'Choose a locality or a community to see its figures.',
     EXPORT_TIMEOUT: 'Generating the file took too long: narrow the filters or choose another format.',
     EXPORT_FAILED: 'The file could not be generated. Try again or choose another format.',
@@ -737,6 +737,6 @@ export const EN_COMUN: typeof ES_COMUN = {
     '412': 'Someone else changed this record. Reload to see the current version; what you wrote is kept.',
     '422': 'The query is not valid.',
     '428': 'The record version is missing. Reload and try again.',
-    red: 'The server did not answer. Check your connection.'
+    red: 'Could not connect to SGSPE. Check your connection.'
   }
 }

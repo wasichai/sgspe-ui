@@ -652,7 +652,7 @@ describe('S07 · asignación de quien crea (P40)', () => {
     await identificar()
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByRole('heading', { name: PIDE })).toBeInTheDocument()
-    expect(screen.getByText(/solo acepta cambios de quien está asignado/)).toBeInTheDocument()
+    expect(screen.getByText(/solo pueden cambiarlo las personas asignadas/)).toBeInTheDocument()
     // sin el directorio de roles, el rol se escribe; el usuario es la cuenta, no se elige
     expect(screen.queryByRole('textbox', { name: 'Correo del usuario' })).not.toBeInTheDocument()
     await userEvent.type(screen.getByRole('textbox', { name: 'Rol en el proyecto' }), 'ROL_DE_PRUEBA')

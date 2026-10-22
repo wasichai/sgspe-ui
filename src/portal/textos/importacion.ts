@@ -4,7 +4,7 @@ export const ES_IMPORTACION = {
   pasos: ['Archivo y destino', 'CRS de origen y columnas', 'Vista previa y decisiones', 'Confirmación'],
   nadaEscrito: 'Nada se ha escrito todavía.',
   archivo: 'Archivo (XLSX, CSV o GeoJSON)',
-  destino: 'Objeto destino',
+  destino: 'Qué importa',
   destinos: {
     project_component: 'Componentes del proyecto',
     land_parcel: 'Predios',
@@ -72,7 +72,7 @@ export const ES_IMPORTACION = {
     gpkg: 'GeoPackage',
     gpx: 'GPX'
   },
-  formatoNoDisponible: 'El servidor no puede leer {{formato}} todavía.',
+  formatoNoDisponible: 'Todavía no se puede leer {{formato}}.',
   formatoDesconocido: 'Ese tipo de archivo no se importa.',
   soloVectorial: 'Este destino se importa desde un archivo con geometrías (GeoJSON, Shapefile, KML, KMZ, GeoPackage, FileGDB o GPX).',
   soloPoligonos: 'Solo polígonos: los puntos y las líneas del archivo llegan como filas inválidas, igual que una fila sin código.',
@@ -83,7 +83,7 @@ export const ES_IMPORTACION = {
   capaOpcion: '{{nombre}} · {{tipo}} · {{n}} elementos',
   capaLeida: 'Capa leída: {{capa}}',
   leerArchivo: 'Leer el archivo',
-  leerArchivoAyuda: 'El servidor lee sus capas y el CRS que declara, sin escribir nada; usted elige la capa y confirma el CRS.',
+  leerArchivoAyuda: 'Se leen sus capas y el CRS que declara, sin guardar nada; usted elige la capa y confirma el CRS.',
   crsDelArchivo: 'Propuesto por el archivo: {{crs}}. Confírmelo o elija otro.',
   tipoFijo: 'Tipo de elemento para todas las filas',
   tipoFalta: 'Indique la columna del tipo de elemento o un tipo para todas las filas.',
@@ -102,7 +102,7 @@ export const EN_IMPORTACION: typeof ES_IMPORTACION = {
   pasos: ['File and target', 'Source CRS and columns', 'Preview and decisions', 'Confirmation'],
   nadaEscrito: 'Nothing has been written yet.',
   archivo: 'File (XLSX, CSV or GeoJSON)',
-  destino: 'Target object',
+  destino: 'What you import',
   destinos: {
     project_component: 'Project components',
     land_parcel: 'Land parcels',
@@ -168,7 +168,7 @@ export const EN_IMPORTACION: typeof ES_IMPORTACION = {
     gpkg: 'GeoPackage',
     gpx: 'GPX'
   },
-  formatoNoDisponible: 'The server cannot read {{formato}} yet.',
+  formatoNoDisponible: '{{formato}} cannot be read yet.',
   formatoDesconocido: 'That kind of file is not imported.',
   soloVectorial: 'This target is imported from a file with geometries (GeoJSON, Shapefile, KML, KMZ, GeoPackage, FileGDB or GPX).',
   soloPoligonos: 'Polygons only: points and lines in the file come back as invalid rows, as does a row without a code.',
@@ -179,7 +179,7 @@ export const EN_IMPORTACION: typeof ES_IMPORTACION = {
   capaOpcion: '{{nombre}} · {{tipo}} · {{n}} features',
   capaLeida: 'Layer read: {{capa}}',
   leerArchivo: 'Read the file',
-  leerArchivoAyuda: 'The server reads its layers and the CRS it declares, without writing anything; you choose the layer and confirm the CRS.',
+  leerArchivoAyuda: 'Its layers and the CRS it declares are read, without saving anything; you choose the layer and confirm the CRS.',
   crsDelArchivo: 'Proposed by the file: {{crs}}. Confirm it or choose another.',
   tipoFijo: 'Feature type for every row',
   tipoFalta: 'Give the feature type column or one type for every row.',

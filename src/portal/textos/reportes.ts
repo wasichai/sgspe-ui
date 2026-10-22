@@ -8,9 +8,9 @@ export const ES_REPORTES = {
   proyectoDeLaPagina: 'Proyecto de la página',
   vistas: { entregables: 'Entregables', exportaciones: 'Exportaciones', historial: 'Historial' },
   alcance: {
-    proyecto: 'Proyecto: {{proyecto}}, el de la barra superior.',
-    todos: 'Todos los proyectos: elija uno en la barra superior para acotar.',
-    mios: 'Todos sus proyectos: elija uno en la barra superior para acotar.'
+    proyecto: 'Proyecto: {{proyecto}}, el que eligió en el selector.',
+    todos: 'Todos los proyectos: elija uno en el selector para acotar.',
+    mios: 'Todos sus proyectos: elija uno en el selector para acotar.'
   },
   nivel: 'Nivel de divulgación',
   niveles: {
@@ -39,7 +39,7 @@ export const ES_REPORTES = {
   historial: 'Registro de exportaciones',
   historialAyuda: 'Las últimas exportaciones de la organización (o del proyecto elegido), con quién las hizo.',
   historialVacio: 'Todavía no hay exportaciones registradas.',
-  columnas: { fecha: 'Fecha', quien: 'Exportó', objeto: 'Objeto', nivel: 'Nivel', filas: 'Filas' },
+  columnas: { fecha: 'Fecha', quien: 'Exportó', objeto: 'Qué se exportó', nivel: 'Nivel', filas: 'Filas' },
   // F3: la matriz de compromisos (api.md §4.13, deliverables.md §10)
   matriz: {
     titulo: 'Matriz de compromisos',
@@ -147,9 +147,9 @@ export const EN_REPORTES: typeof ES_REPORTES = {
   proyectoDeLaPagina: 'Project of this page',
   vistas: { entregables: 'Deliverables', exportaciones: 'Exports', historial: 'History' },
   alcance: {
-    proyecto: 'Project: {{proyecto}}, the one in the top bar.',
-    todos: 'All projects: pick one in the top bar to narrow it down.',
-    mios: 'All your projects: pick one in the top bar to narrow it down.'
+    proyecto: 'Project: {{proyecto}}, the one you chose in the selector.',
+    todos: 'All projects: pick one in the selector to narrow it down.',
+    mios: 'All your projects: pick one in the selector to narrow it down.'
   },
   nivel: 'Disclosure level',
   niveles: {
@@ -175,7 +175,7 @@ export const EN_REPORTES: typeof ES_REPORTES = {
   historial: 'Export log',
   historialAyuda: 'The latest exports of the organization (or of the chosen project), with who made them.',
   historialVacio: 'No exports have been recorded yet.',
-  columnas: { fecha: 'Date', quien: 'Exported by', objeto: 'Object', nivel: 'Level', filas: 'Rows' },
+  columnas: { fecha: 'Date', quien: 'Exported by', objeto: 'What was exported', nivel: 'Level', filas: 'Rows' },
   matriz: {
     titulo: 'Commitment matrix',
     ayuda:
