@@ -4,14 +4,16 @@ import { echarts } from './echarts'
 import type { GraficoProps } from './Grafico'
 
 // ECharts sobre un div: el tema sale de los tokens (la paleta categórica, el texto, los ejes, la cuadrícula y el tooltip, que
-// siguen el tema claro y oscuro) y se reaplica al cambiar de tema; aria y decal activados (dashboards.md §9.3 y §9.4)
+// siguen el tema claro y oscuro) y se reaplica al cambiar de tema; aria activado (dashboards.md §9.3). desde el rediseño de UX
+// (DD-15) las barras y las áreas son de color sólido, sin el relleno con trama (decal) de §9.4: cada serie se distingue por su
+// color, su leyenda y su tabla «Ver datos»
 export const PALETA = ['--sg-data-1', '--sg-data-2', '--sg-data-3', '--sg-data-4', '--sg-data-5', '--sg-data-6']
 
 export function temaDelGrafico() {
   return {
     color: PALETA.map(colorDe),
     textStyle: { color: colorDe('--sg-text-secondary'), fontFamily: 'IBM Plex Sans, system-ui, sans-serif' },
-    aria: { enabled: true, decal: { show: true } },
+    aria: { enabled: true },
     animation: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   }
 }
@@ -60,7 +62,7 @@ export function opcionesConTema(opciones: Objeto): Objeto {
       opciones.tooltip
     )
   }
-  // la descripción accesible propia de una pantalla (aria.label.description) se suma al aria del tema: no lo apaga ni quita el decal
+  // la descripción accesible propia de una pantalla (aria.label.description) se suma al aria del tema: no lo apaga
   if (esObjeto(opciones.aria)) resultado.aria = fusionar(temaDelGrafico().aria, opciones.aria)
   if (esObjeto(opciones.legend)) resultado.legend = fusionar({ textStyle: { color: colorDe('--sg-text-secondary') } }, opciones.legend)
   return resultado
