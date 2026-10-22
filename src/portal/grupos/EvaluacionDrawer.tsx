@@ -1,13 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@wasichai/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useEffect, useState } from 'react'
+import { Alert, Button, cn, Textarea } from '@wasichai/ui'
+import { Check, ChevronDown } from 'lucide-react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { Cargando, ErrorDeCarga } from '../componentes/Estados'
 import { hoyEnLima } from '../datos/fechas'
@@ -15,7 +17,7 @@ import { campoDelError, codigoDelError, nuevaClave } from '../datos/http'
 import { campoDe, useDefinicion, type Registro } from '../datos/registros'
 import { MiniMatriz } from '../graficos/MiniMatriz'
 import { NS, numeroPe } from '../i18n'
-import { INDICADORES, INDICADORES_DE_INTERES, INDICADORES_DE_PODER, useGuardarEvaluacion, useVistaPreviaDeEvaluacion, type EvaluacionGuardada } from './api'
+import { INDICADORES, useGuardarEvaluacion, useVistaPreviaDeEvaluacion, type EvaluacionGuardada } from './api'
 import { Advertencias } from './Advertencias'
 import { rotuloDeOpcion } from '../datos/opciones'
 
@@ -42,6 +44,22 @@ const esquema = z
   })
   .refine((v) => !v.ajustar || (v.influence_group && v.override_reason.trim()), { path: ['override_reason'] })
 type Valores = z.infer<typeof esquema>
+type Indicador = (typeof INDICADORES)[number]
+
+// U-29 (rediseño de UX, área 4.5a): las 15 escalas no caben de corrido en un drawer de 400 px. van en cinco temas de tres,
+// plegables y uno abierto a la vez, con el avance a la vista: los dos de interés (afectación y oportunidad) y los tres de poder
+// (recursos, acción y organización, redes y movilización). solo cambia cómo se piden: lo que se manda es lo mismo
+const TEMAS: { clave: string; dimension: 'interes' | 'poder'; indicadores: Indicador[] }[] = [
+  { clave: 'afectacion', dimension: 'interes', indicadores: ['affect_environment', 'affect_livelihood', 'affect_property_status'] },
+  { clave: 'oportunidad', dimension: 'interes', indicadores: ['opportunity_work', 'opportunity_development', 'opportunity_benefits'] },
+  { clave: 'recursos', dimension: 'poder', indicadores: ['power_legal_action', 'power_credibility', 'power_permit_control'] },
+  { clave: 'accion', dimension: 'poder', indicadores: ['power_action_scope', 'power_organization_level', 'power_convening_capacity'] },
+  { clave: 'redes', dimension: 'poder', indicadores: ['power_network_membership', 'power_group_mobilization', 'power_other_pressure'] }
+]
+const calificados = (tema: (typeof TEMAS)[number], valores: Partial<Record<Indicador, number>> | undefined) =>
+  tema.indicadores.filter((i) => typeof valores?.[i] === 'number').length
+const completo = (tema: (typeof TEMAS)[number], valores: Partial<Record<Indicador, number>> | undefined) =>
+  calificados(tema, valores) === tema.indicadores.length
 
 // la fecha por defecto es hoy en America/Lima (nunca UTC): el servidor rechaza una evaluación con fecha futura según el día
 // de Lima, y a las 19:00 de Lima ya es "mañana" en UTC
@@ -108,6 +126,19 @@ export function EvaluacionDrawer({
   const fecha = useWatch({ control, name: 'assessment_date' })
   const postura = useWatch({ control, name: 'stance' })
   const completos = INDICADORES.every((i) => typeof indicadores?.[i] === 'number')
+  // el tema abierto: el primero al empezar; calificar el último indicador de un tema abre el siguiente sin calificar
+  const [temaAbierto, setTemaAbierto] = useState<number | null>(0)
+  const temasHechos = TEMAS.filter((tema) => completo(tema, indicadores)).length
+  const primeroSinCalificar = (valores: Partial<Record<Indicador, number>> | undefined, desde = 0): number | null => {
+    const orden = [...TEMAS.keys()].map((k) => (k + desde) % TEMAS.length)
+    return orden.find((k) => !completo(TEMAS[k], valores)) ?? null
+  }
+  const calificar = (indice: number, indicador: Indicador, n: number) => {
+    const antes = indicadores
+    setValue(`indicadores.${indicador}`, n, { shouldValidate: formState.isSubmitted })
+    const despues = { ...antes, [indicador]: n }
+    if (!completo(TEMAS[indice], antes) && completo(TEMAS[indice], despues)) setTemaAbierto(primeroSinCalificar(despues, indice + 1))
+  }
   // la vista previa lee el historial (READ sobre stakeholder_assessment): sin él, el servidor responde 403 y no se pide
   const conVistaPrevia = can('stakeholder_assessment', 'READ')
   // la vista previa espera 300 ms sin cambios antes de pedir el cálculo; la fecha y la postura van para que salgan
@@ -125,17 +156,23 @@ export function EvaluacionDrawer({
     return () => clearTimeout(espera)
   }, [completos, conVistaPrevia, JSON.stringify(indicadores), fecha, postura, leePostura])
   const previa = useVistaPreviaDeEvaluacion(grupo.id, pedido)
-  const enviar = handleSubmit((v) =>
-    guardar.mutate(
-      { atributos: atributosDeEvaluacion(v, leePostura), motivo: v.motivo, clave },
-      {
-        onSuccess: (r) => {
-          setClave(nuevaClave())
-          reset(valoresIniciales())
-          alGuardar(r)
+  const enviar = handleSubmit(
+    (v) =>
+      guardar.mutate(
+        { atributos: atributosDeEvaluacion(v, leePostura), motivo: v.motivo, clave },
+        {
+          onSuccess: (r) => {
+            setClave(nuevaClave())
+            reset(valoresIniciales())
+            setTemaAbierto(0)
+            alGuardar(r)
+          }
         }
-      }
-    )
+      ),
+    // con indicadores sin calificar, se abre el primer tema que falta
+    (errores) => {
+      if (errores.indicadores) setTemaAbierto(primeroSinCalificar(indicadores))
+    }
   )
   const desajuste = codigoDelError(guardar.error) === 'STATE_MISMATCH'
   const retirado = grupo.state === 'retired' || desajuste
@@ -150,6 +187,7 @@ export function EvaluacionDrawer({
   const cerrar = () => {
     if (guardar.isPending) return
     reset(valoresIniciales())
+    setTemaAbierto(0)
     guardar.reset()
     alCerrar()
   }
@@ -181,52 +219,70 @@ export function EvaluacionDrawer({
       {definicion.isError && !definicion.data ? <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
       <form hidden={!definicion.data} className="space-y-4" onSubmit={(e) => void enviar(e)} aria-label={t('grupos.evaluacion.titulo')}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Campo etiqueta={t('grupos.evaluacion.fecha')} error={formState.errors.assessment_date ? t('proyectos.asistente.obligatorio') : undefined}>
-            {(p) => <Input {...p} type="date" {...register('assessment_date')} />}
-          </Campo>
+          {/* U-07: el día como dd/mm/aaaa; el valor sigue siendo el día AAAA-MM-DD de Lima que se manda */}
+          <CampoFecha
+            etiqueta={t('grupos.evaluacion.fecha')}
+            requerido
+            valor={fecha || null}
+            alCambiar={(v) => setValue('assessment_date', v ?? '', { shouldValidate: formState.isSubmitted })}
+            error={formState.errors.assessment_date ? t('proyectos.asistente.obligatorio') : undefined}
+          />
           <Campo etiqueta={t('grupos.evaluacion.base')} error={formState.errors.basis ? t('proyectos.asistente.obligatorio') : undefined}>
             {(p) => <SelectNativo {...p} opciones={opciones('basis')} {...register('basis')} />}
           </Campo>
         </div>
-        {[
-          ['interes', INDICADORES_DE_INTERES],
-          ['poder', INDICADORES_DE_PODER]
-        ].map(([grupoDeIndicadores, lista]) => (
-          <fieldset key={grupoDeIndicadores as string} className="space-y-2">
-            <legend className="font-medium">{t(`grupos.evaluacion.${grupoDeIndicadores as string}`)}</legend>
-            {(lista as readonly string[]).map((i) => (
-              <div
-                key={i}
-                role="radiogroup"
-                aria-label={t(`grupos.evaluacion.indicadores.${i}`)}
-                className="flex flex-wrap items-center justify-between gap-2 text-sm"
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium" aria-live="polite">
+              {t('grupos.evaluacion.avance', { hechos: temasHechos, total: TEMAS.length })}
+            </p>
+            <span aria-hidden className="flex w-24 gap-1">
+              {TEMAS.map((tema) => (
+                <span key={tema.clave} className={cn('h-1.5 flex-1 rounded-full', completo(tema, indicadores) ? 'bg-sg-primary' : 'bg-sg-border')} />
+              ))}
+            </span>
+          </div>
+          {TEMAS.map((tema, indice) => (
+            <div key={tema.clave}>
+              {indice === 0 || TEMAS[indice - 1].dimension !== tema.dimension ? (
+                <h3 className="mb-1 mt-3 text-sg-overline font-semibold uppercase text-sg-text-muted">{t(`grupos.evaluacion.${tema.dimension}`)}</h3>
+              ) : null}
+              <TemaDeIndicadores
+                titulo={t(`grupos.evaluacion.temas.${tema.clave}`)}
+                avance={t('grupos.evaluacion.avanceDelTema', { hechos: calificados(tema, indicadores), total: tema.indicadores.length })}
+                hecho={completo(tema, indicadores)}
+                abierto={temaAbierto === indice}
+                alAlternar={() => setTemaAbierto(temaAbierto === indice ? null : indice)}
               >
-                <span>
-                  {t(`grupos.evaluacion.indicadores.${i}`)}
-                  {anterior && anterior.attributes[i] !== undefined && anterior.attributes[i] !== null ? (
-                    <span className="ml-1 text-sg-caption text-sg-text-muted">
-                      ({t('grupos.evaluacion.anterior', { valor: String(anterior.attributes[i]) })})
+                {tema.indicadores.map((i) => (
+                  <div
+                    key={i}
+                    role="radiogroup"
+                    aria-label={t(`grupos.evaluacion.indicadores.${i}`)}
+                    className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                  >
+                    <span>
+                      {t(`grupos.evaluacion.indicadores.${i}`)}
+                      {anterior && anterior.attributes[i] !== undefined && anterior.attributes[i] !== null ? (
+                        <span className="ml-1 text-sg-caption text-sg-text-muted">
+                          ({t('grupos.evaluacion.anterior', { valor: String(anterior.attributes[i]) })})
+                        </span>
+                      ) : null}
                     </span>
-                  ) : null}
-                </span>
-                <span className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <label key={n} className="flex items-center gap-0.5">
-                      <input
-                        type="radio"
-                        name={i}
-                        value={n}
-                        checked={indicadores?.[i as keyof Valores['indicadores']] === n}
-                        onChange={() => setValue(`indicadores.${i}` as `indicadores.affect_environment`, n, { shouldValidate: formState.isSubmitted })}
-                      />
-                      {n}
-                    </label>
-                  ))}
-                </span>
-              </div>
-            ))}
-          </fieldset>
-        ))}
+                    <span className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <label key={n} className="flex items-center gap-0.5">
+                          <input type="radio" name={i} value={n} checked={indicadores?.[i] === n} onChange={() => calificar(indice, i, n)} />
+                          {n}
+                        </label>
+                      ))}
+                    </span>
+                  </div>
+                ))}
+              </TemaDeIndicadores>
+            </div>
+          ))}
+        </div>
         {formState.errors.indicadores ? <p className="text-sg-caption text-sg-danger">{t('grupos.evaluacion.incompleto')}</p> : null}
         <fieldset className="grid gap-3 sm:grid-cols-2">
           {leePostura ? (
@@ -313,5 +369,49 @@ export function EvaluacionDrawer({
         ) : null}
       </form>
     </Drawer>
+  )
+}
+
+// un tema plegable: el encabezado dice su avance («2 de 3») y abre o pliega sus escalas
+function TemaDeIndicadores({
+  titulo,
+  avance,
+  hecho,
+  abierto,
+  alAlternar,
+  children
+}: {
+  titulo: string
+  avance: string
+  hecho: boolean
+  abierto: boolean
+  alAlternar: () => void
+  children: ReactNode
+}) {
+  const id = useId()
+  return (
+    <div className="rounded-sg-md border border-sg-border">
+      <button
+        type="button"
+        aria-expanded={abierto}
+        aria-controls={`${id}-panel`}
+        onClick={alAlternar}
+        className="flex w-full items-center justify-between gap-2 rounded-sg-md px-3 py-2 text-left text-sm hover:bg-sg-surface-hover"
+      >
+        <span id={`${id}-titulo`} className="font-medium">
+          {titulo}
+        </span>{' '}
+        <span className={cn('flex items-center gap-1 text-sg-caption', hecho ? 'text-sg-success' : 'text-sg-text-muted')}>
+          {hecho ? <Check aria-hidden className="size-3.5" /> : null}
+          {avance}
+          <ChevronDown aria-hidden className={cn('size-4 transition-transform', abierto ? 'rotate-180' : '')} />
+        </span>
+      </button>
+      {abierto ? (
+        <div id={`${id}-panel`} role="region" aria-labelledby={`${id}-titulo`} className="space-y-2 border-t border-sg-border px-3 py-2">
+          {children}
+        </div>
+      ) : null}
+    </div>
   )
 }

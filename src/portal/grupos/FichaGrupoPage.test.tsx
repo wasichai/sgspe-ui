@@ -1,9 +1,9 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro } from '../../test/montar'
-import { hoyEnLima } from '../datos/fechas'
+import { hoyEnLima, textoDeDia } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -24,10 +24,22 @@ afterEach(() => {
   red = fetch = null
 })
 
+// U-29 (rediseño de UX, área 4.5a): los 15 indicadores van en cinco temas plegables, uno abierto a la vez. califica todos con
+// el mismo valor, tema por tema: abre el que esté plegado y marca sus escalas
+const TEMAS = ['Afectación', 'Oportunidad', 'Recursos de poder', 'Acción y organización', 'Redes y movilización']
+async function calificar(drawer: HTMLElement, valor: string, usuario: { click: (e: Element) => Promise<void> } = userEvent) {
+  for (const tema of TEMAS) {
+    const boton = within(drawer).getByRole('button', { name: new RegExp(`^${tema}`) })
+    if (boton.getAttribute('aria-expanded') !== 'true') await usuario.click(boton)
+    const panel = within(drawer).getByRole('region', { name: tema })
+    for (const grupo of within(panel).getAllByRole('radiogroup')) await usuario.click(within(grupo).getByRole('radio', { name: valor }))
+  }
+}
+
 // completa una evaluación (base, los 15 indicadores y el motivo) y la guarda
 async function llenar(drawer: HTMLElement, valor = '4', motivo = 'x') {
   await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' }), 'ENTREVISTA')
-  for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: valor }))
+  await calificar(drawer, valor)
   await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), motivo)
   await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
 }
@@ -154,7 +166,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
     expect(within(drawer).getByText('(antes: 5)')).toBeInTheDocument()
     await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' }), 'ENTREVISTA')
-    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '3' }))
+    await calificar(drawer, '3')
     expect(await within(drawer).findByText('Para monitoreo', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(within(drawer).getByText(/Dos evaluaciones cercanas tienen posturas distintas/)).toBeInTheDocument()
     await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
@@ -201,7 +213,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     ])
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
     await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' }), 'ENTREVISTA')
-    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '4' }))
+    await calificar(drawer, '4')
     await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'x')
     await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
     expect(await within(drawer).findByText('El grupo de interés está retirado: reincorpórelo antes de evaluarlo.')).toBeInTheDocument()
@@ -255,7 +267,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
       }
     ])
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
-    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '3' }))
+    await calificar(drawer, '3')
     expect(await within(drawer).findByText(/Hay evaluaciones posteriores a esta fecha/, {}, { timeout: 3000 })).toBeInTheDocument()
     expect(within(drawer).getByText(/Ninguna fila de la matriz de priorización coincide/)).toBeInTheDocument()
     expect(within(drawer).queryByText(/BACKDATED_ASSESSMENT|NO_PRIORITY_RULE/)).not.toBeInTheDocument()
@@ -272,8 +284,8 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
     try {
       const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      for (const grupo of within(drawer).getAllByRole('radiogroup')) await usuario.click(within(grupo).getByRole('radio', { name: '2' }))
-      await waitFor(() => expect(within(drawer).getAllByRole('radio', { checked: true })).toHaveLength(15))
+      await calificar(drawer, '2', usuario)
+      await waitFor(() => expect(within(drawer).getByText('5 de 5 temas calificados')).toBeInTheDocument())
       await vi.advanceTimersByTimeAsync(1000)
     } finally {
       vi.useRealTimers()
@@ -301,7 +313,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     ])
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
     await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' }), 'ENTREVISTA')
-    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '4' }))
+    await calificar(drawer, '4')
     await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'x')
     await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
     expect(await within(drawer).findByText('Evaluar escribe «Postura», un dato que su rol no puede escribir.')).toBeInTheDocument()
@@ -323,13 +335,59 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(within(drawer).queryByText(/campo_restringido/)).not.toBeInTheDocument()
   })
 
+  // U-29: las 15 escalas no caben de corrido en un drawer de 400 px. van en cinco temas plegables, uno abierto a la vez, con el
+  // avance a la vista; calificar un tema abre el siguiente sin calificar
+  it('la evaluación agrupa los 15 indicadores en cinco temas plegables con su avance', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    expect(within(drawer).getByText('0 de 5 temas calificados')).toBeInTheDocument()
+    const temas = TEMAS.map((tema) => within(drawer).getByRole('button', { name: new RegExp(`^${tema}`) }))
+    expect(temas.map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'false', 'false', 'false', 'false'])
+    expect(temas[0]).toHaveAccessibleName('Afectación 0 de 3')
+    // solo el tema abierto muestra sus escalas
+    expect(
+      within(drawer)
+        .getAllByRole('radiogroup')
+        .map((g) => g.getAttribute('aria-label'))
+    ).toEqual(['Afectación del medio ambiente', 'Afecta económicamente mi vida', 'Afectación de la propiedad o la posición'])
+    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '3' }))
+    expect(within(drawer).getByText('1 de 5 temas calificados')).toBeInTheDocument()
+    expect(temas[0]).toHaveAccessibleName('Afectación 3 de 3')
+    expect(temas.map((b) => b.getAttribute('aria-expanded'))).toEqual(['false', 'true', 'false', 'false', 'false'])
+    // un tema calificado se vuelve a abrir y conserva lo marcado
+    await userEvent.click(temas[0])
+    expect(within(within(drawer).getByRole('region', { name: 'Afectación' })).getAllByRole('radio', { checked: true })).toHaveLength(3)
+    expect(temas[1]).toHaveAttribute('aria-expanded', 'false')
+    // cada tema tiene tres escalas y entre todos suman las 15
+    let total = 0
+    for (const [i, tema] of TEMAS.entries()) {
+      if (temas[i].getAttribute('aria-expanded') !== 'true') await userEvent.click(temas[i])
+      total += within(within(drawer).getByRole('region', { name: tema })).getAllByRole('radiogroup').length
+    }
+    expect(total).toBe(15)
+  })
+
+  it('guardar con temas sin calificar no manda nada y abre el primero que falta', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    red = espiarRed()
+    const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '2' }))
+    await userEvent.click(within(drawer).getByRole('button', { name: /^Afectación/ }))
+    await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'x')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
+    expect(await within(drawer).findByText('Califique los 15 indicadores de 1 a 5')).toBeInTheDocument()
+    expect(within(drawer).getByRole('button', { name: /^Oportunidad/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(red.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(0)
+  })
+
   // la fecha de la evaluación es el día de Lima: a las 21:00 de Lima ya es el día siguiente en UTC
   it('la fecha por defecto es hoy en Lima, no en UTC', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-08T02:30:00Z') })
     try {
       fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
       const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
-      expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue('2026-10-07')
+      // U-29: la fecha va en CampoFecha, como dd/mm/aaaa, con el mismo valor
+      expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue('07/10/2026')
     } finally {
       vi.useRealTimers()
     }
@@ -383,7 +441,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     ])
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
     await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' }), 'ENTREVISTA')
-    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '4' }))
+    await calificar(drawer, '4')
     await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'Entrevista con la junta')
     await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
     expect(await within(drawer).findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
@@ -404,7 +462,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     ])
     const drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
     await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' }), 'ENTREVISTA')
-    for (const grupo of within(drawer).getAllByRole('radiogroup')) await userEvent.click(within(grupo).getByRole('radio', { name: '4' }))
+    await calificar(drawer, '4')
     await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'x')
     await userEvent.click(within(drawer).getByRole('button', { name: 'Guardar evaluación' }))
     expect(await within(drawer).findByText(/es un paso que su rol no puede dar/)).toBeInTheDocument()
@@ -427,15 +485,17 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     }
     let drawer = await abrir()
     // la fecha la cambia la persona: la siguiente evaluación vuelve a hoy
-    fireEvent.change(within(drawer).getByLabelText('Fecha de la evaluación'), { target: { value: '2026-01-15' } })
+    await userEvent.clear(within(drawer).getByLabelText('Fecha de la evaluación'))
+    await userEvent.type(within(drawer).getByLabelText('Fecha de la evaluación'), '15/01/2026')
     await llenar(drawer, '4', 'Primera')
     await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(1))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s1'))
     drawer = await abrir()
-    expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue(hoyEnLima())
+    expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue(textoDeDia(hoyEnLima()))
     expect(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' })).toHaveValue('')
     expect(within(drawer).getByLabelText('Motivo (obligatorio)')).toHaveValue('')
     expect(within(drawer).queryAllByRole('radio', { checked: true })).toHaveLength(0)
+    expect(within(drawer).getByText('0 de 5 temas calificados')).toBeInTheDocument()
     await llenar(drawer, '2', 'Segunda')
     await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(2))
     const [primera, segunda] = red.a('POST', '/sgspe/stakeholders/s1/assessments')
@@ -502,14 +562,15 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     ])
     await userEvent.click(await screen.findByRole('button', { name: 'Nueva evaluación' }))
     let drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
-    fireEvent.change(within(drawer).getByLabelText('Fecha de la evaluación'), { target: { value: '2026-01-15' } })
+    await userEvent.clear(within(drawer).getByLabelText('Fecha de la evaluación'))
+    await userEvent.type(within(drawer).getByLabelText('Fecha de la evaluación'), '15/01/2026')
     await llenar(drawer, '4', 'Borrador')
     expect(await within(drawer).findByText(/es un paso que su rol no puede dar/)).toBeInTheDocument()
     await userEvent.click(within(drawer).getByRole('button', { name: 'Cancelar' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await userEvent.click(await screen.findByRole('button', { name: 'Nueva evaluación' }))
     drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
-    expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue(hoyEnLima())
+    expect(within(drawer).getByLabelText('Fecha de la evaluación')).toHaveValue(textoDeDia(hoyEnLima()))
     expect(within(drawer).getByLabelText('Motivo (obligatorio)')).toHaveValue('')
     expect(within(drawer).getByRole('combobox', { name: 'Base de la evaluación' })).toHaveValue('')
     expect(within(drawer).queryByText(/es un paso que su rol no puede dar/)).not.toBeInTheDocument()

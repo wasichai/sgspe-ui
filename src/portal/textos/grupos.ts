@@ -138,6 +138,15 @@ export const ES_GRUPOS = {
     base: 'Base de la evaluación',
     interes: 'Interés: afectación y oportunidad',
     poder: 'Poder: recursos, acción, redes y movilización',
+    temas: {
+      afectacion: 'Afectación',
+      oportunidad: 'Oportunidad',
+      recursos: 'Recursos de poder',
+      accion: 'Acción y organización',
+      redes: 'Redes y movilización'
+    },
+    avance: '{{hechos}} de {{total}} temas calificados',
+    avanceDelTema: '{{hechos}} de {{total}}',
     anterior: 'antes: {{valor}}',
     indicadores: {
       affect_environment: 'Afectación del medio ambiente',
@@ -333,6 +342,15 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     base: 'Basis of the assessment',
     interes: 'Interest: affectation and opportunity',
     poder: 'Power: resources, action, networks and mobilization',
+    temas: {
+      afectacion: 'Affectation',
+      oportunidad: 'Opportunity',
+      recursos: 'Power resources',
+      accion: 'Action and organization',
+      redes: 'Networks and mobilization'
+    },
+    avance: '{{hechos}} of {{total}} themes rated',
+    avanceDelTema: '{{hechos}} of {{total}}',
     anterior: 'before: {{valor}}',
     indicadores: {
       affect_environment: 'Environmental affectation',
