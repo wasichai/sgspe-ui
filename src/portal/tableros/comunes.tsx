@@ -5,6 +5,7 @@ import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Consulta, NoDisponible } from '../componentes/Estados'
 import { sonDemasiadosRegistros, useCatalogoDeIndicadores, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { codigoDelError } from '../datos/http'
@@ -70,14 +71,19 @@ export function FiltrosDeTablero({
   }
   return (
     <div role="group" aria-label={t('tableros.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-      <label className="space-y-1">
-        <span className="block text-sg-label">{t('tableros.desde')}</span>
-        <input type="date" className={CONTROL} value={busqueda.get('periodStart') ?? ''} onChange={(e) => cambiar('periodStart', e.target.value)} />
-      </label>
-      <label className="space-y-1">
-        <span className="block text-sg-label">{t('tableros.hasta')}</span>
-        <input type="date" className={CONTROL} value={busqueda.get('periodEnd') ?? ''} onChange={(e) => cambiar('periodEnd', e.target.value)} />
-      </label>
+      {/* U-07: dd/mm/aaaa en los dos idiomas (CampoFecha), con el mismo valor AAAA-MM-DD en la URL que el <input type="date"> */}
+      <CampoFecha
+        etiqueta={t('tableros.desde')}
+        valor={busqueda.get('periodStart')}
+        max={busqueda.get('periodEnd') ?? undefined}
+        alCambiar={(v) => cambiar('periodStart', v ?? '')}
+      />
+      <CampoFecha
+        etiqueta={t('tableros.hasta')}
+        valor={busqueda.get('periodEnd')}
+        min={busqueda.get('periodStart') ?? undefined}
+        alCambiar={(v) => cambiar('periodEnd', v ?? '')}
+      />
       <label className="space-y-1">
         <span className="block text-sg-label">{t('tableros.ambito')}</span>
         <select className={CONTROL} value={busqueda.get('scope') ?? ''} onChange={(e) => cambiar('scope', e.target.value)}>

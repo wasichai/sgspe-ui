@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { montar } from '../../test/montar'
+import { montar, ubicacion } from '../../test/montar'
 import { useIndicador, type Indicador } from '../datos/indicadores'
 import {
   AvisosDeIndicador,
@@ -190,6 +191,21 @@ describe('filtros y catálogo', () => {
     unmount()
     montar(<FiltrosDeTablero alActualizar={() => undefined} />, { ruta: '/stakeholders/dashboard?periodStart=2026-01-01' })
     expect(screen.queryByText(/Sin fechas, cada cifra es del mes en curso/)).not.toBeInTheDocument()
+  })
+
+  // U-07: las fechas del periodo se leen y se escriben dd/mm/aaaa (CampoFecha), sea cual sea el navegador, y viajan en la URL
+  // como antes, AAAA-MM-DD en ?periodStart= y ?periodEnd=
+  it('las fechas del periodo se escriben dd/mm/aaaa y quedan en ?periodStart= y ?periodEnd= como AAAA-MM-DD', async () => {
+    montar(<FiltrosDeTablero alActualizar={() => undefined} />, { ruta: '/stakeholders/dashboard?periodStart=2026-09-01' })
+    const desde = screen.getByLabelText('Desde')
+    expect(desde).not.toHaveAttribute('type', 'date')
+    expect(desde).toHaveValue('01/09/2026')
+    const hasta = screen.getByLabelText('Hasta')
+    expect(hasta).toHaveAttribute('placeholder', 'dd/mm/aaaa')
+    await userEvent.type(hasta, '30/09/2026')
+    await waitFor(() => expect(ubicacion.actual).toBe('/stakeholders/dashboard?periodStart=2026-09-01&periodEnd=2026-09-30'))
+    await userEvent.clear(desde)
+    await waitFor(() => expect(ubicacion.actual).toBe('/stakeholders/dashboard?periodEnd=2026-09-30'))
   })
 
   it('un tablero se ofrece si el catálogo trae un indicador suyo disponible', async () => {
