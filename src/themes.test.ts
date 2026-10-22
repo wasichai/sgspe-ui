@@ -104,12 +104,13 @@ describe('borde de control, superficie flotante y tokens de datos', () => {
     expect([...declaradas(temas.sistema)].sort()).toEqual([...declaradas(temas.oscuro)].sort())
   })
 
+  // DD-21: en oscuro, el borde fuerte da 2.81:1 sobre la superficie flotante; el de control tiene su propio valor (3.16:1)
   it.each([
-    ['claro', '#ffffff'],
-    ['oscuro', '#1d2420'],
-    ['sistema', '#1d2420']
-  ] as const)('en %s, el borde de control es el borde fuerte y la superficie flotante es %s', (nombre, flotante) => {
-    expect(valor(temas[nombre], '--sg-border-control')).toBe('var(--sg-border-strong)')
+    ['claro', 'var(--sg-border-strong)', '#ffffff'],
+    ['oscuro', '#66726c', '#1d2420'],
+    ['sistema', '#66726c', '#1d2420']
+  ] as const)('en %s, el borde de control es %s y la superficie flotante es %s', (nombre, control, flotante) => {
+    expect(valor(temas[nombre], '--sg-border-control')).toBe(control)
     expect(valor(temas[nombre], '--sg-surface-raised')).toBe(flotante)
   })
 
