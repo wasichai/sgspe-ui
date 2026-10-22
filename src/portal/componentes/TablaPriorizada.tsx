@@ -19,7 +19,9 @@ export interface ColumnaPriorizada {
   encabezadoOculto?: boolean
   // la explicación única de una columna con celdas restringidas o no disponibles (como ThConExplicacion): su id es el que
   // las celdas referencian con describedPor
-  explicacion?: { id: string; tipo: 'restringido' | 'noDisponible' }
+  // con soloLectores, el motivo va solo para los lectores de pantalla, sin botón de ayuda (cuando no se sabe de antemano qué
+  // celdas no se podrán leer)
+  explicacion?: { id: string; tipo: 'restringido' | 'noDisponible'; soloLectores?: boolean }
   // clases propias de las celdas de la columna (un ancho mínimo, el tamaño del texto)
   claseDeCelda?: string
 }
@@ -94,7 +96,8 @@ export function TablaPriorizada<T>({ etiqueta, columnas, filas, clave, celda, va
                 key={clave(f)}
                 tabIndex={alAbrir ? 0 : undefined}
                 onKeyDown={alAbrir ? abrirConEnter(f) : undefined}
-                className={alAbrir ? 'focus-visible:outline-2 focus-visible:outline-sg-focus' : undefined}
+                // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
+                className={cn('group/fila', alAbrir && 'focus-visible:outline-2 focus-visible:outline-sg-focus')}
               >
                 {visibles.map((c) => (
                   <Td key={c.id} className={cn(visibilidad(c.prioridad), c.numerica && 'text-right tabular-nums', c.claseDeCelda)}>
@@ -117,7 +120,7 @@ function ThExplicado({ columna }: { columna: ColumnaPriorizada }) {
   return (
     <Th scope="col" aria-labelledby={nombre} className={cn(visibilidad(columna.prioridad), columna.numerica && 'text-right')}>
       <span id={nombre}>{columna.encabezado}</span>
-      <ExplicacionDeColumna id={columna.explicacion!.id} tipo={columna.explicacion!.tipo} />
+      <ExplicacionDeColumna id={columna.explicacion!.id} tipo={columna.explicacion!.tipo} soloLectores={columna.explicacion!.soloLectores} />
     </Th>
   )
 }

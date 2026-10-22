@@ -11,7 +11,9 @@ import { Link, useNavigate } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
 import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
-import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
+import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { NombreDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
@@ -33,6 +35,8 @@ import { Persona } from '../componentes/Persona'
 // de territorio. sin permiso para leer stance la columna dice "Restringido" y no se filtra por ella (security.md §7.9)
 const VISTAS = ['prioridad', 'mios', 'sinEvaluar', 'sinContacto', 'todos', 'retirados'] as const
 const FILTROS = ['influence_group', 'stance', 'stakeholder_scope', 'relationship_status', 'stakeholder_type'] as const
+// los tres a la vista en la barra (DD-04); el ámbito y el tipo, en «Más filtros»
+const FRECUENTES: readonly string[] = ['influence_group', 'stance', 'relationship_status']
 const POR_PAGINA = 25
 
 export function GruposPage() {
@@ -102,6 +106,16 @@ export function GruposPage() {
   }
   const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` }))
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
+  const limpiarFiltros = () => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))
+  const filtroDe = (f: string) => (
+    <FiltroDeLista
+      key={f}
+      etiqueta={t(`grupos.filtros.${f}`)}
+      opciones={opciones(f)}
+      value={lista.filtro(f)}
+      onChange={(e) => lista.cambiar({ [f]: e.target.value })}
+    />
+  )
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const paso = useSiguientePaso()
 
@@ -220,26 +234,24 @@ export function GruposPage() {
         <Cargando />
       ) : (
         <>
-          <VistasGuardadas
-            vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }), conteo: conteoDe(id) }))}
-            actual={lista.vista}
-            alCambiar={(id) => lista.cambiar({ view: id })}
-          />
-          <div className="flex flex-wrap gap-3">
-            {filtros.map((f) => (
-              <FiltroDeLista
-                key={f}
-                etiqueta={t(`grupos.filtros.${f}`)}
-                opciones={opciones(f)}
-                value={lista.filtro(f)}
-                onChange={(e) => lista.cambiar({ [f]: e.target.value })}
+          {/* la barra de filtros (hallazgos U-18 y U-22, DD-03 y DD-04): las vistas en el selector, con su conteo, en lugar de una
+              segunda fila de pestañas; tres filtros a la vista, el resto en «Más filtros», y un chip por filtro. ?view= y los
+              parámetros de filtro son los mismos */}
+          <BarraDeFiltros
+            vista={
+              <SelectorDeVista
+                etiqueta={t('comun.vistas')}
+                vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }), n: conteoDe(id) }))}
+                actual={lista.vista}
+                alElegir={(id) => lista.cambiar({ view: id })}
+                // cinco a la vista: solo «Retirados» va en «Más vistas»
+                visibles={5}
               />
-            ))}
-          </div>
-          <ChipsDeFiltro
-            chips={chips}
-            alQuitar={(c) => lista.cambiar({ [c]: null })}
-            alLimpiar={() => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))}
+            }
+            frecuentes={<>{filtros.filter((f) => FRECUENTES.includes(f)).map(filtroDe)}</>}
+            todos={<>{filtros.filter((f) => !FRECUENTES.includes(f)).map(filtroDe)}</>}
+            aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
+            alLimpiar={limpiarFiltros}
           />
           {elegidos.length > 0 && proyecto ? (
             <div
@@ -326,7 +338,7 @@ function CeldaDelGrupo({ grupo }: { grupo: Registro }) {
         <NombreDelGrupo grupo={grupo} />
       </Link>{' '}
       {/* la vista previa sin dejar la lista (ux-architecture.md §8.3, paso 2; revisión de UX, etapa 6) */}
-      <BotonDeVistaPrevia objeto="stakeholder" id={grupo.id} nombre={nombre} />
+      <BotonDeVistaPrevia objeto="stakeholder" id={grupo.id} nombre={nombre} enFila />
       <p className="text-sg-caption text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
     </>
   )

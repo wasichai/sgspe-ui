@@ -24,6 +24,14 @@ afterEach(() => {
   red = fetch = null
 })
 
+// una vista del selector (DD-03): a la vista es un radio; si no cabe, está en «Más vistas»
+async function elegirVista(nombre: RegExp) {
+  const aLaVista = screen.queryByRole('radio', { name: nombre })
+  if (aLaVista) return userEvent.click(aLaVista)
+  await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+  await userEvent.click(screen.getByRole('button', { name: nombre }))
+}
+
 const filas = () =>
   within(screen.getByRole('table', { name: 'Grupos de interés' }))
     .getAllByRole('row')
@@ -44,7 +52,11 @@ describe('S16 · lista de grupos de interés', () => {
   it('el ojo de una fila abre la vista previa del grupo sobre la lista, con «Abrir ficha»', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
-    await userEvent.click(await within(filas()[0]).findByRole('link', { name: 'Vista previa de Ronda campesina Tunas' }))
+    const ojo = await within(filas()[0]).findByRole('link', { name: 'Vista previa de Ronda campesina Tunas' })
+    // hallazgo U-17: con ratón, el ojo aparece al pasar sobre la fila o con el foco en ella; en una pantalla táctil, siempre
+    expect(ojo).toHaveClass('pointer-fine:opacity-0', 'pointer-fine:group-hover/fila:opacity-100', 'pointer-fine:group-focus-within/fila:opacity-100')
+    expect(filas()[0]).toHaveClass('group/fila')
+    await userEvent.click(ojo)
     expect(rutaActual()).toMatch(/^\/projects\/p1\/stakeholders\?peek=stakeholder%3A/)
     const drawer = await screen.findByRole('dialog')
     expect(within(drawer).getByRole('link', { name: 'Abrir ficha' })).toHaveAttribute('href', expect.stringMatching(/^\/projects\/p1\/stakeholders\//))
@@ -55,9 +67,57 @@ describe('S16 · lista de grupos de interés', () => {
   it('cada vista dice cuántos tiene y el encabezado el total', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
-    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAccessibleDescription('2 registros')
-    expect(screen.getByRole('tab', { name: 'Retirados' })).toHaveAccessibleDescription('1 registro')
+    expect(screen.getByRole('radio', { name: 'Todos, 2' })).toHaveAttribute('aria-checked', 'true')
+    // la que no cabe va en «Más vistas», también con su conteo
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.getByRole('button', { name: 'Retirados, 1' })).toBeInTheDocument()
     expect(screen.getByText('2 grupos de interés')).toBeInTheDocument()
+  })
+
+  // hallazgos U-18 y U-22 (DD-03, DD-04): una sola fila de pestañas; las vistas van en el selector de la barra de filtros
+  it('las vistas van en el selector de la barra de filtros, no en una segunda fila de pestañas, y ?view= no cambia', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('radiogroup', { name: 'Vistas' })).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('radio', { name: /^Sin evaluar\b/ }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=sinEvaluar')
+    await waitFor(() => expect(filas()).toHaveLength(1))
+  })
+
+  it('los filtros aplicados son chips: quitar uno quita su parámetro y «Limpiar filtros» deja la vista', async () => {
+    fetch = abrirPortal(
+      '/projects/p1/stakeholders?view=todos&stance=EN%20CONTRA&influence_group=ESTRATEGICO',
+      GERENCIA_SOCIAL,
+      LEE,
+      base(GERENCIA_SOCIAL, true)
+    )
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    const chips = screen.getByRole('list', { name: 'Filtros aplicados' })
+    expect(
+      within(chips)
+        .getAllByRole('listitem')
+        .map((c) => c.textContent)
+    ).toEqual(['Grupo de influencia: Estratégico', 'Postura: En contra'])
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Postura: En contra' }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=todos&influence_group=ESTRATEGICO')
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=todos')
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.queryByRole('list', { name: 'Filtros aplicados' })).not.toBeInTheDocument()
+  })
+
+  it('a la vista, hasta tres filtros; el ámbito y el tipo van en «Más filtros»', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    for (const f of ['Grupo de influencia', 'Postura', 'Estado de la relación']) expect(screen.getByRole('combobox', { name: f })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Tipo' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Más filtros' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Más filtros' })
+    expect(within(drawer).getByRole('combobox', { name: 'Ámbito' })).toBeInTheDocument()
+    await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Tipo' }), 'LIDER LOCAL')
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?stakeholder_type=LIDER+LOCAL')
   })
 
   // hallazgo U-06 (DD-05): la tabla cabe a 1440 px por la prioridad de sus columnas
@@ -285,9 +345,9 @@ describe('S16 · lista de grupos de interés', () => {
       }
     ])
     expect(await screen.findByRole('status')).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Sin contacto en 90 días' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /^Sin contacto en 90 días/ })).not.toBeInTheDocument()
     entregar()
-    expect(await screen.findByRole('tab', { name: 'Sin contacto en 60 días' })).toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /^Sin contacto en 60 días/ })).toBeInTheDocument()
   })
 
   it('la selección se reinicia al cambiar de vista: no viaja una fila que ya no se ve', async () => {
@@ -296,10 +356,10 @@ describe('S16 · lista de grupos de interés', () => {
     await userEvent.click(within(filas()[0]).getByRole('checkbox'))
     await userEvent.click(within(filas()[1]).getByRole('checkbox'))
     expect(screen.getByText('2 seleccionados')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Retirados' }))
+    await elegirVista(/^Retirados\b/)
     await waitFor(() => expect(filas()).toHaveLength(1))
     expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Todos' }))
+    await elegirVista(/^Todos\b/)
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()
     await userEvent.click(within(filas()[0]).getByRole('checkbox'))
