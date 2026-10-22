@@ -1,7 +1,7 @@
 import { useCodigoPropuesto } from '../datos/codigos'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
@@ -9,22 +9,22 @@ import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
-import { AvisoAlSalir, useSalidaPermitida } from '../componentes/FormularioPorPasos'
+import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { ConDefiniciones, FalloDeLectura } from '../componentes/LecturaConEstados'
 import { nombreDe, useNombreDelGrupo } from '../componentes/NombreDeActor'
-import { EncabezadoDePagina } from '../componentes/Pagina'
 import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuario'
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones, useProyecto } from '../contexto/proyectos'
 import { esQcs, OBJETOS_DE_QCS, rutaDeQcs, SEVERIDADES_GRAVES, type ObjetoDeQcs } from '../datos/atencion'
-import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
+import { ahoraEnLima, instanteDeLima, textoDeDia } from '../datos/fechas'
+import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
 // los campos que, escritos, son cambios por perder al salir (la fecha de recepción ya viene propuesta)
 const CON_CAMBIOS = ['code', 'channel', 'category', 'description', 'priority', 'severity', 'request_medium', 'requested_resource'] as const
 
-// S37 · registrar QCS (screens.md §8): en un solo paso lo que se planteó, por el canal que llegó, sin decidir todavía su
+// S37 · registrar QCS (screens.md §8): lo que se planteó, por el canal que llegó, sin decidir todavía su
 // tratamiento. es la única entrada de QCS (ASM-104): el equipo social registra también lo que llega por un contratista. el tipo
 // se elige entre los que la cuenta puede crear, con su definición y la regla de sus plazos (los calcula el servidor al registrar,
 // el acuse en días hábiles con los feriados configurados; ASM-096 y ASM-100). quien registra es quien la recibe
@@ -32,6 +32,26 @@ const CON_CAMBIOS = ['code', 'channel', 'category', 'description', 'priority', '
 // CONFIDENTIAL_RECEIVER_REQUIRED nunca rechaza el alta. una anónima no lleva persona ni grupo de interés; la persona es un campo
 // restringido y solo se ofrece si la definición la trae. el alta es requiresReason: pide motivo, y va con la Idempotency-Key
 // nativa (useCrear): un reintento tras un corte no registra dos veces
+// los tres pasos de P-04 (rediseño de UX, U-30), en el mismo asistente que compromiso, interacción y proyecto: qué se plantea
+// (el tipo, el código y el contenido), cómo llegó y quién (el canal, la recepción, la persona o el grupo y la confidencialidad)
+// y la revisión (la prioridad, el responsable y el motivo). nada se escribe hasta el último paso, y lo que se manda es lo mismo
+// que en el formulario de una sola página
+const PASOS = ['que', 'como', 'revision'] as const
+type Paso = (typeof PASOS)[number]
+// lo obligatorio de cada paso: avanzar no deja atrás uno vacío
+const FALTAS_DEL_PASO: Record<Paso, ('code' | 'description' | 'received_at' | 'motivo')[]> = {
+  que: ['code', 'description'],
+  como: ['received_at'],
+  revision: ['motivo']
+}
+// el paso donde se escribe cada campo, para llevar a él un error del servidor; -1 si no tiene control a la vista
+const CAMPOS_DEL_PASO: Record<Paso, string[]> = {
+  que: ['code', 'description', 'category', 'severity', 'request_medium', 'requested_resource'],
+  como: ['channel', 'received_at', 'anonymous', 'confidential', 'stakeholder', 'person'],
+  revision: ['priority', 'owner_user_id', 'owner_user_email']
+}
+const pasoDelCampo = (campo: string): number => PASOS.findIndex((p) => CAMPOS_DEL_PASO[p].includes(campo))
+
 const PLAZOS_POR_DEFECTO = { grievance_ack_days: 5, grievance_resolution_days: 30, inquiry_response_days: 15 }
 
 export function NuevaQcsPage() {
@@ -120,7 +140,10 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const [grupo, setGrupo] = useState('')
   const [persona, setPersona] = useState<Registro | null>(null)
   const [motivo, setMotivo] = useState('')
-  const [intentado, setIntentado] = useState(false)
+  const [actual, setActual] = useState(0)
+  const [visitados, setVisitados] = useState(0)
+  // los pasos que ya se intentó dejar: sus faltas se dicen junto al control
+  const [intentados, setIntentados] = useState<Set<number>>(new Set())
   const cambiar = (campo: keyof Valores, valor: string) => setValores((v) => ({ ...v, [campo]: valor }))
   const opciones = (campo: string) => campoDe(definicion.data, campo)?.enumOptions ?? []
   const etiqueta = (campo: string) => t(`nuevaQcs.campos.${campo}`)
@@ -133,7 +156,8 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   }
   const delServidor = erroresDeCampo(crear.error)
   const errorDe = (campo: keyof typeof faltas | string): string | undefined => {
-    if (intentado && campo in faltas && faltas[campo as keyof typeof faltas]) {
+    const falta = campo in faltas && faltas[campo as keyof typeof faltas]
+    if (falta && intentados.has(PASOS.findIndex((p) => (FALTAS_DEL_PASO[p] as string[]).includes(campo)))) {
       return campo === 'motivo' ? t('comun.motivoFalta') : campo === 'received_at' ? t('nuevaQcs.fechaInvalida') : t('nuevaQcs.obligatorio')
     }
     return delServidor[campo] ?? delServidor[`attributes.${campo}`]
@@ -144,9 +168,25 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   }
   const conPersona = puedeLeer(definicion.data, 'person')
 
+  // avanzar valida solo el paso actual; volver no valida. por eso registrar vuelve a revisar los tres pasos
+  const sinFaltas = (indice: number) => !FALTAS_DEL_PASO[PASOS[indice]].some((c) => faltas[c])
+  const marcarIntentado = (indice: number) => setIntentados((v) => new Set(v).add(indice))
+  const ir = (indice: number) => {
+    if (indice > actual) {
+      marcarIntentado(actual)
+      if (!sinFaltas(actual)) return
+    }
+    setActual(indice)
+    setVisitados((v) => Math.max(v, indice))
+  }
+
   const registrar = () => {
-    setIntentado(true)
-    if (Object.values(faltas).some(Boolean)) return
+    setIntentados(new Set(PASOS.map((_, i) => i)))
+    const conFaltas = PASOS.findIndex((_, i) => !sinFaltas(i))
+    if (conFaltas >= 0) {
+      setActual(conFaltas)
+      return
+    }
     const atributos: Record<string, unknown> = {
       project: projectId,
       code: valores.code.trim(),
@@ -174,17 +214,21 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
         onSuccess: (r) => {
           salida.current = true
           navegar(rutaDeQcs(projectId, tipo, r.id))
+        },
+        // un error de un campo vuelve al paso donde se escribe, con su texto junto al control; si alguno no tiene paso (o no hay
+        // errores de campo), el aviso queda en la revisión: nada se pierde en silencio
+        onError: (e) => {
+          const pasos = Object.keys(erroresDeCampo(e)).map((c) => pasoDelCampo(c.replace(/^attributes\./, '')))
+          if (pasos.length > 0 && !pasos.includes(-1)) setActual(Math.min(...pasos))
         }
       }
     )
   }
 
-  // los errores de campos sin control a la vista (quien recibe, el proyecto) van en el aviso general
-  const conControl = ['code', 'channel', 'received_at', 'category', 'description', 'priority', 'severity', 'stakeholder', 'person', 'owner_user_id']
-  const sinControl = Object.keys(delServidor).filter((c) => !conControl.includes(c.replace(/^attributes\./, '')))
+  // los errores de campos sin control a la vista (quien recibe, el proyecto) van en el aviso general de la revisión
+  const sinControl = Object.keys(delServidor).filter((c) => pasoDelCampo(c.replace(/^attributes\./, '')) === -1)
 
-  // un alta corta de una sola página (revisión de UX, etapa 5): el encabezado común, «Cancelar» junto a «Registrar» y, con
-  // cambios, salir pide confirmar como en el formulario por pasos. la fecha de recepción propuesta no cuenta como cambio
+  // salir con cambios pide confirmar (FormularioPorPasos). la fecha de recepción propuesta no cuenta como cambio
   const conCambios =
     CON_CAMBIOS.some((c) => valores[c].trim() !== '' && !(c === 'code' && valores.code === codigoPropuesto)) ||
     motivo.trim() !== '' ||
@@ -194,46 +238,102 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const volverA = origen
     ? `/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(origen)}`
     : `/projects/${encodeURIComponent(projectId)}/attention`
+  const paso = PASOS[actual]
+  const nombreDelGrupo = (grupos.data ?? []).find((g) => g.id === grupo)
+  const horaDeRecepcion = /T(\d{2}:\d{2})/.exec(valores.received_at)?.[1] ?? ''
   return (
-    <section className="mx-auto max-w-[1100px] space-y-4">
-      <EncabezadoDePagina titulo={t('nuevaQcs.titulo')} descripcion={t('nuevaQcs.ayuda')} />
-      <AvisoAlSalir conCambios={conCambios} salidaPermitida={salida} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <form
-          className="space-y-4"
-          aria-label={t('nuevaQcs.titulo')}
-          onSubmit={(e) => {
-            e.preventDefault()
-            registrar()
-          }}
-        >
-          <fieldset className="space-y-2 rounded-sg-lg border border-sg-border p-4">
-            <legend className="px-1 font-medium">{t('nuevaQcs.tipo')}</legend>
-            {tipos.map((o) => (
-              <label key={o} className="flex items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="tipo"
-                  className="mt-1"
-                  checked={tipo === o}
-                  onChange={() => {
-                    setTipo(o)
-                    crear.reset()
-                  }}
-                />
-                <span>
-                  <span className="font-medium">{t(`comun.qcs.${o}`)}</span>
-                  <span className="block text-sg-caption text-sg-text-muted">{t(`nuevaQcs.definiciones.${o}`)}</span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
-
-          <fieldset className="space-y-3 rounded-sg-lg border border-sg-border p-4">
-            <legend className="px-1 font-medium">{t('nuevaQcs.secciones.comoLlego')}</legend>
+    <div className="mx-auto grid max-w-[1440px] gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <FormularioPorPasos
+        titulo={t('nuevaQcs.titulo')}
+        descripcion={t('nuevaQcs.ayuda')}
+        pasos={PASOS.map((p) => t(`nuevaQcs.pasos.${p}`))}
+        actual={actual}
+        visitados={visitados}
+        alIr={ir}
+        alEnviar={(e) => {
+          e.preventDefault()
+          if (paso === 'revision') registrar()
+          else ir(actual + 1)
+        }}
+        alAnterior={() => setActual(actual - 1)}
+        anteriorDeshabilitado={actual === 0 || crear.isPending}
+        alCancelar={() => navegar(volverA)}
+        ocupado={crear.isPending}
+        conCambios={conCambios}
+        salidaPermitida={salida}
+        acciones={
+          paso === 'revision' ? (
+            <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>
+              {crear.isPending ? t('nuevaQcs.registrando') : t(`nuevaQcs.registrar.${tipo}`)}
+            </Button>
+          ) : undefined
+        }
+      >
+        {paso === 'que' ? (
+          <>
+            <fieldset className="space-y-2">
+              <legend className="mb-1 font-medium">{t('nuevaQcs.tipo')}</legend>
+              {tipos.map((o) => (
+                <label key={o} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="tipo"
+                    className="mt-1"
+                    checked={tipo === o}
+                    onChange={() => {
+                      setTipo(o)
+                      crear.reset()
+                    }}
+                  />
+                  <span>
+                    <span className="font-medium">{t(`comun.qcs.${o}`)}</span>
+                    <span className="block text-sg-caption text-sg-text-muted">{t(`nuevaQcs.definiciones.${o}`)}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
             <Campo etiqueta={etiqueta('code')} error={errorDe('code')}>
               {(p) => <Input {...p} value={valores.code} maxLength={60} onChange={(e) => cambiar('code', e.target.value)} />}
             </Campo>
+            <Campo etiqueta={etiqueta('description')} error={errorDe('description')}>
+              {(p) => <Textarea {...p} value={valores.description} maxLength={4000} onChange={(e) => cambiar('description', e.target.value)} />}
+            </Campo>
+            <Campo etiqueta={etiqueta('category')} error={errorDe('category')}>
+              {(p) => <SelectNativo {...p} value={valores.category} onChange={(e) => cambiar('category', e.target.value)} opciones={opciones('category')} />}
+            </Campo>
+            {tipo === 'grievance' ? (
+              <Campo
+                etiqueta={etiqueta('severity')}
+                error={errorDe('severity')}
+                ayuda={SEVERIDADES_GRAVES.includes(valores.severity) ? t('nuevaQcs.graveAyuda') : undefined}
+              >
+                {(p) => <SelectNativo {...p} value={valores.severity} onChange={(e) => cambiar('severity', e.target.value)} opciones={opciones('severity')} />}
+              </Campo>
+            ) : null}
+            {tipo === 'stakeholder_request' ? (
+              <>
+                <Campo etiqueta={etiqueta('request_medium')} error={errorDe('request_medium')}>
+                  {(p) => (
+                    <SelectNativo
+                      {...p}
+                      value={valores.request_medium}
+                      onChange={(e) => cambiar('request_medium', e.target.value)}
+                      opciones={opciones('request_medium')}
+                    />
+                  )}
+                </Campo>
+                <Campo etiqueta={etiqueta('requested_resource')} error={errorDe('requested_resource')}>
+                  {(p) => (
+                    <Textarea {...p} value={valores.requested_resource} maxLength={4000} onChange={(e) => cambiar('requested_resource', e.target.value)} />
+                  )}
+                </Campo>
+              </>
+            ) : null}
+          </>
+        ) : null}
+
+        {paso === 'como' ? (
+          <>
             <Campo etiqueta={etiqueta('channel')} error={errorDe('channel')}>
               {(p) => <SelectNativo {...p} value={valores.channel} onChange={(e) => cambiar('channel', e.target.value)} opciones={opciones('channel')} />}
             </Campo>
@@ -248,31 +348,18 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
             />
             <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.recibidaPor', { correo: user?.email ?? '' })}</p>
             {origen ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.origen')}</p> : null}
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={anonima}
-                onChange={(e) => {
-                  setAnonima(e.target.checked)
-                  if (e.target.checked) {
-                    setGrupo('')
-                    setPersona(null)
-                  }
-                }}
-              />
-              <span>
-                {etiqueta('anonymous')}
-                <span className="block text-sg-caption text-sg-text-muted">{t('nuevaQcs.anonimaAyuda')}</span>
-              </span>
-            </label>
-            <label className="flex items-start gap-2 text-sm">
-              <input type="checkbox" className="mt-1" checked={confidencial} onChange={(e) => setConfidencial(e.target.checked)} />
-              <span>
-                {etiqueta('confidential')}
-                <span className="block text-sg-caption text-sg-text-muted">{t('nuevaQcs.confidencialAyuda')}</span>
-              </span>
-            </label>
+            <Casilla
+              etiqueta={etiqueta('anonymous')}
+              ayuda={t('nuevaQcs.anonimaAyuda')}
+              marcada={anonima}
+              alCambiar={(marcada) => {
+                setAnonima(marcada)
+                if (marcada) {
+                  setGrupo('')
+                  setPersona(null)
+                }
+              }}
+            />
             {anonima ? null : (
               <>
                 <Campo etiqueta={etiqueta('stakeholder')} error={errorDe('stakeholder')}>
@@ -289,6 +376,8 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
                 {conPersona ? (
                   <div className="space-y-1">
                     <p className="text-sg-body-sm font-medium">{etiqueta('person')}</p>
+                    {/* la persona es un dato restringido (P-04): se dice antes de elegirla */}
+                    <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.personaRestringida')}</p>
                     {persona ? (
                       <p className="text-sm">
                         {nombreDe(persona, 'person', t('comun.personaRegistrada'))}{' '}
@@ -309,82 +398,88 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
                 ) : null}
               </>
             )}
-          </fieldset>
+            {/* la confidencialidad se explica junto a su casilla (P-04): quién la leerá y dónde no aparece */}
+            <Casilla etiqueta={etiqueta('confidential')} ayuda={t('nuevaQcs.confidencialAyuda')} marcada={confidencial} alCambiar={setConfidencial} />
+          </>
+        ) : null}
 
-          <fieldset className="space-y-3 rounded-sg-lg border border-sg-border p-4">
-            <legend className="px-1 font-medium">{t('nuevaQcs.secciones.quePlantea')}</legend>
-            <Campo etiqueta={etiqueta('description')} error={errorDe('description')}>
-              {(p) => <Textarea {...p} value={valores.description} maxLength={4000} onChange={(e) => cambiar('description', e.target.value)} />}
-            </Campo>
-            <Campo etiqueta={etiqueta('category')} error={errorDe('category')}>
-              {(p) => <SelectNativo {...p} value={valores.category} onChange={(e) => cambiar('category', e.target.value)} opciones={opciones('category')} />}
-            </Campo>
-            {tipo === 'grievance' ? (
-              <Campo
-                etiqueta={etiqueta('severity')}
-                error={errorDe('severity')}
-                ayuda={SEVERIDADES_GRAVES.includes(valores.severity) ? t('nuevaQcs.graveAyuda') : undefined}
-              >
-                {(p) => <SelectNativo {...p} value={valores.severity} onChange={(e) => cambiar('severity', e.target.value)} opciones={opciones('severity')} />}
-              </Campo>
-            ) : null}
-            {tipo === 'stakeholder_request' ? (
-              <>
-                <Campo etiqueta={etiqueta('request_medium')}>
-                  {(p) => (
-                    <SelectNativo
-                      {...p}
-                      value={valores.request_medium}
-                      onChange={(e) => cambiar('request_medium', e.target.value)}
-                      opciones={opciones('request_medium')}
-                    />
-                  )}
-                </Campo>
-                <Campo etiqueta={etiqueta('requested_resource')}>
-                  {(p) => (
-                    <Textarea {...p} value={valores.requested_resource} maxLength={4000} onChange={(e) => cambiar('requested_resource', e.target.value)} />
-                  )}
-                </Campo>
-              </>
-            ) : null}
-            <Campo etiqueta={etiqueta('priority')}>
+        {paso === 'revision' ? (
+          <>
+            <section aria-labelledby="resumen-qcs" className="space-y-2 rounded-sg-lg border border-sg-border p-4">
+              <h3 id="resumen-qcs" className="text-sg-overline font-semibold uppercase text-sg-text-muted">
+                {t('nuevaQcs.revision.resumen')}
+              </h3>
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[max-content_minmax(0,1fr)]">
+                <dt className="text-sg-text-muted">{t('nuevaQcs.tipo')}</dt>
+                <dd>{t(`comun.qcs.${tipo}`)}</dd>
+                <dt className="text-sg-text-muted">{etiqueta('code')}</dt>
+                <dd>{valores.code.trim()}</dd>
+                <dt className="text-sg-text-muted">{etiqueta('description')}</dt>
+                <dd className="whitespace-pre-line break-words">{valores.description.trim()}</dd>
+                <dt className="text-sg-text-muted">{etiqueta('channel')}</dt>
+                <dd>{valores.channel ? rotuloDeOpcion(valores.channel) : '—'}</dd>
+                <dt className="text-sg-text-muted">{etiqueta('received_at')}</dt>
+                <dd>{`${textoDeDia(valores.received_at)} ${horaDeRecepcion}`.trim()}</dd>
+                <dt className="text-sg-text-muted">{t('nuevaQcs.revision.quien')}</dt>
+                <dd>{anonima ? etiqueta('anonymous') : nombreDelGrupo ? <NombreDeGrupo grupo={nombreDelGrupo} /> : t('nuevaQcs.ningunGrupo')}</dd>
+                <dt className="text-sg-text-muted">{etiqueta('confidential')}</dt>
+                <dd>{confidencial ? t('comun.si') : t('comun.no')}</dd>
+              </dl>
+            </section>
+            <Campo etiqueta={etiqueta('priority')} error={errorDe('priority')}>
               {(p) => <SelectNativo {...p} value={valores.priority} onChange={(e) => cambiar('priority', e.target.value)} opciones={opciones('priority')} />}
             </Campo>
             <SelectorDeUsuario etiqueta={etiqueta('owner')} valor={responsable} alCambiar={setResponsable} error={errorDe('owner_user_id')} />
-          </fieldset>
+            <Campo etiqueta={t('comun.motivoObligatorio')} error={errorDe('motivo')}>
+              {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
+            </Campo>
+            {crear.isError && (sinControl.length > 0 || Object.keys(delServidor).length === 0) ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
+          </>
+        ) : null}
+      </FormularioPorPasos>
 
-          <Campo etiqueta={t('comun.motivoObligatorio')} error={errorDe('motivo')}>
-            {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-          </Campo>
-          {crear.isError && (sinControl.length > 0 || Object.keys(delServidor).length === 0) ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
-          <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
-            <Button type="button" variant="ghost" disabled={crear.isPending} onClick={() => navegar(volverA)}>
-              {t('paginas.formulario.cancelar')}
-            </Button>
-            <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>
-              {crear.isPending ? t('nuevaQcs.registrando') : t(`nuevaQcs.registrar.${tipo}`)}
-            </Button>
-          </div>
-        </form>
-
-        <aside aria-label={t('nuevaQcs.secciones.quePasara')} className="h-fit space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-          <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('nuevaQcs.secciones.quePasara')}</h2>
-          <p>{valores.code.trim() ? t('nuevaQcs.quePasara.codigo', { codigo: valores.code.trim() }) : t('nuevaQcs.quePasara.sinCodigo')}</p>
-          <p>
-            {t(`nuevaQcs.plazos.${tipo}`, {
-              acuse: parametro('grievance_ack_days'),
-              resolucion: parametro('grievance_resolution_days'),
-              respuesta: parametro('inquiry_response_days')
-            })}
-          </p>
-          {tipo === 'stakeholder_request' ? null : <p className="text-sg-text-muted">{t('nuevaQcs.quePasara.plazoAlRegistrar')}</p>}
-          {/* la tarea de acuse de una confidencial es genérica, sin vínculo con la queja (sgspe#20, D-1) */}
-          {tipo === 'grievance' ? <p>{t(confidencial ? 'nuevaQcs.quePasara.tareaGenerica' : 'nuevaQcs.quePasara.tarea')}</p> : null}
-          {confidencial ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.confidencialAyuda')}</p> : null}
-        </aside>
-      </div>
-    </section>
+      {/* «Qué pasará al registrar» queda al costado en los tres pasos (P-04): los plazos con los parámetros del proyecto */}
+      <aside
+        aria-label={t('nuevaQcs.secciones.quePasara')}
+        className="h-fit space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm xl:sticky xl:top-4"
+      >
+        <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('nuevaQcs.secciones.quePasara')}</h2>
+        <p>{valores.code.trim() ? t('nuevaQcs.quePasara.codigo', { codigo: valores.code.trim() }) : t('nuevaQcs.quePasara.sinCodigo')}</p>
+        <p>
+          {t(`nuevaQcs.plazos.${tipo}`, {
+            acuse: parametro('grievance_ack_days'),
+            resolucion: parametro('grievance_resolution_days'),
+            respuesta: parametro('inquiry_response_days')
+          })}
+        </p>
+        {tipo === 'stakeholder_request' ? null : <p className="text-sg-text-muted">{t('nuevaQcs.quePasara.plazoAlRegistrar')}</p>}
+        {/* la tarea de acuse de una confidencial es genérica, sin vínculo con la queja (sgspe#20, D-1) */}
+        {tipo === 'grievance' ? <p>{t(confidencial ? 'nuevaQcs.quePasara.tareaGenerica' : 'nuevaQcs.quePasara.tarea')}</p> : null}
+        {confidencial ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.confidencialAyuda')}</p> : null}
+      </aside>
+    </div>
   )
+}
+
+// una casilla con su explicación al lado, que es también su descripción accesible
+function Casilla({ etiqueta, ayuda, marcada, alCambiar }: { etiqueta: string; ayuda: string; marcada: boolean; alCambiar: (marcada: boolean) => void }) {
+  const id = useId()
+  return (
+    <div className="text-sm">
+      <label className="flex items-start gap-2">
+        <input type="checkbox" className="mt-1" checked={marcada} aria-describedby={`${id}-ayuda`} onChange={(e) => alCambiar(e.target.checked)} />
+        {etiqueta}
+      </label>
+      <p id={`${id}-ayuda`} className="ml-6 text-sg-caption text-sg-text-muted">
+        {ayuda}
+      </p>
+    </div>
+  )
+}
+
+function NombreDeGrupo({ grupo }: { grupo: Registro }) {
+  const nombre = useNombreDelGrupo(grupo)
+  return <>{nombre || texto(grupo, 'code')}</>
 }
 
 function OpcionDeGrupo({ grupo }: { grupo: Registro }) {

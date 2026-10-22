@@ -14,11 +14,19 @@ export const ES_NUEVA_QCS = {
     inquiry: 'La respuesta vence {{respuesta}} días calendario después de la recepción.',
     stakeholder_request: 'Las solicitudes no tienen plazo de respuesta.'
   },
+  pasos: {
+    que: 'Qué se plantea',
+    como: 'Cómo llegó y quién',
+    revision: 'Revisión'
+  },
   secciones: {
-    comoLlego: 'Cómo llegó y quién la plantea',
-    quePlantea: 'Qué plantea',
     quePasara: 'Qué pasará al registrar'
   },
+  revision: {
+    resumen: 'Resumen',
+    quien: 'Quién la plantea'
+  },
+  personaRestringida: 'Dato restringido: solo lo leen quienes atienden quejas, consultas y solicitudes.',
   campos: {
     code: 'Código',
     channel: 'Canal',
@@ -77,11 +85,19 @@ export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
     inquiry: 'The answer is due {{respuesta}} calendar days after reception.',
     stakeholder_request: 'Requests have no answer deadline.'
   },
+  pasos: {
+    que: 'What is raised',
+    como: 'How it came and who',
+    revision: 'Review'
+  },
   secciones: {
-    comoLlego: 'How it came and who raises it',
-    quePlantea: 'What it raises',
     quePasara: 'What happens on recording'
   },
+  revision: {
+    resumen: 'Summary',
+    quien: 'Who raises it'
+  },
+  personaRestringida: 'Restricted data: only those who handle grievances, inquiries and requests read it.',
   campos: {
     code: 'Code',
     channel: 'Channel',

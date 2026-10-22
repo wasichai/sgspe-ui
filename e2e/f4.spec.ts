@@ -86,6 +86,7 @@ async function prepararF4(page: Page): Promise<Request[]> {
     [/^\/objects\/[a-z_]+\/records\/[a-z0-9]+\/related\//, 'GET', pagina([])],
     [/^\/objects\/task\/records$/, 'GET', pagina([TAREA])],
     [/^\/objects\/[a-z_]+\/records$/, 'GET', pagina([])],
+    [/^\/objects\/grievance\/records$/, 'POST', registro('g10', { project: 'p1', code: 'Q-010' }, 'received')],
     [/^\/sgspe\/transition-checks$/, 'POST', { allowed: true, blocking: [], warnings: [] }, 200],
     [/^\/sgspe\/grievances\/g1\/reclassify$/, 'POST', { original: { ...QUEJA, state: 'closed' }, created: CONSULTA }],
     [
@@ -157,4 +158,39 @@ test('una revisión de riesgo va con su motivo y su clave, y dice el nivel que d
   expect(revision.postDataJSON()).toMatchObject({ attributes: { probability: 3, impact: 4, residual: false } })
   expect(await revision.headerValue('idempotency-key')).toBeTruthy()
   expect(await revision.headerValue('x-change-reason')).toBe("UTF-8''Revisi%C3%B3n%20semanal")
+})
+
+// P-04 y U-30 (rediseño de UX, área 4.5a): registrar una QCS en tres pasos, con «Qué pasará al registrar» al costado del
+// formulario en cada paso a 1440 px (lo que jsdom no ve: depende del CSS compilado), y el mismo cuerpo de escritura de siempre
+test('registrar una queja en tres pasos con «Qué pasará al registrar» al costado en cada uno (P-04)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const escrituras = await prepararF4(page)
+  await page.goto('/projects/p1/attention/new')
+  await expect(page.getByRole('heading', { name: 'Registrar queja, consulta o solicitud', level: 1 })).toBeVisible()
+  const quePasara = page.getByRole('complementary', { name: 'Qué pasará al registrar' })
+  const alCostado = async (paso: string) => {
+    const titulo = page.getByRole('heading', { name: paso, level: 2 })
+    await expect(titulo).toBeVisible()
+    await expect(quePasara).toBeVisible()
+    await expect(quePasara.getByText(/El acuse vence \d+ días hábiles/)).toBeVisible()
+    const [caja, form] = [await quePasara.boundingBox(), await titulo.boundingBox()]
+    expect(caja!.x).toBeGreaterThan(form!.x + form!.width)
+  }
+  await alCostado('Qué se plantea')
+  await page.getByLabel('Código').fill('Q-010')
+  await page.getByLabel('Descripción').fill('Polvo en la vía')
+  await page.getByRole('button', { name: 'Siguiente' }).click()
+  await alCostado('Cómo llegó y quién')
+  await page.getByLabel('Fecha y hora de recepción', { exact: true }).fill('20/10/2026')
+  await page.getByLabel('Fecha y hora de recepción (hora)').fill('10:15')
+  await page.getByRole('button', { name: 'Siguiente' }).click()
+  await alCostado('Revisión')
+  await page.getByLabel('Motivo (obligatorio)').fill('recibida en la oficina')
+  await page.getByRole('button', { name: 'Registrar queja' }).click()
+  await expect(page).toHaveURL(/\/projects\/p1\/grievances\/g10$/)
+  const alta = escrituras.find((r) => new URL(r.url()).pathname === '/api/objects/grievance/records')!
+  expect(alta.postDataJSON()).toMatchObject({
+    attributes: { project: 'p1', code: 'Q-010', description: 'Polvo en la vía', received_at: '2026-10-20T15:15:00.000Z', anonymous: false }
+  })
+  expect(await alta.headerValue('idempotency-key')).toBeTruthy()
 })
