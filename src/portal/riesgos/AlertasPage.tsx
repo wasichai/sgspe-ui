@@ -1,8 +1,8 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
-import { useState } from 'react'
+import { Alert, Button } from '@wasichai/ui'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
@@ -11,14 +11,33 @@ import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { PaginacionDelServidor, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { rutaDeFicha } from '../datos/fichas'
-import { atributo, estados, texto, useActualizar, useConteos, useRegistro, useRegistros, useTodos, type Parametros, type Registro } from '../datos/registros'
+import {
+  atributo,
+  campoDe,
+  estados,
+  texto,
+  useActualizar,
+  useConteo,
+  useConteos,
+  useDefinicion,
+  useRegistro,
+  useRegistros,
+  useTodos,
+  type Parametros,
+  type Registro
+} from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
-import { opcion } from '../datos/opciones'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // S41 · centro de alerta temprana (screens.md §9, flujo 14): las alertas del proyecto por vista (por triar, confirmadas, todas,
 // cerradas, cada una una consulta del servidor con su página y su conteo, D10 de la revisión de UX), creadas por JOB-04 o a mano, y la ficha de una alerta: qué la disparó, la regla que la creó (nunca su clave de origen,
@@ -43,64 +62,116 @@ export function AlertasPage() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
   const lista = useParametrosDeLista('triaje')
+  const telefono = useEsTelefono()
+  const definicion = useDefinicion('early_warning')
   const vista = (VISTAS as readonly string[]).includes(lista.vista) ? (lista.vista as (typeof VISTAS)[number]) : 'triaje'
-  const alertas = useRegistros('early_warning', { ...consultaDe(projectId, vista), sort: 'detected_at', dir: 'desc', page: lista.pagina, size: POR_PAGINA })
-  const conteos = useConteos('early_warning', Object.fromEntries(VISTAS.map((v) => [v, consultaDe(projectId, v)])))
+  const busqueda = lista.filtro('q').trim()
+  const severidad = lista.filtro('severity')
+  // la barra de filtros (P-02; hallazgos U-18 y U-22): la búsqueda y la severidad van en la consulta de cada vista, y cada
+  // filtro puesto es un chip con «Limpiar». ?view= sigue siendo el mismo
+  const filtros: Parametros = { q: busqueda, severity: severidad }
+  const alertas = useRegistros('early_warning', {
+    ...consultaDe(projectId, vista),
+    ...filtros,
+    sort: 'detected_at',
+    dir: 'desc',
+    page: lista.pagina,
+    size: POR_PAGINA
+  })
+  const conteos = useConteos('early_warning', Object.fromEntries(VISTAS.map((v) => [v, { ...consultaDe(projectId, v), ...filtros }])))
+  const chips = [
+    ...(busqueda ? [{ clave: 'q', etiqueta: t('alertas.filtroBusqueda', { texto: busqueda }) }] : []),
+    ...(severidad ? [{ clave: 'severity', etiqueta: `${t('alertas.columnas.severidad')}: ${rotuloDeOpcion(severidad)}` }] : [])
+  ]
+  const limpiar = () => lista.cambiar({ q: null, severity: null })
+  // el vacío por filtros dice cuántas hay en la vista sin ellos
+  const sinFiltros = useConteo('early_warning', consultaDe(projectId, vista), chips.length > 0)
   const visibles = alertas.data?.content ?? []
+  const enlace = (a: Registro) => (
+    <EnlaceConRastro to={rutaDeFicha('early_warning', a) ?? ''} className="text-sg-primary-text underline">
+      {texto(a, 'title')}
+    </EnlaceConRastro>
+  )
+  const detectada = (a: Registro) => (texto(a, 'detected_at') ? fechaPe(new Date(texto(a, 'detected_at'))) : '—')
+  const origen = (a: Registro) =>
+    atributo(a, 'early_warning_rule') ? (
+      <RegistroVinculado objeto="early_warning_rule" id={texto(a, 'early_warning_rule')} />
+    ) : (
+      <span className="text-sg-text-muted">{t('alertas.aMano')}</span>
+    )
+  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales la alerta, su severidad y su estado; secundarias la
+  // fecha en que se detectó y su origen
+  const columnas: ColumnaPriorizada[] = [
+    { id: 'detectada', encabezado: t('alertas.columnas.detectada'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'titulo', encabezado: t('alertas.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm' },
+    { id: 'severidad', encabezado: t('alertas.columnas.severidad'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
+    { id: 'regla', encabezado: t('alertas.columnas.regla'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'estado', encabezado: t('alertas.columnas.estado'), prioridad: 'esencial' }
+  ]
+  const celda = (a: Registro, columna: string): ReactNode => {
+    switch (columna) {
+      case 'detectada':
+        return detectada(a)
+      case 'titulo':
+        return enlace(a)
+      case 'severidad':
+        return opcion(a, 'severity') || '—'
+      case 'regla':
+        return origen(a)
+      default:
+        return <EstadoChip objeto="early_warning" estado={a.state} />
+    }
+  }
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{t('alertas.titulo')}</h1>
         <PaginasDeRiesgos actual="warnings" />
       </div>
-      <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`alertas.vistas.${v}`), conteo: conteos[v] }))}
-        actual={vista}
-        alCambiar={(v) => lista.cambiar({ view: v })}
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`alertas.vistas.${v}`), n: conteos[v] ?? null }))}
+            actual={vista}
+            alElegir={(v) => lista.cambiar({ view: v })}
+          />
+        }
+        busqueda={{ etiqueta: t('alertas.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
+        frecuentes={
+          <FiltroDeLista
+            etiqueta={t('alertas.columnas.severidad')}
+            value={severidad}
+            onChange={(e) => lista.cambiar({ severity: e.target.value })}
+            opciones={campoDe(definicion.data, 'severity')?.enumOptions ?? []}
+          />
+        }
+        aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
+        alLimpiar={limpiar}
       />
       {alertas.isPending ? (
         <Cargando />
       ) : alertas.isError && !alertas.data ? (
         <FalloDeLectura error={alertas.error} alReintentar={() => void alertas.refetch()} />
       ) : visibles.length === 0 ? (
-        <Vacio titulo={t('alertas.vacio')} />
+        chips.length > 0 ? (
+          <VacioDeLista conFiltros alLimpiar={limpiar} sinFiltros={sinFiltros ?? undefined} />
+        ) : (
+          <Vacio titulo={t('alertas.vacio')} />
+        )
+      ) : telefono ? (
+        // en el teléfono, tarjetas con la alerta, su estado y su severidad (revisión de UX, etapa 8)
+        <ListaEnTarjetas
+          etiqueta={t('alertas.tabla')}
+          tarjetas={visibles.map((a) => ({
+            id: a.id,
+            titulo: enlace(a),
+            estado: <EstadoChip objeto="early_warning" estado={a.state} />,
+            detalle: [detectada(a), opcion(a, 'severity')].filter(Boolean).join(' · ')
+          }))}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-          <Table aria-label={t('alertas.tabla')}>
-            <thead>
-              <tr>
-                {(['detectada', 'titulo', 'severidad', 'regla', 'estado'] as const).map((c) => (
-                  <Th key={c} scope="col">
-                    {t(`alertas.columnas.${c}`)}
-                  </Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visibles.map((a) => (
-                <tr key={a.id}>
-                  <Td className="text-sm">{texto(a, 'detected_at') ? fechaPe(new Date(texto(a, 'detected_at'))) : '—'}</Td>
-                  <Td className="text-sm">
-                    <EnlaceConRastro to={rutaDeFicha('early_warning', a) ?? ''} className="text-sg-primary-text underline">
-                      {texto(a, 'title')}
-                    </EnlaceConRastro>
-                  </Td>
-                  <Td className="text-sm">{opcion(a, 'severity') || '—'}</Td>
-                  <Td className="text-sm">
-                    {atributo(a, 'early_warning_rule') ? (
-                      <RegistroVinculado objeto="early_warning_rule" id={texto(a, 'early_warning_rule')} />
-                    ) : (
-                      <span className="text-sg-text-muted">{t('alertas.aMano')}</span>
-                    )}
-                  </Td>
-                  <Td>
-                    <EstadoChip objeto="early_warning" estado={a.state} />
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
+        <TablaPriorizada<Registro> etiqueta={t('alertas.tabla')} columnas={columnas} filas={visibles} clave={(a) => a.id} celda={celda} />
       )}
       <PaginacionDelServidor datos={alertas.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
     </section>

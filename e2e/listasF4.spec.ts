@@ -36,6 +36,35 @@ const CONSULTA = registro(
   },
   'received'
 )
+const RIESGOS = [
+  registro(
+    'k1',
+    {
+      project: 'p1',
+      code: 'R-001',
+      title: 'Bloqueo de la vía de acceso por la comunidad de la parte alta durante la temporada de lluvias',
+      category: 'EXPECTATIVAS Y BENEFICIOS',
+      probability: 4,
+      impact: 4,
+      score: 16,
+      risk_level: 'CRITICO',
+      review_status: 'AL DIA',
+      next_review_date: '2026-10-30',
+      owner_user_email: 'srm@sgspe.test'
+    },
+    'mitigating'
+  ),
+  registro(
+    'k2',
+    { project: 'p1', code: 'R-002', title: 'Desinformación sobre el uso del agua', category: 'AGUA', owner_user_email: 'rel@sgspe.test' },
+    'identified'
+  )
+]
+const ALERTA = registro(
+  'w1',
+  { project: 'p1', title: 'Asamblea de protesta anunciada en la radio local', detected_at: '2026-10-03T13:00:00Z', severity: 'ALTO' },
+  'detected'
+)
 
 const flujo = (objeto: string, estados: [string, string][]) => ({
   id: objeto,
@@ -53,7 +82,10 @@ async function prepararListas(page: Page): Promise<void> {
     organization: ['READ'],
     grievance: ['READ'],
     inquiry: ['READ'],
-    stakeholder_request: ['READ']
+    stakeholder_request: ['READ'],
+    social_risk: ['READ'],
+    early_warning: ['READ'],
+    early_warning_rule: ['READ']
   }
   const rutas: [RegExp, unknown][] = [
     [/^\/auth\/me\/permissions$/, { admin: false, objects: permisos }],
@@ -83,6 +115,10 @@ async function prepararListas(page: Page): Promise<void> {
       /^\/sgspe\/dashboards\/indicators\/KPI-GRV-07$/,
       { code: 'KPI-GRV-07', label: '#6 QCS absueltas', available: true, value: 0, unit: '%', numerator: 0, denominator: 4 }
     ],
+    [/^\/objects\/social_risk\/workflow$/, flujo('social_risk', [['mitigating', 'En mitigación']])],
+    [/^\/objects\/social_risk\/records$/, pagina(RIESGOS)],
+    [/^\/objects\/early_warning\/workflow$/, flujo('early_warning', [['detected', 'Detectada']])],
+    [/^\/objects\/early_warning\/records$/, pagina([ALERTA])],
     [/^\/objects\/[a-z_]+\/records$/, pagina([])]
   ]
   await page.route('**/api/**', async (route) => {
@@ -129,6 +165,22 @@ test.describe('a 1440 px', () => {
     await expect(respondidas).not.toContainText('/ 4')
     await sinDesborde(page, page.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' }))
   })
+
+  test('el registro de riesgos: el selector de páginas arriba, las vistas en la barra y la tabla sin desborde', async ({ page }) => {
+    await page.goto('/projects/p1/risks')
+    await expect(page.getByRole('navigation', { name: 'Páginas de Riesgos' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Filtros' }).getByRole('radio', { name: 'Registro y matriz, 2' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+    await sinDesborde(page, page.getByRole('table', { name: 'Riesgos' }))
+  })
+
+  test('las alertas: las vistas en la barra, sin la fila de pestañas vieja, y la tabla sin desborde', async ({ page }) => {
+    await page.goto('/projects/p1/risks/warnings')
+    await expect(page.getByRole('navigation', { name: 'Páginas de Riesgos' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Filtros' }).getByRole('radio', { name: /^Por triar\b/ })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+    await sinDesborde(page, page.getByRole('table', { name: 'Alertas del proyecto' }))
+  })
 })
 
 test.describe('a 390 px', () => {
@@ -139,5 +191,19 @@ test.describe('a 390 px', () => {
     const tarjetas = page.getByRole('list', { name: 'Quejas, consultas y solicitudes: Vencidas' })
     await expect(tarjetas.getByRole('listitem').filter({ hasText: 'Q-001' })).toBeVisible()
     await expect(page.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })).toHaveCount(0)
+  })
+
+  test('el registro de riesgos es de tarjetas con su nivel', async ({ page }) => {
+    await page.goto('/projects/p1/risks')
+    const tarjetas = page.getByRole('list', { name: 'Riesgos' })
+    await expect(tarjetas.getByRole('listitem').filter({ hasText: 'R-001' })).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Riesgos' })).toHaveCount(0)
+  })
+
+  test('las alertas son tarjetas', async ({ page }) => {
+    await page.goto('/projects/p1/risks/warnings')
+    const tarjetas = page.getByRole('list', { name: 'Alertas del proyecto' })
+    await expect(tarjetas.getByRole('listitem').filter({ hasText: 'Asamblea de protesta' })).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Alertas del proyecto' })).toHaveCount(0)
   })
 })
