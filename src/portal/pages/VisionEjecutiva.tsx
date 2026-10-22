@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { KpiCard } from '../componentes/KpiCard'
+import { Seccion } from '../componentes/Seccion'
 import { useCatalogoDeIndicadores, useTablero } from '../datos/indicadores'
 import { fechaPe, NS } from '../i18n'
 import { CODIGOS_DE_LAS_TILES, type TableroEjecutivo } from '../tableros/contratoF8'
@@ -24,23 +25,20 @@ function CifrasEjecutivas({ titulo }: { titulo: string }) {
   const legibles = CODIGOS_DE_LAS_TILES.flatMap((code) => tablero.data?.indicators.find((i) => i.code === code && i.available) ?? [])
   if (!tablero.data || legibles.length === 0) return null
   return (
-    <section aria-labelledby="inicio-vision" className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div className="space-y-1">
-          <h2 id="inicio-vision" className="text-sg-h2 font-semibold text-sg-text">
-            {titulo}
-          </h2>
-          <p className="text-sg-caption text-sg-text-muted">{t('tableros.calculado', { fecha: fechaPe(new Date(tablero.data.computedAt)) })}</p>
-        </div>
-        <Link to="/dashboards/executive" className="text-sm font-medium text-sg-primary-text">
+    <Seccion
+      titulo={titulo}
+      descripcion={t('tableros.calculado', { fecha: fechaPe(new Date(tablero.data.computedAt)) })}
+      acciones={
+        <Link to="/dashboards/executive" className="text-sg-body-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
           {t('miDia.vision.ver')}
         </Link>
-      </div>
+      }
+    >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {legibles.map((indicador) => (
           <KpiCard key={indicador.code} titulo={indicador.label} indicador={indicador} />
         ))}
       </div>
-    </section>
+    </Seccion>
   )
 }

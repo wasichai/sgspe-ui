@@ -144,7 +144,7 @@ test.beforeEach(async ({ page }) => {
   await prepararApi(page)
 })
 
-// etapa 2 de la revisión de UX: desde el inicio «Mi día» se llega a la ficha de un compromiso a cargo en un clic
+// etapa 2 de la revisión de UX (P-01 del rediseño): desde «Lo que me toca hoy» se llega a la ficha de un compromiso a cargo en un clic
 test('el inicio lleva a la ficha de un compromiso en un clic', async ({ page }) => {
   await prepararCompromisos(page)
   // la lista de los compromisos a su cargo (las rutas registradas después ganan a las de prepararCompromisos)
@@ -153,7 +153,7 @@ test('el inicio lleva a la ficha de un compromiso en un clic', async ({ page }) 
   )
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
-  await page.getByRole('region', { name: 'Su trabajo' }).getByRole('link', { name: /C-001/ }).click()
+  await page.getByRole('region', { name: 'Lo que me toca hoy' }).getByRole('link', { name: /C-001/ }).click()
   await expect(page.getByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeVisible()
   await expect(page).toHaveURL(/\/projects\/p1\/commitments\/c1$/)
 })

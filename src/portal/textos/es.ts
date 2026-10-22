@@ -220,16 +220,6 @@ export const ES = {
     sinRoles: 'Sin roles',
     sinPermisos: 'No se pudieron leer sus permisos',
     modulos: 'Sus secciones',
-    trabajo: {
-      titulo: 'Su trabajo',
-      nada: 'Nada pendiente a su cargo.',
-      tareas_one: '{{count}} tarea abierta',
-      tareas_other: '{{count}} tareas abiertas',
-      compromisos_one: '{{count}} compromiso a su cargo',
-      compromisos_other: '{{count}} compromisos a su cargo',
-      qcs_one: '{{count}} QCS a su cargo',
-      qcs_other: '{{count}} QCS a su cargo'
-    },
     rolesAsignados_one: '{{count}} rol asignado',
     rolesAsignados_other: '{{count}} roles asignados',
     resumen: '{{disponibles, number}} de {{total, number}} secciones disponibles para su cuenta'

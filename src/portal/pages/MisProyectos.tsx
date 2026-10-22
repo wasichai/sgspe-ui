@@ -3,15 +3,17 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 import { ROL_DE_JEFATURA } from '../config'
 import { nombreDeProyecto, useMisAsignaciones, useProyectos, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { useSumasDeConteos, type PedidoDeConteo } from '../datos/conteos'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
-// «Mis proyectos» del inicio (S02, revisión de UX, etapa 2): una tarjeta por proyecto con asignación vigente, con su estado, su
-// jefatura (ASM-080) y tres cifras que llevan a su lista: compromisos vencidos, QCS vencidas y riesgos altos o críticos. con más
-// de seis, los seis con más pendientes y «Ver todos». una cifra que la cuenta no lee, o que no llegó, es «—», nunca cero
+// «Mis proyectos» del inicio (S02, revisión de UX, etapa 2; P-01 del rediseño): una tarjeta por proyecto con asignación vigente,
+// con su estado, su jefatura (ASM-080) y lo que pide acción, que lleva a su lista: compromisos vencidos, QCS vencidas y riesgos
+// altos o críticos. una cifra en cero no se dibuja (U-11) y, sin ninguna, «Nada pide acción»; una que la cuenta no lee, o que no
+// llegó, es «—», nunca cero. con más de seis, los seis con más pendientes y «Ver todos». sin subrayados (U-05)
 const MAXIMO = 6
 const QCS = ['grievance', 'inquiry', 'stakeholder_request']
 type Cifra = 'compromisos' | 'qcs' | 'riesgos'
@@ -40,26 +42,26 @@ export function MisProyectos() {
   const pendientes = (p: Registro) => CIFRAS.reduce((total, { cifra: c }) => total + (cifra(p, c) ?? 0), 0)
   const visibles = [...mios].sort((a, b) => pendientes(b) - pendientes(a)).slice(0, MAXIMO)
   const jefes = (p: Registro) => (jefaturas.data ?? []).filter((j) => atributo(j, 'project') === p.id).map((j) => texto(j, 'member_user_email'))
+  const enlace = 'no-underline hover:underline focus-visible:underline'
   return (
-    <section aria-labelledby="mis-proyectos" className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="mis-proyectos" className="text-sg-h3 font-semibold">
-          {t('miDia.proyectos.titulo')}
-        </h2>
-        {mios.length > MAXIMO ? (
-          <Link to="/projects" className="text-sm text-sg-primary-text underline">
+    <Seccion
+      titulo={t('miDia.proyectos.titulo')}
+      acciones={
+        mios.length > MAXIMO ? (
+          <Link to="/projects" className={`text-sg-body-sm font-medium text-sg-primary-text ${enlace}`}>
             {t('miDia.proyectos.verTodos', { count: mios.length })}
           </Link>
-        ) : null}
-      </div>
+        ) : undefined
+      }
+    >
       <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {visibles.map((p) => {
           const base = `/projects/${encodeURIComponent(p.id)}`
           const suyos = jefes(p)
           return (
-            <li key={p.id} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+            <li key={p.id} className="space-y-2 rounded-sg-md border border-sg-border-subtle p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <Link to={`${base}/overview`} className="font-medium text-sg-primary-text underline">
+                <Link to={`${base}/overview`} className={`font-medium text-sg-text ${enlace}`}>
                   {nombreDeProyecto(p)}
                 </Link>
                 <EstadoChip objeto="project" estado={p.state} />
@@ -78,23 +80,27 @@ export function MisProyectos() {
               <ul className="space-y-0.5">
                 {CIFRAS.map(({ cifra: c, resto }) => {
                   const n = cifra(p, c)
+                  if (n === 0) return null
                   return (
                     <li key={c}>
                       {n === null ? (
                         <span className="text-sg-text-muted">{t('miDia.proyectos.sinDato', { cifra: t(`miDia.proyectos.nombres.${c}`) })}</span>
                       ) : (
-                        <Link to={`${base}/${resto}`} className={n > 0 ? 'font-medium text-sg-danger underline' : 'text-sg-text-secondary underline'}>
+                        <Link to={`${base}/${resto}`} className={`font-medium text-sg-danger ${enlace}`}>
                           {t(`miDia.proyectos.${c}`, { count: n })}
                         </Link>
                       )}
                     </li>
                   )
                 })}
+                {CIFRAS.some(({ cifra: c }) => (cifra(p, c) ?? 0) > 0) || CIFRAS.every(({ cifra: c }) => cifra(p, c) === null) ? null : (
+                  <li className="text-sg-text-secondary">{t('miDia.proyectos.nadaPideAccion')}</li>
+                )}
               </ul>
             </li>
           )
         })}
       </ul>
-    </section>
+    </Seccion>
   )
 }

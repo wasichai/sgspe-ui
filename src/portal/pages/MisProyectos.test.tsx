@@ -5,8 +5,8 @@ import { montar, pagina, registro, workflow } from '../../test/montar'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { MisProyectos } from './MisProyectos'
 
-// S02 «Mi día» (revisión de UX, etapa 2): una tarjeta por proyecto asignado con su estado, su jefatura y tres cifras enlazadas a
-// su lista; los de más pendientes primero; lo que la cuenta no lee es «—», nunca cero
+// S02 «Mi día» (revisión de UX, etapa 2; P-01 del rediseño): una tarjeta por proyecto asignado con su estado, su jefatura y lo
+// que pide acción, enlazado a su lista; los de más pendientes primero; lo que la cuenta no lee es «—», nunca cero
 let fetch: FetchMock | null = null
 afterEach(() => {
   fetch?.restore()
@@ -52,6 +52,14 @@ describe('Mis proyectos', () => {
     expect(within(p2).getByText('Riesgos altos o críticos: —')).toBeInTheDocument()
     expect(within(p2).getByText(/jefa/)).toBeInTheDocument()
     expect(within(tarjetas[1]).getByText('Jefatura: Sin jefatura asignada')).toBeInTheDocument()
+    // lo que pide acción: una cifra en cero no se dibuja (U-11) y, sin ninguna, se dice; lo que no lee sigue en «—»
+    expect(within(tarjetas[1]).queryByText(/^0 /)).not.toBeInTheDocument()
+    expect(within(tarjetas[1]).getByText('Nada pide acción')).toBeInTheDocument()
+    expect(within(tarjetas[1]).getByText('Riesgos altos o críticos: —')).toBeInTheDocument()
+    expect(within(p2).queryByText('Nada pide acción')).not.toBeInTheDocument()
+    // las cifras y el nombre no van subrayados (U-05)
+    expect(within(p2).getByRole('link', { name: '3 compromisos vencidos' })).not.toHaveClass('underline')
+    expect(within(p2).getByRole('link', { name: 'PRJ-02 · Proyecto Ejemplo B' })).not.toHaveClass('underline')
     expect(within(region).queryByText('PRJ-03 · Proyecto ajeno')).not.toBeInTheDocument()
   })
 

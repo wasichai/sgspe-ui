@@ -259,3 +259,142 @@ describe('visión ejecutiva en el inicio', () => {
     expect(pidioElTablero()).toBe(false)
   })
 })
+
+// P-01 del rediseño de UX (DD-01, U-01 y U-13): «Mi trabajo» contesta, en orden, lo que le toca hoy (con lo que puede tomar de
+// sus proyectos, sin elegir uno en el selector), lo que espera su decisión, su agenda de la semana, cómo registra, sus proyectos y
+// al final la visión ejecutiva; cada bloque por lo que la cuenta lee, y ninguno cuenta lo que no lee
+describe('Mi trabajo', () => {
+  const reg = (id: string, attributes: Record<string, unknown>, state?: string) => ({
+    id,
+    createdAt: '2026-10-01T15:00:00Z',
+    updatedAt: '2026-10-01T15:00:00Z',
+    state,
+    attributes,
+    geometries: {}
+  })
+  const pag = (content: unknown[]) => ({ content, page: 0, size: 25, totalElements: content.length, totalPages: 1, nextCursor: null })
+  const manana = new Date(Date.now() + 86_400_000).toISOString()
+  const P1 = reg('p1', { code: 'PRJ-01', name: 'Proyecto Ejemplo A' }, 'active')
+  const comunes = (usuario: AuthUser): MockRoute[] => [
+    {
+      path: /^\/objects\/project_assignment\/records/,
+      body: pag([reg('a1', { project: 'p1', member_user_id: usuario.id, active: true, start_date: '2026-01-01' })])
+    },
+    { path: /^\/objects\/project\/records/, body: pag([P1]) },
+    {
+      path: /^\/objects\/task\/records\?.*empty=assignee_user_id/,
+      body: pag([reg('q1', { title: 'Registrar la asistencia de la asamblea', project: 'p1', deadline_status: 'AL DIA' }, 'open')])
+    },
+    {
+      path: /^\/objects\/task\/records\?.*assignee_user_id=/,
+      body: pag([reg('t1', { title: 'Levantar fotos del tramo', project: 'p1', due_date: '2026-10-19', deadline_status: 'VENCIDO' }, 'open')])
+    },
+    {
+      path: /^\/objects\/field_visit\/records/,
+      body: pag([reg('v1', { title: 'Encuesta de línea base en Rumichaca', project: 'p1', planned_start_date: manana.slice(0, 10) }, 'planned')])
+    },
+    { path: /^\/objects\/[a-z_]+\/records/, body: pag([]) }
+  ]
+  const CATALOGO = { path: '/sgspe/dashboards/indicators', body: [{ code: 'KPI-EXE-01', label: 'Proyectos activos', dashboard: 'executive', available: true }] }
+  const tablero = (available: boolean) => ({
+    path: '/sgspe/dashboards/executive',
+    body: {
+      dashboard: 'executive',
+      computedAt: '2026-10-20T15:00:00Z',
+      filters: {},
+      indicators: [{ code: 'KPI-EXE-01', label: 'Proyectos activos', available, ...(available ? { value: 3 } : { unavailableReason: 'FORBIDDEN' }) }]
+    }
+  })
+  const BLOQUES = ['Lo que me toca hoy', 'Esperan su decisión', 'Agenda de la semana', 'Registrar', 'Mis proyectos', 'Visión ejecutiva']
+  const bloquesDibujados = () =>
+    pagina()
+      .getAllByRole('region')
+      .map((r) => r.getAttribute('aria-labelledby') && document.getElementById(r.getAttribute('aria-labelledby') ?? '')?.textContent)
+      .filter((nombre): nombre is string => BLOQUES.includes(nombre ?? ''))
+
+  it('los bloques van por urgencia: lo de hoy, las decisiones, la agenda, registrar, los proyectos y la visión ejecutiva', async () => {
+    start(
+      RELACIONISTA,
+      {
+        admin: false,
+        objects: {
+          task: ['READ'],
+          field_visit: ['READ'],
+          engagement: ['READ', 'CREATE'],
+          project: ['READ'],
+          project_assignment: ['READ'],
+          commitment: ['READ']
+        }
+      },
+      [
+        CATALOGO,
+        tablero(true),
+        {
+          path: /^\/auth\/me\/notifications\?/,
+          body: {
+            content: [
+              {
+                id: 'n1',
+                kind: 'ACTION',
+                title: 'Aprobar el aporte de apoyo en especie',
+                body: null,
+                link: { type: 'RECORD', object: 'social_contribution', recordId: 'ap1' },
+                publishAt: '2026-10-20T15:00:00Z',
+                expiresAt: null,
+                dueAt: null,
+                overdue: false,
+                source: 'sgspe.approvals',
+                read: false,
+                snoozedUntil: null,
+                dismissible: false
+              }
+            ],
+            page: 0,
+            size: 200,
+            totalElements: 1,
+            totalPages: 1
+          }
+        },
+        ...comunes(RELACIONISTA)
+      ]
+    )
+    await pagina().findByRole('region', { name: 'Visión ejecutiva' })
+    await pagina().findByRole('region', { name: 'Esperan su decisión' })
+    await pagina().findByRole('region', { name: 'Agenda de la semana' })
+    await pagina().findByRole('region', { name: 'Mis proyectos' })
+    expect(bloquesDibujados()).toEqual(BLOQUES)
+    // lo que le toca: lo vencido con su motivo, y lo que puede tomar de su proyecto sin elegirlo en el selector
+    const hoy = within(pagina().getByRole('region', { name: 'Lo que me toca hoy' }))
+    const vencida = (await hoy.findByRole('link', { name: 'Levantar fotos del tramo' })).closest('li')
+    expect(vencida).toHaveTextContent('Levantar fotos del tramoTarea · Vencido · venció el 19/10/2026')
+    expect(await hoy.findByRole('link', { name: 'Registrar la asistencia de la asamblea' })).toHaveAttribute('href', '/projects/p1/tasks?task=q1')
+    expect(pagina().queryByRole('region', { name: 'Su trabajo' })).not.toBeInTheDocument()
+  })
+
+  it('el agente de campo, sin lectura de las cifras ejecutivas, ve lo que le toca, lo que puede tomar y sus visitas, sin «No disponible»', async () => {
+    start(
+      RELACIONISTA,
+      {
+        admin: false,
+        objects: {
+          task: ['READ', 'UPDATE'],
+          field_visit: ['READ', 'CREATE'],
+          engagement: ['READ', 'CREATE'],
+          project: ['READ'],
+          project_assignment: ['READ']
+        }
+      },
+      [CATALOGO, tablero(false), ...comunes(RELACIONISTA)]
+    )
+    const hoy = within(await pagina().findByRole('region', { name: 'Lo que me toca hoy' }))
+    expect(await hoy.findByRole('link', { name: 'Levantar fotos del tramo' })).toBeInTheDocument()
+    expect(await hoy.findByRole('region', { name: /^Para tomar en PRJ-01 · Proyecto Ejemplo A/ })).toBeInTheDocument()
+    const agenda = within(await pagina().findByRole('region', { name: 'Agenda de la semana' }))
+    expect(await agenda.findByRole('link', { name: 'Encuesta de línea base en Rumichaca' })).toBeInTheDocument()
+    await waitFor(() => expect(fetch?.calls.some((c) => c.url.includes('/sgspe/dashboards/executive'))).toBe(true))
+    expect(pagina().queryByRole('region', { name: 'Visión ejecutiva' })).not.toBeInTheDocument()
+    expect(pagina().queryByText('No disponible')).not.toBeInTheDocument()
+    // sin lectura de compromisos ni QCS, nada se pide ni se cuenta de ellos
+    expect(fetch?.calls.some((c) => /\/objects\/(commitment|grievance|inquiry|stakeholder_request)\//.test(c.path))).toBe(false)
+  })
+})

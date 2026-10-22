@@ -1,16 +1,37 @@
-// el inicio «Mi día» de la revisión de UX (etapa 2, S02): lo que pide atención, los atajos de creación y los proyectos de la persona
+// el inicio «Mi trabajo» (S02; P-01 y DD-01 del rediseño de UX): lo que le toca hoy, lo que espera su decisión, su agenda, los
+// atajos de creación y los proyectos de la persona
 export const ES_MI_DIA = {
-  atencion: {
-    titulo: 'Atención requerida',
-    nada: 'Nada vencido ni por vencer a su cargo, y nada espera su decisión.',
-    vencidos_one: '{{count}} vencido a su cargo',
-    vencidos_other: '{{count}} vencidos a su cargo',
-    porVencer_one: '{{count}} por vencer a su cargo',
-    porVencer_other: '{{count}} por vencer a su cargo',
-    decisiones_one: '{{count}} espera su decisión',
-    decisiones_other: '{{count}} esperan su decisión',
-    avisos_one: '{{count}} aviso que pide acción',
-    avisos_other: '{{count}} avisos que piden acción'
+  hoy: {
+    titulo: 'Lo que me toca hoy',
+    descripcion: 'Lo vencido primero, con su motivo y su fecha.',
+    aCargo: 'A su cargo',
+    nada: 'Nada pendiente a su cargo.',
+    verTareas: 'Ver mis tareas',
+    vencio: 'venció el {{fecha}}',
+    vence: 'vence el {{fecha}}',
+    paraTomar: 'Para tomar en {{proyecto}}',
+    paraTomarSinNombre: 'Para tomar en uno de sus proyectos',
+    sinAsignar: 'Sin asignar',
+    otrosProyectos_one: 'Lo que puede tomar en su otro proyecto está en su lista de tareas',
+    otrosProyectos_other: 'Lo que puede tomar en sus otros {{count}} proyectos está en la lista de tareas de cada uno'
+  },
+  decision: {
+    titulo: 'Esperan su decisión',
+    aprobaciones: 'Aprobaciones',
+    alertas: 'Alertas por triar',
+    avisos: 'Avisos que piden acción',
+    aprobacionPendiente: 'Aprobación pendiente',
+    pideAccion: 'Pide acción',
+    desde: 'desde el {{fecha}}',
+    severidad: 'Severidad: {{valor}}',
+    sinSeveridad: 'Sin severidad',
+    detectada: 'detectada el {{fecha}}'
+  },
+  agenda: {
+    titulo: 'Agenda de la semana',
+    descripcion: 'Sus visitas de campo y las interacciones programadas en sus proyectos, de hoy a siete días.',
+    visita: 'Visita de campo',
+    interaccion: 'Interacción'
   },
   vision: {
     titulo: 'Visión ejecutiva',
@@ -35,6 +56,7 @@ export const ES_MI_DIA = {
     riesgos_other: '{{count}} riesgos altos o críticos',
     nombres: { compromisos: 'Compromisos vencidos', qcs: 'QCS vencidas', riesgos: 'Riesgos altos o críticos' },
     sinDato: '{{cifra}}: —',
+    nadaPideAccion: 'Nada pide acción',
     verTodos: 'Ver todos sus proyectos ({{count}})'
   },
   tipos: {
@@ -47,17 +69,37 @@ export const ES_MI_DIA = {
 }
 
 export const EN_MI_DIA: typeof ES_MI_DIA = {
-  atencion: {
-    titulo: 'Needs attention',
-    nada: 'Nothing overdue or due soon in your charge, and nothing awaits your decision.',
-    vencidos_one: '{{count}} overdue in your charge',
-    vencidos_other: '{{count}} overdue in your charge',
-    porVencer_one: '{{count}} due soon in your charge',
-    porVencer_other: '{{count}} due soon in your charge',
-    decisiones_one: '{{count}} awaits your decision',
-    decisiones_other: '{{count}} await your decision',
-    avisos_one: '{{count}} notification needs action',
-    avisos_other: '{{count}} notifications need action'
+  hoy: {
+    titulo: 'My work today',
+    descripcion: 'Overdue first, with its reason and date.',
+    aCargo: 'In your charge',
+    nada: 'Nothing pending in your charge.',
+    verTareas: 'See my tasks',
+    vencio: 'was due {{fecha}}',
+    vence: 'due {{fecha}}',
+    paraTomar: 'Up for grabs in {{proyecto}}',
+    paraTomarSinNombre: 'Up for grabs in one of your projects',
+    sinAsignar: 'Unassigned',
+    otrosProyectos_one: 'What you can take in your other project is in its task list',
+    otrosProyectos_other: 'What you can take in your other {{count}} projects is in the task list of each one'
+  },
+  decision: {
+    titulo: 'Awaiting your decision',
+    aprobaciones: 'Approvals',
+    alertas: 'Alerts to triage',
+    avisos: 'Notifications that need action',
+    aprobacionPendiente: 'Approval pending',
+    pideAccion: 'Needs action',
+    desde: 'since {{fecha}}',
+    severidad: 'Severity: {{valor}}',
+    sinSeveridad: 'No severity',
+    detectada: 'detected {{fecha}}'
+  },
+  agenda: {
+    titulo: 'This week',
+    descripcion: 'Your field visits and the engagements scheduled in your projects, from today to seven days ahead.',
+    visita: 'Field visit',
+    interaccion: 'Engagement'
   },
   vision: {
     titulo: 'Executive overview',
@@ -82,6 +124,7 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     riesgos_other: '{{count}} high or critical risks',
     nombres: { compromisos: 'Overdue commitments', qcs: 'Overdue grievances, inquiries or requests', riesgos: 'High or critical risks' },
     sinDato: '{{cifra}}: —',
+    nadaPideAccion: 'Nothing needs action',
     verTodos: 'See all your projects ({{count}})'
   },
   tipos: {
