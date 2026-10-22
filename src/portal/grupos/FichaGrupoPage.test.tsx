@@ -609,6 +609,17 @@ describe('S17 · cabecera y cuerpo de la ficha (P-09)', () => {
     expect(within(perfil).getByText('Resumen del perfil')).toBeInTheDocument()
     expect(within(perfil).getByText('Responsable')).toBeInTheDocument()
   })
+
+  // U-28 del rediseño de UX: la sigla del ámbito se explica
+  it('el ámbito explica su sigla', async () => {
+    const enAids = { ...S1, attributes: { ...S1.attributes, stakeholder_scope: 'AIDS' } }
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, [
+      { path: '/objects/stakeholder/records/s1', body: enAids },
+      ...base(GERENCIA_SOCIAL, true)
+    ])
+    const perfil = await screen.findByRole('region', { name: 'Caracterización' })
+    expect(within(perfil).getByText('AIDS (área de influencia directa social)')).toBeInTheDocument()
+  })
 })
 
 // P38: solo ADMIN escribe sin asignación (revisión final, I3)

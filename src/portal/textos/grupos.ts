@@ -77,6 +77,8 @@ export const ES_GRUPOS = {
     perfil: 'Caracterización',
     editarPerfil: 'Editar la caracterización',
     estado: 'Estado',
+    siglaExplicada: '{{sigla}} ({{explicacion}})',
+    siglas: { AIDS: 'área de influencia directa social', AIIS: 'área de influencia indirecta social' },
     campos: {
       inclusion_reason: 'Motivo de inclusión',
       profile_summary: 'Resumen del perfil',
@@ -271,6 +273,8 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     perfil: 'Profile',
     editarPerfil: 'Edit the profile',
     estado: 'Status',
+    siglaExplicada: '{{sigla}} ({{explicacion}})',
+    siglas: { AIDS: 'direct social area of influence', AIIS: 'indirect social area of influence' },
     campos: {
       inclusion_reason: 'Reason for inclusion',
       profile_summary: 'Profile summary',

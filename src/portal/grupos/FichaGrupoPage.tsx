@@ -54,6 +54,9 @@ const CAMPOS_DEL_PERFIL = [
   'area_of_influence'
 ] as const
 
+// los ámbitos que son siglas del área de influencia: se dicen con su explicación
+const SIGLAS_DE_AMBITO = ['AIDS', 'AIIS']
+
 // el día de Lima de una marca de tiempo (una interacción de las 22:00 de Lima es del día siguiente en UTC)
 const diaEnLima = (marca: string): string => {
   const instante = new Date(marca)
@@ -263,7 +266,18 @@ function Ficha({ grupo }: { grupo: Registro }) {
               campos={[
                 { clave: 'inclusion_reason', termino: t('grupos.ficha.campos.inclusion_reason'), valor: texto(grupo, 'inclusion_reason'), ancho: true },
                 { clave: 'profile_summary', termino: t('grupos.ficha.campos.profile_summary'), valor: texto(grupo, 'profile_summary'), ancho: true },
-                { clave: 'stakeholder_scope', termino: t('grupos.ficha.campos.stakeholder_scope'), valor: opcion(grupo, 'stakeholder_scope') },
+                {
+                  clave: 'stakeholder_scope',
+                  termino: t('grupos.ficha.campos.stakeholder_scope'),
+                  // la sigla del ámbito, explicada (U-28 del rediseño de UX)
+                  valor:
+                    opcion(grupo, 'stakeholder_scope') && SIGLAS_DE_AMBITO.includes(texto(grupo, 'stakeholder_scope'))
+                      ? t('grupos.ficha.siglaExplicada', {
+                          sigla: opcion(grupo, 'stakeholder_scope'),
+                          explicacion: t(`grupos.ficha.siglas.${texto(grupo, 'stakeholder_scope')}`)
+                        })
+                      : opcion(grupo, 'stakeholder_scope')
+                },
                 {
                   clave: 'owner',
                   termino: t('grupos.ficha.campos.owner'),
