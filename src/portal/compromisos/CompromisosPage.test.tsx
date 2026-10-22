@@ -306,6 +306,8 @@ describe('S28 · candidatos', () => {
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
     await userEvent.click(await screen.findByRole('button', { name: 'Revisar' }))
     const panel = await screen.findByRole('dialog')
+    // hallazgo U-07 (DD-07): la fecha sugerida se propone como dd/mm/aaaa
+    expect(within(panel).getByLabelText('Fecha de vencimiento')).toHaveValue('15/12/2026')
     await userEvent.type(within(panel).getByLabelText('Código del compromiso'), 'C-010')
     await userEvent.type(within(panel).getByLabelText('Monto'), '-5')
     await userEvent.click(within(panel).getByRole('button', { name: 'Aceptar y crear borrador' }))
@@ -384,10 +386,12 @@ describe('S28 · candidatos', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
     expect(await within(panel).findByText('Escriba lo que se propuso')).toBeInTheDocument()
     await userEvent.type(within(panel).getByLabelText('Lo que se propuso'), 'Instalar dos pozos')
+    // hallazgo U-07 (DD-07): la fecha sugerida se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+    await userEvent.type(within(panel).getByLabelText('Fecha sugerida'), '20/10/2026')
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/commitment-candidates')).toHaveLength(1))
     const [llamada] = red.a('POST', '/sgspe/commitment-candidates')
-    expect(llamada.cuerpo).toEqual({ attributes: { proposed_text: 'Instalar dos pozos', project: 'p1' } })
+    expect(llamada.cuerpo).toEqual({ attributes: { proposed_text: 'Instalar dos pozos', suggested_due_date: '2026-10-20', project: 'p1' } })
     expect(llamada.cabeceras.get('Idempotency-Key')).toBeTruthy()
   })
 
