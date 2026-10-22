@@ -172,12 +172,25 @@ export const ES = {
     preguntar: 'Preguntar',
     idioma: 'Idioma',
     idiomaNoGuardado: 'No se pudo guardar el idioma',
-    tema: 'Tema'
+    tema: 'Tema',
+    // los títulos de bloque de la navegación (navTree.ts, BLOQUES) y su «Contraer»
+    bloques: {
+      territorio: 'Proyectos y territorio',
+      comunidades: 'Trabajo con las comunidades',
+      riesgos: 'Riesgos e inversión social',
+      seguimiento: 'Documentos y seguimiento'
+    },
+    contraer: 'Contraer',
+    expandir: 'Expandir'
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
-  // el rótulo corto de una sección cuyo nombre no cabe en la barra lateral; el completo va en aria-label y title
+  // el rótulo corto de una sección en la pestaña del proyecto (ProyectoLayout); el completo va en aria-label y title
   seccionesCortas: {
     attention: 'QCS'
+  },
+  // el nombre de una sección en la barra lateral, si no es el de secciones (DD-10): el completo va en title
+  seccionesEnLaBarra: {
+    attention: 'Quejas y solicitudes'
   },
   secciones: {
     dashboard: 'Inicio',

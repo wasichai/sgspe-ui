@@ -53,7 +53,8 @@ describe('rutas de F4', () => {
     // la gestión de quejas lee los riesgos (security.md §7.6): la pestaña Riesgos lleva al registro del proyecto
     expect(within(pestanas).getByRole('link', { name: 'Riesgos' })).toHaveAttribute('href', '/projects/p1/risks')
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })
-    expect(within(secciones).getByRole('link', { name: 'Quejas, consultas y solicitudes' })).toBeInTheDocument()
+    // en la barra lateral, por su nombre largo (DD-10); la sigla queda en la pestaña
+    expect(within(secciones).getByRole('link', { name: 'Quejas y solicitudes' })).toBeInTheDocument()
   })
 
   it('la ficha de una queja vive bajo su proyecto', async () => {
@@ -101,7 +102,7 @@ describe('rutas de F4', () => {
     fetch = abrirPortal('/attention', GESTOR_DE_RIESGOS, permisos({ project: ['READ'], social_risk: ['READ'] }), deRiesgos())
     expect(await screen.findByRole('heading', { name: 'No puede abrir «Quejas, consultas y solicitudes»' })).toBeInTheDocument()
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })
-    expect(within(secciones).queryByRole('link', { name: 'Quejas, consultas y solicitudes' })).not.toBeInTheDocument()
+    expect(within(secciones).queryByRole('link', { name: 'Quejas y solicitudes' })).not.toBeInTheDocument()
     expect(within(secciones).getByRole('link', { name: 'Riesgos' })).toBeInTheDocument()
   })
 

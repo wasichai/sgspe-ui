@@ -2,7 +2,7 @@ import { VistaPrevia } from '../componentes/VistaPrevia'
 import { Rastro } from '../contexto/Rastro'
 import { useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
-import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal } from 'lucide-react'
+import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
@@ -12,7 +12,7 @@ import { BotonPreguntar, ProveedorDelAsistente } from '../ia/Asistente'
 import { BotonBuscar } from '../busqueda/BusquedaGlobal'
 import { NS } from '../i18n'
 import { LanguageMenu } from './LanguageMenu'
-import { useArbol } from './navTree'
+import { BLOQUES, useArbol } from './navTree'
 import { seccionDeRuta } from './seccionActual'
 import { useInsignias } from './insignias'
 import { DatosDeLaCuenta, MenuDePerfil } from './Perfil'
@@ -25,10 +25,54 @@ import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
 // text-sm es el cuerpo de 14/20 de tokens.css: dentro de cn(), text-sg-body se confundiría con un color
 const ENLACE = 'flex h-9 items-center gap-2.5 rounded-sg-md px-2.5 text-sm'
 const REPOSO = 'text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text'
-// por debajo de xl (1280 px) la navegación se contrae a 52 px: solo íconos, con la etiqueta para lectores y en title
-const ROTULO = 'sr-only xl:not-sr-only xl:truncate'
-// en el panel del menú (tableta y teléfono) las etiquetas se ven siempre
-const ROTULO_VISIBLE = 'truncate'
+const TITULO_DE_BLOQUE = 'px-2.5 pb-1 text-sg-overline font-semibold tracking-wide text-sg-text-muted uppercase'
+
+// cómo se dibuja la lista de secciones (DD-10): la barra lateral expandida desde lg (1024 px; por debajo, 52 px con solo los
+// íconos), la barra lateral contraída por la persona (solo íconos a todo ancho) o el panel del menú (tableta y teléfono), con
+// las etiquetas siempre a la vista. contraída, la etiqueta queda para lectores y en title, y una línea separa los bloques
+type Modo = 'lateral' | 'contraida' | 'panel'
+const ESTILOS: Record<Modo, { rotulo: string; titulo: string; bloque: string; insignia: string; externo: string }> = {
+  lateral: {
+    rotulo: 'sr-only lg:not-sr-only lg:truncate',
+    titulo: `sr-only lg:not-sr-only lg:block ${TITULO_DE_BLOQUE}`,
+    bloque: 'mt-2 border-t border-sg-border pt-2 lg:mt-4 lg:border-t-0 lg:pt-0',
+    insignia: 'absolute top-0.5 right-0.5 lg:static lg:ml-auto',
+    externo: 'ml-auto hidden size-3 lg:block'
+  },
+  contraida: {
+    rotulo: 'sr-only',
+    titulo: 'sr-only',
+    bloque: 'mt-2 border-t border-sg-border pt-2',
+    insignia: 'absolute top-0.5 right-0.5',
+    externo: 'hidden'
+  },
+  panel: { rotulo: 'truncate', titulo: `block ${TITULO_DE_BLOQUE}`, bloque: 'mt-4', insignia: 'ml-auto', externo: 'ml-auto size-3' }
+}
+
+// «Contraer» la barra lateral se recuerda en este navegador (DD-10). el almacenamiento puede faltar (ventana privada, datos
+// bloqueados): sin él, la barra queda expandida
+const CLAVE_CONTRAIDA = 'sgspe.navegacion'
+function leerContraida(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_CONTRAIDA) === 'contraida'
+  } catch {
+    return false
+  }
+}
+function useContraida(): [boolean, () => void] {
+  const [contraida, setContraida] = useState(leerContraida)
+  const alternar = () =>
+    setContraida((antes) => {
+      try {
+        if (antes) localStorage.removeItem(CLAVE_CONTRAIDA)
+        else localStorage.setItem(CLAVE_CONTRAIDA, 'contraida')
+      } catch {
+        // sin almacenamiento, vale para esta visita
+      }
+      return !antes
+    })
+  return [contraida, alternar]
+}
 
 // el shell del portal (docs/ux/ux-architecture.md §7.1): barra superior de 56 px con seis controles (DD-09): la marca, el selector
 // de proyecto, Buscar, el botón Preguntar del asistente (S05, desde F7), la campana de avisos (S04, desde F3) y la cuenta con
@@ -46,6 +90,7 @@ export function AppShell() {
     .filter(Boolean)
     .join(', ')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [contraida, alternarContraida] = useContraida()
   // el panel del menú se cierra al cambiar de ruta: al elegir una sección o un proyecto en su selector
   const { pathname } = useLocation()
   useEffect(() => setMenuAbierto(false), [pathname])
@@ -82,8 +127,22 @@ export function AppShell() {
           <MenuDePerfil rotulosDeRol={rotulosDeRol} />
         </header>
         <div className="flex min-h-0 flex-1">
-          <nav aria-label={t('shell.secciones')} className="hidden w-[52px] shrink-0 border-r border-sg-border bg-sg-surface p-1.5 md:block xl:w-60 xl:p-3">
-            <ListaDeSecciones rotulo={ROTULO} />
+          <nav
+            aria-label={t('shell.secciones')}
+            className={cn('hidden w-[52px] shrink-0 overflow-y-auto border-r border-sg-border bg-sg-surface p-1.5 md:block', !contraida && 'lg:w-60 lg:p-3')}
+          >
+            <ListaDeSecciones modo={contraida ? 'contraida' : 'lateral'} />
+            {/* «Contraer» solo desde lg: por debajo, la barra ya muestra solo los íconos */}
+            <button
+              type="button"
+              onClick={alternarContraida}
+              aria-label={contraida ? t('shell.expandir') : undefined}
+              title={contraida ? t('shell.expandir') : undefined}
+              className={cn(ENLACE, REPOSO, 'mt-4 hidden w-full lg:flex')}
+            >
+              {contraida ? <PanelLeftOpen aria-hidden className="size-4 shrink-0" /> : <PanelLeftClose aria-hidden className="size-4 shrink-0" />}
+              {contraida ? null : <span className="truncate">{t('shell.contraer')}</span>}
+            </button>
           </nav>
           <main
             id="content"
@@ -112,7 +171,7 @@ export function AppShell() {
           <DatosDeLaCuenta />
           <SelectorDeProyecto siempre />
           <nav aria-label={t('shell.seccionesDelMenu')} className="min-h-0 flex-1 overflow-y-auto">
-            <ListaDeSecciones rotulo={ROTULO_VISIBLE} alElegir={() => setMenuAbierto(false)} />
+            <ListaDeSecciones modo="panel" alElegir={() => setMenuAbierto(false)} />
           </nav>
           <div className="flex items-center gap-3 border-t border-sg-border pt-3">
             <LanguageMenu />
@@ -138,57 +197,74 @@ function TituloDeSeccion() {
   return null
 }
 
-// las secciones que se le ofrecen a la cuenta (useArbol), en su orden: en la barra lateral (rótulo solo desde xl) y en el
-// panel del menú (rótulo siempre, y elegir una cierra el panel)
-// la sección marcada es la de la ruta (seccionDeRuta): dentro de un proyecto, la del módulo abierto. un nombre largo se ve
-// corto («QCS») y el completo queda en aria-label y en title
-function ListaDeSecciones({ rotulo, alElegir }: { rotulo: string; alElegir?: () => void }) {
+// las secciones que se le ofrecen a la cuenta (useArbol), en su orden y en sus bloques (BLOQUES): en la barra lateral y en el
+// panel del menú (elegir una cierra el panel). cada bloque con título es una lista nombrada por él; un bloque sin secciones
+// para la cuenta no se dibuja. la sección marcada es la de la ruta (seccionDeRuta): dentro de un proyecto, la del módulo
+// abierto. en la barra, QCS se dice «Quejas y solicitudes» (seccionesEnLaBarra, DD-10) y su nombre completo queda en title
+function ListaDeSecciones({ modo, alElegir }: { modo: Modo; alElegir?: () => void }) {
   const { t } = useTranslation(NS)
   const secciones = useArbol()
   const actual = seccionDeRuta(useLocation().pathname)
   const insignias = useInsignias()
-  const idInsignia = useId()
+  const id = useId()
+  const estilo = ESTILOS[modo]
+  const bloques = BLOQUES.map((bloque) => ({ ...bloque, secciones: secciones.filter((s) => bloque.secciones.includes(s.clave)) })).filter(
+    (bloque) => bloque.secciones.length > 0
+  )
   return (
-    <ul className="space-y-0.5">
-      {secciones.map((seccion) => {
-        const Icono = seccion.icon ?? LayoutDashboard
-        const nombre = t(`secciones.${seccion.clave}`)
-        const corto = t(`seccionesCortas.${seccion.clave}`, { defaultValue: '' })
-        const marcada = seccion.clave === actual
-        const pendientes = seccion.clave === 'tasks' ? insignias.tareas : null
-        const idDeEsta = `${idInsignia}-${seccion.clave}`
+    <div>
+      {bloques.map((bloque, i) => {
+        const idTitulo = bloque.clave ? `${id}-${bloque.clave}` : undefined
         return (
-          <li key={seccion.clave}>
-            {seccion.external ? (
-              <a href={seccion.to} title={nombre} onClick={alElegir} className={cn(ENLACE, REPOSO)}>
-                <Icono aria-hidden className="size-4 shrink-0" />
-                <span className={rotulo}>{nombre}</span>
-                <ExternalLink aria-hidden className="ml-auto hidden size-3 xl:block" />
-              </a>
-            ) : (
-              <Link
-                to={seccion.to}
-                title={nombre}
-                aria-label={corto ? nombre : undefined}
-                aria-current={marcada ? 'page' : undefined}
-                aria-describedby={pendientes ? idDeEsta : undefined}
-                onClick={alElegir}
-                className={cn(ENLACE, 'relative', marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
-              >
-                <Icono aria-hidden className="size-4 shrink-0" />
-                <span className={rotulo}>{corto || nombre}</span>
-                <Insignia
-                  n={pendientes}
-                  id={idDeEsta}
-                  descripcion={t('shell.insignias.tareas', { count: pendientes ?? 0 })}
-                  className={rotulo === ROTULO ? 'absolute top-0.5 right-0.5 xl:static xl:ml-auto' : 'ml-auto'}
-                />
-              </Link>
-            )}
-          </li>
+          <div key={bloque.clave ?? bloque.secciones[0].clave} className={i > 0 ? estilo.bloque : undefined}>
+            {bloque.clave ? (
+              <p id={idTitulo} className={estilo.titulo}>
+                {t(`shell.bloques.${bloque.clave}`)}
+              </p>
+            ) : null}
+            <ul aria-labelledby={idTitulo} className="space-y-0.5">
+              {bloque.secciones.map((seccion) => {
+                const Icono = seccion.icon ?? LayoutDashboard
+                const nombre = t(`secciones.${seccion.clave}`)
+                const enLaBarra = t(`seccionesEnLaBarra.${seccion.clave}`, { defaultValue: '' }) || nombre
+                const marcada = seccion.clave === actual
+                const pendientes = seccion.clave === 'tasks' ? insignias.tareas : null
+                const idDeEsta = `${id}-${seccion.clave}-insignia`
+                return (
+                  <li key={seccion.clave}>
+                    {seccion.external ? (
+                      <a href={seccion.to} title={nombre} onClick={alElegir} className={cn(ENLACE, REPOSO)}>
+                        <Icono aria-hidden className="size-4 shrink-0" />
+                        <span className={estilo.rotulo}>{nombre}</span>
+                        <ExternalLink aria-hidden className={estilo.externo} />
+                      </a>
+                    ) : (
+                      <Link
+                        to={seccion.to}
+                        title={nombre}
+                        aria-current={marcada ? 'page' : undefined}
+                        aria-describedby={pendientes ? idDeEsta : undefined}
+                        onClick={alElegir}
+                        className={cn(ENLACE, 'relative', marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : REPOSO)}
+                      >
+                        <Icono aria-hidden className="size-4 shrink-0" />
+                        <span className={estilo.rotulo}>{enLaBarra}</span>
+                        <Insignia
+                          n={pendientes}
+                          id={idDeEsta}
+                          descripcion={t('shell.insignias.tareas', { count: pendientes ?? 0 })}
+                          className={estilo.insignia}
+                        />
+                      </Link>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         )
       })}
-    </ul>
+    </div>
   )
 }
 

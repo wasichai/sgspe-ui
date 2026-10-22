@@ -123,6 +123,20 @@ export const NAV_TREE: SeccionNav[] = [
   { clave: 'admin', label: 'Administración', to: '/administration', icon: Settings, soloAdmin: true, fases: ['F1'] }
 ]
 
+// los bloques de la navegación (ux-architecture.md §7.1, DD-10): Inicio; «Proyectos y territorio»; «Trabajo con las
+// comunidades»; «Riesgos e inversión social»; «Documentos y seguimiento»; y Administración aparte, sin título. reúnen las
+// secciones sin cambiar su orden (Navigation.test.tsx lo vigila); un bloque sin secciones para la cuenta no se dibuja
+export type ClaveDeBloque = 'territorio' | 'comunidades' | 'riesgos' | 'seguimiento'
+
+export const BLOQUES: { clave?: ClaveDeBloque; secciones: ClaveDeSeccion[] }[] = [
+  { secciones: ['dashboard'] },
+  { clave: 'territorio', secciones: ['projects', 'territory'] },
+  { clave: 'comunidades', secciones: ['stakeholders', 'engagements', 'commitments', 'attention'] },
+  { clave: 'riesgos', secciones: ['risks', 'programs'] },
+  { clave: 'seguimiento', secciones: ['documents', 'tasks', 'reports'] },
+  { secciones: ['admin'] }
+]
+
 // la guarda de una pantalla que vive bajo una sección pero lee otro objeto: la sección (su nombre y su pantalla) con otros
 // permisos (LEE_ACUERDOS, de leeAcuerdos.ts)
 export function guardaDe(clave: ClaveDeSeccion, seOfreceCon?: Par[][]): SeccionNav {

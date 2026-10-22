@@ -47,3 +47,30 @@ test.describe('a 1440 px', () => {
     await expect(menu.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
   })
 })
+
+// DD-10: desde lg (1024 px) la barra lateral está expandida, con las etiquetas y los títulos de bloque a la vista; «Contraer»
+// la deja en íconos y se recuerda al recargar
+test.describe('a 1024 px', () => {
+  test.use({ viewport: { width: 1024, height: 768 } })
+
+  test('la navegación muestra las etiquetas y los títulos de bloque, y «Contraer» persiste al recargar', async ({ page }) => {
+    await page.goto('/')
+    const nav = page.getByRole('navigation', { name: 'Secciones' })
+    await expect(nav.getByRole('link', { name: 'Proyectos' }).getByText('Proyectos')).toBeVisible()
+    await expect(nav.getByText('Proyectos y territorio')).toBeVisible()
+    await expect(nav.getByText('Trabajo con las comunidades')).toBeVisible()
+    expect((await nav.boundingBox())!.width).toBeGreaterThan(200)
+    await nav.getByRole('button', { name: 'Contraer' }).click()
+    await expect(nav.getByRole('button', { name: 'Expandir' })).toBeVisible()
+    expect((await nav.boundingBox())!.width).toBeLessThan(60)
+    await page.reload()
+    const otra = page.getByRole('navigation', { name: 'Secciones' })
+    await expect(otra.getByRole('button', { name: 'Expandir' })).toBeVisible()
+    expect((await otra.boundingBox())!.width).toBeLessThan(60)
+    // contraída, la etiqueta y el título quedan solo para lectores de pantalla (sr-only: una caja de 1 px)
+    expect((await otra.getByRole('link', { name: 'Proyectos' }).getByText('Proyectos').boundingBox())!.width).toBeLessThanOrEqual(1)
+    expect((await otra.getByText('Proyectos y territorio').boundingBox())!.width).toBeLessThanOrEqual(1)
+    await otra.getByRole('button', { name: 'Expandir' }).click()
+    await expect(otra.getByText('Proyectos y territorio')).toBeVisible()
+  })
+})

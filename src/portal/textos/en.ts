@@ -172,10 +172,21 @@ export const EN: Textos = {
     preguntar: 'Ask',
     idioma: 'Language',
     idiomaNoGuardado: 'Could not save the language',
-    tema: 'Theme'
+    tema: 'Theme',
+    bloques: {
+      territorio: 'Projects and territory',
+      comunidades: 'Work with communities',
+      riesgos: 'Risks and social investment',
+      seguimiento: 'Documents and follow-up'
+    },
+    contraer: 'Collapse',
+    expandir: 'Expand'
   },
   seccionesCortas: {
     attention: 'GIR'
+  },
+  seccionesEnLaBarra: {
+    attention: 'Grievances and requests'
   },
   secciones: {
     dashboard: 'Home',
