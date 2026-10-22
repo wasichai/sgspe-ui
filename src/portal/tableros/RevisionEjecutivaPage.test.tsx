@@ -146,7 +146,10 @@ describe('S51 · revisión ejecutiva', () => {
       'Compromisos abiertos',
       'Postura de los grupos de interés'
     ])
-    const zonas = screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))
+    const zonas = screen
+      .getAllByRole('region')
+      // el nombre de una Seccion con título sale de su encabezado (aria-labelledby), el de las demás de aria-label
+      .map((r) => r.getAttribute('aria-label') ?? document.getElementById(r.getAttribute('aria-labelledby') ?? '')?.textContent)
     expect(zonas.indexOf('Tendencia de 12 meses')).toBeLessThan(zonas.indexOf('Inversión ejecutada frente a presupuesto y topes'))
   })
 

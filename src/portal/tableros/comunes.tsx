@@ -14,6 +14,7 @@ import { Grafico } from '../graficos/Grafico'
 import { fechaPe, NS, numeroPe, periodoPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { rotuloDeFila, rotuloDeOpcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // la fila de filtros de dashboards.md §3.1, en la URL: proyecto (el del contexto; sin él, las asignaciones de la persona),
 // periodo, territorio (el chip) y ámbito; desde F3, la campaña de exploración y el responsable (?explorationCampaign=, ?owner=),
@@ -209,8 +210,7 @@ export function ConsultaDeTablero<T>({ consulta, children }: { consulta: UseQuer
 // con los filtros que el indicador no aplica y sus avisos. un indicador ausente de la respuesta tampoco se lee como vacío
 export function Zona({ titulo, indicador, children }: { titulo: string; indicador: Indicador | undefined; children: (i: Indicador) => ReactNode }) {
   return (
-    <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo}>
       {indicador?.available ? (
         <>
           <NotasDeIndicador indicador={indicador} />
@@ -219,7 +219,7 @@ export function Zona({ titulo, indicador, children }: { titulo: string; indicado
       ) : (
         <NoDisponible motivo={indicador?.unavailableReason} />
       )}
-    </section>
+    </Seccion>
   )
 }
 

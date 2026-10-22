@@ -17,6 +17,7 @@ import { diaPe, fechaPe, mesPe, NS, numeroPe, periodoPe } from '../i18n'
 import { itemsDeAtencion } from './atencionEjecutiva'
 import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero } from './comunes'
 import { CODIGOS_DE_LAS_TILES, mesesDeTendencia, TOPE_DE_PROYECTOS, type MesDeTendencia, type TableroEjecutivo } from './contratoF8'
+import { Seccion } from '../componentes/Seccion'
 
 // S51 · revisión ejecutiva de 5 minutos (screens.md, dashboards.md §5.1): qué cambió, qué es crítico, dónde y quién lo atiende,
 // con el tablero executive en una sola llamada (api.md §4.11). los proyectos elegidos viajan en la URL (?project= repetido);
@@ -197,11 +198,11 @@ function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: Tablero
           {tiles.map((i) => (
             <KpiCard key={i.code} titulo={i.label} indicador={i} notas={<NotaDeConfidenciales oculta={i.confidentialHidden} />} />
           ))}
-          <section aria-label={t('tablerosF8.ejecutivo.postura')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+          <Seccion etiqueta={t('tablerosF8.ejecutivo.postura')} className="space-y-1">
             <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('tablerosF8.ejecutivo.postura')}</h3>
             <NoDisponible />
             <p className="text-sg-caption text-sg-text-muted">{t('tablerosF8.ejecutivo.posturaAyuda')}</p>
-          </section>
+          </Seccion>
         </div>
       </section>
       <div className="grid items-start gap-4 lg:grid-cols-2">{zonas.map((z) => z.zona)}</div>
@@ -217,8 +218,7 @@ function LoCritico({ datos, pie }: { datos: TableroEjecutivo; pie: string }) {
   const titulo = t('tablerosF8.ejecutivo.critico')
   const items = itemsDeAtencion(datos)
   return (
-    <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo}>
       <Pie>{pie}</Pie>
       {items.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{t('tablerosF8.ejecutivo.sinAtencion')}</p>
@@ -253,7 +253,7 @@ function LoCritico({ datos, pie }: { datos: TableroEjecutivo; pie: string }) {
         </Table>
       )}
       <p className="text-sg-caption text-sg-text-muted">{t('tablerosF8.ejecutivo.criticoAyuda')}</p>
-    </section>
+    </Seccion>
   )
 }
 
@@ -293,8 +293,7 @@ function InversionPorMoneda({ indicador, pie }: { indicador: Indicador; pie: str
   const monedas = indicador.available ? inversionPorMoneda(indicador) : []
   const texto_ = (n: bigint | null) => (n === null ? null : deDiezmilesimos(n))
   return (
-    <section aria-label={titulo} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo} className="space-y-3">
       <Pie>{pie}</Pie>
       {!indicador.available ? (
         <NoDisponible motivo={indicador.unavailableReason} />
@@ -325,7 +324,7 @@ function InversionPorMoneda({ indicador, pie }: { indicador: Indicador; pie: str
           })}
         </ul>
       )}
-    </section>
+    </Seccion>
   )
 }
 
@@ -371,8 +370,7 @@ function Tendencia({ indicador, calculado }: { indicador: Indicador; calculado: 
   const ultimo = meses.at(-1)?.period
   const periodo = primero && ultimo ? t('tablerosF8.ejecutivo.meses', { desde: periodoPe(primero), hasta: periodoPe(ultimo) }) : titulo
   return (
-    <section aria-label={titulo} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo} className="space-y-3">
       <Pie>{t('tablerosF8.ejecutivo.pie', { periodo, calculado })}</Pie>
       {!indicador.available ? (
         <NoDisponible motivo={indicador.unavailableReason} />
@@ -403,7 +401,7 @@ function Tendencia({ indicador, calculado }: { indicador: Indicador; calculado: 
           />
         </div>
       )}
-    </section>
+    </Seccion>
   )
 }
 

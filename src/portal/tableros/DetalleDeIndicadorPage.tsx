@@ -7,6 +7,7 @@ import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { esMes } from './contratoF8'
 import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, FiltrosIgnorados, SerieConMeta, useFiltrosDeTablero } from './comunes'
+import { Seccion } from '../componentes/Seccion'
 
 // los desgloses de cada indicador que son categorías y se dibujan en barras (api.md §4.11). los demás no lo son: los
 // puntos y los umbrales de la matriz (stakeholder y thresholds de KPI-STK-03), la cobertura de KPI-STK-06 (coverage) y
@@ -84,21 +85,19 @@ export function DetalleDeIndicadorPage() {
                     const filas =
                       d.by === 'direction' ? d.rows.map((f) => ({ ...f, label: t(`tableros.direcciones.${f.key}`, { defaultValue: f.key }) })) : d.rows
                     return (
-                      <section key={d.by} aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-                        <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+                      <Seccion key={d.by} titulo={titulo}>
                         {filas.length === 0 ? (
                           <p className="text-sm text-sg-text-muted">{t('tableros.sinDatos')}</p>
                         ) : (
                           <Barras titulo={titulo} filas={diezYOtros(filas, t('tableros.otros'))} />
                         )}
-                      </section>
+                      </Seccion>
                     )
                   })}
                   {(i.series ?? []).length > 0 ? (
-                    <section aria-label={t('tableros.serie')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-                      <h2 className="text-sg-h3 font-semibold">{t('tableros.serie')}</h2>
+                    <Seccion titulo={t('tableros.serie')}>
                       <SerieConMeta titulo={t('tableros.serie')} serie={i.series ?? []} tipo="line" />
-                    </section>
+                    </Seccion>
                   ) : null}
                 </div>
               </>
