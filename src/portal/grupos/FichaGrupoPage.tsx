@@ -206,20 +206,16 @@ function Ficha({ grupo }: { grupo: Registro }) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           {ultima && definicionDeEvaluacion.data ? (
-            <section
-              aria-label={t('grupos.ficha.preocupaciones')}
-              className="grid gap-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm sm:grid-cols-2"
-            >
+            <Seccion etiqueta={t('grupos.ficha.preocupaciones')} className="grid gap-3 space-y-0 text-sm sm:grid-cols-2">
               {(['concerns', 'expectations'] as const).map((c) => (
                 <div key={c}>
                   <h3 className="font-medium">{t(c === 'concerns' ? 'grupos.ficha.preocupaciones' : 'grupos.ficha.expectativas')}</h3>
                   {puedeLeer(definicionDeEvaluacion.data, c) ? <p>{texto(ultima, c) || '—'}</p> : <Restringido />}
                 </div>
               ))}
-            </section>
+            </Seccion>
           ) : null}
-          <section aria-label={t('grupos.ficha.evaluaciones')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-            <h2 className="font-medium">{t('grupos.ficha.evaluaciones')}</h2>
+          <Seccion titulo={t('grupos.ficha.evaluaciones')}>
             {!leeEvaluaciones ? <NoDisponible motivo="OBJECT_NOT_READABLE" /> : null}
             {leeEvaluaciones && evaluaciones.isPending ? <Cargando compacto /> : null}
             {leeEvaluaciones && evaluaciones.isError && !evaluaciones.data ? (
@@ -251,7 +247,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
                 </li>
               ))}
             </ol>
-          </section>
+          </Seccion>
           <Seccion
             titulo={t('grupos.ficha.perfil')}
             acciones={
@@ -322,12 +318,12 @@ function Ficha({ grupo }: { grupo: Registro }) {
 
 function Tarjeta({ titulo, ayuda, children }: { titulo: string; ayuda?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+    <Seccion etiqueta={titulo} className="space-y-1">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted" title={ayuda}>
         {titulo}
       </h3>
       {children}
-    </div>
+    </Seccion>
   )
 }
 
@@ -413,7 +409,7 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
   const proyecto = String(atributo(grupo, 'project'))
   const dia = (e: Registro) => diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))
   return (
-    <aside aria-label={t('grupos.ficha.trazabilidad')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion elemento="aside" etiqueta={t('grupos.ficha.trazabilidad')} className="text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('grupos.ficha.trazabilidad')}</h2>
       <h3 className="font-medium">{t('grupos.ficha.interacciones')}</h3>
       {interacciones.isPending ? <Cargando compacto /> : null}
@@ -459,6 +455,6 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
           </ul>
         </>
       ) : null}
-    </aside>
+    </Seccion>
   )
 }

@@ -30,6 +30,7 @@ import {
 import { rotuloDeFila } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S27 · tablero de compromisos (dashboards.md §5.6, screens.md §12): GET /api/sgspe/dashboards/commitments en una llamada, con
 // los filtros de periodo, territorio, campaña y responsable (owner, que aplican KPI-COM-03, 04, 06 y 09; los demás lo declaran
@@ -273,8 +274,7 @@ function Pendientes({ proyecto, filtros }: { proyecto?: string; filtros: Filtros
   const filas = [...(vencidos.data?.content ?? []), ...(porVencer.data?.content ?? [])]
   const truncado = (vencidos.data?.totalPages ?? 1) > 1 || (porVencer.data?.totalPages ?? 1) > 1
   return (
-    <section aria-label={t('tableroCompromisos.zonas.pendientes')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('tableroCompromisos.zonas.pendientes')}</h2>
+    <Seccion titulo={t('tableroCompromisos.zonas.pendientes')}>
       {noAplicados.length > 0 ? (
         <p role="note" className="text-sg-caption text-sg-text-muted">
           {t('tableroCompromisos.pendientesNoAplica', { filtros: noAplicados.map((f) => t(`tableros.nombresDeFiltro.${f}`)).join(', ') })}
@@ -326,6 +326,6 @@ function Pendientes({ proyecto, filtros }: { proyecto?: string; filtros: Filtros
           </Table>
         </>
       )}
-    </section>
+    </Seccion>
   )
 }
