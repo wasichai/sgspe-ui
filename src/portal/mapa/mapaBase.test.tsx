@@ -61,6 +61,34 @@ describe('mapa base de la organización', () => {
     expect(screen.queryByRole('button', { name: 'Sin fondo' })).not.toBeInTheDocument()
   })
 
+  // U-32 y P-06: sin mapa base, quien administra lee dónde se configura; quien no, solo que no lo hay
+  it('sin mapa base, el aviso nombra dónde se configura para quien administra', async () => {
+    fetch = mockFetch([])
+    conProveedor()
+    expect(await screen.findByText('Sin mapa base')).toBeInTheDocument()
+    expect(screen.getByText(/Lo configura quien opera SGSPE, en los ajustes del mapa base de la organización/)).toBeInTheDocument()
+  })
+
+  it('sin mapa base, quien no administra solo lee que no lo hay', async () => {
+    fetch = mockFetch([])
+    montar(
+      <ProveedorDelMapaBase>
+        <Mapa etiqueta="Mapa de prueba" capas={[]} />
+      </ProveedorDelMapaBase>,
+      { permisos: { admin: false, objects: {} } }
+    )
+    expect(await screen.findByText('Sin mapa base')).toBeInTheDocument()
+    expect(screen.queryByText(/Lo configura/)).not.toBeInTheDocument()
+  })
+
+  it('«Sin fondo» elegido a mano no dice dónde se configura: el mapa base existe', async () => {
+    fetch = mockFetch([{ path: '/sgspe/map/settings', body: { basemap: ESTILO } }])
+    conProveedor()
+    await userEvent.click(await screen.findByRole('button', { name: 'Sin fondo' }))
+    expect(screen.getByText('Sin mapa base')).toBeInTheDocument()
+    expect(screen.queryByText(/Lo configura/)).not.toBeInTheDocument()
+  })
+
   it('una respuesta que no es un BasemapSpec válido vale «Sin mapa base»', () => {
     expect(mapaBaseDe({ basemap: null })).toEqual({ type: 'none' })
     expect(mapaBaseDe({ basemap: { type: 'raster', tiles: [] } })).toEqual({ type: 'none' })

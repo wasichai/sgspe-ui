@@ -2,6 +2,7 @@
 export const ES_SIG = {
   titulo: 'Mapa',
   sinMapaBase: 'Sin mapa base',
+  dondeSeConfigura: 'Lo configura quien opera SGSPE, en los ajustes del mapa base de la organización.',
   sinFondo: 'Sin fondo',
   leyenda: 'Leyenda',
   filtros: 'Filtros del mapa',
@@ -50,6 +51,7 @@ export const ES_SIG = {
 export const EN_SIG: typeof ES_SIG = {
   titulo: 'Map',
   sinMapaBase: 'No base map',
+  dondeSeConfigura: 'It is set up by whoever operates SGSPE, in the organization base map settings.',
   sinFondo: 'No background',
   leyenda: 'Legend',
   filtros: 'Map filters',

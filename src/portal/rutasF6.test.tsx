@@ -1,4 +1,5 @@
 import { cleanup, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { FetchMock, MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { abrirPortal } from '../test/pantalla'
@@ -46,10 +47,13 @@ describe('rutas de F6', () => {
       deSig([{ code: 'KPI-TER-02', label: 'Superficie', dashboard: 'territory', available: true }])
     )
     expect(await screen.findByRole('link', { name: 'Tablero territorial' })).toHaveAttribute('href', '/territory/dashboard?project=p1')
+    // la calidad de datos va en «Más acciones» (DD-11); el cambio entre el mapa y el tablero queda a la vista
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('link', { name: 'Calidad de datos' })).toHaveAttribute('href', '/territory/quality')
     cleanup()
     fetch.restore()
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, deSig())
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     await screen.findByRole('link', { name: 'Calidad de datos' })
     expect(screen.queryByRole('link', { name: 'Tablero territorial' })).not.toBeInTheDocument()
   })

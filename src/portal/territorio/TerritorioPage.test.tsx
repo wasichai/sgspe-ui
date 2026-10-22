@@ -52,7 +52,18 @@ const sinGestion = (...salvo: string[]): MockRoute[] =>
     .filter((id) => !salvo.includes(id))
     .map((id) => ({ path: `/sgspe/territory/layers/${id}`, ...CAPA_NO_ENCONTRADA }))
 const listaWms = () => screen.findByRole('list', { name: 'Mapa territorial · WMS' })
-const capas = () => screen.findByRole('region', { name: 'Capas' })
+// el panel de capas con «Todas las capas» desplegado (DD-11): las que no están en el mapa van plegadas
+const capas = async () => {
+  const panel = await screen.findByRole('region', { name: 'Capas' })
+  const todas = within(panel).getByRole('button', { name: /Todas las capas/ })
+  if (todas.getAttribute('aria-expanded') === 'false') await userEvent.click(todas)
+  return panel
+}
+// «Más acciones» de la cabecera, abierto
+const masAcciones = async () => {
+  await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
+  return screen.getByRole('group', { name: 'Más acciones' })
+}
 
 // revisión final del plan 6.3, m1: las capas se piden una vez con la vista que el mapa muestra, nunca sin bbox
 describe('S12 · la vista inicial', () => {
@@ -102,6 +113,89 @@ describe('S12 · la vista inicial', () => {
   })
 })
 
+// el mapa primero (DD-11, P-06): el lienzo a todo el ancho, con las capas y su leyenda en un panel plegable a la izquierda y los
+// lugares en otro a la derecha; la cabecera, con una sola primaria y lo demás en «Más acciones»
+describe('S12 · el mapa primero', () => {
+  it('las capas elegidas van arriba, con su leyenda, y el resto queda plegado tras «Todas las capas»', async () => {
+    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
+    const panel = await screen.findByRole('region', { name: 'Capas' })
+    const elegidas = within(panel).getByRole('region', { name: 'Capas en el mapa' })
+    expect(
+      within(elegidas)
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('label')!.textContent)
+    ).toEqual(['Centros poblados y localidades', 'Territorio comunal'])
+    expect(
+      within(elegidas)
+        .getAllByRole('checkbox')
+        .every((c) => (c as HTMLInputElement).checked)
+    ).toBe(true)
+    // la muestra de cada capa es la de la paleta compartida: la leyenda va con la capa
+    expect(elegidas.querySelectorAll('[data-color]')).toHaveLength(2)
+    expect(within(panel).queryByRole('checkbox', { name: /Concesiones mineras/ })).not.toBeInTheDocument()
+    const todas = within(panel).getByRole('button', { name: /Todas las capas/ })
+    expect(todas).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(todas)
+    expect(todas).toHaveAttribute('aria-expanded', 'true')
+    // encender una capa la deja donde está mientras el panel sigue abierto: el foco no salta
+    const mineras = within(panel).getByRole('checkbox', { name: /Concesiones mineras/ })
+    await userEvent.click(mineras)
+    expect(mineras).toBeChecked()
+    expect(mineras).toHaveFocus()
+  })
+
+  it('el panel de capas se cierra y se abre con su botón sin perder lo elegido, y su estado va en la URL', async () => {
+    fetch = abrirPortal('/territory?project=p1', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
+    const boton = await screen.findByRole('button', { name: 'Capas (2)' })
+    expect(boton).toHaveAttribute('aria-expanded', 'true')
+    expect(boton).toHaveAttribute('aria-controls', screen.getByRole('region', { name: 'Capas' }).id)
+    await userEvent.click(within(screen.getByRole('region', { name: 'Capas' })).getByRole('checkbox', { name: /Territorio comunal/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Capas (1)' }))
+    expect(screen.queryByRole('region', { name: 'Capas' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Capas (1)' })).toHaveAttribute('aria-expanded', 'false')
+    await waitFor(() => expect(rutaActual()).toBe('/territory?project=p1&hide=layers'))
+    await userEvent.click(screen.getByRole('button', { name: 'Capas (1)' }))
+    const elegidas = within(await screen.findByRole('region', { name: 'Capas' })).getByRole('region', { name: 'Capas en el mapa' })
+    expect(
+      within(elegidas)
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('label')!.textContent)
+    ).toEqual(['Centros poblados y localidades'])
+    await waitFor(() => expect(rutaActual()).toBe('/territory?project=p1'))
+  })
+
+  it('la lista de lugares es un panel plegable; elegir un lugar en el mapa lo vuelve a abrir con su ficha', async () => {
+    fetch = abrirPortal('/territory?hide=places', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
+    const boton = await screen.findByRole('button', { name: /^Lugares/ })
+    expect(boton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('navigation', { name: 'Lugares visibles' })).not.toBeInTheDocument()
+    await userEvent.click(boton)
+    expect(await screen.findByRole('navigation', { name: 'Lugares visibles' })).toBeInTheDocument()
+    expect(boton).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(boton)
+    await waitFor(() => expect(rutaActual()).toBe('/territory?hide=places'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Localidad Ejemplo' }))
+    expect(await screen.findByRole('complementary', { name: 'Ficha del lugar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Lugares/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(rutaActual()).toBe('/territory?selected=locality%3Al1')
+  })
+
+  it('la cabecera tiene una sola primaria y las demás acciones van en «Más acciones»', async () => {
+    fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
+    const titulo = await screen.findByRole('heading', { name: 'Mapa territorial', level: 1 })
+    const cabecera = titulo.closest('div')!.parentElement!
+    expect(within(cabecera).getByRole('button', { name: 'Nueva comunidad' })).toBeInTheDocument()
+    expect(within(cabecera).queryByRole('button', { name: 'Capturar PNG' })).not.toBeInTheDocument()
+    expect(within(cabecera).queryByRole('link', { name: 'Calidad de datos' })).not.toBeInTheDocument()
+    await userEvent.click(within(cabecera).getByRole('button', { name: 'Más acciones' }))
+    const menu = within(cabecera).getByRole('group', { name: 'Más acciones' })
+    expect(within(menu).getByRole('link', { name: 'Calidad de datos' })).toHaveAttribute('href', '/territory/quality')
+    expect(within(menu).getByRole('button', { name: 'Capturar PNG' })).toBeInTheDocument()
+    expect(within(menu).getByRole('button', { name: 'Exportar' })).toBeInTheDocument()
+    expect(within(menu).queryByRole('button', { name: 'Nueva comunidad' })).not.toBeInTheDocument()
+  })
+})
+
 describe('S12 · capas por WMS', () => {
   it('las capas públicas van por WMS y los lugares con ficha se siguen eligiendo sobre la tesela', async () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())
@@ -112,7 +206,7 @@ describe('S12 · capas por WMS', () => {
       expect.stringContaining('/api/sgspe/territory/wms?service=WMS&version=1.1.1&request=GetMap&layers=t_community__territory&styles=sgspe-lyr-05')
     )
     expect(await screen.findByRole('button', { name: 'Comunidad Ejemplo' })).toHaveAttribute('data-invisible', 'si')
-    await userEvent.click(screen.getByRole('checkbox', { name: /Límites administrativos/ }))
+    await userEvent.click(within(await capas()).getByRole('checkbox', { name: /Límites administrativos/ }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Tesela que falla LYR-01' })).toBeInTheDocument())
     expect(red.a('GET', '/sgspe/territory/layers/LYR-01')).toEqual([])
   })
@@ -121,7 +215,7 @@ describe('S12 · capas por WMS', () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())
     red = espiarRed([capacidades])
     await listaWms()
-    await userEvent.click(screen.getByRole('checkbox', { name: /Límites administrativos/ }))
+    await userEvent.click(within(await capas()).getByRole('checkbox', { name: /Límites administrativos/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Tesela que falla LYR-01' }))
     expect(await screen.findByText(/El servicio de mapas de referencia no responde/)).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Mapa territorial · WMS' })).not.toBeInTheDocument()
@@ -242,16 +336,19 @@ describe('S12 · filtros, leyenda y captura', () => {
     }
   })
 
-  it('la leyenda dice las capas encendidas; Gestión solo ofrece el calor sin capas; «Capturar PNG» está a mano', async () => {
+  // la leyenda ya no es un panel aparte: las capas en el mapa llevan su muestra de la paleta, arriba del panel (DD-11); «Capturar
+  // PNG» pasa a «Más acciones»
+  it('arriba van las capas encendidas con su leyenda; Gestión solo ofrece el calor sin capas; «Capturar PNG» está en el menú', async () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
-    const leyenda = await screen.findByRole('region', { name: 'Leyenda' })
+    const panel = await capas()
+    const enElMapa = within(panel).getByRole('region', { name: 'Capas en el mapa' })
     expect(
-      within(leyenda)
-        .getAllByRole('listitem')
-        .map((li) => li.textContent)
+      within(enElMapa)
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('label')!.textContent)
     ).toEqual(['Centros poblados y localidades', 'Territorio comunal'])
-    expect(screen.getByRole('checkbox', { name: /Concesiones mineras/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Capturar PNG' })).toBeInTheDocument()
+    expect(within(panel).getByRole('checkbox', { name: /Concesiones mineras/ })).toBeInTheDocument()
+    expect(within(await masAcciones()).getByRole('button', { name: 'Capturar PNG' })).toBeInTheDocument()
     await waitFor(() => expect(fetch!.calls.filter((l) => l.path.startsWith('/sgspe/territory/layers/LYR-19')).length).toBe(1))
     expect(within(await within(await capas()).findByRole('group', { name: 'Gestión' })).queryAllByRole('checkbox')).toEqual([])
   })
@@ -267,7 +364,7 @@ describe('S12 · filtros, leyenda y captura', () => {
         responder: () => new Response('{}', { headers: { 'Content-Disposition': 'attachment; filename="community-interno.gpkg"' } })
       }
     ])
-    await userEvent.click(await screen.findByRole('button', { name: 'Exportar' }))
+    await userEvent.click(within(await masAcciones()).getByRole('button', { name: 'Exportar' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Exportar una capa' })
     expect(within(dialogo).getByRole('combobox', { name: 'Capa' })).toHaveValue('LYR-05')
     await userEvent.selectOptions(within(dialogo).getByRole('combobox', { name: 'Formato' }), 'gpkg')
@@ -416,7 +513,7 @@ describe('S12 · mapa de calor', () => {
       { path: '/sgspe/territory/concentration', body: { ...CONCENTRACION, confidentialHidden: true } }
     ])
     red = espiarRed()
-    const control = await screen.findByRole('region', { name: 'Capas' })
+    const control = await capas()
     const selector = within(control).getByLabelText('Mapa de calor')
     expect(within(selector).queryByRole('option', { name: 'Consultas' })).not.toBeInTheDocument()
     await userEvent.selectOptions(selector, 'grievance')

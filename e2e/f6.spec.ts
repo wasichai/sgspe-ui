@@ -173,6 +173,8 @@ test('la ficha contextual de un lugar dice sus cifras y «No disponible» donde 
 test('exportar una capa en EXTERNO pide la lista de verificación y descarga el archivo', async ({ page }) => {
   const { pedidos } = await prepararF6(page)
   await page.goto('/territory?project=p1')
+  // «Exportar» va en «Más acciones» de la cabecera (DD-11)
+  await page.getByRole('button', { name: 'Más acciones' }).click()
   await page.getByRole('button', { name: 'Exportar' }).click()
   const dialogo = page.getByRole('dialog', { name: 'Exportar una capa' })
   // la cuenta exporta localidades y comunidades; LYR-03 no se ofrece sola (H4): las ciudades salen con las localidades
@@ -200,4 +202,37 @@ test('exportar una capa en EXTERNO pide la lista de verificación y descarga el 
   })
   // una exportación geográfica no crea registros de negocio: no manda Idempotency-Key (enmienda 12.3)
   expect(await pedido.headerValue('idempotency-key')).toBeNull()
+})
+
+// el mapa primero (DD-11, P-06): a 1440 px el lienzo ocupa al menos el 75 % del ancho del contenido, con las capas y los lugares
+// superpuestos y plegables; plegar un panel no achica ni mueve el lienzo
+test.describe('a 1440 px', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('el lienzo del mapa territorial ocupa al menos el 75 % del ancho del contenido, con los paneles plegables', async ({ page }) => {
+    await prepararF6(page)
+    await page.goto('/territory?project=p1')
+    const mapa = page.getByRole('region', { name: 'Mapa territorial' })
+    await expect(mapa.locator('canvas')).toBeVisible()
+    const contenido = (await page.locator('[data-ancho="pagina"]').boundingBox())!
+    const lienzo = (await mapa.boundingBox())!
+    expect(lienzo.width / contenido.width).toBeGreaterThanOrEqual(0.75)
+    // los paneles flotan sobre el lienzo, no a su lado
+    const capas = page.getByRole('region', { name: 'Capas', exact: true })
+    const lugares = page.getByRole('navigation', { name: 'Lugares visibles' })
+    await expect(capas).toBeVisible()
+    await expect(lugares).toBeVisible()
+    const panel = (await capas.boundingBox())!
+    expect(panel.x).toBeGreaterThanOrEqual(lienzo.x)
+    expect(panel.x + panel.width).toBeLessThanOrEqual(lienzo.x + lienzo.width)
+    // se pliegan con su botón y el lienzo sigue igual
+    await page.getByRole('button', { name: /^Capas \(/ }).click()
+    await page.getByRole('button', { name: /^Lugares \(/ }).click()
+    await expect(capas).toHaveCount(0)
+    await expect(lugares).toHaveCount(0)
+    await expect(page).toHaveURL(/hide=layers%2Cplaces|hide=layers,places/)
+    expect((await mapa.boundingBox())!.width).toBeCloseTo(lienzo.width, 0)
+    await page.getByRole('button', { name: /^Capas \(/ }).click()
+    await expect(capas).toBeVisible()
+  })
 })

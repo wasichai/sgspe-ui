@@ -83,7 +83,16 @@ export const ES_MAPA = {
   lugares: 'Lugares visibles',
   sinLugares: 'Acerque el mapa a una zona con comunidades o localidades.',
   elegirLugar: 'Elija un lugar en el mapa o en la lista para abrir su ficha.',
-  nuevaComunidad: 'Nueva comunidad'
+  nuevaComunidad: 'Nueva comunidad',
+  // los paneles plegables de S12 sobre el mapa (DD-11)
+  paneles: {
+    capas: 'Capas ({{n}})',
+    enElMapa: 'Capas en el mapa',
+    ningunaEncendida: 'Ninguna capa encendida.',
+    todas: 'Todas las capas ({{n}})',
+    otras: 'Las demás capas',
+    lugares: 'Lugares ({{n}})'
+  }
 }
 
 export const EN_MAPA: typeof ES_MAPA = {
@@ -169,5 +178,13 @@ export const EN_MAPA: typeof ES_MAPA = {
   lugares: 'Visible places',
   sinLugares: 'Zoom the map to an area with communities or localities.',
   elegirLugar: 'Pick a place on the map or in the list to open its card.',
-  nuevaComunidad: 'New community'
+  nuevaComunidad: 'New community',
+  paneles: {
+    capas: 'Layers ({{n}})',
+    enElMapa: 'Layers on the map',
+    ningunaEncendida: 'No layer turned on.',
+    todas: 'All layers ({{n}})',
+    otras: 'Other layers',
+    lugares: 'Places ({{n}})'
+  }
 }

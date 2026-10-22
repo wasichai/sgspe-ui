@@ -1,12 +1,13 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import { PanelRightOpen } from 'lucide-react'
+import { Layers, List, PanelRightOpen } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useProyecto, useProyectos } from '../contexto/proyectos'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
@@ -18,8 +19,6 @@ import { destinoDe, encuadreDeGeometrias, idDeElemento, useCapas, useCapasDispon
 import { avisoDelMapa } from '../mapa/avisos'
 import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, dibujoDe } from '../mapa/capas'
 import { capaDeCalor, SelectorDeCalor, TablaDeCalor } from '../mapa/Calor'
-import { ControlDeCapas } from '../mapa/ControlDeCapas'
-import { Leyenda } from '../mapa/Leyenda'
 import { Mapa } from '../mapa/Mapa'
 import { useWms } from '../mapa/wms'
 import { AgregadosDelMapa } from './AgregadosDelMapa'
@@ -29,6 +28,7 @@ import { EstadisticasTerritoriales } from './EstadisticasTerritoriales'
 import { capasExportables } from './exportacion'
 import { FichaContextual } from './FichaContextual'
 import { DESTINOS, importaA } from './importacion'
+import { PanelDeCapas } from './PanelDeCapas'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 
 // S12 · mapa territorial (screens.md §4, spec F6 §3.7): las capas públicas por WMS del proxy (nombradas por su GetCapabilities) y
@@ -38,13 +38,20 @@ import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 // responden 404 no se ofrecen) con el periodo, y sus agregados por localidad en texto. filtros de proyecto y periodo en la URL,
 // leyenda de la paleta compartida y «Capturar PNG». elegir un lugar (?selected=) abre su ficha contextual con KPI-TER-01 y sus
 // registros bajo el mapa. "Nueva comunidad" es el flujo 2. en modo tablero (/territory/dashboard, dashboards.md §5.9) suma
-// KPI-TER-02 a 04 del proyecto elegido
+// KPI-TER-02 a 04 del proyecto elegido. el mapa primero (DD-11, U-10): el lienzo a todo el ancho, con las capas y su leyenda en
+// un panel plegable a la izquierda y los lugares (con la ficha contextual) en otro a la derecha, y en la cabecera una sola
+// primaria («Nueva comunidad») con lo demás en «Más acciones»
 const FICHA: Record<string, string> = { community: 'communities', locality: 'localities' }
 // las capas cuyos lugares tienen ficha (decisión 7 del plan 6.3)
 const SELECCIONABLES = new Set(['LYR-02', 'LYR-03', 'LYR-05'])
 const DE_GESTION = CAPAS_DE_GESTION.map((c) => c.id)
 // la capa que dice si el backend sirve las de gestión: de registros (los compromisos), no un agregado, que sale caro sondear
 const SONDA_DE_GESTION = 'LYR-19'
+// los paneles plegados, en la URL (?hide=layers,places): atrás o un enlace los dejan como estaban. abiertos, no se escriben
+type Panel = 'layers' | 'places'
+const PANELES: readonly Panel[] = ['layers', 'places']
+// un elemento del menú «Más acciones», como los de CrearRelacionado
+const DEL_MENU = 'rounded-sg-sm px-2.5 py-1.5 text-left text-sm hover:bg-sg-surface-hover'
 
 export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } = {}) {
   const { t } = useTranslation(NS)
@@ -71,10 +78,21 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   const [objetoElegido, idElegido = null] = busqueda.get('selected')?.split(':') ?? []
   const elegido: { objeto: 'locality' | 'community'; id: string } | null =
     (objetoElegido === 'locality' || objetoElegido === 'community') && idElegido ? { objeto: objetoElegido, id: idElegido } : null
+  const plegados = new Set((busqueda.get('hide') ?? '').split(',').filter((p): p is Panel => (PANELES as readonly string[]).includes(p)))
+  const conPlegados = (siguiente: URLSearchParams, panel: Panel, plegado: boolean) => {
+    const nuevos = PANELES.filter((p) => (p === panel ? plegado : plegados.has(p)))
+    if (nuevos.length > 0) siguiente.set('hide', nuevos.join(','))
+    else siguiente.delete('hide')
+    return siguiente
+  }
+  const alternar = (panel: Panel) => fijar(conPlegados(new URLSearchParams(busqueda), panel, !plegados.has(panel)), { replace: true })
+  // elegir un lugar abre el panel de lugares, donde está su ficha contextual
   const elegir = (objeto: string, id: string | null) => {
     const siguiente = new URLSearchParams(busqueda)
-    if (id && FICHA[objeto]) siguiente.set('selected', `${objeto}:${id}`)
-    else siguiente.delete('selected')
+    if (id && FICHA[objeto]) {
+      siguiente.set('selected', `${objeto}:${id}`)
+      conPlegados(siguiente, 'places', false)
+    } else siguiente.delete('selected')
     fijar(siguiente, { replace: true })
   }
   const [encendidas, setEncendidas] = useState(() => new Set<string>(['LYR-02', 'LYR-05']))
@@ -142,12 +160,25 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
     enlace.click()
   }
 
+  const capasAbiertas = !plegados.has('layers')
+  const lugaresAbiertos = !plegados.has('places')
+  const idDeCapas = 'panel-de-capas'
+  const idDeLugares = 'panel-de-lugares'
+  // los paneles flotan sobre el mapa desde md; en el teléfono van debajo, a todo el ancho (02 §7)
+  const PANEL = 'rounded-sg-lg border border-sg-border bg-sg-surface-raised p-3 text-sm shadow-sg-md md:absolute md:z-10 md:overflow-y-auto'
+  const BOTON_DE_PANEL =
+    'inline-flex h-8 items-center gap-1.5 rounded-sg-md border border-sg-border bg-sg-surface px-2.5 text-sm text-sg-text hover:bg-sg-surface-hover aria-expanded:border-sg-primary aria-expanded:text-sg-primary-text'
+  const exporta = capasExportables(can).length > 0
+  const importa = DESTINOS.some((d) => importaA(can, d))
+
   return (
-    <section className="mx-auto max-w-[1440px] space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{modo === 'tablero' ? t('tableroTerritorial.titulo') : t('mapa.mapaTerritorial')}</h1>
-        <div className="flex flex-wrap gap-2">
-          {modo === 'tablero' ? (
+    <ContenedorDePagina className="space-y-3">
+      {/* una sola primaria («Nueva comunidad»); el cambio de vista entre el mapa y el tablero queda a mano, y lo demás va en
+          «Más acciones» (U-10, DD-11) */}
+      <EncabezadoDePagina
+        titulo={modo === 'tablero' ? t('tableroTerritorial.titulo') : t('mapa.mapaTerritorial')}
+        vistas={
+          modo === 'tablero' ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/territory${sufijo}`}>{t('tableroTerritorial.irAlMapa')}</Link>
             </Button>
@@ -155,30 +186,36 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
             <Button asChild size="sm" variant="secondary">
               <Link to={`/territory/dashboard${sufijo}`}>{t('tableroTerritorial.irAlTablero')}</Link>
             </Button>
-          ) : null}
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/territory/quality">{t('calidad.titulo')}</Link>
-          </Button>
-          <Button variant="secondary" size="sm" onClick={descargar}>
-            {t('mapa.capturar')}
-          </Button>
-          {capasExportables(can).length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={() => setExportando(true)}>
-              {t('exportacionGeografica.abrir')}
-            </Button>
-          ) : null}
-          {can('community', 'CREATE') ? (
+          ) : undefined
+        }
+        mas={
+          <>
+            <Link to="/territory/quality" className={DEL_MENU}>
+              {t('calidad.titulo')}
+            </Link>
+            <button type="button" className={DEL_MENU} onClick={descargar}>
+              {t('mapa.capturar')}
+            </button>
+            {exporta ? (
+              <button type="button" className={DEL_MENU} onClick={() => setExportando(true)}>
+                {t('exportacionGeografica.abrir')}
+              </button>
+            ) : null}
+            {importa ? (
+              <Link to={`/territory/imports/new${sufijo}`} className={DEL_MENU}>
+                {t('mapa.importar')}
+              </Link>
+            ) : null}
+          </>
+        }
+        primaria={
+          can('community', 'CREATE') ? (
             <Button size="sm" onClick={() => setCreando(true)}>
               {t('mapa.nuevaComunidad')}
             </Button>
-          ) : null}
-          {DESTINOS.some((d) => importaA(can, d)) ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/territory/imports/new${sufijo}`}>{t('mapa.importar')}</Link>
-            </Button>
-          ) : null}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
       <FiltrosDelMapa />
       {servicio.caido ? (
         <Alert tone="warning">
@@ -190,9 +227,56 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
           </span>
         </Alert>
       ) : null}
-      <div className="grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)_300px]">
-        <div className="space-y-3">
-          <ControlDeCapas
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          className={BOTON_DE_PANEL}
+          aria-expanded={capasAbiertas}
+          aria-controls={capasAbiertas ? idDeCapas : undefined}
+          onClick={() => alternar('layers')}
+        >
+          <Layers aria-hidden className="size-4" />
+          {t('mapa.paneles.capas', { n: encendidas.size })}
+        </button>
+        <button
+          type="button"
+          className={BOTON_DE_PANEL}
+          aria-expanded={lugaresAbiertos}
+          aria-controls={lugaresAbiertos ? idDeLugares : undefined}
+          onClick={() => alternar('places')}
+        >
+          <List aria-hidden className="size-4" />
+          {t('mapa.paneles.lugares', { n: lugares.size })}
+        </button>
+      </div>
+      {/* el lienzo a todo el ancho útil; las capas (con su leyenda) y los lugares flotan encima, plegables (DD-11, P-06) */}
+      <div className="relative space-y-3 md:space-y-0">
+        <Mapa
+          className="relative h-[70vh] max-h-[760px] min-h-[420px] w-full overflow-hidden rounded-sg-lg border border-sg-border bg-sg-surface-sunken"
+          etiqueta={t('mapa.mapaTerritorial')}
+          capas={estados
+            .filter((e) => e.datos)
+            .map((e) => ({
+              id: e.id,
+              datos: e.datos!,
+              color: capa(e.id)!.color,
+              ...dibujoDe(e.id),
+              seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) || capa(e.id)!.grupo === 'gestion',
+              invisible: servicio.porWms.has(e.id)
+            }))}
+          calor={calor}
+          wms={servicio.wms}
+          alFallarWms={servicio.alFallar}
+          seleccion={elegido?.id ?? null}
+          alSeleccionar={(id, capaId, objeto) => abrir(objeto ?? capa(capaId)?.objeto ?? '', id)}
+          alMoverVista={setEncuadre}
+          vistaInicial={vistaInicial}
+          alCapturar={(f) => (capturar.current = f)}
+        />
+        {capasAbiertas ? (
+          <PanelDeCapas
+            id={idDeCapas}
+            className={`${PANEL} md:top-3 md:left-3 md:max-h-[calc(100%-5.5rem)] md:w-72`}
             ids={ids}
             encendidas={encendidas}
             estados={estados}
@@ -204,100 +288,79 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
               setEncendidas(siguiente)
             }}
           />
-          <Leyenda ids={ids.filter((id) => encendidas.has(id))} />
-        </div>
-        <div className="space-y-1">
-          <Mapa
-            etiqueta={t('mapa.mapaTerritorial')}
-            capas={estados
-              .filter((e) => e.datos)
-              .map((e) => ({
-                id: e.id,
-                datos: e.datos!,
-                color: capa(e.id)!.color,
-                ...dibujoDe(e.id),
-                seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) || capa(e.id)!.grupo === 'gestion',
-                invisible: servicio.porWms.has(e.id)
-              }))}
-            calor={calor}
-            wms={servicio.wms}
-            alFallarWms={servicio.alFallar}
-            seleccion={elegido?.id ?? null}
-            alSeleccionar={(id, capaId, objeto) => abrir(objeto ?? capa(capaId)?.objeto ?? '', id)}
-            alMoverVista={setEncuadre}
-            vistaInicial={vistaInicial}
-            alCapturar={(f) => (capturar.current = f)}
-          />
-          {aviso ? (
-            <p role="status" className="text-sm text-sg-text-muted">
-              {t(`mapa.avisos.${aviso}`)}
-            </p>
-          ) : null}
-          {objetoDeCalor ? <TablaDeCalor objeto={objetoDeCalor} consulta={concentracion} /> : null}
-          {/* la clave suma el periodo: con otro periodo la lista vuelve a su primera página */}
-          {elegido ? (
-            <RegistrosDeLaZona
-              key={`${elegido.objeto}:${elegido.id}:${periodo.periodStart ?? ''}:${periodo.periodEnd ?? ''}`}
-              zona={elegido.objeto}
-              id={elegido.id}
-              periodo={periodo}
-            />
-          ) : null}
-        </div>
-        <div className="space-y-3">
-          {elegido ? (
-            <FichaContextual
-              key={`${elegido.objeto}:${elegido.id}`}
-              objeto={elegido.objeto}
-              id={elegido.id}
-              proyecto={proyecto}
-              periodo={periodo}
-              alCerrar={() => elegir('', null)}
-            />
-          ) : null}
-          <nav aria-label={t('mapa.lugares')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
-            <h2 className="font-medium">{t('mapa.lugares')}</h2>
-            <p className="text-sg-caption text-sg-text-muted">{t('mapa.elegirLugar')}</p>
-            {/* sin lugares, la lista dice por qué: cargando, una capa que falló (la lista estaría incompleta) o, solo si todo
-                respondió, que no hay lugares en la vista */}
-            {lugares.size === 0 && cargando ? (
-              <p role="status" className="text-sg-caption text-sg-text-muted">
-                {t('comun.cargando')}
-              </p>
+        ) : null}
+        {lugaresAbiertos ? (
+          // a la izquierda del zoom de MapLibre, que va arriba a la derecha
+          <div id={idDeLugares} className={`${PANEL} space-y-3 md:top-3 md:right-12 md:max-h-[calc(100%-3rem)] md:w-80`}>
+            {elegido ? (
+              <FichaContextual
+                key={`${elegido.objeto}:${elegido.id}`}
+                objeto={elegido.objeto}
+                id={elegido.id}
+                proyecto={proyecto}
+                periodo={periodo}
+                alCerrar={() => elegir('', null)}
+              />
             ) : null}
-            {conError ? (
-              <p role="alert" className="text-sg-caption text-sg-danger">
-                {t('mapa.errorDeCapa')}
-              </p>
-            ) : null}
-            {bloqueadas ? <p className="text-sg-caption text-sg-text-muted">{t('territorio.capasBloqueadas')}</p> : null}
-            {lugares.size === 0 && !cargando && !conError && !bloqueadas && (aviso === null || aviso === 'vistaVacia') ? (
-              <p className="text-sg-caption text-sg-text-muted">{t('mapa.sinLugares')}</p>
-            ) : null}
-            <ul className="max-h-[420px] space-y-1 overflow-y-auto">
-              {[...lugares.values()].map((l) => (
-                <li key={`${l.objeto}-${l.id}`}>
-                  <Link to={rutaDe(l.objeto, l.id)!} state={paso(t('mapa.mapaTerritorial'))} className="text-sg-primary-text underline">
-                    {l.nombre || t('territorio.sinNombre')}
-                  </Link>
-                  {/* la alternativa de teclado del clic en el mapa: abre la ficha contextual */}
-                  {/* un ícono y no «Ver resumen» repetido en cada fila; el nombre accesible y el title dicen de qué lugar */}
-                  <button
-                    type="button"
-                    className="ml-2 inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
-                    aria-label={t('fichaTerritorial.verResumen', { nombre: l.nombre || t('territorio.sinNombre') })}
-                    title={t('fichaTerritorial.verResumenCorto')}
-                    onClick={() => elegir(l.objeto, l.id)}
-                  >
-                    <PanelRightOpen aria-hidden className="size-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <AgregadosDelMapa estados={estadosDeGestion} />
-        </div>
+            <nav aria-label={t('mapa.lugares')} className="space-y-2">
+              <h2 className="font-medium">{t('mapa.lugares')}</h2>
+              <p className="text-sg-caption text-sg-text-muted">{t('mapa.elegirLugar')}</p>
+              {/* sin lugares, la lista dice por qué: cargando, una capa que falló (la lista estaría incompleta) o, solo si todo
+                  respondió, que no hay lugares en la vista */}
+              {lugares.size === 0 && cargando ? (
+                <p role="status" className="text-sg-caption text-sg-text-muted">
+                  {t('comun.cargando')}
+                </p>
+              ) : null}
+              {conError ? (
+                <p role="alert" className="text-sg-caption text-sg-danger">
+                  {t('mapa.errorDeCapa')}
+                </p>
+              ) : null}
+              {bloqueadas ? <p className="text-sg-caption text-sg-text-muted">{t('territorio.capasBloqueadas')}</p> : null}
+              {lugares.size === 0 && !cargando && !conError && !bloqueadas && (aviso === null || aviso === 'vistaVacia') ? (
+                <p className="text-sg-caption text-sg-text-muted">{t('mapa.sinLugares')}</p>
+              ) : null}
+              <ul className="space-y-1">
+                {[...lugares.values()].map((l) => (
+                  <li key={`${l.objeto}-${l.id}`}>
+                    <Link to={rutaDe(l.objeto, l.id)!} state={paso(t('mapa.mapaTerritorial'))} className="text-sg-primary-text underline">
+                      {l.nombre || t('territorio.sinNombre')}
+                    </Link>
+                    {/* la alternativa de teclado del clic en el mapa: abre la ficha contextual */}
+                    {/* un ícono y no «Ver resumen» repetido en cada fila; el nombre accesible y el title dicen de qué lugar */}
+                    <button
+                      type="button"
+                      className="ml-2 inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
+                      aria-label={t('fichaTerritorial.verResumen', { nombre: l.nombre || t('territorio.sinNombre') })}
+                      title={t('fichaTerritorial.verResumenCorto')}
+                      onClick={() => elegir(l.objeto, l.id)}
+                    >
+                      <PanelRightOpen aria-hidden className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <AgregadosDelMapa estados={estadosDeGestion} />
+          </div>
+        ) : null}
       </div>
+      {aviso ? (
+        <p role="status" className="text-sm text-sg-text-muted">
+          {t(`mapa.avisos.${aviso}`)}
+        </p>
+      ) : null}
+      {objetoDeCalor ? <TablaDeCalor objeto={objetoDeCalor} consulta={concentracion} /> : null}
+      {/* la clave suma el periodo: con otro periodo la lista vuelve a su primera página */}
+      {elegido ? (
+        <RegistrosDeLaZona
+          key={`${elegido.objeto}:${elegido.id}:${periodo.periodStart ?? ''}:${periodo.periodEnd ?? ''}`}
+          zona={elegido.objeto}
+          id={elegido.id}
+          periodo={periodo}
+        />
+      ) : null}
       {modo === 'tablero' ? (
         proyecto ? (
           <EstadisticasTerritoriales proyecto={proyecto} periodo={periodo} />
@@ -313,7 +376,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
           alCancelar={() => setCreando(false)}
         />
       </Drawer>
-    </section>
+    </ContenedorDePagina>
   )
 }
 
