@@ -38,6 +38,7 @@ import {
 import { fechaPe, fechaYHoraPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // S41 · centro de alerta temprana (screens.md §9, flujo 14): las alertas del proyecto por vista (por triar, confirmadas, todas,
 // cerradas, cada una una consulta del servidor con su página y su conteo, D10 de la revisión de UX), creadas por JOB-04 o a mano, y la ficha de una alerta: qué la disparó, la regla que la creó (nunca su clave de origen,
@@ -250,7 +251,7 @@ function Regla({ alerta }: { alerta: Registro }) {
   const regla = useRegistro('early_warning_rule', atributo<string>(alerta, 'early_warning_rule') || undefined)
   const porRegla = Boolean(atributo(alerta, 'generator_key')) || Boolean(atributo(alerta, 'early_warning_rule'))
   return (
-    <section aria-label={t('alertas.ficha.regla')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion etiqueta={t('alertas.ficha.regla')} className="text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('alertas.ficha.regla')}</h2>
       <p>{porRegla ? t('alertas.ficha.creadaPorRegla') : t('alertas.ficha.aMano')}</p>
       {atributo(alerta, 'early_warning_rule') ? (
@@ -271,7 +272,7 @@ function Regla({ alerta }: { alerta: Registro }) {
           </dl>
         ) : null
       ) : null}
-    </section>
+    </Seccion>
   )
 }
 
@@ -293,7 +294,7 @@ function Riesgo({ alerta, escribe }: { alerta: Registro; escribe: boolean }) {
   const releer = useReleer()
   const riesgo = atributo<string>(alerta, 'social_risk')
   return (
-    <section aria-label={t('alertas.ficha.riesgo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion etiqueta={t('alertas.ficha.riesgo')} className="text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('alertas.ficha.riesgo')}</h2>
       {riesgo ? <RegistroVinculado objeto="social_risk" id={riesgo} /> : <p className="text-sg-text-muted">{t('alertas.ficha.sinRiesgo')}</p>}
       {escribe && can('early_warning', 'UPDATE') ? (
@@ -313,7 +314,7 @@ function Riesgo({ alerta, escribe }: { alerta: Registro; escribe: boolean }) {
       {actualizar.isError ? (
         <AvisoDeConflicto error={actualizar.error} releer={() => releer(['record', 'early_warning', alerta.id])} alRecargar={() => actualizar.reset()} />
       ) : null}
-    </section>
+    </Seccion>
   )
 }
 

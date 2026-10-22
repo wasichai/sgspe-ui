@@ -33,6 +33,7 @@ import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S38 y S39 · registro y matriz de riesgos (screens.md §9): qué riesgos hay, de qué nivel y cuáles piden revisión. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076). la API genérica no filtra por estado ni por situación, así que,
@@ -228,11 +229,7 @@ export function RiesgosPage() {
         <FalloDeLectura error={riesgos.error} alReintentar={() => void riesgos.refetch()} />
       ) : (
         <div className="grid gap-4 min-[105rem]:grid-cols-[360px_minmax(0,1fr)]">
-          <section
-            aria-label={t('riesgos.mapa.titulo')}
-            className="w-full max-w-md space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 min-[105rem]:max-w-none"
-          >
-            <h2 className="text-sg-h3 font-semibold">{t('riesgos.mapa.titulo')}</h2>
+          <Seccion titulo={t('riesgos.mapa.titulo')} className="w-full max-w-md min-[105rem]:max-w-none">
             <MapaDeCalor riesgos={enLaVista} umbrales={umbrales} elegida={celda} alElegir={(c) => lista.cambiar({ cell: c })} />
             <p className="text-sm text-sg-text-secondary">{t('riesgos.mapa.sinEvaluar', { n: numeroPe(sinEvaluar) })}</p>
             {celda ? (
@@ -240,7 +237,7 @@ export function RiesgosPage() {
                 {t('riesgos.mapa.quitar')}
               </button>
             ) : null}
-          </section>
+          </Seccion>
           {filtrados.length === 0 ? (
             <Vacio titulo={t('riesgos.vacio')} />
           ) : telefono ? (

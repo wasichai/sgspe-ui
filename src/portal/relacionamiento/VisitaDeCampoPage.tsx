@@ -45,6 +45,7 @@ import { CodigoDeProyecto } from './InteraccionesPage'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S26 · visita de campo (screens.md §6, WF-L): el camino Planificada → En curso → Concluida o Parcial, el mapa con la ruta,
 // las interacciones y las observaciones, y "Agregar observación aquí" con la ubicación del teléfono o con coordenadas
@@ -339,7 +340,7 @@ function Visita({ visita }: { visita: Registro }) {
             </CuerpoDeLista>
           </section>
         </div>
-        <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <Seccion elemento="aside" className="space-y-3 text-sm">
           <h2 className="font-medium">{t('relacionamiento.visita.objetivo')}</h2>
           <p>{texto(visita, 'objective') || '—'}</p>
           <h2 className="font-medium">{t('relacionamiento.visita.itinerario')}</h2>
@@ -353,7 +354,7 @@ function Visita({ visita }: { visita: Registro }) {
               {t('relacionamiento.visita.editarResultado')}
             </Button>
           ) : null}
-        </aside>
+        </Seccion>
       </div>
       <Drawer titulo={t('relacionamiento.visita.agregarObservacion')} abierto={observando} alCerrar={() => setObservando(false)}>
         <NuevaObservacion visita={visita.id} alGuardar={() => setObservando(false)} />

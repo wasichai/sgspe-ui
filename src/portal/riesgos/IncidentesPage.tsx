@@ -21,6 +21,7 @@ import { texto, usePuedeEditar, useRegistro, useRegistros, useTodos, type Regist
 import { fechaPe, fechaYHoraPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { opcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // los incidentes (screens.md §9, ficha de incidente; WF-M): la lista del proyecto, paginada en el servidor (D10 de la revisión de
 // UX), con «Registrar incidente» y la ficha con qué pasó,
@@ -256,12 +257,12 @@ function QueGenero({ incidente }: { incidente: Registro }) {
   const quejas = useTodos('grievance', { incident: incidente.id })
   const senales = useTodos('early_warning_signal', { incident: incidente.id })
   return (
-    <aside aria-label={t('incidentes.ficha.queGenero')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion elemento="aside" etiqueta={t('incidentes.ficha.queGenero')} className="space-y-3 text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('incidentes.ficha.queGenero')}</h2>
       <Generados titulo={t('incidentes.ficha.riesgos')} objeto="social_risk" consulta={riesgos} />
       <Generados titulo={t('incidentes.ficha.quejas')} objeto="grievance" consulta={quejas} />
       <Generados titulo={t('incidentes.ficha.senales')} objeto="early_warning_signal" consulta={senales} />
-    </aside>
+    </Seccion>
   )
 }
 
