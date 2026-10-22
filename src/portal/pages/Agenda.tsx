@@ -74,19 +74,24 @@ export function Agenda() {
     lugar: '',
     ruta: rutaDeFicha('field_visit', r)
   })
-  const deInteraccion = (r: Registro): Cita => {
-    const enLima = ahoraEnLima(new Date(texto(r, 'scheduled_at')))
-    return {
-      clave: `engagement-${r.id}`,
-      cuando: enLima,
-      hora: enLima.slice(11, 16),
-      tipo: 'interaccion',
-      titulo: texto(r, 'title') || r.id,
-      lugar: texto(r, 'place'),
-      ruta: rutaDeFicha('engagement', r)
-    }
+  // sin una hora programada válida no se sabe cuándo es: queda fuera (Intl lanza RangeError con una fecha inválida)
+  const deInteraccion = (r: Registro): Cita[] => {
+    const programada = new Date(texto(r, 'scheduled_at'))
+    if (Number.isNaN(programada.getTime())) return []
+    const enLima = ahoraEnLima(programada)
+    return [
+      {
+        clave: `engagement-${r.id}`,
+        cuando: enLima,
+        hora: enLima.slice(11, 16),
+        tipo: 'interaccion',
+        titulo: texto(r, 'title') || r.id,
+        lugar: texto(r, 'place'),
+        ruta: rutaDeFicha('engagement', r)
+      }
+    ]
   }
-  const citas = [...(leeVisitas ? (visitas.data ?? []).map(deVisita) : []), ...(leeInteracciones ? (interacciones.data ?? []).map(deInteraccion) : [])]
+  const citas = [...(leeVisitas ? (visitas.data ?? []).map(deVisita) : []), ...(leeInteracciones ? (interacciones.data ?? []).flatMap(deInteraccion) : [])]
     .filter((c) => /^\d{4}-\d{2}-\d{2}/.test(c.cuando))
     .sort((a, b) => a.cuando.localeCompare(b.cuando))
   if (citas.length === 0) return null

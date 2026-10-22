@@ -17,13 +17,22 @@ import { rutaDeDecision, useAprobacionesPendientes } from '../tareas/Aprobacione
 const CONFIRMAR_ALERTA = 'CONFIRM_ALERT'
 const POR_TRIAR = ['detected', 'in_triage']
 
+// una fecha que falta o no es válida no tumba el inicio (Intl lanza RangeError con una fecha inválida): se omite
+const fechaSiValida = (valor: string | null | undefined): string | null => {
+  const fecha = new Date(valor ?? '')
+  return Number.isNaN(fecha.getTime()) ? null : fechaPe(fecha)
+}
+
 export function EsperanSuDecision() {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const { avisos, pendientes, truncado } = useAprobacionesPendientes()
   const triaje = can('early_warning', 'READ') && can('early_warning', CONFIRMAR_ALERTA)
   const alertas = useTodos('early_warning', { state: estados(POR_TRIAR), sort: 'detected_at', dir: 'desc' }, triaje)
-  const desde = (a: Aviso) => t('miDia.decision.desde', { fecha: fechaPe(new Date(a.publishAt)) })
+  const desde = (a: Aviso) => {
+    const fecha = fechaSiValida(a.publishAt)
+    return fecha ? t('miDia.decision.desde', { fecha }) : undefined
+  }
   const aprobaciones: EntradaPriorizada[] = pendientes.map((a) => ({
     clave: a.id,
     titulo: a.title,
@@ -34,13 +43,13 @@ export function EsperanSuDecision() {
   }))
   const porTriar: EntradaPriorizada[] = (alertas.data ?? []).map((r) => {
     const severidad = texto(r, 'severity')
-    const detectada = texto(r, 'detected_at')
+    const detectada = fechaSiValida(texto(r, 'detected_at'))
     return {
       clave: r.id,
       titulo: texto(r, 'title') || r.id,
       a: rutaDeFicha('early_warning', r) ?? '/notifications',
       motivo: severidad ? t('miDia.decision.severidad', { valor: rotuloDeOpcion(severidad) }) : t('miDia.decision.sinSeveridad'),
-      cuando: detectada ? t('miDia.decision.detectada', { fecha: fechaPe(new Date(detectada)) }) : undefined,
+      cuando: detectada ? t('miDia.decision.detectada', { fecha: detectada }) : undefined,
       tono: SEVERIDADES_GRAVES.includes(severidad) ? 'peligro' : 'aviso'
     }
   })

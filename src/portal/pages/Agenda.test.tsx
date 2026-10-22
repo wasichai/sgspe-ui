@@ -88,3 +88,22 @@ describe('Agenda de la semana', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+// una interacción sin hora programada no tumba la agenda: queda fuera, porque no se sabe cuándo es
+describe('Agenda de la semana, con fechas que faltan', () => {
+  it('deja fuera la interacción sin scheduled_at y dibuja lo demás', async () => {
+    fetch = mockFetch([
+      { path: /^\/objects\/project_assignment\/records/, body: pagina([asignacion('a1', 'p1')]) },
+      {
+        path: /^\/objects\/field_visit\/records/,
+        body: pagina([registro('v1', { title: 'Visita al canal', project: 'p1', planned_start_date: '2026-10-23' }, { state: 'planned' })])
+      },
+      { path: /^\/objects\/engagement\/records/, body: pagina([registro('e1', { title: 'Sin hora', project: 'p1' }, { state: 'scheduled' })]) }
+    ])
+    montar(<Agenda />, { usuario: RELACIONISTA, permisos: permisos({ field_visit: ['READ'], engagement: ['READ'] }) })
+    const region = await screen.findByRole('region', { name: 'Agenda de la semana' })
+    await waitFor(() => expect(fetch?.calls.some((c) => c.path.startsWith('/objects/engagement/records'))).toBe(true))
+    await waitFor(() => expect(within(region).getAllByRole('listitem')).toHaveLength(1))
+    expect(within(region).queryByText('Sin hora')).not.toBeInTheDocument()
+  })
+})

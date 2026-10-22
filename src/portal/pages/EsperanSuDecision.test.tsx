@@ -88,3 +88,24 @@ describe('Esperan su decisión', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+// un aviso o una alerta con una fecha que falta o no es válida no tumba el inicio: se dibuja sin la fecha
+describe('Esperan su decisión, con fechas que faltan', () => {
+  it('se dibuja sin «desde» ni «detectada» cuando la fecha falta o no es válida', async () => {
+    fetch = mockFetch([
+      {
+        path: /^\/auth\/me\/notifications\?/,
+        body: bandeja([aviso('n1', 'sgspe.approvals', 'social_contribution', 'ap1', 'Aprobar el aporte', { publishAt: null })])
+      },
+      {
+        path: /^\/objects\/early_warning\/records\?/,
+        body: pagina([registro('w1', { title: 'Alerta sin fecha', project: 'p1', detected_at: 'no es fecha' }, { state: 'detected' })])
+      }
+    ])
+    montar(<EsperanSuDecision />, { usuario: RELACIONISTA, permisos: permisos({ early_warning: ['READ', 'CONFIRM_ALERT'] }) })
+    await screen.findByRole('region', { name: 'Esperan su decisión' })
+    await waitFor(() => expect(grupo(/^Alertas por triar/)).toBeInTheDocument())
+    expect(within(grupo(/^Aprobaciones/)).getByRole('link', { name: 'Aprobar el aporte' })).toBeInTheDocument()
+    expect(within(grupo(/^Alertas por triar/)).getByRole('link', { name: 'Alerta sin fecha' })).toBeInTheDocument()
+  })
+})
