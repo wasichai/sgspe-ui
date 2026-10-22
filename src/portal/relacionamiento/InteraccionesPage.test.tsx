@@ -1,8 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro } from '../../test/montar'
-import { abrirPortal } from '../../test/pantalla'
+import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMINISTRACION, RELACIONISTA } from '../../test/portal'
 import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -127,7 +128,7 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
   it('un ?view= desconocido cae en la vista de la ruta: la lista en /engagements y el mes en /engagements/calendar', async () => {
     fetch = abrirPortal('/projects/p1/engagements?view=nada', RELACIONISTA, EQUIPO, [...base(), { path: '/objects/engagement/records', body: pagina([E1]) }])
     expect(await screen.findByRole('table', { name: 'Relacionamiento' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Lista' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: 'Lista' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.queryByRole('table', { name: 'Calendario de interacciones' })).not.toBeInTheDocument()
   })
 
@@ -142,16 +143,52 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     expect(within(calendario).getByRole('cell', { name: '2000-01-02' })).toBeInTheDocument()
   })
 
-  it('el selector de vista son botones con aria-pressed y cambia de vista', async () => {
+  // hallazgo U-18 (DD-03): Mes, Semana y Lista son el selector de vista de la barra de filtros, el mismo de toda lista, en lugar
+  // de un conmutador propio; ?view= no cambia
+  it('Mes, Semana y Lista van en el selector de vista de la barra y cambian ?view=', async () => {
     fetch = abrirPortal('/projects/p1/engagements/calendar?month=2026-10', RELACIONISTA, EQUIPO, [
       ...base(),
       { path: '/objects/engagement/records', body: pagina([E1]) }
     ])
     await screen.findByRole('table', { name: 'Calendario de interacciones' })
-    expect(screen.getByRole('button', { name: 'Mes' })).toHaveAttribute('aria-pressed', 'true')
-    screen.getByRole('button', { name: 'Lista' }).click()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    const selector = within(screen.getByRole('group', { name: 'Filtros' })).getByRole('radiogroup', { name: 'Vista' })
+    expect(within(selector).getByRole('radio', { name: 'Mes' })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(within(selector).getByRole('radio', { name: 'Lista' }))
     expect(await screen.findByRole('table', { name: 'Relacionamiento' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Lista' })).toHaveAttribute('aria-pressed', 'true')
+    expect(rutaActual()).toBe('/projects/p1/engagements/calendar?month=2026-10&view=lista')
+    expect(screen.getByRole('radio', { name: 'Lista' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  // hallazgo U-06 (DD-05): la tabla cabe a 1440 px por la prioridad de sus columnas; el título va en una línea
+  it('la lista va por prioridad de columnas: el tipo desde xl, el lugar y los asistentes desde 1536 px, y lo igual en todas, a la nota', async () => {
+    const otra = registro(
+      'e5',
+      { project: 'p1', title: 'Asamblea extraordinaria', engagement_type: 'ASAMBLEA', place: 'Local comunal', held_at: '2026-10-09T15:00:00Z' },
+      { state: 'held' }
+    )
+    const conLugar = { ...E1, attributes: { ...E1.attributes, place: 'Local comunal' } }
+    fetch = abrirPortal('/projects/p1/engagements?view=lista', RELACIONISTA, EQUIPO, [
+      ...base(),
+      { path: '/objects/engagement/records', body: pagina([conLugar, otra]) }
+    ])
+    const tabla = within(await screen.findByRole('table', { name: 'Relacionamiento' }))
+    for (const c of ['Interacción', 'Estado', 'Fecha']) expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
+    expect(tabla.getByRole('columnheader', { name: 'Asistentes' })).toHaveClass('hidden', 'min-[96rem]:table-cell')
+    // el tipo y el lugar son los mismos en las dos filas: salen de la tabla y quedan en la nota
+    expect(tabla.queryByRole('columnheader', { name: 'Tipo' })).not.toBeInTheDocument()
+    const nota = screen.getByRole('list', { name: 'Igual en todas las filas' })
+    expect(
+      within(nota)
+        .getAllByRole('listitem')
+        .map((n) => n.textContent)
+    ).toEqual(['Tipo: Asamblea', 'Lugar: Local comunal'])
+    // el título toma el ancho que queda y va en una línea, con su texto completo al pasar
+    expect(tabla.getByRole('columnheader', { name: 'Interacción' })).not.toHaveClass('w-full')
+    expect(tabla.getAllByRole('cell')[0]).toHaveClass('w-full', 'max-w-0')
+    const enlace = tabla.getByRole('link', { name: /^Asamblea extraordinaria/ })
+    expect(enlace).toHaveClass('truncate')
+    expect(enlace).toHaveAttribute('title', 'Asamblea extraordinaria')
   })
 
   it('si el tope de lectura corta la lista, lo dice, lee en orden descendente y no calla la truncación', async () => {
@@ -218,7 +255,7 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     fetch = abrirPortal('/projects/p1/engagements/calendar?month=2026-10', RELACIONISTA, EQUIPO, base())
     red = espiarRed([listaDelServidor('engagement', [E1, sinFecha])])
     expect(await screen.findByText('Interacciones sin fecha, que no aparecen en el calendario: 1.')).toBeInTheDocument()
-    screen.getByRole('button', { name: 'Lista' }).click()
+    await userEvent.click(screen.getByRole('radio', { name: 'Lista' }))
     const tabla = await screen.findByRole('table', { name: 'Relacionamiento' })
     expect(within(within(tabla).getByRole('link', { name: 'Sin fecha aún' }).closest('tr') as HTMLElement).getAllByText('—').length).toBeGreaterThan(0)
     expect(screen.queryByText(/Interacciones sin fecha/)).not.toBeInTheDocument()
@@ -294,7 +331,7 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     const calendario = await screen.findByRole('table', { name: 'Calendario de interacciones' })
     expect(within(calendario).getByRole('link', { name: 'Visita suspendida' })).toHaveAccessibleDescription('Cancelada')
     expect(within(calendario).getByText('Cancelada: Lluvias').className).toContain('group-focus-within:not-sr-only')
-    screen.getByRole('button', { name: 'Lista' }).click()
+    await userEvent.click(screen.getByRole('radio', { name: 'Lista' }))
     const tabla = await screen.findByRole('table', { name: 'Relacionamiento' })
     expect(within(tabla).getByText('Cancelada: Lluvias').className).not.toContain('sr-only')
   })

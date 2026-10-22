@@ -6,13 +6,16 @@ import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Td, Th, cn } from '@wasichai/ui'
-import { useId } from 'react'
+import { Alert, Button, cn } from '@wasichai/ui'
+import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible, ThConExplicacion, esProhibido } from '../componentes/Estados'
+import { Cargando, ErrorDeCarga, NoDisponible, esProhibido } from '../componentes/Estados'
 import { VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { hoyEnLima } from '../datos/fechas'
@@ -108,42 +111,43 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
         }
       />
       {territorio === null ? <Alert tone="notice">{t('contexto.noAplica')}</Alert> : null}
-      <div className="flex flex-wrap items-center gap-3">
-        <div role="group" aria-label={t('relacionamiento.vista')} className="inline-flex rounded-sg-md border border-sg-border-strong">
-          {VISTAS.map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={vista === v}
-              onClick={() => cambiar({ view: v })}
-              className={cn('px-3 py-1 text-sm', vista === v ? 'bg-sg-primary-soft font-medium' : '')}
-            >
-              {t(`relacionamiento.vistas.${v}`)}
-            </button>
-          ))}
-        </div>
-        {vista === 'mes' ? (
-          <div className="flex items-center gap-2 text-sm">
-            <button type="button" aria-label={t('relacionamiento.mesAnterior')} onClick={() => cambiar({ month: sumarMeses(mes, -1) })} className="px-2">
-              ‹
-            </button>
-            <span className="min-w-32 text-center font-medium">{mesPe(mes)}</span>
-            <button type="button" aria-label={t('relacionamiento.mesSiguiente')} onClick={() => cambiar({ month: sumarMeses(mes, 1) })} className="px-2">
-              ›
-            </button>
+      {/* la barra de filtros (hallazgo U-18, DD-03): Mes, Semana y Lista en el selector de vista de toda lista, con el paso de
+          mes o de semana al lado. ?view=, ?month= y ?day= son los mismos; la lista no tiene filtros propios (el territorio es el
+          chip de la barra de contexto) */}
+      <BarraDeFiltros
+        vista={
+          <div className="flex flex-wrap items-center gap-3">
+            <SelectorDeVista
+              etiqueta={t('relacionamiento.vista')}
+              vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`relacionamiento.vistas.${v}`) }))}
+              actual={vista}
+              alElegir={(v) => cambiar({ view: v })}
+            />
+            {vista === 'mes' ? (
+              <div className="flex items-center gap-2 text-sm">
+                <button type="button" aria-label={t('relacionamiento.mesAnterior')} onClick={() => cambiar({ month: sumarMeses(mes, -1) })} className="px-2">
+                  ‹
+                </button>
+                <span className="min-w-32 text-center font-medium">{mesPe(mes)}</span>
+                <button type="button" aria-label={t('relacionamiento.mesSiguiente')} onClick={() => cambiar({ month: sumarMeses(mes, 1) })} className="px-2">
+                  ›
+                </button>
+              </div>
+            ) : vista === 'semana' ? (
+              <div className="flex items-center gap-2 text-sm">
+                <button type="button" aria-label={t('relacionamiento.semanaAnterior')} onClick={() => cambiar(moverSemana(dia, -7))} className="px-2">
+                  ‹
+                </button>
+                <span className="min-w-32 text-center font-medium">{diaPe(semanas[0][0])}</span>
+                <button type="button" aria-label={t('relacionamiento.semanaSiguiente')} onClick={() => cambiar(moverSemana(dia, 7))} className="px-2">
+                  ›
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : vista === 'semana' ? (
-          <div className="flex items-center gap-2 text-sm">
-            <button type="button" aria-label={t('relacionamiento.semanaAnterior')} onClick={() => cambiar(moverSemana(dia, -7))} className="px-2">
-              ‹
-            </button>
-            <span className="min-w-32 text-center font-medium">{diaPe(semanas[0][0])}</span>
-            <button type="button" aria-label={t('relacionamiento.semanaSiguiente')} onClick={() => cambiar(moverSemana(dia, 7))} className="px-2">
-              ›
-            </button>
-          </div>
-        ) : null}
-      </div>
+        }
+        aplicados={[]}
+      />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-3">
           {interacciones.truncado ? <Alert tone="warning">{t('relacionamiento.truncado', { n: numeroPe(interacciones.data?.length ?? 0) })}</Alert> : null}
@@ -196,10 +200,11 @@ function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boo
     <span className="group block">
       <EnlaceConRastro
         to={`/projects/${encodeURIComponent(texto(interaccion, 'project'))}/engagements/${encodeURIComponent(interaccion.id)}`}
-        title={motivo}
+        // en la lista, el título va en una línea (P-02) y dice el texto completo al pasar; el motivo ya está a la vista debajo
+        title={enLista ? texto(interaccion, 'title') : motivo}
         aria-describedby={motivo ? idMotivo : undefined}
         className={cn(
-          enLista ? 'text-sm text-sg-primary-text underline' : 'block truncate rounded-sg-sm bg-sg-surface-sunken px-1 text-sg-caption',
+          enLista ? 'block truncate text-sm text-sg-primary-text underline' : 'block truncate rounded-sg-sm bg-sg-surface-sunken px-1 text-sg-caption',
           cancelada && 'line-through'
         )}
       >
@@ -316,55 +321,65 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
         }))}
       />
     )
+  // la tabla de escritorio con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px, junto al panel, cabe sin desplazar.
+  // esenciales la interacción, el proyecto (en lo global), el estado y la fecha; secundaria, desde xl, el tipo; el lugar y los
+  // asistentes son opcionales: desde 1536 px, hasta que los elija «Columnas». una no esencial que dice lo mismo en toda la
+  // página sale a la nota. el título toma el ancho que queda (w-full con max-w-0) y se corta en una línea. no se sabe de
+  // antemano qué proyectos no se podrán leer: la explicación única va en el encabezado, solo para los lectores de pantalla
+  const columnas: ColumnaPriorizada[] = [
+    { id: 'titulo', encabezado: t('relacionamiento.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'w-full max-w-0' },
+    ...(global
+      ? [
+          {
+            id: 'proyecto',
+            encabezado: t('relacionamiento.columnas.proyecto'),
+            prioridad: 'esencial' as const,
+            claseDeCelda: 'font-sg-mono text-sg-caption',
+            explicacion: { id: idDeProyecto, tipo: 'noDisponible' as const, soloLectores: true }
+          }
+        ]
+      : []),
+    { id: 'tipo', encabezado: t('relacionamiento.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'estado', encabezado: t('relacionamiento.columnas.estado'), prioridad: 'esencial' },
+    { id: 'fecha', encabezado: t('relacionamiento.columnas.fecha'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap' },
+    { id: 'lugar', encabezado: t('relacionamiento.columnas.lugar'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
+    { id: 'asistentes', encabezado: t('relacionamiento.columnas.asistentes'), prioridad: 'opcional', numerica: true, claseDeCelda: 'text-sm' }
+  ]
+  const asistentes = (i: Registro) => {
+    const n = atributo(i, 'attendees_total_count')
+    return n === null || n === undefined ? '—' : numeroPe(Number(n))
+  }
+  const celda = (i: Registro, columna: string): ReactNode => {
+    switch (columna) {
+      case 'titulo':
+        return <Evento interaccion={i} enLista />
+      case 'proyecto':
+        return <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} />
+      case 'tipo':
+        return opcion(i, 'engagement_type')
+      case 'estado':
+        return <EstadoChip objeto="engagement" estado={i.state} />
+      case 'fecha':
+        return <Dia valor={diaDe(i)} />
+      case 'lugar':
+        return texto(i, 'place') || '—'
+      default:
+        return asistentes(i)
+    }
+  }
+  // lo que decide si una secundaria dice lo mismo en toda la página: el dato guardado, no su rótulo
+  const valorPlano = (i: Registro, columna: string): string =>
+    columna === 'tipo' ? texto(i, 'engagement_type') : columna === 'lugar' ? texto(i, 'place') : columna === 'asistentes' ? asistentes(i) : i.id
   return (
-    <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-      <Table aria-label={t('relacionamiento.titulo')}>
-        <thead>
-          <tr>
-            {(['titulo', ...(global ? ['proyecto'] : []), 'tipo', 'estado', 'fecha', 'lugar', 'asistentes'] as const).map((c) =>
-              c === 'proyecto' ? (
-                // no se sabe de antemano qué proyectos no se podrán leer: la explicación única va en el encabezado, solo
-                // para los lectores de pantalla, y cada celda sin acceso la referencia
-                <ThConExplicacion key={c} explicacion={idDeProyecto} tipo="noDisponible" soloLectores>
-                  {t(`relacionamiento.columnas.${c}`)}
-                </ThConExplicacion>
-              ) : (
-                <Th key={c} scope="col">
-                  {t(`relacionamiento.columnas.${c}`)}
-                </Th>
-              )
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {ordenadas.map((i) => (
-            <tr key={i.id}>
-              <Td>
-                <Evento interaccion={i} enLista />
-              </Td>
-              {global ? (
-                <Td className="font-sg-mono text-sg-caption">
-                  <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} />
-                </Td>
-              ) : null}
-              <Td className="text-sm">{opcion(i, 'engagement_type')}</Td>
-              <Td>
-                <EstadoChip objeto="engagement" estado={i.state} />
-              </Td>
-              <Td className="text-sm">
-                <Dia valor={diaDe(i)} />
-              </Td>
-              <Td className="text-sm">{texto(i, 'place') || '—'}</Td>
-              <Td className="text-sm tabular-nums">
-                {atributo(i, 'attendees_total_count') === null || atributo(i, 'attendees_total_count') === undefined
-                  ? '—'
-                  : numeroPe(Number(atributo(i, 'attendees_total_count')))}
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    </div>
+    <TablaPriorizada<Registro>
+      etiqueta={t('relacionamiento.titulo')}
+      columnas={columnas}
+      filas={ordenadas}
+      clave={(i) => i.id}
+      celda={celda}
+      valorPlano={valorPlano}
+      ocultarUniformes
+    />
   )
 }
 
