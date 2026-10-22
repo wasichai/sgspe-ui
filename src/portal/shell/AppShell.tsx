@@ -33,7 +33,7 @@ const ROTULO_VISIBLE = 'truncate'
 // el shell del portal (docs/ux/ux-architecture.md §7.1): barra superior de 56 px con la marca, el botón Preguntar del
 // asistente (S05, desde F7), la campana de avisos (S04, desde F3), el tema, la cuenta con sus roles y la salida; a la izquierda, la
 // navegación principal con las secciones que se le ofrecen a la cuenta (useArbol), en su orden; a la derecha, el contenido.
-// Administración es un enlace a /admin, fuera del portal. la búsqueda con ⌘K (S03) llega después
+// Administración es S53, que enlaza la consola de /admin. la búsqueda con ⌘K (S03) llega después
 export function AppShell() {
   const { t } = useTranslation(NS)
   const { appName } = useWasichaiConfig()

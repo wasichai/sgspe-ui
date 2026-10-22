@@ -13,7 +13,8 @@ import { PortalApp } from '../PortalApp'
 const variantes = vi.hoisted(() => [] as VarianteDeInicio[])
 vi.mock('../inicios', async (original) => ({ ...(await original<typeof import('../inicios')>()), INICIOS: variantes }))
 
-// los accesos se prueban sin pantallas registradas: solo Administración (de quien administra) es una sección disponible
+// los accesos se prueban sin pantallas registradas: fuera del inicio no hay secciones disponibles (desde S53, tampoco
+// Administración, que es una pantalla del portal)
 vi.mock('../pantallas', () => ({ PANTALLAS: {}, RUTAS_ADICIONALES: [] }))
 
 const ORGANIZACION = { id: 'o1', name: 'Organización de prueba', slug: 'prueba', createdAt: null }

@@ -62,6 +62,7 @@ import { ES_BORRADOR_DE_ACTA } from './borradorDeActa'
 import { ES_TABLEROS_F8 } from './tablerosF8'
 import { ES_ENTREGABLES } from './entregables'
 import { ES_PLANTILLAS } from './plantillas'
+import { ES_ADMINISTRACION } from './administracion'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
@@ -137,6 +138,8 @@ export const ES = {
   tablerosF8: ES_TABLEROS_F8,
   entregables: ES_ENTREGABLES,
   plantillas: ES_PLANTILLAS,
+  // el rediseño de UX: S53, la sección Administración
+  administracion: ES_ADMINISTRACION,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',

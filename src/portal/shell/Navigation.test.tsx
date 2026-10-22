@@ -26,6 +26,9 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   for (const clave of Object.keys(registradas)) delete registradas[clave]
+  // desde S53 (rediseño de UX, U-08) Administración es una pantalla del portal y no un enlace a /admin: como las demás
+  // secciones, sin pantalla no se dibuja. se registra en todas las pruebas para que digan quién la ve
+  registradas.admin = Prueba
 })
 afterEach(() => {
   fetch?.restore()
@@ -70,7 +73,7 @@ describe('NAV_TREE', () => {
       ['Documentos', '/documents', 'F3'],
       ['Tareas', '/tasks', 'F3'],
       ['Reportes', '/reports', 'F2, F8'],
-      ['Administración', '/admin', 'F1']
+      ['Administración', '/administration', 'F1']
     ])
     expect(NAV_TREE.filter((s) => !s.icon)).toEqual([])
     expect(new Set(NAV_TREE.map((s) => s.icon)).size).toBe(13)
@@ -80,9 +83,12 @@ describe('NAV_TREE', () => {
     for (const seccion of NAV_TREE) expect(ES.secciones[seccion.clave]).toBe(seccion.label)
   })
 
-  it('en F1, sin pantallas, el admin ve Dashboard y Administración y los demás solo Dashboard', () => {
-    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio', 'Administración'])
-    expect(arbolPara(NAV_TREE, { ...cuenta(['project READ']), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio'])
+  it('en F1, con las pantallas de Inicio y Administración, el admin ve las dos y los demás solo Inicio', () => {
+    const deF1 = (clave: ClaveDeSeccion) => clave === 'dashboard' || clave === 'admin'
+    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: deF1 }).map((s) => s.label)).toEqual(['Inicio', 'Administración'])
+    expect(arbolPara(NAV_TREE, { ...cuenta(['project READ']), conPantalla: deF1 }).map((s) => s.label)).toEqual(['Inicio'])
+    // S53 ya no es un enlace externo: sin su pantalla, Administración no se dibuja, ni siquiera para el admin
+    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio'])
   })
 
   it.each([
@@ -130,11 +136,12 @@ describe('navegación del portal', () => {
     expect(await within(screen.getByRole('banner')).findByText('Administración de la organización')).toBeInTheDocument()
   })
 
-  it('el admin ve Dashboard y Administración, que lleva a /admin', async () => {
+  // S53: Administración lleva a su pantalla del portal, que enlaza la consola de /admin (AdministracionPage.test.tsx)
+  it('el admin ve Dashboard y Administración, que lleva a /administration', async () => {
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
     await screen.findByRole('navigation', { name: 'Secciones' })
     await waitFor(() => expect(enlaces()).toEqual(['Inicio', 'Administración']))
-    expect(within(lateral()).getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '/admin')
+    expect(within(lateral()).getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '/administration')
   })
 
   // WAS-ADR-0053: la plataforma dice que la cuenta tiene MANAGE_METADATA o MANAGE_ORGANIZATION aunque no sea admin: el portal lo lee

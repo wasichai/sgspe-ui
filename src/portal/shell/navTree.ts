@@ -118,7 +118,9 @@ export const NAV_TREE: SeccionNav[] = [
       [lee('deliverable')]
     ]
   },
-  { clave: 'admin', label: 'Administración', to: '/admin', icon: Settings, external: true, soloAdmin: true, fases: ['F1'] }
+  // S53 (rediseño de UX, U-08 y U-37): una pantalla del portal que dice qué se administra aquí y qué en la consola (/admin),
+  // con el enlace a ella
+  { clave: 'admin', label: 'Administración', to: '/administration', icon: Settings, soloAdmin: true, fases: ['F1'] }
 ]
 
 // la guarda de una pantalla que vive bajo una sección pero lee otro objeto: la sección (su nombre y su pantalla) con otros
@@ -143,7 +145,7 @@ export type Estado = 'disponible' | 'sin-acceso' | 'solo-admin' | 'por-llegar'
 export const ofrece = (alternativas: Par[][], can: Oferta['can']) =>
   alternativas.some((alternativa) => alternativa.every(({ objeto, accion }) => can(objeto, accion)))
 
-// el Dashboard es la ruta índice del portal y Administración un enlace a /admin: existen sin registrarse en PANTALLAS
+// el Dashboard es la ruta índice del portal: existe sin registrarse en PANTALLAS
 export const conPantalla = (clave: ClaveDeSeccion) => clave === 'dashboard' || PANTALLAS[clave] !== undefined
 
 // administra quien es admin o la plataforma dice que tiene MANAGE_METADATA o MANAGE_ORGANIZATION (WAS-ADR-0053)

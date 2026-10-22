@@ -62,6 +62,7 @@ import { EN_BORRADOR_DE_ACTA } from './borradorDeActa'
 import { EN_TABLEROS_F8 } from './tablerosF8'
 import { EN_ENTREGABLES } from './entregables'
 import { EN_PLANTILLAS } from './plantillas'
+import { EN_ADMINISTRACION } from './administracion'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
@@ -137,6 +138,8 @@ export const EN: Textos = {
   tablerosF8: EN_TABLEROS_F8,
   entregables: EN_ENTREGABLES,
   plantillas: EN_PLANTILLAS,
+  // el rediseño de UX: S53, la sección Administración
+  administracion: EN_ADMINISTRACION,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',
