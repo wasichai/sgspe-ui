@@ -353,3 +353,41 @@ describe('S33 · acuerdos', () => {
     expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Corrige%20el%20t%C3%ADtulo")
   })
 })
+
+// P-09 del rediseño de UX (DD-02 y DD-06; U-03, U-25, U-26 y U-27): el antetítulo en sans, el estado una sola vez (en el panel
+// de decisión), una sola primaria, terminar en «Más acciones» y lo acordado y la vigencia en sus secciones, con lo vacío plegado
+describe('S33 · cabecera y cuerpo de la ficha (P-09)', () => {
+  it('una sola primaria, terminar en «Más acciones», el estado una sola vez y las fechas sin dato plegadas', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/agreement/records/ag1', body: { ...SERVIDUMBRE, attributes: { ...SERVIDUMBRE.attributes, expiry_date: null } } },
+        {
+          path: '/objects/agreement/records/ag1/transitions',
+          body: [
+            { name: 'terminate', label: 'Terminar', to: 'terminated', toLabel: 'Terminado', allowed: true, reason: null },
+            { name: 'activate', label: 'Registrar vigencia', to: 'active', toLabel: 'Vigente', allowed: true, reason: null }
+          ]
+        }
+      ])
+    )
+    montar(<FichaAcuerdoPage />, { ruta: '/projects/p1/agreements/ag1', ...FICHA })
+    const titulo = await screen.findByRole('heading', { name: 'Servidumbre del acceso norte', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText(/^Acuerdo · A-001/)).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).queryByText('En negociación')).not.toBeInTheDocument()
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByRole('button', { name: 'Registrar vigencia' })).toHaveAttribute('data-variant', 'primary')
+    // a la vista, una sola primaria: «Vincular» confirma el formulario plegado de un predio
+    expect([...document.querySelectorAll('[data-variant="primary"]')].filter((b) => !b.closest('details:not([open])'))).toHaveLength(1)
+    expect(within(acciones).queryByRole('button', { name: /^Terminar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Terminar/ })).toBeInTheDocument()
+    expect(await screen.findAllByText('En negociación', { selector: '[data-estado]' })).toHaveLength(1)
+    expect(screen.getByRole('region', { name: 'Qué se acordó' })).toHaveTextContent('Paso por el predio comunal')
+    const vigencia = screen.getByRole('region', { name: 'Vigencia' })
+    expect(within(vigencia).getByText('Firmado')).toBeInTheDocument()
+    expect(within(vigencia).queryByText('Hasta')).not.toBeInTheDocument()
+    await userEvent.click(within(vigencia).getByRole('button', { name: /^Mostrar (el campo|los \d+ campos) sin dato$/ }))
+    expect(within(vigencia).getByText('Hasta')).toBeInTheDocument()
+  })
+})
