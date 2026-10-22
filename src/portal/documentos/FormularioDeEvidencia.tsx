@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { ConDefiniciones } from '../componentes/LecturaConEstados'
 import { codigoDelError } from '../datos/http'
@@ -185,9 +186,18 @@ function Formulario({
         </Campo>
       ) : null}
       {lee('document_date') ? (
-        <Campo etiqueta={t('evidencias.fechaDelDocumento')} error={error('document_date')}>
-          {(p) => <Input {...p} type="date" {...register('document_date')} />}
-        </Campo>
+        <Controller
+          control={control}
+          name="document_date"
+          render={({ field }) => (
+            <CampoFecha
+              etiqueta={t('evidencias.fechaDelDocumento')}
+              error={error('document_date')}
+              valor={field.value || null}
+              alCambiar={(v) => field.onChange(v ?? '')}
+            />
+          )}
+        />
       ) : null}
       {lee('author') ? (
         <Campo etiqueta={t('evidencias.autor')} error={error('author')}>

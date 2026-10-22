@@ -6,13 +6,14 @@ import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useEffect, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { z } from 'zod'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando, Consulta, Restringido, NoEsDeSusProyectos } from '../componentes/Estados'
@@ -507,9 +508,18 @@ function EditarEvidencia({ evidencia, alCerrar }: { evidencia: Registro; alCerra
         <Campo etiqueta={t('evidencias.tituloDelDocumento')} error={delServidor.title}>
           {(p) => <Input {...p} {...register('title')} maxLength={300} />}
         </Campo>
-        <Campo etiqueta={t('evidencias.fechaDelDocumento')} error={delServidor.document_date}>
-          {(p) => <Input {...p} type="date" {...register('document_date')} />}
-        </Campo>
+        <Controller
+          control={control}
+          name="document_date"
+          render={({ field }) => (
+            <CampoFecha
+              etiqueta={t('evidencias.fechaDelDocumento')}
+              error={delServidor.document_date}
+              valor={field.value || null}
+              alCambiar={(v) => field.onChange(v ?? '')}
+            />
+          )}
+        />
         <Campo etiqueta={t('evidencias.autor')} error={delServidor.author}>
           {(p) => <Input {...p} {...register('author')} maxLength={200} />}
         </Campo>
