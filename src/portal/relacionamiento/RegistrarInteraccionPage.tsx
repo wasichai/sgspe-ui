@@ -3,12 +3,13 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
-import { useFieldArray, useForm, useWatch, type FieldErrors } from 'react-hook-form'
+import { Controller, useFieldArray, useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { Cargando, NoDisponible } from '../componentes/Estados'
 import { ConDefiniciones, DeLista, FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -67,7 +68,7 @@ const esquema = z
   .refine((v) => !v.realizada || v.held_at !== '', { path: ['held_at'] })
 type Valores = z.infer<typeof esquema>
 
-// lo que se teclea (datetime-local) es la hora de Lima y viaja como instante UTC (instanteDeLima); uno que no es fecha no viaja
+// lo que se teclea (CampoFecha) es la hora de Lima y viaja como instante UTC (instanteDeLima); uno que no es fecha no viaja
 const instante = instanteDeLima
 // en la revisión, lo tecleado se dice como fecha y hora es-PE
 const instanteDicho = (local: string) => (instanteDeLima(local) ? fechaYHoraPe(new Date(instanteDeLima(local))) : local || '—')
@@ -314,12 +315,37 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             <input type="checkbox" {...register('realizada')} />
             {t('relacionamiento.registro.realizada')}
           </label>
+          {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
           {v.realizada ? (
-            <Campo etiqueta={t('relacionamiento.registro.realizadaEl')} error={errorDeFecha}>
-              {(p) => <Input {...p} type="datetime-local" {...register('held_at')} />}
-            </Campo>
+            <Controller
+              key="held_at"
+              control={control}
+              name="held_at"
+              render={({ field }) => (
+                <CampoFecha
+                  etiqueta={t('relacionamiento.registro.realizadaEl')}
+                  conHora
+                  requerido
+                  error={errorDeFecha}
+                  valor={field.value || null}
+                  alCambiar={(x) => field.onChange(x ?? '')}
+                />
+              )}
+            />
           ) : (
-            <Campo etiqueta={t('relacionamiento.registro.programada')}>{(p) => <Input {...p} type="datetime-local" {...register('scheduled_at')} />}</Campo>
+            <Controller
+              key="scheduled_at"
+              control={control}
+              name="scheduled_at"
+              render={({ field }) => (
+                <CampoFecha
+                  etiqueta={t('relacionamiento.registro.programada')}
+                  conHora
+                  valor={field.value || null}
+                  alCambiar={(x) => field.onChange(x ?? '')}
+                />
+              )}
+            />
           )}
         </div>
       ) : null}
