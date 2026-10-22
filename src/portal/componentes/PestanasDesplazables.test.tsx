@@ -51,4 +51,17 @@ describe('PestanasDesplazables', () => {
     expect(screen.getByRole('button', { name: 'Ver las secciones anteriores' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Ver más secciones' })).not.toBeInTheDocument()
   })
+
+  // U-19: la pestaña activa nunca queda oculta; si la fila no cabe, se trae a la vista sin mover la página en vertical
+  it('trae la pestaña activa a la vista', () => {
+    const traer = vi.fn()
+    Element.prototype.scrollIntoView = traer
+    try {
+      montar()
+      expect(traer).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+      expect(traer.mock.contexts[0]).toBe(screen.getByRole('link', { name: 'Documentos' }))
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView
+    }
+  })
 })

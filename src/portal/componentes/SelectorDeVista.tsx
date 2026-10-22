@@ -1,6 +1,7 @@
 import { cn } from '@wasichai/ui'
 import { useRef, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import { NS, numeroPe } from '../i18n'
 import { MasAcciones } from './Pagina'
 
@@ -113,6 +114,72 @@ export function SelectorDeVista({
   )
 }
 
+export interface PaginaDelSelector extends VistaDelSelector {
+  // la ruta de la página, ya codificada
+  a: string
+}
+
+// la variante del selector que navega entre rutas (DD-03, U-20): las páginas de un módulo que tienen su propia ruta (las de
+// Riesgos; Compromisos y Acuerdos) en la misma pieza, con su aspecto, en lugar de una segunda fila de pestañas o de un menú
+// escondido. es una navegación de enlaces con aria-current, no un radiogroup: elegir cambia de página, y las flechas no deben
+// sacar a nadie de la suya. las que no caben van en «Más páginas»; la actual nunca queda escondida. con una sola página no se
+// dibuja: no hay adónde ir
+export function SelectorDePagina({
+  etiqueta,
+  paginas,
+  actual,
+  visibles = 4
+}: {
+  etiqueta: string
+  paginas: PaginaDelSelector[]
+  actual: string
+  visibles?: number
+}) {
+  const { t } = useTranslation(NS)
+  if (paginas.length < 2) return null
+  const [aLaVista, enMenu] = repartir(paginas, actual, visibles)
+  const nombre = (p: PaginaDelSelector) => (p.n != null ? t('comun.selectorDeVista.conConteo', { etiqueta: p.etiqueta, n: numeroPe(p.n) }) : undefined)
+  return (
+    <nav aria-label={etiqueta} className="flex max-w-full items-center gap-2">
+      <div className="inline-flex max-w-full overflow-x-auto rounded-sg-md border border-sg-border bg-sg-surface p-0.5 text-sm">
+        {aLaVista.map((p) => {
+          const elegida = p.id === actual
+          return (
+            <Link
+              key={p.id}
+              to={p.a}
+              aria-current={elegida ? 'page' : undefined}
+              aria-label={nombre(p)}
+              className={cn(
+                'flex items-center gap-1.5 whitespace-nowrap rounded-sg-sm px-2.5 py-1',
+                elegida ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : 'text-sg-text-secondary hover:bg-sg-surface-hover'
+              )}
+            >
+              {p.etiqueta}
+              {p.n != null ? <Conteo n={p.n} /> : null}
+            </Link>
+          )
+        })}
+      </div>
+      {enMenu.length > 0 ? (
+        <MasAcciones etiqueta={t('comun.selectorDePagina.mas')}>
+          {enMenu.map((p) => (
+            <Link
+              key={p.id}
+              to={p.a}
+              aria-label={nombre(p)}
+              className="flex items-center justify-between gap-3 whitespace-nowrap rounded-sg-sm px-2 py-1.5 text-left text-sm text-sg-text hover:bg-sg-surface-hover"
+            >
+              {p.etiqueta}
+              {p.n != null ? <Conteo n={p.n} /> : null}
+            </Link>
+          ))}
+        </MasAcciones>
+      ) : null}
+    </nav>
+  )
+}
+
 // el conteo se ve; el nombre accesible del radio ya lo dice
 function Conteo({ n }: { n: number }) {
   return (
@@ -123,7 +190,7 @@ function Conteo({ n }: { n: number }) {
 }
 
 // las primeras `visibles` a la vista y el resto en el menú; si la actual cae en el menú, toma el lugar de la última visible
-export function repartir(vistas: VistaDelSelector[], actual: string, visibles: number): [VistaDelSelector[], VistaDelSelector[]] {
+export function repartir<V extends VistaDelSelector>(vistas: V[], actual: string, visibles: number): [V[], V[]] {
   const cuantas = Math.max(1, visibles)
   if (vistas.length <= cuantas) return [vistas, []]
   const aLaVista = vistas.slice(0, cuantas)

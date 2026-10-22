@@ -1,10 +1,11 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
+import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 import { CLASE_DE_TONO } from '../componentes/apariencias'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
@@ -77,10 +78,6 @@ export function celdaDe(r: Registro): string | null {
   return Number.isInteger(p) && Number.isInteger(i) && p >= 1 && p <= 5 && i >= 1 && i <= 5 ? `${p}-${i}` : null
 }
 
-// las páginas de riesgos que no son el registro: en «Más» del encabezado; fuera de un proyecto solo existen las reglas del tenant
-const MAS_EN_PROYECTO = ['warnings', 'incidents', 'mentions', 'signals', 'impacts', 'rules'] as const
-const MAS_GLOBAL = ['rules'] as const
-
 export function RiesgosPage() {
   const { t } = useTranslation(NS)
   const { user, can } = useAuth()
@@ -113,12 +110,11 @@ export function RiesgosPage() {
     }
     fijar(siguiente, { replace: true })
   }
-  const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       {/* la sección aterriza en el registro y la matriz (decisión 7 de la revisión de UX): el tablero es una vista más, y las
-          demás páginas de riesgos van en «Más» */}
+          demás páginas de riesgos van en su selector, en la cabecera (DD-03, U-20) */}
       <EncabezadoDePagina
         titulo={t('riesgos.titulo')}
         conteo={riesgos.data ? t('riesgos.conteo', { count: filtrados.length }) : undefined}
@@ -133,12 +129,12 @@ export function RiesgosPage() {
             <BotonCrear objeto="social_risk" etiqueta={t('riesgos.identificar')} resto="risks?nuevo=1" />
           )
         }
-        vistas={<VistasDelModulo modulo="risks" actual="lista" />}
-        mas={(proyecto ? MAS_EN_PROYECTO : MAS_GLOBAL).map((resto) => (
-          <Link key={resto} to={`${base}/risks/${resto}`} className="rounded-sg-sm px-2.5 py-1.5 text-sm hover:bg-sg-surface-hover">
-            {t(`riesgos.mas.${resto}`)}
-          </Link>
-        ))}
+        vistas={
+          <>
+            <PaginasDeRiesgos actual="registro" />
+            <VistasDelModulo modulo="risks" actual="lista" />
+          </>
+        }
       />
       <VistasGuardadas
         vistas={VISTAS.map((v) => ({

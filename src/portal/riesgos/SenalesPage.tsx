@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { useNavigate, useParams } from 'react-router'
 import { RegistrosSimples } from '../componentes/RegistrosSimples'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
@@ -40,7 +41,10 @@ export function SenalesPage() {
   ]
   return (
     <section className="mx-auto max-w-[1200px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('registrosDeAlerta.senales.titulo')}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-sg-h1 font-semibold">{t('registrosDeAlerta.senales.titulo')}</h1>
+        <PaginasDeRiesgos actual="signals" />
+      </div>
       <p className="text-sm text-sg-text-secondary">{t('registrosDeAlerta.senales.ayuda')}</p>
       <RegistrosSimples
         objeto="early_warning_signal"

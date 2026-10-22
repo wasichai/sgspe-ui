@@ -47,9 +47,11 @@ describe('rutas de F3', () => {
     expect(await screen.findByRole('heading', { name: 'Compromisos', level: 1 })).toBeInTheDocument()
     const pestanas = screen.getByRole('navigation', { name: 'Secciones del proyecto' })
     for (const nombre of ['Compromisos', 'Documentos']) expect(within(pestanas).getByRole('link', { name: nombre })).toBeInTheDocument()
-    // Acuerdos es una vista de Compromisos y Tareas va en «Más» (revisión de UX, decisión 2)
-    const vistas = screen.getByRole('navigation', { name: 'Vistas de Compromisos' })
-    expect(within(vistas).getByRole('link', { name: 'Acuerdos' })).toHaveAttribute('href', '/projects/p1/agreements')
+    // Acuerdos se ofrece en el selector de páginas de la lista (DD-03: sin segunda fila de pestañas) y Tareas va en «Más»
+    const paginas = screen.getByRole('navigation', { name: 'Páginas de Compromisos' })
+    expect(within(paginas).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('aria-current', 'page')
+    expect(within(paginas).getByRole('link', { name: 'Acuerdos' })).toHaveAttribute('href', '/projects/p1/agreements')
+    expect(screen.queryByRole('navigation', { name: 'Vistas de Compromisos' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Más secciones del proyecto' })).toBeInTheDocument()
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })
     for (const nombre of ['Compromisos', 'Documentos', 'Tareas']) expect(within(secciones).getByRole('link', { name: nombre })).toBeInTheDocument()
@@ -58,6 +60,10 @@ describe('rutas de F3', () => {
   it('los acuerdos de todos los proyectos viven en /agreements, con la guarda de Compromisos', async () => {
     fetch = abrirPortal('/agreements', GESTORA, EQUIPO_DE_COMPROMISOS, rutas())
     expect(await screen.findByRole('link', { name: 'Convenio de agua' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
+    // fuera de un proyecto, el mismo selector lleva entre /commitments y /agreements
+    const paginas = screen.getByRole('navigation', { name: 'Páginas de Compromisos' })
+    expect(within(paginas).getByRole('link', { name: 'Acuerdos' })).toHaveAttribute('aria-current', 'page')
+    expect(within(paginas).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('href', '/commitments')
   })
 
   it('sin READ sobre compromisos, la ruta lo dice y la sección no se ofrece', async () => {

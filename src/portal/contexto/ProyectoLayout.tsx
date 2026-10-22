@@ -40,9 +40,9 @@ const PESTANAS = [
 ] as const
 type Pestana = (typeof PESTANAS)[number]
 // la revisión de UX (decisión 2, ux-architecture.md §7.1): nueve pestañas a la vista y «Más» con las demás. Acuerdos no es
-// pestaña: es una vista de Compromisos (VISTAS_DE_PESTANA), y su pestaña es Compromisos
+// pestaña: su pestaña es Compromisos, y las dos páginas se ofrecen en el selector de su cabecera (PaginasDeCompromisos). una sola
+// fila de pestañas por pantalla (DD-03): las vistas de un módulo van en el selector de su lista, nunca en una segunda fila
 const EN_MAS: readonly Pestana[] = ['tasks', 'ai-review', 'reports', 'settings']
-const VISTAS_DE_PESTANA: Partial<Record<Pestana, Pestana[]>> = { commitments: ['commitments', 'agreements'] }
 const PESTANA_DE_VISTA: Partial<Record<string, Pestana>> = { agreements: 'commitments' }
 // las pestañas de otra sección se ofrecen con los permisos de esa sección, como el árbol y su guarda (GuardaDeSeccion): el PAD
 // no ve «Grupos de interés» ni «Relacionamiento» para llegar al aviso de que no puede abrirlas. Acuerdos vive bajo Compromisos
@@ -89,9 +89,6 @@ export function ProyectoLayout() {
   const marcada = contenedora(pestanaActual) ?? pestanaActual
   const visibles = pestanas.filter((p) => !EN_MAS.includes(p) && !contenedora(p))
   const enMas = pestanas.filter((p) => EN_MAS.includes(p))
-  // las vistas de la pestaña marcada, solo en su lista (no en una ficha) y si la cuenta tiene más de una
-  const vistas = (VISTAS_DE_PESTANA[marcada as Pestana] ?? []).filter((v) => pestanas.includes(v))
-  const enLista = pathname.split('/').length === 4
   const corto = (p: Pestana) => (p === 'attention' ? t('seccionesCortas.attention') : '')
   const conteos = useConteosDelProyecto(projectId, visibles)
   const idConteo = useId()
@@ -147,23 +144,6 @@ export function ProyectoLayout() {
           </PestanasDesplazables>
           {enMas.length > 0 ? <MasPestanas base={base} pestanas={enMas} marcada={marcada} /> : null}
         </div>
-        {enLista && vistas.length > 1 ? (
-          <nav aria-label={t('contexto.vistasDe', { pestana: t(`contexto.pestanas.${marcada}`) })} className="flex gap-1 text-sm">
-            {vistas.map((v) => (
-              <Link
-                key={v}
-                to={`${base}/${v}`}
-                aria-current={v === pestanaActual ? 'page' : undefined}
-                className={cn(
-                  'rounded-sg-md px-2.5 py-1',
-                  v === pestanaActual ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : 'text-sg-text-secondary hover:bg-sg-surface-hover'
-                )}
-              >
-                {t(`contexto.pestanas.${v}`)}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
         {asignaciones.isSuccess && !escribe ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
         <Outlet />
       </div>

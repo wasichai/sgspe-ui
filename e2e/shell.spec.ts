@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { prepararApi } from './api'
+import { prepararApi, prepararFichaDeCompromiso } from './api'
 
 // el shell del rediseño de UX (fase 3 del plan, DD-09 y DD-10) en un navegador de verdad: lo que jsdom no puede comprobar
 // porque depende de las media queries del CSS compilado (qué se ve a cada ancho) y de la recarga de la página
@@ -72,5 +72,29 @@ test.describe('a 1024 px', () => {
     expect((await otra.getByText('Proyectos y territorio').boundingBox())!.width).toBeLessThanOrEqual(1)
     await otra.getByRole('button', { name: 'Expandir' }).click()
     await expect(otra.getByText('Proyectos y territorio')).toBeVisible()
+  })
+})
+
+// DD-03 y U-19: una sola fila de pestañas en el proyecto, y la pestaña activa nunca queda oculta: si la fila no cabe, se desplaza
+// sola hasta ella. a 480 px las pestañas de Project 360 no caben, y Documentos es la última a la vista
+test.describe('a 480 px', () => {
+  test.use({ viewport: { width: 480, height: 900 } })
+
+  test('la pestaña activa del proyecto queda a la vista y no hay una segunda fila', async ({ page }) => {
+    await prepararFichaDeCompromiso(page)
+    await page.goto('/projects/p1/documents')
+    const fila = page.getByRole('navigation', { name: 'Secciones del proyecto' })
+    const activa = fila.getByRole('link', { name: 'Documentos' })
+    await expect(activa).toHaveAttribute('aria-current', 'page')
+    // la fila desborda: hay a qué volver, y la activa entra entera en su caja
+    await expect(page.getByRole('button', { name: 'Ver las secciones anteriores' })).toBeVisible()
+    await expect
+      .poll(async () => {
+        const caja = (await fila.boundingBox())!
+        const pestana = (await activa.boundingBox())!
+        return pestana.x >= caja.x - 1 && pestana.x + pestana.width <= caja.x + caja.width + 1
+      })
+      .toBe(true)
+    await expect(page.getByRole('navigation', { name: /^Vistas de/ })).toHaveCount(0)
   })
 })

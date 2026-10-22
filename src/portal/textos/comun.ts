@@ -41,6 +41,11 @@ export const ES_COMUN = {
     conConteo: '{{etiqueta}}, {{n}}',
     mas: 'Más vistas'
   },
+  // la variante del selector que navega entre las páginas de un módulo (DD-03, U-20)
+  selectorDePagina: {
+    etiqueta: 'Páginas de {{modulo}}',
+    mas: 'Más páginas'
+  },
   // la barra de filtros de una lista (hallazgo U-22): «Filtros (N)» en el teléfono, con N los filtros aplicados
   barraDeFiltros: {
     masFiltros: 'Más filtros',
@@ -411,6 +416,10 @@ export const EN_COMUN: typeof ES_COMUN = {
   selectorDeVista: {
     conConteo: '{{etiqueta}}, {{n}}',
     mas: 'More views'
+  },
+  selectorDePagina: {
+    etiqueta: '{{modulo}} pages',
+    mas: 'More pages'
   },
   barraDeFiltros: {
     masFiltros: 'More filters',

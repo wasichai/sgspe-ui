@@ -1,4 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
+import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Tabs, Td, Th } from '@wasichai/ui'
@@ -44,7 +45,10 @@ export function IncidentesPage() {
     <section className="mx-auto max-w-[1440px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{t('incidentes.titulo')}</h1>
-        {escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <PaginasDeRiesgos actual="incidents" />
+          {escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : null}
+        </div>
       </div>
       {incidentes.isPending ? (
         <Cargando />

@@ -9,7 +9,6 @@ export const ES_CONTEXTO = {
     vencidos_other: '{{count}} vencidos'
   },
   masPestanas: 'Más secciones del proyecto',
-  vistasDe: 'Vistas de {{pestana}}',
   cambiarProyecto: 'Proyecto: {{proyecto}}. Cambiar de proyecto',
   todos: 'Todos mis proyectos',
   // con la acción de leer todos los proyectos (o ADMIN), el alcance global no es «mis» proyectos (plan 4.4b)
@@ -58,7 +57,6 @@ export const EN_CONTEXTO: typeof ES_CONTEXTO = {
     vencidos_other: '{{count}} overdue'
   },
   masPestanas: 'More project sections',
-  vistasDe: '{{pestana}} views',
   cambiarProyecto: 'Project: {{proyecto}}. Change project',
   todos: 'All my projects',
   todosLosProyectos: 'All projects',

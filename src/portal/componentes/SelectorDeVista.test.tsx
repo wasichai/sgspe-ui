@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
-import { SelectorDeVista } from './SelectorDeVista'
+import { SelectorDePagina, SelectorDeVista } from './SelectorDeVista'
 
 // hallazgo U-18 (DD-03): las vistas de un módulo van en una sola fila, con su conteo, dentro de la barra de filtros; las que
 // no caben van en «Más vistas»
@@ -111,5 +111,51 @@ describe('SelectorDeVista', () => {
     } finally {
       localStorage.removeItem('sgspe.lang')
     }
+  })
+})
+
+// la variante que navega entre rutas (DD-03, U-20): las páginas de un módulo con rutas distintas (las de Riesgos, Compromisos y
+// Acuerdos) van en el mismo selector, como enlaces con aria-current; las que no caben, en «Más páginas»
+describe('SelectorDePagina', () => {
+  const PAGINAS = [
+    { id: 'registro', etiqueta: 'Registro y matriz', a: '/projects/p1/risks' },
+    { id: 'warnings', etiqueta: 'Alerta temprana', a: '/projects/p1/risks/warnings' },
+    { id: 'incidents', etiqueta: 'Incidentes', a: '/projects/p1/incidents' },
+    { id: 'signals', etiqueta: 'Señales de alerta', a: '/projects/p1/risks/signals' },
+    { id: 'mentions', etiqueta: 'Menciones en medios', a: '/projects/p1/risks/mentions' }
+  ]
+
+  it('es una navegación de enlaces con la actual marcada, sin radios ni pestañas', () => {
+    montar(<SelectorDePagina etiqueta="Páginas de Riesgos" paginas={PAGINAS} actual="warnings" />)
+    const nav = screen.getByRole('navigation', { name: 'Páginas de Riesgos' })
+    expect(within(nav).getByRole('link', { name: 'Alerta temprana' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: 'Registro y matriz' })).toHaveAttribute('href', '/projects/p1/risks')
+    expect(within(nav).getByRole('link', { name: 'Registro y matriz' })).not.toHaveAttribute('aria-current')
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+  })
+
+  it('las que no caben van en «Más páginas»; la actual nunca queda escondida', async () => {
+    montar(<SelectorDePagina etiqueta="Páginas de Riesgos" paginas={PAGINAS} actual="mentions" visibles={3} />)
+    const nav = screen.getByRole('navigation', { name: 'Páginas de Riesgos' })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((l) => l.textContent)
+    ).toEqual(['Registro y matriz', 'Alerta temprana', 'Menciones en medios'])
+    expect(within(nav).getByRole('link', { name: 'Menciones en medios' })).toHaveAttribute('aria-current', 'page')
+    await userEvent.click(within(nav).getByRole('button', { name: 'Más páginas' }))
+    const menu = within(nav).getByRole('group', { name: 'Más páginas' })
+    expect(
+      within(menu)
+        .getAllByRole('link')
+        .map((l) => l.textContent)
+    ).toEqual(['Incidentes', 'Señales de alerta'])
+    expect(within(menu).getByRole('link', { name: 'Incidentes' })).toHaveAttribute('href', '/projects/p1/incidents')
+  })
+
+  it('con una sola página no se dibuja', () => {
+    montar(<SelectorDePagina etiqueta="Páginas de Riesgos" paginas={PAGINAS.slice(0, 1)} actual="registro" />)
+    expect(screen.queryByRole('navigation', { name: 'Páginas de Riesgos' })).not.toBeInTheDocument()
   })
 })

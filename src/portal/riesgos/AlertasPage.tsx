@@ -1,4 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
+import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
@@ -48,7 +49,10 @@ export function AlertasPage() {
   const visibles = alertas.data?.content ?? []
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('alertas.titulo')}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-sg-h1 font-semibold">{t('alertas.titulo')}</h1>
+        <PaginasDeRiesgos actual="warnings" />
+      </div>
       <VistasGuardadas
         vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`alertas.vistas.${v}`), conteo: conteos[v] }))}
         actual={vista}

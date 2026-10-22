@@ -1,4 +1,5 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
+import { PaginasDeCompromisos } from '../acuerdos/PaginasDeCompromisos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
@@ -138,7 +139,12 @@ export function CompromisosPage() {
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
-        vistas={<VistasDelModulo modulo="commitments" actual="lista" conTablero={conTablero} />}
+        vistas={
+          <>
+            <PaginasDeCompromisos actual="commitments" />
+            <VistasDelModulo modulo="commitments" actual="lista" conTablero={conTablero} />
+          </>
+        }
         titulo={t('compromisos.titulo')}
         conteo={!enCandidatos && total !== null ? t('compromisos.conteo', { count: total }) : undefined}
         primaria={<BotonCrear objeto="commitment" etiqueta={t('compromisos.nuevo')} resto="commitments/new" />}

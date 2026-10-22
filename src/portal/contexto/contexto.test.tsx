@@ -391,21 +391,27 @@ describe('barra de contexto y Project 360', () => {
     expect(within(subnav).getByRole('link', { name: 'Quejas, consultas y solicitudes' })).toHaveAccessibleDescription('6 en total, 3 vencidos')
   })
 
-  it('Acuerdos es una vista de Compromisos: la pestaña Compromisos queda marcada y la vista ofrece volver', async () => {
+  // DD-03 (U-18): una sola fila de pestañas. la segunda fila con las vistas de una pestaña («Vistas de Compromisos», con
+  // Compromisos y Acuerdos) ya no existe: Acuerdos se ofrece en el selector de páginas de su lista (compromisos.test.tsx y
+  // acuerdos.test.tsx). en Acuerdos, la pestaña marcada sigue siendo Compromisos
+  it('una sola fila de pestañas: en Acuerdos queda marcada Compromisos y no hay una segunda fila de vistas', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(
       <Routes>
         <Route path="/projects/:projectId" element={<ProyectoLayout />}>
           <Route path="agreements" element={<p>Acuerdos</p>} />
+          <Route path="commitments" element={<p>Compromisos</p>} />
         </Route>
       </Routes>,
       { ruta: '/projects/p1/agreements', permisos: ADMIN_PERMISOS }
     )
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
     expect(within(subnav).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('aria-current', 'page')
-    const vistas = screen.getByRole('navigation', { name: 'Vistas de Compromisos' })
-    expect(within(vistas).getByRole('link', { name: 'Acuerdos' })).toHaveAttribute('aria-current', 'page')
-    expect(within(vistas).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('href', '/projects/p1/commitments')
+    expect(within(subnav).queryByRole('link', { name: 'Acuerdos' })).not.toBeInTheDocument()
+    // la única navegación del proyecto es su fila de pestañas
+    expect(screen.queryByRole('navigation', { name: /^Vistas de/ })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('navigation').map((n) => n.getAttribute('aria-label'))).not.toContain('Vistas de Compromisos')
+    expect(screen.queryByRole('link', { name: 'Acuerdos' })).not.toBeInTheDocument()
   })
 
   it('las pestañas de otra sección se ofrecen con sus permisos (revisión final, M7)', async () => {

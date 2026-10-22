@@ -1,4 +1,5 @@
 import { cleanup, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { FetchMock, MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeAtencion, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA } from '../test/atencion'
@@ -70,6 +71,56 @@ describe('rutas de F4', () => {
     fetch.restore()
     fetch = abrirPortal('/risks/dashboard', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
     expect(await screen.findByRole('heading', { name: 'Tablero de riesgos', level: 1 })).toBeInTheDocument()
+  })
+
+  // DD-03 y U-20: las páginas de Riesgos (alerta temprana, incidentes, señales, menciones, impactos y reglas) se ofrecen en el
+  // selector de páginas de cada una, con sus rutas de siempre
+  it('las páginas de Riesgos se ofrecen en su selector y llevan a sus rutas', async () => {
+    fetch = abrirPortal('/projects/p1/risks', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
+    expect(await screen.findByRole('heading', { name: 'Riesgos', level: 1 })).toBeInTheDocument()
+    const paginas = screen.getByRole('navigation', { name: 'Páginas de Riesgos' })
+    expect(within(paginas).getByRole('link', { name: 'Registro y matriz' })).toHaveAttribute('aria-current', 'page')
+    await userEvent.click(within(paginas).getByRole('button', { name: 'Más páginas' }))
+    const enlaces = within(paginas)
+      .getAllByRole('link')
+      .map((l) => [l.textContent, l.getAttribute('href')])
+    expect(enlaces).toEqual([
+      ['Registro y matriz', '/projects/p1/risks'],
+      ['Alerta temprana', '/projects/p1/risks/warnings'],
+      ['Señales de alerta', '/projects/p1/risks/signals'],
+      ['Menciones en medios', '/projects/p1/risks/mentions'],
+      ['Impactos potenciales', '/projects/p1/risks/impacts'],
+      ['Incidentes', '/projects/p1/incidents'],
+      ['Reglas de alerta', '/projects/p1/risks/rules']
+    ])
+    await userEvent.click(within(paginas).getByRole('link', { name: 'Señales de alerta' }))
+    expect(window.location.pathname).toBe('/projects/p1/risks/signals')
+    const enSenales = await screen.findByRole('navigation', { name: 'Páginas de Riesgos' })
+    expect(within(enSenales).getByRole('link', { name: 'Señales de alerta' })).toHaveAttribute('aria-current', 'page')
+    await userEvent.click(within(enSenales).getByRole('link', { name: 'Alerta temprana' }))
+    expect(window.location.pathname).toBe('/projects/p1/risks/warnings')
+    expect(within(await screen.findByRole('navigation', { name: 'Páginas de Riesgos' })).getByRole('link', { name: 'Alerta temprana' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    // la pestaña del proyecto sigue siendo Riesgos, y no hay una segunda fila de pestañas
+    expect(within(screen.getByRole('navigation', { name: 'Secciones del proyecto' })).getByRole('link', { name: 'Riesgos' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+  })
+
+  it('fuera de un proyecto, Riesgos ofrece el registro y las reglas de la organización', async () => {
+    fetch = abrirPortal('/risks', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
+    const paginas = await screen.findByRole('navigation', { name: 'Páginas de Riesgos' })
+    expect(
+      within(paginas)
+        .getAllByRole('link')
+        .map((l) => [l.textContent, l.getAttribute('href')])
+    ).toEqual([
+      ['Registro y matriz', '/risks'],
+      ['Reglas de alerta', '/risks/rules']
+    ])
   })
 
   it('el registro y la ficha de un riesgo viven bajo el proyecto', async () => {

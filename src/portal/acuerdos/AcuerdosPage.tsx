@@ -1,4 +1,5 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
+import { PaginasDeCompromisos } from './PaginasDeCompromisos'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -64,6 +65,7 @@ export function AcuerdosPage() {
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
         titulo={t('acuerdos.titulo')}
+        vistas={<PaginasDeCompromisos actual="agreements" />}
         conteo={acuerdos.data?.totalElements != null ? t('acuerdos.conteo', { count: acuerdos.data.totalElements }) : undefined}
         primaria={
           proyecto ? (
