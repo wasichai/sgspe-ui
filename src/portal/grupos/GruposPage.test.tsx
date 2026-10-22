@@ -265,6 +265,9 @@ describe('S16 · lista de grupos de interés', () => {
     expect(screen.getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
     expect(await within(filas()[0]).findByText('PRJ-01')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ver como matriz' })).not.toBeInTheDocument()
+    // con la columna Proyecto, el responsable pasa a opcional (desde 1536 px) para que a 1440 px la tabla quepa (CA-1.6.2)
+    const responsable = screen.queryByRole('columnheader', { name: 'Responsable' })
+    if (responsable) expect(responsable).toHaveClass('hidden', 'min-[96rem]:table-cell')
   })
 
   it('con el chip de una localidad, la lista se limita al lugar', async () => {

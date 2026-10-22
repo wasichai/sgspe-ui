@@ -141,7 +141,15 @@ export function GruposPage() {
     { id: 'relacion', encabezado: t('grupos.columnas.relacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
     ...(lista.vista === 'mios'
       ? []
-      : [{ id: 'responsable', encabezado: t('grupos.columnas.responsable'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }]),
+      : // en el alcance global la columna Proyecto ocupa su lugar: el responsable pasa a opcional para que la tabla quepa a 1440 px
+        [
+          {
+            id: 'responsable',
+            encabezado: t('grupos.columnas.responsable'),
+            prioridad: proyecto ? ('secundaria' as const) : ('opcional' as const),
+            claseDeCelda: 'text-sm'
+          }
+        ]),
     { id: 'evaluacion', encabezado: t('grupos.columnas.evaluacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
     { id: 'contacto', encabezado: t('grupos.columnas.contacto'), prioridad: 'secundaria', claseDeCelda: 'text-sm' }
   ]
