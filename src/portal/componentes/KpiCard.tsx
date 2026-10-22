@@ -12,7 +12,8 @@ import { correlacionDe, useMensajeDeError } from './errores'
 // "n de N" que deja ver la base. sin permiso dice "no disponible" y por qué; un módulo que no llegó dice en qué fase llega
 // si la consulta del indicador falló, error lo dice (con su correlación) en lugar de dejar "Cargando…" para siempre; un 403
 // dice "No disponible", como el resto de las cifras sin permiso. notas va dentro de la tarjeta, bajo la cifra: lo que un
-// tablero dice de ella (los filtros que no aplica, sus avisos)
+// tablero dice de ella (los filtros que no aplica, sus avisos). una lista que muestra la cifra fuera de su tablero puede decir con
+// cifra y detalle qué cuenta, en palabras (hallazgo U-24): «0 %» y «0 de 4 recibidas… tienen respuesta», no «0» y «0 / 4 · %»
 export function KpiCard({
   titulo,
   indicador,
@@ -22,7 +23,9 @@ export function KpiCard({
   notas,
   a,
   alReintentar,
-  anidada
+  anidada,
+  cifra,
+  detalle
 }: {
   titulo: string
   indicador?: Indicador
@@ -36,6 +39,9 @@ export function KpiCard({
   alReintentar?: () => void
   // dentro de una superficie que ya tiene borde, la cifra va sin caja propia: nunca una tarjeta dentro de otra (U-34)
   anidada?: boolean
+  // la cifra como se lee (con su unidad) y la línea que dice qué cuenta, en lugar de «n / N · unidad»
+  cifra?: (indicador: Indicador & { value: number }) => string
+  detalle?: (indicador: Indicador & { value: number }) => ReactNode
 }) {
   const { t } = useTranslation(NS)
   let cuerpo
@@ -48,26 +54,35 @@ export function KpiCard({
   else if (!indicador.available) cuerpo = <NoDisponible motivo={indicador.unavailableReason} />
   // sin valor en el periodo (un porcentaje sin base, una mediana sin casos) se dice, sin «—» ni la unidad suelta
   else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
-  else
+  else {
+    const conValor = indicador as Indicador & { value: number }
+    const dicha = cifra ? cifra(conValor) : numeroPe(indicador.value)
     cuerpo = (
       <>
         <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">
           {a ? (
-            <Link to={a} aria-label={`${titulo}: ${numeroPe(indicador.value)}`} className="hover:underline">
-              {numeroPe(indicador.value)}
+            <Link to={a} aria-label={`${titulo}: ${dicha}`} className="hover:underline">
+              {dicha}
             </Link>
           ) : (
-            numeroPe(indicador.value)
+            dicha
           )}
         </p>
         <p className="text-sg-caption text-sg-text-muted">
-          {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
-            ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `
-            : ''}
-          {indicador.unit ?? ''}
+          {detalle ? (
+            detalle(conValor)
+          ) : (
+            <>
+              {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
+                ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `
+                : ''}
+              {indicador.unit ?? ''}
+            </>
+          )}
         </p>
       </>
     )
+  }
   return (
     <section aria-label={titulo} className={anidada ? 'space-y-1' : 'space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4'}>
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>

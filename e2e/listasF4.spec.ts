@@ -1,0 +1,143 @@
+import { expect, test, type Locator, type Page } from '@playwright/test'
+import { pagina, prepararApi, registro } from './api'
+
+// P-02 en las listas de QCS, Riesgos y Programas (rediseño de UX, área 4.3b), en un navegador de verdad: lo que jsdom no ve porque
+// depende del CSS compilado. una sola fila de pestañas (las vistas van en el selector de la barra de filtros), la tabla sin
+// desborde a 1440 px y, a 390 px, tarjetas en lugar de la tabla. la API se simula como en f4.spec.ts: estas rutas ganan a las
+// comunes
+const QUEJA = registro(
+  'g1',
+  {
+    project: 'p1',
+    code: 'Q-001',
+    channel: 'PRESENCIAL',
+    category: 'AGUA Y MEDIO AMBIENTE',
+    severity: 'MEDIA',
+    description: 'El canal de riego quedó turbio después de las obras de la plataforma en la quebrada alta',
+    deadline_status: 'VENCIDO',
+    ack_due_date: '2026-10-02',
+    owner_user_email: 'gvm@sgspe.test',
+    anonymous: true
+  },
+  'received'
+)
+const CONSULTA = registro(
+  'i1',
+  {
+    project: 'p1',
+    code: 'C-001',
+    channel: 'TELEFONO',
+    category: 'EMPLEO LOCAL',
+    description: '¿Cuándo abre la convocatoria de empleo local para la comunidad?',
+    deadline_status: 'AL DIA',
+    response_due_date: '2026-10-20',
+    owner_user_email: 'rel@sgspe.test',
+    anonymous: false
+  },
+  'received'
+)
+
+const flujo = (objeto: string, estados: [string, string][]) => ({
+  id: objeto,
+  objectName: objeto,
+  name: objeto,
+  label: objeto,
+  enabled: true,
+  definition: { states: estados.map(([name, label]) => ({ name, label, type: 'INTERMEDIATE' })), transitions: [] }
+})
+
+async function prepararListas(page: Page): Promise<void> {
+  const permisos = {
+    project: ['READ'],
+    project_assignment: ['READ'],
+    organization: ['READ'],
+    grievance: ['READ'],
+    inquiry: ['READ'],
+    stakeholder_request: ['READ']
+  }
+  const rutas: [RegExp, unknown][] = [
+    [/^\/auth\/me\/permissions$/, { admin: false, objects: permisos }],
+    [/^\/objects\/grievance\/workflow$/, flujo('grievance', [['received', 'Recibida']])],
+    [/^\/objects\/inquiry\/workflow$/, flujo('inquiry', [['received', 'Recibida']])],
+    [
+      /^\/sgspe\/attention\/queue$/,
+      {
+        content: [
+          { type: 'grievance', group: 'overdue', record: QUEJA },
+          { type: 'inquiry', group: 'onTime', record: CONSULTA }
+        ],
+        page: 0,
+        size: 25,
+        totalElements: 2,
+        totalPages: 1,
+        views: { attention: 2, grievances: 1, inquiries: 1, requests: 0, mine: 0, all: 2 },
+        groups: { overdue: 1, dueSoon: 0, onTime: 1 },
+        unfiltered: 2,
+        openDueSoon: 0,
+        readable: ['grievance', 'inquiry', 'stakeholder_request']
+      }
+    ],
+    [/^\/sgspe\/dashboards\/indicators\/KPI-GRV-02$/, { code: 'KPI-GRV-02', label: 'QCS abiertas', available: true, value: 2, unit: 'QCS' }],
+    [/^\/sgspe\/dashboards\/indicators\/KPI-GRV-06$/, { code: 'KPI-GRV-06', label: 'QCS fuera de plazo', available: true, value: 1, unit: 'QCS' }],
+    [
+      /^\/sgspe\/dashboards\/indicators\/KPI-GRV-07$/,
+      { code: 'KPI-GRV-07', label: '#6 QCS absueltas', available: true, value: 0, unit: '%', numerator: 0, denominator: 4 }
+    ],
+    [/^\/objects\/[a-z_]+\/records$/, pagina([])]
+  ]
+  await page.route('**/api/**', async (route) => {
+    const peticion = route.request()
+    const ruta = new URL(peticion.url()).pathname.replace(/^\/api/, '')
+    const encontrada = rutas.find(([patron]) => patron.test(ruta))
+    if (!encontrada || peticion.method() !== 'GET') return route.fallback()
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(encontrada[1]) })
+  })
+}
+
+test.beforeEach(async ({ page }) => {
+  await prepararApi(page)
+  await prepararListas(page)
+})
+
+// la tabla cabe en su contenedor (no se desplaza por dentro) y el contenido no se desplaza en horizontal
+async function sinDesborde(page: Page, tabla: Locator) {
+  await expect(tabla).toBeVisible()
+  const contenedor = await tabla.evaluate((t) => {
+    const caja = t.parentElement!
+    return { ancho: caja.scrollWidth, visible: caja.clientWidth }
+  })
+  expect(contenedor.ancho).toBeLessThanOrEqual(contenedor.visible)
+  const main = await page.evaluate(() => {
+    const m = document.querySelector('main')!
+    return { ancho: m.scrollWidth, visible: m.clientWidth, pagina: document.documentElement.scrollWidth, vista: window.innerWidth }
+  })
+  expect(main.ancho).toBeLessThanOrEqual(main.visible)
+  expect(main.pagina).toBeLessThanOrEqual(main.vista)
+}
+
+test.describe('a 1440 px', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('la lista de QCS: las vistas en el selector, ninguna segunda fila de pestañas y la tabla sin desborde', async ({ page }) => {
+    await page.goto('/projects/p1/attention')
+    const barra = page.getByRole('group', { name: 'Filtros' })
+    await expect(barra.getByRole('radio', { name: 'Atención, 2' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+    // las cifras se entienden sin conocer el modelo (U-24)
+    const respondidas = page.getByRole('region', { name: 'Respondidas' })
+    await expect(respondidas).toContainText('0 de 4 recibidas en el periodo tienen respuesta')
+    await expect(respondidas).not.toContainText('/ 4')
+    await sinDesborde(page, page.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' }))
+  })
+})
+
+test.describe('a 390 px', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('la lista de QCS es de tarjetas con su estado', async ({ page }) => {
+    await page.goto('/projects/p1/attention')
+    const tarjetas = page.getByRole('list', { name: 'Quejas, consultas y solicitudes: Vencidas' })
+    await expect(tarjetas.getByRole('listitem').filter({ hasText: 'Q-001' })).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })).toHaveCount(0)
+  })
+})

@@ -23,7 +23,12 @@ export const ES_ATENCION = {
     abiertas: 'Abiertas',
     vencidas: 'Vencidas',
     porVencer: 'Por vencer',
-    absueltas: 'Absueltas'
+    absueltas: 'Respondidas',
+    abiertasDetalle: 'siguen en atención',
+    vencidasDetalle: 'abiertas con el plazo vencido',
+    porVencerDetalle: 'abiertas que vencen pronto',
+    respondidasDetalle: '{{n}} de {{total}} recibidas en el periodo tienen respuesta',
+    respondidasSinBase: 'de las recibidas en el periodo tienen respuesta'
   },
   grupos: {
     vencidas: 'Vencidas',
@@ -41,10 +46,10 @@ export const ES_ATENCION = {
     estado: 'Estado',
     plazo: 'Plazo que corre',
     responsable: 'Responsable',
-    planteaQuien: 'Quién la plantea'
+    planteaQuien: 'Quien la plantea'
   },
   anonima: 'Anónima',
-  identificada: 'Identificada',
+  identificada: 'Dio su nombre',
   sinPlazo: 'Sin plazo',
   plazoPorCalcular: 'Por calcular',
   vacio: 'No hay quejas, consultas ni solicitudes en esta vista.',
@@ -75,7 +80,12 @@ export const EN_ATENCION: typeof ES_ATENCION = {
     abiertas: 'Open',
     vencidas: 'Overdue',
     porVencer: 'Due soon',
-    absueltas: 'Answered'
+    absueltas: 'Answered',
+    abiertasDetalle: 'still being handled',
+    vencidasDetalle: 'open with the deadline past',
+    porVencerDetalle: 'open and due soon',
+    respondidasDetalle: '{{n}} of {{total}} received in the period have an answer',
+    respondidasSinBase: 'of those received in the period have an answer'
   },
   grupos: {
     vencidas: 'Overdue',
@@ -96,7 +106,7 @@ export const EN_ATENCION: typeof ES_ATENCION = {
     planteaQuien: 'Raised by'
   },
   anonima: 'Anonymous',
-  identificada: 'Identified',
+  identificada: 'Gave their name',
   sinPlazo: 'No deadline',
   plazoPorCalcular: 'Not computed yet',
   vacio: 'There are no grievances, inquiries or requests in this view.',
