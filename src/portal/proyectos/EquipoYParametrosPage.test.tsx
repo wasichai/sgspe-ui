@@ -250,10 +250,13 @@ describe('S11 · equipo y parámetros', () => {
     await userEvent.type(await screen.findByLabelText('Correo del usuario'), 'nueva@sgspe.test')
     await userEvent.type(screen.getByLabelText('Identificador del usuario'), '6f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f')
     await userEvent.type(screen.getByLabelText('Rol en el proyecto'), 'ROL_DE_PRUEBA')
+    // hallazgo U-07 (DD-07): el periodo se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+    await userEvent.type(screen.getByLabelText('Desde'), '20/10/2026')
+    await userEvent.type(screen.getByLabelText('Hasta'), '31/12/2026')
     await userEvent.click(screen.getByRole('button', { name: 'Asignar' }))
     await waitFor(() => expect(red!.a('POST', '/objects/project_assignment/records')).toHaveLength(1))
     expect(red.a('POST', '/objects/project_assignment/records')[0].cuerpo).toMatchObject({
-      attributes: { project: 'p1', member_user_email: 'nueva@sgspe.test' }
+      attributes: { project: 'p1', member_user_email: 'nueva@sgspe.test', start_date: '2026-10-20', end_date: '2026-12-31' }
     })
   })
 

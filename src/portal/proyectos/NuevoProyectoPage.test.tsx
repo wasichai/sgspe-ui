@@ -114,6 +114,8 @@ describe('S07 · crear proyecto', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     expect(await screen.findAllByText('Obligatorio')).toHaveLength(2)
     await identificar()
+    // hallazgo U-07 (DD-07): el inicio se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+    await userEvent.type(screen.getByLabelText('start_date'), '20/10/2026')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     await screen.findByRole('heading', { name: 'Ubicación y CRS de trabajo' })
     // el borrador ya existe: la URL recoge su id, sin recargar el asistente
@@ -123,6 +125,7 @@ describe('S07 · crear proyecto', () => {
       attributes: {
         code: 'PRJ-09',
         name: 'Antakuna',
+        start_date: '2026-10-20',
         interest_threshold: 3,
         power_threshold: 3,
         meetings_per_month_target: 2,

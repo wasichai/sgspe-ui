@@ -3,12 +3,13 @@ import { useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useRef, useState } from 'react'
-import { useForm, type FieldErrors } from 'react-hook-form'
+import { Controller, useForm, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { AvisoDeConflicto } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Cargando, ErrorDeCarga } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -158,7 +159,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
   const [sinGuardar, setSinGuardar] = useState(false)
   const salida = useSalidaPermitida()
   const formulario = useForm<Valores>({ resolver: zodResolver(esquema), defaultValues: valoresDe(inicial) })
-  const { register, handleSubmit, setError, formState, watch, setValue, reset } = formulario
+  const { register, handleSubmit, setError, formState, watch, setValue, reset, control } = formulario
   const sucio = formState.isDirty
   const guardando = crear.isPending || actualizar.isPending
   const pasos = t('proyectos.asistente.pasos', { returnObjects: true }) as string[]
@@ -340,9 +341,18 @@ function Asistente({ inicial }: { inicial?: Registro }) {
               {(p) => <SelectNativo {...p} opciones={opciones(c)} {...register(c)} />}
             </Campo>
           ))}
-          <Campo etiqueta={rotulo('start_date')} error={errorDe('start_date')}>
-            {(p) => <Input {...p} type="date" {...register('start_date')} />}
-          </Campo>
+          <Controller
+            control={control}
+            name="start_date"
+            render={({ field }) => (
+              <CampoFecha
+                etiqueta={rotulo('start_date')}
+                error={errorDe('start_date')}
+                valor={field.value || null}
+                alCambiar={(v) => field.onChange(v ?? '')}
+              />
+            )}
+          />
           <div className="md:col-span-2">
             <Campo etiqueta={rotulo('description')} error={errorDe('description')}>
               {(p) => <Textarea {...p} {...register('description')} />}

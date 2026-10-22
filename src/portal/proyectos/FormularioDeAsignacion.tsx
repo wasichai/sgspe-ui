@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input } from '@wasichai/ui'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
 import { useCrear } from '../datos/registros'
@@ -38,7 +39,7 @@ export function FormularioDeAsignacion({ proyecto, alGuardar, propia = false }: 
   const crear = useCrear('project_assignment')
   const mensaje = useMensajeDeError()
   const erroresDeCampo = useErroresDeCampo()
-  const { register, handleSubmit, setValue, watch, formState, reset, setError } = useForm<Valores>({
+  const { register, handleSubmit, setValue, watch, formState, reset, setError, control } = useForm<Valores>({
     resolver: zodResolver(propia ? esquemaPropio : esquema),
     defaultValues: {
       member_user_id: propia ? (user?.id ?? '') : '',
@@ -127,12 +128,30 @@ export function FormularioDeAsignacion({ proyecto, alGuardar, propia = false }: 
       </Campo>
       {propia ? null : (
         <div className="grid grid-cols-2 gap-3">
-          <Campo etiqueta={t('p360.asignacion.desde')} error={error('start_date')}>
-            {(props) => <Input {...props} type="date" {...register('start_date')} />}
-          </Campo>
-          <Campo etiqueta={t('p360.asignacion.hasta')} error={error('end_date')}>
-            {(props) => <Input {...props} type="date" {...register('end_date')} />}
-          </Campo>
+          <Controller
+            control={control}
+            name="start_date"
+            render={({ field }) => (
+              <CampoFecha
+                etiqueta={t('p360.asignacion.desde')}
+                error={error('start_date')}
+                valor={field.value || null}
+                alCambiar={(v) => field.onChange(v ?? '')}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="end_date"
+            render={({ field }) => (
+              <CampoFecha
+                etiqueta={t('p360.asignacion.hasta')}
+                error={error('end_date')}
+                valor={field.value || null}
+                alCambiar={(v) => field.onChange(v ?? '')}
+              />
+            )}
+          />
         </div>
       )}
       {avisoAlPie ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
