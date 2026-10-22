@@ -66,8 +66,8 @@ describe('PestanasDesplazables', () => {
   })
 })
 
-// U-19: las pestañas del proyecto llegan después de los permisos; la activa se trae a la vista cuando aparece, no solo al
-// cambiar de ruta, y un cambio que no es de la activa (un conteo que llega) no vuelve a desplazar la fila
+// U-19: las pestañas del proyecto llegan después de los permisos, y sus conteos después aún (y las ensanchan): la activa se
+// trae a la vista cuando aparece y con cada cambio de la fila, hasta que la persona la desplace por su cuenta
 describe('PestanasDesplazables, con pestañas que llegan después', () => {
   afterEach(() => vi.restoreAllMocks())
 
@@ -88,7 +88,7 @@ describe('PestanasDesplazables, con pestañas que llegan después', () => {
     )
   }
 
-  it('trae a la vista la pestaña activa que aparece después y no vuelve a desplazar por otro cambio', async () => {
+  it('trae a la vista la pestaña activa que aparece después, y otra vez si la fila cambia, hasta que la persona la desplaza', async () => {
     const llevar = vi.fn()
     Element.prototype.scrollIntoView = llevar
     const { rerender } = render(<Fila conActiva={false} />)
@@ -96,8 +96,13 @@ describe('PestanasDesplazables, con pestañas que llegan después', () => {
     rerender(<Fila conActiva />)
     await vi.waitFor(() => expect(llevar).toHaveBeenCalledTimes(1))
     expect(llevar.mock.contexts[0]).toBe(screen.getByRole('link', { name: 'Documentos' }))
+    // llega un conteo: la activa puede haberse corrido, se vuelve a traer
     rerender(<Fila conActiva conteo="12" />)
+    await vi.waitFor(() => expect(llevar).toHaveBeenCalledTimes(2))
+    // la persona desplaza la fila: lo que llegue después ya no la mueve
+    act(() => screen.getByRole('navigation', { name: 'Secciones del proyecto' }).dispatchEvent(new WheelEvent('wheel', { bubbles: true })))
+    rerender(<Fila conActiva conteo="13" />)
     await new Promise((r) => setTimeout(r, 20))
-    expect(llevar).toHaveBeenCalledTimes(1)
+    expect(llevar).toHaveBeenCalledTimes(2)
   })
 })
