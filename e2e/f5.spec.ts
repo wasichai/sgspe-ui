@@ -221,7 +221,14 @@ test('aprobar un aporte desde la bandeja manda el motivo y la versión leída si
     r.fulfill(
       json({
         admin: false,
-        objects: { project: ['READ'], project_assignment: ['READ'], social_contribution: ['READ', 'UPDATE', 'APPROVE'], contribution_item: ['READ'] }
+        // la bandeja es de la sección Tareas: se ofrece a quien lee task (navTree.ts)
+        objects: {
+          project: ['READ'],
+          project_assignment: ['READ'],
+          task: ['READ'],
+          social_contribution: ['READ', 'UPDATE', 'APPROVE'],
+          contribution_item: ['READ']
+        }
       })
     )
   )
