@@ -172,3 +172,16 @@ describe('CampoFecha', () => {
     expect(screen.getByLabelText('Recepción (hora)')).toHaveValue('08:00')
   })
 })
+
+// la ayuda del campo y la invalidez que decide la pantalla (un periodo con «desde» después de «hasta»): las tenían los campos
+// nativos que CampoFecha reemplaza, y un lector de pantalla las necesita
+describe('CampoFecha, ayuda e invalidez de la pantalla', () => {
+  it('enlaza la ayuda con aria-describedby y marca aria-invalid cuando la pantalla lo pide', () => {
+    const { rerender } = montar(<CampoFecha etiqueta="Desde" valor="2026-10-20" ayuda="Fecha de recepción de la QCS" alCambiar={() => {}} />)
+    const campo = screen.getByLabelText('Desde')
+    expect(campo).toHaveAccessibleDescription('Fecha de recepción de la QCS')
+    expect(campo).not.toHaveAttribute('aria-invalid')
+    rerender(<CampoFecha etiqueta="Desde" valor="2026-10-20" ayuda="Fecha de recepción de la QCS" invalido alCambiar={() => {}} />)
+    expect(screen.getByLabelText('Desde')).toHaveAttribute('aria-invalid', 'true')
+  })
+})

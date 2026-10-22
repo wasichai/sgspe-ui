@@ -11,16 +11,8 @@ const PORTAL = import.meta.dirname
 // type="date", type='date', type={'date'} o type: 'date', y lo mismo con datetime-local
 const NATIVO = /\btype\s*(?:=|:)\s*\{?\s*['"`](?:date|datetime-local)['"`]/
 
-// las fuentes que todavía pueden llevarlo. CampoFecha es el componente que lo reemplaza. las demás son temporales: otras tareas
-// del área 4.5 las migran en paralelo (NuevaQcsPage, EvaluacionDrawer y los tableros); al integrarlas, esta lista se vacía
-// hasta dejar solo CampoFecha
-const EXCEPCIONES = [
-  'componentes/CampoFecha.tsx',
-  // temporales del área 4.5: se quitan al integrar sus migraciones
-  'atencion/NuevaQcsPage.tsx',
-  'grupos/EvaluacionDrawer.tsx',
-  'tableros/'
-]
+// la única fuente que puede llevarlo: CampoFecha, el componente que lo reemplaza
+const EXCEPCIONES = ['componentes/CampoFecha.tsx']
 
 function fuentes(dir: string): string[] {
   return readdirSync(dir).flatMap((nombre) => {

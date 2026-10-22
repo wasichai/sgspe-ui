@@ -448,8 +448,18 @@ export function FiltrosDelMapa() {
             ))}
           </select>
         </label>
-        <CampoFecha etiqueta={t('sig.desde')} valor={fecha('periodStart') || null} alCambiar={(v) => cambiarPeriodo('periodStart', v ?? '')} />
-        <CampoFecha etiqueta={t('sig.hasta')} valor={fecha('periodEnd') || null} alCambiar={(v) => cambiarPeriodo('periodEnd', v ?? '')} />
+        <CampoFecha
+          etiqueta={t('sig.desde')}
+          valor={fecha('periodStart') || null}
+          invalido={Boolean(borrador)}
+          alCambiar={(v) => cambiarPeriodo('periodStart', v ?? '')}
+        />
+        <CampoFecha
+          etiqueta={t('sig.hasta')}
+          valor={fecha('periodEnd') || null}
+          invalido={Boolean(borrador)}
+          alCambiar={(v) => cambiarPeriodo('periodEnd', v ?? '')}
+        />
       </div>
       {borrador ? (
         <p role="alert" className="text-sg-caption text-sg-danger">

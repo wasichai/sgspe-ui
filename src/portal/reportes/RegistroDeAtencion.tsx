@@ -88,8 +88,12 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
         <AlcanceDeLaExportacion proyecto={proyecto} />
         <SelectorDeNivel exportacion={exportacion} niveles={niveles} descripciones="reportes.atencion.niveles" />
         <div className="space-y-1">
-          <CampoFecha etiqueta={t('reportes.atencion.desde')} valor={desde || null} alCambiar={(v) => cambiar(setDesde)(v ?? '')} />
-          <p className="text-sg-caption text-sg-text-muted">{t('reportes.atencion.periodoAyuda')}</p>
+          <CampoFecha
+            etiqueta={t('reportes.atencion.desde')}
+            valor={desde || null}
+            ayuda={t('reportes.atencion.periodoAyuda')}
+            alCambiar={(v) => cambiar(setDesde)(v ?? '')}
+          />
         </div>
         <CampoFecha etiqueta={t('reportes.atencion.hasta')} valor={hasta || null} alCambiar={(v) => cambiar(setHasta)(v ?? '')} />
         <Campo etiqueta={t('reportes.atencion.canal')}>

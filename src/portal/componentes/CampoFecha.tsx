@@ -22,6 +22,10 @@ export interface PropsDeCampoFecha {
   // el error que pone el formulario (obligatorio, el del servidor); el del formato o el rango del campo va antes
   error?: string
   deshabilitado?: boolean
+  // la ayuda bajo el campo, enlazada por aria-describedby
+  ayuda?: string
+  // inválido por una regla de la pantalla (un periodo con «desde» después de «hasta»), que dice su error aparte
+  invalido?: boolean
 }
 
 type Motivo = 'formato' | 'formatoHora' | 'antesDe' | 'despuesDe'
@@ -44,7 +48,7 @@ function leer(textoDia: string, textoHora: string, conHora: boolean, min?: strin
 
 const horaDe = (valor: string | null): string => /T(\d{2}:\d{2})/.exec(valor ?? '')?.[1] ?? ''
 
-export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, requerido, min, max, error, deshabilitado }: PropsDeCampoFecha) {
+export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, requerido, min, max, error, deshabilitado, ayuda, invalido }: PropsDeCampoFecha) {
   const { t } = useTranslation(NS)
   const [textoDia, setTextoDia] = useState(textoDeDia(valor ?? ''))
   const [textoHora, setTextoHora] = useState(horaDe(valor))
@@ -97,7 +101,7 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
   }
 
   return (
-    <Campo etiqueta={etiqueta} error={propio ?? error} id={id}>
+    <Campo etiqueta={etiqueta} error={propio ?? error} ayuda={ayuda} id={id}>
       {(p) => (
         <div className="flex flex-wrap gap-2">
           <Input
@@ -108,7 +112,7 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
             placeholder={t('comun.campoFecha.marcador')}
             maxLength={10}
             aria-required={requerido || undefined}
-            aria-invalid={p['aria-invalid'] && motivo !== 'formatoHora' ? true : undefined}
+            aria-invalid={(p['aria-invalid'] && motivo !== 'formatoHora') || invalido ? true : undefined}
             disabled={deshabilitado}
             value={textoDia}
             onChange={(e) => cambiar(e.target.value, textoHora)}
