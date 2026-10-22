@@ -2,7 +2,8 @@ import { ApiError, useAuth } from '@wasichai/core'
 import { useWorkflow } from '@wasichai/workflow'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
+import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { LEE_CONFIDENCIALES, OBJETOS_DE_QCS } from '../datos/atencion'
@@ -86,12 +87,11 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
       <div className="grid gap-3 md:grid-cols-2">
         <AlcanceDeLaExportacion proyecto={proyecto} />
         <SelectorDeNivel exportacion={exportacion} niveles={niveles} descripciones="reportes.atencion.niveles" />
-        <Campo etiqueta={t('reportes.atencion.desde')} ayuda={t('reportes.atencion.periodoAyuda')}>
-          {(p) => <input {...p} type="date" className={CONTROL} value={desde} onChange={(e) => cambiar(setDesde)(e.target.value)} />}
-        </Campo>
-        <Campo etiqueta={t('reportes.atencion.hasta')}>
-          {(p) => <input {...p} type="date" className={CONTROL} value={hasta} onChange={(e) => cambiar(setHasta)(e.target.value)} />}
-        </Campo>
+        <div className="space-y-1">
+          <CampoFecha etiqueta={t('reportes.atencion.desde')} valor={desde || null} alCambiar={(v) => cambiar(setDesde)(v ?? '')} />
+          <p className="text-sg-caption text-sg-text-muted">{t('reportes.atencion.periodoAyuda')}</p>
+        </div>
+        <CampoFecha etiqueta={t('reportes.atencion.hasta')} valor={hasta || null} alCambiar={(v) => cambiar(setHasta)(v ?? '')} />
         <Campo etiqueta={t('reportes.atencion.canal')}>
           {(p) => (
             <SelectNativo

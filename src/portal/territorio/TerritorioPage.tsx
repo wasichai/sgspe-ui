@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
@@ -447,26 +448,8 @@ export function FiltrosDelMapa() {
             ))}
           </select>
         </label>
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('sig.desde')}</span>
-          <input
-            type="date"
-            className={CONTROL}
-            value={fecha('periodStart')}
-            aria-invalid={borrador ? true : undefined}
-            onChange={(e) => cambiarPeriodo('periodStart', e.target.value)}
-          />
-        </label>
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('sig.hasta')}</span>
-          <input
-            type="date"
-            className={CONTROL}
-            value={fecha('periodEnd')}
-            aria-invalid={borrador ? true : undefined}
-            onChange={(e) => cambiarPeriodo('periodEnd', e.target.value)}
-          />
-        </label>
+        <CampoFecha etiqueta={t('sig.desde')} valor={fecha('periodStart') || null} alCambiar={(v) => cambiarPeriodo('periodStart', v ?? '')} />
+        <CampoFecha etiqueta={t('sig.hasta')} valor={fecha('periodEnd') || null} alCambiar={(v) => cambiarPeriodo('periodEnd', v ?? '')} />
       </div>
       {borrador ? (
         <p role="alert" className="text-sg-caption text-sg-danger">

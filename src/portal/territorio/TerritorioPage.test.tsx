@@ -262,7 +262,7 @@ describe('S12 · filtros, leyenda y captura', () => {
     await userEvent.selectOptions(within(filtros).getByLabelText('Proyecto del mapa'), 'p1')
     await waitFor(() => expect(rutaActual()).toBe('/territory?project=p1'))
     await waitFor(() => expect(red!.a('GET', '/sgspe/territory/layers/LYR-05').some((l) => l.ruta.includes('project=p1'))).toBe(true))
-    await userEvent.type(within(filtros).getByLabelText('Desde'), '2026-07-01')
+    await userEvent.type(within(filtros).getByLabelText('Desde'), '01/07/2026')
     await waitFor(() => expect(rutaActual()).toContain('periodStart=2026-07-01'))
     // el periodo no filtra las capas de referencia (Layers.kt): no se les manda
     expect(red.a('GET', '/sgspe/territory/layers/LYR-05').some((l) => l.ruta.includes('periodStart'))).toBe(false)
@@ -275,15 +275,15 @@ describe('S12 · filtros, leyenda y captura', () => {
     try {
       fetch = abrirPortal('/territory?periodEnd=2026-06-30', ANALISTA_SIG, EQUIPO_SIG, rutas())
       const filtros = await screen.findByRole('group', { name: 'Filtros del mapa' })
-      await userEvent.type(within(filtros).getByLabelText('Desde'), '2026-07-01')
+      await userEvent.type(within(filtros).getByLabelText('Desde'), '01/07/2026')
       expect(await within(filtros).findByRole('alert')).toHaveTextContent('La fecha de inicio no puede ser posterior a la de fin.')
       expect(rutaActual()).toBe('/territory?periodEnd=2026-06-30')
       await userEvent.clear(within(filtros).getByLabelText('Desde'))
-      await userEvent.type(within(filtros).getByLabelText('Desde'), '2021-06-30')
+      await userEvent.type(within(filtros).getByLabelText('Desde'), '30/06/2021')
       expect(await within(filtros).findByRole('alert')).toHaveTextContent('El periodo no puede pasar de 5 años.')
       expect(rutaActual()).toBe('/territory?periodEnd=2026-06-30')
       await userEvent.clear(within(filtros).getByLabelText('Desde'))
-      await userEvent.type(within(filtros).getByLabelText('Desde'), '2021-07-01')
+      await userEvent.type(within(filtros).getByLabelText('Desde'), '01/07/2021')
       await waitFor(() => expect(rutaActual()).toBe('/territory?periodEnd=2026-06-30&periodStart=2021-07-01'))
       expect(within(filtros).queryByRole('alert')).not.toBeInTheDocument()
     } finally {
@@ -297,14 +297,14 @@ describe('S12 · filtros, leyenda y captura', () => {
     try {
       fetch = abrirPortal('/territory?periodEnd=2026-06-30', ANALISTA_SIG, EQUIPO_SIG, rutas())
       const filtros = await screen.findByRole('group', { name: 'Filtros del mapa' })
-      await userEvent.type(within(filtros).getByLabelText('Desde'), '2026-07-01')
+      await userEvent.type(within(filtros).getByLabelText('Desde'), '01/07/2026')
       expect(await within(filtros).findByRole('alert')).toBeInTheDocument()
       act(() => {
         window.history.pushState({}, '', '/territory?periodStart=2026-01-01&periodEnd=2026-03-31')
         window.dispatchEvent(new PopStateEvent('popstate'))
       })
-      await waitFor(() => expect(within(filtros).getByLabelText('Desde')).toHaveValue('2026-01-01'))
-      expect(within(filtros).getByLabelText('Hasta')).toHaveValue('2026-03-31')
+      await waitFor(() => expect(within(filtros).getByLabelText('Desde')).toHaveValue('01/01/2026'))
+      expect(within(filtros).getByLabelText('Hasta')).toHaveValue('31/03/2026')
       expect(within(filtros).queryByRole('alert')).not.toBeInTheDocument()
     } finally {
       vi.useRealTimers()
@@ -328,7 +328,7 @@ describe('S12 · filtros, leyenda y captura', () => {
     try {
       fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())
       const filtros = await screen.findByRole('group', { name: 'Filtros del mapa' })
-      await userEvent.type(within(filtros).getByLabelText('Desde'), '2026-10-13')
+      await userEvent.type(within(filtros).getByLabelText('Desde'), '13/10/2026')
       expect(await within(filtros).findByRole('alert')).toHaveTextContent('La fecha de inicio no puede ser posterior a la de fin.')
       expect(rutaActual()).toBe('/territory')
     } finally {

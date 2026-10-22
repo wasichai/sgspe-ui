@@ -100,6 +100,9 @@ describe('S44 · entrega del aporte', () => {
       expect(within(within(panel).getByRole('group', { name: 'Subir una evidencia' })).getByLabelText('Tipo de evidencia')).toHaveValue('FOTO')
     )
     expect(red.a('POST', '/sgspe/social-contributions/a1/deliveries')).toHaveLength(0)
+    // hallazgo U-07 (DD-07): la fecha se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+    await userEvent.clear(within(panel).getByLabelText('Fecha de la entrega'))
+    await userEvent.type(within(panel).getByLabelText('Fecha de la entrega'), '20/10/2026')
     await userEvent.type(within(panel).getByLabelText('Qué se entregó'), 'Estantes y transporte')
     await userEvent.click(within(panel).getByLabelText('El grupo de interés dio conformidad'))
     await userEvent.type(within(panel).getByLabelText('Quiénes dieron la conformidad'), 'Directiva de la asociación')
@@ -109,7 +112,7 @@ describe('S44 · entrega del aporte', () => {
     const [alta] = red.a('POST', '/sgspe/social-contributions/a1/deliveries')
     expect(alta.cuerpo).toEqual({
       attributes: {
-        delivery_date: '2026-10-10',
+        delivery_date: '2026-10-20',
         delivered_items: 'Estantes y transporte',
         conformity_given: true,
         conformity_by: 'Directiva de la asociación'

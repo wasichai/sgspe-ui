@@ -162,7 +162,10 @@ describe('S40 · ficha de riesgo', () => {
     abrir()
     await userEvent.click(await screen.findByRole('button', { name: 'Nueva revisión' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Nueva revisión' })
-    expect(within(dialogo).getByLabelText('Fecha de la revisión')).toHaveValue('2026-10-09')
+    // hallazgo U-07 (DD-07): la fecha se propone y se escribe como dd/mm/aaaa, y viaja como AAAA-MM-DD
+    expect(within(dialogo).getByLabelText('Fecha de la revisión')).toHaveValue('09/10/2026')
+    await userEvent.clear(within(dialogo).getByLabelText('Fecha de la revisión'))
+    await userEvent.type(within(dialogo).getByLabelText('Fecha de la revisión'), '05/10/2026')
     await userEvent.selectOptions(within(dialogo).getByLabelText('Probabilidad (1 a 5)'), '3')
     expect(within(dialogo).getByText(/Puntaje 12: nivel Alto con los umbrales del proyecto/)).toBeInTheDocument()
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Registrar revisión' }))
@@ -173,7 +176,7 @@ describe('S40 · ficha de riesgo', () => {
     await userEvent.click(await within(dialogo).findByRole('button', { name: 'Registrar revisión' }))
     expect(await screen.findByText('Revisión registrada: el riesgo queda en nivel Alto.')).toBeInTheDocument()
     const [primera, segunda] = red.a('POST', '/sgspe/social-risks/k1/assessments')
-    expect(primera.cuerpo).toEqual({ attributes: { assessment_date: '2026-10-09', probability: 3, impact: 4, residual: false } })
+    expect(primera.cuerpo).toEqual({ attributes: { assessment_date: '2026-10-05', probability: 3, impact: 4, residual: false } })
     expect(segunda.cabeceras.get('Idempotency-Key')).toBe(primera.cabeceras.get('Idempotency-Key'))
   })
 

@@ -14,12 +14,13 @@ import { rutaDeFicha } from '../datos/fichas'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { ApiError, useAuth } from '@wasichai/core'
-import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Table, Td, Textarea, Th } from '@wasichai/ui'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta } from '../componentes/Estados'
@@ -497,9 +498,14 @@ function NuevaRevision({
           {primera ? t('fichaRiesgo.revision.primera') : t('fichaRiesgo.revision.descripcion')}
         </DialogDescription>
         <div className="mt-4 space-y-3">
-          <Campo etiqueta={t('fichaRiesgo.revision.fecha')} error={intentado && faltaFecha ? t('fichaRiesgo.revision.fechaFutura') : undefined}>
-            {(p) => <Input {...p} type="date" max={hoy} value={fecha} onChange={(e) => setFecha(e.target.value)} />}
-          </Campo>
+          <CampoFecha
+            etiqueta={t('fichaRiesgo.revision.fecha')}
+            requerido
+            max={hoy}
+            valor={fecha || null}
+            alCambiar={(v) => setFecha(v ?? '')}
+            error={intentado && faltaFecha ? t('fichaRiesgo.revision.fechaFutura') : undefined}
+          />
           <div className="grid grid-cols-2 gap-3">
             <Campo
               etiqueta={t('fichaRiesgo.revision.probabilidad')}

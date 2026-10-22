@@ -490,8 +490,8 @@ describe('F4 · registro de quejas, consultas y solicitudes', () => {
     fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conRegistro(), rutasDeAtencion)
     red = exportar()
     const seccion = await screen.findByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })
-    await userEvent.type(within(seccion).getByLabelText('Recibidas desde'), '2026-09-01')
-    await userEvent.type(within(seccion).getByLabelText('Recibidas hasta'), '2026-09-30')
+    await userEvent.type(within(seccion).getByLabelText('Recibidas desde'), '01/09/2026')
+    await userEvent.type(within(seccion).getByLabelText('Recibidas hasta'), '30/09/2026')
     await userEvent.click(within(seccion).getByRole('checkbox', { name: 'Quejas' }))
     await userEvent.click(within(seccion).getByRole('checkbox', { name: 'Consultas' }))
     // «Recibida» existe en los tres workflows: se manda una vez
