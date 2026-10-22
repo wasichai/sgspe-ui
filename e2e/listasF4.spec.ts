@@ -181,7 +181,7 @@ test.describe('a 1440 px', () => {
     await expect(page.getByRole('navigation', { name: 'Páginas de Riesgos' })).toBeVisible()
     await expect(page.getByRole('group', { name: 'Filtros' }).getByRole('radio', { name: 'Registro y matriz, 2' })).toHaveAttribute('aria-checked', 'true')
     await expect(page.getByRole('tablist')).toHaveCount(0)
-    await sinDesborde(page, page.getByRole('table', { name: 'Riesgos' }))
+    await sinDesborde(page, page.getByRole('table', { name: 'Riesgos', exact: true }))
   })
 
   test('las alertas: las vistas en la barra, sin la fila de pestañas vieja, y la tabla sin desborde', async ({ page }) => {
@@ -220,7 +220,7 @@ test.describe('a 390 px', () => {
     await page.goto('/projects/p1/risks')
     const tarjetas = page.getByRole('list', { name: 'Riesgos' })
     await expect(tarjetas.getByRole('listitem').filter({ hasText: 'R-001' })).toBeVisible()
-    await expect(page.getByRole('table', { name: 'Riesgos' })).toHaveCount(0)
+    await expect(page.getByRole('table', { name: 'Riesgos', exact: true })).toHaveCount(0)
   })
 
   test('las alertas son tarjetas', async ({ page }) => {
