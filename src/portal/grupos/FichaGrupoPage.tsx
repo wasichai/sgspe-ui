@@ -1,5 +1,7 @@
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import { CamposPlegables } from '../componentes/CamposPlegables'
+import { Seccion } from '../componentes/Seccion'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useState } from 'react'
@@ -27,7 +29,6 @@ import {
   type Registro
 } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import type { Advertencia } from './api'
 import { Advertencias } from './Advertencias'
 import { EvaluacionDrawer } from './EvaluacionDrawer'
@@ -112,53 +113,53 @@ function Ficha({ grupo }: { grupo: Registro }) {
   useMigaDelRegistro(nombre)
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('grupos.ficha.tipo'), opcion(grupo, 'stakeholder_type')].filter(Boolean).join(' · ')}
         titulo={nombre}
         chips={
-          <>
-            <EstadoChip objeto="stakeholder" estado={grupo.state} />
-            {/* D9: lo que falta no deja un guion suelto junto a «Ver el actor» */}
-            {opcion(grupo, 'stakeholder_scope') ? <span className="text-sg-text-secondary">{opcion(grupo, 'stakeholder_scope')}</span> : null}
-            {texto(grupo, 'owner_user_email') ? (
-              <span className="text-sg-text-secondary">
-                <Persona correo={texto(grupo, 'owner_user_email')} />
-              </span>
-            ) : null}
-            {actor.id ? (
-              <Link
-                to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
-                state={paso(nombre)}
-                className="text-sg-primary-text underline"
-              >
-                {t('grupos.ficha.actor')}
+          actor.id ? (
+            <Link
+              to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
+              state={paso(nombre)}
+              className="text-sg-primary-text underline"
+            >
+              {t('grupos.ficha.actor')}
+            </Link>
+          ) : undefined
+        }
+        objeto="stakeholder"
+        registro={grupo}
+        proyecto={proyecto}
+        primariaPropia={
+          escribeEnElProyecto && can('engagement', 'CREATE') ? (
+            <Button asChild size="sm">
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
+                {t('grupos.ficha.registrar')}
               </Link>
-            ) : null}
-          </>
-        }
-        primaria={
-          <div className="flex flex-wrap gap-2">
-            {escribeEnElProyecto && can('engagement', 'CREATE') ? (
-              <Button asChild size="sm">
-                <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
-                  {t('grupos.ficha.registrar')}
-                </Link>
-              </Button>
-            ) : null}
-            <BotonesDeTransicion objeto="stakeholder" registro={grupo} proyecto={proyecto} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
-          </div>
-        }
-        secundarias={
-          evalua ? (
-            <Button size="sm" variant="secondary" onClick={() => drawer(true)}>
-              {t('grupos.ficha.evaluar')}
             </Button>
           ) : undefined
         }
+        secundarias={
+          evalua
+            ? [
+                {
+                  clave: 'evaluar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => drawer(true)}>
+                      {t('grupos.ficha.evaluar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []
+        }
       />
       <Advertencias advertencias={advertencias} />
-      <section aria-label={t('grupos.ficha.paraDecidir')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* S17 no tiene panel de decisión: «Para decidir» hace sus veces y es el único lugar del estado (U-25) */}
+      <section aria-label={t('grupos.ficha.paraDecidir')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Tarjeta titulo={t('grupos.ficha.estado')}>
+          <EstadoChip objeto="stakeholder" estado={grupo.state} />
+        </Tarjeta>
         <Tarjeta titulo={t('grupos.ficha.influencia')}>
           {evaluado ? (
             <>
@@ -248,18 +249,37 @@ function Ficha({ grupo }: { grupo: Registro }) {
               ))}
             </ol>
           </section>
-          <section aria-label={t('grupos.ficha.perfil')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="font-medium">{t('grupos.ficha.perfil')}</h2>
-              {editaPerfil ? (
+          <Seccion
+            titulo={t('grupos.ficha.perfil')}
+            acciones={
+              editaPerfil ? (
                 <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                   {t('grupos.ficha.editarPerfil')}
                 </Button>
-              ) : null}
-            </div>
-            <p>{texto(grupo, 'inclusion_reason') || '—'}</p>
-            <p className="text-sg-text-secondary">{texto(grupo, 'profile_summary')}</p>
-          </section>
+              ) : undefined
+            }
+          >
+            <CamposPlegables
+              campos={[
+                { clave: 'inclusion_reason', termino: t('grupos.ficha.campos.inclusion_reason'), valor: texto(grupo, 'inclusion_reason'), ancho: true },
+                { clave: 'profile_summary', termino: t('grupos.ficha.campos.profile_summary'), valor: texto(grupo, 'profile_summary'), ancho: true },
+                { clave: 'stakeholder_scope', termino: t('grupos.ficha.campos.stakeholder_scope'), valor: opcion(grupo, 'stakeholder_scope') },
+                {
+                  clave: 'owner',
+                  termino: t('grupos.ficha.campos.owner'),
+                  valor: texto(grupo, 'owner_user_email') ? <Persona correo={texto(grupo, 'owner_user_email')} /> : null
+                },
+                { clave: 'interview_status', termino: t('grupos.ficha.campos.interview_status'), valor: opcion(grupo, 'interview_status') },
+                { clave: 'relationship_status', termino: t('grupos.ficha.campos.relationship_status'), valor: opcion(grupo, 'relationship_status') },
+                { clave: 'information_priority', termino: t('grupos.ficha.campos.information_priority'), valor: opcion(grupo, 'information_priority') },
+                {
+                  clave: 'last_contact_date',
+                  termino: t('grupos.ficha.campos.last_contact_date'),
+                  valor: texto(grupo, 'last_contact_date') ? <Dia valor={texto(grupo, 'last_contact_date')} /> : null
+                }
+              ]}
+            />
+          </Seccion>
         </div>
         <Trazabilidad grupo={grupo} />
       </div>

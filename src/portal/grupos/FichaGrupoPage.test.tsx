@@ -564,6 +564,53 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
   })
 })
 
+// P-09 del rediseño de UX (DD-02 y DD-06; U-02, U-03, U-25, U-26 y U-27): la cabecera dice qué es en la letra del texto y sin
+// el estado del flujo, que se dice una sola vez en «Para decidir»; una sola primaria, retirar en «Más acciones» y la
+// caracterización en su sección, con los campos sin dato plegados
+describe('S17 · cabecera y cuerpo de la ficha (P-09)', () => {
+  const conRetiro = {
+    path: '/objects/stakeholder/records/s1/transitions',
+    body: [{ name: 'retire_assessed', label: 'Retirar', to: 'retired', toLabel: 'Retirado', allowed: true, reason: null }]
+  }
+
+  it('una sola primaria, retirar en «Más acciones» y el estado una sola vez, fuera de la cabecera', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, [conRetiro, ...base(GERENCIA_SOCIAL, true)])
+    const titulo = await screen.findByRole('heading', { name: 'Ronda campesina Tunas', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText(/^Grupo de interés/)).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).queryByText('Evaluado')).not.toBeInTheDocument()
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    const registrar = within(acciones).getByRole('link', { name: 'Registrar interacción' })
+    expect(registrar).toHaveAttribute('data-variant', 'primary')
+    expect(await within(acciones).findByRole('button', { name: 'Nueva evaluación' })).toHaveAttribute('data-variant', 'secondary')
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    await waitFor(() => expect(within(acciones).getByRole('button', { name: 'Más acciones' })).toBeInTheDocument())
+    expect(within(acciones).queryByRole('button', { name: /^Retirar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Retirar/ })).toBeInTheDocument()
+    // el estado, una sola vez: en «Para decidir»
+    const estados = await screen.findAllByText('Evaluado', { selector: '[data-estado]' })
+    expect(estados).toHaveLength(1)
+    expect(within(screen.getByRole('region', { name: 'Para decidir' })).getByText('Evaluado')).toBe(estados[0])
+  })
+
+  it('la caracterización en su sección, con los campos sin dato plegados tras su conteo', async () => {
+    const conPerfil = { ...S1, attributes: { ...S1.attributes, inclusion_reason: 'Usa el agua del canal', owner_user_email: undefined } }
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, [
+      { path: '/objects/stakeholder/records/s1', body: conPerfil },
+      ...base(GERENCIA_SOCIAL, true)
+    ])
+    const perfil = await screen.findByRole('region', { name: 'Caracterización' })
+    expect(within(perfil).getByText('Motivo de inclusión')).toBeInTheDocument()
+    expect(within(perfil).getByText('Usa el agua del canal')).toBeInTheDocument()
+    expect(within(perfil).queryByText('Resumen del perfil')).not.toBeInTheDocument()
+    const mostrar = within(perfil).getByRole('button', { name: /^Mostrar los \d+ campos sin dato$/ })
+    await userEvent.click(mostrar)
+    expect(within(perfil).getByText('Resumen del perfil')).toBeInTheDocument()
+    expect(within(perfil).getByText('Responsable')).toBeInTheDocument()
+  })
+})
+
 // P38: solo ADMIN escribe sin asignación (revisión final, I3)
 describe('S17 · escritura sin asignación', () => {
   it('ADMIN sin asignación edita la caracterización y evalúa', async () => {
