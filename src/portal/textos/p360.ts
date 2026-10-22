@@ -7,7 +7,8 @@ export const ES_P360 = {
     fase: 'Fase de exploración',
     completar: 'Completar proyecto',
     registrarInteraccion: 'Registrar interacción',
-    atencion: 'Atención requerida',
+    atencion: 'Qué requiere atención',
+    atencionAyuda: 'Lo más urgente de cada grupo, con su motivo.',
     sinAtencion: 'Nada pide atención hoy.',
     // cada grupo de «Atención requerida» con su conteo al lado (ListaPriorizada) y el motivo de cada entrada
     grupos: {
@@ -25,6 +26,7 @@ export const ES_P360 = {
     },
     fuentes: { interacciones: 'Interacciones', grupos: 'Grupos de interés' },
     salud: 'Salud del proyecto',
+    pideAccion: 'Pide acción',
     kpis: {
       gruposVigentes: 'Grupos de interés vigentes',
       interacciones: 'Interacciones realizadas este mes',
@@ -189,7 +191,8 @@ export const EN_P360: typeof ES_P360 = {
     fase: 'Exploration phase',
     completar: 'Complete project',
     registrarInteraccion: 'Register engagement',
-    atencion: 'Needs attention',
+    atencion: 'What needs attention',
+    atencionAyuda: 'The most urgent items in each group, with why.',
     sinAtencion: 'Nothing needs attention today.',
     grupos: {
       actas: 'Minutes to draft',
@@ -206,6 +209,7 @@ export const EN_P360: typeof ES_P360 = {
     },
     fuentes: { interacciones: 'Engagements', grupos: 'Stakeholders' },
     salud: 'Project health',
+    pideAccion: 'Needs action',
     kpis: {
       gruposVigentes: 'Current stakeholders',
       interacciones: 'Engagements held this month',

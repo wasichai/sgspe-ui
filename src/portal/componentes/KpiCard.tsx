@@ -21,7 +21,8 @@ export function KpiCard({
   error,
   notas,
   a,
-  alReintentar
+  alReintentar,
+  anidada
 }: {
   titulo: string
   indicador?: Indicador
@@ -33,6 +34,8 @@ export function KpiCard({
   a?: string
   // con un fallo propio, «Reintentar» junto a la cifra; si falla todo el tablero, el aviso único lo ofrece y la tarjeta no
   alReintentar?: () => void
+  // dentro de una superficie que ya tiene borde, la cifra va sin caja propia: nunca una tarjeta dentro de otra (U-34)
+  anidada?: boolean
 }) {
   const { t } = useTranslation(NS)
   let cuerpo
@@ -66,7 +69,7 @@ export function KpiCard({
       </>
     )
   return (
-    <section aria-label={titulo} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+    <section aria-label={titulo} className={anidada ? 'space-y-1' : 'space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4'}>
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
       {cuerpo}
       {notas}

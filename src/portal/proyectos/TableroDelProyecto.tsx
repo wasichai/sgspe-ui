@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { KpiCard } from '../componentes/KpiCard'
+import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
+import { Seccion } from '../componentes/Seccion'
 import { useTablero, type Indicador, type Tablero } from '../datos/indicadores'
 import { NS } from '../i18n'
 import { BeneficiariosPorPrograma, Consolidado, ProgramasPorAnio } from '../inversion/TableroInversionPage'
@@ -33,15 +35,18 @@ export function useIndicadoresDelProyecto(proyecto: string) {
 
 const noDisponible = (code: string): Indicador => ({ code, label: code, available: false })
 
+// P-03 y DD-13: el acceso a cada tablero va sin subrayado; el subrayado queda para los enlaces dentro de un texto
+const ACCESO = 'text-sg-caption font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline'
+
+// un grupo de cifras en una sola superficie: las cifras van sin caja propia, nunca tarjetas dentro de tarjetas (U-34)
 function Grupo({ titulo, enlace, rotulo, children }: { titulo: string; enlace: string; rotulo: string; children: ReactNode }) {
   return (
-    <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h3 className="text-sg-h3 font-semibold">{titulo}</h3>
+    <Seccion titulo={titulo} nivel={3}>
       <div className="grid gap-3 sm:grid-cols-2">{children}</div>
-      <Link to={enlace} className="text-sg-caption text-sg-primary-text underline">
+      <Link to={enlace} className={ACCESO}>
         {rotulo}
       </Link>
-    </section>
+    </Seccion>
   )
 }
 
@@ -55,7 +60,11 @@ export function TableroDelProyecto({ tablero, proyecto }: { tablero: UseQueryRes
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {
           const ind = (code: string) => indicadorDe(datos.indicators, code) ?? noDisponible(code)
-          const tarjetas = (codigos: string[]) => codigos.map((c) => <KpiCard key={c} titulo={ind(c).label} indicador={ind(c)} />)
+          // una cifra de QCS que no cuenta las confidenciales lo dice, sin cuántas
+          const tarjetas = (codigos: string[]) =>
+            codigos.map((c) => (
+              <KpiCard key={c} titulo={ind(c).label} indicador={ind(c)} anidada notas={<NotaDeConfidenciales oculta={ind(c).confidentialHidden} />} />
+            ))
           return (
             <div className="grid gap-4 lg:grid-cols-2">
               <Grupo titulo={t('tablerosF8.proyecto.compromisos')} enlace={`${base}/commitments/dashboard`} rotulo={t('tablerosF8.proyecto.verCompromisos')}>
@@ -68,7 +77,7 @@ export function TableroDelProyecto({ tablero, proyecto }: { tablero: UseQueryRes
                 {(i) => (
                   <>
                     <MapaDeCalor indicador={i} />
-                    <Link to={`${base}/risks/dashboard`} className="text-sg-caption text-sg-primary-text underline">
+                    <Link to={`${base}/risks/dashboard`} className={ACCESO}>
                       {t('tablerosF8.proyecto.verRiesgos')}
                     </Link>
                   </>
@@ -84,7 +93,7 @@ export function TableroDelProyecto({ tablero, proyecto }: { tablero: UseQueryRes
                 {(i) => (
                   <>
                     <BeneficiariosPorPrograma indicador={i} />
-                    <Link to={`${base}/programs/dashboard`} className="text-sg-caption text-sg-primary-text underline">
+                    <Link to={`${base}/programs/dashboard`} className={ACCESO}>
                       {t('tablerosF8.proyecto.verInversion')}
                     </Link>
                   </>
