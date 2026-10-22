@@ -26,6 +26,12 @@ export const ES_COMUN = {
   eligeUnProyecto: 'Elija un proyecto',
   // la nota de TablaPriorizada sobre una columna que dice lo mismo en todas las filas (hallazgo U-06): <valor/> es la celda
   // ListaPriorizada (hallazgo U-05): el enlace sin conteo y lo que queda cuando no hay una lista a la que ir
+  // los campos vacíos de una ficha, plegados (hallazgo U-26)
+  camposPlegables: {
+    mostrar_one: 'Mostrar el campo sin dato',
+    mostrar_other: 'Mostrar los {{count}} campos sin dato',
+    ocultar: 'Ocultar los campos sin dato'
+  },
   listaPriorizada: {
     verTodos: 'Ver todos',
     mostrarMas_one: 'Mostrar {{count}} más',
@@ -403,6 +409,11 @@ export const EN_COMUN: typeof ES_COMUN = {
     OBJECT_NOT_READABLE: 'Your role cannot read these records'
   },
   eligeUnProyecto: 'Pick a project',
+  camposPlegables: {
+    mostrar_one: 'Show the empty field',
+    mostrar_other: 'Show the {{count}} empty fields',
+    ocultar: 'Hide the empty fields'
+  },
   listaPriorizada: {
     verTodos: 'Show all',
     mostrarMas_one: 'Show {{count}} more',
