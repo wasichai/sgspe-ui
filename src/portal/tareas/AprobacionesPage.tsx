@@ -24,6 +24,7 @@ import { fechaYHoraPe, NS } from '../i18n'
 import { useComprobacion } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { opcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // S48 · aprobaciones y escalamientos (screens.md §11): las aprobaciones son transiciones, no objetos (domain-model.md §6.13).
 // «Por aprobar» sale de los avisos approval_pending de wasichai-notifications (fuente sgspe.approvals, ACTION, con su enlace
@@ -311,7 +312,7 @@ function Detalle({ objeto, registro }: { objeto: string; registro: Registro }) {
     : texto(registro, 'description')
   const completa = objeto === 'commitment' ? `/tasks/approvals/commitment/${encodeURIComponent(registro.id)}` : rutaParaAbrir(objeto, registro.id)
   return (
-    <article className="space-y-4 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+    <Seccion etiqueta={titulo} className="space-y-4">
       <header className="space-y-1">
         <p className="text-sg-caption text-sg-text-muted">
           {[t(`aprobaciones.objetos.${objeto}`, { defaultValue: '' }), aporte ? '' : texto(registro, 'code')].filter(Boolean).join(' · ')}
@@ -375,7 +376,7 @@ function Detalle({ objeto, registro }: { objeto: string; registro: Registro }) {
           {t('aprobaciones.detalle.abrirFicha')}
         </EnlaceConRastro>
       ) : null}
-    </article>
+    </Seccion>
   )
 }
 

@@ -20,6 +20,7 @@ import { APROBACIONES_DE, rutaDeDecision, useAprobacionesPendientes } from './Ap
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S31 · aprobación de compromiso (/tasks/approvals/commitment/:recordId; screens.md §7, flujo 8): la bandeja a la izquierda,
 // el compromiso con su origen y la decisión con motivo obligatorio (commitment es requiresReason); a la derecha, las reglas de
@@ -83,7 +84,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
           {t('aprobaciones.decision.volver')}
         </Link>
         <h1 className="text-sg-h1 font-semibold">{t('aprobaciones.decision.titulo')}</h1>
-        <section aria-label={t('aprobaciones.decision.resumen')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <Seccion etiqueta={t('aprobaciones.decision.resumen')} className="text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-sg-mono">{texto(compromiso, 'code')}</span>
             <EstadoChip objeto="commitment" estado={compromiso.state} />
@@ -145,7 +146,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
           >
             {t('aprobaciones.decision.abrirFicha')}
           </EnlaceConRastro>
-        </section>
+        </Seccion>
         <section aria-label={t('aprobaciones.decision.decidir')} className="space-y-3">
           <h2 className="text-sg-h3 font-semibold">{t('aprobaciones.decision.decidir')}</h2>
           {!escribe ? (
@@ -203,7 +204,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
           )}
         </section>
       </article>
-      <aside aria-label={t('aprobaciones.decision.reglas')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+      <Seccion elemento="aside" etiqueta={t('aprobaciones.decision.reglas')} className="text-sm">
         <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('aprobaciones.decision.reglas')}</h2>
         {!decision ? null : comprobacion.isPending ? (
           <p className="text-sg-text-muted">{t('transiciones.comprobando')}</p>
@@ -227,7 +228,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
             ) : null}
           </>
         )}
-      </aside>
+      </Seccion>
     </div>
   )
 }

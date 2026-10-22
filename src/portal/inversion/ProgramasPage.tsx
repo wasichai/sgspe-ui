@@ -34,6 +34,7 @@ import { ConsultaDeTablero, indicadorDe, useTableroDisponible } from '../tablero
 import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, presupuestoDelPrograma, PresupuestoPorMoneda } from './cifras'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
+import { Seccion } from '../componentes/Seccion'
 
 // S42 · programas e inversión (screens.md §10): ¿cuánto del tope de la campaña queda, cómo avanzan los programas y qué aportes están
 // en curso? la misma página con alcance global (columna Proyecto, sin altas) o de un proyecto (ASM-076). las cifras salen del
@@ -183,10 +184,9 @@ function Cifras({ indicadores, deProgramas }: { indicadores: Indicador[]; deProg
     const indicador = indicadorDe(indicadores, code)
     if (indicador?.available && !conDatos(indicador)) return null
     return (
-      <section key={code} aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-        <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+      <Seccion key={code} titulo={titulo}>
         {indicador?.available ? contenido(indicador) : <NoDisponible motivo={indicador?.unavailableReason} />}
-      </section>
+      </Seccion>
     )
   }
   const zonas = (

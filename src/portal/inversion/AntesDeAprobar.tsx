@@ -14,6 +14,7 @@ import { NS } from '../i18n'
 import { useComprobacion, type Aviso } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { leerLineamientos, type Situacion } from './lineamientos'
+import { Seccion } from '../componentes/Seccion'
 
 // «Antes de aprobar» de S44 (screens.md S44, spec F5 §3.3 y §3.4): la consulta en seco (transition-checks) de la aprobación que
 // el rol tiene, approve o approve_direct (si no tiene ninguna, approve: la consulta no juzga roles, api.md §4.1, y dice a quien
@@ -44,10 +45,9 @@ export function AntesDeAprobar({ aporte, escribe }: { aporte: Registro; escribe:
   if (transiciones.isPending) return <Cargando compacto etiqueta={t('fichaAporte.antes.comprobando')} />
   if (transiciones.isError && !transiciones.data)
     return (
-      <section aria-label={t('fichaAporte.antes.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-        <h2 className="font-semibold">{t('fichaAporte.antes.titulo')}</h2>
+      <Seccion titulo={t('fichaAporte.antes.titulo')} className="space-y-3 text-sm">
         <FalloDeLectura error={transiciones.error} alReintentar={() => void transiciones.refetch()} />
-      </section>
+      </Seccion>
     )
   let cuerpo
   if (comprobacion.isPending || proyecto.isPending) cuerpo = <Cargando compacto etiqueta={t('fichaAporte.antes.comprobando')} />
@@ -93,11 +93,10 @@ export function AntesDeAprobar({ aporte, escribe }: { aporte: Registro; escribe:
     )
   }
   return (
-    <section aria-label={t('fichaAporte.antes.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="font-semibold">{t('fichaAporte.antes.titulo')}</h2>
+    <Seccion titulo={t('fichaAporte.antes.titulo')} className="space-y-3 text-sm">
       <p className="text-sg-caption text-sg-text-muted">{t('fichaAporte.antes.ayuda', { accion })}</p>
       {cuerpo}
-    </section>
+    </Seccion>
   )
 }
 
