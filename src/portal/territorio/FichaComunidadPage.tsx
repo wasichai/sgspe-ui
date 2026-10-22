@@ -20,6 +20,7 @@ import { EditorDeGeometria } from './EditorDeGeometria'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 import { opcion } from '../datos/opciones'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
+import { Seccion } from '../componentes/Seccion'
 
 // S13 · ficha de comunidad (screens.md §4, flujos 2 y 17): quién es la comunidad (registros, vida orgánica, sectores y la
 // organización que la representa con sus cargos), sus grupos de interés y las áreas que la incluyen. los registros del lugar
@@ -126,8 +127,7 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
   const [agregando, setAgregando] = useState(false)
   return (
     <div className="space-y-4 pt-3">
-      <section aria-label={t('territorio.comunidad.registro')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-        <h2 className="mb-2 font-medium">{t('territorio.comunidad.registro')}</h2>
+      <Seccion titulo={t('territorio.comunidad.registro')}>
         <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
           <Dato etiqueta={t('territorio.comunidad.personeria')}>{texto(comunidad, 'legal_entity_record') || '—'}</Dato>
           <Dato etiqueta={t('territorio.comunidad.propiedad')}>{texto(comunidad, 'property_record') || '—'}</Dato>
@@ -136,9 +136,8 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
           <Dato etiqueta={t('territorio.comunidad.areaInscrita')}>{HA(atributo(comunidad, 'registered_area_ha'))}</Dato>
           <Dato etiqueta={t('territorio.comunidad.areaCalculada')}>{HA(atributo(comunidad, 'calculated_area_ha'))}</Dato>
         </dl>
-      </section>
-      <section aria-label={t('territorio.comunidad.vidaOrganica')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-        <h2 className="mb-2 font-medium">{t('territorio.comunidad.vidaOrganica')}</h2>
+      </Seccion>
+      <Seccion titulo={t('territorio.comunidad.vidaOrganica')}>
         <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
           <Dato etiqueta={t('territorio.comunidad.estadoOrganico')}>{opcion(comunidad, 'organic_status') || '—'}</Dato>
           <Dato etiqueta={t('territorio.comunidad.juntaInscrita')}>{atributo(comunidad, 'board_registered') ? t('comun.si') : t('comun.no')}</Dato>
@@ -156,9 +155,8 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
         {(organizaciones.data ?? []).map((o) => (
           <Representante key={o.id} organizacion={o} />
         ))}
-      </section>
-      <section aria-label={t('territorio.comunidad.sectores')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-        <h2 className="font-medium">{t('territorio.comunidad.sectores')}</h2>
+      </Seccion>
+      <Seccion titulo={t('territorio.comunidad.sectores')}>
         {sectores.isPending ? <Cargando /> : null}
         {sectores.isError && !sectores.data ? <ErrorDeCarga error={sectores.error} alReintentar={() => void sectores.refetch()} /> : null}
         <ul className="text-sm">
@@ -177,7 +175,7 @@ function Resumen({ comunidad }: { comunidad: Registro }) {
             {t('territorio.comunidad.agregarSector')}
           </Button>
         ) : null}
-      </section>
+      </Seccion>
       <GruposDelLugar organizaciones={organizaciones} />
       <Drawer titulo={t('territorio.comunidad.agregarSector')} abierto={agregando} alCerrar={() => setAgregando(false)}>
         <FormularioDeRegistro
@@ -236,8 +234,7 @@ function GruposDelLugar({ organizaciones: lectura }: { organizaciones: UseQueryR
   const fallida = fallidaDeOrganizaciones ? { error: lectura.error } : consultas.find((c) => c.isError && !c.data)
   const grupos = consultas.flatMap((c) => c.data ?? [])
   return (
-    <section aria-label={t('territorio.comunidad.grupos')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="font-medium">{t('territorio.comunidad.grupos')}</h2>
+    <Seccion titulo={t('territorio.comunidad.grupos')}>
       {pendiente ? <Cargando /> : null}
       {fallida ? (
         <ErrorDeCarga
@@ -251,7 +248,7 @@ function GruposDelLugar({ organizaciones: lectura }: { organizaciones: UseQueryR
         ))}
       </ul>
       {!pendiente && !fallida && grupos.length === 0 ? <p className="text-sm text-sg-text-muted">{t('territorio.comunidad.sinGrupos')}</p> : null}
-    </section>
+    </Seccion>
   )
 }
 
@@ -274,12 +271,11 @@ function AreasQueLaIncluyen({ comunidad }: { comunidad: string }) {
   const { t } = useTranslation(NS)
   const miembros = useTodos('area_of_influence_member', { community: comunidad })
   return (
-    <aside aria-label={t('territorio.comunidad.areas')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="font-medium">{t('territorio.comunidad.areas')}</h2>
+    <Seccion titulo={t('territorio.comunidad.areas')} elemento="aside" className="text-sm">
       {miembros.isPending ? <Cargando /> : null}
       {miembros.isError && !miembros.data ? <ErrorDeCarga error={miembros.error} alReintentar={() => void miembros.refetch()} /> : null}
       {miembros.data ? <AreasDeMiembros miembros={miembros.data} /> : null}
-    </aside>
+    </Seccion>
   )
 }
 

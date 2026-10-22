@@ -17,6 +17,7 @@ import { diaPe, NS, numeroPe } from '../i18n'
 import { NotasDeIndicador } from '../tableros/comunes'
 import { useFichaTerritorial, type AreaDeLaFicha, type FichaTerritorial } from './consultas'
 import { rotuloDeFila, rotuloDeOpcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // la ficha contextual de S12 (screens.md S12, spec F6 §3.2 y §3.7): la parte territorial sale de sgspe.territory (…/card) y todas
 // las cifras de KPI-TER-01, que calcula sgspe.dashboard (dashboards.md §4.8 y §5.9), con el proyecto y el periodo del mapa. cada
@@ -56,7 +57,7 @@ export function FichaContextual({
   let encabezado = nombre
   if (!encabezado) encabezado = ficha.isPending ? t('comun.cargando') : ficha.data ? t('territorio.sinNombre') : t(`fichaTerritorial.tipos.${objeto}`)
   return (
-    <aside aria-label={t('fichaTerritorial.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion elemento="aside" etiqueta={t('fichaTerritorial.titulo')} className="space-y-3 text-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sg-overline font-semibold uppercase text-sg-territory">{t(`fichaTerritorial.tipos.${objeto}`)}</p>
@@ -82,7 +83,7 @@ export function FichaContextual({
       </div>
       <ParteTerritorial objeto={objeto} consulta={ficha} />
       <Cifras consulta={kpi} />
-    </aside>
+    </Seccion>
   )
 }
 
