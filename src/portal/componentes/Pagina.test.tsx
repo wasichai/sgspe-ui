@@ -115,6 +115,27 @@ describe('MasAcciones', () => {
     expect(boton).toHaveAttribute('aria-expanded', 'false')
     expect(boton).toHaveFocus()
   })
+
+  // el menú de una fila (P-08): solo el ícono, con un nombre accesible que dice de quién son las acciones
+  it('con nombre, el botón de solo ícono y su grupo se llaman así; sin él, «Más acciones»', async () => {
+    const { unmount } = montar(
+      <MasAcciones nombre="Acciones de pad@sgspe.test">
+        <button type="button">Terminar</button>
+      </MasAcciones>
+    )
+    const boton = screen.getByRole('button', { name: 'Acciones de pad@sgspe.test' })
+    expect(boton).toHaveAttribute('title', 'Acciones de pad@sgspe.test')
+    expect(boton).not.toHaveTextContent(/\S/)
+    await userEvent.click(boton)
+    expect(screen.getByRole('group', { name: 'Acciones de pad@sgspe.test' })).toBeInTheDocument()
+    unmount()
+    montar(
+      <MasAcciones>
+        <button type="button">Terminar</button>
+      </MasAcciones>
+    )
+    expect(screen.getByRole('button', { name: 'Más acciones' })).toBeInTheDocument()
+  })
 })
 
 describe('ContenedorDePagina', () => {

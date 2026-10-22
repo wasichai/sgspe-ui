@@ -58,12 +58,14 @@ export const ES_P360 = {
     asignar: 'Asignar',
     asignarme: 'Asignarme al proyecto',
     invalido: 'Revise este dato',
-    terminar: 'Terminar asignación',
+    terminar: 'Terminar la asignación…',
     vencida: 'Vencida: no da acceso de escritura',
     programada: 'Programada: aún no da acceso de escritura',
-    terminarDe: 'Terminar asignación de {{correo}}',
-    confirmarTerminar: '¿Terminar la asignación de {{correo}}? Dejará de dar acceso de escritura.',
-    terminarSi: 'Sí, terminar'
+    acciones: 'Acciones de {{persona}}',
+    tituloTerminar: 'Terminar la asignación de {{persona}}',
+    efectoVigente: '{{persona}} deja de trabajar en este proyecto desde hoy, {{fecha}}: la asignación queda terminada y ya no le da acceso de escritura.',
+    efectoProgramada: '{{persona}} no empezará a trabajar en este proyecto el {{fecha}}: la asignación queda terminada y nunca le dará acceso de escritura.',
+    terminarSi: 'Terminar la asignación'
   },
   equipo: {
     titulo: 'Equipo y parámetros',
@@ -237,12 +239,14 @@ export const EN_P360: typeof ES_P360 = {
     asignar: 'Assign',
     asignarme: 'Assign me to the project',
     invalido: 'Check this value',
-    terminar: 'End assignment',
+    terminar: 'End the assignment…',
     vencida: 'Expired: grants no write access',
     programada: 'Scheduled: grants no write access yet',
-    terminarDe: 'End assignment of {{correo}}',
-    confirmarTerminar: 'End the assignment of {{correo}}? It will stop granting write access.',
-    terminarSi: 'Yes, end it'
+    acciones: 'Actions for {{persona}}',
+    tituloTerminar: 'End the assignment of {{persona}}',
+    efectoVigente: '{{persona}} stops working on this project as of today, {{fecha}}: the assignment ends and no longer grants write access.',
+    efectoProgramada: '{{persona}} will not start working on this project on {{fecha}}: the assignment ends and will never grant write access.',
+    terminarSi: 'End the assignment'
   },
   equipo: {
     titulo: 'Team and parameters',

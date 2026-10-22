@@ -154,10 +154,11 @@ export function EncabezadoDePagina({
 
 // un desplegable sencillo (botón con aria-expanded y un grupo): Escape, un clic fuera o elegir una de sus opciones (un botón o
 // un enlace) lo cierran, y el foco vuelve al botón
-// el menú de acciones del encabezado: «Más» (solo el ícono) o, con etiqueta, un botón con su texto («Crear relacionado»)
-export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqueta?: string }) {
+// el menú de acciones del encabezado: «Más» (solo el ícono) o, con etiqueta, un botón con su texto («Crear relacionado»). el
+// menú de una fila (P-08) es solo el ícono con un nombre propio («Acciones de …»), que también nombra al grupo
+export function MasAcciones({ children, etiqueta, nombre: nombreAccesible }: { children: ReactNode; etiqueta?: string; nombre?: string }) {
   const { t } = useTranslation(NS)
-  const nombre = etiqueta ?? t('paginas.mas')
+  const nombre = etiqueta ?? nombreAccesible ?? t('paginas.mas')
   const [abierto, setAbierto] = useState(false)
   const id = useId()
   const raiz = useRef<HTMLDivElement>(null)
