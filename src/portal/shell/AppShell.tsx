@@ -30,8 +30,9 @@ const ROTULO = 'sr-only xl:not-sr-only xl:truncate'
 // en el panel del menú (tableta y teléfono) las etiquetas se ven siempre
 const ROTULO_VISIBLE = 'truncate'
 
-// el shell del portal (docs/ux/ux-architecture.md §7.1): barra superior de 56 px con la marca, el botón Preguntar del
-// asistente (S05, desde F7), la campana de avisos (S04, desde F3), el tema, la cuenta con sus roles y la salida; a la izquierda, la
+// el shell del portal (docs/ux/ux-architecture.md §7.1): barra superior de 56 px con seis controles (DD-09): la marca, el selector
+// de proyecto, Buscar, el botón Preguntar del asistente (S05, desde F7), la campana de avisos (S04, desde F3) y la cuenta con
+// sus roles, cuyo menú trae el idioma, el tema y la salida; a la izquierda, la
 // navegación principal con las secciones que se le ofrecen a la cuenta (useArbol), en su orden; a la derecha, el contenido.
 // Administración es S53, que enlaza la consola de /admin. la búsqueda con ⌘K (S03) llega después
 export function AppShell() {
@@ -66,7 +67,8 @@ export function AppShell() {
             <Mountain aria-hidden className="size-5" />
             {appName}
           </Link>
-          <span className="hidden truncate text-sg-body-sm text-sg-text-muted lg:inline">{t('app.lema')}</span>
+          {/* el lema solo desde 2xl (DD-09): por debajo, la barra no da para él y los seis controles */}
+          <span className="hidden truncate text-sg-body-sm text-sg-text-muted 2xl:inline">{t('app.lema')}</span>
           {/* el selector de proyecto ("Todos mis proyectos" o uno) lee y escribe el alcance de la URL (./context.ts); la
             búsqueda con ⌘K (S03) queda para después de F2 */}
           <SelectorDeProyecto />
@@ -76,20 +78,8 @@ export function AppShell() {
           <BotonBuscar />
           <BotonPreguntar />
           <Campana />
-          <span className="hidden items-center gap-3 sm:flex">
-            <LanguageMenu />
-            <ThemeMenu />
-          </span>
+          {/* el idioma, el tema y la salida van en el menú de la cuenta (DD-09, ux-architecture.md §7.1): nada de eso va suelto */}
           <MenuDePerfil rotulosDeRol={rotulosDeRol} />
-          <button
-            type="button"
-            onClick={signOut}
-            aria-label={t('shell.salir')}
-            title={t('shell.salir')}
-            className="hidden size-8 items-center justify-center rounded-sg-md text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text sm:flex"
-          >
-            <LogOut className="size-4" />
-          </button>
         </header>
         <div className="flex min-h-0 flex-1">
           <nav aria-label={t('shell.secciones')} className="hidden w-[52px] shrink-0 border-r border-sg-border bg-sg-surface p-1.5 md:block xl:w-60 xl:p-3">

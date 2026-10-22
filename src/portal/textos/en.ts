@@ -171,7 +171,8 @@ export const EN: Textos = {
     sinPermisos: 'Your permissions could not be read',
     preguntar: 'Ask',
     idioma: 'Language',
-    idiomaNoGuardado: 'Could not save the language'
+    idiomaNoGuardado: 'Could not save the language',
+    tema: 'Theme'
   },
   seccionesCortas: {
     attention: 'GIR'

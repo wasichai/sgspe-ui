@@ -171,7 +171,8 @@ export const ES = {
     sinPermisos: 'No se pudieron leer sus permisos',
     preguntar: 'Preguntar',
     idioma: 'Idioma',
-    idiomaNoGuardado: 'No se pudo guardar el idioma'
+    idiomaNoGuardado: 'No se pudo guardar el idioma',
+    tema: 'Tema'
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
   // el rótulo corto de una sección cuyo nombre no cabe en la barra lateral; el completo va en aria-label y title

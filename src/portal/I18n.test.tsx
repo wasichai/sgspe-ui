@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -38,6 +38,11 @@ function start(...extra: MockRoute[]) {
   render(<PortalApp />)
 }
 
+// el idioma y la salida viven en el menú de la cuenta (DD-09): se abre antes de buscarlos
+async function abrirCuenta(nombre = 'Su cuenta') {
+  await userEvent.click(await within(await screen.findByRole('banner')).findByRole('button', { name: nombre }))
+}
+
 describe('i18n del portal', () => {
   it('en.ts tiene exactamente las claves de es.ts', () => {
     expect(claves(EN).sort()).toEqual(claves(ES).sort())
@@ -45,6 +50,7 @@ describe('i18n del portal', () => {
 
   it('el español es el idioma por defecto', async () => {
     start()
+    await abrirCuenta()
     expect(await screen.findByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Idioma' })).toHaveValue('es')
     // WCAG 3.1.1: el idioma de la página es el del portal
@@ -62,6 +68,7 @@ describe('i18n del portal', () => {
 
   it('elegir inglés cambia los textos y lo guarda en sgspe.lang, la clave de /admin', async () => {
     start()
+    await abrirCuenta()
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Idioma' }), 'en')
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument()
@@ -73,6 +80,7 @@ describe('i18n del portal', () => {
   it('elegir inglés lo guarda también en el servidor, como /admin', async () => {
     // el servidor contesta el PUT con lo guardado
     start({ method: 'PUT', path: '/auth/me/preferences', body: { theme: 'system', locale: 'en' } }, preferencias('es'))
+    await abrirCuenta()
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Idioma' }), 'en')
     await screen.findByRole('button', { name: 'Sign out' })
     await waitFor(() => {
@@ -85,6 +93,7 @@ describe('i18n del portal', () => {
   // si el servidor rechaza el PUT, core devuelve el idioma anterior y vuelve a lanzar: el menú lo dice y no queda sin atender
   it('si el servidor rechaza guardar el idioma, vuelve al anterior y lo dice', async () => {
     start({ method: 'PUT', path: '/auth/me/preferences', status: 500, body: { title: 'Error', status: 500, detail: 'Fallo de prueba' } }, preferencias('es'))
+    await abrirCuenta()
     const selector = await screen.findByRole('combobox', { name: 'Idioma' })
     await userEvent.selectOptions(selector, 'en')
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo guardar el idioma')
@@ -96,6 +105,8 @@ describe('i18n del portal', () => {
 
   it('el idioma guardado en el servidor se aplica al cargar y se recuerda en sgspe.lang', async () => {
     start(preferencias('en'))
+    await waitFor(() => expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Your account' })).toBeInTheDocument())
+    await abrirCuenta('Your account')
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('en')
     expect(localStorage.getItem('sgspe.lang')).toBe('en')
