@@ -44,6 +44,10 @@ export const ES_RELACIONAMIENTO = {
       actividad: 'Actividad'
     },
     convocante: 'Convoca',
+    // las siglas del ámbito de los asistentes, explicadas (hallazgo U-28)
+    siglas: 'AIDS: área de influencia directa social · AIIS: área de influencia indirecta social',
+    quePaso: 'Qué pasó',
+    campos: { description: 'Qué se trató', results: 'Resultados', place: 'Lugar' },
     asistentes: 'Asistentes',
     porSexo: 'Por sexo',
     porAmbito: 'Por ámbito',
@@ -276,6 +280,9 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
       actividad: 'Activity'
     },
     convocante: 'Convener',
+    siglas: 'AIDS: direct social area of influence · AIIS: indirect social area of influence',
+    quePaso: 'What happened',
+    campos: { description: 'What was discussed', results: 'Results', place: 'Place' },
     asistentes: 'Attendees',
     porSexo: 'By sex',
     porAmbito: 'By scope',

@@ -229,7 +229,7 @@ test('la campana cuenta los avisos sin leer y abrir uno lleva a la ficha del reg
   expect(escrituras.map((r) => new URL(r.url()).pathname)).toContain('/api/auth/me/notifications/n1/read')
 })
 
-// etapa 5 de la revisión de UX: «Crear relacionado» desde la interacción abre el alta con ella como origen, y el compromiso
+// etapa 5 de la revisión de UX: «Registrar compromiso» desde la interacción abre el alta con ella como origen, y el compromiso
 // creado llega a su ficha con el origen enlazado en «De dónde viene»
 test('desde una interacción se crea el compromiso con ella como origen y la ficha lo enlaza', async ({ page }) => {
   const campo = (name: string, extra: Record<string, unknown> = {}) => ({ name, label: name, type: 'TEXT', editable: true, visible: true, ...extra })
@@ -303,8 +303,8 @@ test('desde una interacción se crea el compromiso con ella como origen y la fic
   })
 
   await page.goto('/projects/p1/engagements/e1')
-  await page.getByRole('button', { name: 'Crear relacionado' }).click()
-  await page.getByRole('link', { name: 'Registrar compromiso' }).click()
+  // con CabeceraDeFicha, el compromiso es una acción de la cabecera (P-09 del rediseño de UX)
+  await page.getByRole('group', { name: 'Acciones del registro' }).getByRole('link', { name: 'Registrar compromiso' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/commitments\/new\?origin_engagement=e1$/)
   // el origen viene propuesto: la interacción, sin buscarla
   await expect(page.getByRole('heading', { name: 'Nuevo compromiso', level: 1 })).toBeVisible()

@@ -1,11 +1,12 @@
 import { EnlaceConRastro, useSiguientePaso } from '../contexto/Rastro'
-import { VerEnElMapa } from '../componentes/VerEnElMapa'
+import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CrearRelacionado } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import { CamposPlegables } from '../componentes/CamposPlegables'
+import { Seccion } from '../componentes/Seccion'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
@@ -49,7 +50,6 @@ import {
 } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { Barras } from '../tableros/comunes'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
 import { VistaMarkdown } from './markdown'
 import { opcion } from '../datos/opciones'
@@ -89,6 +89,7 @@ export function FichaInteraccionPage() {
 
 // el camino de WF-B sin sus excepciones (posponer, cancelar, cerrar sin acta); un estado de excepción se agrega
 const CAMINO = ['planned', 'scheduled', 'held', 'minutes_drafted', 'minutes_in_review', 'minutes_approved', 'closed']
+const COMPROBAR = ['close', 'close_light']
 
 function Ficha({ interaccion }: { interaccion: Registro }) {
   const { t } = useTranslation(NS)
@@ -99,17 +100,16 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el título, encabezado, camino del flujo, panel de
   // decisión, pestañas con conteo y trazabilidad en tres grupos
   useMigaDelRegistro(texto(interaccion, 'title'))
-  const siguiente = useSiguienteAccion('engagement', interaccion, ['close', 'close_light'])
+  const siguiente = useSiguienteAccion('engagement', interaccion, COMPROBAR)
+  const { can } = useAuth()
   const evidencias = useEvidenciasDe('engagement', interaccion.id)
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('relacionamiento.ficha.tipo'), opcion(interaccion, 'engagement_type')].filter(Boolean).join(' · ')}
         titulo={texto(interaccion, 'title')}
         chips={
           <>
-            <EstadoChip objeto="engagement" estado={interaccion.state} />
             {instante ? <span className="text-sg-text-secondary">{fechaYHoraPe(new Date(instante))}</span> : null}
             {texto(interaccion, 'place') ? <span className="text-sg-text-secondary">{texto(interaccion, 'place')}</span> : null}
             {convocante.data ? (
@@ -125,28 +125,44 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             ) : null}
           </>
         }
-        primaria={<BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />}
-        secundarias={
-          <>
-            <VerEnElMapa objeto="engagement" registro={interaccion} />
-            {/* lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5) */}
-            <CrearRelacionado
-              proyecto={proyecto}
-              acciones={[
+        objeto="engagement"
+        registro={interaccion}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
+        secundarias={[
+          // lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5): acciones de la cabecera, no un menú
+          // dentro de otro (en «Más acciones» no se podría abrir)
+          ...(escribe && can('commitment', 'CREATE')
+            ? [
                 {
-                  objeto: 'commitment',
-                  etiqueta: t('paginas.relacionados.compromiso'),
-                  a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
-                },
-                {
-                  objeto: [...OBJETOS_DE_QCS],
-                  etiqueta: t('paginas.relacionados.qcs'),
-                  a: `/projects/${encodeURIComponent(proyecto)}/attention/new?origin_engagement=${encodeURIComponent(interaccion.id)}`
+                  clave: 'compromiso',
+                  nodo: (
+                    <Button asChild size="sm" variant="secondary">
+                      <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/new?origin_engagement=${encodeURIComponent(interaccion.id)}`}>
+                        {t('paginas.relacionados.compromiso')}
+                      </Link>
+                    </Button>
+                  )
                 }
-              ]}
-            />
-          </>
-        }
+              ]
+            : []),
+          ...(escribe && OBJETOS_DE_QCS.some((o) => can(o, 'CREATE'))
+            ? [
+                {
+                  clave: 'qcs',
+                  nodo: (
+                    <Button asChild size="sm" variant="secondary">
+                      <Link to={`/projects/${encodeURIComponent(proyecto)}/attention/new?origin_engagement=${encodeURIComponent(interaccion.id)}`}>
+                        {t('paginas.relacionados.qcs')}
+                      </Link>
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          ...(rutaEnElMapa('engagement', interaccion) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="engagement" registro={interaccion} /> }] : [])
+        ]}
       />
       <AccionesDeIa
         objeto="engagement"
@@ -241,7 +257,19 @@ function Resumen({ interaccion }: { interaccion: Registro }) {
           ]}
         />
       </div>
-      <p className="whitespace-pre-wrap text-sm">{texto(interaccion, 'results') || texto(interaccion, 'description')}</p>
+      {/* las siglas del ámbito, explicadas (U-28 del rediseño de UX) */}
+      <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.ficha.siglas')}</p>
+      {/* qué pasó, con los campos sin dato plegados (DD-06 y U-26 del rediseño de UX) */}
+      <Seccion titulo={t('relacionamiento.ficha.quePaso')}>
+        <CamposPlegables
+          campos={(['description', 'results', 'place'] as const).map((campo) => ({
+            clave: campo,
+            termino: t(`relacionamiento.ficha.campos.${campo}`),
+            valor: texto(interaccion, campo) ? <span className="whitespace-pre-wrap">{texto(interaccion, campo)}</span> : null,
+            ancho: campo !== 'place'
+          }))}
+        />
+      </Seccion>
     </div>
   )
 }
