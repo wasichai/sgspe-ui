@@ -2,8 +2,8 @@ import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, cn, Table, Td, Textarea, Th } from '@wasichai/ui'
-import { useMemo, useState } from 'react'
+import { Alert, Button, cn, Textarea } from '@wasichai/ui'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { CLASE_DE_TONO } from '../componentes/apariencias'
@@ -13,7 +13,10 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { ChipsDeFiltro, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { useParametrosDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -111,6 +114,71 @@ export function RiesgosPage() {
     fijar(siguiente, { replace: true })
   }
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
+  const [p, i] = celda.split('-')
+  const chips = [
+    ...(soloAltos ? [{ clave: 'level', etiqueta: t('riesgos.filtroAltos') }] : []),
+    ...(celda ? [{ clave: 'cell', etiqueta: t('riesgos.filtroCelda', { p, i }) }] : [])
+  ]
+  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el riesgo, el proyecto, el nivel, el estado y la
+  // revisión; secundarias, desde xl, la categoría, P × I y el responsable. una columna no esencial que dice lo mismo en todas las
+  // filas sale a una nota encima, y en «Mis riesgos» el responsable es quien mira: no se dibuja
+  const columnas: ColumnaPriorizada[] = [
+    { id: 'riesgo', encabezado: t('riesgos.columnas.riesgo'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm' },
+    ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('riesgos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
+    { id: 'categoria', encabezado: t('riesgos.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'puntaje', encabezado: t('riesgos.columnas.puntaje'), prioridad: 'secundaria', claseDeCelda: 'text-sm tabular-nums' },
+    { id: 'nivel', encabezado: t('riesgos.columnas.nivel'), prioridad: 'esencial' },
+    { id: 'estado', encabezado: t('riesgos.columnas.estado'), prioridad: 'esencial' },
+    { id: 'revision', encabezado: t('riesgos.columnas.revision'), prioridad: 'esencial', claseDeCelda: 'space-x-1 text-sm' },
+    ...(lista.vista === 'mios'
+      ? []
+      : [{ id: 'responsable', encabezado: t('riesgos.columnas.responsable'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }])
+  ]
+  const celdaDeTabla = (r: Registro, columna: string): ReactNode => {
+    switch (columna) {
+      case 'riesgo':
+        return (
+          <EnlaceDeRegistro
+            codigo={texto(r, 'code')}
+            titulo={texto(r, 'title')}
+            ruta={rutaDeFicha('social_risk', r)}
+            desde={t('riesgos.titulo')}
+            previa={{ objeto: 'social_risk', id: r.id }}
+          />
+        )
+      case 'proyecto':
+        return nombreDelProyecto(texto(r, 'project'))
+      case 'categoria':
+        return opcion(r, 'category') || '—'
+      case 'puntaje':
+        return celdaDe(r) && texto(r, 'score') ? `${texto(r, 'probability')} × ${texto(r, 'impact')} = ${texto(r, 'score')}` : '—'
+      case 'nivel':
+        return <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
+      case 'estado':
+        return <EstadoChip objeto="social_risk" estado={r.state} />
+      case 'revision':
+        return (
+          <>
+            <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
+            {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
+          </>
+        )
+      default:
+        return <Persona correo={texto(r, 'owner_user_email')} />
+    }
+  }
+  const valorPlano = (r: Registro, columna: string): string => {
+    switch (columna) {
+      case 'categoria':
+        return String(atributo(r, 'category') ?? '')
+      case 'puntaje':
+        return `${texto(r, 'probability')}×${texto(r, 'impact')}=${texto(r, 'score')}`
+      case 'responsable':
+        return texto(r, 'owner_user_email').toLowerCase()
+      default:
+        return r.id
+    }
+  }
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       {/* la sección aterriza en el registro y la matriz (decisión 7 de la revisión de UX): el tablero es una vista más, y las
@@ -136,19 +204,23 @@ export function RiesgosPage() {
           </>
         }
       />
-      <VistasGuardadas
-        vistas={VISTAS.map((v) => ({
-          id: v,
-          etiqueta: t(`riesgos.vistas.${v}`),
-          conteo: riesgos.data ? riesgos.data.filter((r) => enVista(v, r, user?.id)).length : null
-        }))}
-        actual={lista.vista}
-        alCambiar={(vista) => lista.cambiar({ view: vista, cell: null })}
-      />
-      <ChipsDeFiltro
-        chips={soloAltos ? [{ clave: 'level', etiqueta: t('riesgos.filtroAltos') }] : []}
-        alQuitar={(clave) => lista.cambiar({ [clave]: null })}
-        alLimpiar={() => lista.cambiar({ level: null })}
+      {/* la barra de filtros (P-02; hallazgos U-18 y U-22): las vistas en una sola fila con su conteo, y el nivel y la celda del
+          mapa como chips con «Limpiar». ?view=, ?level= y ?cell= siguen siendo los mismos */}
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({
+              id: v,
+              etiqueta: t(`riesgos.vistas.${v}`),
+              n: riesgos.data ? riesgos.data.filter((r) => enVista(v, r, user?.id)).length : null
+            }))}
+            actual={lista.vista}
+            alElegir={(vista) => lista.cambiar({ view: vista, cell: null })}
+          />
+        }
+        aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
+        alLimpiar={() => lista.cambiar({ level: null, cell: null })}
       />
       {riesgos.isPending ? (
         <Cargando />
@@ -201,55 +273,15 @@ export function RiesgosPage() {
               }))}
             />
           ) : (
-            <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-              <Table aria-label={t('riesgos.tabla')}>
-                <thead>
-                  <tr>
-                    <Th scope="col">{t('riesgos.columnas.riesgo')}</Th>
-                    {proyecto ? null : <Th scope="col">{t('riesgos.columnas.proyecto')}</Th>}
-                    <Th scope="col">{t('riesgos.columnas.categoria')}</Th>
-                    <Th scope="col">{t('riesgos.columnas.puntaje')}</Th>
-                    <Th scope="col">{t('riesgos.columnas.nivel')}</Th>
-                    <Th scope="col">{t('riesgos.columnas.estado')}</Th>
-                    <Th scope="col">{t('riesgos.columnas.revision')}</Th>
-                    <Th scope="col">{t('riesgos.columnas.responsable')}</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtrados.map((r) => (
-                    <tr key={r.id}>
-                      <Td className="min-w-64 text-sm">
-                        <EnlaceDeRegistro
-                          codigo={texto(r, 'code')}
-                          titulo={texto(r, 'title')}
-                          ruta={rutaDeFicha('social_risk', r)}
-                          desde={t('riesgos.titulo')}
-                          previa={{ objeto: 'social_risk', id: r.id }}
-                        />
-                      </Td>
-                      {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(r, 'project'))}</Td>}
-                      <Td className="text-sm">{opcion(r, 'category') || '—'}</Td>
-                      <Td className="text-sm tabular-nums">
-                        {celdaDe(r) && texto(r, 'score') ? `${texto(r, 'probability')} × ${texto(r, 'impact')} = ${texto(r, 'score')}` : '—'}
-                      </Td>
-                      <Td>
-                        <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
-                      </Td>
-                      <Td>
-                        <EstadoChip objeto="social_risk" estado={r.state} />
-                      </Td>
-                      <Td className="space-x-1 text-sm">
-                        <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-                        {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
-                      </Td>
-                      <Td className="text-sm">
-                        <Persona correo={texto(r, 'owner_user_email')} />
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
+            <TablaPriorizada<Registro>
+              etiqueta={t('riesgos.tabla')}
+              columnas={columnas}
+              filas={filtrados}
+              clave={(r) => r.id}
+              celda={celdaDeTabla}
+              valorPlano={valorPlano}
+              ocultarUniformes
+            />
           )}
         </div>
       )}

@@ -13,6 +13,7 @@ export const ES_RIESGOS = {
     rules: 'Reglas de alerta'
   },
   filtroAltos: 'Nivel alto o crítico',
+  filtroCelda: 'Probabilidad {{p}} × impacto {{i}}',
   vacio: 'No hay riesgos en esta vista.',
   tabla: 'Riesgos',
   nivel: 'Nivel de riesgo',
@@ -62,6 +63,7 @@ export const EN_RIESGOS: typeof ES_RIESGOS = {
     rules: 'Warning rules'
   },
   filtroAltos: 'High or critical level',
+  filtroCelda: 'Probability {{p}} × impact {{i}}',
   vacio: 'There are no risks in this view.',
   tabla: 'Risks',
   nivel: 'Risk level',
