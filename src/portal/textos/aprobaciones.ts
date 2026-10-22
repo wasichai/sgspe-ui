@@ -1,8 +1,7 @@
 // S48 y S31 · aprobaciones y escalamientos, aprobación de compromiso (screens.md §7 y §11, flujo 8)
 export const ES_APROBACIONES = {
   titulo: 'Aprobaciones y escalamientos',
-  ayuda:
-    'Las aprobaciones son pasos del flujo, no objetos: esta bandeja sale de los avisos de aprobación pendiente que le llegaron por su asignación al proyecto.',
+  ayuda: 'Lo que espera su decisión en sus proyectos.',
   vistas: { porAprobar: 'Por aprobar', escalamientos: 'Escalamientos' },
   sinModulo: 'Los avisos no están disponibles en esta instalación: las aprobaciones se ven en cada ficha.',
   vacia: 'No tiene decisiones pendientes.',
@@ -27,6 +26,25 @@ export const ES_APROBACIONES = {
   comprobando: 'Comprobando…',
   revisar: 'Revisar',
   ver: 'Ver',
+  espera: 'Espera: {{tiempo}}',
+  puede: '¿Puede decidir?',
+  // P-05: el detalle de lo elegido, al lado de la lista
+  detalle: {
+    titulo: 'Detalle',
+    elegir: 'Elija una aprobación de la lista para ver su detalle y decidir.',
+    volver: 'Volver a la lista',
+    aporte: 'Aporte {{codigo}}',
+    items: 'Ítems',
+    tope: 'Tope de la campaña',
+    presupuesto: 'Presupuesto total',
+    monto: 'Monto',
+    vence: 'Vence',
+    decidir: 'Decisión',
+    sinDecisiones: 'Su rol no tiene decisiones sobre este registro en su estado actual.',
+    enSuFicha: 'Esta decisión pide datos que se completan en la ficha del registro.',
+    decidirEnSuFicha: 'Decidir en su ficha',
+    abrirFicha: 'Abrir la ficha completa'
+  },
   // S31
   decision: {
     titulo: 'Aprobación de compromiso',
@@ -52,7 +70,7 @@ export const ES_APROBACIONES = {
 
 export const EN_APROBACIONES: typeof ES_APROBACIONES = {
   titulo: 'Approvals and escalations',
-  ayuda: 'Approvals are workflow steps, not objects: this inbox comes from the pending approval notices that reached you through your project assignment.',
+  ayuda: 'What awaits your decision in your projects.',
   vistas: { porAprobar: 'To approve', escalamientos: 'Escalations' },
   sinModulo: 'Notices are not available in this installation: approvals are seen on each record page.',
   vacia: 'You have no pending decisions.',
@@ -77,6 +95,24 @@ export const EN_APROBACIONES: typeof ES_APROBACIONES = {
   comprobando: 'Checking…',
   revisar: 'Review',
   ver: 'View',
+  espera: 'Waiting: {{tiempo}}',
+  puede: 'Can you decide?',
+  detalle: {
+    titulo: 'Detail',
+    elegir: 'Pick an approval from the list to see its detail and decide.',
+    volver: 'Back to the list',
+    aporte: 'Contribution {{codigo}}',
+    items: 'Items',
+    tope: 'Campaign cap',
+    presupuesto: 'Total budget',
+    monto: 'Amount',
+    vence: 'Due',
+    decidir: 'Decision',
+    sinDecisiones: 'Your role has no decisions on this record in its current state.',
+    enSuFicha: 'This decision needs details that are filled in on the record page.',
+    decidirEnSuFicha: 'Decide on its page',
+    abrirFicha: 'Open the full page'
+  },
   decision: {
     titulo: 'Commitment approval',
     volver: 'Back to the inbox',

@@ -47,6 +47,8 @@ export interface OpcionesDeTransiciones {
   // lo que impide la primaria, dicho en la pantalla con este id (CabeceraDeFicha): la primaria lo referencia y sale
   // deshabilitada (DD-02)
   faltaDeLaPrimaria?: { id: string; texto: string }
+  // la transición se aplicó: la bandeja de aprobaciones relee sus avisos (el resuelto sale de la lista)
+  alAplicar?: (transicion: AvailableTransition) => void
 }
 
 // las transiciones del registro repartidas: la primaria, las que avanzan, las destructivas, la confirmación de la última
@@ -61,7 +63,8 @@ export function useTransicionesOfrecidas({
   anexos,
   sinPrimaria = false,
   primariaSoloDelCamino = false,
-  faltaDeLaPrimaria
+  faltaDeLaPrimaria,
+  alAplicar
 }: OpcionesDeTransiciones) {
   const { t } = useTranslation(NS)
   const transiciones = useAvailableTransitions(objeto, registro.id)
@@ -117,7 +120,10 @@ export function useTransicionesOfrecidas({
         registro={registro}
         transicion={abierta}
         alCerrar={() => setAbierta(null)}
-        alAplicar={() => setHecha(abierta.toLabel)}
+        alAplicar={() => {
+          setHecha(abierta.toLabel)
+          alAplicar?.(abierta)
+        }}
         anexo={anexos?.[abierta.name]}
       />
     ) : null

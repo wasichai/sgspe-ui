@@ -195,3 +195,61 @@ test('un programa de otro proyecto dice que no existe o no es de sus proyectos, 
   await expect(page.getByRole('button', { name: 'Reintentar' })).toHaveCount(0)
   await expect(page.getByText(/does not exist/)).toHaveCount(0)
 })
+
+// P-05 (flujo F-E): el aporte se decide desde la bandeja, con el detalle al lado y la selección en la URL, sin abrir su ficha. solo
+// se ofrece lo que el servidor permite (aquí, «Aprobar»), con motivo, por el diálogo de transición
+test('aprobar un aporte desde la bandeja manda el motivo y la versión leída sin salir de la bandeja (P-05)', async ({ page }) => {
+  const { escrituras } = await prepararF5(page)
+  const ITEM = registro('it1', { social_contribution: 'a9', description: 'Estantes de madera', item_kind: 'BIEN', quantity: 5, line_amount: '1500' })
+  const aviso = {
+    id: 'n1',
+    kind: 'ACTION',
+    title: 'Aporte por aprobar',
+    body: null,
+    link: { type: 'RECORD', object: 'social_contribution', recordId: 'a9' },
+    publishAt: '2026-10-06T15:00:00Z',
+    expiresAt: null,
+    dueAt: null,
+    overdue: false,
+    source: 'sgspe.approvals',
+    read: false,
+    snoozedUntil: null,
+    dismissible: false
+  }
+  const json = (body: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+  await page.route(/\/api\/auth\/me\/permissions$/, (r) =>
+    r.fulfill(
+      json({
+        admin: false,
+        objects: { project: ['READ'], project_assignment: ['READ'], social_contribution: ['READ', 'UPDATE', 'APPROVE'], contribution_item: ['READ'] }
+      })
+    )
+  )
+  await page.route(/\/api\/auth\/me\/notifications(\?.*)?$/, (r) => r.fulfill(json({ content: [aviso], page: 0, size: 200, totalElements: 1, totalPages: 1 })))
+  await page.route(/\/api\/objects\/contribution_item\/records(\?.*)?$/, (r) => r.fulfill(json(pagina([ITEM]))))
+  await page.route(/\/api\/objects\/social_contribution\/records\/a9\/transitions$/, (r) =>
+    r.request().method() === 'GET'
+      ? r.fulfill(json([{ name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }]))
+      : r.fallback()
+  )
+  await page.route(/\/api\/objects\/social_contribution\/records\/a9\/transitions\/approve$/, (r) => {
+    escrituras.push(r.request())
+    return r.fulfill(json({ ...NUEVO, state: 'approved' }))
+  })
+  await page.goto('/tasks/approvals')
+  await page.getByRole('list', { name: 'Por aprobar' }).getByRole('link', { name: 'AP-010' }).click()
+  await expect(page).toHaveURL(/\/tasks\/approvals\?selected=social_contribution%3Aa9$/)
+  const detalle = page.getByRole('region', { name: 'Detalle' })
+  await expect(detalle.getByRole('heading', { name: 'Aporte AP-010' })).toBeVisible()
+  await expect(detalle.getByText('Estantes de madera')).toBeVisible()
+  await expect(detalle.getByRole('button', { name: 'Rechazar' })).toHaveCount(0)
+  await detalle.getByRole('button', { name: 'Aprobar' }).click()
+  const dialogo = page.getByRole('dialog', { name: 'Aprobar' })
+  await dialogo.getByLabel('Motivo (obligatorio)').fill('Dentro del tope')
+  await dialogo.getByRole('button', { name: 'Confirmar' }).click()
+  await expect(detalle.getByText('Decisión registrada.')).toBeVisible()
+  await expect(page).toHaveURL(/\/tasks\/approvals\?selected=social_contribution%3Aa9$/)
+  const aprobacion = escrituras.find((r) => new URL(r.url()).pathname === '/api/objects/social_contribution/records/a9/transitions/approve')!
+  expect(await aprobacion.headerValue('if-match')).toBe(`"${NUEVO.updatedAt}"`)
+  expect(await aprobacion.headerValue('x-change-reason')).toBe("UTF-8''Dentro%20del%20tope")
+})
