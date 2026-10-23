@@ -190,12 +190,24 @@ describe('CampoFecha, ayuda e invalidez de la pantalla', () => {
 // día abre una grilla de mes no modal, con lunes primero en los dos idiomas, que se recorre con el teclado y escribe el día
 // elegido en el campo como si se hubiera tecleado
 describe('CampoFecha, calendario', () => {
-  const ABRIR = 'Elegir la fecha en el calendario'
+  // el botón dice qué campo abre: con dos campos de fecha en una pantalla (Desde y Hasta) no se confunden
+  const ABRIR = /^Elegir .+ en el calendario$/
   const abrir = () => userEvent.click(screen.getByRole('button', { name: ABRIR }))
   const celda = (nombre: string) => screen.getByRole('gridcell', { name: nombre })
   const enfocada = () => document.activeElement?.getAttribute('aria-label')
 
   afterEach(() => vi.useRealTimers())
+
+  it('con dos campos de fecha, cada botón nombra su campo', () => {
+    montar(
+      <>
+        <CampoFecha etiqueta="Desde" valor={null} alCambiar={() => {}} />
+        <CampoFecha etiqueta="Hasta" valor={null} alCambiar={() => {}} />
+      </>
+    )
+    expect(screen.getByRole('button', { name: 'Elegir Desde en el calendario' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Elegir Hasta en el calendario' })).toBeInTheDocument()
+  })
 
   it('abre un diálogo no modal con el mes del valor y el foco en el día elegido', async () => {
     montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />)
@@ -401,7 +413,7 @@ describe('CampoFecha, calendario', () => {
   it.each([
     [
       'es',
-      'Elegir la fecha en el calendario',
+      'Elegir Inicio en el calendario',
       'Calendario de Inicio',
       ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'],
       'Octubre de 2026',
@@ -409,7 +421,7 @@ describe('CampoFecha, calendario', () => {
     ],
     [
       'en',
-      'Choose the date on the calendar',
+      'Choose Inicio on the calendar',
       'Inicio calendar',
       ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
       'October 2026',

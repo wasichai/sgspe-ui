@@ -375,7 +375,7 @@ export const ES_COMUN = {
     formatoHora: 'Escriba la hora como horas:minutos, de 00:00 a 23:59, por ejemplo 15:30',
     antesDe: 'La fecha no puede ser anterior al {{min}}',
     despuesDe: 'La fecha no puede ser posterior al {{max}}',
-    abrir: 'Elegir la fecha en el calendario',
+    abrir: 'Elegir {{etiqueta}} en el calendario',
     calendario: 'Calendario de {{etiqueta}}',
     mesAnterior: 'Mes anterior',
     mesSiguiente: 'Mes siguiente'
@@ -732,7 +732,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     formatoHora: 'Write the time as hours:minutes, from 00:00 to 23:59, for example 15:30',
     antesDe: 'The date cannot be before {{min}}',
     despuesDe: 'The date cannot be after {{max}}',
-    abrir: 'Choose the date on the calendar',
+    abrir: 'Choose {{etiqueta}} on the calendar',
     calendario: '{{etiqueta}} calendar',
     mesAnterior: 'Previous month',
     mesSiguiente: 'Next month'

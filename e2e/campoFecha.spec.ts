@@ -44,7 +44,7 @@ test('la fecha de recepción de una queja se elige en el calendario con el tecla
   await page.getByRole('button', { name: 'Siguiente' }).click()
 
   await page.getByLabel('Fecha y hora de recepción (hora)').fill('10:15')
-  const boton = page.getByRole('button', { name: 'Elegir la fecha en el calendario' })
+  const boton = page.getByRole('button', { name: 'Elegir Fecha y hora de recepción en el calendario' })
   await boton.click()
   const calendario = page.getByRole('dialog', { name: 'Calendario de Fecha y hora de recepción' })
   await expect(calendario).toBeVisible()
