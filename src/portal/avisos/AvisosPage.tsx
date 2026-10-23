@@ -1,7 +1,8 @@
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { Alert, Button, cn, Pagination } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { ResultadoDeLista } from '../contexto/Origen'
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMensajeDeError } from '../componentes/errores'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -107,11 +108,14 @@ export function AvisosPage() {
         <Vacio titulo={lista.vista === 'todos' && !tipo ? t('avisos.vacio') : t('avisos.vacioFiltrado')} />
       ) : (
         <>
-          <ul className="space-y-2">
-            {avisos.data.content.map((a) => (
-              <AvisoDeLaBandeja key={a.id} aviso={a} />
-            ))}
-          </ul>
+          {/* la bandeja es un resultado (flujo F-C): el registro de un aviso ofrece volver a ella y pasar al del siguiente */}
+          <ResultadoDeLista total={avisos.data.totalElements ?? null}>
+            <ul className="space-y-2">
+              {avisos.data.content.map((a) => (
+                <AvisoDeLaBandeja key={a.id} aviso={a} />
+              ))}
+            </ul>
+          </ResultadoDeLista>
           {avisos.data.totalPages && avisos.data.totalPages > 1 ? (
             <Pagination
               page={avisos.data.page}
@@ -153,9 +157,9 @@ function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
       </p>
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {destino ? (
-          <Link to={destino} onClick={() => !aviso.read && accion.mutate({ aviso, accion: 'read' })} className="text-sg-primary-text underline">
+          <EnlaceConRastro to={destino} onClick={() => !aviso.read && accion.mutate({ aviso, accion: 'read' })} className="text-sg-primary-text underline">
             {t('avisos.abrir')}
-          </Link>
+          </EnlaceConRastro>
         ) : (
           <span className="text-sg-caption text-sg-text-muted">{t('avisos.sinEnlace')}</span>
         )}

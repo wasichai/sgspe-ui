@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
 import { texto, useRegistro, type Registro } from '../datos/registros'
-import { useSiguientePaso } from '../contexto/Rastro'
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { NS } from '../i18n'
 import { Cargando, esIlegible, esProhibido, NoDisponible, Reservado } from './Estados'
 import { FalloDeLectura } from './LecturaConEstados'
@@ -21,7 +20,6 @@ export function useRotuloDeRegistro(): (registro: Registro) => string {
 export function RegistroVinculado({ objeto, id, rotulo }: { objeto: string; id: string | null | undefined; rotulo?: (registro: Registro) => string }) {
   const registro = useRegistro(objeto, id ?? undefined)
   const rotuloPorDefecto = useRotuloDeRegistro()
-  const paso = useSiguientePaso()
   if (!id) return null
   if (registro.isPending) return <Cargando compacto />
   if (registro.isError && !registro.data) {
@@ -32,9 +30,9 @@ export function RegistroVinculado({ objeto, id, rotulo }: { objeto: string; id: 
   const r = registro.data as Registro
   const ruta = rutaDeFicha(objeto, r) ?? rutaParaAbrir(objeto, r.id)
   return (
-    <Link to={ruta} state={paso(undefined, ruta)} className="text-sg-primary-text underline">
+    <EnlaceConRastro to={ruta} className="text-sg-primary-text underline">
       {(rotulo ?? rotuloPorDefecto)(r)}
-    </Link>
+    </EnlaceConRastro>
   )
 }
 
@@ -42,11 +40,10 @@ export function RegistroVinculado({ objeto, id, rotulo }: { objeto: string; id: 
 // nunca un enlace a «#»
 export function EnlaceDeFicha({ objeto, registro, children }: { objeto: string; registro: Registro; children: React.ReactNode }) {
   const ruta = rutaDeFicha(objeto, registro)
-  const paso = useSiguientePaso()
   return ruta ? (
-    <Link to={ruta} state={paso(undefined, ruta)} className="text-sg-primary-text underline">
+    <EnlaceConRastro to={ruta} className="text-sg-primary-text underline">
       {children}
-    </Link>
+    </EnlaceConRastro>
   ) : (
     <span>{children}</span>
   )

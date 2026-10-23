@@ -18,6 +18,7 @@ import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
+import { ResultadoDeLista } from '../contexto/Origen'
 import { useProyectos } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { atributo, conEstado, estados, texto, useConteo, useConteos, useRegistros, useRelacionados, type Parametros, type Registro } from '../datos/registros'
@@ -200,7 +201,8 @@ export function CompromisosPage() {
               <Vacio titulo={t('compromisos.vacio')} />
             )
           ) : (
-            <>
+            // el resultado de la vista con sus filtros (flujo F-C): la ficha abierta desde aquí dice «Volver a Compromisos (N)»
+            <ResultadoDeLista total={total}>
               {telefono ? (
                 <ListaEnTarjetas
                   etiqueta={t('compromisos.tabla')}
@@ -281,7 +283,7 @@ export function CompromisosPage() {
                   onPage={(p) => lista.cambiar({ page: String(p) })}
                 />
               ) : null}
-            </>
+            </ResultadoDeLista>
           )}
         </>
       )}

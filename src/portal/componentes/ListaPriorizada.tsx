@@ -2,6 +2,8 @@ import { cn } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { EnlaceConRastro } from '../contexto/Rastro'
+import { ResultadoDeLista } from '../contexto/Origen'
 import { NS, numeroPe } from '../i18n'
 import { Seccion } from './Seccion'
 
@@ -72,24 +74,28 @@ export function ListaPriorizada({ titulo, total, entradas, limite = 3, verTodos,
       {entradas.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{vacio}</p>
       ) : (
-        <ul className="space-y-2">
-          {visibles.map((e) => (
-            <li key={e.clave} className={cn('border-l-2 pl-3', BORDE[e.tono])}>
-              <Link to={e.a} className="text-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
-                {e.titulo}
-              </Link>
-              <p className="text-sg-caption text-sg-text-secondary">
-                <span>{e.motivo}</span>
-                {e.cuando ? (
-                  <>
-                    <span aria-hidden> · </span>
-                    <span>{e.cuando}</span>
-                  </>
-                ) : null}
-              </p>
-            </li>
-          ))}
-        </ul>
+        // las entradas son un resultado (flujo F-C): la ficha abierta desde una ofrece volver aquí y pasar a la siguiente. el total
+        // es el del grupo, no el de la pantalla: «Volver» no lleva conteo
+        <ResultadoDeLista>
+          <ul className="space-y-2">
+            {visibles.map((e) => (
+              <li key={e.clave} className={cn('border-l-2 pl-3', BORDE[e.tono])}>
+                <EnlaceConRastro to={e.a} className="text-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
+                  {e.titulo}
+                </EnlaceConRastro>
+                <p className="text-sg-caption text-sg-text-secondary">
+                  <span>{e.motivo}</span>
+                  {e.cuando ? (
+                    <>
+                      <span aria-hidden> · </span>
+                      <span>{e.cuando}</span>
+                    </>
+                  ) : null}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </ResultadoDeLista>
       )}
       {enlace}
     </Seccion>

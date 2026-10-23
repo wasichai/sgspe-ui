@@ -299,6 +299,7 @@ export function GruposPage() {
                 // proyecto, cada una con su casilla para registrar una interacción con los elegidos
                 <ListaEnTarjetas
                   etiqueta={t('grupos.titulo')}
+                  total={filtrados.length}
                   tarjetas={pagina.map((g) => ({
                     id: g.id,
                     titulo: <TituloDeGrupo grupo={g} seleccionado={seleccion.has(g.id)} alSeleccionar={proyecto ? (si) => alternar(g.id, si) : undefined} />,
@@ -310,6 +311,7 @@ export function GruposPage() {
               ) : (
                 <TablaPriorizada<Registro>
                   etiqueta={t('grupos.titulo')}
+                  total={filtrados.length}
                   idDeTabla="grupos"
                   columnas={columnas}
                   filas={pagina}

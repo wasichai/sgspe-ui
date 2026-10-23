@@ -22,6 +22,7 @@ import { atributo, texto, useRegistros } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { ResultadoDeLista } from '../contexto/Origen'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 
@@ -89,6 +90,7 @@ export function AcuerdosPage() {
         // en el teléfono, tarjetas con el título, el estado, la vigencia y el proyecto (revisión de UX, etapa 8)
         <ListaEnTarjetas
           etiqueta={t('acuerdos.tabla')}
+          total={acuerdos.data?.totalElements ?? null}
           tarjetas={lista.map((a) => ({
             id: a.id,
             titulo: (
@@ -112,53 +114,55 @@ export function AcuerdosPage() {
           }))}
         />
       ) : (
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-          <Table aria-label={t('acuerdos.tabla')}>
-            <thead>
-              <tr>
-                <Th scope="col">{t('acuerdos.columnas.acuerdo')}</Th>
-                {proyecto ? null : <Th scope="col">{t('acuerdos.columnas.proyecto')}</Th>}
-                <Th scope="col">{t('acuerdos.columnas.tipo')}</Th>
-                <Th scope="col">{t('acuerdos.columnas.estado')}</Th>
-                <Th scope="col">{t('acuerdos.columnas.vigencia')}</Th>
-                <Th scope="col">{t('acuerdos.columnas.vence')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {lista.map((a) => {
-                const p = proyectos.data?.find((x) => x.id === texto(a, 'project'))
-                return (
-                  <tr key={a.id}>
-                    <Td className="min-w-64 text-sm">
-                      <EnlaceDeRegistro
-                        codigo={texto(a, 'code')}
-                        titulo={texto(a, 'title')}
-                        ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
-                        desde={t('acuerdos.titulo')}
-                        previa={{ objeto: 'agreement', id: a.id }}
-                      />
-                    </Td>
-                    {proyecto ? null : (
-                      <Td className="text-sm">
-                        <ProyectoEnLista proyecto={p} />
+        <ResultadoDeLista total={acuerdos.data?.totalElements ?? null}>
+          <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+            <Table aria-label={t('acuerdos.tabla')}>
+              <thead>
+                <tr>
+                  <Th scope="col">{t('acuerdos.columnas.acuerdo')}</Th>
+                  {proyecto ? null : <Th scope="col">{t('acuerdos.columnas.proyecto')}</Th>}
+                  <Th scope="col">{t('acuerdos.columnas.tipo')}</Th>
+                  <Th scope="col">{t('acuerdos.columnas.estado')}</Th>
+                  <Th scope="col">{t('acuerdos.columnas.vigencia')}</Th>
+                  <Th scope="col">{t('acuerdos.columnas.vence')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {lista.map((a) => {
+                  const p = proyectos.data?.find((x) => x.id === texto(a, 'project'))
+                  return (
+                    <tr key={a.id}>
+                      <Td className="min-w-64 text-sm">
+                        <EnlaceDeRegistro
+                          codigo={texto(a, 'code')}
+                          titulo={texto(a, 'title')}
+                          ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
+                          desde={t('acuerdos.titulo')}
+                          previa={{ objeto: 'agreement', id: a.id }}
+                        />
                       </Td>
-                    )}
-                    <Td className="text-sm">{opcion(a, 'agreement_type')}</Td>
-                    <Td>
-                      <EstadoChip objeto="agreement" estado={a.state} />
-                    </Td>
-                    <Td>
-                      <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
-                    </Td>
-                    <Td className="text-sm">
-                      <Dia valor={texto(a, 'expiry_date')} />
-                    </Td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </Table>
-        </div>
+                      {proyecto ? null : (
+                        <Td className="text-sm">
+                          <ProyectoEnLista proyecto={p} />
+                        </Td>
+                      )}
+                      <Td className="text-sm">{opcion(a, 'agreement_type')}</Td>
+                      <Td>
+                        <EstadoChip objeto="agreement" estado={a.state} />
+                      </Td>
+                      <Td>
+                        <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
+                      </Td>
+                      <Td className="text-sm">
+                        <Dia valor={texto(a, 'expiry_date')} />
+                      </Td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </Table>
+          </div>
+        </ResultadoDeLista>
       )}
       <PaginacionDelServidor datos={acuerdos.data} alPagina={(p) => parametros.cambiar({ page: String(p) })} />
       {proyecto && fijos ? (

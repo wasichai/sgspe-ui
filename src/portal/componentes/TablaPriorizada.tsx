@@ -2,6 +2,7 @@ import { Table, Td, Th, cn } from '@wasichai/ui'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { useId, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import { ATRIBUTO_DE_FICHA, ResultadoDeLista } from '../contexto/Origen'
 import { NS } from '../i18n'
 import { ExplicacionDeColumna } from './Estados'
 import { MasAcciones } from './Pagina'
@@ -52,6 +53,8 @@ export interface PropsDeTablaPriorizada<T> {
   // el orden en que llegan las filas (quien llama ordena: la consulta del servidor) y qué hacer al pedir otro
   orden?: OrdenDeTabla
   alOrdenar?: (orden: OrdenDeTabla) => void
+  // cuántos registros tiene el resultado entero (no la página): la ficha abierta desde la tabla lo dice en «Volver a <lista> (N)»
+  total?: number | null
 }
 
 const VISIBILIDAD: Record<PrioridadDeColumna, string | undefined> = {
@@ -145,7 +148,8 @@ export function TablaPriorizada<T>({
   alPrevisualizar,
   idDeTabla,
   orden,
-  alOrdenar
+  alOrdenar,
+  total
 }: PropsDeTablaPriorizada<T>) {
   const { t } = useTranslation(NS)
   const ancha = useEsAncha()
@@ -169,7 +173,10 @@ export function TablaPriorizada<T>({
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' && alAbrir) {
       e.preventDefault()
-      alAbrir(fila)
+      // la ficha de la fila se abre como con su enlace, con el origen de la lista (flujo F-C); sin enlace, como diga quien llama
+      const enlace = e.currentTarget.querySelector<HTMLAnchorElement>(`a[${ATRIBUTO_DE_FICHA}]`)
+      if (enlace) enlace.click()
+      else alAbrir(fila)
     } else if (e.key === ' ' && alPrevisualizar) {
       // sin desplazar la página
       e.preventDefault()
@@ -177,80 +184,82 @@ export function TablaPriorizada<T>({
     }
   }
   return (
-    <div className="space-y-2">
-      {opcionales.length > 0 ? (
-        <div className="flex justify-end">
-          <MasAcciones etiqueta={t('comun.tablaPriorizada.columnas')}>
-            {opcionales.map((c) => (
-              <label key={c.id} className="flex items-center gap-2 rounded-sg-sm px-2 py-1 text-sm text-sg-text hover:bg-sg-surface-hover">
-                <input type="checkbox" checked={seVe(c)} onChange={() => alternar(c)} className="size-4" />
-                {c.encabezado}
-              </label>
+    <ResultadoDeLista total={total}>
+      <div className="space-y-2">
+        {opcionales.length > 0 ? (
+          <div className="flex justify-end">
+            <MasAcciones etiqueta={t('comun.tablaPriorizada.columnas')}>
+              {opcionales.map((c) => (
+                <label key={c.id} className="flex items-center gap-2 rounded-sg-sm px-2 py-1 text-sm text-sg-text hover:bg-sg-surface-hover">
+                  <input type="checkbox" checked={seVe(c)} onChange={() => alternar(c)} className="size-4" />
+                  {c.encabezado}
+                </label>
+              ))}
+            </MasAcciones>
+          </div>
+        ) : null}
+        {uniformes.length > 0 ? (
+          <ul aria-label={t('comun.tablaPriorizada.igualEnTodas')} className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-sg-text-secondary">
+            {uniformes.map((c) => (
+              <li key={c.id}>
+                <Trans
+                  t={t}
+                  i18nKey="comun.tablaPriorizada.uniforme"
+                  values={{ encabezado: c.encabezado }}
+                  components={{ valor: <span className="font-medium text-sg-text">{celda(filas[0], c.id)}</span> }}
+                />
+              </li>
             ))}
-          </MasAcciones>
-        </div>
-      ) : null}
-      {uniformes.length > 0 ? (
-        <ul aria-label={t('comun.tablaPriorizada.igualEnTodas')} className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-sg-text-secondary">
-          {uniformes.map((c) => (
-            <li key={c.id}>
-              <Trans
-                t={t}
-                i18nKey="comun.tablaPriorizada.uniforme"
-                values={{ encabezado: c.encabezado }}
-                components={{ valor: <span className="font-medium text-sg-text">{celda(filas[0], c.id)}</span> }}
-              />
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-        <Table aria-label={etiqueta}>
-          <thead>
-            <tr>
-              {visibles.map((c) => {
-                // la que ordena dice su sentido en el th; una ordenable que no ordena no lleva aria-sort
-                const sentido = alOrdenar && c.ordenable && orden?.columna === c.id ? orden.dir : undefined
-                const ordenar = alOrdenar && c.ordenable ? () => alOrdenar({ columna: c.id, dir: sentido === 'asc' ? 'desc' : 'asc' }) : undefined
-                const ariaSort = sentido === 'asc' ? 'ascending' : sentido === 'desc' ? 'descending' : undefined
-                return c.explicacion ? (
-                  <ThExplicado key={c.id} columna={c} visibilidad={visibilidad(c)} ariaSort={ariaSort} sentido={sentido} alOrdenar={ordenar} />
-                ) : (
-                  <Th key={c.id} scope="col" aria-sort={ariaSort} className={cn(visibilidad(c), c.numerica && 'text-right')}>
-                    {ordenar ? (
-                      <BotonDeOrden sentido={sentido} alPulsar={ordenar}>
-                        {c.encabezado}
-                      </BotonDeOrden>
-                    ) : c.encabezadoOculto ? (
-                      <span className="sr-only">{c.encabezado}</span>
-                    ) : (
-                      c.encabezado
-                    )}
-                  </Th>
-                )
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((f) => (
-              <tr
-                key={clave(f)}
-                tabIndex={enfocable ? 0 : undefined}
-                onKeyDown={enfocable ? alTeclear(f) : undefined}
-                // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
-                className={cn('group/fila', enfocable && 'focus-visible:outline-2 focus-visible:outline-sg-focus')}
-              >
-                {visibles.map((c) => (
-                  <Td key={c.id} className={cn(visibilidad(c), c.numerica && 'text-right tabular-nums', c.claseDeCelda)}>
-                    {celda(f, c.id)}
-                  </Td>
-                ))}
+          </ul>
+        ) : null}
+        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+          <Table aria-label={etiqueta}>
+            <thead>
+              <tr>
+                {visibles.map((c) => {
+                  // la que ordena dice su sentido en el th; una ordenable que no ordena no lleva aria-sort
+                  const sentido = alOrdenar && c.ordenable && orden?.columna === c.id ? orden.dir : undefined
+                  const ordenar = alOrdenar && c.ordenable ? () => alOrdenar({ columna: c.id, dir: sentido === 'asc' ? 'desc' : 'asc' }) : undefined
+                  const ariaSort = sentido === 'asc' ? 'ascending' : sentido === 'desc' ? 'descending' : undefined
+                  return c.explicacion ? (
+                    <ThExplicado key={c.id} columna={c} visibilidad={visibilidad(c)} ariaSort={ariaSort} sentido={sentido} alOrdenar={ordenar} />
+                  ) : (
+                    <Th key={c.id} scope="col" aria-sort={ariaSort} className={cn(visibilidad(c), c.numerica && 'text-right')}>
+                      {ordenar ? (
+                        <BotonDeOrden sentido={sentido} alPulsar={ordenar}>
+                          {c.encabezado}
+                        </BotonDeOrden>
+                      ) : c.encabezadoOculto ? (
+                        <span className="sr-only">{c.encabezado}</span>
+                      ) : (
+                        c.encabezado
+                      )}
+                    </Th>
+                  )
+                })}
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {filas.map((f) => (
+                <tr
+                  key={clave(f)}
+                  tabIndex={enfocable ? 0 : undefined}
+                  onKeyDown={enfocable ? alTeclear(f) : undefined}
+                  // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
+                  className={cn('group/fila', enfocable && 'focus-visible:outline-2 focus-visible:outline-sg-focus')}
+                >
+                  {visibles.map((c) => (
+                    <Td key={c.id} className={cn(visibilidad(c), c.numerica && 'text-right tabular-nums', c.claseDeCelda)}>
+                      {celda(f, c.id)}
+                    </Td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       </div>
-    </div>
+    </ResultadoDeLista>
   )
 }
 

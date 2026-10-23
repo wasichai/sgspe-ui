@@ -249,6 +249,7 @@ export function RiesgosPage() {
           ) : telefono ? (
             <ListaEnTarjetas
               etiqueta={t('riesgos.tabla')}
+              total={filtrados.length}
               tarjetas={filtrados.map((r) => ({
                 id: r.id,
                 titulo: (
@@ -278,6 +279,7 @@ export function RiesgosPage() {
           ) : (
             <TablaPriorizada<Registro>
               etiqueta={t('riesgos.tabla')}
+              total={filtrados.length}
               columnas={columnas}
               filas={filtrados}
               clave={(r) => r.id}

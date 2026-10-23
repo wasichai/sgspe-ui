@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { texto, useRegistro } from '../datos/registros'
 import { NS } from '../i18n'
+import { NavegacionDeOrigen } from './NavegacionDeOrigen'
 
 // las piezas de página de la revisión de UX (etapa 0, design-system.md §6.1 y §6.4): un ancho único para todas las
 // pantallas, un encabezado con el mismo orden y peso en todas, y el título del documento con la pantalla y el proyecto (D7)
@@ -124,6 +125,8 @@ export function EncabezadoDePagina({
     // un div y no un <header>: dentro de main no es la barra superior, y así nada lo confunde con ella (el banner de la página)
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1">
+        {/* una ficha abierta desde una lista: «‹ Volver a <lista> (N)», «Anterior» y «Siguiente» sobre el antetítulo (flujo F-C) */}
+        {ficha ? <NavegacionDeOrigen /> : null}
         {antetitulo ? <p className={`${antetituloEnSans ? '' : 'font-sg-mono '}text-sg-caption text-sg-text-muted`}>{antetitulo}</p> : null}
         <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
         {chips ? <div className="flex flex-wrap items-center gap-2 text-sm">{chips}</div> : null}

@@ -310,6 +310,7 @@ function Programas({ proyecto, indicadores, programas }: { proyecto?: string; in
         // en el teléfono, tarjetas (revisión de UX, etapa 8)
         <ListaEnTarjetas
           etiqueta={t('inversion.programas.tabla')}
+          total={programas.data?.totalElements ?? null}
           tarjetas={filas.map((p) => ({
             id: p.id,
             titulo: enlace(p),
@@ -321,6 +322,7 @@ function Programas({ proyecto, indicadores, programas }: { proyecto?: string; in
       ) : (
         <TablaPriorizada<Registro>
           etiqueta={t('inversion.programas.tabla')}
+          total={programas.data?.totalElements ?? null}
           columnas={columnas}
           filas={filas}
           clave={(p) => p.id}

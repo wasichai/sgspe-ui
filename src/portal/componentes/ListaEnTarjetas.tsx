@@ -1,4 +1,5 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
+import { ResultadoDeLista } from '../contexto/Origen'
 
 // las listas en el teléfono (revisión de UX, etapa 8): por debajo de sm, una tabla de trabajo se desplazaba en horizontal y su
 // estado quedaba fuera de la pantalla. ahí la lista es de tarjetas con el título, el estado, el plazo y el proyecto; desde sm,
@@ -28,22 +29,25 @@ export interface TarjetaDeLista {
   detalle?: ReactNode
 }
 
-export function ListaEnTarjetas({ etiqueta, tarjetas }: { etiqueta: string; tarjetas: TarjetaDeLista[] }) {
+// total: cuántos registros tiene el resultado entero, para el «Volver a <lista> (N)» de la ficha que se abra desde aquí
+export function ListaEnTarjetas({ etiqueta, tarjetas, total }: { etiqueta: string; tarjetas: TarjetaDeLista[]; total?: number | null }) {
   return (
-    <ul aria-label={etiqueta} className="space-y-2">
-      {tarjetas.map((t) => (
-        <li key={t.id} className="space-y-1.5 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
-          <div className="min-w-0">{t.titulo}</div>
-          {t.estado || t.plazo ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {t.estado}
-              {t.plazo}
-            </div>
-          ) : null}
-          {t.proyecto ? <div className="text-sg-caption text-sg-text-secondary">{t.proyecto}</div> : null}
-          {t.detalle ? <div className="text-sg-caption text-sg-text-secondary">{t.detalle}</div> : null}
-        </li>
-      ))}
-    </ul>
+    <ResultadoDeLista total={total}>
+      <ul aria-label={etiqueta} className="space-y-2">
+        {tarjetas.map((t) => (
+          <li key={t.id} className="space-y-1.5 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
+            <div className="min-w-0">{t.titulo}</div>
+            {t.estado || t.plazo ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {t.estado}
+                {t.plazo}
+              </div>
+            ) : null}
+            {t.proyecto ? <div className="text-sg-caption text-sg-text-secondary">{t.proyecto}</div> : null}
+            {t.detalle ? <div className="text-sg-caption text-sg-text-secondary">{t.detalle}</div> : null}
+          </li>
+        ))}
+      </ul>
+    </ResultadoDeLista>
   )
 }
