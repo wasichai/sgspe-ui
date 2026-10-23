@@ -208,10 +208,10 @@ test('la revisión ejecutiva y el cierre de un periodo con su razón', async ({ 
   await expect(page.getByRole('link', { name: 'Compromisos vencidos · Proyecto Ejemplo A' })).toHaveAttribute('href', '/projects/p1/commitments')
   // P-07 y U-11: el periodo y la fecha de cálculo bajo el título; los filtros, plegados hasta pedirlos, con fechas dd/mm/aaaa
   await expect(page.getByText(/ · todos sus proyectos · calculado /)).toBeVisible()
-  await expect(page.getByLabel('Desde')).toHaveCount(0)
+  await expect(page.getByLabel('Desde', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Cambiar el periodo y los filtros' }).click()
-  await page.getByLabel('Desde').fill('01/09/2026')
-  await page.getByLabel('Hasta').fill('30/09/2026')
+  await page.getByLabel('Desde', { exact: true }).fill('01/09/2026')
+  await page.getByLabel('Hasta', { exact: true }).fill('30/09/2026')
   await expect(page).toHaveURL(/periodStart=2026-09-01&periodEnd=2026-09-30/)
   await expect(page.getByText(/^Setiembre de 2026 · todos sus proyectos · calculado /)).toBeVisible()
   // P-07 (i): barras de color sólido, sin el relleno con trama (un patrón url() del decal de ECharts)
