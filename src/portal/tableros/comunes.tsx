@@ -5,6 +5,7 @@ import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
+import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { Consulta, NoDisponible } from '../componentes/Estados'
 import { sonDemasiadosRegistros, useCatalogoDeIndicadores, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
@@ -84,6 +85,16 @@ export function FiltrosDeTablero({
         valor={busqueda.get('periodEnd')}
         min={busqueda.get('periodStart') ?? undefined}
         alCambiar={(v) => cambiar('periodEnd', v ?? '')}
+      />
+      <AtajosDePeriodo
+        desde={busqueda.get('periodStart')}
+        hasta={busqueda.get('periodEnd')}
+        alElegir={({ desde, hasta }) => {
+          const siguiente = new URLSearchParams(busqueda)
+          siguiente.set('periodStart', desde)
+          siguiente.set('periodEnd', hasta)
+          fijar(siguiente, { replace: true })
+        }}
       />
       <label className="space-y-1">
         <span className="block text-sg-label">{t('tableros.ambito')}</span>

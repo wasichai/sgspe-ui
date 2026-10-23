@@ -3,6 +3,7 @@ import { useWorkflow } from '@wasichai/workflow'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -96,6 +97,16 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
           />
         </div>
         <CampoFecha etiqueta={t('reportes.atencion.hasta')} valor={hasta || null} alCambiar={(v) => cambiar(setHasta)(v ?? '')} />
+        <div className="md:col-span-2">
+          <AtajosDePeriodo
+            desde={desde}
+            hasta={hasta}
+            alElegir={(periodo) => {
+              cambiar(setDesde)(periodo.desde)
+              cambiar(setHasta)(periodo.hasta)
+            }}
+          />
+        </div>
         <Campo etiqueta={t('reportes.atencion.canal')}>
           {(p) => (
             <SelectNativo

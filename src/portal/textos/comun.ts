@@ -383,6 +383,16 @@ export const ES_COMUN = {
     mesAnterior: 'Mes anterior',
     mesSiguiente: 'Mes siguiente'
   },
+  // AtajosDePeriodo: llenan las dos fechas de un periodo según el día de hoy en Lima. ningún nombre lleva «Desde» ni «Hasta»,
+  // que son las etiquetas de los campos que llenan
+  atajosDePeriodo: {
+    grupo: 'Atajos de periodo',
+    esteMes: 'Este mes',
+    mesPasado: 'Mes pasado',
+    ultimos30: 'Últimos 30 días',
+    esteAno: 'Este año',
+    anoPasado: 'Año pasado'
+  },
   errores: {
     '400': 'Revise los datos marcados.',
     '403': 'Su cuenta no tiene permiso para esta acción. Pídalo a la administración del proyecto.',
@@ -742,6 +752,14 @@ export const EN_COMUN: typeof ES_COMUN = {
     calendario: '{{etiqueta}} calendar',
     mesAnterior: 'Previous month',
     mesSiguiente: 'Next month'
+  },
+  atajosDePeriodo: {
+    grupo: 'Period shortcuts',
+    esteMes: 'This month',
+    mesPasado: 'Last month',
+    ultimos30: 'Last 30 days',
+    esteAno: 'This year',
+    anoPasado: 'Last year'
   },
   errores: {
     '400': 'Check the highlighted data.',

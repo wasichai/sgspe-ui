@@ -291,6 +291,26 @@ describe('S12 · filtros, leyenda y captura', () => {
     }
   })
 
+  // design-system.md §5: los atajos llenan las dos fechas con el día de Lima y quitan un periodo tecleado que no valía
+  it('un atajo de periodo escribe las dos fechas en la URL y quita el aviso del periodo tecleado', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-12T15:00:00Z'))
+    try {
+      fetch = abrirPortal('/territory?periodEnd=2026-06-30', ANALISTA_SIG, EQUIPO_SIG, rutas())
+      const filtros = await screen.findByRole('group', { name: 'Filtros del mapa' })
+      await userEvent.type(within(filtros).getByLabelText('Desde'), '01/07/2026')
+      expect(await within(filtros).findByRole('alert')).toBeInTheDocument()
+      const atajos = within(filtros).getByRole('group', { name: 'Atajos de periodo' })
+      await userEvent.click(within(atajos).getByRole('button', { name: 'Año pasado' }))
+      await waitFor(() => expect(rutaActual()).toBe('/territory?periodEnd=2025-12-31&periodStart=2025-01-01'))
+      expect(within(filtros).queryByRole('alert')).not.toBeInTheDocument()
+      expect(within(filtros).getByLabelText('Desde')).toHaveValue('01/01/2025')
+      expect(within(atajos).getByRole('button', { name: 'Año pasado' })).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('las fechas inválidas tecleadas ceden a la URL si el periodo cambia por otro camino (atrás, un enlace)', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-12T15:00:00Z'))

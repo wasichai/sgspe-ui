@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 import { SelectNativo } from '../componentes/Campo'
+import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, NoDisponible, Vacio } from '../componentes/Estados'
@@ -115,6 +116,17 @@ export function ReporteQcsPage() {
       <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
         <CampoFecha etiqueta={t('reporteQcs.filtros.desde')} valor={filtro('periodStart') || null} alCambiar={(v) => cambiar('periodStart', v ?? '')} />
         <CampoFecha etiqueta={t('reporteQcs.filtros.hasta')} valor={filtro('periodEnd') || null} alCambiar={(v) => cambiar('periodEnd', v ?? '')} />
+        <AtajosDePeriodo
+          desde={filtro('periodStart')}
+          hasta={filtro('periodEnd')}
+          alElegir={({ desde, hasta }) => {
+            const siguiente = new URLSearchParams(busqueda)
+            siguiente.delete('page')
+            siguiente.set('periodStart', desde)
+            siguiente.set('periodEnd', hasta)
+            fijar(siguiente, { replace: true })
+          }}
+        />
         <label className="space-y-1">
           <span className="block">{t('reporteQcs.filtros.tipo')}</span>
           <SelectNativo

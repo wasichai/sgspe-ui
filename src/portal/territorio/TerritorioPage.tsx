@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
+import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
@@ -459,6 +460,15 @@ export function FiltrosDelMapa() {
           valor={fecha('periodEnd') || null}
           invalido={Boolean(borrador)}
           alCambiar={(v) => cambiarPeriodo('periodEnd', v ?? '')}
+        />
+        {/* un atajo es siempre un periodo válido (a lo sumo un año): quita lo tecleado que no valía */}
+        <AtajosDePeriodo
+          desde={fecha('periodStart')}
+          hasta={fecha('periodEnd')}
+          alElegir={({ desde, hasta }) => {
+            setBorrador(null)
+            escribir({ periodStart: desde, periodEnd: hasta })
+          }}
         />
       </div>
       {borrador ? (

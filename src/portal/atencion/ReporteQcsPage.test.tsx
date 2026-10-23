@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeAtencion, EQUIPO_DE_RELACIONES } from '../../test/atencion'
 import { montar, ubicacion } from '../../test/montar'
 import { RELACIONISTA } from '../../test/portal'
@@ -123,6 +123,24 @@ describe('reporte unificado de QCS', () => {
     await waitFor(() => expect(red!.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toContain('periodStart=2026-10-20'))
     expect(red.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toContain('periodEnd=2026-10-31')
     expect(screen.getByLabelText('Recibidas desde')).toHaveValue('20/10/2026')
+  })
+
+  it('un atajo de periodo llena las dos fechas, vuelve a la primera página y llega a la consulta', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-23T15:00:00Z'))
+    try {
+      fetch = mockFetch([...baseDeAtencion(RELACIONISTA), { path: '/sgspe/attention/report', body: REPORTE }])
+      red = espiarRed()
+      abrir('/projects/p1/attention/report?page=2')
+      await screen.findByRole('table', { name: 'Por tipo' })
+      await userEvent.click(within(screen.getByRole('group', { name: 'Atajos de periodo' })).getByRole('button', { name: 'Últimos 30 días' }))
+      await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/attention/report?periodStart=2026-09-24&periodEnd=2026-10-23'))
+      await waitFor(() => expect(red!.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toContain('periodStart=2026-09-24&periodEnd=2026-10-23'))
+      expect(screen.getByLabelText('Recibidas desde')).toHaveValue('24/09/2026')
+      expect(screen.getByRole('button', { name: 'Últimos 30 días' })).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   // plan 4.2a: una página más allá del final responde 200 con la lista vacía (por ejemplo, tras cerrar casos o con un enlace viejo):

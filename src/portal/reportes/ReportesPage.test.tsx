@@ -486,6 +486,22 @@ describe('F4 · registro de quejas, consultas y solicitudes', () => {
   ]
   const exportar = () => espiarRed([{ method: 'POST', path: '/sgspe/exports/attention-register', responder: () => archivoXlsx('registro-de-qcs.xlsx') }])
 
+  it('un atajo de periodo llena «Recibidas desde» y «Recibidas hasta» con el día de Lima', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-23T15:00:00Z'))
+    try {
+      fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conRegistro(), rutasDeAtencion)
+      const seccion = await screen.findByRole('region', { name: 'Registro de quejas, consultas y solicitudes' })
+      const atajos = within(seccion).getByRole('group', { name: 'Atajos de periodo' })
+      await userEvent.click(within(atajos).getByRole('button', { name: 'Este año' }))
+      expect(within(seccion).getByLabelText('Recibidas desde')).toHaveValue('01/01/2026')
+      expect(within(seccion).getByLabelText('Recibidas hasta')).toHaveValue('23/10/2026')
+      expect(within(atajos).getByRole('button', { name: 'Este año' })).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('exporta con el proyecto, el periodo, los tipos, los estados, el canal, la categoría y las reclasificadas, con su propia clave', async () => {
     fetch = abrirPortal('/projects/p1/reports', GERENCIA_SOCIAL, conRegistro(), rutasDeAtencion)
     red = exportar()

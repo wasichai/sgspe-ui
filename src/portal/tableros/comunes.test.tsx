@@ -208,6 +208,25 @@ describe('filtros y catálogo', () => {
     await waitFor(() => expect(ubicacion.actual).toBe('/stakeholders/dashboard?periodEnd=2026-09-30'))
   })
 
+  // design-system.md §5: los atajos de periodo llenan ?periodStart= y ?periodEnd= según el día de hoy en Lima
+  it('«Mes pasado» llena las dos fechas del mes anterior al de Lima y queda marcado', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    // las 20:00 de Lima del 31 de octubre: en UTC ya es noviembre
+    vi.setSystemTime(new Date('2026-11-01T01:00:00Z'))
+    try {
+      montar(<FiltrosDeTablero alActualizar={() => undefined} />, { ruta: '/stakeholders/dashboard?scope=LOCAL' })
+      const atajos = screen.getByRole('group', { name: 'Atajos de periodo' })
+      await userEvent.click(within(atajos).getByRole('button', { name: 'Mes pasado' }))
+      await waitFor(() => expect(ubicacion.actual).toBe('/stakeholders/dashboard?scope=LOCAL&periodStart=2026-09-01&periodEnd=2026-09-30'))
+      expect(screen.getByLabelText('Desde')).toHaveValue('01/09/2026')
+      expect(screen.getByLabelText('Hasta')).toHaveValue('30/09/2026')
+      expect(within(atajos).getByRole('button', { name: 'Mes pasado' })).toHaveAttribute('aria-pressed', 'true')
+      expect(within(atajos).getByRole('button', { name: 'Este mes' })).toHaveAttribute('aria-pressed', 'false')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('un tablero se ofrece si el catálogo trae un indicador suyo disponible', async () => {
     fetch = mockFetch([
       {
