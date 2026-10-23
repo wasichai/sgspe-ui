@@ -5,6 +5,7 @@ export const EnCurso = () => (
     <PanelDeDecision
       objeto="commitment"
       estado="in_progress"
+      camino={['draft', 'pending_approval', 'approved', 'in_progress', 'fulfilled', 'verified', 'closed']}
       desde="2026-10-02T15:30:00Z"
       por="coordinacion@sgspe.test"
       siguiente={{ etiqueta: 'Registrar la entrega', falta: 'Falta una evidencia de la entrega' }}

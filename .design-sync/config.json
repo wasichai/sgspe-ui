@@ -19,8 +19,8 @@
     "Pagination": "page: number; totalPages: number; totalElements: number; onPage: (page: number) => void;",
     "PageSizePagination": "page: number; size: number; total: number; sizes?: readonly number[]; onPage: (page: number) => void; onSize: (size: number) => void;",
     "Drawer": "titulo: string; descripcion?: string; abierto: boolean; alCerrar: () => void; children: React.ReactNode; pie?: React.ReactNode;",
-    "KpiCard": "titulo: string; indicador?: { code: string; label: string; available: boolean; value?: number | null; unit?: string; unavailableReason?: string }; llegaEn?: string; cargando?: boolean; error?: unknown; notas?: React.ReactNode; a?: string; alReintentar?: () => void;",
-    "PanelDeDecision": "objeto: string; estado: string | null; desde?: string | null; por?: string | null; siguiente: { etiqueta: string; falta?: string } | null; responsable: string | null; vencimiento: string | null; situacion?: string; tipoDeSituacion?: \"plazo\" | \"revision\" | \"vigencia\";",
+    "KpiCard": "titulo: string; indicador?: { code: string; label: string; available: boolean; value?: number | null; numerator?: number | null; denominator?: number | null; unit?: string; unavailableReason?: string }; llegaEn?: string; cargando?: boolean; error?: unknown; notas?: React.ReactNode; a?: string; alReintentar?: () => void; anidada?: boolean; cifra?: (indicador: { value: number; unit?: string; numerator?: number | null; denominator?: number | null }) => string; detalle?: (indicador: { value: number; unit?: string; numerator?: number | null; denominator?: number | null }) => React.ReactNode;",
+    "PanelDeDecision": "objeto: string; estado: string | null; camino?: string[]; desde?: string | null; por?: string | null; siguiente: { etiqueta: string; falta?: string } | null; responsable: string | null; vencimiento: string | null; situacion?: string; tipoDeSituacion?: \"plazo\" | \"revision\" | \"vigencia\";",
     "PanelDeTrazabilidad": "deDondeViene?: { clave: string; titulo: string; contenido: React.ReactNode }[]; queGenero?: { clave: string; titulo: string; contenido: React.ReactNode }[]; loSustenta?: { clave: string; titulo: string; contenido: React.ReactNode }[]; vacios?: Partial<Record<\"deDondeViene\" | \"queGenero\" | \"loSustenta\", string>>; pie?: React.ReactNode;",
     "ListaEnTarjetas": "etiqueta: string; tarjetas: { id: string; titulo: React.ReactNode; estado?: React.ReactNode; plazo?: React.ReactNode; proyecto?: React.ReactNode; detalle?: React.ReactNode }[];",
     "Alert": "tone: \"success\" | \"warning\" | \"danger\" | \"notice\"; title?: React.ReactNode; children: React.ReactNode; onDismiss?: () => void; className?: string;"
@@ -99,6 +99,16 @@
     "Pasos": {
       "cardMode": "single",
       "viewport": "1100x360"
+    },
+    "EstadoSinAcceso": {
+      "cardMode": "column"
+    },
+    "BarraDeFiltros": {
+      "cardMode": "column"
+    },
+    "TablaPriorizada": {
+      "cardMode": "single",
+      "viewport": "1320x420"
     }
   },
   "readmeHeader": ".design-sync/conventions.md",

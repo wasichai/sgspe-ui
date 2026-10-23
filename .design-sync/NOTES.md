@@ -19,6 +19,30 @@
   Resultado: typecheck y build limpios; las pruebas pasan salvo `dependencias.test.ts`, que solo
   falla mientras dura la reescritura temporal de `package.json`.
 
+## Re-sincronización del 2026-10-23 (rediseño)
+
+- Kit: 71 componentes (61 + 10). Nuevos: `Seccion`, `EstadoSinAcceso`, `CampoFecha`, `CalendarioDeFecha`,
+  `TablaPriorizada`, `ListaPriorizada`, `SelectorDeVista`, `SelectorDePagina`, `BarraDeFiltros` y `CamposPlegables`, cada uno
+  con su doc y su preview. Cambiaron de API y de preview o doc: `PanelDeDecision` (`camino`, «Ver el camino» plegado),
+  `KpiCard` (`anidada`, `cifra`, `detalle`), `EncabezadoDePagina` (`antetituloEnSans`, `etiquetaDeAcciones`,
+  `pieDeAcciones`; la preview «Ficha» es ahora la anatomía de `CabeceraDeFicha`, y ya no anida un `MasAcciones` dentro de
+  `mas`), `MasAcciones` (`nombre`) y `Campo` (`id`). `dtsPropsFor` de `PanelDeDecision` y `KpiCard` al día.
+- Fuera del kit: `CabeceraDeFicha` (pide las transiciones a la API con `useAvailableTransitions`; su aspecto lo da la
+  preview «Ficha» de `EncabezadoDePagina`), `CaminoDelFlujo` suelto (se ve dentro de `PanelDeDecision`), `VistaPrevia`,
+  `Migas` y `RegistrosSimples` (leen registros).
+- `overrides`: `EstadoSinAcceso` y `BarraDeFiltros` en `column` (el primero dio `GRID_OVERFLOW`); `TablaPriorizada` en
+  `single` a 1320x420, para que se vean las columnas secundarias (desde `xl`).
+- Las previews interactivas (`CampoFecha`, `SelectorDeVista`, `BarraDeFiltros`, `TablaPriorizada`) llevan su estado con
+  `useState` en un envoltorio de la preview; eso cambia `_vendor/react.js` del bundle.
+- `tokens.css` sumó `--sg-surface-raised` y `--sg-border-control` (y el tema `sgspe-noche`): son variables, sin utilidad
+  `sg-*` propia; viajan en `_ds_bundle.css`. `kit/flujos.json` no cambió (los workflows de `sgspe` siguen iguales).
+- Ancla: el `_ds_sync.json` del bundle de la primera subida (`/home/user/sgspe-ui/ds-bundle/`), pasado a `resync.mjs` con
+  `--remote`. Diferencia: 3 cambiados, 10 nuevos, 0 borrados; 70 archivos que escribir (50 nuevos y 20 modificados) y
+  ninguno que borrar. Render check: 71 previews, 0 malas, 0 delgadas, 0 idénticas; las 13 capturadas, calificadas en
+  `.cache/review/`. El CSS del portal no cambió (`index-CTzbXUHi.css`, mismo SHA-256 antes y después).
+- La caché de calificaciones vive en el árbol principal (`.design-sync/.cache/`); un worktree la copia antes de correr
+  `resync.mjs`, o vuelve a capturar y calificar todo.
+
 ## Cómo se arma (primera sincronización, 2026-10-20)
 
 - `sgspe-ui` es una app, no una biblioteca: la entrada es `.design-sync/kit/` (paquete `sgspe-kit`), que reexporta los
@@ -47,6 +71,8 @@
 
 - `@wasichai/*` se construyó desde `wasichai-ui` en `v1.0.0`, no desde lo publicado: si difieren, el bundle también.
 - `kit/flujos.json` es una copia: se rehace cuando cambie un workflow en `sgspe`.
+- Una preview que reproduce un componente que pide datos (`CabeceraDeFicha`) se arma con sus piezas presentacionales: si
+  la regla de la cabecera cambia en el portal, la preview «Ficha» de `EncabezadoDePagina` cambia a mano.
 - Las previews reproducen el uso real del portal (p. ej. `DialogTitle className="text-sg-h3 font-semibold"`); si el
   portal cambia ese idioma, cambian aquí a mano.
 - `Alert` de `@wasichai/ui` es texto en color, sin caja: es su aspecto real, no un fallo del CSS.

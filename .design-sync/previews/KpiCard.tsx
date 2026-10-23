@@ -11,3 +11,17 @@ export const Estados = () => (
     <KpiCard titulo="Riesgos críticos" cargando />
   </div>
 )
+
+export const EnUnaLista = () => (
+  <div className="max-w-md p-4">
+    <div className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+      <KpiCard
+        anidada
+        titulo="Quejas con respuesta"
+        indicador={{ code: 'KPI-QCS-04', label: 'Con respuesta', available: true, value: 0, unit: '%', numerator: 0, denominator: 4 }}
+        cifra={(i) => `${i.value} %`}
+        detalle={(i) => `${i.numerator} de ${i.denominator} recibidas este mes tienen respuesta`}
+      />
+    </div>
+  </div>
+)

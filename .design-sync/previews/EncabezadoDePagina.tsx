@@ -1,4 +1,4 @@
-import { Button, EncabezadoDePagina, MasAcciones, SituacionDePlazo } from 'sgspe-kit'
+import { Button, EncabezadoDePagina, SituacionDePlazo } from 'sgspe-kit'
 
 export const Listado = () => (
   <div className="p-4">
@@ -16,11 +16,14 @@ export const Listado = () => (
   </div>
 )
 
+// la cabecera de una ficha como la arma CabeceraDeFicha: una primaria (la siguiente acción del flujo, deshabilitada con lo
+// que falta dicho debajo), dos secundarias a la vista y el resto, con lo destructivo, en «Más acciones»
 export const Ficha = () => (
-  <div className="p-4">
+  <div className="p-4 pb-40">
     <EncabezadoDePagina
       ficha
       antetitulo="Compromiso · COM-0142 · Infraestructura"
+      antetituloEnSans
       titulo="Mejorar el acceso al centro de salud de Huancapampa"
       chips={
         <>
@@ -28,18 +31,36 @@ export const Ficha = () => (
           <span className="text-sg-text-secondary">Vence el 15/11/2026</span>
         </>
       }
-      primaria={<Button>Registrar entrega</Button>}
+      etiquetaDeAcciones="Acciones del registro"
       secundarias={
-        <Button size="sm" variant="secondary">
-          Reprogramar
-        </Button>
+        <>
+          <Button size="sm" variant="secondary">
+            Editar
+          </Button>
+          <Button size="sm" variant="secondary">
+            Reprogramar
+          </Button>
+        </>
       }
       mas={
-        <MasAcciones>
-          <button type="button" className="block w-full px-3 py-2 text-left hover:bg-sg-surface-hover">
-            Cancelar compromiso
-          </button>
-        </MasAcciones>
+        <>
+          <Button size="sm" variant="secondary">
+            Bloquear
+          </Button>
+          <Button size="sm" variant="secondary" className="text-sg-danger">
+            Cancelar el compromiso
+          </Button>
+        </>
+      }
+      primaria={
+        <Button size="sm" disabled aria-describedby="falta-com-0142" title="Falta una evidencia de la entrega">
+          Marcar como cumplido
+        </Button>
+      }
+      pieDeAcciones={
+        <p id="falta-com-0142" className="text-sg-caption text-sg-text-secondary">
+          Falta una evidencia de la entrega
+        </p>
       }
     />
   </div>

@@ -28,6 +28,7 @@ arbitrario nuevo no se dibuja.
 | Tono suave | `bg-sg-success-soft`, `bg-sg-warning-soft`, `bg-sg-danger-soft`, `bg-sg-info-soft`; IA: `bg-sg-ai-soft text-sg-ai border-sg-ai-border`; territorio: `bg-sg-territory-soft` |
 | Tipografía | `text-sg-h1` `text-sg-h2` `text-sg-h3` `text-sg-body` `text-sg-body-sm` `text-sg-caption` `text-sg-overline` `text-sg-kpi`; `font-sg-mono` para códigos; `tabular-nums` para cifras |
 | Bordes y radios | `border border-sg-border`, `border-sg-border-strong`, `rounded-sg-md`, `rounded-sg-lg`; sombra `shadow-sg-sm` |
+| Superficies | `Seccion` en lugar de `rounded-sg-lg border … p-4` a mano; nunca una caja dentro de otra (`anidada`, o una `Seccion` dentro de otra) |
 | Ritmo | escala de 4 px: `gap-2/3/4`, `p-3/4`, `space-y-2/3/4`; rejillas `grid lg:grid-cols-3` |
 
 ## Reglas del producto
@@ -35,12 +36,17 @@ arbitrario nuevo no se dibuja.
 - Una sola acción `Button` primaria por contexto; las demás `variant="secondary"` o `"ghost"`, y lo raro o destructivo
   en `MasAcciones`. `variant="danger"` solo para lo irreversible, con `ConfirmDialog`.
 - Cabecera de pantalla con `EncabezadoDePagina` (`primaria`, `secundarias`, `mas`, `vistas`; `ficha` + `antetitulo` +
-  `chips` en un registro). Una ficha abre con `PanelDeDecision` y cierra con `PanelDeTrazabilidad`.
+  `chips` en un registro, con dos secundarias a la vista como mucho). Una ficha abre con `PanelDeDecision` (el único lugar
+  del estado, con su `camino`) y cierra con `PanelDeTrazabilidad`; sus atributos van en `CamposPlegables`.
+- Una lista abre con `BarraDeFiltros` (con `SelectorDeVista` en `vista`) y dibuja sus filas con `TablaPriorizada`
+  (columnas `esencial`, `secundaria` u `opcional`); los avisos de un inicio, con `ListaPriorizada`. Las fechas se escriben
+  con `CampoFecha` (dd/mm/aaaa, nunca `<input type="date">`), y una sección sin acceso se dice con `EstadoSinAcceso`.
 - Estado: `EstadoChip objeto="commitment" estado="in_progress"` (objetos reales: commitment, grievance, inquiry,
   stakeholder_request, agreement, engagement, social_risk, incident, task, social_program, social_contribution, project…);
   plazo: `SituacionDePlazo valor="POR VENCER"`. Nunca solo color.
-- Listados tabulares con `Table`/`Th`/`Td` (números a la derecha, códigos en mono); `ListaEnTarjetas` solo en pantallas
-  pequeñas. Campos de formulario siempre con `Campo` (etiqueta, ayuda y error junto al control).
+- Listados tabulares con `TablaPriorizada` o `Table`/`Th`/`Td` (números a la derecha, códigos en mono);
+  `ListaEnTarjetas` solo en pantallas pequeñas. Campos de formulario siempre con `Campo` (etiqueta, ayuda y error junto al
+  control).
 - Estados: `Cargando`, `Vacio` (qué falta y la acción), `ErrorDeCarga`; lo que la persona no puede ver se dice con
   `Restringido`, `Reservado` o `NoDisponible`, nunca en blanco ni en cero; `NotaDeConfidenciales` bajo una cifra que
   excluye confidenciales, sin decir cuántos. Ningún texto muestra códigos del servidor.
