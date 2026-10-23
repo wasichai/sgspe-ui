@@ -16,7 +16,7 @@ import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { rutaDeFicha } from '../datos/fichas'
@@ -57,6 +57,10 @@ const consultaDe = (projectId: string, v: (typeof VISTAS)[number]): Parametros =
   return { project: projectId, ...(deLaVista ? { state: estados(deLaVista) } : {}) }
 }
 const CONFIRMAR_ALERTA = 'CONFIRM_ALERT'
+// las columnas que el servidor ordena (el sort y el dir que la lista ya pedía): la fecha en que se detectó y el título. la
+// severidad y el estado no: su código no dice su orden
+const CAMPO_DE_ORDEN: Record<string, string> = { detectada: 'detected_at', titulo: 'title' }
+const ORDEN_INICIAL: OrdenDeTabla = { columna: 'detectada', dir: 'desc' }
 const DECISIONES = ['confirm', 'dismiss']
 
 export function AlertasPage() {
@@ -71,11 +75,18 @@ export function AlertasPage() {
   // la barra de filtros (P-02; hallazgos U-18 y U-22): la búsqueda y la severidad van en la consulta de cada vista, y cada
   // filtro puesto es un chip con «Limpiar». ?view= sigue siendo el mismo
   const filtros: Parametros = { q: busqueda, severity: severidad }
+  // el orden es de esta visita: la lista no tiene parámetros de orden en la URL
+  const [orden, setOrden] = useState(ORDEN_INICIAL)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    // otro orden empieza en la primera página
+    lista.cambiar({ page: null })
+  }
   const alertas = useRegistros('early_warning', {
     ...consultaDe(projectId, vista),
     ...filtros,
-    sort: 'detected_at',
-    dir: 'desc',
+    sort: CAMPO_DE_ORDEN[orden.columna],
+    dir: orden.dir,
     page: lista.pagina,
     size: POR_PAGINA
   })
@@ -103,8 +114,8 @@ export function AlertasPage() {
   // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales la alerta, su severidad y su estado; secundarias la
   // fecha en que se detectó y su origen
   const columnas: ColumnaPriorizada[] = [
-    { id: 'detectada', encabezado: t('alertas.columnas.detectada'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    { id: 'titulo', encabezado: t('alertas.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm' },
+    { id: 'detectada', encabezado: t('alertas.columnas.detectada'), prioridad: 'secundaria', claseDeCelda: 'text-sm', ordenable: true },
+    { id: 'titulo', encabezado: t('alertas.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm', ordenable: true },
     { id: 'severidad', encabezado: t('alertas.columnas.severidad'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
     { id: 'regla', encabezado: t('alertas.columnas.regla'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('alertas.columnas.estado'), prioridad: 'esencial' }
@@ -172,7 +183,15 @@ export function AlertasPage() {
           }))}
         />
       ) : (
-        <TablaPriorizada<Registro> etiqueta={t('alertas.tabla')} columnas={columnas} filas={visibles} clave={(a) => a.id} celda={celda} />
+        <TablaPriorizada<Registro>
+          etiqueta={t('alertas.tabla')}
+          columnas={columnas}
+          filas={visibles}
+          clave={(a) => a.id}
+          celda={celda}
+          orden={orden}
+          alOrdenar={ordenar}
+        />
       )}
       <PaginacionDelServidor datos={alertas.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
     </section>

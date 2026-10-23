@@ -1,4 +1,5 @@
 import { Table, Td, Th, cn } from '@wasichai/ui'
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { useId, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
@@ -26,6 +27,13 @@ export interface ColumnaPriorizada {
   explicacion?: { id: string; tipo: 'restringido' | 'noDisponible'; soloLectores?: boolean }
   // clases propias de las celdas de la columna (un ancho mínimo, el tamaño del texto)
   claseDeCelda?: string
+  // con alOrdenar en la tabla, su encabezado es un botón que ordena por ella
+  ordenable?: boolean
+}
+
+export interface OrdenDeTabla {
+  columna: string
+  dir: 'asc' | 'desc'
 }
 
 export interface PropsDeTablaPriorizada<T> {
@@ -39,6 +47,9 @@ export interface PropsDeTablaPriorizada<T> {
   alAbrir?: (fila: T) => void
   // el nombre con que se recuerda la elección de «Columnas» (sgspe.columnas.<idDeTabla>); sin él, la elección dura la visita
   idDeTabla?: string
+  // el orden en que llegan las filas (quien llama ordena: la consulta del servidor) y qué hacer al pedir otro
+  orden?: OrdenDeTabla
+  alOrdenar?: (orden: OrdenDeTabla) => void
 }
 
 const VISIBILIDAD: Record<PrioridadDeColumna, string | undefined> = {
@@ -120,7 +131,19 @@ function useEsAncha(): boolean {
   )
 }
 
-export function TablaPriorizada<T>({ etiqueta, columnas, filas, clave, celda, valorPlano, ocultarUniformes, alAbrir, idDeTabla }: PropsDeTablaPriorizada<T>) {
+export function TablaPriorizada<T>({
+  etiqueta,
+  columnas,
+  filas,
+  clave,
+  celda,
+  valorPlano,
+  ocultarUniformes,
+  alAbrir,
+  idDeTabla,
+  orden,
+  alOrdenar
+}: PropsDeTablaPriorizada<T>) {
   const { t } = useTranslation(NS)
   const ancha = useEsAncha()
   const [eleccion, fijarEleccion] = useEleccion(idDeTabla)
@@ -176,15 +199,27 @@ export function TablaPriorizada<T>({ etiqueta, columnas, filas, clave, celda, va
         <Table aria-label={etiqueta}>
           <thead>
             <tr>
-              {visibles.map((c) =>
-                c.explicacion ? (
-                  <ThExplicado key={c.id} columna={c} visibilidad={visibilidad(c)} />
+              {visibles.map((c) => {
+                // la que ordena dice su sentido en el th; una ordenable que no ordena no lleva aria-sort
+                const sentido = alOrdenar && c.ordenable && orden?.columna === c.id ? orden.dir : undefined
+                const ordenar = alOrdenar && c.ordenable ? () => alOrdenar({ columna: c.id, dir: sentido === 'asc' ? 'desc' : 'asc' }) : undefined
+                const ariaSort = sentido === 'asc' ? 'ascending' : sentido === 'desc' ? 'descending' : undefined
+                return c.explicacion ? (
+                  <ThExplicado key={c.id} columna={c} visibilidad={visibilidad(c)} ariaSort={ariaSort} sentido={sentido} alOrdenar={ordenar} />
                 ) : (
-                  <Th key={c.id} scope="col" className={cn(visibilidad(c), c.numerica && 'text-right')}>
-                    {c.encabezadoOculto ? <span className="sr-only">{c.encabezado}</span> : c.encabezado}
+                  <Th key={c.id} scope="col" aria-sort={ariaSort} className={cn(visibilidad(c), c.numerica && 'text-right')}>
+                    {ordenar ? (
+                      <BotonDeOrden sentido={sentido} alPulsar={ordenar}>
+                        {c.encabezado}
+                      </BotonDeOrden>
+                    ) : c.encabezadoOculto ? (
+                      <span className="sr-only">{c.encabezado}</span>
+                    ) : (
+                      c.encabezado
+                    )}
                   </Th>
                 )
-              )}
+              })}
             </tr>
           </thead>
           <tbody>
@@ -212,12 +247,45 @@ export function TablaPriorizada<T>({ etiqueta, columnas, filas, clave, celda, va
 
 // el encabezado con explicación única (ThConExplicacion de Estados.tsx con la clase de su prioridad): el nombre accesible es
 // solo el de la columna
-function ThExplicado({ columna, visibilidad }: { columna: ColumnaPriorizada; visibilidad: string | undefined }) {
+function ThExplicado({
+  columna,
+  visibilidad,
+  ariaSort,
+  sentido,
+  alOrdenar
+}: {
+  columna: ColumnaPriorizada
+  visibilidad: string | undefined
+  ariaSort?: 'ascending' | 'descending'
+  sentido?: OrdenDeTabla['dir']
+  alOrdenar?: () => void
+}) {
   const nombre = useId()
   return (
-    <Th scope="col" aria-labelledby={nombre} className={cn(visibilidad, columna.numerica && 'text-right')}>
-      <span id={nombre}>{columna.encabezado}</span>
+    <Th scope="col" aria-labelledby={nombre} aria-sort={ariaSort} className={cn(visibilidad, columna.numerica && 'text-right')}>
+      {alOrdenar ? (
+        <BotonDeOrden sentido={sentido} alPulsar={alOrdenar}>
+          <span id={nombre}>{columna.encabezado}</span>
+        </BotonDeOrden>
+      ) : (
+        <span id={nombre}>{columna.encabezado}</span>
+      )}
       <ExplicacionDeColumna id={columna.explicacion!.id} tipo={columna.explicacion!.tipo} soloLectores={columna.explicacion!.soloLectores} />
     </Th>
+  )
+}
+
+// el encabezado que ordena: su nombre es el de la columna (aria-sort, en el th, dice el sentido) y la flecha lo dibuja
+function BotonDeOrden({ sentido, alPulsar, children }: { sentido?: OrdenDeTabla['dir']; alPulsar: () => void; children: ReactNode }) {
+  const Flecha = sentido === 'asc' ? ArrowUp : sentido === 'desc' ? ArrowDown : ChevronsUpDown
+  return (
+    <button
+      type="button"
+      onClick={alPulsar}
+      className="inline-flex items-center gap-1 rounded-sg-sm hover:text-sg-text focus-visible:outline-2 focus-visible:outline-sg-focus"
+    >
+      {children}
+      <Flecha aria-hidden className={cn('size-3.5 shrink-0', sentido ? 'text-sg-text' : 'text-sg-text-muted')} />
+    </button>
   )
 }

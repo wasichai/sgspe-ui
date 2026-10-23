@@ -119,6 +119,58 @@ describe('S41 · lista de alertas', () => {
     expect(ubicacion.actual).toBe('/projects/p1/risks/warnings?view=todas')
   })
 
+  // 05-especificacion §1.6: la fecha y el título se ordenan en el servidor, con el sort y el dir que la lista ya pedía
+  it('la fecha y el título ordenan la lista en el servidor, y el encabezado lo dice con aria-sort', async () => {
+    fetch = mockFetch([...baseDeRiesgos(), { path: '/objects/early_warning_rule/records/rg1', body: REGLA }])
+    red = espiarRed([listaDelServidor('early_warning', [ALERTA, CONFIRMADA])])
+    montar(<AlertasPage />, {
+      ruta: '/projects/p1/risks/warnings?view=todas',
+      camino: '/projects/:projectId/risks/warnings',
+      usuario: GESTOR_DE_RIESGOS,
+      permisos: EQUIPO_DE_RIESGOS
+    })
+    const tabla = await screen.findByRole('table', { name: 'Alertas del proyecto' })
+    expect(within(tabla).getByRole('columnheader', { name: 'Detectada' })).toHaveAttribute('aria-sort', 'descending')
+    const consultas = () => red!.a('GET', '/objects/early_warning/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Detectada' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'detected_at', dir: 'asc', page: '0' })))
+    // el orden no escribe parámetros nuevos en la URL
+    expect(ubicacion.actual).toBe('/projects/p1/risks/warnings?view=todas')
+    expect(within(screen.getByRole('table', { name: 'Alertas del proyecto' })).getByRole('columnheader', { name: 'Detectada' })).toHaveAttribute(
+      'aria-sort',
+      'ascending'
+    )
+    await userEvent.click(within(screen.getByRole('table', { name: 'Alertas del proyecto' })).getByRole('button', { name: 'Alerta' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'title', dir: 'asc' })))
+    expect(within(screen.getByRole('table', { name: 'Alertas del proyecto' })).getByRole('columnheader', { name: 'Alerta' })).toHaveAttribute(
+      'aria-sort',
+      'ascending'
+    )
+    // la severidad y el estado no se ordenan: su código no dice su orden
+    expect(within(screen.getByRole('table', { name: 'Alertas del proyecto' })).queryByRole('button', { name: 'Severidad' })).not.toBeInTheDocument()
+  })
+
+  it('otro orden vuelve a la primera página', async () => {
+    const muchas = Array.from({ length: 26 }, (_, i) =>
+      registro(
+        `w${i + 10}`,
+        { project: 'p1', title: `Alerta ${i + 10}`, detected_at: `2026-09-${String(i + 1).padStart(2, '0')}T13:00:00Z` },
+        { state: 'confirmed' }
+      )
+    )
+    fetch = mockFetch(baseDeRiesgos())
+    red = espiarRed([listaDelServidor('early_warning', muchas)])
+    montar(<AlertasPage />, {
+      ruta: '/projects/p1/risks/warnings?view=todas&page=1',
+      camino: '/projects/:projectId/risks/warnings',
+      usuario: GESTOR_DE_RIESGOS,
+      permisos: EQUIPO_DE_RIESGOS
+    })
+    const tabla = await screen.findByRole('table', { name: 'Alertas del proyecto' })
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Detectada' }))
+    expect(ubicacion.actual).toBe('/projects/p1/risks/warnings?view=todas')
+  })
+
   it('mientras carga no dice que no hay alertas', async () => {
     fetch = mockFetch([...baseDeRiesgos(), { path: '/objects/early_warning/records', body: pagina([]) }])
     montar(<AlertasPage />, {

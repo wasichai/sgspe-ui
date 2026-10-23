@@ -124,6 +124,56 @@ describe('TablaPriorizada', () => {
     expect(within(encabezado).getByText('Seleccionar')).toHaveClass('sr-only')
   })
 
+  // 05-especificacion §1.6: el encabezado de una columna ordenable es un botón y su th dice el orden con aria-sort
+  describe('orden', () => {
+    const ORDENABLES = COLUMNAS.map((c) => (c.id === 'titulo' || c.id === 'monto' ? { ...c, ordenable: true } : c))
+
+    it('una columna ordenable es un botón; el th de la que ordena lleva aria-sort y las demás no', () => {
+      dibujar({ columnas: ORDENABLES, orden: { columna: 'monto', dir: 'desc' }, alOrdenar: vi.fn() })
+      const monto = within(tabla()).getByRole('columnheader', { name: 'Monto' })
+      expect(monto).toHaveAttribute('aria-sort', 'descending')
+      expect(within(monto).getByRole('button', { name: 'Monto' })).toBeInTheDocument()
+      const compromiso = within(tabla()).getByRole('columnheader', { name: 'Compromiso' })
+      expect(compromiso).not.toHaveAttribute('aria-sort')
+      expect(within(compromiso).getByRole('button', { name: 'Compromiso' })).toBeInTheDocument()
+      const estado = within(tabla()).getByRole('columnheader', { name: 'Estado' })
+      expect(within(estado).queryByRole('button')).not.toBeInTheDocument()
+      document.body.innerHTML = ''
+      dibujar({ columnas: ORDENABLES, orden: { columna: 'titulo', dir: 'asc' }, alOrdenar: vi.fn() })
+      expect(within(tabla()).getByRole('columnheader', { name: 'Compromiso' })).toHaveAttribute('aria-sort', 'ascending')
+    })
+
+    it('pulsar la que ordena invierte el sentido; pulsar otra ordena por ella de forma ascendente', async () => {
+      const alOrdenar = vi.fn()
+      dibujar({ columnas: ORDENABLES, orden: { columna: 'monto', dir: 'desc' }, alOrdenar })
+      await userEvent.click(screen.getByRole('button', { name: 'Monto' }))
+      expect(alOrdenar).toHaveBeenLastCalledWith({ columna: 'monto', dir: 'asc' })
+      await userEvent.click(screen.getByRole('button', { name: 'Compromiso' }))
+      expect(alOrdenar).toHaveBeenLastCalledWith({ columna: 'titulo', dir: 'asc' })
+    })
+
+    it('sin alOrdenar, ordenable no dibuja botones', () => {
+      dibujar({ columnas: ORDENABLES })
+      expect(within(tabla()).queryAllByRole('button')).toHaveLength(0)
+      expect(within(tabla()).getByRole('columnheader', { name: 'Monto' })).not.toHaveAttribute('aria-sort')
+    })
+
+    it('una columna con explicación también se ordena, con el nombre de la columna', async () => {
+      const alOrdenar = vi.fn()
+      dibujar({
+        columnas: [
+          { id: 'notas', encabezado: 'Notas', prioridad: 'esencial', ordenable: true, explicacion: { id: 'x', tipo: 'restringido', soloLectores: true } }
+        ],
+        orden: { columna: 'notas', dir: 'asc' },
+        alOrdenar
+      })
+      const notas = within(tabla()).getByRole('columnheader', { name: 'Notas' })
+      expect(notas).toHaveAttribute('aria-sort', 'ascending')
+      await userEvent.click(within(notas).getByRole('button', { name: 'Notas' }))
+      expect(alOrdenar).toHaveBeenCalledWith({ columna: 'notas', dir: 'desc' })
+    })
+  })
+
   describe('«Columnas»', () => {
     const CLAVE = 'sgspe.columnas.compromisos'
     afterEach(() => {

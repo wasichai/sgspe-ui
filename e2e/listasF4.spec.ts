@@ -192,6 +192,18 @@ test.describe('a 1440 px', () => {
     await sinDesborde(page, page.getByRole('table', { name: 'Alertas del proyecto' }))
   })
 
+  // 05-especificacion §1.6: el encabezado ordenable es un botón y el th dice el orden con aria-sort
+  test('las alertas se ordenan por la fecha desde su encabezado, con aria-sort y la consulta del servidor', async ({ page }) => {
+    await page.goto('/projects/p1/risks/warnings')
+    const tabla = page.getByRole('table', { name: 'Alertas del proyecto' })
+    const detectada = tabla.getByRole('columnheader', { name: 'Detectada' })
+    await expect(detectada).toHaveAttribute('aria-sort', 'descending')
+    const pedida = page.waitForRequest((r) => r.url().includes('/objects/early_warning/records?') && r.url().includes('dir=asc'))
+    await detectada.getByRole('button', { name: 'Detectada' }).click()
+    await pedida
+    await expect(detectada).toHaveAttribute('aria-sort', 'ascending')
+  })
+
   test('programas: Programas y Aportes en un solo selector, nunca dos listados apilados, y la tabla sin desborde', async ({ page }) => {
     await page.goto('/projects/p1/programs')
     const barra = page.getByRole('group', { name: 'Filtros' })
