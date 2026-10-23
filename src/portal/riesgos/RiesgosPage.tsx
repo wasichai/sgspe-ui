@@ -5,7 +5,9 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn, Textarea } from '@wasichai/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { CLASE_DE_TONO } from '../componentes/apariencias'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
@@ -90,6 +92,10 @@ export function RiesgosPage() {
   const escribe = useEscribeEnProyecto(proyecto)
   const lista = useParametrosDeLista('registro')
   const telefono = useEsTelefono()
+  // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
+  const navegar = useNavigate()
+  const previa = useRutaDeVistaPrevia()
+  const paso = useSiguientePaso()
   const [busqueda, fijar] = useSearchParams()
   // todos los riesgos del alcance, sin tope: la matriz de calor cuenta cada celda con el conjunto entero (D10 de la revisión de UX)
   const riesgos = useTodosSinTope('social_risk', { project: proyecto, sort: 'code', dir: 'asc' })
@@ -278,6 +284,11 @@ export function RiesgosPage() {
               celda={celdaDeTabla}
               valorPlano={valorPlano}
               ocultarUniformes
+              alAbrir={(r) => {
+                const ruta = rutaDeFicha('social_risk', r)
+                if (ruta) navegar(ruta, { state: paso(t('riesgos.titulo'), ruta) })
+              }}
+              alPrevisualizar={(r) => navegar(previa('social_risk', r.id))}
             />
           )}
         </div>

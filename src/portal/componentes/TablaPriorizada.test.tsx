@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
@@ -111,6 +111,37 @@ describe('TablaPriorizada', () => {
     within(filas()[0]).getByRole('link', { name: 'Reservorio de Tunas' }).focus()
     await userEvent.keyboard('{Enter}')
     expect(alAbrir).not.toHaveBeenCalled()
+  })
+
+  // 05-especificacion §1.6: Espacio en una fila enfocada abre su vista previa, sin desplazar la página
+  it('con alPrevisualizar, Espacio en la fila enfocada la previsualiza sin desplazar la página; Enter sigue abriéndola', async () => {
+    const alAbrir = vi.fn()
+    const alPrevisualizar = vi.fn()
+    dibujar({ alAbrir, alPrevisualizar })
+    filas()[0].focus()
+    await userEvent.keyboard(' ')
+    expect(alPrevisualizar).toHaveBeenCalledTimes(1)
+    expect(alPrevisualizar).toHaveBeenCalledWith(FILAS[0])
+    expect(alAbrir).not.toHaveBeenCalled()
+    // el desplazamiento de Espacio se evita
+    expect(fireEvent.keyDown(filas()[1], { key: ' ' })).toBe(false)
+    expect(alPrevisualizar).toHaveBeenLastCalledWith(FILAS[1])
+    await userEvent.keyboard('{Enter}')
+    expect(alAbrir).toHaveBeenCalledWith(FILAS[0])
+    expect(alPrevisualizar).toHaveBeenCalledTimes(2)
+  })
+
+  it('solo con alPrevisualizar la fila también se enfoca; Espacio en un control de la fila es de ese control', async () => {
+    const alPrevisualizar = vi.fn()
+    dibujar({ alPrevisualizar, celda: (f, c) => (c === 'titulo' ? <button type="button">{f.titulo}</button> : valor(f, c)) })
+    expect(filas()[0]).toHaveAttribute('tabIndex', '0')
+    within(filas()[0]).getByRole('button', { name: 'Reservorio de Tunas' }).focus()
+    await userEvent.keyboard(' ')
+    expect(alPrevisualizar).not.toHaveBeenCalled()
+    // sin alAbrir, Enter no hace nada en la fila
+    filas()[0].focus()
+    await userEvent.keyboard('{Enter}')
+    expect(alPrevisualizar).not.toHaveBeenCalled()
   })
 
   it('sin alAbrir, las filas no son enfocables', () => {

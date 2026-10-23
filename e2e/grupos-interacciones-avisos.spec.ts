@@ -162,3 +162,19 @@ test('«Columnas» muestra una opcional a 1440 px y la recuerda al recargar', as
   await page.reload()
   await expect(page.getByRole('table', { name: 'Grupos de interés' }).getByRole('columnheader', { name: 'Evaluación' })).toBeVisible()
 })
+
+// 05-especificacion §1.6: Espacio en una fila enfocada abre su vista previa y no desplaza la página
+test('Espacio en una fila enfocada abre la vista previa sin desplazar la página', async ({ page }) => {
+  await page.goto('/projects/p1/stakeholders')
+  const fila = page
+    .getByRole('table', { name: 'Grupos de interés' })
+    .getByRole('row')
+    .filter({ has: page.getByRole('link', { name: /^Vista previa de / }) })
+    .first()
+  await fila.focus()
+  const antes = await page.evaluate(() => window.scrollY)
+  await page.keyboard.press('Space')
+  await expect(page).toHaveURL(/[?&]peek=stakeholder%3As/)
+  await expect(page.getByRole('dialog')).toBeVisible()
+  expect(await page.evaluate(() => window.scrollY)).toBe(antes)
+})

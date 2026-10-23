@@ -231,6 +231,32 @@ describe('S42 · programas e inversión', () => {
     expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
   })
 
+  // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
+  it('Espacio en una fila de programas o de aportes abre su vista previa, y Enter su ficha', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir()
+    const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
+    within(programas).getAllByRole('row')[1].focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?peek=social_program%3Asp1')
+    within(screen.getByRole('table', { name: 'Programas del alcance', hidden: true }))
+      .getAllByRole('row', { hidden: true })[1]
+      .focus()
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe('/projects/p1/programs/sp1')
+  })
+
+  it('Espacio en una fila de aportes abre su vista previa', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir({ ruta: '/projects/p1/programs?view=enCurso' })
+    const aportes = await screen.findByRole('table', { name: 'Aportes del alcance' })
+    within(aportes).getAllByRole('row')[1].focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=enCurso&peek=social_contribution%3Aa1')
+  })
+
   it('lista los programas y los aportes con su enlace, su socio y su monto en su moneda; filtra los terminados', async () => {
     fetch = mockFetch(rutas())
     // las vistas de los aportes son consultas del servidor, con su página y su conteo (D10 de la revisión de UX)

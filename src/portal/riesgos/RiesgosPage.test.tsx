@@ -83,6 +83,23 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     expect(within(tabla).queryByRole('link', { name: /Huelga regional/ })).not.toBeInTheDocument()
   })
 
+  // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
+  it('Espacio en una fila enfocada abre la vista previa del riesgo y Enter su ficha', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const tabla = await screen.findByRole('table', { name: 'Riesgos' })
+    const fila = within(tabla).getAllByRole('row')[1]
+    const ficha = within(fila).getAllByRole('link')[0].getAttribute('href')!
+    fila.focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toMatch(/^\/projects\/p1\/risks\/register\?peek=social_risk%3A/)
+    within(screen.getByRole('table', { name: 'Riesgos', hidden: true }))
+      .getAllByRole('row', { hidden: true })[1]
+      .focus()
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe(ficha)
+  })
+
   it('elegir una celda filtra la tabla y «Quitar filtro de celda» la devuelve entera', async () => {
     fetch = mockFetch(rutas())
     abrir()

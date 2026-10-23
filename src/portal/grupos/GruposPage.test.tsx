@@ -182,6 +182,15 @@ describe('S16 · lista de grupos de interés', () => {
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s2'))
   })
 
+  it('Espacio en una fila enfocada abre la vista previa del grupo sin dejar la lista', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    filas()[1].focus()
+    await userEvent.keyboard(' ')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders?peek=stakeholder%3As2'))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+
   it('la postura restringida se explica una vez, en el encabezado: las celdas no llevan botón de ayuda', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))

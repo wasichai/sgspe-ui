@@ -45,6 +45,8 @@ export interface PropsDeTablaPriorizada<T> {
   valorPlano?: (fila: T, columna: string) => string
   ocultarUniformes?: boolean
   alAbrir?: (fila: T) => void
+  // Espacio en la fila enfocada: su vista previa (?peek=), sin dejar la lista
+  alPrevisualizar?: (fila: T) => void
   // el nombre con que se recuerda la elección de «Columnas» (sgspe.columnas.<idDeTabla>); sin él, la elección dura la visita
   idDeTabla?: string
   // el orden en que llegan las filas (quien llama ordena: la consulta del servidor) y qué hacer al pedir otro
@@ -140,6 +142,7 @@ export function TablaPriorizada<T>({
   valorPlano,
   ocultarUniformes,
   alAbrir,
+  alPrevisualizar,
   idDeTabla,
   orden,
   alOrdenar
@@ -160,11 +163,17 @@ export function TablaPriorizada<T>({
   const visibles = columnas.filter((c) => !uniformes.includes(c))
   // «Columnas» ofrece las opcionales que están en la tabla: las esenciales siempre se ven y las secundarias, desde xl
   const opcionales = visibles.filter((c) => c.prioridad === 'opcional')
-  const abrirConEnter = (fila: T) => (e: KeyboardEvent<HTMLTableRowElement>) => {
-    // solo la fila enfocada: Enter en un enlace o una casilla de la fila es de ese control
-    if (e.key === 'Enter' && e.target === e.currentTarget) {
+  const enfocable = Boolean(alAbrir || alPrevisualizar)
+  const alTeclear = (fila: T) => (e: KeyboardEvent<HTMLTableRowElement>) => {
+    // solo la fila enfocada: Enter o Espacio en un enlace o una casilla de la fila es de ese control
+    if (e.target !== e.currentTarget) return
+    if (e.key === 'Enter' && alAbrir) {
       e.preventDefault()
-      alAbrir?.(fila)
+      alAbrir(fila)
+    } else if (e.key === ' ' && alPrevisualizar) {
+      // sin desplazar la página
+      e.preventDefault()
+      alPrevisualizar(fila)
     }
   }
   return (
@@ -226,10 +235,10 @@ export function TablaPriorizada<T>({
             {filas.map((f) => (
               <tr
                 key={clave(f)}
-                tabIndex={alAbrir ? 0 : undefined}
-                onKeyDown={alAbrir ? abrirConEnter(f) : undefined}
+                tabIndex={enfocable ? 0 : undefined}
+                onKeyDown={enfocable ? alTeclear(f) : undefined}
                 // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
-                className={cn('group/fila', alAbrir && 'focus-visible:outline-2 focus-visible:outline-sg-focus')}
+                className={cn('group/fila', enfocable && 'focus-visible:outline-2 focus-visible:outline-sg-focus')}
               >
                 {visibles.map((c) => (
                   <Td key={c.id} className={cn(visibilidad(c), c.numerica && 'text-right tabular-nums', c.claseDeCelda)}>

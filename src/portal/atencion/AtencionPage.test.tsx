@@ -66,6 +66,21 @@ const abrir = (
 }
 
 describe('S35 · lista unificada de QCS', () => {
+  // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
+  it('Espacio en una fila de la cola abre la vista previa de la QCS, y Enter su ficha', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
+    within(vencidas).getAllByRole('row')[1].focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toBe('/projects/p1/attention?peek=grievance%3Ag2')
+    within(screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas', hidden: true }))
+      .getAllByRole('row', { hidden: true })[1]
+      .focus()
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe('/projects/p1/grievances/g2')
+  })
+
   it('agrupa las abiertas por su situación de plazo, con el plazo que corre en su estado y el registro para quien escribe', async () => {
     fetch = mockFetch(rutas())
     abrir()

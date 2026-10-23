@@ -9,6 +9,8 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { Campo } from '../componentes/Campo'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
@@ -218,6 +220,20 @@ function Cifras({ indicadores, deProgramas }: { indicadores: Indicador[]; deProg
   return <div className={deProgramas ? 'grid gap-4 lg:grid-cols-2' : 'grid gap-4'}>{zonas}</div>
 }
 
+// Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
+function useAccionesDeFila(objeto: 'social_program' | 'social_contribution', desde: string) {
+  const navegar = useNavigate()
+  const previa = useRutaDeVistaPrevia()
+  const paso = useSiguientePaso()
+  return {
+    abrir: (r: Registro) => {
+      const ruta = rutaDeFicha(objeto, r)
+      if (ruta) navegar(ruta, { state: paso(desde, ruta) })
+    },
+    previsualizar: (r: Registro) => navegar(previa(objeto, r.id))
+  }
+}
+
 function useNombreDelProyecto(): (id: string) => React.ReactNode {
   const proyectos = useProyectos()
   return (id) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
@@ -227,6 +243,7 @@ function Programas({ proyecto, indicadores, programas }: { proyecto?: string; in
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista(PROGRAMAS)
   const filas = programas.data?.content ?? []
+  const fila = useAccionesDeFila('social_program', t('inversion.titulo'))
   const nombreDelProyecto = useNombreDelProyecto()
   const telefono = useEsTelefono()
   const anio = anioEnLima()
@@ -302,7 +319,15 @@ function Programas({ proyecto, indicadores, programas }: { proyecto?: string; in
           }))}
         />
       ) : (
-        <TablaPriorizada<Registro> etiqueta={t('inversion.programas.tabla')} columnas={columnas} filas={filas} clave={(p) => p.id} celda={celda} />
+        <TablaPriorizada<Registro>
+          etiqueta={t('inversion.programas.tabla')}
+          columnas={columnas}
+          filas={filas}
+          clave={(p) => p.id}
+          celda={celda}
+          alAbrir={fila.abrir}
+          alPrevisualizar={fila.previsualizar}
+        />
       )}
       <PaginacionDelServidor datos={programas.data} alPagina={(p) => lista.cambiar({ pp: String(p), page: lista.filtro('page') || null })} />
     </section>
@@ -326,6 +351,7 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
   const nombreDelProyecto = useNombreDelProyecto()
   const telefono = useEsTelefono()
   const filtrados = actual ? (aportes.data?.content ?? []) : []
+  const fila = useAccionesDeFila('social_contribution', t('inversion.titulo'))
   const enlace = (a: Registro) => (
     <EnlaceDeRegistro
       titulo={texto(a, 'code')}
@@ -389,7 +415,15 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
           }))}
         />
       ) : (
-        <TablaPriorizada<Registro> etiqueta={t('inversion.aportes.tabla')} columnas={columnas} filas={filtrados} clave={(a) => a.id} celda={celda} />
+        <TablaPriorizada<Registro>
+          etiqueta={t('inversion.aportes.tabla')}
+          columnas={columnas}
+          filas={filtrados}
+          clave={(a) => a.id}
+          celda={celda}
+          alAbrir={fila.abrir}
+          alPrevisualizar={fila.previsualizar}
+        />
       )}
       <PaginacionDelServidor datos={aportes.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
     </section>

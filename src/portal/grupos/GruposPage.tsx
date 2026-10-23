@@ -15,7 +15,7 @@ import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { NombreDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
-import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
+import { BotonDeVistaPrevia, useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
@@ -43,6 +43,7 @@ export function GruposPage() {
   const { t } = useTranslation(NS)
   const { user, can } = useAuth()
   const navegar = useNavigate()
+  const previa = useRutaDeVistaPrevia()
   const { scope, territory } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const registroDelProyecto = useProyecto(proyecto)
@@ -317,6 +318,8 @@ export function GruposPage() {
                   valorPlano={valorPlano}
                   ocultarUniformes
                   alAbrir={(g) => navegar(rutaDelGrupo(g), { state: paso() })}
+                  // Espacio abre la vista previa, como el ojo de la fila
+                  alPrevisualizar={(g) => navegar(previa('stakeholder', g.id))}
                 />
               )}
               {filtrados.length > POR_PAGINA ? (

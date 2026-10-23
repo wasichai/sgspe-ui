@@ -5,7 +5,9 @@ import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
@@ -66,6 +68,10 @@ export function AtencionPage() {
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const lista = useParametrosDeLista('atencion')
+  // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
+  const navegar = useNavigate()
+  const previa = useRutaDeVistaPrevia()
+  const paso = useSiguientePaso()
   const telefono = useEsTelefono()
   const legibles = OBJETOS_DE_QCS.filter((o) => can(o, 'READ'))
   const proyectos = useProyectos()
@@ -350,6 +356,11 @@ export function AtencionPage() {
                     celda={celdaDe}
                     valorPlano={valorPlano}
                     ocultarUniformes
+                    alAbrir={(f) => {
+                      const ruta = rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)
+                      navegar(ruta, { state: paso(t('atencion.titulo'), ruta) })
+                    }}
+                    alPrevisualizar={(f) => navegar(previa(f.objeto, f.registro.id))}
                   />
                 )}
               </section>
