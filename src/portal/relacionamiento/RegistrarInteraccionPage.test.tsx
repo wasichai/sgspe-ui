@@ -147,7 +147,7 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByText('Indique la fecha')).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
@@ -308,7 +308,7 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
@@ -406,7 +406,7 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea tardía')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '23:30')
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
@@ -471,7 +471,7 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
     await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
     for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
@@ -553,16 +553,60 @@ describe('S24 · registrar interacción', () => {
     expect(attributes).not.toHaveProperty('locality')
   })
 
-  it('los enlaces entre el asistente y el modo rápido conservan los grupos, la visita y el territorio', async () => {
+  // F-D (02-arquitectura-de-informacion.md §6): el modo rápido es un conmutador de la cabecera del asistente, no un enlace suelto
+  it('el conmutador del modo rápido conserva los grupos, la visita y el territorio en los dos sentidos', async () => {
     fetch = abrirPortal('/projects/p1/engagements/new?stakeholders=s1&field_visit=v1&territory=locality:l1', RELACIONISTA, EQUIPO, rutas())
-    const aRapido = await screen.findByRole('link', { name: 'Modo rápido de campo' })
-    const rapido = new URL(aRapido.getAttribute('href') ?? '', 'http://x')
+    const aRapido = await screen.findByRole('switch', { name: 'Modo rápido de campo' })
+    expect(aRapido).toHaveAttribute('aria-checked', 'false')
+    expect(screen.queryByRole('link', { name: 'Modo rápido de campo' })).not.toBeInTheDocument()
+    await userEvent.click(aRapido)
+    await waitFor(() => expect(new URL(rutaActual(), 'http://x').searchParams.get('mode')).toBe('quick'))
+    const rapido = new URL(rutaActual(), 'http://x')
     expect(rapido.pathname).toBe('/projects/p1/engagements/new')
     expect(Object.fromEntries(rapido.searchParams)).toEqual({ stakeholders: 's1', field_visit: 'v1', territory: 'locality:l1', mode: 'quick' })
-    await userEvent.click(aRapido)
-    const alAsistente = await screen.findByRole('link', { name: 'Registrar interacción' })
-    const asistente = new URL(alAsistente.getAttribute('href') ?? '', 'http://x')
-    expect(Object.fromEntries(asistente.searchParams)).toEqual({ stakeholders: 's1', field_visit: 'v1', territory: 'locality:l1', mode: 'full' })
+    const alAsistente = await screen.findByRole('switch', { name: 'Modo rápido de campo' })
+    expect(alAsistente).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(alAsistente)
+    await waitFor(() => expect(new URL(rutaActual(), 'http://x').searchParams.get('mode')).toBe('full'))
+    expect(Object.fromEntries(new URL(rutaActual(), 'http://x').searchParams)).toEqual({
+      stakeholders: 's1',
+      field_visit: 'v1',
+      territory: 'locality:l1',
+      mode: 'full'
+    })
+    expect(await screen.findByRole('textbox', { name: 'Título' })).toBeInTheDocument()
+  })
+
+  // F-D: el paso 1 es solo tipo, título, fecha y hora y «¿Ya se realizó?», un selector de dos opciones con su efecto explicado;
+  // el objetivo pasa al paso 2
+  it('el paso 1 pide tipo, título, si ya se realizó y la fecha; el objetivo está en el paso 2', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    const grupo = screen.getByRole('radiogroup', { name: '¿Ya se realizó?' })
+    const planificada = within(grupo).getByRole('radio', { name: 'No, está planificada' })
+    const realizada = within(grupo).getByRole('radio', { name: 'Sí, ya se realizó' })
+    expect(planificada).toBeChecked()
+    expect(planificada).toHaveAccessibleDescription('Se registrará como planificada.')
+    expect(realizada).toHaveAccessibleDescription('Se registrará como realizada; podrá redactar el acta después.')
+    expect(screen.queryByRole('checkbox', { name: 'Ya se realizó' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Objetivo' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Fecha y hora programadas')).toBeInTheDocument()
+    await userEvent.click(realizada)
+    expect(realizada).toBeChecked()
+    expect(screen.getByLabelText('Fecha y hora en que se realizó')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Fecha y hora programadas')).not.toBeInTheDocument()
+    await userEvent.click(planificada)
+    expect(screen.getByLabelText('Fecha y hora programadas')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('heading', { name: 'Objetivo, lugar y grupos de interés' })).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Objetivo' }), 'Informar el avance')
+    for (let i = 0; i < 3; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar y completar después' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/engagement/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).toMatchObject({ attributes: { objective: 'Informar el avance' } })
   })
 
   it('el modo rápido sigue disponible como asistente aunque la pantalla sea angosta', async () => {

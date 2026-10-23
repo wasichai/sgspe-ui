@@ -2,10 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
@@ -22,7 +22,7 @@ import { instanteDeLima } from '../datos/fechas'
 import { fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
-import { conModo } from './modos'
+import { ConmutadorDeModo } from './ConmutadorDeModo'
 import { GuardadoParcial, useGuardarInteraccion, type NuevaInteraccion } from './guardarInteraccion'
 import { RegistroRapido } from './RegistroRapido'
 import { Mapa } from '../mapa/Mapa'
@@ -31,7 +31,8 @@ import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
 // S24 · registrar interacción (screens.md §6, flujos 4 y 5): cinco pasos con participantes sin pedir datos personales que
 // no hacen falta (filas de persona o de grupo sin nombres, con personas ≥ 1) y totales en vivo; al final "Guardar como
 // realizada" (register_held_unplanned) o "Programar" (schedule). abierta desde S16 trae los grupos de interés elegidos
-// (?stakeholders=); el territorio sale del chip. en el teléfono, o con ?mode=quick, el modo rápido de campo
+// (?stakeholders=); el territorio sale del chip. en el teléfono, o con ?mode=quick, el modo rápido de campo, que se
+// enciende y se apaga con el conmutador de la cabecera. F-D: el paso 1 es solo tipo, título, «¿Ya se realizó?» y su fecha
 const fila = z.object({
   tipo: z.enum(['persona', 'grupo']),
   participant_name: z.string(),
@@ -262,11 +263,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   return (
     <FormularioPorPasos
       titulo={t('relacionamiento.registro.titulo')}
-      descripcion={
-        <Link to={{ search: conModo(busqueda, 'quick') }} className="text-sg-primary-text underline">
-          {t('relacionamiento.registro.rapido')}
-        </Link>
-      }
+      accionesDeCabecera={<ConmutadorDeModo rapido={false} />}
       pasos={pasos}
       actual={paso}
       visitados={visitados}
@@ -309,12 +306,12 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             {(p) => <Input {...p} {...register('title')} />}
           </Campo>
           <div className="md:col-span-2">
-            <Campo etiqueta={t('relacionamiento.registro.objetivo')}>{(p) => <Textarea {...p} {...register('objective')} />}</Campo>
+            <Controller
+              control={control}
+              name="realizada"
+              render={({ field }) => <SelectorDeRealizada valor={field.value} alCambiar={field.onChange} alSalir={field.onBlur} />}
+            />
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register('realizada')} />
-            {t('relacionamiento.registro.realizada')}
-          </label>
           {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
           {v.realizada ? (
             <Controller
@@ -351,6 +348,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       ) : null}
       {paso === 1 ? (
         <div className="space-y-3">
+          <Campo etiqueta={t('relacionamiento.registro.objetivo')}>{(p) => <Textarea {...p} {...register('objective')} />}</Campo>
           <Campo etiqueta={t('relacionamiento.registro.lugar')}>{(p) => <Input {...p} {...register('place')} />}</Campo>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
@@ -585,6 +583,56 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       ) : null}
       {guardar.isError ? <ErrorDeGuardado error={guardar.error} proyecto={projectId} /> : null}
     </FormularioPorPasos>
+  )
+}
+
+// «¿Ya se realizó?» (F-D, 02-arquitectura-de-informacion.md §6): dos opciones con su efecto dicho, no una casilla. planificada
+// primero, porque es lo que se registra si no se elige
+function SelectorDeRealizada({ valor, alCambiar, alSalir }: { valor: boolean; alCambiar: (v: boolean) => void; alSalir: () => void }) {
+  const { t } = useTranslation(NS)
+  const id = useId()
+  const opciones = [
+    { valor: false, etiqueta: t('relacionamiento.registro.realizadaNo'), efecto: t('relacionamiento.registro.realizadaNoEfecto') },
+    { valor: true, etiqueta: t('relacionamiento.registro.realizadaSi'), efecto: t('relacionamiento.registro.realizadaSiEfecto') }
+  ]
+  return (
+    <div className="space-y-1">
+      <p id={`${id}-leyenda`} className="text-sg-label font-medium">
+        {t('relacionamiento.registro.realizada')}
+      </p>
+      <div role="radiogroup" aria-labelledby={`${id}-leyenda`} className="grid gap-2 sm:grid-cols-2">
+        {opciones.map((o) => {
+          const clave = `${id}-${String(o.valor)}`
+          return (
+            <div
+              key={clave}
+              className={`flex items-start gap-2 rounded-sg-md border p-3 ${
+                valor === o.valor ? 'border-sg-primary bg-sg-primary-soft' : 'border-sg-border bg-sg-surface'
+              }`}
+            >
+              <input
+                id={clave}
+                type="radio"
+                name={`${id}-realizada`}
+                className="mt-0.5"
+                checked={valor === o.valor}
+                onChange={() => alCambiar(o.valor)}
+                onBlur={alSalir}
+                aria-describedby={`${clave}-efecto`}
+              />
+              <div className="space-y-0.5">
+                <label htmlFor={clave} className="block text-sm font-medium">
+                  {o.etiqueta}
+                </label>
+                <p id={`${clave}-efecto`} className="text-sg-caption text-sg-text-muted">
+                  {o.efecto}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
