@@ -127,7 +127,9 @@ export const ES_COMUN = {
     explicacion: 'Su cuenta no tiene acceso a esta sección. El acceso depende de los permisos que su organización le da según su trabajo.',
     aQuien: 'Si lo necesita, pídalo a {{aQuien}}.',
     administracion: 'la administración de su organización',
-    volverAlInicio: 'Volver al inicio'
+    volverAlInicio: 'Volver al inicio',
+    jefatura: 'la jefatura del proyecto, {{nombre}}',
+    volverAlProyecto: 'Volver al resumen del proyecto'
   },
   usuario: {
     deLaLista: 'Elija a la persona',
@@ -506,7 +508,9 @@ export const EN_COMUN: typeof ES_COMUN = {
     explicacion: 'Your account does not have access to this section. Access depends on the permissions your organization gives you for your work.',
     aQuien: 'If you need it, ask {{aQuien}}.',
     administracion: 'your organization’s administration',
-    volverAlInicio: 'Back to home'
+    volverAlInicio: 'Back to home',
+    jefatura: 'the project lead, {{nombre}}',
+    volverAlProyecto: 'Back to the project overview'
   },
   usuario: {
     deLaLista: 'Pick the person',

@@ -21,7 +21,21 @@ export function ProyectosRutas() {
           const guarda = seccion ? guardaDe(seccion, seOfreceCon) : undefined
           // cada pantalla se monta de nuevo por su proyecto y su registro: nada de lo abierto o escrito pasa a otro
           const pantalla = <PorRuta parametros={['projectId', ...parametrosDe(ruta)]} Pantalla={Pantalla} />
-          return <Route key={ruta} path={ruta} element={guarda ? <GuardaDeSeccion seccion={guarda}>{pantalla}</GuardaDeSeccion> : pantalla} />
+          return (
+            <Route
+              key={ruta}
+              path={ruta}
+              element={
+                guarda ? (
+                  <GuardaDeSeccion seccion={guarda} enProyecto>
+                    {pantalla}
+                  </GuardaDeSeccion>
+                ) : (
+                  pantalla
+                )
+              }
+            />
+          )
         })}
       </Route>
     </Routes>

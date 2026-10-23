@@ -72,6 +72,38 @@ describe('rutas de F3', () => {
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Compromisos' })).not.toBeInTheDocument()
   })
 
+  // DD-12 (05 §1.8): dentro de un proyecto, «Sin acceso» nombra a la jefatura del proyecto si la cuenta la lee, y vuelve al
+  // resumen del proyecto
+  const JEFATURA: MockRoute = {
+    path: /^\/objects\/project_assignment\/records\?.*role_name=PROJECT_MANAGER/,
+    body: pagina([registro('j1', { project: 'p1', member_user_email: 'jefa@sgspe.test', role_name: 'PROJECT_MANAGER', active: true })])
+  }
+  const NOMBRES: MockRoute = { path: /^\/sgspe\/people\?/, body: [{ email: 'jefa@sgspe.test', displayName: 'Jefa Ejemplo' }] }
+
+  it('dentro de un proyecto, sin acceso a una pestaña pide el acceso a la jefatura del proyecto y vuelve a su resumen', async () => {
+    fetch = abrirPortal('/projects/p1/commitments', GESTORA, permisos({ project: ['READ'], project_assignment: ['READ'] }), [JEFATURA, NOMBRES, ...rutas()])
+    const bloque = await screen.findByRole('region', { name: 'No puede abrir «Compromisos»' })
+    await waitFor(() => expect(bloque).toHaveTextContent('pídalo a la jefatura del proyecto, Jefa Ejemplo.'))
+    expect(within(bloque).getByRole('link', { name: 'Volver al resumen del proyecto' })).toHaveAttribute('href', '/projects/p1/overview')
+    const pedido = fetch.calls.find((c) => c.url.includes('/objects/project_assignment/records') && c.url.includes('role_name'))
+    expect(pedido?.url).toContain('project=p1')
+  })
+
+  it('dentro de un proyecto, sin leer las asignaciones pide el acceso a la administración y vuelve al resumen', async () => {
+    fetch = abrirPortal('/projects/p1/commitments', GESTORA, permisos({ project: ['READ'] }), [JEFATURA, NOMBRES, ...rutas()])
+    const bloque = await screen.findByRole('region', { name: 'No puede abrir «Compromisos»' })
+    expect(bloque).toHaveTextContent('pídalo a la administración de su organización.')
+    expect(within(bloque).getByRole('link', { name: 'Volver al resumen del proyecto' })).toHaveAttribute('href', '/projects/p1/overview')
+    expect(fetch.calls.some((c) => c.url.includes('role_name='))).toBe(false)
+  })
+
+  it('fuera de un proyecto, sin acceso sigue pidiéndolo a la administración y vuelve al inicio', async () => {
+    fetch = abrirPortal('/documents', GESTORA, permisos({ project: ['READ'], project_assignment: ['READ'] }), [JEFATURA, NOMBRES, ...rutas()])
+    const bloque = await screen.findByRole('region', { name: 'No puede abrir «Documentos»' })
+    expect(bloque).toHaveTextContent('pídalo a la administración de su organización.')
+    expect(within(bloque).getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/')
+  })
+
   // los acuerdos viven bajo Compromisos, pero se leen con su propio permiso: la pestaña y las dos rutas piden READ sobre
   // agreement, no sobre commitment
   const sinAcuerdos = permisos({ project: ['READ'], project_assignment: ['READ'], commitment: ['READ'] })
