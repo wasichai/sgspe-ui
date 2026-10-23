@@ -1,15 +1,18 @@
-import { Input } from '@wasichai/ui'
-import { useState } from 'react'
+import { Button, Input } from '@wasichai/ui'
+import { CalendarDays } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { diaDeTexto, horaDeTexto, instanteDeLima, textoDeDia } from '../datos/fechas'
 import { NS } from '../i18n'
+import { CalendarioDeFecha } from './CalendarioDeFecha'
 import { Campo } from './Campo'
 
 // un campo de fecha que muestra y lee el día como dd/mm/aaaa y, con conHora, la hora de 24 h, en los dos idiomas (hallazgo
 // U-07, decisión DD-07): un <input type="date"> lo dibuja el navegador con su configuración regional (mm/dd/yyyy, AM/PM).
 // el valor es el día AAAA-MM-DD o, con hora, la hora de Lima como la escribía un datetime-local (AAAA-MM-DDTHH:mm): el
 // formulario lo convierte al instante que manda con instanteDeLima, igual que antes. null mientras no hay una fecha válida
-// dentro de min y max (en el mismo formato del valor). la grilla de calendario queda para una tarea siguiente
+// dentro de min y max (en el mismo formato del valor). el botón de calendario abre una grilla de mes (CalendarioDeFecha) que
+// escribe el día elegido en el campo como si se hubiera tecleado; con hora, conserva la hora escrita
 export interface PropsDeCampoFecha {
   valor: string | null
   alCambiar: (valor: string | null) => void
@@ -94,6 +97,37 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
     if (dia) setTextoDia(textoDeDia(dia))
     setTocados((x) => ({ ...x, dia: true }))
   }
+  // el calendario: Esc lo cierra sin elegir y devuelve el foco al botón, un clic fuera lo cierra
+  const [abierto, setAbierto] = useState(false)
+  const boton = useRef<HTMLButtonElement>(null)
+  const contenedor = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!abierto) return
+    // en la fase de captura de window, antes que la de document: un Dialog de Radix que contiene el campo no se cierra
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      e.preventDefault()
+      setAbierto(false)
+      boton.current?.focus()
+    }
+    const alApuntar = (e: PointerEvent) => {
+      if (!contenedor.current?.contains(e.target as Node)) setAbierto(false)
+    }
+    window.addEventListener('keydown', alTeclear, { capture: true })
+    document.addEventListener('pointerdown', alApuntar)
+    return () => {
+      window.removeEventListener('keydown', alTeclear, { capture: true })
+      document.removeEventListener('pointerdown', alApuntar)
+    }
+  }, [abierto])
+  const elegirDia = (dia: string) => {
+    cambiar(textoDeDia(dia), textoHora)
+    setTocados((x) => ({ ...x, dia: true }))
+    setAbierto(false)
+    boton.current?.focus()
+  }
+
   const salirDeLaHora = () => {
     const hora = horaDeTexto(textoHora)
     if (hora) setTextoHora(hora)
@@ -103,7 +137,14 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
   return (
     <Campo etiqueta={etiqueta} error={propio ?? error} ayuda={ayuda} id={id}>
       {(p) => (
-        <div className="flex flex-wrap gap-2">
+        <div
+          ref={contenedor}
+          className="relative flex flex-wrap gap-2"
+          onBlur={(e) => {
+            // el foco que sale del campo y del calendario (con Tab) lo cierra; dentro de él, no
+            if (abierto && e.relatedTarget && !contenedor.current?.contains(e.relatedTarget)) setAbierto(false)
+          }}
+        >
           <Input
             {...p}
             className="w-36"
@@ -118,6 +159,19 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
             onChange={(e) => cambiar(e.target.value, textoHora)}
             onBlur={salirDelDia}
           />
+          <Button
+            ref={boton}
+            type="button"
+            variant="secondary"
+            size="icon"
+            aria-label={t('comun.campoFecha.abrir')}
+            aria-haspopup="dialog"
+            aria-expanded={abierto}
+            disabled={deshabilitado}
+            onClick={() => setAbierto((a) => !a)}
+          >
+            <CalendarDays aria-hidden="true" className="size-4" />
+          </Button>
           {conHora ? (
             <Input
               className="w-24"
@@ -135,6 +189,7 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
               onBlur={salirDeLaHora}
             />
           ) : null}
+          {abierto ? <CalendarioDeFecha elegido={diaDeTexto(textoDia)} etiqueta={etiqueta} min={min} max={max} alElegir={elegirDia} /> : null}
         </div>
       )}
     </Campo>

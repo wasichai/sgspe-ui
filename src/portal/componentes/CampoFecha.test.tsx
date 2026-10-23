@@ -185,3 +185,248 @@ describe('CampoFecha, ayuda e invalidez de la pantalla', () => {
     expect(screen.getByLabelText('Desde')).toHaveAttribute('aria-invalid', 'true')
   })
 })
+
+// el calendario del campo (05-especificacion §1.5, DD-07): el patrón «Date Picker Dialog» de WAI-ARIA APG. un botón junto al
+// día abre una grilla de mes no modal, con lunes primero en los dos idiomas, que se recorre con el teclado y escribe el día
+// elegido en el campo como si se hubiera tecleado
+describe('CampoFecha, calendario', () => {
+  const ABRIR = 'Elegir la fecha en el calendario'
+  const abrir = () => userEvent.click(screen.getByRole('button', { name: ABRIR }))
+  const celda = (nombre: string) => screen.getByRole('gridcell', { name: nombre })
+  const enfocada = () => document.activeElement?.getAttribute('aria-label')
+
+  afterEach(() => vi.useRealTimers())
+
+  it('abre un diálogo no modal con el mes del valor y el foco en el día elegido', async () => {
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />)
+    const boton = screen.getByRole('button', { name: ABRIR })
+    expect(boton).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(boton).toHaveAttribute('aria-expanded', 'false')
+    await abrir()
+    expect(boton).toHaveAttribute('aria-expanded', 'true')
+    const dialogo = screen.getByRole('dialog', { name: 'Calendario de Inicio' })
+    expect(dialogo).toHaveAttribute('aria-modal', 'false')
+    expect(screen.getByText('Octubre de 2026')).toBeInTheDocument()
+    expect(screen.getByRole('grid', { name: 'Octubre de 2026' })).toBeInTheDocument()
+    const elegido = celda('martes, 20 de octubre de 2026')
+    expect(elegido).toHaveAttribute('aria-selected', 'true')
+    expect(elegido).toHaveFocus()
+    expect(celda('miércoles, 21 de octubre de 2026')).toHaveAttribute('aria-selected', 'false')
+  })
+
+  it('sin valor abre en el mes de hoy en Lima, con el foco y aria-current="date" en hoy', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    // las 22:00 de Lima del 23 de octubre: en UTC ya es 24, pero el día de negocio es el de Lima
+    vi.setSystemTime(new Date('2026-10-24T03:00:00Z'))
+    montar(<Controlado etiqueta="Inicio" espia={vi.fn()} />)
+    await abrir()
+    const hoy = celda('viernes, 23 de octubre de 2026')
+    expect(hoy).toHaveAttribute('aria-current', 'date')
+    expect(hoy).toHaveFocus()
+    expect(celda('sábado, 24 de octubre de 2026')).not.toHaveAttribute('aria-current')
+    expect(screen.queryAllByRole('gridcell', { selected: true })).toHaveLength(0)
+  })
+
+  it('las flechas mueven un día o una semana, RePág y AvPág un mes, con Mayús un año, Inicio y Fin a lunes y domingo', async () => {
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />)
+    await abrir()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(enfocada()).toBe('miércoles, 21 de octubre de 2026')
+    await userEvent.keyboard('{ArrowLeft}{ArrowLeft}')
+    expect(enfocada()).toBe('lunes, 19 de octubre de 2026')
+    await userEvent.keyboard('{ArrowDown}')
+    expect(enfocada()).toBe('lunes, 26 de octubre de 2026')
+    await userEvent.keyboard('{ArrowUp}{ArrowUp}')
+    expect(enfocada()).toBe('lunes, 12 de octubre de 2026')
+    await userEvent.keyboard('{End}')
+    expect(enfocada()).toBe('domingo, 18 de octubre de 2026')
+    await userEvent.keyboard('{Home}')
+    expect(enfocada()).toBe('lunes, 12 de octubre de 2026')
+    await userEvent.keyboard('{PageDown}')
+    expect(enfocada()).toBe('jueves, 12 de noviembre de 2026')
+    expect(screen.getByText('Noviembre de 2026')).toBeInTheDocument()
+    await userEvent.keyboard('{PageUp}{PageUp}')
+    expect(enfocada()).toBe('sábado, 12 de setiembre de 2026')
+    await userEvent.keyboard('{Shift>}{PageDown}{/Shift}')
+    expect(enfocada()).toBe('domingo, 12 de setiembre de 2027')
+    await userEvent.keyboard('{Shift>}{PageUp}{PageUp}{/Shift}')
+    expect(enfocada()).toBe('viernes, 12 de setiembre de 2025')
+  })
+
+  it('las flechas cruzan de mes y RePág no se corre de mes en el 31', async () => {
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-31" espia={vi.fn()} />)
+    await abrir()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(enfocada()).toBe('domingo, 1 de noviembre de 2026')
+    expect(screen.getByText('Noviembre de 2026')).toBeInTheDocument()
+    await userEvent.keyboard('{ArrowLeft}{PageUp}')
+    expect(enfocada()).toBe('miércoles, 30 de setiembre de 2026')
+  })
+
+  it('los botones «Mes anterior» y «Mes siguiente» cambian el mes', async () => {
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />)
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }))
+    expect(screen.getByText('Noviembre de 2026')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Mes anterior' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Mes anterior' }))
+    expect(screen.getByText('Setiembre de 2026')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('Enter elige el día enfocado, lo escribe en el campo, cierra y devuelve el foco al botón', async () => {
+    const espia = vi.fn()
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={espia} />)
+    await abrir()
+    await userEvent.keyboard('{ArrowRight}{Enter}')
+    expect(ultimo(espia)).toBe('2026-10-21')
+    expect(screen.getByLabelText('Inicio')).toHaveValue('21/10/2026')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: ABRIR })).toHaveFocus()
+  })
+
+  it('Espacio también elige', async () => {
+    const espia = vi.fn()
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={espia} />)
+    await abrir()
+    await userEvent.keyboard('{ArrowDown} ')
+    expect(ultimo(espia)).toBe('2026-10-27')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('un clic en un día lo elige y, con hora, conserva la hora escrita', async () => {
+    const espia = vi.fn()
+    montar(<Controlado etiqueta="Recepción" conHora inicial="2026-10-20T10:15" espia={espia} />)
+    await abrir()
+    await userEvent.click(celda('jueves, 22 de octubre de 2026'))
+    expect(ultimo(espia)).toBe('2026-10-22T10:15')
+    expect(screen.getByLabelText('Recepción')).toHaveValue('22/10/2026')
+    expect(screen.getByLabelText('Recepción (hora)')).toHaveValue('10:15')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('con hora todavía sin escribir, elegir el día lo escribe y no avisa un valor hasta que llegue la hora', async () => {
+    const espia = vi.fn()
+    montar(<Controlado etiqueta="Recepción" conHora inicial={null} espia={espia} />)
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-23T15:00:00Z'))
+    await abrir()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByLabelText('Recepción')).toHaveValue('23/10/2026')
+    expect(espia).not.toHaveBeenCalledWith(expect.any(String))
+    await userEvent.type(screen.getByLabelText('Recepción (hora)'), '09:30')
+    expect(ultimo(espia)).toBe('2026-10-23T09:30')
+  })
+
+  it('fuera de min y max los días están deshabilitados y no se eligen', async () => {
+    const espia = vi.fn()
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" min="2026-10-10" max="2026-10-25" espia={espia} />)
+    await abrir()
+    expect(celda('viernes, 9 de octubre de 2026')).toHaveAttribute('aria-disabled', 'true')
+    expect(celda('sábado, 10 de octubre de 2026')).not.toHaveAttribute('aria-disabled')
+    expect(celda('domingo, 25 de octubre de 2026')).not.toHaveAttribute('aria-disabled')
+    expect(celda('lunes, 26 de octubre de 2026')).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(celda('lunes, 26 de octubre de 2026'))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await userEvent.keyboard('{ArrowDown}{Enter}')
+    expect(enfocada()).toBe('martes, 27 de octubre de 2026')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(espia).not.toHaveBeenCalled()
+  })
+
+  it('con min y max con hora, los días se juzgan por su día', async () => {
+    montar(<Controlado etiqueta="Recepción" conHora inicial="2026-10-20T10:15" min="2026-10-10T08:00" max="2026-10-25T18:00" espia={vi.fn()} />)
+    await abrir()
+    expect(celda('sábado, 10 de octubre de 2026')).not.toHaveAttribute('aria-disabled')
+    expect(celda('domingo, 25 de octubre de 2026')).not.toHaveAttribute('aria-disabled')
+    expect(celda('viernes, 9 de octubre de 2026')).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('Esc cierra sin elegir, devuelve el foco al botón y no cierra el diálogo que lo contiene', async () => {
+    const espia = vi.fn()
+    const deFuera = vi.fn()
+    const escuchar = (e: KeyboardEvent) => e.key === 'Escape' && deFuera()
+    document.addEventListener('keydown', escuchar, { capture: true })
+    try {
+      montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={espia} />)
+      await abrir()
+      await userEvent.keyboard('{ArrowRight}{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: ABRIR })).toHaveFocus()
+      expect(screen.getByLabelText('Inicio')).toHaveValue('20/10/2026')
+      expect(espia).not.toHaveBeenCalled()
+      expect(deFuera).not.toHaveBeenCalled()
+    } finally {
+      document.removeEventListener('keydown', escuchar, { capture: true })
+    }
+  })
+
+  it('un clic fuera cierra sin elegir', async () => {
+    const espia = vi.fn()
+    montar(
+      <>
+        <Controlado etiqueta="Inicio" inicial="2026-10-20" espia={espia} />
+        <p>Fuera</p>
+      </>
+    )
+    await abrir()
+    await userEvent.click(screen.getByText('Fuera'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(espia).not.toHaveBeenCalled()
+  })
+
+  it('el foco que sale con Tab cierra el calendario', async () => {
+    montar(
+      <>
+        <Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />
+        <button type="button">Después</button>
+      </>
+    )
+    await abrir()
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Después' })).toHaveFocus()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('el botón vuelve a cerrar el calendario abierto y se deshabilita con el campo', async () => {
+    const { unmount } = montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />)
+    await abrir()
+    await abrir()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    unmount()
+    montar(<CampoFecha etiqueta="Inicio" deshabilitado valor={null} alCambiar={() => {}} />)
+    expect(screen.getByRole('button', { name: ABRIR })).toBeDisabled()
+  })
+
+  it.each([
+    [
+      'es',
+      'Elegir la fecha en el calendario',
+      'Calendario de Inicio',
+      ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'],
+      'Octubre de 2026',
+      'martes, 20 de octubre de 2026'
+    ],
+    [
+      'en',
+      'Choose the date on the calendar',
+      'Inicio calendar',
+      ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      'October 2026',
+      'Tuesday, October 20, 2026'
+    ]
+  ])('en %s la semana empieza el lunes y los nombres son del idioma del portal, no del navegador', async (idioma, abrirTexto, nombre, dias, mes, dia) => {
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue(idioma === 'es' ? 'en-US' : 'es-PE')
+    vi.spyOn(navigator, 'languages', 'get').mockReturnValue([idioma === 'es' ? 'en-US' : 'es-PE'])
+    localStorage.setItem('sgspe.lang', idioma)
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: abrirTexto }))
+    expect(screen.getByRole('dialog', { name: nombre })).toBeInTheDocument()
+    expect(screen.getAllByRole('columnheader').map((c) => c.textContent?.trim())).toEqual(dias.map((d) => expect.stringContaining(d)))
+    expect(screen.getByText(mes)).toBeInTheDocument()
+    expect(celda(dia)).toHaveFocus()
+    // el 1 de octubre de 2026 es jueves: la primera fila tiene tres celdas vacías antes
+    const primeraFila = screen.getAllByRole('row')[1]
+    expect(primeraFila.querySelectorAll('[role="gridcell"]:not([aria-label])')).toHaveLength(3)
+  })
+})
