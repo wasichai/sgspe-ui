@@ -309,6 +309,7 @@ export function GruposPage() {
               ) : (
                 <TablaPriorizada<Registro>
                   etiqueta={t('grupos.titulo')}
+                  idDeTabla="grupos"
                   columnas={columnas}
                   filas={pagina}
                   clave={(g) => g.id}

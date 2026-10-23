@@ -40,7 +40,8 @@ export const ES_COMUN = {
   },
   tablaPriorizada: {
     igualEnTodas: 'Igual en todas las filas',
-    uniforme: '{{encabezado}}: <valor/>'
+    uniforme: '{{encabezado}}: <valor/>',
+    columnas: 'Columnas'
   },
   // las vistas de un módulo en una sola fila, con su conteo (hallazgo U-18): «Vencidos, 1» es el nombre accesible
   selectorDeVista: {
@@ -428,7 +429,8 @@ export const EN_COMUN: typeof ES_COMUN = {
   },
   tablaPriorizada: {
     igualEnTodas: 'Same in every row',
-    uniforme: '{{encabezado}}: <valor/>'
+    uniforme: '{{encabezado}}: <valor/>',
+    columnas: 'Columns'
   },
   selectorDeVista: {
     conConteo: '{{etiqueta}}, {{n}}',

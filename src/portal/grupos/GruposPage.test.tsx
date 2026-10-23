@@ -140,13 +140,31 @@ describe('S16 · lista de grupos de interés', () => {
       expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
     // secundarias, desde xl
     for (const c of ['Territorio', 'Último contacto']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'xl:table-cell')
-    // opcionales, desde 1536 px hasta que llegue el selector «Columnas»
+    // opcionales, desde 1536 px mientras no se elijan en «Columnas»
     for (const c of ['Relación', 'Evaluación']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'min-[96rem]:table-cell')
     // el mismo responsable en toda la página: sale de la tabla y queda en la nota, con su nombre
     expect(tabla.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
     const nota = screen.getByRole('list', { name: 'Igual en todas las filas' })
     await waitFor(() => expect(within(nota).getByRole('listitem')).toHaveTextContent('Responsable: Gestión de compromisos (demo)'))
     expect(await within(filas()[0]).findByText('Tunas')).toBeInTheDocument()
+  })
+
+  // 05-especificacion §1.6: «Columnas» muestra u oculta las opcionales en todos los anchos y se recuerda en este navegador
+  it('«Columnas» ofrece las opcionales; la elegida se ve en todos los anchos y se recuerda para la lista de grupos', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(screen.getByRole('button', { name: 'Columnas' }))
+    const menu = screen.getByRole('group', { name: 'Columnas' })
+    expect(
+      within(menu)
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('label')?.textContent)
+    ).toEqual(['Relación', 'Evaluación'])
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'Evaluación' }))
+    const tabla = within(screen.getByRole('table', { name: 'Grupos de interés' }))
+    expect(tabla.getByRole('columnheader', { name: 'Evaluación' })).not.toHaveClass('hidden')
+    expect(tabla.getByRole('columnheader', { name: 'Relación' })).toHaveClass('hidden', 'min-[96rem]:table-cell')
+    expect(JSON.parse(localStorage.getItem('sgspe.columnas.grupos') ?? '{}')).toEqual({ evaluacion: true })
   })
 
   it('en «Míos» no se dibuja el responsable: es quien mira', async () => {

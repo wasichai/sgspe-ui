@@ -342,6 +342,8 @@ export function AtencionPage() {
                 ) : (
                   <TablaPriorizada<Fila>
                     etiqueta={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}
+                    // los grupos de la cola comparten la elección de «Columnas»
+                    idDeTabla="atencion"
                     columnas={columnas}
                     filas={delGrupo}
                     clave={(f) => `${f.objeto}:${f.registro.id}`}

@@ -148,3 +148,17 @@ test('el ojo de la vista previa aparece al pasar sobre la fila o con el foco, y 
   await expect(page).toHaveURL(/[?&]peek=stakeholder%3As/)
   await expect(page.getByRole('dialog')).toBeVisible()
 })
+
+// 05-especificacion §1.6: a 1440 px una opcional no se ve hasta que se elige en «Columnas», y la elección sobrevive a recargar
+test('«Columnas» muestra una opcional a 1440 px y la recuerda al recargar', async ({ page }) => {
+  await page.goto('/projects/p1/stakeholders')
+  const tabla = page.getByRole('table', { name: 'Grupos de interés' })
+  const evaluacion = tabla.getByRole('columnheader', { name: 'Evaluación' })
+  await expect(tabla).toBeVisible()
+  await expect(evaluacion).toBeHidden()
+  await page.getByRole('button', { name: 'Columnas' }).click()
+  await page.getByRole('group', { name: 'Columnas' }).getByRole('checkbox', { name: 'Evaluación' }).check()
+  await expect(evaluacion).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('table', { name: 'Grupos de interés' }).getByRole('columnheader', { name: 'Evaluación' })).toBeVisible()
+})

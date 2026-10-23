@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 import { TablaPriorizada, type ColumnaPriorizada } from './TablaPriorizada'
 
@@ -78,8 +78,8 @@ describe('TablaPriorizada', () => {
     expect(within(filas()[0]).getByRole('cell', { name: 'Reservorio de Tunas' })).not.toHaveClass('hidden')
   })
 
-  // mientras no llegue el selector «Columnas», una opcional se ve desde 1536 px (el 2xl de SGSPE es 1440 px): ningún dato queda sin forma de verse
-  it('las opcionales se ven solo desde 1536 px', () => {
+  // sin una elección en «Columnas», una opcional se ve desde 1536 px (el 2xl de SGSPE es 1440 px)
+  it('sin elección guardada, las opcionales se ven solo desde 1536 px', () => {
     dibujar()
     const notas = within(tabla()).getByRole('columnheader', { name: 'Notas' })
     expect(notas).toHaveClass('hidden', 'min-[96rem]:table-cell')
@@ -122,5 +122,132 @@ describe('TablaPriorizada', () => {
     dibujar({ columnas: [{ id: 'sel', encabezado: 'Seleccionar', prioridad: 'esencial', encabezadoOculto: true }, ...COLUMNAS] })
     const encabezado = within(tabla()).getByRole('columnheader', { name: 'Seleccionar' })
     expect(within(encabezado).getByText('Seleccionar')).toHaveClass('sr-only')
+  })
+
+  describe('«Columnas»', () => {
+    const CLAVE = 'sgspe.columnas.compromisos'
+    afterEach(() => {
+      localStorage.removeItem(CLAVE)
+      vi.restoreAllMocks()
+    })
+    const abrirColumnas = async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Columnas' }))
+      return screen.getByRole('group', { name: 'Columnas' })
+    }
+
+    it('ofrece solo las opcionales, cada una con su casilla', async () => {
+      dibujar({ idDeTabla: 'compromisos' })
+      const menu = await abrirColumnas()
+      expect(
+        within(menu)
+          .getAllByRole('checkbox')
+          .map((c) => c.closest('label')?.textContent)
+      ).toEqual(['Notas'])
+      expect(within(menu).getByRole('checkbox', { name: 'Notas' })).not.toBeChecked()
+    })
+
+    it('marcar una opcional la muestra en todos los anchos y la elección se recuerda por tabla', async () => {
+      const { unmount } = dibujar({ idDeTabla: 'compromisos' })
+      const menu = await abrirColumnas()
+      await userEvent.click(within(menu).getByRole('checkbox', { name: 'Notas' }))
+      const notas = within(tabla()).getByRole('columnheader', { name: 'Notas' })
+      expect(notas).not.toHaveClass('hidden')
+      expect(within(filas()[0]).getByRole('cell', { name: 'a' })).not.toHaveClass('hidden')
+      expect(JSON.parse(localStorage.getItem(CLAVE) ?? '{}')).toEqual({ notas: true })
+      unmount()
+      dibujar({ idDeTabla: 'compromisos' })
+      expect(within(tabla()).getByRole('columnheader', { name: 'Notas' })).not.toHaveClass('hidden')
+      // otra tabla no hereda la elección
+      document.body.innerHTML = ''
+      dibujar({ idDeTabla: 'otra' })
+      expect(within(tabla()).getByRole('columnheader', { name: 'Notas' })).toHaveClass('hidden', 'min-[96rem]:table-cell')
+    })
+
+    it('dos tablas con el mismo id (los grupos de una lista) comparten la elección al instante', async () => {
+      montar(
+        <>
+          <TablaPriorizada<Fila> etiqueta="Uno" idDeTabla="compromisos" columnas={COLUMNAS} filas={FILAS} clave={(f) => f.id} celda={valor} />
+          <TablaPriorizada<Fila> etiqueta="Dos" idDeTabla="compromisos" columnas={COLUMNAS} filas={FILAS} clave={(f) => f.id} celda={valor} />
+        </>
+      )
+      await userEvent.click(screen.getAllByRole('button', { name: 'Columnas' })[0])
+      await userEvent.click(within(screen.getByRole('group', { name: 'Columnas' })).getByRole('checkbox', { name: 'Notas' }))
+      for (const nombre of ['Uno', 'Dos'])
+        expect(within(screen.getByRole('table', { name: nombre })).getByRole('columnheader', { name: 'Notas' })).not.toHaveClass('hidden')
+    })
+
+    it('desmarcarla la oculta también en las pantallas anchas', async () => {
+      localStorage.setItem(CLAVE, JSON.stringify({ notas: true }))
+      dibujar({ idDeTabla: 'compromisos' })
+      const menu = await abrirColumnas()
+      const casilla = within(menu).getByRole('checkbox', { name: 'Notas' })
+      expect(casilla).toBeChecked()
+      await userEvent.click(casilla)
+      const notas = within(tabla()).getByRole('columnheader', { name: 'Notas' })
+      expect(notas).toHaveClass('hidden')
+      expect(notas).not.toHaveClass('min-[96rem]:table-cell')
+      expect(JSON.parse(localStorage.getItem(CLAVE) ?? '{}')).toEqual({ notas: false })
+    })
+
+    it('en una pantalla ancha, sin elección, la casilla dice que la columna se ve', async () => {
+      const original = window.matchMedia
+      window.matchMedia = ((consulta: string) => ({
+        matches: consulta.includes('96rem'),
+        media: consulta,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined
+      })) as unknown as typeof window.matchMedia
+      try {
+        dibujar({ idDeTabla: 'compromisos' })
+        const menu = await abrirColumnas()
+        expect(within(menu).getByRole('checkbox', { name: 'Notas' })).toBeChecked()
+        await userEvent.click(within(menu).getByRole('checkbox', { name: 'Notas' }))
+        expect(JSON.parse(localStorage.getItem(CLAVE) ?? '{}')).toEqual({ notas: false })
+      } finally {
+        window.matchMedia = original
+      }
+    })
+
+    it('sin almacenamiento, o con uno ilegible, vale lo de siempre y la casilla sigue sirviendo en la página', async () => {
+      localStorage.setItem(CLAVE, 'no es json')
+      dibujar({ idDeTabla: 'compromisos' })
+      expect(within(tabla()).getByRole('columnheader', { name: 'Notas' })).toHaveClass('hidden', 'min-[96rem]:table-cell')
+      document.body.innerHTML = ''
+      // el almacenamiento de las columnas falla; el de la sesión y el idioma, que montar y i18n usan, no
+      const leer = Storage.prototype.getItem
+      const escribir = Storage.prototype.setItem
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, clave: string) {
+        if (clave.startsWith('sgspe.columnas.')) throw new Error('bloqueado')
+        return leer.call(this, clave)
+      })
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, clave: string, valor: string) {
+        if (clave.startsWith('sgspe.columnas.')) throw new Error('bloqueado')
+        escribir.call(this, clave, valor)
+      })
+      dibujar({ idDeTabla: 'compromisos' })
+      expect(within(tabla()).getByRole('columnheader', { name: 'Notas' })).toHaveClass('hidden', 'min-[96rem]:table-cell')
+      const menu = await abrirColumnas()
+      await userEvent.click(within(menu).getByRole('checkbox', { name: 'Notas' }))
+      expect(within(tabla()).getByRole('columnheader', { name: 'Notas' })).not.toHaveClass('hidden')
+    })
+
+    it('sin opcionales no hay «Columnas»; una opcional uniforme, que ya está en la nota, no se ofrece', () => {
+      dibujar({ columnas: COLUMNAS.filter((c) => c.prioridad !== 'opcional') })
+      expect(screen.queryByRole('button', { name: 'Columnas' })).not.toBeInTheDocument()
+      document.body.innerHTML = ''
+      dibujar({ ocultarUniformes: true, filas: FILAS.map((f) => ({ ...f, notas: 'igual' })) })
+      expect(screen.queryByRole('button', { name: 'Columnas' })).not.toBeInTheDocument()
+    })
+
+    it('en inglés', async () => {
+      localStorage.setItem('sgspe.lang', 'en')
+      try {
+        dibujar({ idDeTabla: 'compromisos' })
+        await userEvent.click(screen.getByRole('button', { name: 'Columns' }))
+        expect(screen.getByRole('group', { name: 'Columns' })).toBeInTheDocument()
+      } finally {
+        localStorage.removeItem('sgspe.lang')
+      }
+    })
   })
 })

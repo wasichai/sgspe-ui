@@ -373,6 +373,7 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
   return (
     <TablaPriorizada<Registro>
       etiqueta={t('relacionamiento.titulo')}
+      idDeTabla="interacciones"
       columnas={columnas}
       filas={ordenadas}
       clave={(i) => i.id}
