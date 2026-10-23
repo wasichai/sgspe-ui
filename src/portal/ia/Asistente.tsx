@@ -114,6 +114,27 @@ export interface Turno<R, V> {
 }
 
 // la conversación de un modo: vive en el panel, que no se desmonta al cerrar el drawer
+// la pregunta prellenada desde una ficha (decisión 6 del plan 7.3, revisada en el rediseño de UX): la persona lee el tipo de
+// registro con su nombre y su rótulo, nunca el nombre técnico ni el id. el rótulo (un título) puede ser un dato personal que
+// iría al proveedor sin seudonimizar (AI-05 solo seudonimiza los resultados de las herramientas), así que al enviarla el
+// comienzo prellenado, si la persona lo dejó, se cambia por la referencia técnica (objeto e id), con la que el asistente lee
+// el registro con los permisos de quien pregunta
+type RegistroDelContexto = NonNullable<ContextoDelAsistente['registro']>
+type Traducir = (clave: string, opciones?: Record<string, unknown>) => string
+
+export function prefijoDe(t: Traducir, registro: RegistroDelContexto): string {
+  const tipo = t(`asistente.tipos.${registro.objeto}`, { defaultValue: t('asistente.tipos.otro') })
+  return registro.rotulo ? t('asistente.sobreElRegistro', { tipo, rotulo: registro.rotulo }) : t('asistente.sobreElRegistroSinRotulo', { tipo })
+}
+
+export function paraElProveedor(t: Traducir, registro: RegistroDelContexto | undefined, pregunta: string): string {
+  if (!registro) return pregunta
+  const prefijo = prefijoDe(t, registro).trimEnd()
+  if (!pregunta.startsWith(prefijo)) return pregunta
+  const referencia = t('asistente.referenciaAlRegistro', { objeto: registro.objeto, id: registro.id }).trimEnd()
+  return referencia + pregunta.slice(prefijo.length)
+}
+
 export function useConversacion<V, R>(enviar: (valor: V) => Promise<R>) {
   const [turnos, setTurnos] = useState<Turno<R, V>[]>([])
   const [enCurso, setEnCurso] = useState(false)
@@ -317,7 +338,7 @@ export function PanelDelAsistente({
   useEffect(() => {
     setModo(contexto.modo ?? 'datos')
     setProyecto(contexto.proyecto ?? (scope.kind === 'project' ? scope.projectId : ''))
-    if (contexto.registro) setBorrador(t('asistente.sobreElRegistro', { objeto: contexto.registro.objeto, id: contexto.registro.id }))
+    if (contexto.registro) setBorrador(prefijoDe(t, contexto.registro))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vez])
   // flujo 18: quien no lee los nombres de las personas solo ve «Preguntar a los datos» (decisión 5)
@@ -370,7 +391,11 @@ export function PanelDelAsistente({
         alCambiar={setBorrador}
         enCurso={enDocumentos ? documentos.enCurso : datos.enCurso}
         listo={!enDocumentos || proyecto !== ''}
-        alPreguntar={(pregunta) => void (enDocumentos ? documentos.preguntar(pregunta, { pregunta, proyecto }) : datos.preguntar(pregunta, pregunta))}
+        alPreguntar={(pregunta) => {
+          // la conversación muestra lo que la persona escribió; al proveedor va la referencia técnica en lugar del rótulo
+          const enviada = paraElProveedor(t, contexto.registro, pregunta)
+          void (enDocumentos ? documentos.preguntar(pregunta, { pregunta: enviada, proyecto }) : datos.preguntar(pregunta, enviada))
+        }}
         alReintentarEstado={() => void estado.refetch()}
       >
         {enDocumentos ? <ProyectoDeLaPregunta valor={proyecto} alCambiar={setProyecto} /> : null}

@@ -161,11 +161,19 @@ describe('S05 · preguntar a los datos', () => {
     expect(within(panel).getByText('La IA no está disponible para su rol.')).toBeInTheDocument()
   })
 
-  it('desde una ficha muestra el contexto y prellena la pregunta con el objeto y el id, nunca con el rótulo', async () => {
+  // la persona lee el tipo de registro con su nombre y su rótulo, nunca el nombre técnico ni el id; al proveedor va la
+  // referencia técnica en lugar del rótulo, que puede ser un dato personal sin seudonimizar (decisión 6 del plan 7.3)
+  it('desde una ficha muestra el contexto y prellena la pregunta con el tipo y el rótulo; al proveedor no le llega el rótulo', async () => {
     montarAsistente()
+    red = espiarRed([{ method: 'POST', path: '/sgspe/ai/assistant/questions', responder: () => jsonResponse(RESPUESTA_DATOS) }])
     await userEvent.click(await screen.findByRole('button', { name: 'Abrir con contexto' }))
     const panel = await screen.findByRole('dialog', { name: 'Asistente de IA' })
     expect(within(panel).getByText('Contexto: Q-001')).toBeInTheDocument()
-    await waitFor(() => expect(within(panel).getByLabelText('Su pregunta')).toHaveValue('Sobre el registro grievance g1: '))
+    await waitFor(() => expect(within(panel).getByLabelText('Su pregunta')).toHaveValue('Sobre la queja Q-001: '))
+    expect(panel).not.toHaveTextContent(/grievance|\bg1\b/)
+    await preguntar(panel, '¿qué falta para cerrarla?')
+    expect(await within(panel).findByText('Sobre la queja Q-001: ¿qué falta para cerrarla?')).toBeInTheDocument()
+    expect(red.a('POST', '/sgspe/ai/assistant/questions')[0].cuerpo).toEqual({ question: 'Sobre el registro grievance g1: ¿qué falta para cerrarla?' })
+    expect(panel).not.toHaveTextContent(/grievance|\bg1\b/)
   })
 })
