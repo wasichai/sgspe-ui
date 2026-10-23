@@ -204,6 +204,22 @@ test.describe('a 1440 px', () => {
     await expect(detectada).toHaveAttribute('aria-sort', 'ascending')
   })
 
+  // 05-especificacion §1.4: la búsqueda espera 300 ms tras la última tecla: escribir de corrido es una sola consulta
+  test('la búsqueda de las alertas se manda una vez al terminar de escribir, no con cada tecla', async ({ page }) => {
+    await page.goto('/projects/p1/risks/warnings')
+    await expect(page.getByRole('table', { name: 'Alertas del proyecto' })).toBeVisible()
+    const busquedas: string[] = []
+    page.on('request', (r) => {
+      const q = new URL(r.url()).searchParams.get('q')
+      if (r.url().includes('/objects/early_warning/records?') && q) busquedas.push(q)
+    })
+    const caja = page.getByRole('searchbox', { name: 'Buscar por título' })
+    await caja.pressSequentially('agua', { delay: 50 })
+    await expect(caja).toHaveValue('agua')
+    await expect(page).toHaveURL(/[?&]q=agua(&|$)/)
+    expect(new Set(busquedas)).toEqual(new Set(['agua']))
+  })
+
   test('programas: Programas y Aportes en un solo selector, nunca dos listados apilados, y la tabla sin desborde', async ({ page }) => {
     await page.goto('/projects/p1/programs')
     const barra = page.getByRole('group', { name: 'Filtros' })

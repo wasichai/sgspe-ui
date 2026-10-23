@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -119,7 +119,10 @@ describe('S35 · lista unificada de QCS', () => {
     await userEvent.click(screen.getByRole('radio', { name: /^Todas\b/ }))
     expect(screen.getByRole('link', { name: /^Q-003\b/ })).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Buscar por código o descripción'), 'turbio')
-    expect(screen.getAllByRole('link', { name: /^[QCS]-\d+\b/ }).map((l) => l.textContent?.split(' ')[0])).toEqual(['Q-002', 'Q-001', 'Q-003'])
+    // la búsqueda llega a la consulta 300 ms después de la última tecla (05-especificacion §1.4): antes filtraba con cada tecla
+    await waitFor(() =>
+      expect(screen.getAllByRole('link', { name: /^[QCS]-\d+\b/ }).map((l) => l.textContent?.split(' ')[0])).toEqual(['Q-002', 'Q-001', 'Q-003'])
+    )
     await userEvent.selectOptions(screen.getByLabelText('Severidad'), 'MEDIA')
     expect(screen.getAllByRole('link', { name: /^[QCS]-\d+\b/ }).map((l) => l.textContent?.split(' ')[0])).toEqual(['Q-002'])
   })

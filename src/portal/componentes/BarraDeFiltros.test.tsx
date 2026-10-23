@@ -1,6 +1,6 @@
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { montar, ubicacion } from '../../test/montar'
 import { BarraDeFiltros } from './BarraDeFiltros'
 import { FiltroDeLista } from './FiltroDeLista'
@@ -54,13 +54,71 @@ function ListaDePrueba({ conTodos = true }: { conTodos?: boolean }) {
 const enLista = (ruta: string, conTodos = true) => montar(<ListaDePrueba conTodos={conTodos} />, { ruta: `/commitments${ruta}`, camino: '/commitments' })
 
 describe('BarraDeFiltros', () => {
-  it('la búsqueda tiene su rótulo y escribe en la URL; el filtro frecuente está a la vista', async () => {
-    enLista('?view=vencidos')
-    expect(screen.getByText('Selector de vista')).toBeInTheDocument()
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'agua')
-    expect(ubicacion.actual).toBe('/commitments?view=vencidos&q=agua')
-    await userEvent.selectOptions(screen.getByLabelText('Estado'), 'blocked')
-    expect(ubicacion.actual).toBe('/commitments?view=vencidos&q=agua&state=blocked')
+  // 05-especificacion §1.4: lo escrito se ve al instante, pero la búsqueda llega a la URL (y a la consulta) 300 ms después de la
+  // última tecla; Enter la manda en el acto. antes se escribía en la URL con cada tecla: esta prueba esperaba la URL al instante
+  describe('la búsqueda', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+    })
+    // relojes falsos solo para los temporizadores y sin que avancen solos (con shouldAdvanceTime, una prueba lenta vería pasar
+    // los 300 ms): la barra no pide nada a la red, sin TanStack Query de por medio. Testing Library solo reconoce los relojes
+    // falsos de jest y, sin él, espera un setTimeout que nunca llega: se le da el avance de vitest con ese nombre
+    const conReloj = () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      vi.stubGlobal('jest', { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) })
+      return userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    }
+
+    it('tiene su rótulo, muestra lo escrito al instante y lo escribe en la URL 300 ms después de la última tecla', async () => {
+      const usuario = conReloj()
+      enLista('?view=vencidos')
+      expect(screen.getByText('Selector de vista')).toBeInTheDocument()
+      const caja = screen.getByRole('searchbox', { name: 'Buscar' })
+      await usuario.type(caja, 'agu')
+      act(() => vi.advanceTimersByTime(200))
+      await usuario.type(caja, 'a')
+      expect(caja).toHaveValue('agua')
+      expect(ubicacion.actual).toBe('/commitments?view=vencidos')
+      act(() => vi.advanceTimersByTime(299))
+      expect(ubicacion.actual).toBe('/commitments?view=vencidos')
+      act(() => vi.advanceTimersByTime(1))
+      expect(ubicacion.actual).toBe('/commitments?view=vencidos&q=agua')
+      expect(caja).toHaveValue('agua')
+      // el filtro frecuente está a la vista y escribe en el acto
+      await usuario.selectOptions(screen.getByLabelText('Estado'), 'blocked')
+      expect(ubicacion.actual).toBe('/commitments?view=vencidos&q=agua&state=blocked')
+    })
+
+    it('Enter la manda en el acto, sin esperar', async () => {
+      const usuario = conReloj()
+      enLista('?view=vencidos')
+      await usuario.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'agua{Enter}')
+      expect(ubicacion.actual).toBe('/commitments?view=vencidos&q=agua')
+      // la espera pendiente ya no vuelve a escribir
+      act(() => vi.advanceTimersByTime(1000))
+      expect(ubicacion.actual).toBe('/commitments?view=vencidos&q=agua')
+    })
+
+    it('varias teclas seguidas son una sola búsqueda', async () => {
+      const usuario = conReloj()
+      const alCambiar = vi.fn()
+      montar(<BarraDeFiltros busqueda={{ etiqueta: 'Buscar', valor: '', alCambiar }} aplicados={[]} />)
+      await usuario.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'taller')
+      expect(alCambiar).not.toHaveBeenCalled()
+      act(() => vi.advanceTimersByTime(300))
+      expect(alCambiar).toHaveBeenCalledTimes(1)
+      expect(alCambiar).toHaveBeenCalledWith('taller')
+    })
+
+    it('si la búsqueda cambia desde fuera (su chip, «Limpiar filtros»), la caja lo refleja', async () => {
+      enLista('?view=vencidos&q=agua')
+      const caja = screen.getByRole('searchbox', { name: 'Buscar' })
+      expect(caja).toHaveValue('agua')
+      await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Contiene «agua»' }))
+      expect(ubicacion.actual).toBe('/commitments?view=vencidos')
+      expect(caja).toHaveValue('')
+    })
   })
 
   it('«Más filtros» abre un drawer con los demás filtros', async () => {
