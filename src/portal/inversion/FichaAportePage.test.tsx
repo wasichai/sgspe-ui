@@ -18,6 +18,7 @@ import { montar, pagina } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaAportePage } from './FichaAportePage'
+import { estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -73,6 +74,7 @@ describe('S44 · ficha del aporte', () => {
     expect(await screen.findByRole('heading', { name: 'Equipar la biblioteca escolar', level: 1 })).toBeInTheDocument()
     // en el camino del flujo y el panel de decisión (revisión de UX, etapa 4); ya no en la cabecera (U-25)
     expect((await screen.findAllByText('Solicitado')).length).toBeGreaterThan(0)
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(await screen.findByRole('button', { name: 'Aprobar sin revisión interna' })).toBeInTheDocument()
     const paraQue = screen.getByRole('region', { name: 'Para qué y para quién' })
     expect(within(paraQue).getByText('Equipar la biblioteca escolar')).toBeInTheDocument()

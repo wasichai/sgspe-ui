@@ -28,7 +28,8 @@ export const ES_PAGINAS = {
     responsable: 'Responsable',
     sinResponsable: 'Sin responsable',
     vencimiento: 'Vencimiento',
-    sinVencimiento: 'Sin fecha límite'
+    sinVencimiento: 'Sin fecha límite',
+    verCamino: 'Ver el camino'
   },
   flujo: {
     titulo: 'Camino del flujo',
@@ -89,7 +90,8 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     responsable: 'Owner',
     sinResponsable: 'No owner',
     vencimiento: 'Due date',
-    sinVencimiento: 'No due date'
+    sinVencimiento: 'No due date',
+    verCamino: 'Show the path'
   },
   flujo: {
     titulo: 'Path of steps',

@@ -1,7 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
@@ -165,8 +164,8 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
       />
       {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
       {/* el camino de WF-D sin la excepción (bloqueado): si el compromiso está bloqueado, se agrega igual al camino */}
-      <CaminoDelFlujo objeto="commitment" estado={compromiso.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="commitment"
         estado={compromiso.state}
         desde={texto(compromiso, 'state_changed_at') || null}

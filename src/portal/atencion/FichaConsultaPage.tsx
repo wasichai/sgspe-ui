@@ -1,6 +1,5 @@
 import { useCodigoPropuesto } from '../datos/codigos'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
@@ -305,8 +304,8 @@ function Ficha({
       />
       <AvisoDeConfidencial qcs={qcs} />
       {ayuda}
-      <CaminoDelFlujo objeto={objeto} estado={qcs.state} camino={CAMINO_DE_QCS[objeto]} />
       <PanelDeDecision
+        camino={CAMINO_DE_QCS[objeto]}
         objeto={objeto}
         estado={qcs.state}
         desde={texto(qcs, 'state_changed_at') || null}

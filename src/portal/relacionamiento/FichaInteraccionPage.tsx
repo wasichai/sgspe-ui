@@ -1,7 +1,6 @@
 import { EnlaceConRastro, useSiguientePaso } from '../contexto/Rastro'
 import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
@@ -171,8 +170,8 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         rotulo={texto(interaccion, 'title')}
         casos={casosDeInteraccion(interaccion)}
       />
-      <CaminoDelFlujo objeto="engagement" estado={interaccion.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="engagement"
         estado={interaccion.state}
         desde={texto(interaccion, 'state_changed_at') || null}

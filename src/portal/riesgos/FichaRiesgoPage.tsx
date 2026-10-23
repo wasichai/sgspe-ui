@@ -1,7 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
@@ -213,8 +212,8 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
           {hecha}
         </p>
       ) : null}
-      <CaminoDelFlujo objeto="social_risk" estado={riesgo.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="social_risk"
         estado={riesgo.state}
         desde={texto(riesgo, 'state_changed_at') || null}

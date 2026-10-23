@@ -8,6 +8,7 @@ import { definicion, montar, pagina, registro, ubicacion, workflow } from '../..
 import { espiarRed, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaCompromisoPage } from './FichaCompromisoPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -121,7 +122,8 @@ describe('S29 · ficha de compromiso', () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/delivery/records', body: pagina([], { totalElements: 2 }) }]))
     abrir()
     await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })
-    const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
+    const camino = await abrirCamino()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(within(camino).getByText('En ejecución').closest('li')).toHaveAttribute('aria-current', 'step')
     const siguiente = screen.getByRole('group', { name: 'Siguiente acción' })
     expect(await within(siguiente).findByText('Registrar cumplimiento')).toBeInTheDocument()

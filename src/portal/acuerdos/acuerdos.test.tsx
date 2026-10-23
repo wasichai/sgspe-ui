@@ -10,6 +10,7 @@ import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { AcuerdosPage } from './AcuerdosPage'
 import { FichaAcuerdoPage } from './FichaAcuerdoPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 // S33 (WF-I, RF-AGR-001 a RF-AGR-003): la lista con su vigencia, el alta con motivo (requiresReason), y la ficha con sus
 // cláusulas y compromisos, partes, titular, asamblea y predios; registrar la vigencia de una servidumbre sin predios se avisa
@@ -182,7 +183,8 @@ describe('S33 · acuerdos', () => {
       usuario: GERENCIA_SOCIAL,
       permisos: EQUIPO
     })
-    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(await abrirCamino()).toBeInTheDocument()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(screen.getByRole('group', { name: 'Vencimiento' })).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
     expect(

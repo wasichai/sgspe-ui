@@ -17,6 +17,7 @@ import { montar, pagina, registro } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaProgramaPage } from './FichaProgramaPage'
+import { estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -60,6 +61,8 @@ describe('S43 · ficha del programa', () => {
     expect(await screen.findByRole('heading', { name: 'Programa Ejemplo de agua segura', level: 1 })).toBeInTheDocument()
     // en el encabezado, el camino del flujo y el panel de decisión (revisión de UX, etapa 4)
     expect((await screen.findAllByText('En ejecución')).length).toBeGreaterThan(0)
+    expect(estadosDeLaFicha()).toHaveLength(1)
+    expect(within(screen.getByRole('group', { name: 'Estado actual' })).getByText('En ejecución')).toHaveAttribute('data-estado')
     expect(await screen.findByRole('link', { name: 'Asociación Ejemplo' })).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: 'AC-001 · Convenio de sinergia de ejemplo' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
     expect(await screen.findByRole('button', { name: 'Pasar a monitoreo' })).toBeInTheDocument()

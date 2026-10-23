@@ -1,5 +1,4 @@
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha, tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
@@ -153,8 +152,8 @@ function Ficha({ aporte }: { aporte: Registro }) {
             : []
         }
       />
-      <CaminoDelFlujo objeto="social_contribution" estado={aporte.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="social_contribution"
         estado={aporte.state}
         desde={texto(aporte, 'state_changed_at') || null}

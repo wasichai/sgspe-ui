@@ -1,6 +1,5 @@
 import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
@@ -174,8 +173,8 @@ function Ficha({ queja }: { queja: Registro }) {
       />
       <AvisoDeConfidencial qcs={queja} />
       {grave ? <Alert tone="notice">{t('fichaQueja.grave', { severidad: opcion(queja, 'severity') })}</Alert> : null}
-      <CaminoDelFlujo objeto="grievance" estado={queja.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="grievance"
         estado={queja.state}
         desde={texto(queja, 'state_changed_at') || null}

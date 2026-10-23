@@ -1,6 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
@@ -163,8 +162,8 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
             : []
         }
       />
-      <CaminoDelFlujo objeto="agreement" estado={acuerdo.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="agreement"
         estado={acuerdo.state}
         desde={texto(acuerdo, 'state_changed_at') || null}

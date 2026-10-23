@@ -7,6 +7,7 @@ import { abrirPortal } from '../../test/pantalla'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { E1, EQUIPO, base } from '../../test/relacionamiento'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -400,7 +401,8 @@ describe('S26 · visita de campo', () => {
       ...rutas()
     ])
     // el camino del flujo común (revisión de UX, etapa 4): la cancelada no es un paso del camino, se dice como el estado actual
-    const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
+    const camino = await abrirCamino()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(within(camino).getByText('Cancelada').closest('li')).toHaveAttribute('aria-current', 'step')
     expect((await screen.findAllByText('Cancelada')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Agregar observación aquí' })).not.toBeInTheDocument()

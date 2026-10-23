@@ -1,5 +1,4 @@
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -108,11 +107,6 @@ function Ficha({ programa }: { programa: Registro }) {
         ficha
         antetitulo={[t('fichaPrograma.tipo'), texto(programa, 'code')].filter(Boolean).join(' · ')}
         titulo={texto(programa, 'name')}
-        chips={
-          <>
-            <EstadoChip objeto="social_program" estado={programa.state} />
-          </>
-        }
         primaria={<BotonesDeTransicion objeto="social_program" registro={programa} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
         secundarias={
           edita ? (
@@ -122,8 +116,8 @@ function Ficha({ programa }: { programa: Registro }) {
           ) : undefined
         }
       />
-      <CaminoDelFlujo objeto="social_program" estado={programa.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="social_program"
         estado={programa.state}
         desde={texto(programa, 'state_changed_at') || null}

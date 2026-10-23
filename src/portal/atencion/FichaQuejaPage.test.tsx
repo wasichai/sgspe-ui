@@ -10,6 +10,7 @@ import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaQuejaPage } from './FichaQuejaPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -132,7 +133,8 @@ describe('S36 · ficha de queja', () => {
   it('dice el camino del flujo, el panel de decisión y los tres grupos de trazabilidad', async () => {
     fetch = mockFetch(rutas(QUEJA))
     abrir()
-    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(await abrirCamino()).toBeInTheDocument()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     const decision = screen.getByRole('region', { name: 'Situación' })
     expect(within(decision).getByRole('group', { name: 'Responsable' })).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })

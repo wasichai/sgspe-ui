@@ -1,5 +1,4 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
@@ -233,15 +232,12 @@ function Visita({ visita }: { visita: Registro }) {
         antetitulo={t('relacionamiento.visita.tipo')}
         titulo={texto(visita, 'title')}
         chips={
-          <>
-            <EstadoChip objeto="field_visit" estado={visita.state} />
-            <span className="text-sg-text-secondary">
-              {t('relacionamiento.visita.periodo', {
-                desde: diaPe(texto(visita, 'actual_start_date') || texto(visita, 'planned_start_date')) || '…',
-                hasta: diaPe(texto(visita, 'actual_end_date') || texto(visita, 'planned_end_date')) || '…'
-              })}
-            </span>
-          </>
+          <span className="text-sg-text-secondary">
+            {t('relacionamiento.visita.periodo', {
+              desde: diaPe(texto(visita, 'actual_start_date') || texto(visita, 'planned_start_date')) || '…',
+              hasta: diaPe(texto(visita, 'actual_end_date') || texto(visita, 'planned_end_date')) || '…'
+            })}
+          </span>
         }
         primaria={
           <div className="flex flex-wrap gap-2">
@@ -268,8 +264,8 @@ function Visita({ visita }: { visita: Registro }) {
           ) : undefined
         }
       />
-      <CaminoDelFlujo objeto="field_visit" estado={visita.state} camino={[...CAMINO]} />
       <PanelDeDecision
+        camino={[...CAMINO]}
         objeto="field_visit"
         estado={visita.state}
         desde={texto(visita, 'state_changed_at') || null}

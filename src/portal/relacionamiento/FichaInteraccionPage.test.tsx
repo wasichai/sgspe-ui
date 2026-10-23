@@ -7,6 +7,7 @@ import { abrirPortal } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { E1, EQUIPO, base } from '../../test/relacionamiento'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -82,7 +83,8 @@ describe('S23 · ficha de interacción', () => {
   // revisión de UX, etapa 4: la anatomía común; la siguiente acción es la del camino (redactar el acta), no cerrar sin ella
   it('dice el camino del flujo, la siguiente acción del camino y los tres grupos de trazabilidad', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
-    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(await abrirCamino()).toBeInTheDocument()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(await within(screen.getByRole('group', { name: 'Siguiente acción' })).findByText('Redactar acta')).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
     expect(

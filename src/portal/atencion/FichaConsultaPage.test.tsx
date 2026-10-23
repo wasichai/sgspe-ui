@@ -9,6 +9,7 @@ import { APORTE, DEF_APORTE, EMPRESA, EQUIPO_DE_INVERSION, INVERSION } from '../
 import { definicion, montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { FichaConsultaPage, FichaSolicitudPage } from './FichaConsultaPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -85,7 +86,8 @@ describe('S57 · ficha de consulta', () => {
       ...comunes('inquiry', 'i1')
     ])
     abrir()
-    const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
+    const camino = await abrirCamino()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(within(camino).getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByRole('region', { name: 'Situación' })).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
