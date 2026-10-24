@@ -17,6 +17,21 @@ process.env.TZ = 'America/Lima'
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
+// la ficha a la que lleva el alta puede quedar en espera (React Router navega en una transición): mientras espera, la URL ya
+// cambió y la pantalla del alta sigue montada, como cuando la máquina va lenta y se vuelve atrás antes de que se dibuje
+const ficha = vi.hoisted(() => ({ espera: null as Promise<never> | null }))
+vi.mock('./FichaInteraccionPage', async (original) => {
+  const { use, createElement } = await import('react')
+  const m = await original<typeof import('./FichaInteraccionPage')>()
+  return {
+    ...m,
+    FichaInteraccionPage: () => {
+      if (ficha.espera) use(ficha.espera)
+      return createElement(m.FichaInteraccionPage)
+    }
+  }
+})
+
 let fetch: FetchMock | null = null
 let red: Red | null = null
 beforeEach(() => {
@@ -29,6 +44,7 @@ afterEach(() => {
   red = fetch = null
   vi.unstubAllGlobals()
   vi.useRealTimers()
+  ficha.espera = null
 })
 
 describe('S24 · registrar interacción', () => {
@@ -437,8 +453,11 @@ describe('S24 · registrar interacción', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
       await waitFor(() => expect(red!.a('POST', '/objects/engagement/records')).toHaveLength(veces))
       await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+      // la URL cambia antes de que React confirme la ficha (React Router navega en una transición): se espera la ficha
+      // dibujada (e9 responde 404 en el doble) para que «Atrás» no llegue con el formulario aún montado
+      expect(await screen.findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
       if (veces === 1) {
-        window.history.back()
+        await act(async () => window.history.back())
         await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/new?mode=quick'))
       }
     }
@@ -448,6 +467,52 @@ describe('S24 · registrar interacción', () => {
     expect(claves[1]).toBeTruthy()
     expect(claves[0]).not.toBe(claves[1])
     expect(altas.map((a) => (a.cuerpo as { attributes: { description: string } }).attributes.description)).toEqual(['nota 1', 'nota 2'])
+  })
+
+  // si se vuelve atrás antes de que se dibuje la ficha, la pantalla del alta no se desmonta: lo escrito no puede quedar con una
+  // clave nueva, listo para que otro «Guardar» duplique la interacción
+  it('tras guardar en el modo rápido el formulario queda vacío aunque la pantalla siga montada', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick&stakeholders=s1', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    const tipo = screen.getByRole('combobox', { name: 'Tipo de interacción' })
+    await userEvent.selectOptions(tipo, 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nota' }), 'una nota')
+    await userEvent.click(await screen.findByRole('button', { name: 'Más Femenino · AIDS' }))
+    ficha.espera = new Promise<never>(() => {})
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+    await act(async () => window.history.back())
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/new?mode=quick&stakeholders=s1'))
+    // el mismo elemento: la pantalla no se volvió a montar
+    expect(screen.getByRole('combobox', { name: 'Tipo de interacción' })).toBe(tipo)
+    expect(tipo).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'Nota' })).toHaveValue('')
+    expect(screen.getByLabelText('Femenino · AIDS')).toHaveTextContent('0')
+    expect(screen.getByRole('checkbox', { name: 'Ronda campesina' })).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Guardar como realizada' })).toBeDisabled()
+    expect(red.a('POST', '/objects/engagement/records')).toHaveLength(1)
+  })
+
+  it('tras guardar en el asistente el formulario vuelve vacío al paso 1 aunque la pantalla siga montada', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    const conmutador = screen.getByRole('switch', { name: 'Modo rápido de campo' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    ficha.espera = new Promise<never>(() => {})
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar y completar después' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+    await act(async () => window.history.back())
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/new'))
+    // el mismo conmutador de la cabecera: el asistente no se volvió a montar, y está otra vez en el primer paso
+    expect(screen.getByRole('switch', { name: 'Modo rápido de campo' })).toBe(conmutador)
+    expect(screen.getByRole('heading', { name: 'Tipo y fecha' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Tipo de interacción' })).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('')
+    expect(red.a('POST', '/objects/engagement/records')).toHaveLength(1)
   })
 
   it('el modo rápido conserva los grupos de interés y la visita de campo de la que se abrió', async () => {
@@ -564,7 +629,8 @@ describe('S24 · registrar interacción', () => {
     const rapido = new URL(rutaActual(), 'http://x')
     expect(rapido.pathname).toBe('/projects/p1/engagements/new')
     expect(Object.fromEntries(rapido.searchParams)).toEqual({ stakeholders: 's1', field_visit: 'v1', territory: 'locality:l1', mode: 'quick' })
-    const alAsistente = await screen.findByRole('switch', { name: 'Modo rápido de campo' })
+    // la URL cambia antes de que React confirme el modo rápido: se toma el conmutador de su pantalla, no el del asistente
+    const alAsistente = within(await screen.findByRole('region', { name: 'Modo rápido de campo' })).getByRole('switch', { name: 'Modo rápido de campo' })
     expect(alAsistente).toHaveAttribute('aria-checked', 'true')
     await userEvent.click(alAsistente)
     await waitFor(() => expect(new URL(rutaActual(), 'http://x').searchParams.get('mode')).toBe('full'))

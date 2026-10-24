@@ -358,9 +358,11 @@ describe('S15 · importación geoespacial', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar importación' }))
     await screen.findByRole('heading', { name: 'Importación confirmada' })
     // atrás sale de la vista previa y adelante vuelve a /territory/imports/b-1, ya sin el archivo en la pestaña
-    window.history.back()
+    // la URL cambia antes de que React confirme la pantalla (React Router navega en una transición): se espera lo dibujado
+    await act(async () => window.history.back())
     await waitFor(() => expect(rutaActual()).toBe('/territory/imports/new?project=p1'))
-    window.history.forward()
+    expect(await screen.findByLabelText('Archivo (XLSX, CSV o GeoJSON)')).toBeInTheDocument()
+    await act(async () => window.history.forward())
     await waitFor(() => expect(rutaActual()).toBe('/territory/imports/b-1'))
     expect(await screen.findByRole('link', { name: 'Empezar de nuevo' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Confirmar importación' })).not.toBeInTheDocument()

@@ -36,7 +36,8 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
   const [tipo, setTipo] = useState('')
   const [nota, setNota] = useState('')
   // abierto desde un grupo de interés (S16) o una visita de campo (S26): trae sus grupos y la visita
-  const [presentes, setPresentes] = useState<string[]>(() => busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? [])
+  const presentesDeInicio = () => busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? []
+  const [presentes, setPresentes] = useState<string[]>(presentesDeInicio)
   const [conteos, setConteos] = useState<Record<Clave, number>>({})
   const [ubicacion, setUbicacion] = useState<Punto | null>(null)
   // lo que «Usar estos lugares» reemplaza: solo lo que locate propone; lo demás conserva el chip de territorio
@@ -78,7 +79,15 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
       },
       {
         onSuccess: (i) => {
+          // React Router navega en una transición: si se vuelve atrás antes de que se confirme la ficha, esta pantalla sigue
+          // montada; sin limpiar, lo escrito quedaría con una clave nueva y otro «Guardar» duplicaría la interacción
           setClave(nuevaClave())
+          setTipo('')
+          setNota('')
+          setPresentes(presentesDeInicio())
+          setConteos({})
+          setUbicacion(null)
+          setLugares({})
           navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
         }
       }

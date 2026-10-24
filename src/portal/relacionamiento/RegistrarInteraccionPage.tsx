@@ -141,7 +141,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       temas: []
     }
   })
-  const { register, control, handleSubmit, formState, trigger, setValue } = formulario
+  const { register, control, handleSubmit, formState, trigger, setValue, reset } = formulario
   const participantes = useFieldArray({ control, name: 'participantes' })
   const preguntas = useFieldArray({ control, name: 'preguntas' })
   const v = useWatch({ control }) as Valores
@@ -242,7 +242,13 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       }
       guardar.mutate(nueva, {
         onSuccess: (i) => {
+          // React Router navega en una transición: si se vuelve atrás antes de que se confirme la ficha, el asistente sigue
+          // montado; sin limpiar, lo escrito quedaría con una clave nueva y otro «Guardar» duplicaría la interacción
           setClave(nuevaClave())
+          reset()
+          setPunto(null)
+          setPaso(0)
+          setVisitados(0)
           salida.current = true
           navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
         }
