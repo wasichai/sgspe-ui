@@ -94,7 +94,7 @@ describe('S12 · mapa territorial', () => {
     const registros = await screen.findByRole('region', { name: 'Registros del lugar' })
     await userEvent.click(await within(registros).findByRole('button', { name: 'Siguiente' }))
     expect(await within(registros).findByText('Página 2 de 3')).toBeInTheDocument()
-    await userEvent.type(within(screen.getByRole('group', { name: 'Filtros del mapa' })).getByLabelText('Desde'), '2026-07-01')
+    await userEvent.type(within(screen.getByRole('group', { name: 'Filtros del mapa' })).getByLabelText('Desde'), '01/07/2026')
     await waitFor(() => expect(rutaActual()).toContain('periodStart=2026-07-01'))
     await waitFor(() =>
       expect(red!.a('GET', '/sgspe/territory/zones/locality/l1/records').map((l) => l.ruta)).toContain(
@@ -129,11 +129,14 @@ describe('S12 · mapa territorial', () => {
   it('«Importar» solo con CREATE y UPDATE sobre algún destino, como la guarda de la importación (revisión final, M8)', async () => {
     const capas = { path: /^\/sgspe\/territory\/layers\//, body: coleccion([]) }
     fetch = abrirPortal('/territory', RELACIONISTA, permisos({ ...LEE_TERRITORIO.objects, land_parcel: ['READ', 'CREATE'] }), [...base, capas])
+    // «Importar» va en «Más acciones» (DD-11)
     await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.queryByRole('link', { name: 'Importar' })).not.toBeInTheDocument()
     cleanup()
     fetch.restore()
     fetch = abrirPortal('/territory', RELACIONISTA, permisos({ ...LEE_TERRITORIO.objects, land_parcel: ['READ', 'CREATE', 'UPDATE'] }), [...base, capas])
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     expect(await screen.findByRole('link', { name: 'Importar' })).toHaveAttribute('href', '/territory/imports/new')
   })
 

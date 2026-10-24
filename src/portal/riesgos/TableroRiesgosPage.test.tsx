@@ -95,7 +95,10 @@ describe('S62 · tablero de riesgos', () => {
     expect(within(fila4).getAllByRole('cell')[3]).toHaveTextContent('2')
     expect(within(fila4).getAllByRole('cell')[3]).toHaveTextContent('Crítico')
     expect(screen.getByText('Sin evaluar: 4 riesgos todavía no tienen revisión y no entran al mapa.')).toBeInTheDocument()
-    const zonas = screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))
+    const zonas = screen
+      .getAllByRole('region')
+      // el nombre de una Seccion con título sale de su encabezado (aria-labelledby), el de las demás de aria-label
+      .map((r) => r.getAttribute('aria-label') ?? document.getElementById(r.getAttribute('aria-labelledby') ?? '')?.textContent)
     expect(zonas.filter((z) => z !== 'Filtros')).toEqual([
       'Mapa de calor de riesgos',
       'Riesgos activos',

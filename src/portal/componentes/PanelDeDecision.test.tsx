@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, describe, expect, it } from 'vitest'
 import { montar, workflow } from '../../test/montar'
@@ -50,5 +51,33 @@ describe('PanelDeDecision', () => {
     expect(within(tarjeta('Estado actual')).queryByText('Desde', { exact: false })).not.toBeInTheDocument()
     expect(within(tarjeta('Siguiente acción')).getByText('Nada pendiente')).toBeInTheDocument()
     expect(within(tarjeta('Vencimiento')).getByText('Sin fecha límite')).toBeInTheDocument()
+  })
+
+  // DD-06 (U-25): el panel es el único lugar del estado, con el camino del flujo plegado dentro de «Estado actual»
+  it('pliega el camino del flujo dentro de «Estado actual» y lo despliega con el teclado', async () => {
+    fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
+    montar(<PanelDeDecision objeto="commitment" estado="approved" camino={['draft', 'approved']} siguiente={null} responsable={null} vencimiento={null} />)
+    const estado = tarjeta('Estado actual')
+    await within(estado).findByText('Aprobado')
+    expect(document.querySelectorAll('[data-estado]')).toHaveLength(1)
+    const ver = within(estado).getByRole('button', { name: 'Ver el camino' })
+    expect(ver).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('list', { name: 'Camino del flujo' })).not.toBeInTheDocument()
+    ver.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(ver).toHaveAttribute('aria-expanded', 'true')
+    const camino = within(estado).getByRole('list', { name: 'Camino del flujo' })
+    expect(within(camino).getByText('Aprobado').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(document.querySelectorAll('[data-estado]')).toHaveLength(1)
+    await userEvent.keyboard(' ')
+    expect(ver).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('list', { name: 'Camino del flujo' })).not.toBeInTheDocument()
+  })
+
+  it('sin camino no ofrece desplegarlo', async () => {
+    fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
+    montar(<PanelDeDecision objeto="commitment" estado="draft" siguiente={null} responsable={null} vencimiento={null} />)
+    await within(tarjeta('Estado actual')).findByText('Borrador')
+    expect(screen.queryByRole('button', { name: 'Ver el camino' })).not.toBeInTheDocument()
   })
 })

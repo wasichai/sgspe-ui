@@ -211,7 +211,7 @@ describe('diálogo de exportación geográfica', () => {
     await screen.findByRole('dialog', { name: 'Exportar una capa' })
     await elegir('Formato', 'shp')
     await userEvent.click(screen.getByRole('button', { name: 'Exportar' }))
-    expect(await screen.findByText('El servidor no puede escribir ese formato todavía: elija GeoJSON, CSV o XLSX.')).toBeInTheDocument()
+    expect(await screen.findByText('Ese formato todavía no se puede exportar: elija GeoJSON, CSV o XLSX.')).toBeInTheDocument()
   })
 
   it('sin ninguna capa exportable dice por qué', async () => {

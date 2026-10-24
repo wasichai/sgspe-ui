@@ -7,12 +7,14 @@ import type { Indicador } from '../datos/indicadores'
 import { NS, numeroPe } from '../i18n'
 import { Cargando, NoDisponible } from './Estados'
 import { correlacionDe, useMensajeDeError } from './errores'
+import { Seccion } from './Seccion'
 
 // una cifra con su contexto (design-system.md §5, dashboards.md §9.2): el valor, su unidad y, si es un porcentaje, el
 // "n de N" que deja ver la base. sin permiso dice "no disponible" y por qué; un módulo que no llegó dice en qué fase llega
 // si la consulta del indicador falló, error lo dice (con su correlación) en lugar de dejar "Cargando…" para siempre; un 403
 // dice "No disponible", como el resto de las cifras sin permiso. notas va dentro de la tarjeta, bajo la cifra: lo que un
-// tablero dice de ella (los filtros que no aplica, sus avisos)
+// tablero dice de ella (los filtros que no aplica, sus avisos). una lista que muestra la cifra fuera de su tablero puede decir con
+// cifra y detalle qué cuenta, en palabras (hallazgo U-24): «0 %» y «0 de 4 recibidas… tienen respuesta», no «0» y «0 / 4 · %»
 export function KpiCard({
   titulo,
   indicador,
@@ -21,7 +23,10 @@ export function KpiCard({
   error,
   notas,
   a,
-  alReintentar
+  alReintentar,
+  anidada,
+  cifra,
+  detalle
 }: {
   titulo: string
   indicador?: Indicador
@@ -33,6 +38,11 @@ export function KpiCard({
   a?: string
   // con un fallo propio, «Reintentar» junto a la cifra; si falla todo el tablero, el aviso único lo ofrece y la tarjeta no
   alReintentar?: () => void
+  // dentro de una superficie que ya tiene borde, la cifra va sin caja propia: nunca una tarjeta dentro de otra (U-34)
+  anidada?: boolean
+  // la cifra como se lee (con su unidad) y la línea que dice qué cuenta, en lugar de «n / N · unidad»
+  cifra?: (indicador: Indicador & { value: number }) => string
+  detalle?: (indicador: Indicador & { value: number }) => ReactNode
 }) {
   const { t } = useTranslation(NS)
   let cuerpo
@@ -46,39 +56,45 @@ export function KpiCard({
   // sin valor en el periodo (un porcentaje sin base, una mediana sin casos) se dice, sin «—» ni la unidad suelta
   else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
   else {
-    // un porcentaje lleva su signo junto a la cifra y debajo su base, «n de N» (rediseño de UX, 2026-10-20: se leía «0 / 1 · %»);
-    // otra unidad («QCS», «compromisos») va debajo
+    const conValor = indicador as Indicador & { value: number }
+    // sin cifra propia, un porcentaje lleva su signo junto a la cifra y debajo su base, «n de N» (rediseño de UX, 2026-10-20: se
+    // leía «0 / 1 · %»); otra unidad («QCS», «compromisos») va debajo
     const porcentaje = indicador.unit === '%'
-    const valor = `${numeroPe(indicador.value)}${porcentaje ? ' %' : ''}`
+    const dicha = cifra ? cifra(conValor) : `${numeroPe(indicador.value)}${porcentaje ? ' %' : ''}`
     const base =
       porcentaje && indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
         ? t('comun.nDeN', { n: numeroPe(indicador.numerator), total: numeroPe(indicador.denominator) })
         : ''
+    const dibujada =
+      porcentaje && !cifra ? (
+        <>
+          <span>{numeroPe(indicador.value)}</span>
+          <span className="text-sg-h3"> %</span>
+        </>
+      ) : (
+        dicha
+      )
     cuerpo = (
       <>
         <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">
           {a ? (
-            <Link to={a} aria-label={`${titulo}: ${valor}`} className="hover:underline">
-              <span>{numeroPe(indicador.value)}</span>
-              {porcentaje ? <span className="text-sg-h3"> %</span> : null}
+            <Link to={a} aria-label={`${titulo}: ${dicha}`} className="hover:underline">
+              {dibujada}
             </Link>
           ) : (
-            <>
-              <span>{numeroPe(indicador.value)}</span>
-              {porcentaje ? <span className="text-sg-h3"> %</span> : null}
-            </>
+            dibujada
           )}
         </p>
-        <p className="text-sg-caption text-sg-text-muted">{porcentaje ? base : (indicador.unit ?? '')}</p>
+        <p className="text-sg-caption text-sg-text-muted">{detalle ? detalle(conValor) : porcentaje ? base : (indicador.unit ?? '')}</p>
       </>
     )
   }
   return (
-    <section aria-label={titulo} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+    <Seccion etiqueta={titulo} anidada={anidada} className="space-y-1">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
       {cuerpo}
       {notas}
-    </section>
+    </Seccion>
   )
 }
 

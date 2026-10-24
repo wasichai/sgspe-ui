@@ -4,7 +4,7 @@ import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasich
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { ADMIN_PERMISOS, ADMINISTRACION, permisos, RELACIONISTA } from '../../test/portal'
-import { useAvailableTransitions } from '@wasichai/workflow'
+import { useAvailableTransitions } from '../datos/flujos'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useRegistro } from '../datos/registros'
@@ -352,7 +352,7 @@ describe('transiciones', () => {
     start([], { allowed: false, blocking: [], warnings: [] })
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
-    expect(await screen.findByText(/El servidor no permite este paso ahora/)).toBeInTheDocument()
+    expect(await screen.findByText(/Este paso no se puede dar ahora/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
     expect(screen.queryByText('Se cumplen las reglas para este paso.')).not.toBeInTheDocument()
   })

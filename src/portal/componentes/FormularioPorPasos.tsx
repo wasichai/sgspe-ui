@@ -14,6 +14,8 @@ import { Pasos } from './Pasos'
 export interface PropsDeFormularioPorPasos {
   titulo: string
   descripcion?: ReactNode
+  // lo que va a la derecha del título (el conmutador del modo rápido de campo en S24)
+  accionesDeCabecera?: ReactNode
   pasos: string[]
   actual: number
   visitados: number
@@ -47,6 +49,7 @@ export function useSalidaPermitida(): MutableRefObject<boolean> {
 export function FormularioPorPasos({
   titulo,
   descripcion,
+  accionesDeCabecera,
   pasos,
   actual,
   visitados,
@@ -94,7 +97,7 @@ export function FormularioPorPasos({
   )
   return (
     <section className="mx-auto max-w-[1100px] space-y-4">
-      <EncabezadoDePagina titulo={titulo} descripcion={descripcion} />
+      <EncabezadoDePagina titulo={titulo} descripcion={descripcion} secundarias={accionesDeCabecera} />
       {avisos}
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <Pasos pasos={pasos} actual={actual} visitados={visitados} alIr={alIr} />

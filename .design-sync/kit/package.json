@@ -1,0 +1,9 @@
+{
+    "name": "sgspe-kit",
+    "private": true,
+    "version": "0.0.0",
+    "description": "Entrada de design-sync: los primitivos de @wasichai/ui y los componentes presentacionales del portal",
+    "type": "module",
+    "module": "./index.tsx",
+    "types": "./dist/.design-sync/kit/index.d.ts"
+}

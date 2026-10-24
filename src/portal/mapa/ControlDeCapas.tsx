@@ -5,6 +5,7 @@ import { campoDelError, codigoDelError } from '../datos/http'
 import { NS } from '../i18n'
 import type { EstadoDeCapa } from './api'
 import { CAPAS, CAPAS_DE_GESTION, GRUPOS } from './capas'
+import { MuestraDeCapa } from './Leyenda'
 
 const TODAS = [...CAPAS, ...CAPAS_DE_GESTION]
 const DEL_PERIODO = new Set(['periodStart', 'periodEnd'])
@@ -18,7 +19,10 @@ export function ControlDeCapas({
   encendidas,
   estados,
   alCambiar,
-  gestion
+  gestion,
+  etiqueta,
+  conLeyenda = false,
+  className
 }: {
   ids: readonly string[]
   encendidas: ReadonlySet<string>
@@ -26,6 +30,11 @@ export function ControlDeCapas({
   alCambiar: (id: string, encendida: boolean) => void
   // el contenido propio del grupo Gestión (el calor de S12); sin él ni capas de gestión en ids, el grupo no se dibuja
   gestion?: ReactNode
+  // el nombre de la región (por omisión, «Capas») y, con conLeyenda, la muestra de la paleta en lugar del punto de color: el
+  // panel de S12 une capas y leyenda (DD-11) y anida dos listas, la de las capas en el mapa y la de todas
+  etiqueta?: string
+  conLeyenda?: boolean
+  className?: string
 }) {
   const { t } = useTranslation(NS)
   const estado = (id: string) => estados.find((e) => e.id === id)
@@ -37,7 +46,7 @@ export function ControlDeCapas({
     return codigo === 'OUT_OF_RANGE' ? t('mapa.periodoFueraDeRango') : codigo === 'INVALID_VALUE' ? t('mapa.fechaInvalida') : t('mapa.errorDeCapa')
   }
   return (
-    <section aria-label={t('mapa.capas')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
+    <section aria-label={etiqueta ?? t('mapa.capas')} className={className ?? 'space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm'}>
       {GRUPOS.map((grupo) => {
         const delGrupo = TODAS.filter((c) => c.grupo === grupo && ids.includes(c.id))
         const propio = grupo === 'gestion' ? gestion : null
@@ -57,7 +66,11 @@ export function ControlDeCapas({
                       checked={encendidas.has(c.id) && !bloqueada}
                       onChange={(e) => alCambiar(c.id, e.target.checked)}
                     />
-                    <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: c.color }} aria-hidden />
+                    {conLeyenda ? (
+                      <MuestraDeCapa id={c.id} />
+                    ) : (
+                      <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: c.color }} aria-hidden />
+                    )}
                     <span>{t(`mapa.capasNombre.${c.id}`)}</span>
                     {bloqueada || c.sensible ? (
                       <Lock aria-label={bloqueada ? t('mapa.bloqueada') : t('mapa.sensible')} className="size-3.5 text-sg-text-muted" />

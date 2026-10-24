@@ -30,6 +30,7 @@ import { EditorDeGeometria } from './EditorDeGeometria'
 import { RegistrosDeLaZona } from './RegistrosDeLaZona'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { Seccion } from '../componentes/Seccion'
 
 // S14 · ficha de localidad y línea base social (screens.md §4): el lugar con datos fechados y su confiabilidad. cada perfil
 // es una foto: un dato nuevo es otro perfil. las cifras se comparan con el perfil anterior y una ausente dice "no disponible
@@ -281,7 +282,7 @@ function Cifra({ campo, perfil, anterior }: { campo: (typeof CIFRAS)[number]; pe
 }
 
 // una sección de Servicios: sus filas, o por qué no hay (carga, restringido, error); «Aún no hay registros» solo si llegó vacía
-function Seccion<T extends Registro>({
+function Servicio<T extends Registro>({
   titulo,
   consulta,
   filas,
@@ -295,8 +296,7 @@ function Seccion<T extends Registro>({
   const { t } = useTranslation(NS)
   const registros = consulta.data ? filas(consulta.data) : undefined
   return (
-    <section aria-label={titulo} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h3 className="font-medium">{titulo}</h3>
+    <Seccion titulo={titulo} nivel={3} className="space-y-1 text-sm">
       {registros ? null : <SinDatos consulta={consulta} />}
       <ul>
         {(registros ?? []).map((r) => (
@@ -304,7 +304,7 @@ function Seccion<T extends Registro>({
         ))}
       </ul>
       {registros && registros.length === 0 ? <p className="text-sg-text-muted">{t('comun.vacio')}</p> : null}
-    </section>
+    </Seccion>
   )
 }
 
@@ -326,21 +326,25 @@ function Servicios({ localidad }: { localidad: string }) {
   )
   return (
     <div className="grid gap-3 lg:grid-cols-2">
-      <Seccion
+      <Servicio
         titulo={t('territorio.localidad.escuelas')}
         consulta={escuelas}
         filas={deLista}
         rotulo={(r) => `${texto(r, 'name')} · ${texto(r, 'education_level')}`}
       />
-      <Seccion titulo={t('territorio.localidad.salud')} consulta={salud} filas={deLista} rotulo={(r) => `${texto(r, 'name')} · ${texto(r, 'facility_type')}`} />
-      <Seccion
+      <Servicio
+        titulo={t('territorio.localidad.salud')}
+        consulta={salud}
+        filas={deLista}
+        rotulo={(r) => `${texto(r, 'name')} · ${texto(r, 'facility_type')}`}
+      />
+      <Servicio
         titulo={t('territorio.localidad.vias')}
         consulta={vias}
         filas={deLista}
         rotulo={(r) => [texto(r, 'road_type'), texto(r, 'road_condition'), texto(r, 'travel_time')].filter(Boolean).join(' · ')}
       />
-      <section aria-label={t('territorio.localidad.festividades')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-        <h3 className="font-medium">{t('territorio.localidad.festividades')}</h3>
+      <Seccion titulo={t('territorio.localidad.festividades')} nivel={3} className="space-y-1 text-sm">
         {festividades.data ? null : <SinDatos consulta={festividades} />}
         <ol>
           {ordenadas.map((f) => (
@@ -351,9 +355,9 @@ function Servicios({ localidad }: { localidad: string }) {
           ))}
         </ol>
         {festividades.data?.length === 0 ? <p className="text-sg-text-muted">{t('comun.vacio')}</p> : null}
-      </section>
-      <Seccion titulo={t('territorio.localidad.programas')} consulta={programas} filas={deLista} rotulo={(r) => texto(r, 'name')} />
-      <Seccion
+      </Seccion>
+      <Servicio titulo={t('territorio.localidad.programas')} consulta={programas} filas={deLista} rotulo={(r) => texto(r, 'name')} />
+      <Servicio
         titulo={t('territorio.localidad.conflictos')}
         consulta={conflictos}
         filas={deLista}
@@ -367,8 +371,7 @@ function Percepciones({ estudio }: { estudio: string }) {
   const { t } = useTranslation(NS)
   const percepciones = useTodos('perception', { study: estudio })
   return (
-    <section aria-label={t('territorio.localidad.percepciones')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h3 className="font-medium">{t('territorio.localidad.percepciones')}</h3>
+    <Seccion titulo={t('territorio.localidad.percepciones')} nivel={3} className="text-sm">
       {percepciones.data ? null : <SinDatos consulta={percepciones} />}
       <ul className="space-y-2">
         {(percepciones.data ?? []).map((p) => (
@@ -385,6 +388,6 @@ function Percepciones({ estudio }: { estudio: string }) {
         ))}
       </ul>
       {percepciones.data?.length === 0 ? <p className="text-sg-text-muted">{t('comun.vacio')}</p> : null}
-    </section>
+    </Seccion>
   )
 }

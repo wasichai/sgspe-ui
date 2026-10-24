@@ -130,17 +130,12 @@ const abrir = (opciones: { ruta?: string; camino?: string; usuario?: typeof INVE
   })
 
 describe('S42 · programas e inversión', () => {
-  it('dice el tope de la campaña con lo comprometido y lo ejecutado, el presupuesto del año por moneda y «No disponible» sin cifra', async () => {
+  // U-35: cada vista lleva solo sus cifras; los programas, el presupuesto del año y los beneficiarios; los aportes, el tope
+  it('en Programas dice el presupuesto del año por moneda y «No disponible» sin cifra; en los aportes, el tope de la campaña', async () => {
     fetch = mockFetch(rutas())
     abrir()
     expect(await screen.findByRole('heading', { name: 'Programas sociales', level: 1 })).toBeInTheDocument()
-    const campanas = await screen.findByRole('region', { name: 'Tope de las campañas' })
-    expect(within(campanas).getByText('Campaña Ejemplo 2026')).toBeInTheDocument()
-    expect(within(campanas).getByText('Tope: S/ 50,000.00')).toBeInTheDocument()
-    expect(within(campanas).getByText('Comprometido: S/ 30,000.00 (60 %)')).toBeInTheDocument()
-    expect(within(campanas).getByText('Ejecutado: S/ 12,000.00')).toBeInTheDocument()
-    expect(within(campanas).getByText('Montos en otra moneda que no se suman al tope: 2.')).toBeInTheDocument()
-    const presupuesto = screen.getByRole('table', { name: 'Presupuesto de programas 2026' })
+    const presupuesto = await screen.findByRole('table', { name: 'Presupuesto de programas 2026' })
     const pen = within(presupuesto).getByText('PEN').closest('tr') as HTMLElement
     expect(within(pen).getByText('S/ 80,000.00')).toBeInTheDocument()
     expect(within(pen).getByText('S/ 20,000.00')).toBeInTheDocument()
@@ -150,6 +145,116 @@ describe('S42 · programas e inversión', () => {
     expect(within(usd).getAllByText('—').length).toBeGreaterThanOrEqual(1)
     expect(within(presupuesto).queryByText(/90,000/)).not.toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Beneficiarios' })).getByText(/No disponible/)).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Tope de las campañas' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /^Aportes en curso\b/ }))
+    const campanas = await screen.findByRole('region', { name: 'Tope de las campañas' })
+    expect(within(campanas).getByText('Campaña Ejemplo 2026')).toBeInTheDocument()
+    expect(within(campanas).getByText('Tope: S/ 50,000.00')).toBeInTheDocument()
+    expect(within(campanas).getByText('Comprometido: S/ 30,000.00 (60 %)')).toBeInTheDocument()
+    expect(within(campanas).getByText('Ejecutado: S/ 12,000.00')).toBeInTheDocument()
+    expect(within(campanas).getByText('Montos en otra moneda que no se suman al tope: 2.')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Presupuesto de programas 2026' })).not.toBeInTheDocument()
+  })
+
+  // U-35: sin barras vacías ni «S/ 0.00» antes de la lista; una cifra sin datos no se dibuja
+  it('una campaña sin ejecución no dibuja la barra ni «S/ 0.00», y una zona sin datos no se dibuja', async () => {
+    const vacio = {
+      ...TABLERO,
+      indicators: [
+        {
+          code: 'KPI-INV-01',
+          label: 'Tope',
+          available: true,
+          value: 0,
+          breakdowns: [
+            {
+              by: 'campaign',
+              rows: [
+                {
+                  key: 'camp1',
+                  label: 'Campaña Ejemplo 2026',
+                  currency: 'PEN',
+                  cap: '50000',
+                  committed: '0',
+                  executed: '0',
+                  committedPercent: 0,
+                  executedPercent: 0
+                }
+              ]
+            }
+          ]
+        },
+        { code: 'KPI-INV-02', label: 'Presupuesto', available: true, value: null, breakdowns: [{ by: 'program', rows: [] }] },
+        { code: 'KPI-INV-04', label: 'Beneficiarios', available: true, value: null, breakdowns: [{ by: 'source', rows: [] }] }
+      ]
+    }
+    fetch = mockFetch(rutas([{ path: '/sgspe/dashboards/investment', body: vacio }]))
+    abrir({ ruta: '/projects/p1/programs?view=enCurso' })
+    const campanas = await screen.findByRole('region', { name: 'Tope de las campañas' })
+    expect(within(campanas).getByText('Tope: S/ 50,000.00')).toBeInTheDocument()
+    expect(within(campanas).queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(within(campanas).queryByText(/S\/ 0\.00/)).not.toBeInTheDocument()
+    expect(within(campanas).getByText('Ejecutado: nada todavía')).toBeInTheDocument()
+    expect(within(campanas).getByText('Comprometido: nada todavía')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /^Programas\b/ }))
+    await screen.findByRole('table', { name: 'Programas del alcance' })
+    expect(screen.queryByRole('region', { name: 'Presupuesto de programas 2026' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Beneficiarios' })).not.toBeInTheDocument()
+  })
+
+  // U-35 y DD-03: Programas y Aportes en una sola vista con su selector, nunca dos listados completos apilados
+  it('Programas y Aportes van en un solo selector de la barra de filtros, con su conteo; nunca las dos tablas a la vez', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir()
+    await screen.findByRole('table', { name: 'Programas del alcance' })
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('radio', { name: 'Programas, 1' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('table', { name: 'Aportes del alcance' })).not.toBeInTheDocument()
+    // el estado es de los aportes: no se ofrece en Programas
+    expect(within(barra).queryByLabelText('Estado')).not.toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('radio', { name: 'Aportes en curso, 1' }))
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=enCurso')
+    expect(await screen.findByRole('table', { name: 'Aportes del alcance' })).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Programas del alcance' })).not.toBeInTheDocument()
+  })
+
+  it('el estado de los aportes es un chip en la URL y «Limpiar filtros» conserva la vista', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir({ ruta: '/projects/p1/programs?view=todos&state=closed' })
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(await within(barra).findByRole('button', { name: /^Quitar el filtro Estado: / })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'AP-002' })).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
+  })
+
+  // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
+  it('Espacio en una fila de programas o de aportes abre su vista previa, y Enter su ficha', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir()
+    const programas = await screen.findByRole('table', { name: 'Programas del alcance' })
+    within(programas).getAllByRole('row')[1].focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?peek=social_program%3Asp1')
+    within(screen.getByRole('table', { name: 'Programas del alcance', hidden: true }))
+      .getAllByRole('row', { hidden: true })[1]
+      .focus()
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe('/projects/p1/programs/sp1')
+  })
+
+  it('Espacio en una fila de aportes abre su vista previa', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir({ ruta: '/projects/p1/programs?view=enCurso' })
+    const aportes = await screen.findByRole('table', { name: 'Aportes del alcance' })
+    within(aportes).getAllByRole('row')[1].focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=enCurso&peek=social_contribution%3Aa1')
   })
 
   it('lista los programas y los aportes con su enlace, su socio y su monto en su moneda; filtra los terminados', async () => {
@@ -161,17 +266,77 @@ describe('S42 · programas e inversión', () => {
     expect(await within(programas).findByRole('link', { name: 'Programa Ejemplo de agua segura' })).toHaveAttribute('href', '/projects/p1/programs/sp1')
     expect(await within(programas).findByRole('link', { name: 'Asociación Ejemplo' })).toBeInTheDocument()
     expect(within(programas).getByText(/S\/ 80,000\.00 · .*5,000\.00/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /^Aportes en curso\b/ }))
     const aportes = await screen.findByRole('table', { name: 'Aportes del alcance' })
     expect(within(aportes).getByRole('link', { name: 'AP-001' })).toHaveAttribute('href', '/projects/p1/contributions/a1')
     expect(within(aportes).getByText('S/ 1,750.50')).toBeInTheDocument()
     // «En curso» por defecto: el cerrado no sale; «Terminados» lo muestra
     expect(within(aportes).queryByText('AP-002')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Terminados' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Aportes terminados\b/ }))
     expect(await screen.findByRole('link', { name: 'AP-002' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAccessibleDescription('2 registros')
+    expect(screen.getByRole('radio', { name: 'Todos los aportes, 2' })).toBeInTheDocument()
     const consultas = red.a('GET', '/objects/social_contribution/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
     expect(consultas).toContainEqual(expect.objectContaining({ state: expect.stringContaining('closed'), page: '0', size: '25' }))
     expect(consultas).toContainEqual(expect.objectContaining({ state_not: expect.stringContaining('closed'), size: '1' }))
+  })
+
+  // 05-especificacion §1.6: el código y el nombre de un programa se ordenan en el servidor; el orden dura la visita
+  it('los programas se ordenan por código y por nombre en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+    // 26 programas: la segunda página tiene uno, el primero (PS-001) va en la primera
+    const otros = Array.from({ length: 25 }, (_, i) =>
+      registro(`sp${i + 2}`, { ...PROGRAMA.attributes, code: `PS-${String(i + 2).padStart(3, '0')}`, name: `Programa ${i + 2}` }, { state: 'executing' })
+    )
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_program', [PROGRAMA, ...otros])])
+    abrir({ ruta: '/projects/p1/programs?pp=1' })
+    const tabla = () => screen.getByRole('table', { name: 'Programas del alcance' })
+    await screen.findByRole('table', { name: 'Programas del alcance' })
+    expect(within(tabla()).getAllByRole('row')).toHaveLength(2)
+    const consultas = () => red!.a('GET', '/objects/social_program/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '1' }))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
+    // el código va en su columna y la vista previa lo sigue nombrando
+    expect(within(tabla()).getByRole('cell', { name: 'PS-026' })).toBeInTheDocument()
+    expect(within(tabla()).getByRole('link', { name: 'Vista previa de PS-026 Programa 26' })).toBeInTheDocument()
+    // el estado y las cifras del tablero no se ordenan
+    expect(within(tabla()).queryByRole('button', { name: 'Estado' })).not.toBeInTheDocument()
+    expect(within(tabla()).queryByRole('button', { name: /^Presupuesto/ })).not.toBeInTheDocument()
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Programa' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'name', dir: 'asc', page: '0' })))
+    expect(ubicacion.actual).toBe('/projects/p1/programs')
+    await waitFor(() => expect(within(tabla()).getByRole('columnheader', { name: 'Programa' })).toHaveAttribute('aria-sort', 'ascending'))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).not.toHaveAttribute('aria-sort')
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
+  })
+
+  it('los aportes se ordenan por código en el servidor, nunca por el monto, y otro orden vuelve a la primera página', async () => {
+    // 26 aportes: con el código de mayor a menor, la segunda página tiene solo AP-001
+    const otros = Array.from({ length: 25 }, (_, i) =>
+      registro(`a${i + 2}`, { ...APORTE.attributes, code: `AP-${String(i + 2).padStart(3, '0')}` }, { state: 'requested' })
+    )
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, ...otros])])
+    abrir({ ruta: '/projects/p1/programs?view=todos&page=1' })
+    const tabla = () => screen.getByRole('table', { name: 'Aportes del alcance' })
+    const consultas = () =>
+      red!
+        .a('GET', '/objects/social_contribution/records')
+        .map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+        .filter((c) => c.size === '25')
+    await screen.findByRole('table', { name: 'Aportes del alcance' })
+    expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'desc', page: '1' }))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'descending')
+    // el monto mezcla monedas: no se ordena (ASM-063)
+    expect(within(tabla()).queryByRole('button', { name: 'Monto' })).not.toBeInTheDocument()
+    expect(within(tabla()).getAllByRole('row')).toHaveLength(2)
+    expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('AP-001')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0' })))
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
+    expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('AP-001')
+    expect(within(tabla()).getAllByRole('row')[2]).toHaveTextContent('AP-002')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
   })
 
   it('«Nuevo aporte» pide el motivo, propone PEN, manda el proyecto y abre la ficha del aporte creado', async () => {

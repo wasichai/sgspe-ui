@@ -97,7 +97,14 @@ describe('opcionesConTema', () => {
 
   it('la descripción accesible que la pantalla da se suma al aria del tema sin apagarlo', () => {
     const r = opcionesConTema({ aria: { label: { description: 'Programas: uno por aprobar' } }, series: [] }) as Record<string, any>
-    expect(r.aria).toEqual({ enabled: true, decal: { show: true }, label: { description: 'Programas: uno por aprobar' } })
+    expect(r.aria).toEqual({ enabled: true, label: { description: 'Programas: uno por aprobar' } })
+  })
+
+  // DD-15 del rediseño de UX (P-07 (i)): barras y áreas de color sólido, sin el relleno con trama (decal) que activaba el tema
+  it('el tema no pone trama en las barras ni en las áreas', () => {
+    const r = opcionesConTema({ series: [{ type: 'bar', data: [1, 2] }] }) as Record<string, any>
+    expect(r.aria.enabled).toBe(true)
+    expect(JSON.stringify(r)).not.toMatch(/decal/)
   })
 
   it('un eje de valores con series de enteros (conteos) no tiene ticks decimales; con decimales, sí', () => {

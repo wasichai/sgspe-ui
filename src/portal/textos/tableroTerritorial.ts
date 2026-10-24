@@ -31,7 +31,9 @@ export const ES_TABLERO_TERRITORIAL = {
   rangoCompleto: '{{desde}} a {{hasta}}',
   periodoDesde: 'desde {{desde}}',
   periodoHasta: 'hasta {{hasta}}',
-  calculado: 'Calculado el {{fecha}}'
+  calculado: 'Calculado el {{fecha}}',
+  irAlMapa: 'Ir al mapa territorial',
+  irAlTablero: 'Tablero territorial'
 }
 
 export const EN_TABLERO_TERRITORIAL: typeof ES_TABLERO_TERRITORIAL = {
@@ -63,5 +65,7 @@ export const EN_TABLERO_TERRITORIAL: typeof ES_TABLERO_TERRITORIAL = {
   rangoCompleto: '{{desde}} to {{hasta}}',
   periodoDesde: 'from {{desde}}',
   periodoHasta: 'to {{hasta}}',
-  calculado: 'Calculated on {{fecha}}'
+  calculado: 'Calculated on {{fecha}}',
+  irAlMapa: 'Go to the territorial map',
+  irAlTablero: 'Territorial dashboard'
 }

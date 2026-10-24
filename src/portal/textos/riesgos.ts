@@ -13,6 +13,7 @@ export const ES_RIESGOS = {
     rules: 'Reglas de alerta'
   },
   filtroAltos: 'Nivel alto o crítico',
+  filtroCelda: 'Probabilidad {{p}} × impacto {{i}}',
   vacio: 'No hay riesgos en esta vista.',
   sinRiesgos: 'Aún no hay riesgos registrados.',
   sinRiesgosAyuda: 'Identifique el primero con «Identificar riesgo»: queda en el registro y en la matriz de calor.',
@@ -64,6 +65,7 @@ export const EN_RIESGOS: typeof ES_RIESGOS = {
     rules: 'Warning rules'
   },
   filtroAltos: 'High or critical level',
+  filtroCelda: 'Probability {{p}} × impact {{i}}',
   vacio: 'There are no risks in this view.',
   sinRiesgos: 'No risks recorded yet.',
   sinRiesgosAyuda: 'Identify the first one with “Identify risk”: it goes to the register and the heat map.',

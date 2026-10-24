@@ -16,6 +16,7 @@ import { NS, numeroPe } from '../i18n'
 import { colorDe } from '../mapa/colores'
 import { useContextFilters } from '../shell/context'
 import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, indicadorDe, SerieConMeta, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import { Seccion } from '../componentes/Seccion'
 
 // el tablero de grupos de interés (dashboards.md §5.3, RF-DSH-007), con GET /api/sgspe/dashboards/stakeholders: la
 // clasificación (KPI-STK-01), las posturas (KPI-STK-02, divergente centrada en NEUTRAL), la matriz (KPI-STK-03, un solo
@@ -121,11 +122,10 @@ function MasIndicadores() {
       </ul>
     )
   return (
-    <section aria-label={t('tableros.masIndicadores')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('tableros.masIndicadores')}</h2>
+    <Seccion titulo={t('tableros.masIndicadores')}>
       <p className="text-sm text-sg-text-muted">{t('tableros.masIndicadoresAyuda')}</p>
       {cuerpo}
-    </section>
+    </Seccion>
   )
 }
 

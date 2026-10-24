@@ -90,4 +90,10 @@ describe('admin', () => {
   it('fija el huso de Lima para los DATETIME', () => {
     expect(configDeAdministracion.timeZone).toBe('America/Lima')
   })
+
+  // el modelo, los workflows y los roles viven en model/ de sgspe (GAP-030): /admin avisa que un cambio hecho allí se pierde
+  // en la próxima subida de fase (W-05, @wasichai/core 1.1.0)
+  it('declara que el modelo vive en el repositorio', () => {
+    expect(configDeAdministracion.modelInRepository).toBe(true)
+  })
 })

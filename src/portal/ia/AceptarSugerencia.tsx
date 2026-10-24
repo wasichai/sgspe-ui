@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
@@ -257,9 +258,12 @@ function CamposDeLaFila({
       )
     case 'fecha':
       return (
-        <Campo etiqueta={t(`bandejaIa.campos.${v.campo}`)} error={error('value')}>
-          {(p) => <Input {...p} type="date" value={v.valor} onChange={(e) => alCambiar({ ...v, valor: e.target.value })} />}
-        </Campo>
+        <CampoFecha
+          etiqueta={t(`bandejaIa.campos.${v.campo}`)}
+          error={error('value')}
+          valor={v.valor || null}
+          alCambiar={(x) => alCambiar({ ...v, valor: x ?? '' })}
+        />
       )
     case 'clausula':
       return (

@@ -5,6 +5,8 @@ import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
+import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Consulta, NoDisponible } from '../componentes/Estados'
 import { sonDemasiadosRegistros, useCatalogoDeIndicadores, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
 import { codigoDelError } from '../datos/http'
@@ -13,6 +15,7 @@ import { Grafico } from '../graficos/Grafico'
 import { fechaPe, NS, numeroPe, periodoPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { rotuloDeFila, rotuloDeOpcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // la fila de filtros de dashboards.md §3.1, en la URL: proyecto (el del contexto; sin él, las asignaciones de la persona),
 // periodo, territorio (el chip) y ámbito; desde F3, la campaña de exploración y el responsable (?explorationCampaign=, ?owner=),
@@ -70,14 +73,29 @@ export function FiltrosDeTablero({
   }
   return (
     <div role="group" aria-label={t('tableros.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-      <label className="space-y-1">
-        <span className="block text-sg-label">{t('tableros.desde')}</span>
-        <input type="date" className={CONTROL} value={busqueda.get('periodStart') ?? ''} onChange={(e) => cambiar('periodStart', e.target.value)} />
-      </label>
-      <label className="space-y-1">
-        <span className="block text-sg-label">{t('tableros.hasta')}</span>
-        <input type="date" className={CONTROL} value={busqueda.get('periodEnd') ?? ''} onChange={(e) => cambiar('periodEnd', e.target.value)} />
-      </label>
+      {/* U-07: dd/mm/aaaa en los dos idiomas (CampoFecha), con el mismo valor AAAA-MM-DD en la URL que el <input type="date"> */}
+      <CampoFecha
+        etiqueta={t('tableros.desde')}
+        valor={busqueda.get('periodStart')}
+        max={busqueda.get('periodEnd') ?? undefined}
+        alCambiar={(v) => cambiar('periodStart', v ?? '')}
+      />
+      <CampoFecha
+        etiqueta={t('tableros.hasta')}
+        valor={busqueda.get('periodEnd')}
+        min={busqueda.get('periodStart') ?? undefined}
+        alCambiar={(v) => cambiar('periodEnd', v ?? '')}
+      />
+      <AtajosDePeriodo
+        desde={busqueda.get('periodStart')}
+        hasta={busqueda.get('periodEnd')}
+        alElegir={({ desde, hasta }) => {
+          const siguiente = new URLSearchParams(busqueda)
+          siguiente.set('periodStart', desde)
+          siguiente.set('periodEnd', hasta)
+          fijar(siguiente, { replace: true })
+        }}
+      />
       <label className="space-y-1">
         <span className="block text-sg-label">{t('tableros.ambito')}</span>
         <select className={CONTROL} value={busqueda.get('scope') ?? ''} onChange={(e) => cambiar('scope', e.target.value)}>
@@ -203,8 +221,7 @@ export function ConsultaDeTablero<T>({ consulta, children }: { consulta: UseQuer
 // con los filtros que el indicador no aplica y sus avisos. un indicador ausente de la respuesta tampoco se lee como vacío
 export function Zona({ titulo, indicador, children }: { titulo: string; indicador: Indicador | undefined; children: (i: Indicador) => ReactNode }) {
   return (
-    <section aria-label={titulo} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo}>
       {indicador?.available ? (
         <>
           <NotasDeIndicador indicador={indicador} />
@@ -213,7 +230,7 @@ export function Zona({ titulo, indicador, children }: { titulo: string; indicado
       ) : (
         <NoDisponible motivo={indicador?.unavailableReason} />
       )}
-    </section>
+    </Seccion>
   )
 }
 

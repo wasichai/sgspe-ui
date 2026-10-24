@@ -9,6 +9,7 @@ import { APORTE, DEF_APORTE, EMPRESA, EQUIPO_DE_INVERSION, INVERSION } from '../
 import { definicion, montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { FichaConsultaPage, FichaSolicitudPage } from './FichaConsultaPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -60,14 +61,16 @@ describe('S57 · ficha de consulta', () => {
       ...comunes('inquiry', 'i1')
     ])
     abrir()
-    expect(await screen.findByRole('heading', { name: 'Consulta C-001', level: 1 })).toBeInTheDocument()
+    // el título dice lo que se planteó (U-27 del rediseño)
+    expect(await screen.findByRole('heading', { name: '¿Cuándo empieza la perforación en el sector norte?', level: 1 })).toBeInTheDocument()
     expect(screen.getByText(/Respuesta hasta el 17 oct/)).toBeInTheDocument()
     expect(screen.getByText(/Responder pide la respuesta y cuándo se comunicó/)).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Responder' })).toBeInTheDocument()
-    // las demás transiciones van en «Más acciones» (rediseño de UX, 2026-10-20)
-    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
-    expect(screen.getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Reclasificar…' })).toBeInTheDocument()
+    // con «Escribir la respuesta» y «Editar» a la vista, reclasificar y derivar van en «Más acciones» (CabeceraDeFicha)
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
+    const mas = screen.getByRole('group', { name: 'Más acciones' })
+    expect(within(mas).getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
+    expect(within(mas).getByRole('button', { name: 'Reclasificar…' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Escribir la respuesta' }))
     expect(await screen.findByRole('dialog', { name: 'Responder la consulta' })).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
@@ -83,7 +86,8 @@ describe('S57 · ficha de consulta', () => {
       ...comunes('inquiry', 'i1')
     ])
     abrir()
-    const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
+    const camino = await abrirCamino()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(within(camino).getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByRole('region', { name: 'Situación' })).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
@@ -132,7 +136,7 @@ describe('S57 · ficha de solicitud', () => {
       }
     ])
     abrir()
-    expect(await screen.findByRole('heading', { name: 'Solicitud S-001', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'La comunidad pide apoyo para el techo del local comunal', level: 1 })).toBeInTheDocument()
     expect(screen.getByText('Las solicitudes no tienen plazo de respuesta.')).toBeInTheDocument()
     expect(screen.getByText('Calaminas para el local comunal')).toBeInTheDocument()
     // accept no es un botón de transición: tiene su diálogo
@@ -140,7 +144,9 @@ describe('S57 · ficha de solicitud', () => {
     expect(screen.queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
-    expect(within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima)')).toHaveValue('2026-10-09T21:30')
+    // hallazgo U-07 (DD-07): la hora de Lima propuesta se muestra como dd/mm/aaaa y HH:mm de 24 h
+    expect(within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima)')).toHaveValue('09/10/2026')
+    expect(within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima) (hora)')).toHaveValue('21:30')
     expect(within(dialogo).getByLabelText('Título del compromiso')).toHaveValue('Calaminas para el local comunal')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
     expect(within(dialogo).getAllByText('Este dato es obligatorio').length).toBeGreaterThanOrEqual(3)
@@ -162,6 +168,34 @@ describe('S57 · ficha de solicitud', () => {
     expect(aceptar.cabeceras.get('If-Match')).toBe(`"${SOLICITUD.updatedAt}"`)
     expect(aceptar.cabeceras.get('X-Change-Reason')).toBe("UTF-8''aprobada%20en%20comit%C3%A9")
     expect(aceptar.cabeceras.get('Idempotency-Key')).toBeTruthy()
+  })
+
+  // hallazgo U-07 (DD-07): la respuesta se escribe como 20/10/2026 y 10:15 y viaja como el instante de esa hora de Lima
+  it('la hora de la respuesta escrita como 20/10/2026 y 10:15 viaja como el instante de Lima', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/stakeholder-requests/r1/accept',
+        responder: () => new Response(JSON.stringify({ request: { ...SOLICITUD, state: 'accepted' }, commitment: COMPROMISO }), { status: 201 })
+      }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la solicitud' })
+    const dia = within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima)')
+    const hora = within(dialogo).getByLabelText('Respuesta comunicada (hora de Lima) (hora)')
+    await userEvent.clear(dia)
+    await userEvent.type(dia, '20/10/2026')
+    await userEvent.clear(hora)
+    await userEvent.type(hora, '10:15')
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta a la solicitud'), 'Sí')
+    await userEvent.type(within(dialogo).getByLabelText('Código del compromiso'), 'COM-010')
+    await userEvent.type(within(dialogo).getByLabelText('Monto'), '100')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'comité')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar y crear' }))
+    await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholder-requests/r1/accept')).toHaveLength(1))
+    expect(red.a('POST', '/sgspe/stakeholder-requests/r1/accept')[0].cuerpo).toMatchObject({ respondedAt: '2026-10-20T15:15:00.000Z' })
   })
 
   // plan 4.2a: un respondedAt mal formado es un 400 sobre respondedAt (con el texto libre de la validación): se dice junto a su
@@ -229,6 +263,62 @@ describe('S57 · ficha de solicitud', () => {
     expect(await screen.findByRole('link', { name: 'COM-010 · Calaminas' })).toHaveAttribute('href', '/projects/p1/commitments/c9')
     expect(await screen.findByRole('button', { name: 'Cerrar sin ejecución' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Aceptar y crear el compromiso' })).not.toBeInTheDocument()
+  })
+})
+
+// P-09 del rediseño de UX (DD-02 y DD-06; U-02, U-03, U-25, U-26 y U-27): el título dice lo que se planteó; el estado, una sola
+// vez, en el panel de decisión; una sola primaria (la siguiente acción del flujo o, sin ella, la acción propia de la ficha), dos
+// secundarias a la vista y lo demás en «Más acciones»; los datos del caso por tema, con los vacíos plegados
+describe('S57 · cabecera y cuerpo de la ficha (P-09)', () => {
+  it('consulta: «Responder» es la única primaria, «Escribir la respuesta» la acompaña y «Derivar» va en «Más acciones»', async () => {
+    fetch = mockFetch([
+      { path: '/objects/inquiry/records/i1', body: CONSULTA },
+      transiciones('inquiry', 'i1', [
+        ['refer', 'Derivar'],
+        ['answer', 'Responder']
+      ]),
+      ...comunes('inquiry', 'i1')
+    ])
+    montar(<FichaConsultaPage />, {
+      ruta: '/projects/p1/inquiries/i1',
+      camino: '/projects/:projectId/inquiries/:inquiryId',
+      usuario: GESTORA_DE_QUEJAS,
+      permisos: EQUIPO_DE_QUEJAS
+    })
+    const titulo = await screen.findByRole('heading', { name: '¿Cuándo empieza la perforación en el sector norte?', level: 1 })
+    expect(within(titulo.parentElement!).getByText(/^Consulta · C-001/)).not.toHaveClass('font-sg-mono')
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByRole('button', { name: 'Responder' })).toHaveAttribute('data-variant', 'primary')
+    expect(within(acciones).getByRole('button', { name: 'Escribir la respuesta' })).toHaveAttribute('data-variant', 'secondary')
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    expect(within(acciones).queryByRole('button', { name: 'Derivar' })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
+    expect(await screen.findAllByText('Recibida', { selector: '[data-estado]' })).toHaveLength(1)
+    const atencion = screen.getByRole('region', { name: 'Atención y respuesta' })
+    expect(within(atencion).getByRole('button', { name: /^Mostrar (el campo|los \d+ campos) sin dato$/ })).toBeInTheDocument()
+  })
+
+  it('solicitud: sin transición del camino, «Aceptar y crear el compromiso» es la primaria; qué se pide va en lo que se plantea', async () => {
+    fetch = mockFetch([
+      { path: '/objects/stakeholder_request/records/r1', body: SOLICITUD },
+      transiciones('stakeholder_request', 'r1', [
+        ['accept', 'Aceptar'],
+        ['decline', 'Declinar']
+      ]),
+      ...comunes('stakeholder_request', 'r1')
+    ])
+    montar(<FichaSolicitudPage />, {
+      ruta: '/projects/p1/requests/r1',
+      camino: '/projects/:projectId/requests/:requestId',
+      usuario: GESTORA_DE_QUEJAS,
+      permisos: { ...EQUIPO_DE_QUEJAS, objects: { ...EQUIPO_DE_QUEJAS.objects, commitment: ['READ', 'CREATE'] } }
+    })
+    expect(await screen.findByRole('heading', { name: 'La comunidad pide apoyo para el techo del local comunal', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Aceptar y crear el compromiso' })).toHaveAttribute('data-variant', 'primary')
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    expect(within(screen.getByRole('region', { name: 'Qué se plantea' })).getByText('Calaminas para el local comunal')).toBeInTheDocument()
+    expect(await screen.findAllByText('En evaluación', { selector: '[data-estado]' })).toHaveLength(1)
   })
 })
 

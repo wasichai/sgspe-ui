@@ -310,6 +310,22 @@ describe('S46 · ficha de evidencia', () => {
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
   })
 
+  // hallazgo U-07 (DD-07): la fecha del documento se muestra y se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+  it('corregir la fecha del documento escrita como 20/10/2026 manda document_date 2026-10-20', async () => {
+    fetch = mockFetch(rutasDeFicha([], registro('ev1', { ...EV.attributes, document_date: '2026-10-01' }, { updatedAt: EV.updatedAt })))
+    red = espiarRed([{ method: 'PATCH', path: '/sgspe/evidence/ev1', responder: () => jsonResponse(EV) }])
+    abrirFicha()
+    await userEvent.click(await screen.findByRole('button', { name: 'Cambiar datos o clasificación' }))
+    const panel = await screen.findByRole('dialog')
+    const fecha = within(panel).getByLabelText('Fecha del documento')
+    expect(fecha).toHaveValue('01/10/2026')
+    await userEvent.clear(fecha)
+    await userEvent.type(fecha, '20/10/2026')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(red!.a('PATCH', '/sgspe/evidence/ev1')).toHaveLength(1))
+    expect(red.a('PATCH', '/sgspe/evidence/ev1')[0].cuerpo).toEqual({ attributes: { document_date: '2026-10-20' } })
+  })
+
   it('cambiar la clasificación pide motivo, manda solo lo cambiado con If-Match y un 412 ofrece Recargar que conserva lo escrito', async () => {
     fetch = mockFetch(rutasDeFicha())
     let intentos = 0

@@ -13,6 +13,7 @@ import {
   type TipoDeAviso
 } from '../datos/avisos'
 import { NS } from '../i18n'
+import { Seccion } from '../componentes/Seccion'
 
 // qué tipos de aviso llegan por cada canal (WAS-ADR-0060): la bandeja recibe todos; el correo, los que la persona elija.
 // GET y PUT /api/auth/me/notification-preferences ({ email: ['ACTION', …] }); un canal sin tipos se apaga. sin canales
@@ -32,8 +33,7 @@ export function PreferenciasDeAvisos() {
     guardar.reset()
   }
   return (
-    <section aria-label={t('avisos.preferencias.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="text-sg-h3 font-semibold">{t('avisos.preferencias.titulo')}</h2>
+    <Seccion titulo={t('avisos.preferencias.titulo')} className="text-sm">
       <p className="text-sg-text-secondary">{t('avisos.preferencias.ayuda')}</p>
       {preferencias.isPending ? (
         <Cargando compacto />
@@ -70,6 +70,6 @@ export function PreferenciasDeAvisos() {
           </Button>
         </>
       )}
-    </section>
+    </Seccion>
   )
 }

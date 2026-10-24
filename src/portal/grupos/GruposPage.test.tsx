@@ -7,7 +7,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { base, LEE, P1 } from '../../test/grupos'
+import { base, hace, LEE, P1, S1, S2 } from '../../test/grupos'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -23,6 +23,14 @@ afterEach(() => {
   fetch?.restore()
   red = fetch = null
 })
+
+// una vista del selector (DD-03): a la vista es un radio; si no cabe, está en «Más vistas»
+async function elegirVista(nombre: RegExp) {
+  const aLaVista = screen.queryByRole('radio', { name: nombre })
+  if (aLaVista) return userEvent.click(aLaVista)
+  await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+  await userEvent.click(screen.getByRole('button', { name: nombre }))
+}
 
 const filas = () =>
   within(screen.getByRole('table', { name: 'Grupos de interés' }))
@@ -44,21 +52,176 @@ describe('S16 · lista de grupos de interés', () => {
   it('el ojo de una fila abre la vista previa del grupo sobre la lista, con «Abrir ficha»', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
-    await userEvent.click(await within(filas()[0]).findByRole('link', { name: 'Vista previa de Ronda campesina Tunas' }))
+    const ojo = await within(filas()[0]).findByRole('link', { name: 'Vista previa de Ronda campesina Tunas' })
+    // hallazgo U-17: con ratón, el ojo aparece al pasar sobre la fila o con el foco en ella; en una pantalla táctil, siempre
+    expect(ojo).toHaveClass('pointer-fine:opacity-0', 'pointer-fine:group-hover/fila:opacity-100', 'pointer-fine:group-focus-within/fila:opacity-100')
+    expect(filas()[0]).toHaveClass('group/fila')
+    await userEvent.click(ojo)
     expect(rutaActual()).toMatch(/^\/projects\/p1\/stakeholders\?peek=stakeholder%3A/)
     const drawer = await screen.findByRole('dialog')
     expect(within(drawer).getByRole('link', { name: 'Abrir ficha' })).toHaveAttribute('href', expect.stringMatching(/^\/projects\/p1\/stakeholders\//))
     expect(screen.getByRole('table', { name: 'Grupos de interés', hidden: true })).toBeInTheDocument()
   })
 
-  // revisión de UX, etapa 3: vistas con conteo, el total en el encabezado y Responsable solo desde 1440 px
-  it('cada vista dice cuántos tiene, el encabezado el total, y Responsable se oculta por debajo de 1440 px', async () => {
+  // revisión de UX, etapa 3: vistas con conteo y el total en el encabezado
+  it('cada vista dice cuántos tiene y el encabezado el total', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
-    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAccessibleDescription('2 registros')
-    expect(screen.getByRole('tab', { name: 'Retirados' })).toHaveAccessibleDescription('1 registro')
+    expect(screen.getByRole('radio', { name: 'Todos, 2' })).toHaveAttribute('aria-checked', 'true')
+    // la que no cabe va en «Más vistas», también con su conteo
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.getByRole('button', { name: 'Retirados, 1' })).toBeInTheDocument()
     expect(screen.getByText('2 grupos de interés')).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Responsable' })).toHaveClass('hidden', '2xl:table-cell')
+  })
+
+  // hallazgos U-18 y U-22 (DD-03, DD-04): una sola fila de pestañas; las vistas van en el selector de la barra de filtros
+  it('las vistas van en el selector de la barra de filtros, no en una segunda fila de pestañas, y ?view= no cambia', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('radiogroup', { name: 'Vistas' })).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('radio', { name: /^Sin evaluar\b/ }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=sinEvaluar')
+    await waitFor(() => expect(filas()).toHaveLength(1))
+  })
+
+  it('los filtros aplicados son chips: quitar uno quita su parámetro y «Limpiar filtros» deja la vista', async () => {
+    fetch = abrirPortal(
+      '/projects/p1/stakeholders?view=todos&stance=EN%20CONTRA&influence_group=ESTRATEGICO',
+      GERENCIA_SOCIAL,
+      LEE,
+      base(GERENCIA_SOCIAL, true)
+    )
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    const chips = screen.getByRole('list', { name: 'Filtros aplicados' })
+    expect(
+      within(chips)
+        .getAllByRole('listitem')
+        .map((c) => c.textContent)
+    ).toEqual(['Grupo de influencia: Estratégico', 'Postura: En contra'])
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Postura: En contra' }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=todos&influence_group=ESTRATEGICO')
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=todos')
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.queryByRole('list', { name: 'Filtros aplicados' })).not.toBeInTheDocument()
+  })
+
+  it('a la vista, hasta tres filtros; el ámbito y el tipo van en «Más filtros»', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    for (const f of ['Grupo de influencia', 'Postura', 'Estado de la relación']) expect(screen.getByRole('combobox', { name: f })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Tipo' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Más filtros' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Más filtros' })
+    expect(within(drawer).getByRole('combobox', { name: 'Ámbito' })).toBeInTheDocument()
+    await userEvent.selectOptions(within(drawer).getByRole('combobox', { name: 'Tipo' }), 'LIDER LOCAL')
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?stakeholder_type=LIDER+LOCAL')
+  })
+
+  // hallazgo U-06 (DD-05): la tabla cabe a 1440 px por la prioridad de sus columnas
+  it('las columnas van por prioridad: las secundarias desde xl, las opcionales desde 1536 px y las uniformes van a una nota', async () => {
+    const conResponsable = (id: string, extra: Record<string, unknown>) => {
+      const g = [S1, S2].find((r) => r.id === id)!
+      return { ...g, attributes: { ...g.attributes, owner_user_email: 'gestion@sgspe.test', ...extra } }
+    }
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
+      { path: '/sgspe/people', body: [{ email: 'gestion@sgspe.test', displayName: 'Gestión de compromisos (demo)' }] },
+      { path: '/objects/locality/records/l1', body: registro('l1', { name: 'Tunas' }) },
+      { path: '/objects/locality/records/l2', body: registro('l2', { name: 'Huaylla' }) },
+      { path: '/objects/stakeholder/records', body: pagina([conResponsable('s1', { locality: 'l1' }), conResponsable('s2', { locality: 'l2' })]) },
+      ...base()
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    const tabla = within(screen.getByRole('table', { name: 'Grupos de interés' }))
+    // esenciales, siempre
+    for (const c of ['Grupo de interés', 'Grupo de influencia', 'Postura', 'Prioridad', 'Estado'])
+      expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
+    // secundarias, desde xl
+    for (const c of ['Territorio', 'Último contacto']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'xl:table-cell')
+    // opcionales, desde 1536 px mientras no se elijan en «Columnas»
+    for (const c of ['Relación', 'Evaluación']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'min-[96rem]:table-cell')
+    // el mismo responsable en toda la página: sale de la tabla y queda en la nota, con su nombre
+    expect(tabla.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
+    const nota = screen.getByRole('list', { name: 'Igual en todas las filas' })
+    await waitFor(() => expect(within(nota).getByRole('listitem')).toHaveTextContent('Responsable: Gestión de compromisos (demo)'))
+    expect(await within(filas()[0]).findByText('Tunas')).toBeInTheDocument()
+  })
+
+  // 05-especificacion §1.6: «Columnas» muestra u oculta las opcionales en todos los anchos y se recuerda en este navegador
+  it('«Columnas» ofrece las opcionales; la elegida se ve en todos los anchos y se recuerda para la lista de grupos', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(screen.getByRole('button', { name: 'Columnas' }))
+    const menu = screen.getByRole('group', { name: 'Columnas' })
+    expect(
+      within(menu)
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('label')?.textContent)
+    ).toEqual(['Relación', 'Evaluación'])
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'Evaluación' }))
+    const tabla = within(screen.getByRole('table', { name: 'Grupos de interés' }))
+    expect(tabla.getByRole('columnheader', { name: 'Evaluación' })).not.toHaveClass('hidden')
+    expect(tabla.getByRole('columnheader', { name: 'Relación' })).toHaveClass('hidden', 'min-[96rem]:table-cell')
+    expect(JSON.parse(localStorage.getItem('sgspe.columnas.grupos') ?? '{}')).toEqual({ evaluacion: true })
+  })
+
+  it('en «Míos» no se dibuja el responsable: es quien mira', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders?view=mios', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(screen.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Responsable:/)).not.toBeInTheDocument()
+  })
+
+  // 05-especificacion §1.6: el portal filtra y pagina los grupos, y los ordena por la prioridad informativa, por su orden de negocio
+  it('la prioridad ordena en el portal de media a muy alta, sin evaluar al final, con aria-sort, y vuelve a la primera página', async () => {
+    const grupo = (id: string, prioridad: string, n: number) =>
+      registro(id, { ...S1.attributes, organization: `o-${id}`, information_priority: prioridad, last_contact_date: hace(n) }, { state: 'assessed' })
+    // 26 grupos: 24 de prioridad alta, uno media, uno muy alta, y el sin evaluar (S2)
+    const altos = Array.from({ length: 24 }, (_, i) => grupo(`a${i}`, 'ALTA', i))
+    fetch = abrirPortal('/projects/p1/stakeholders?page=1', RELACIONISTA, LEE, [
+      { path: '/objects/stakeholder/records', body: pagina([grupo('muy', 'MUY ALTA', 1), S2, ...altos, grupo('media', 'MEDIA', 2)]) },
+      { path: /^\/objects\/organization\/records\/o-/, body: registro('ox', { name: 'Organización' }) },
+      ...base()
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    const tabla = () => within(screen.getByRole('table', { name: 'Grupos de interés' }))
+    expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).not.toHaveAttribute('aria-sort')
+    // el nombre y el grupo de influencia no se ordenan
+    expect(tabla().queryByRole('button', { name: 'Grupo de interés' })).not.toBeInTheDocument()
+    expect(tabla().queryByRole('button', { name: 'Grupo de influencia' })).not.toBeInTheDocument()
+    await userEvent.click(tabla().getByRole('button', { name: 'Prioridad' }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders')
+    await waitFor(() => expect(filas()).toHaveLength(25))
+    expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(filas()[0]).toHaveTextContent('Media')
+    expect(filas()[24]).toHaveTextContent('Alta')
+    await userEvent.click(tabla().getByRole('button', { name: 'Prioridad' }))
+    expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).toHaveAttribute('aria-sort', 'descending')
+    expect(filas()[0]).toHaveTextContent('Muy alta')
+    // el sin evaluar queda al final también al revés: en la segunda página, tras la media
+    await userEvent.click(screen.getByRole('button', { name: /siguiente|next/i }))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(filas()[0]).toHaveTextContent('Media')
+    expect(filas()[1]).toHaveTextContent('Sin evaluar')
+  })
+
+  it('Enter en una fila enfocada abre la ficha del grupo', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    filas()[1].focus()
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s2'))
+  })
+
+  it('Espacio en una fila enfocada abre la vista previa del grupo sin dejar la lista', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    filas()[1].focus()
+    await userEvent.keyboard(' ')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders?peek=stakeholder%3As2'))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
 
   it('la postura restringida se explica una vez, en el encabezado: las celdas no llevan botón de ayuda', async () => {
@@ -162,6 +325,9 @@ describe('S16 · lista de grupos de interés', () => {
     expect(screen.getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
     expect(await within(filas()[0]).findByText('PRJ-01')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Ver como matriz' })).not.toBeInTheDocument()
+    // con la columna Proyecto, el responsable pasa a opcional (desde 1536 px) para que a 1440 px la tabla quepa (CA-1.6.2)
+    const responsable = screen.queryByRole('columnheader', { name: 'Responsable' })
+    if (responsable) expect(responsable).toHaveClass('hidden', 'min-[96rem]:table-cell')
   })
 
   it('con el chip de una localidad, la lista se limita al lugar', async () => {
@@ -242,9 +408,9 @@ describe('S16 · lista de grupos de interés', () => {
       }
     ])
     expect(await screen.findByRole('status')).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Sin contacto en 90 días' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /^Sin contacto en 90 días/ })).not.toBeInTheDocument()
     entregar()
-    expect(await screen.findByRole('tab', { name: 'Sin contacto en 60 días' })).toBeInTheDocument()
+    expect(await screen.findByRole('radio', { name: /^Sin contacto en 60 días/ })).toBeInTheDocument()
   })
 
   it('la selección se reinicia al cambiar de vista: no viaja una fila que ya no se ve', async () => {
@@ -253,10 +419,10 @@ describe('S16 · lista de grupos de interés', () => {
     await userEvent.click(within(filas()[0]).getByRole('checkbox'))
     await userEvent.click(within(filas()[1]).getByRole('checkbox'))
     expect(screen.getByText('2 seleccionados')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Retirados' }))
+    await elegirVista(/^Retirados\b/)
     await waitFor(() => expect(filas()).toHaveLength(1))
     expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Todos' }))
+    await elegirVista(/^Todos\b/)
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(screen.queryByText(/seleccionados/)).not.toBeInTheDocument()
     await userEvent.click(within(filas()[0]).getByRole('checkbox'))
@@ -449,7 +615,7 @@ describe('la ruta de los grupos de interés', () => {
   it('una cuenta sin la sección stakeholders no entra a /projects/:p/stakeholders: lee que no puede y no se pide la lista', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, permisos({ project: ['READ'] }), base())
     red = espiarRed()
-    expect(await screen.findByText('Su cuenta no puede abrir «Grupos de interés».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Grupos de interés»' })).toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
     expect(red.a('GET', '/objects/stakeholder/records')).toHaveLength(0)
   })

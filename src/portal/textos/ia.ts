@@ -23,7 +23,7 @@ export const ES_IA = {
     proveedor: 'El servicio de IA no responde en este momento.',
     rol: 'La IA no está disponible para su rol.',
     rolDocumentos: 'Preguntar a los documentos pide además poder leer los nombres de las personas.',
-    sinServidor: 'La IA no está disponible en este servidor.',
+    sinServidor: 'La IA no está disponible en esta instalación.',
     reintentar: 'Reintentar'
   },
   confianza: 'Confianza {{n}} %',
@@ -52,7 +52,7 @@ export const EN_IA: typeof ES_IA = {
     proveedor: 'The AI service is not responding right now.',
     rol: 'AI is not available for your role.',
     rolDocumentos: 'Asking the documents also requires reading the names of people.',
-    sinServidor: 'AI is not available on this server.',
+    sinServidor: 'AI is not available in this installation.',
     reintentar: 'Retry'
   },
   confianza: 'Confidence {{n}} %',

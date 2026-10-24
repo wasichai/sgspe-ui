@@ -20,8 +20,9 @@ const moneda = (valor: unknown): string | null => (typeof valor === 'string' && 
 
 // KPI-INV-01: por campaña, el tope, lo comprometido (compromisos y aportes, elección 6) y lo ejecutado, que son cifras distintas
 // (ASM-063). la barra dibuja lo ejecutado frente al tope y su texto lo dice; una campaña sin moneda o con montos en otra moneda lo
-// advierte
-export function CampanasFrenteAlTope({ indicador }: { indicador: Indicador }) {
+// advierte. con sinVacios (la lista S42, hallazgo U-35), una campaña sin avance no dibuja la barra vacía y un monto en cero se dice
+// «nada todavía» en lugar de «S/ 0.00»; el tablero dibuja siempre la barra
+export function CampanasFrenteAlTope({ indicador, sinVacios = false }: { indicador: Indicador; sinVacios?: boolean }) {
   const { t } = useTranslation(NS)
   const filas = desglose(indicador, 'campaign')
   if (filas.length === 0) return <p className="text-sm text-sg-text-muted">{t('inversion.cifras.sinCampanas')}</p>
@@ -35,26 +36,34 @@ export function CampanasFrenteAlTope({ indicador }: { indicador: Indicador }) {
           const avance = cifraDe(f.executedPercent)
           const comprometido = cifraDe(f.committedPercent)
           const otras = (cifraDe(f.committedOtherCurrencyCount) ?? 0) + (cifraDe(f.otherCurrencyCount) ?? 0)
+          const conBarra = !sinVacios || (avance !== null && avance > 0)
+          const enCero = (valor: unknown) => sinVacios && aDiezmilesimos(valor) === 0n
           return (
             <li key={f.key} className="space-y-1 rounded-sg-md border border-sg-border p-3 text-sm">
               <p className="font-medium">{nombre}</p>
-              <div
-                role="progressbar"
-                aria-label={t('inversion.cifras.ejecutadoDe', { campana: nombre })}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={avance ?? undefined}
-                aria-valuetext={avance === null ? '—' : t('inversion.cifras.avanceDicho', { avance: numeroPe(avance) })}
-                className="h-2 rounded-full bg-sg-surface-sunken"
-              >
-                <div className="h-2 rounded-full bg-sg-primary" style={{ width: `${Math.min(100, avance ?? 0)}%` }} />
-              </div>
+              {conBarra ? (
+                <div
+                  role="progressbar"
+                  aria-label={t('inversion.cifras.ejecutadoDe', { campana: nombre })}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={avance ?? undefined}
+                  aria-valuetext={avance === null ? '—' : t('inversion.cifras.avanceDicho', { avance: numeroPe(avance) })}
+                  className="h-2 rounded-full bg-sg-surface-sunken"
+                >
+                  <div className="h-2 rounded-full bg-sg-primary" style={{ width: `${Math.min(100, avance ?? 0)}%` }} />
+                </div>
+              ) : null}
               <p>{t('inversion.cifras.tope', { monto: montoPe(f.cap, enMoneda) })}</p>
-              <p>
-                {t('inversion.cifras.comprometido', { monto: montoPe(f.committed, enMoneda) })}
-                {comprometido === null ? '' : ` (${numeroPe(comprometido)} %)`}
-              </p>
-              <p>{t('inversion.cifras.ejecutado', { monto: montoPe(f.executed, enMoneda) })}</p>
+              {enCero(f.committed) ? (
+                <p>{t('inversion.cifras.comprometidoNada')}</p>
+              ) : (
+                <p>
+                  {t('inversion.cifras.comprometido', { monto: montoPe(f.committed, enMoneda) })}
+                  {comprometido === null ? '' : ` (${numeroPe(comprometido)} %)`}
+                </p>
+              )}
+              <p>{enCero(f.executed) ? t('inversion.cifras.ejecutadoNada') : t('inversion.cifras.ejecutado', { monto: montoPe(f.executed, enMoneda) })}</p>
               {enMoneda ? null : <p className="text-sg-caption text-sg-warning">{t('inversion.cifras.sinMoneda')}</p>}
               {otras > 0 ? <p className="text-sg-caption text-sg-warning">{t('inversion.cifras.otraMoneda', { n: numeroPe(otras) })}</p> : null}
             </li>

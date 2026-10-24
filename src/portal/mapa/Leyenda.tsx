@@ -11,30 +11,36 @@ export function Leyenda({ ids }: { ids: readonly string[] }) {
     <section aria-label={t('sig.leyenda')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('sig.leyenda')}</h2>
       <ul className="space-y-1">
-        {ids.map((id) => {
-          const estilo = estiloDeCapa(id)
-          const relleno = estilo.colorDeRelleno ?? estilo.color
-          return (
-            <li key={id} className="flex items-center gap-2">
-              <span
-                aria-hidden
-                data-color={estilo.color}
-                className="inline-block size-3.5 shrink-0 rounded-sg-sm"
-                style={{
-                  border: `2px ${estilo.trazo ? 'dashed' : 'solid'} ${estilo.color}`,
-                  backgroundColor:
-                    estilo.fillOpacity > 0
-                      ? `${relleno}${Math.round(estilo.fillOpacity * 255)
-                          .toString(16)
-                          .padStart(2, '0')}`
-                      : 'transparent'
-                }}
-              />
-              <span>{t(`mapa.capasNombre.${id}`)}</span>
-            </li>
-          )
-        })}
+        {ids.map((id) => (
+          <li key={id} className="flex items-center gap-2">
+            <MuestraDeCapa id={id} />
+            <span>{t(`mapa.capasNombre.${id}`)}</span>
+          </li>
+        ))}
       </ul>
     </section>
+  )
+}
+
+// la muestra de una capa con la paleta compartida: el color, el trazo (continuo o discontinuo) y el relleno de la tesela. la usa
+// también el panel de capas de S12, que une capas y leyenda (DD-11)
+export function MuestraDeCapa({ id }: { id: string }) {
+  const estilo = estiloDeCapa(id)
+  const relleno = estilo.colorDeRelleno ?? estilo.color
+  return (
+    <span
+      aria-hidden
+      data-color={estilo.color}
+      className="inline-block size-3.5 shrink-0 rounded-sg-sm"
+      style={{
+        border: `2px ${estilo.trazo ? 'dashed' : 'solid'} ${estilo.color}`,
+        backgroundColor:
+          estilo.fillOpacity > 0
+            ? `${relleno}${Math.round(estilo.fillOpacity * 255)
+                .toString(16)
+                .padStart(2, '0')}`
+            : 'transparent'
+      }}
+    />
   )
 }

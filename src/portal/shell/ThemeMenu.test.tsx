@@ -26,19 +26,24 @@ function start(routes: MockRoute[] = []) {
   render(<PortalApp />)
 }
 
+// el tema vive en el menú de la cuenta (DD-09): se abre antes de buscarlo
+async function abrirCuenta() {
+  await userEvent.click(await within(await screen.findByRole('banner')).findByRole('button', { name: 'Su cuenta' }))
+}
+
 describe('menú de tema', () => {
-  // design-system.md §3.6: 32 px como mínimo en escritorio (size-8); a 28 px (p-1.5 y size-4) solo cumplían WCAG 2.5.8
+  // design-system.md §3.6: 32 px como mínimo en escritorio (size-8); a 28 px (p-1.5 y size-4) solo cumplían WCAG 2.5.8. la salida
+  // es ahora una fila del menú de la cuenta, de 36 px (h-9)
   it('los botones de tema y de salida miden 32 px como mínimo', async () => {
     start()
-    // en el menú del perfil (ux-architecture.md §7.1; rediseño de UX, 2026-10-20)
-    await userEvent.click(await screen.findByRole('button', { name: 'Su cuenta' }))
+    await abrirCuenta()
     expect(await screen.findByRole('button', { name: /^Tema: Sistema/ })).toHaveClass('size-8')
-    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toHaveClass('h-8')
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toHaveClass('h-9')
   })
 
   it('cambia el tema desde un menú, lo guarda en sgspe.theme y en las preferencias', async () => {
     start([{ method: 'PUT', path: '/auth/me/preferences', body: { theme: 'dark', locale: null } }])
-    await userEvent.click(await screen.findByRole('button', { name: 'Su cuenta' }))
+    await abrirCuenta()
     const button = await screen.findByRole('button', { name: /^Tema: Sistema/ })
     await userEvent.click(button)
     const menu = screen.getByRole('menu', { name: 'Tema' })

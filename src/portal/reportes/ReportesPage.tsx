@@ -25,6 +25,7 @@ import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { EntregablesDeReportes } from '../entregables/EntregablesDeReportes'
 import { opcion } from '../datos/opciones'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S49: desde F8 los entregables (EntregablesDeReportes); de F2 a F4 · reportes y exportaciones: el registro de grupos de interés, desde F3 la matriz de compromisos
 // (MatrizDeCompromisos, con EXPORT sobre commitment) y desde F4 el registro de quejas, consultas y solicitudes (RegistroDeAtencion,
@@ -65,8 +66,7 @@ export function ReportesPage() {
   // de exportaciones, cada una con su pestaña (?tab=); sin permiso para una, su pestaña no está
   const exportaciones = (
     <div className="space-y-4">
-      <section aria-label={t('reportes.registroDeGrupos')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-        <h2 className="text-sg-h3 font-semibold">{t('reportes.registroDeGrupos')}</h2>
+      <Seccion titulo={t('reportes.registroDeGrupos')} className="space-y-3">
         <p className="text-sm text-sg-text-secondary">{t('reportes.registroAyuda')}</p>
         {can('stakeholder', 'EXPORT') ? (
           <>
@@ -88,7 +88,7 @@ export function ReportesPage() {
         ) : (
           <Alert tone="notice">{t('reportes.sinPermiso')}</Alert>
         )}
-      </section>
+      </Seccion>
       {can('commitment', 'EXPORT') ? <MatrizDeCompromisos key={`compromisos-${delaUrl}`} niveles={niveles} /> : null}
       {OBJETOS_DE_QCS.every((o) => can(o, 'EXPORT')) ? <RegistroDeAtencion key={`atencion-${delaUrl}`} niveles={niveles} /> : null}
       {can('social_risk', 'EXPORT') ? <RegistroDeRiesgos key={`riesgos-${delaUrl}`} niveles={niveles} /> : null}

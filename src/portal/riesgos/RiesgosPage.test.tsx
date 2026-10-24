@@ -3,12 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { P1 } from '../../test/compromisos'
-import { definicion, montar, pagina, registro } from '../../test/montar'
+import { definicion, montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
 import { baseDeRiesgos, DEF_RIESGO, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, RELACIONES_EN_RIESGOS, RIESGO } from '../../test/riesgos'
 import { RELACIONISTA } from '../../test/portal'
 import { nivelDePuntaje, umbralesDe } from './niveles'
 import { RiesgosPage } from './RiesgosPage'
+import { numeroPe } from '../i18n'
 
 // S38 y S39 (screens.md §9): el mapa de calor por los valores vigentes, los riesgos sin revisión fuera del mapa, la celda que filtra
 // la tabla, las vistas armadas en el portal y el alta con motivo, también desde un incidente
@@ -82,6 +83,56 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     expect(within(tabla).queryByRole('link', { name: /Huelga regional/ })).not.toBeInTheDocument()
   })
 
+  // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
+  it('Espacio en una fila enfocada abre la vista previa del riesgo y Enter su ficha', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const tabla = await screen.findByRole('table', { name: 'Riesgos' })
+    const fila = within(tabla).getAllByRole('row')[1]
+    const ficha = within(fila).getAllByRole('link')[0].getAttribute('href')!
+    fila.focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toMatch(/^\/projects\/p1\/risks\/register\?peek=social_risk%3A/)
+    within(screen.getByRole('table', { name: 'Riesgos', hidden: true }))
+      .getAllByRole('row', { hidden: true })[1]
+      .focus()
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe(ficha)
+  })
+
+  // 05-especificacion §1.6: el portal tiene todos los riesgos y los ordena aquí, el nivel por su orden de negocio y no por su texto
+  it('el riesgo, P × I y el nivel ordenan en el portal, con aria-sort; el nivel va de bajo a crítico y lo sin dato, al final', async () => {
+    const ALTO = registro('k7', { ...MEDIO.attributes, code: 'R-007', probability: 3, impact: 3, score: 9, risk_level: 'ALTO' }, { state: 'assessed' })
+    const BAJO = registro('k8', { ...MEDIO.attributes, code: 'R-008', probability: 1, impact: 2, score: 2, risk_level: 'BAJO' }, { state: 'assessed' })
+    // llegan desordenados: el orden inicial es el del código
+    fetch = mockFetch(rutas([], [ALTO, NUEVO, RIESGO, BAJO, MEDIO]))
+    red = espiarRed()
+    abrir()
+    await screen.findByRole('table', { name: 'Riesgos' })
+    const tabla = () => screen.getByRole('table', { name: 'Riesgos' })
+    const codigos = () =>
+      within(tabla())
+        .getAllByRole('row')
+        .slice(1)
+        .map((f) => within(f).getByText(/^R-\d+$/).textContent)
+    expect(codigos()).toEqual(['R-001', 'R-002', 'R-003', 'R-007', 'R-008'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Riesgo' })).toHaveAttribute('aria-sort', 'ascending')
+    // el nivel por su orden (bajo, medio, alto, crítico), no alfabético; el sin evaluar, al final en los dos sentidos
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel' }))
+    expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel' }))
+    expect(codigos()).toEqual(['R-001', 'R-007', 'R-003', 'R-008', 'R-002'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel' })).toHaveAttribute('aria-sort', 'descending')
+    // el puntaje como número: 2, 6, 9, 16 (no «16» antes de «2»)
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'P × I' }))
+    expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
+    // el estado y la revisión no se ordenan; el orden no escribe la URL ni vuelve a pedir la lista
+    expect(within(tabla()).queryByRole('button', { name: 'Estado' })).not.toBeInTheDocument()
+    expect(ubicacion.actual).toBe('/projects/p1/risks/register')
+    expect(red.a('GET', '/objects/social_risk/records').every((l) => l.ruta.includes('sort=code&dir=asc'))).toBe(true)
+  })
+
   it('elegir una celda filtra la tabla y «Quitar filtro de celda» la devuelve entera', async () => {
     fetch = mockFetch(rutas())
     abrir()
@@ -98,7 +149,10 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     fetch = mockFetch(rutas())
     abrir('/projects/p1/risks/register?cell=1-1')
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    // el del vacío, no el de la barra de filtros
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    const delVacio = screen.getAllByRole('button', { name: 'Limpiar filtros' }).find((b) => !barra.contains(b))!
+    await userEvent.click(delVacio)
     expect(within(await screen.findByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(4)
   })
 
@@ -108,23 +162,41 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     abrir('/projects/p1/risks/register?level=alto')
     const tabla = await screen.findByRole('table', { name: 'Riesgos' })
     expect(within(tabla).getAllByRole('row')).toHaveLength(2)
-    await userEvent.click(screen.getByRole('button', { name: 'Quitar Nivel alto o crítico' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Nivel alto o crítico' }))
+    expect(within(screen.getByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(4)
+  })
+
+  // P-02 (DD-03, DD-04): las vistas en el selector de la barra de filtros, con su conteo; la celda y el nivel son chips con «Limpiar»
+  it('las vistas van en el selector de la barra de filtros y la celda elegida es un chip; «Limpiar filtros» deja la vista', async () => {
+    fetch = mockFetch(rutas())
+    abrir('/projects/p1/risks/register?view=registro&level=alto')
+    await screen.findByRole('table', { name: 'Riesgos' })
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('radio', { name: 'Registro y matriz, 3' })).toHaveAttribute('aria-checked', 'true')
+    expect(within(barra).getByRole('radio', { name: 'Cerrados, 1' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Probabilidad 4, impacto 4/ }))
+    const aplicados = within(barra).getByRole('list', { name: 'Filtros aplicados' })
+    expect(within(aplicados).getByText('Probabilidad 4 × impacto 4')).toBeInTheDocument()
+    expect(within(aplicados).getByText('Nivel alto o crítico')).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/risks/register?view=registro')
     expect(within(screen.getByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(4)
   })
 
   it('las vistas: revisión pendiente, mis riesgos y cerrados', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    await userEvent.click(await screen.findByRole('tab', { name: 'Revisión pendiente' }))
+    await userEvent.click(await screen.findByRole('radio', { name: /^Revisión pendiente\b/ }))
     let tabla = screen.getByRole('table', { name: 'Riesgos' })
     expect(within(tabla).getByText(/R-003/)).toBeInTheDocument()
     expect(within(tabla).getByLabelText('Situación de revisión: Por revisar')).toBeInTheDocument()
     expect(within(tabla).queryByText(/R-001/)).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Mis riesgos' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Mis riesgos\b/ }))
     tabla = screen.getByRole('table', { name: 'Riesgos' })
     expect(within(tabla).getByText(/R-001/)).toBeInTheDocument()
     expect(within(tabla).queryByText(/R-003/)).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Cerrados' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Cerrados\b/ }))
     expect(within(screen.getByRole('table', { name: 'Riesgos' })).getByText(/R-004/)).toBeInTheDocument()
   })
 
@@ -184,7 +256,7 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     ])
     abrir('/risks/register')
     await waitFor(() => expect(red!.a('GET', '/objects/social_risk/records')).toHaveLength(6))
-    expect(await screen.findByRole('tab', { name: 'Registro y matriz' })).toHaveAccessibleDescription('1200 registros')
+    expect(await screen.findByRole('radio', { name: `Registro y matriz, ${numeroPe(1200)}` })).toHaveAttribute('aria-checked', 'true')
     expect(screen.queryByText(/Se muestran los primeros/)).not.toBeInTheDocument()
   })
 

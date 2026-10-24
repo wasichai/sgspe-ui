@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { APROBADORA, baseDeCompromisos, C1 } from '../../test/compromisos'
-import { APORTE, PERMISOS_DE_APROBACION, PROGRAMA } from '../../test/inversion'
+import { APORTE, APROBACION_DE_APORTES, baseDeInversion, ITEM_BIEN, ITEM_SERVICIO, PERMISOS_DE_APROBACION, PROGRAMA } from '../../test/inversion'
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
@@ -107,18 +107,23 @@ describe('S48 · aprobaciones', () => {
     fetch = mockFetch(rutas())
     red = reglas()
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })
-    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
-    expect(within(tabla).getAllByRole('row')).toHaveLength(3)
-    const fila = (await within(tabla).findByText('C-001 · Reservorio de agua para Tunas Pampa')).closest('tr') as HTMLElement
+    // la bandeja es una lista a la izquierda (P-05): cada aprobación en una tarjeta, no una fila de tabla
+    const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
+    expect(within(tabla).getAllByRole('listitem')).toHaveLength(2)
+    const fila = (await within(tabla).findByText('C-001 · Reservorio de agua para Tunas Pampa')).closest('li') as HTMLElement
     expect(within(fila).getByText('S/ 25,000.00')).toBeInTheDocument()
-    expect(within(fila).getByText('3 días')).toBeInTheDocument()
+    expect(within(fila).getByText('Espera: 3 días')).toBeInTheDocument()
     expect(
       await within(fila).findByText(
         'No: Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.'
       )
     ).toBeInTheDocument()
-    expect(within(fila).getByRole('link', { name: 'Revisar' })).toHaveAttribute('href', '/tasks/approvals/commitment/c1')
-    const otra = (await within(tabla).findByText('C-007 · Botiquín')).closest('tr') as HTMLElement
+    // elegirla la abre en el detalle, al lado: la selección va en la URL
+    expect(within(fila).getByRole('link', { name: 'C-001 · Reservorio de agua para Tunas Pampa' })).toHaveAttribute(
+      'href',
+      '/tasks/approvals?selected=commitment%3Ac1'
+    )
+    const otra = (await within(tabla).findByText('C-007 · Botiquín')).closest('li') as HTMLElement
     expect(await within(otra).findByText('Sí')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Escalamientos' }))
     expect(await screen.findByRole('heading', { name: 'Pendiente c1' })).toBeInTheDocument()
@@ -139,8 +144,8 @@ describe('S48 · aprobaciones', () => {
       }
     ])
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })
-    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
-    const fila = (await within(tabla).findByText('C-001 · Reservorio de agua para Tunas Pampa')).closest('tr') as HTMLElement
+    const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
+    const fila = (await within(tabla).findByText('C-001 · Reservorio de agua para Tunas Pampa')).closest('li') as HTMLElement
     expect(await within(fila).findByText('Sí')).toBeInTheDocument()
     expect(within(fila).queryByText(/SENIOR_APPROVAL_REQUIRED|nivel superior/)).not.toBeInTheDocument()
   })
@@ -187,11 +192,14 @@ describe('S48 · aprobaciones', () => {
       usuario: APROBADORA,
       permisos: permisos({ grievance: ['READ', 'UPDATE', 'APPROVE'], social_risk: ['READ'] })
     })
-    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
-    const fila = (await within(tabla).findByText('Q-001 · Agua y medio ambiente')).closest('tr') as HTMLElement
+    const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
+    const fila = (await within(tabla).findByText('Q-001 · Agua y medio ambiente')).closest('li') as HTMLElement
     expect(within(fila).getByText('Queja grave por resolver')).toBeInTheDocument()
     expect(await within(fila).findByText('Sí')).toBeInTheDocument()
-    expect(within(fila).getByRole('link', { name: 'Ver' })).toHaveAttribute('href', '/r/grievance/g1')
+    // la queja se elige como las demás; su decisión pide los datos de la resolución y se toma en su ficha (S36)
+    await userEvent.click(within(fila).getByRole('link', { name: 'Q-001 · Agua y medio ambiente' }))
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    expect(await within(detalle).findByRole('link', { name: 'Decidir en su ficha' })).toHaveAttribute('href', '/r/grievance/g1')
     expect(red.a('POST', '/sgspe/transition-checks')[0].cuerpo).toMatchObject({ object: 'grievance', transition: 'resolve_high_severity' })
     await userEvent.click(screen.getByRole('tab', { name: 'Escalamientos' }))
     expect(await screen.findByRole('heading', { name: 'Pendiente k1' })).toBeInTheDocument()
@@ -214,11 +222,11 @@ describe('S48 · aprobaciones', () => {
       usuario: APROBADORA,
       permisos: permisos({ grievance: ['READ', 'UPDATE', 'APPROVE'] })
     })
-    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
     expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
     expect(within(tabla).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
-    // sin enlace a una ficha que solo diría lo mismo y sin decir qué es ni de qué trata
-    const fila = within(tabla).getByText('Registro reservado').closest('tr')!
+    // sin enlace (ni para elegirla) a un detalle que solo diría lo mismo y sin decir qué es ni de qué trata
+    const fila = within(tabla).getByText('Registro reservado').closest('li')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
     expect(within(fila).queryByText(/^Queja/)).not.toBeInTheDocument()
   })
@@ -240,13 +248,13 @@ describe('S48 · aprobaciones', () => {
       usuario: APROBADORA,
       permisos: permisos({ commitment: ['READ', 'UPDATE', 'APPROVE'] })
     })
-    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
+    const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
     expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
-    const fila = within(tabla).getByText('Registro reservado').closest('tr')!
+    const fila = within(tabla).getByText('Registro reservado').closest('li')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
     expect(within(fila).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
-    // la tercera columna es la del monto
-    expect(within(fila).getAllByRole('cell')[2]).toHaveTextContent(/^—$/)
+    // la tarjeta no dice monto
+    expect(fila).not.toHaveTextContent('S/')
   })
 
   // una sonda sobre la consulta de la fila: dice cuándo terminó la relectura, sin esperar un tiempo fijo. enabled: false
@@ -274,8 +282,8 @@ describe('S48 · aprobaciones', () => {
       </>,
       { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION }
     )
-    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
-    const fila = (await within(tabla).findByText('C-007 · Botiquín')).closest('tr')!
+    const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
+    const fila = (await within(tabla).findByText('C-007 · Botiquín')).closest('li')!
     expect(within(fila).getByRole('link')).toBeInTheDocument()
     act(() => {
       focusManager.setFocused(false)
@@ -419,9 +427,9 @@ describe('S31 · aprobación de compromiso', () => {
   })
 })
 
-// F5 (spec §3.8): el aviso de aprobación de un aporte llega al alta y el de un programa al enviarlo; los dos se deciden en su ficha
+// F5 (spec §3.8): el aviso de aprobación de un aporte llega al alta y el de un programa al enviarlo; los dos se deciden en la bandeja
 describe('S48 · aprobaciones de programas y aportes', () => {
-  it('dicen su monto, si se puede decidir con la razón, y «Revisar» lleva a su ficha', async () => {
+  it('dicen su monto, si se puede decidir con la razón, y elegirlos los abre en el detalle', async () => {
     fetch = mockFetch([
       {
         path: '/auth/me/notifications',
@@ -452,8 +460,8 @@ describe('S48 · aprobaciones de programas y aportes', () => {
       }
     ])
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: PERMISOS_DE_APROBACION })
-    const tabla = await screen.findByRole('table', { name: 'Por aprobar' })
-    const aporte = (await within(tabla).findByText('AP-001')).closest('tr') as HTMLElement
+    const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
+    const aporte = (await within(tabla).findByText('AP-001')).closest('li') as HTMLElement
     expect(within(aporte).getByText('Aprobación de aporte')).toBeInTheDocument()
     expect(within(aporte).getByText('S/ 1,750.50')).toBeInTheDocument()
     expect(
@@ -461,10 +469,154 @@ describe('S48 · aprobaciones de programas y aportes', () => {
         'No: Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.'
       )
     ).toBeInTheDocument()
-    expect(within(aporte).getByRole('link', { name: 'Revisar' })).toHaveAttribute('href', '/r/social_contribution/a1')
-    const programa = (await within(tabla).findByText('PS-001 · Programa Ejemplo de agua segura')).closest('tr') as HTMLElement
+    expect(within(aporte).getByRole('link', { name: 'AP-001' })).toHaveAttribute('href', '/tasks/approvals?selected=social_contribution%3Aa1')
+    const programa = (await within(tabla).findByText('PS-001 · Programa Ejemplo de agua segura')).closest('li') as HTMLElement
     expect(within(programa).getByText('Aprobación de programa')).toBeInTheDocument()
     expect(await within(programa).findByText('Sí')).toBeInTheDocument()
-    expect(within(programa).getByRole('link', { name: 'Revisar' })).toHaveAttribute('href', '/r/social_program/sp1')
+    expect(within(programa).getByRole('link', { name: 'PS-001 · Programa Ejemplo de agua segura' })).toHaveAttribute(
+      'href',
+      '/tasks/approvals?selected=social_program%3Asp1'
+    )
+  })
+})
+
+// P-05 (flujo F-E del rediseño de UX): la lista a la izquierda y el detalle de lo elegido a la derecha, con la selección en la URL; un
+// aporte se decide ahí, con sus ítems, el tope de la campaña y «Antes de aprobar» a la vista, sin abrir su ficha. solo se ofrecen las
+// decisiones que el servidor permite, por el diálogo de transición (motivo, transition-checks, If-Match y el 412 con su aviso)
+describe('P-05 · decidir desde la bandeja', () => {
+  const RECHAZAR_NO = { name: 'reject', label: 'Rechazar', to: 'rejected', toLabel: 'Rechazado', allowed: false, reason: 'No permitido' }
+  const deAporte = (extra: MockRoute[] = [], transiciones: unknown[] = [APROBAR, RECHAZAR_NO]): MockRoute[] => [
+    ...extra,
+    {
+      path: '/auth/me/notifications',
+      body: { content: [aviso('n1', 'social_contribution', 'a1')], page: 0, size: 200, totalElements: 1, totalPages: 1 }
+    },
+    ...baseDeInversion(APROBACION_DE_APORTES),
+    { path: '/objects/social_contribution/records/a1', body: APORTE },
+    { path: '/objects/social_contribution/records/a1/transitions', body: transiciones },
+    { path: '/objects/contribution_item/records', body: pagina([ITEM_BIEN, ITEM_SERVICIO]) },
+    { path: '/objects/commitment/records', body: pagina([]) },
+    { path: '/objects/social_contribution/records', body: pagina([]) }
+  ]
+  const enSeco = (otras: Parameters<typeof espiarRed>[0] = []) =>
+    espiarRed([...otras, { method: 'POST', path: '/sgspe/transition-checks', responder: () => jsonResponse({ allowed: true, blocking: [], warnings: [] }) }])
+  const abrirBandeja = (ruta = '/tasks/approvals') =>
+    montar(<AprobacionesPage />, { ruta, camino: '/tasks/approvals', usuario: APROBACION_DE_APORTES, permisos: PERMISOS_DE_APROBACION })
+
+  it('elegir un aporte lo pone en la URL y dice al lado sus ítems, el total, el tope de la campaña y «Antes de aprobar»', async () => {
+    fetch = mockFetch(deAporte())
+    red = enSeco()
+    abrirBandeja()
+    // la ayuda dice qué es la bandeja, sin hablar de flujos ni de objetos
+    expect(screen.getByText('Lo que espera su decisión en sus proyectos.')).toBeInTheDocument()
+    expect(screen.queryByText(/pasos del flujo|no objetos/)).not.toBeInTheDocument()
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    expect(within(detalle).getByText('Elija una aprobación de la lista para ver su detalle y decidir.')).toBeInTheDocument()
+    const lista = await screen.findByRole('list', { name: 'Por aprobar' })
+    await userEvent.click(await within(lista).findByRole('link', { name: 'AP-001' }))
+    expect(ubicacion.actual).toBe('/tasks/approvals?selected=social_contribution%3Aa1')
+    expect(within(lista).getByRole('link', { name: 'AP-001' })).toHaveAttribute('aria-current', 'true')
+    expect(await within(detalle).findByRole('heading', { name: 'Aporte AP-001' })).toBeInTheDocument()
+    expect(await within(detalle).findByText('Estantes de madera')).toBeInTheDocument()
+    expect(within(detalle).getByText('Transporte a la institución')).toBeInTheDocument()
+    expect(await within(detalle).findByText('Total que se aprobará: S/ 1,750.50')).toBeInTheDocument()
+    expect(await within(detalle).findByText('Este aporte')).toBeInTheDocument()
+    expect(await within(detalle).findByRole('region', { name: 'Antes de aprobar' })).toBeInTheDocument()
+    // sin salir de la bandeja
+    expect(ubicacion.actual).toMatch(/^\/tasks\/approvals\?/)
+  })
+
+  it('aprueba el aporte con motivo desde el detalle, con la versión leída, sin navegar a la ficha; solo ofrece lo que el servidor permite', async () => {
+    fetch = mockFetch(
+      deAporte([{ method: 'POST', path: '/objects/social_contribution/records/a1/transitions/approve', body: { ...APORTE, state: 'approved' } }])
+    )
+    red = enSeco()
+    abrirBandeja('/tasks/approvals?selected=social_contribution%3Aa1')
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    const decidir = await within(detalle).findByRole('group', { name: 'Acciones del registro' })
+    await waitFor(() => expect(within(decidir).getByRole('button', { name: 'Aprobar' })).toBeEnabled())
+    // «Rechazar» existe en el flujo, pero el servidor no la permite a esta cuenta: no se ofrece
+    expect(within(detalle).queryByRole('button', { name: 'Rechazar' })).not.toBeInTheDocument()
+    const avisosAntes = red.a('GET', '/auth/me/notifications').length
+    await userEvent.click(within(decidir).getByRole('button', { name: 'Aprobar' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aprobar' })
+    await waitFor(() => expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toBeEnabled())
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    expect(await within(dialogo).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
+    expect(red.a('POST', '/objects/social_contribution/records/a1/transitions/approve')).toHaveLength(0)
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Dentro del tope')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/social_contribution/records/a1/transitions/approve')).toHaveLength(1))
+    const [llamada] = red.a('POST', '/objects/social_contribution/records/a1/transitions/approve')
+    expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00.123456Z"')
+    expect(llamada.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Dentro%20del%20tope")
+    expect(await screen.findByText('Decisión registrada.')).toBeInTheDocument()
+    expect(ubicacion.actual).toBe('/tasks/approvals?selected=social_contribution%3Aa1')
+    // la bandeja se relee: el aviso resuelto sale de la lista
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').length).toBeGreaterThan(avisosAntes))
+  })
+
+  it('un 412 al decidir dice que otra persona cambió el aporte y ofrece recargar, sin perder el motivo', async () => {
+    fetch = mockFetch(deAporte())
+    red = enSeco([{ method: 'POST', path: '/objects/social_contribution/records/a1/transitions/approve', responder: () => problema(412, 'Versión vieja') }])
+    abrirBandeja('/tasks/approvals?selected=social_contribution%3Aa1')
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    await waitFor(() => expect(within(detalle).getByRole('button', { name: 'Aprobar' })).toBeEnabled())
+    await userEvent.click(within(detalle).getByRole('button', { name: 'Aprobar' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aprobar' })
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Conforme')
+    await waitFor(() => expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toBeEnabled())
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    expect(await within(dialogo).findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
+    expect(within(dialogo).getByRole('button', { name: 'Recargar' })).toBeInTheDocument()
+    expect(within(dialogo).getByLabelText('Motivo (obligatorio)')).toHaveValue('Conforme')
+    expect(ubicacion.actual).toBe('/tasks/approvals?selected=social_contribution%3Aa1')
+  })
+
+  it('sin una decisión que el servidor permita no ofrece ninguna y lo dice', async () => {
+    fetch = mockFetch(deAporte([], [RECHAZAR_NO]))
+    red = enSeco()
+    abrirBandeja('/tasks/approvals?selected=social_contribution%3Aa1')
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    expect(await within(detalle).findByText('Su rol no tiene decisiones sobre este registro en su estado actual.')).toBeInTheDocument()
+    expect(within(detalle).queryByRole('button', { name: /Aprobar|Rechazar/ })).not.toBeInTheDocument()
+  })
+
+  it('«Volver» deja la lista sola (en el teléfono, el detalle ocupa la pantalla)', async () => {
+    fetch = mockFetch(deAporte())
+    red = enSeco()
+    abrirBandeja('/tasks/approvals?selected=social_contribution%3Aa1')
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    expect(await within(detalle).findByRole('heading', { name: 'Aporte AP-001' })).toBeInTheDocument()
+    await userEvent.click(within(detalle).getByRole('button', { name: 'Volver a la lista' }))
+    expect(ubicacion.actual).toBe('/tasks/approvals')
+    expect(within(detalle).getByText('Elija una aprobación de la lista para ver su detalle y decidir.')).toBeInTheDocument()
+  })
+
+  it('un elegido que responde 404 no dice si existe ni de quién es', async () => {
+    fetch = mockFetch(deAporte([{ path: '/objects/social_contribution/records/a9', status: 404, body: { title: 'Not Found', status: 404, detail: 'x' } }]))
+    red = enSeco()
+    abrirBandeja('/tasks/approvals?selected=social_contribution%3Aa9')
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    expect(await within(detalle).findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
+    expect(within(detalle).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+  })
+
+  it('un compromiso se decide también en el detalle, con las decisiones de su estado', async () => {
+    fetch = mockFetch(rutas())
+    red = reglas()
+    montar(<AprobacionesPage />, {
+      ruta: '/tasks/approvals?selected=commitment%3Ac7',
+      camino: '/tasks/approvals',
+      usuario: APROBADORA,
+      permisos: APROBACION
+    })
+    const detalle = screen.getByRole('region', { name: 'Detalle' })
+    expect(await within(detalle).findByRole('heading', { name: 'Botiquín' })).toBeInTheDocument()
+    expect(within(detalle).getByText('S/ 800.00')).toBeInTheDocument()
+    const decidir = await within(detalle).findByRole('group', { name: 'Acciones del registro' })
+    expect(within(decidir).getByRole('button', { name: 'Aprobar' })).toBeInTheDocument()
+    expect(within(decidir).getByRole('button', { name: 'Devolver a borrador' })).toBeInTheDocument()
+    expect(within(detalle).getByRole('link', { name: 'Abrir la ficha completa' })).toHaveAttribute('href', '/tasks/approvals/commitment/c7')
   })
 })

@@ -4,7 +4,7 @@ import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, registro } from '../../test/montar'
-import { ContenedorDePagina, EncabezadoDePagina, useTituloDeDocumento } from './Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, MasAcciones, useTituloDeDocumento } from './Pagina'
 
 // la revisión de UX, etapa 0: un solo encabezado de página (título, antetítulo, chips, conteo, una acción primaria,
 // secundarias y «Más») y el título del documento con la pantalla y el proyecto (D7)
@@ -90,6 +90,51 @@ describe('EncabezadoDePagina', () => {
   it('el título del documento puede ser otro que el visible', () => {
     montar(<EncabezadoDePagina titulo="Reservorio de agua" tituloDelDocumento="COM-2026-031 Reservorio de agua" />)
     expect(document.title).toBe('COM-2026-031 Reservorio de agua · SGSPE')
+  })
+})
+
+// un menú se cierra al elegir una de sus opciones (un botón o un enlace) y devuelve el foco a su botón; un clic en otra cosa
+// del menú no lo cierra
+describe('MasAcciones', () => {
+  it('se cierra al elegir una opción y no al pulsar otra cosa del menú', async () => {
+    let elegidas = 0
+    montar(
+      <MasAcciones etiqueta="Más vistas">
+        <button type="button" onClick={() => (elegidas += 1)}>
+          Cerrados
+        </button>
+        <p>Una nota</p>
+      </MasAcciones>
+    )
+    const boton = screen.getByRole('button', { name: 'Más vistas' })
+    await userEvent.click(boton)
+    await userEvent.click(screen.getByText('Una nota'))
+    expect(boton).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrados' }))
+    expect(elegidas).toBe(1)
+    expect(boton).toHaveAttribute('aria-expanded', 'false')
+    expect(boton).toHaveFocus()
+  })
+
+  // el menú de una fila (P-08): solo el ícono, con un nombre accesible que dice de quién son las acciones
+  it('con nombre, el botón de solo ícono y su grupo se llaman así; sin él, «Más acciones»', async () => {
+    const { unmount } = montar(
+      <MasAcciones nombre="Acciones de pad@sgspe.test">
+        <button type="button">Terminar</button>
+      </MasAcciones>
+    )
+    const boton = screen.getByRole('button', { name: 'Acciones de pad@sgspe.test' })
+    expect(boton).toHaveAttribute('title', 'Acciones de pad@sgspe.test')
+    expect(boton).not.toHaveTextContent(/\S/)
+    await userEvent.click(boton)
+    expect(screen.getByRole('group', { name: 'Acciones de pad@sgspe.test' })).toBeInTheDocument()
+    unmount()
+    montar(
+      <MasAcciones>
+        <button type="button">Terminar</button>
+      </MasAcciones>
+    )
+    expect(screen.getByRole('button', { name: 'Más acciones' })).toBeInTheDocument()
   })
 })
 

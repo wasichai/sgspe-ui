@@ -81,14 +81,27 @@ describe('S28 · lista de compromisos', () => {
       '/projects/p1/commitments?peek=commitment%3Ac1'
     )
     expect(within(tabla).getAllByText('S/ 25,000.00')).toHaveLength(3)
-    await userEvent.click(screen.getByRole('tab', { name: 'Vencidos' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Vencidos\b/ }))
     expect(await within(await screen.findByRole('table', { name: 'Compromisos' })).findByText('Taller de costura')).toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(2)
-    await userEvent.click(screen.getByRole('tab', { name: 'Bloqueados' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Bloqueados\b/ }))
     expect(screen.getByText('Taller de costura')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Por vencer' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Por vencer\b/ }))
     expect(screen.getByText('Becas escolares')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Nuevo compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new')
+  })
+
+  // hallazgo U-18 (CA-1.3.1): las vistas van en una sola fila, sin una segunda fila de pestañas
+  it('elegir «Vencidos» deja ?view=vencidos en la URL y conserva los demás parámetros', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=Taller&state=blocked')
+    await screen.findByRole('table', { name: 'Compromisos' })
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Vistas' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /^Vencidos\b/ }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?q=Taller&state=blocked&view=vencidos')
+    expect(screen.getByRole('radio', { name: /^Vencidos\b/ })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('«Míos» lista los abiertos de quien mira; «Cerrados y cancelados», los cerrados', () => {
@@ -123,10 +136,12 @@ describe('S28 · lista de compromisos', () => {
     red = conServidor()
     enProyecto()
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
-    expect(screen.getByRole('tab', { name: 'Abiertos' })).toHaveAccessibleDescription('3 registros')
-    expect(screen.getByRole('tab', { name: 'Vencidos' })).toHaveAccessibleDescription('1 registro')
-    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('1 registro')
-    expect(screen.getByRole('tab', { name: 'Candidatos' })).not.toHaveAccessibleDescription()
+    // el conteo va en el nombre de cada vista (SelectorDeVista); las que no caben, en «Más vistas», también con su conteo
+    expect(await screen.findByRole('radio', { name: 'Abiertos, 3' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Vencidos, 1' })).toHaveAttribute('aria-checked', 'false')
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.getByRole('button', { name: 'Cerrados y cancelados, 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Candidatos' })).toHaveTextContent(/^Candidatos$/)
     expect(screen.getByText('3 compromisos')).toBeInTheDocument()
     expect(within(tabla).getByText('C-002')).toHaveClass('font-sg-mono')
   })
@@ -137,10 +152,34 @@ describe('S28 · lista de compromisos', () => {
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=inexistente')
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
     expect(screen.getByText('Sin los filtros hay 3.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Quitar Contiene «inexistente»' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quitar el filtro Contiene «inexistente»' })).toBeInTheDocument()
     await userEvent.click(screen.getAllByRole('button', { name: 'Limpiar filtros' })[0])
     expect(ubicacion.actual).toBe('/projects/p1/commitments')
     expect(await screen.findByRole('table', { name: 'Compromisos' })).toBeInTheDocument()
+  })
+
+  // hallazgo U-22 (CA-1.4.1 a CA-1.4.3): la vista, la búsqueda y el estado van en la barra de filtros, con un chip por filtro
+  it('quitar un chip quita solo su parámetro; «Limpiar filtros» deja solo la vista; «Filtros (N)» cuenta los chips', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=vencidos&q=Taller&state=blocked')
+    const barra = await screen.findByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('radiogroup', { name: 'Vistas' })).toBeInTheDocument()
+    expect(within(barra).getByRole('searchbox', { name: 'Buscar por código o título' })).toHaveValue('Taller')
+    const chips = within(within(barra).getByRole('list', { name: 'Filtros aplicados' })).getAllByRole('listitem')
+    expect(chips).toHaveLength(2)
+    expect(within(barra).getByRole('button', { name: `Filtros (${chips.length})` })).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('button', { name: /^Quitar el filtro Estado:/ }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos&q=Taller')
+    expect(screen.getByRole('button', { name: 'Filtros (1)' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros (1)' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Filtros' })
+    await userEvent.selectOptions(within(drawer).getByLabelText('Estado'), 'blocked')
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos&q=Taller&state=blocked')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Ver resultados' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Filtros' })).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos')
+    expect(screen.queryByRole('list', { name: 'Filtros aplicados' })).not.toBeInTheDocument()
   })
 
   it('cada vista es una consulta del servidor: «Abiertos» pide su página con state_not, y cada vista cuenta con una página de uno', async () => {
@@ -173,9 +212,11 @@ describe('S28 · lista de compromisos', () => {
       page: '0',
       size: '25'
     })
-    await userEvent.click(screen.getByRole('tab', { name: 'Cerrados y cancelados' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Cerrados y cancelados\b/ }))
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('0 registros')
+    // la vista elegida del menú entra a la fila, con su conteo
+    expect(screen.getByRole('radio', { name: 'Cerrados y cancelados, 0' })).toHaveAttribute('aria-checked', 'true')
     expect(consultasA(red).some((c) => c.state === 'closed,cancelled' && c.size === '25')).toBe(false)
   })
 
@@ -210,7 +251,148 @@ describe('S28 · lista de compromisos', () => {
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
     expect(within(tabla).getAllByRole('row')).toHaveLength(3)
     expect(within(tabla).queryByText('Becas escolares')).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Cerrados y cancelados' })).toHaveAccessibleDescription('1 registro')
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.getByRole('button', { name: 'Cerrados y cancelados, 1' })).toBeInTheDocument()
+    expect(consultasA(red)).toEqual([])
+  })
+
+  // flujo F-C (02-arquitectura-de-informacion §6, issue #77): Compromisos → «Vencidos» → «Más filtros» → Grupo de interés → chip,
+  // con la URL para compartir. el grupo se busca por el nombre que lee quien mira; una persona sin nombres legibles dice «Persona
+  // registrada», como su chip
+  const GRUPOS: MockRoute[] = [
+    {
+      path: '/objects/stakeholder/records',
+      body: pagina([registro('s1', { project: 'p1', organization: 'o-junta' }), registro('s2', { project: 'p1', person: 'pe2' })])
+    },
+    { path: '/objects/stakeholder/records/s1', body: registro('s1', { project: 'p1', organization: 'o-junta' }) },
+    { path: '/objects/organization/records/o-junta', body: registro('o-junta', { name: 'Junta de regantes' }) },
+    { path: '/objects/person/records/pe2', body: registro('pe2', {}) },
+    { path: '/objects/stakeholder/records/s1/related/commitment_stakeholder', body: pagina([C1, C2, C4]) }
+  ]
+
+  it('F-C: en «Vencidos» con un estado, «Más filtros» busca el grupo de interés, deja ?stakeholder= y su chip', async () => {
+    fetch = mockFetch(rutas(GRUPOS))
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=vencidos&state=blocked')
+    await screen.findByRole('table', { name: 'Compromisos' })
+    await userEvent.click(within(screen.getByRole('group', { name: 'Filtros' })).getByRole('button', { name: 'Más filtros' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Más filtros' })
+    const grupos = await within(drawer).findByRole('list', { name: 'Grupos de interés' })
+    expect(await within(grupos).findByRole('button', { name: 'Junta de regantes' })).toBeInTheDocument()
+    expect(await within(grupos).findByRole('button', { name: 'Persona registrada' })).toBeInTheDocument()
+    // los grupos que lee quien mira, del proyecto
+    expect(consultasA(red, 'stakeholder')).toContainEqual(expect.objectContaining({ project: 'p1' }))
+    const buscar = within(drawer).getByRole('searchbox', { name: 'Buscar el grupo de interés' })
+    await userEvent.type(buscar, 'junta')
+    expect(within(grupos).queryByRole('button', { name: 'Persona registrada' })).not.toBeInTheDocument()
+    await userEvent.click(within(grupos).getByRole('button', { name: 'Junta de regantes' }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos&state=blocked&stakeholder=s1')
+    expect(within(grupos).getByRole('button', { name: 'Junta de regantes' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.type(buscar, 'xyz')
+    expect(within(drawer).getByText('Ningún grupo de interés coincide con la búsqueda.')).toBeInTheDocument()
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Ver resultados' }))
+    // el chip es el mismo que deja la ficha del grupo; la vista y el estado siguen filtrando sus compromisos
+    const chips = within(screen.getByRole('list', { name: 'Filtros aplicados' })).getAllByRole('listitem')
+    expect(chips.map((c) => c.textContent)).toContain('Grupo de interés: Junta de regantes')
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    expect(within(tabla).getAllByRole('row')).toHaveLength(2)
+    expect(within(tabla).getByText('Taller de costura')).toBeInTheDocument()
+  })
+
+  it('en el alcance global, «Más filtros» ofrece los grupos de todos los proyectos que lee', async () => {
+    fetch = mockFetch(rutas(GRUPOS))
+    red = conServidor()
+    montar(<CompromisosPage />, { ruta: '/commitments', camino: '/commitments', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await screen.findByRole('table', { name: 'Compromisos' })
+    await userEvent.click(screen.getByRole('button', { name: 'Más filtros' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Más filtros' })
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Junta de regantes' }))
+    expect(ubicacion.actual).toBe('/commitments?stakeholder=s1')
+    expect(consultasA(red, 'stakeholder').length).toBeGreaterThan(0)
+    expect(consultasA(red, 'stakeholder').every((c) => !('project' in c))).toBe(true)
+  })
+
+  it('sin leer grupos de interés, la lista no ofrece «Más filtros»', async () => {
+    const { stakeholder: _sinGrupos, ...sinGrupos } = EQUIPO_DE_COMPROMISOS.objects
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(permisos(sinGrupos))
+    await screen.findByRole('table', { name: 'Compromisos' })
+    expect(screen.queryByRole('button', { name: 'Más filtros' })).not.toBeInTheDocument()
+  })
+
+  // 05-especificacion §1.6 y DD-05: el código, el título y el vencimiento se ordenan en el servidor; el orden dura la visita
+  it('el código, el título y el vencimiento ordenan en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+    const muchos = Array.from({ length: 30 }, (_, i) =>
+      registro(
+        `m${i}`,
+        {
+          ...C1.attributes,
+          code: `C-${String(i + 100)}`,
+          title: `Compromiso ${String(i).padStart(2, '0')}`,
+          due_date: `2026-11-${String((i % 28) + 1).padStart(2, '0')}`
+        },
+        { state: 'in_progress' }
+      )
+    )
+    fetch = mockFetch(rutas())
+    red = conServidor([], muchos)
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?page=1')
+    const tabla = () => screen.getByRole('table', { name: 'Compromisos' })
+    await screen.findByRole('table', { name: 'Compromisos' })
+    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
+    // la prioridad de columnas (DD-05): el responsable y el monto, desde xl
+    expect(within(tabla()).getByRole('columnheader', { name: 'Responsable' })).toHaveClass('hidden', 'xl:table-cell')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Monto' })).toHaveClass('hidden', 'xl:table-cell')
+    // el estado, la situación y el monto no se ordenan
+    for (const c of ['Estado', 'Plazo', 'Monto']) expect(within(tabla()).queryByRole('button', { name: c })).not.toBeInTheDocument()
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0', size: '25' })))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments')
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('C-100'))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'desc' })))
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('C-129'))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'descending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Compromiso' }))
+    await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'title', dir: 'asc' })))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Compromiso' })).toHaveAttribute('aria-sort', 'ascending')
+  })
+
+  it('con el filtro de un grupo de interés, el orden es del portal por la misma columna, estable, y vuelve a la primera página', async () => {
+    const delGrupo = [
+      registro('g1', { ...C1.attributes, code: 'C-003', title: 'Óvalo deportivo', due_date: '2026-12-01' }, { state: 'in_progress' }),
+      registro('g2', { ...C1.attributes, code: 'C-001', title: 'Zanja de riego', due_date: null }, { state: 'in_progress' }),
+      registro('g3', { ...C1.attributes, code: 'C-002', title: 'Aula comunal', due_date: '2026-10-15' }, { state: 'in_progress' })
+    ]
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/stakeholder/records/s1', body: registro('s1', { project: 'p1', name: 'Junta directiva' }) },
+        { path: '/objects/stakeholder/records/s1/related/commitment_stakeholder', body: pagina(delGrupo) }
+      ])
+    )
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?stakeholder=s1&page=0')
+    const tabla = () => screen.getByRole('table', { name: 'Compromisos' })
+    const codigos = () =>
+      within(tabla())
+        .getAllByRole('row')
+        .slice(1)
+        .map((f) => within(f).getAllByRole('cell')[0].textContent)
+    await screen.findByRole('table', { name: 'Compromisos' })
+    // por el vencimiento, de antes a después; el que no tiene fecha, al final
+    expect(codigos()).toEqual(['C-002', 'C-003', 'C-001'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Vence' }))
+    expect(codigos()).toEqual(['C-003', 'C-002', 'C-001'])
+    // el título con el colador del español: la «Ó» va con la «O», no al final
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Compromiso' }))
+    expect(codigos()).toEqual(['C-002', 'C-003', 'C-001'])
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    expect(codigos()).toEqual(['C-001', 'C-002', 'C-003'])
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?stakeholder=s1')
+    // el servidor no ordena lo que filtra el portal
     expect(consultasA(red)).toEqual([])
   })
 
@@ -233,6 +415,9 @@ describe('S28 · candidatos', () => {
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
     const region = await screen.findByRole('region', { name: 'Candidatos a compromiso' })
     expect(await within(region).findByText('Mejorar el camino al anexo Huallpa')).toBeInTheDocument()
+    // los candidatos no se filtran: la barra solo trae la vista
+    expect(screen.getByRole('radio', { name: 'Candidatos' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
     expect(within(region).getByText('Propuesto por la IA · confianza 82 %')).toBeInTheDocument()
     expect(within(region).getByText('Restringido')).toBeInTheDocument()
     // la cita que sí se lee se dice tal cual
@@ -261,6 +446,8 @@ describe('S28 · candidatos', () => {
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=candidatos')
     await userEvent.click(await screen.findByRole('button', { name: 'Revisar' }))
     const panel = await screen.findByRole('dialog')
+    // hallazgo U-07 (DD-07): la fecha sugerida se propone como dd/mm/aaaa
+    expect(within(panel).getByLabelText('Fecha de vencimiento')).toHaveValue('15/12/2026')
     await userEvent.type(within(panel).getByLabelText('Código del compromiso'), 'C-010')
     await userEvent.type(within(panel).getByLabelText('Monto'), '-5')
     await userEvent.click(within(panel).getByRole('button', { name: 'Aceptar y crear borrador' }))
@@ -339,10 +526,12 @@ describe('S28 · candidatos', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
     expect(await within(panel).findByText('Escriba lo que se propuso')).toBeInTheDocument()
     await userEvent.type(within(panel).getByLabelText('Lo que se propuso'), 'Instalar dos pozos')
+    // hallazgo U-07 (DD-07): la fecha sugerida se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+    await userEvent.type(within(panel).getByLabelText('Fecha sugerida'), '20/10/2026')
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(red!.a('POST', '/sgspe/commitment-candidates')).toHaveLength(1))
     const [llamada] = red.a('POST', '/sgspe/commitment-candidates')
-    expect(llamada.cuerpo).toEqual({ attributes: { proposed_text: 'Instalar dos pozos', project: 'p1' } })
+    expect(llamada.cuerpo).toEqual({ attributes: { proposed_text: 'Instalar dos pozos', suggested_due_date: '2026-10-20', project: 'p1' } })
     expect(llamada.cabeceras.get('Idempotency-Key')).toBeTruthy()
   })
 

@@ -7,6 +7,8 @@ export const ES_ALERTAS = {
   vistas: { triaje: 'Por triar', activas: 'Confirmadas', todas: 'Todas', cerradas: 'Cerradas' },
   columnas: { detectada: 'Detectada', titulo: 'Alerta', severidad: 'Severidad', regla: 'Origen', estado: 'Estado' },
   aMano: 'Registrada a mano',
+  buscar: 'Buscar por título',
+  filtroBusqueda: 'Contiene «{{texto}}»',
   ficha: {
     volver: 'Volver a las alertas',
     noExiste: 'Esta alerta no existe o no es de sus proyectos.',
@@ -47,6 +49,8 @@ export const EN_ALERTAS: typeof ES_ALERTAS = {
   vistas: { triaje: 'To triage', activas: 'Confirmed', todas: 'All', cerradas: 'Closed' },
   columnas: { detectada: 'Detected', titulo: 'Alert', severidad: 'Severity', regla: 'Origin', estado: 'State' },
   aMano: 'Recorded by hand',
+  buscar: 'Search by title',
+  filtroBusqueda: 'Contains “{{texto}}”',
   ficha: {
     volver: 'Back to the alerts',
     noExiste: 'This alert does not exist or is not in your projects.',

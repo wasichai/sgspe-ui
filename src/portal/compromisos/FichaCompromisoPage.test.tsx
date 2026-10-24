@@ -8,6 +8,7 @@ import { definicion, montar, pagina, registro, ubicacion, workflow } from '../..
 import { espiarRed, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaCompromisoPage } from './FichaCompromisoPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -66,9 +67,54 @@ describe('S29 · ficha de compromiso', () => {
     const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
     await waitFor(() => expect(cumplimiento).toBeDisabled())
     expect(cumplimiento).toHaveAccessibleDescription('Falta una entrega con conformidad')
-    // las demás transiciones van en «Más acciones» (rediseño de UX, 2026-10-20)
-    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
-    expect(screen.getByRole('button', { name: 'Bloquear' })).toBeEnabled()
+    // CabeceraDeFicha (DD-02): a la vista, las dos secundarias de la ficha; las demás transiciones, en «Más acciones»
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    expect(within(acciones).getByRole('button', { name: 'Editar el compromiso' })).toBeInTheDocument()
+    expect(within(acciones).getByRole('button', { name: 'Informar riesgo de retraso' })).toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Bloquear' })).toBeEnabled()
+  })
+
+  // U-25 y U-27 del rediseño (DD-06): la cabecera dice tipo, código y categoría en la letra del texto, y el estado del flujo
+  // no va en sus chips (lo dicen el panel de decisión y el camino); lo que falta para la siguiente acción, bajo las acciones
+  it('la cabecera lleva el antetítulo en sans, sin el estado, y dice lo que falta para la primaria', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText('Compromiso · C-001 · Material')).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).queryByText('En ejecución')).not.toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Registrar cumplimiento' })
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByText('Falta una entrega con conformidad')).toBeVisible()
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+  })
+
+  // U-02 y U-03 del rediseño (DD-02): la primaria es la siguiente acción del flujo aunque el servidor la liste después, y la
+  // que cancela va en «Más acciones», lejos de la primaria
+  it('la primaria es «Registrar cumplimiento», la siguiente acción, y cancelar va en «Más acciones»', async () => {
+    fetch = mockFetch(
+      rutas(C1, [
+        {
+          path: '/objects/commitment/records/c1/transitions',
+          body: [
+            { name: 'block', label: 'Bloquear', to: 'blocked', toLabel: 'Bloqueado', allowed: true, reason: null },
+            { name: 'cancel', label: 'Cancelar', to: 'cancelled', toLabel: 'Cancelado', allowed: true, reason: null },
+            { name: 'register_fulfillment', label: 'Registrar cumplimiento', to: 'fulfilled', toLabel: 'Cumplido', allowed: true, reason: null }
+          ]
+        }
+      ])
+    )
+    abrir()
+    const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    expect(cumplimiento).toHaveAttribute('data-variant', 'primary')
+    expect(within(acciones).queryByRole('button', { name: /^Cancelar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    const mas = screen.getByRole('group', { name: 'Más acciones' })
+    // con las dos secundarias de la ficha a la vista, «Bloquear» va en «Más acciones», como secundaria
+    expect(within(mas).getByRole('button', { name: 'Bloquear' })).toHaveAttribute('data-variant', 'secondary')
+    expect(within(mas).getByRole('button', { name: /^Cancelar/ })).toBeInTheDocument()
   })
 
   // rediseño de UX (2026-10-20): sin monto, los chips no terminan en un «—» suelto
@@ -85,7 +131,8 @@ describe('S29 · ficha de compromiso', () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/delivery/records', body: pagina([], { totalElements: 2 }) }]))
     abrir()
     await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })
-    const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
+    const camino = await abrirCamino()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(within(camino).getByText('En ejecución').closest('li')).toHaveAttribute('aria-current', 'step')
     const siguiente = screen.getByRole('group', { name: 'Siguiente acción' })
     expect(await within(siguiente).findByText('Registrar cumplimiento')).toBeInTheDocument()

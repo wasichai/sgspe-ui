@@ -1,4 +1,4 @@
-import { useAvailableTransitions } from '@wasichai/workflow'
+import { useAvailableTransitions } from '../datos/flujos'
 import type { SiguienteAccion } from '../componentes/PanelDeDecision'
 import type { Registro } from '../datos/registros'
 import { useComprobacion } from '../transiciones/api'

@@ -2,11 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Cargando, Restringido, Vacio } from '../componentes/Estados'
@@ -285,9 +286,19 @@ function EntregaDrawer({
       {lista ? (
         <form id="entrega" className="space-y-3" onSubmit={(e) => void guardar(e)}>
           {escribible('delivery_date') ? (
-            <Campo etiqueta={t('entregas.campos.delivery_date')} error={error('delivery_date')}>
-              {(p) => <Input {...p} type="date" {...register('delivery_date')} />}
-            </Campo>
+            <Controller
+              control={control}
+              name="delivery_date"
+              render={({ field }) => (
+                <CampoFecha
+                  etiqueta={t('entregas.campos.delivery_date')}
+                  requerido
+                  error={error('delivery_date')}
+                  valor={field.value || null}
+                  alCambiar={(v) => field.onChange(v ?? '')}
+                />
+              )}
+            />
           ) : null}
           {escribible('place') ? (
             <Campo etiqueta={t('entregas.campos.place')} error={error('place')}>

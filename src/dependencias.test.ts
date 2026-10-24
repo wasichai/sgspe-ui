@@ -9,10 +9,10 @@ const paquete = leer('package.json')
 
 describe('dependencias de F2 y F3', () => {
   it.each([
-    ['@wasichai/gis', '1.0.0'],
-    ['@wasichai/workflow', '1.0.0'],
-    ['@wasichai/documents', '1.0.0'],
-    ['@wasichai/automation', '1.0.0'],
+    ['@wasichai/gis', '1.1.0'],
+    ['@wasichai/workflow', '1.1.0'],
+    ['@wasichai/documents', '1.1.0'],
+    ['@wasichai/automation', '1.1.0'],
     ['maplibre-gl', '6.10.0'],
     ['echarts', '6.1.0'],
     ['react-hook-form', '7.89.0'],
@@ -42,18 +42,18 @@ describe('dependencias de F2 y F3', () => {
         .filter(([nombre]) => nombre.startsWith('@wasichai/'))
         .map(([, v]) => v)
     )
-    expect([...versiones]).toEqual(['1.0.0'])
+    expect([...versiones]).toEqual(['1.1.0'])
   })
 })
 
 // F8 (plan 8.3, decisión 8): la extensión oficial de Markdown de tiptap y los paquetes que el editor importa, fijados en la
 // misma versión que trae @wasichai/documents
 describe('dependencias de F8', () => {
-  it.each(['@tiptap/markdown', '@tiptap/core', '@tiptap/pm', '@tiptap/react', '@tiptap/starter-kit'])('%s va fijada en 3.31.3', (nombre) => {
-    expect(paquete.dependencies[nombre]).toBe('3.31.3')
+  it.each(['@tiptap/markdown', '@tiptap/core', '@tiptap/pm', '@tiptap/react', '@tiptap/starter-kit'])('%s va fijada en 3.32.0', (nombre) => {
+    expect(paquete.dependencies[nombre]).toBe('3.32.0')
   })
 
   it('es la versión de tiptap que trae @wasichai/documents', () => {
-    expect(leer('node_modules/@wasichai/documents/package.json').dependencies['@tiptap/core']).toBe('3.31.3')
+    expect(leer('node_modules/@wasichai/documents/package.json').dependencies['@tiptap/core']).toBe('3.32.0')
   })
 })

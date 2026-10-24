@@ -94,6 +94,8 @@ describe('evidencias de un registro', () => {
     await userEvent.selectOptions(within(panel).getByLabelText('Tipo de evidencia'), 'FOTO')
     await userEvent.selectOptions(within(panel).getByLabelText('Clasificación'), 'INTERNA')
     await userEvent.type(within(panel).getByLabelText('Título'), 'Acta firmada')
+    // hallazgo U-07 (DD-07): la fecha del documento se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+    await userEvent.type(within(panel).getByLabelText('Fecha del documento'), '20/10/2026')
     await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Sustenta la entrega')
     await userEvent.click(within(panel).getByRole('button', { name: 'Subir evidencia' }))
     expect(await within(panel).findByRole('alert')).toBeInTheDocument()
@@ -110,6 +112,7 @@ describe('evidencias de un registro', () => {
         evidence_type: 'FOTO',
         classification: 'INTERNA',
         title: 'Acta firmada',
+        document_date: '2026-10-20',
         people_identifiable: false,
         captured_at: '2026-10-07T19:03:11.000Z',
         project: 'p1'

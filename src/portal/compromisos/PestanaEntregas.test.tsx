@@ -242,6 +242,23 @@ describe('S32 · entregas', () => {
     expect(await within(seccion).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
   })
 
+  // hallazgo U-07 (DD-07): la fecha de la entrega se muestra y se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+  it('corregir la fecha escrita como 20/10/2026 manda delivery_date 2026-10-20', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([{ method: 'PATCH', path: '/sgspe/deliveries/dl1', responder: () => jsonResponse({ delivery: ENTREGA, commitment: C1 }) }])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Corregir' }))
+    const panel = await screen.findByRole('dialog')
+    const fecha = within(panel).getByLabelText('Fecha de la entrega')
+    expect(fecha).toHaveValue('01/10/2026')
+    await userEvent.clear(fecha)
+    await userEvent.type(fecha, '20/10/2026')
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Fecha mal escrita')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar entrega' }))
+    await waitFor(() => expect(red!.a('PATCH', '/sgspe/deliveries/dl1')).toHaveLength(1))
+    expect(red.a('PATCH', '/sgspe/deliveries/dl1')[0].cuerpo).toEqual({ attributes: { delivery_date: '2026-10-20' } })
+  })
+
   it('corregir manda solo lo cambiado con If-Match; DELIVERY_FROZEN dice su texto', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed([

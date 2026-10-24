@@ -10,6 +10,7 @@ import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { AcuerdosPage } from './AcuerdosPage'
 import { FichaAcuerdoPage } from './FichaAcuerdoPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 // S33 (WF-I, RF-AGR-001 a RF-AGR-003): la lista con su vigencia, el alta con motivo (requiresReason), y la ficha con sus
 // cláusulas y compromisos, partes, titular, asamblea y predios; registrar la vigencia de una servidumbre sin predios se avisa
@@ -153,6 +154,38 @@ describe('S33 · acuerdos', () => {
     expect(red.a('GET', '/objects/agreement/records').map((l) => l.ruta)).toContain('/objects/agreement/records?sort=code&dir=asc&page=1&size=25')
   })
 
+  // 05-especificacion §1.6 y DD-05: el código y el vencimiento se ordenan en el servidor; el orden dura la visita
+  it('el acuerdo (por su código) y el vencimiento ordenan en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+    const muchos = Array.from({ length: 27 }, (_, i) =>
+      registro(`ag${i + 10}`, {
+        ...SERVIDUMBRE.attributes,
+        code: `A-${100 + i}`,
+        title: `Acuerdo ${i}`,
+        expiry_date: `2027-01-${String(27 - i).padStart(2, '0')}`
+      })
+    )
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('agreement', muchos)])
+    montar(<AcuerdosPage />, { ruta: '/agreements?page=1', camino: '/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
+    const tabla = () => screen.getByRole('table', { name: 'Acuerdos' })
+    await screen.findByRole('table', { name: 'Acuerdos' })
+    expect(within(tabla()).getByRole('columnheader', { name: 'Acuerdo' })).toHaveAttribute('aria-sort', 'ascending')
+    // el tipo, desde xl (DD-05); el estado y la vigencia no se ordenan
+    expect(within(tabla()).getByRole('columnheader', { name: 'Tipo' })).toHaveClass('hidden', 'xl:table-cell')
+    for (const c of ['Estado', 'Vigencia']) expect(within(tabla()).queryByRole('button', { name: c })).not.toBeInTheDocument()
+    const rutasPedidas = () => red!.a('GET', '/objects/agreement/records').map((l) => l.ruta)
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Vence' }))
+    await waitFor(() => expect(rutasPedidas()).toContain('/objects/agreement/records?sort=expiry_date&dir=asc&page=0&size=25'))
+    expect(ubicacion.actual).toBe('/agreements')
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
+    expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('A-126')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Acuerdo' })).not.toHaveAttribute('aria-sort')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Acuerdo' }))
+    await waitFor(() => expect(rutasPedidas()).toContain('/objects/agreement/records?sort=code&dir=asc&page=0&size=25'))
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('A-100'))
+  })
+
   it('lista el acuerdo con su vigencia y lo registra con el proyecto fijo y el motivo', async () => {
     fetch = mockFetch(rutas([{ method: 'POST', path: '/objects/agreement/records', status: 201, body: registro('ag9', { project: 'p1' }) }]))
     red = espiarRed()
@@ -182,7 +215,8 @@ describe('S33 · acuerdos', () => {
       usuario: GERENCIA_SOCIAL,
       permisos: EQUIPO
     })
-    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(await abrirCamino()).toBeInTheDocument()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(screen.getByRole('group', { name: 'Vencimiento' })).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
     expect(
@@ -351,5 +385,43 @@ describe('S33 · acuerdos', () => {
     const [cambio] = red.a('PUT', '/objects/agreement/records/ag1')
     expect(cambio.cuerpo).toMatchObject({ attributes: { title: 'Servidumbre del acceso norte y sur' } })
     expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Corrige%20el%20t%C3%ADtulo")
+  })
+})
+
+// P-09 del rediseño de UX (DD-02 y DD-06; U-03, U-25, U-26 y U-27): el antetítulo en sans, el estado una sola vez (en el panel
+// de decisión), una sola primaria, terminar en «Más acciones» y lo acordado y la vigencia en sus secciones, con lo vacío plegado
+describe('S33 · cabecera y cuerpo de la ficha (P-09)', () => {
+  it('una sola primaria, terminar en «Más acciones», el estado una sola vez y las fechas sin dato plegadas', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/agreement/records/ag1', body: { ...SERVIDUMBRE, attributes: { ...SERVIDUMBRE.attributes, expiry_date: null } } },
+        {
+          path: '/objects/agreement/records/ag1/transitions',
+          body: [
+            { name: 'terminate', label: 'Terminar', to: 'terminated', toLabel: 'Terminado', allowed: true, reason: null },
+            { name: 'activate', label: 'Registrar vigencia', to: 'active', toLabel: 'Vigente', allowed: true, reason: null }
+          ]
+        }
+      ])
+    )
+    montar(<FichaAcuerdoPage />, { ruta: '/projects/p1/agreements/ag1', ...FICHA })
+    const titulo = await screen.findByRole('heading', { name: 'Servidumbre del acceso norte', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText(/^Acuerdo · A-001/)).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).queryByText('En negociación')).not.toBeInTheDocument()
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByRole('button', { name: 'Registrar vigencia' })).toHaveAttribute('data-variant', 'primary')
+    // a la vista, una sola primaria: «Vincular» confirma el formulario plegado de un predio
+    expect([...document.querySelectorAll('[data-variant="primary"]')].filter((b) => !b.closest('details:not([open])'))).toHaveLength(1)
+    expect(within(acciones).queryByRole('button', { name: /^Terminar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Terminar/ })).toBeInTheDocument()
+    expect(await screen.findAllByText('En negociación', { selector: '[data-estado]' })).toHaveLength(1)
+    expect(screen.getByRole('region', { name: 'Qué se acordó' })).toHaveTextContent('Paso por el predio comunal')
+    const vigencia = screen.getByRole('region', { name: 'Vigencia' })
+    expect(within(vigencia).getByText('Firmado')).toBeInTheDocument()
+    expect(within(vigencia).queryByText('Hasta')).not.toBeInTheDocument()
+    await userEvent.click(within(vigencia).getByRole('button', { name: /^Mostrar (el campo|los \d+ campos) sin dato$/ }))
+    expect(within(vigencia).getByText('Hasta')).toBeInTheDocument()
   })
 })

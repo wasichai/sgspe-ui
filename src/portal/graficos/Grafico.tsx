@@ -5,7 +5,7 @@ import { LimiteDeError } from '../componentes/LimiteDeError'
 import { NS } from '../i18n'
 
 // el Chart del portal (design-system.md §5, dashboards.md §9): una envoltura delgada de ECharts, cargada bajo demanda,
-// con la descripción ARIA y los patrones de relleno activados, y siempre con su tabla "Ver datos" debajo (RQ-DSH-035):
+// con la descripción ARIA activada y barras de color sólido (DD-15), y siempre con su tabla "Ver datos" debajo (RQ-DSH-035):
 // el tooltip nunca es la única forma de leer un valor. si el chunk de ECharts no baja o init lanza, un aviso ocupa el lugar
 // del gráfico y la tabla queda abierta. cambiar de biblioteca es cambiar este archivo (ASM-046)
 export interface DatosDelGrafico {

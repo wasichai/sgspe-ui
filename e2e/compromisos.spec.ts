@@ -144,7 +144,7 @@ test.beforeEach(async ({ page }) => {
   await prepararApi(page)
 })
 
-// etapa 2 de la revisión de UX: desde el inicio «Mi día» se llega a la ficha de un compromiso a cargo en un clic
+// etapa 2 de la revisión de UX (P-01 del rediseño): desde «Lo que me toca hoy» se llega a la ficha de un compromiso a cargo en un clic
 test('el inicio lleva a la ficha de un compromiso en un clic', async ({ page }) => {
   await prepararCompromisos(page)
   // la lista de los compromisos a su cargo (las rutas registradas después ganan a las de prepararCompromisos)
@@ -153,7 +153,7 @@ test('el inicio lleva a la ficha de un compromiso en un clic', async ({ page }) 
   )
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
-  await page.getByRole('region', { name: 'Su trabajo' }).getByRole('link', { name: /C-001/ }).click()
+  await page.getByRole('region', { name: 'Lo que me toca hoy' }).getByRole('link', { name: /C-001/ }).click()
   await expect(page.getByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeVisible()
   await expect(page).toHaveURL(/\/projects\/p1\/commitments\/c1$/)
 })
@@ -229,7 +229,7 @@ test('la campana cuenta los avisos sin leer y abrir uno lleva a la ficha del reg
   expect(escrituras.map((r) => new URL(r.url()).pathname)).toContain('/api/auth/me/notifications/n1/read')
 })
 
-// etapa 5 de la revisión de UX: «Crear relacionado» desde la interacción abre el alta con ella como origen, y el compromiso
+// etapa 5 de la revisión de UX: «Registrar compromiso» desde la interacción abre el alta con ella como origen, y el compromiso
 // creado llega a su ficha con el origen enlazado en «De dónde viene»
 test('desde una interacción se crea el compromiso con ella como origen y la ficha lo enlaza', async ({ page }) => {
   const campo = (name: string, extra: Record<string, unknown> = {}) => ({ name, label: name, type: 'TEXT', editable: true, visible: true, ...extra })
@@ -303,8 +303,8 @@ test('desde una interacción se crea el compromiso con ella como origen y la fic
   })
 
   await page.goto('/projects/p1/engagements/e1')
-  await page.getByRole('button', { name: 'Crear relacionado' }).click()
-  await page.getByRole('link', { name: 'Registrar compromiso' }).click()
+  // con CabeceraDeFicha, el compromiso es una acción de la cabecera (P-09 del rediseño de UX)
+  await page.getByRole('group', { name: 'Acciones del registro' }).getByRole('link', { name: 'Registrar compromiso' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/commitments\/new\?origin_engagement=e1$/)
   // el origen viene propuesto: la interacción, sin buscarla
   await expect(page.getByRole('heading', { name: 'Nuevo compromiso', level: 1 })).toBeVisible()

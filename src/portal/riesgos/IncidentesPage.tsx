@@ -1,4 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
+import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Tabs, Td, Th } from '@wasichai/ui'
@@ -20,6 +21,7 @@ import { texto, usePuedeEditar, useRegistro, useRegistros, useTodos, type Regist
 import { fechaPe, fechaYHoraPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { opcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // los incidentes (screens.md §9, ficha de incidente; WF-M): la lista del proyecto, paginada en el servidor (D10 de la revisión de
 // UX), con «Registrar incidente» y la ficha con qué pasó,
@@ -44,7 +46,10 @@ export function IncidentesPage() {
     <section className="mx-auto max-w-[1440px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{t('incidentes.titulo')}</h1>
-        {escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <PaginasDeRiesgos actual="incidents" />
+          {escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : null}
+        </div>
       </div>
       {incidentes.isPending ? (
         <Cargando />
@@ -252,12 +257,12 @@ function QueGenero({ incidente }: { incidente: Registro }) {
   const quejas = useTodos('grievance', { incident: incidente.id })
   const senales = useTodos('early_warning_signal', { incident: incidente.id })
   return (
-    <aside aria-label={t('incidentes.ficha.queGenero')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion elemento="aside" etiqueta={t('incidentes.ficha.queGenero')} className="space-y-3 text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('incidentes.ficha.queGenero')}</h2>
       <Generados titulo={t('incidentes.ficha.riesgos')} objeto="social_risk" consulta={riesgos} />
       <Generados titulo={t('incidentes.ficha.quejas')} objeto="grievance" consulta={quejas} />
       <Generados titulo={t('incidentes.ficha.senales')} objeto="early_warning_signal" consulta={senales} />
-    </aside>
+    </Seccion>
   )
 }
 

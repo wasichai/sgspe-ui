@@ -17,6 +17,21 @@ process.env.TZ = 'America/Lima'
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
+// la ficha a la que lleva el alta puede quedar en espera (React Router navega en una transición): mientras espera, la URL ya
+// cambió y la pantalla del alta sigue montada, como cuando la máquina va lenta y se vuelve atrás antes de que se dibuje
+const ficha = vi.hoisted(() => ({ espera: null as Promise<never> | null }))
+vi.mock('./FichaInteraccionPage', async (original) => {
+  const { use, createElement } = await import('react')
+  const m = await original<typeof import('./FichaInteraccionPage')>()
+  return {
+    ...m,
+    FichaInteraccionPage: () => {
+      if (ficha.espera) use(ficha.espera)
+      return createElement(m.FichaInteraccionPage)
+    }
+  }
+})
+
 let fetch: FetchMock | null = null
 let red: Red | null = null
 beforeEach(() => {
@@ -29,6 +44,7 @@ afterEach(() => {
   red = fetch = null
   vi.unstubAllGlobals()
   vi.useRealTimers()
+  ficha.espera = null
 })
 
 describe('S24 · registrar interacción', () => {
@@ -147,10 +163,11 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByText('Indique la fecha')).toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '2026-10-06T10:30')
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByRole('checkbox', { name: 'Ronda campesina' })).toBeChecked()
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
@@ -175,6 +192,27 @@ describe('S24 · registrar interacción', () => {
       attributes: { engagement: 'e9', question_text: '¿Cuándo empieza la perforación?', answered_on_site: false }
     })
     expect(red.a('POST', '/objects/engagement/records/e9/transitions/register_held_unplanned')[0].cabeceras.get('If-Match')).toBe('"2026-10-07T10:00:00Z"')
+  })
+
+  // hallazgo U-07 (DD-07): la fecha y la hora programadas se escriben como dd/mm/aaaa y HH:mm y viajan como el instante de Lima
+  it('programa con la fecha escrita como 20/10/2026 y la hora 10:15: scheduled_at es el instante de esa hora de Lima', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?stakeholders=s1', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.type(screen.getByLabelText('Fecha y hora programadas'), '20/10/2026')
+    await userEvent.type(screen.getByLabelText('Fecha y hora programadas (hora)'), '10:15')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('checkbox', { name: 'Ronda campesina' })).toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Programar' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/engagement/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).toMatchObject({ attributes: { scheduled_at: '2026-10-20T15:15:00.000Z' } })
+    expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).not.toHaveProperty('attributes.held_at')
   })
 
   // api.md §3.6: más de 500 escrituras de conteos y vínculos dejan la versión del alta fuera de la ventana del historial
@@ -286,9 +324,10 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '2026-10-06T10:30')
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pulsar en el mapa' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
@@ -383,8 +422,9 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea tardía')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '2026-10-06T23:30')
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '23:30')
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
@@ -413,8 +453,11 @@ describe('S24 · registrar interacción', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
       await waitFor(() => expect(red!.a('POST', '/objects/engagement/records')).toHaveLength(veces))
       await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+      // la URL cambia antes de que React confirme la ficha (React Router navega en una transición): se espera la ficha
+      // dibujada (e9 responde 404 en el doble) para que «Atrás» no llegue con el formulario aún montado
+      expect(await screen.findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
       if (veces === 1) {
-        window.history.back()
+        await act(async () => window.history.back())
         await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/new?mode=quick'))
       }
     }
@@ -424,6 +467,52 @@ describe('S24 · registrar interacción', () => {
     expect(claves[1]).toBeTruthy()
     expect(claves[0]).not.toBe(claves[1])
     expect(altas.map((a) => (a.cuerpo as { attributes: { description: string } }).attributes.description)).toEqual(['nota 1', 'nota 2'])
+  })
+
+  // si se vuelve atrás antes de que se dibuje la ficha, la pantalla del alta no se desmonta: lo escrito no puede quedar con una
+  // clave nueva, listo para que otro «Guardar» duplique la interacción
+  it('tras guardar en el modo rápido el formulario queda vacío aunque la pantalla siga montada', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick&stakeholders=s1', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    const tipo = screen.getByRole('combobox', { name: 'Tipo de interacción' })
+    await userEvent.selectOptions(tipo, 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nota' }), 'una nota')
+    await userEvent.click(await screen.findByRole('button', { name: 'Más Femenino · AIDS' }))
+    ficha.espera = new Promise<never>(() => {})
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+    await act(async () => window.history.back())
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/new?mode=quick&stakeholders=s1'))
+    // el mismo elemento: la pantalla no se volvió a montar
+    expect(screen.getByRole('combobox', { name: 'Tipo de interacción' })).toBe(tipo)
+    expect(tipo).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'Nota' })).toHaveValue('')
+    expect(screen.getByLabelText('Femenino · AIDS')).toHaveTextContent('0')
+    expect(screen.getByRole('checkbox', { name: 'Ronda campesina' })).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Guardar como realizada' })).toBeDisabled()
+    expect(red.a('POST', '/objects/engagement/records')).toHaveLength(1)
+  })
+
+  it('tras guardar en el asistente el formulario vuelve vacío al paso 1 aunque la pantalla siga montada', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    const conmutador = screen.getByRole('switch', { name: 'Modo rápido de campo' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    ficha.espera = new Promise<never>(() => {})
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar y completar después' }))
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
+    await act(async () => window.history.back())
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/new'))
+    // el mismo conmutador de la cabecera: el asistente no se volvió a montar, y está otra vez en el primer paso
+    expect(screen.getByRole('switch', { name: 'Modo rápido de campo' })).toBe(conmutador)
+    expect(screen.getByRole('heading', { name: 'Tipo y fecha' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Tipo de interacción' })).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('')
+    expect(red.a('POST', '/objects/engagement/records')).toHaveLength(1)
   })
 
   it('el modo rápido conserva los grupos de interés y la visita de campo de la que se abrió', async () => {
@@ -447,8 +536,9 @@ describe('S24 · registrar interacción', () => {
     await screen.findByRole('option', { name: 'Asamblea' })
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Ya se realizó' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '2026-10-06T10:30')
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
+    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
     for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
     expect(await screen.findByText('Para guardar como realizada, agregue al menos un participante que asistió.')).toBeInTheDocument()
@@ -528,16 +618,61 @@ describe('S24 · registrar interacción', () => {
     expect(attributes).not.toHaveProperty('locality')
   })
 
-  it('los enlaces entre el asistente y el modo rápido conservan los grupos, la visita y el territorio', async () => {
+  // F-D (02-arquitectura-de-informacion.md §6): el modo rápido es un conmutador de la cabecera del asistente, no un enlace suelto
+  it('el conmutador del modo rápido conserva los grupos, la visita y el territorio en los dos sentidos', async () => {
     fetch = abrirPortal('/projects/p1/engagements/new?stakeholders=s1&field_visit=v1&territory=locality:l1', RELACIONISTA, EQUIPO, rutas())
-    const aRapido = await screen.findByRole('link', { name: 'Modo rápido de campo' })
-    const rapido = new URL(aRapido.getAttribute('href') ?? '', 'http://x')
+    const aRapido = await screen.findByRole('switch', { name: 'Modo rápido de campo' })
+    expect(aRapido).toHaveAttribute('aria-checked', 'false')
+    expect(screen.queryByRole('link', { name: 'Modo rápido de campo' })).not.toBeInTheDocument()
+    await userEvent.click(aRapido)
+    await waitFor(() => expect(new URL(rutaActual(), 'http://x').searchParams.get('mode')).toBe('quick'))
+    const rapido = new URL(rutaActual(), 'http://x')
     expect(rapido.pathname).toBe('/projects/p1/engagements/new')
     expect(Object.fromEntries(rapido.searchParams)).toEqual({ stakeholders: 's1', field_visit: 'v1', territory: 'locality:l1', mode: 'quick' })
-    await userEvent.click(aRapido)
-    const alAsistente = await screen.findByRole('link', { name: 'Registrar interacción' })
-    const asistente = new URL(alAsistente.getAttribute('href') ?? '', 'http://x')
-    expect(Object.fromEntries(asistente.searchParams)).toEqual({ stakeholders: 's1', field_visit: 'v1', territory: 'locality:l1', mode: 'full' })
+    // la URL cambia antes de que React confirme el modo rápido: se toma el conmutador de su pantalla, no el del asistente
+    const alAsistente = within(await screen.findByRole('region', { name: 'Modo rápido de campo' })).getByRole('switch', { name: 'Modo rápido de campo' })
+    expect(alAsistente).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(alAsistente)
+    await waitFor(() => expect(new URL(rutaActual(), 'http://x').searchParams.get('mode')).toBe('full'))
+    expect(Object.fromEntries(new URL(rutaActual(), 'http://x').searchParams)).toEqual({
+      stakeholders: 's1',
+      field_visit: 'v1',
+      territory: 'locality:l1',
+      mode: 'full'
+    })
+    expect(await screen.findByRole('textbox', { name: 'Título' })).toBeInTheDocument()
+  })
+
+  // F-D: el paso 1 es solo tipo, título, fecha y hora y «¿Ya se realizó?», un selector de dos opciones con su efecto explicado;
+  // el objetivo pasa al paso 2
+  it('el paso 1 pide tipo, título, si ya se realizó y la fecha; el objetivo está en el paso 2', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    const grupo = screen.getByRole('radiogroup', { name: '¿Ya se realizó?' })
+    const planificada = within(grupo).getByRole('radio', { name: 'No, está planificada' })
+    const realizada = within(grupo).getByRole('radio', { name: 'Sí, ya se realizó' })
+    expect(planificada).toBeChecked()
+    expect(planificada).toHaveAccessibleDescription('Se registrará como planificada.')
+    expect(realizada).toHaveAccessibleDescription('Se registrará como realizada; podrá redactar el acta después.')
+    expect(screen.queryByRole('checkbox', { name: 'Ya se realizó' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Objetivo' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Fecha y hora programadas')).toBeInTheDocument()
+    await userEvent.click(realizada)
+    expect(realizada).toBeChecked()
+    expect(screen.getByLabelText('Fecha y hora en que se realizó')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Fecha y hora programadas')).not.toBeInTheDocument()
+    await userEvent.click(planificada)
+    expect(screen.getByLabelText('Fecha y hora programadas')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('heading', { name: 'Objetivo, lugar y grupos de interés' })).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Objetivo' }), 'Informar el avance')
+    for (let i = 0; i < 3; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar y completar después' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/engagement/records')).toHaveLength(1))
+    expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).toMatchObject({ attributes: { objective: 'Informar el avance' } })
   })
 
   it('el modo rápido sigue disponible como asistente aunque la pantalla sea angosta', async () => {

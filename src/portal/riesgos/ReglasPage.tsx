@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useRef, useState } from 'react'
@@ -50,7 +51,10 @@ function Reglas() {
     <section className="mx-auto max-w-[1440px] space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{projectId ? t('reglasDeAlerta.titulo') : t('reglasDeAlerta.tituloDeLaOrganizacion')}</h1>
-        {crea ? <Button onClick={() => setAbierta('nueva')}>{t('reglasDeAlerta.nueva')}</Button> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <PaginasDeRiesgos actual="rules" />
+          {crea ? <Button onClick={() => setAbierta('nueva')}>{t('reglasDeAlerta.nueva')}</Button> : null}
+        </div>
       </div>
       <p className="text-sm text-sg-text-secondary">{t('reglasDeAlerta.ayuda')}</p>
       {lectura.truncado ? <Alert tone="warning">{t('reglasDeAlerta.truncado', { n: numeroPe(lectura.data?.length ?? 0) })}</Alert> : null}

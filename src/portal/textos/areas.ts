@@ -31,7 +31,7 @@ export const ES_AREAS = {
   aprobando: 'Aprobando…',
   // lo que dice el diálogo de aprobación ante los códigos del comando (api.md §3.3), con la acción que ofrece
   errores: {
-    MEMBERS_REQUIRED: 'El servidor no encuentra miembros en esta versión: agréguelos antes de aprobar.',
+    MEMBERS_REQUIRED: 'Esta versión no tiene miembros: agréguelos antes de aprobar.',
     STATE_MISMATCH: 'Esta versión ya no está en borrador: otra persona la aprobó o la reemplazó. Recargue para ver su estado.'
   },
   agregarMiembros: 'Agregar miembros',
@@ -75,7 +75,7 @@ export const EN_AREAS: typeof ES_AREAS = {
     'Version {{version}} becomes Approved and the previous approved one of this type becomes Superseded, in one step. The territory filter and the dashboards use the approved one.',
   aprobando: 'Approving…',
   errores: {
-    MEMBERS_REQUIRED: 'The server finds no members in this version: add them before approving.',
+    MEMBERS_REQUIRED: 'This version has no members: add them before approving.',
     STATE_MISMATCH: 'This version is no longer a draft: someone else approved or superseded it. Reload to see its state.'
   },
   agregarMiembros: 'Add members',

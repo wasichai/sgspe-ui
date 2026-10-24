@@ -1,4 +1,4 @@
-import { useApiClient } from '@wasichai/core'
+import { useApiClient, useAuth } from '@wasichai/core'
 import type { BasemapSpec } from '@wasichai/gis'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -85,6 +85,7 @@ const MapaImpl = lazy(() => import('./MapaImpl'))
 
 export function Mapa({ className, basemap, ...props }: MapaProps) {
   const { t } = useTranslation(NS)
+  const { isAdmin } = useAuth()
   const deLaSesion = useMapaBase()
   const atribucion = useAtribucionDelMapa()
   const [sinFondo, setSinFondo] = useState(false)
@@ -116,9 +117,15 @@ export function Mapa({ className, basemap, ...props }: MapaProps) {
           <MapaImpl key={JSON.stringify(fondo)} {...props} basemap={fondo} firmar={firmar} camaraPrevia={camaraPrevia} alMoverCamara={alMoverCamara} />
         </Suspense>
       </LimiteDeError>
-      <div className="absolute left-2 top-2 flex items-center gap-2">
+      {/* abajo a la izquierda, sobre la escala: arriba quedan los paneles que una pantalla superpone (S12, DD-11) y el zoom */}
+      <div className="absolute bottom-9 left-2 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-2">
         {fondo.type === 'none' ? (
-          <p className="rounded-sg-sm bg-sg-surface px-2 py-0.5 text-sg-caption text-sg-text-muted shadow-sg-sm">{t('sig.sinMapaBase')}</p>
+          <p className="max-w-sm rounded-sg-sm bg-sg-surface px-2 py-0.5 text-sg-caption text-sg-text-muted shadow-sg-sm">
+            <span>{t('sig.sinMapaBase')}</span>
+            {/* U-32: sin mapa base configurado, quien administra lee dónde se configura; con «Sin fondo» elegido, el mapa base
+                existe y no hace falta. quien no administra solo lee que no lo hay */}
+            {configurado.type === 'none' && isAdmin ? <span className="block">{t('sig.dondeSeConfigura')}</span> : null}
+          </p>
         ) : null}
         {configurado.type !== 'none' ? (
           <button

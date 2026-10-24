@@ -1,11 +1,11 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
-import { VerEnElMapa } from '../componentes/VerEnElMapa'
+import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { ItemsRelacionados, useRelacionadas } from '../componentes/CrearRelacionado'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import { CamposPlegables, type CampoDeFicha } from '../componentes/CamposPlegables'
+import { Seccion } from '../componentes/Seccion'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
@@ -13,12 +13,13 @@ import { rutaDeFicha } from '../datos/fichas'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { ApiError, useAuth } from '@wasichai/core'
-import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Table, Td, Textarea, Th } from '@wasichai/ui'
-import { useState } from 'react'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta } from '../componentes/Estados'
@@ -34,8 +35,6 @@ import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { hoyEnLima } from '../datos/fechas'
 import { atributo, texto, usePuedeEditar, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
-import { Dato } from '../atencion/comunesDeFicha'
 import { useRevisarRiesgo } from './comandos'
 import { Impactos } from './ImpactosPage'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
@@ -126,80 +125,95 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
   // decisión (con la próxima revisión como vencimiento), pestañas con conteo y trazabilidad en tres grupos
   useMigaDelRegistro(texto(riesgo, 'code') || texto(riesgo, 'title'))
-  // el compromiso que atiende el riesgo (revisión de UX, etapa 5), en «Más acciones»; la medida se crea en su pestaña
-  const relacionadas = useRelacionadas(proyecto, [
-    {
-      objeto: 'commitment',
-      etiqueta: t('paginas.relacionados.compromiso'),
-      a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?social_risk=${encodeURIComponent(riesgo.id)}`
-    }
-  ])
   const siguiente = useSiguienteAccion('social_risk', riesgo, COMPROBAR)
   const medidas = useTodos('mitigation_measure', { social_risk: riesgo.id })
   const evidencias = useEvidenciasDe('social_risk', riesgo.id)
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('fichaRiesgo.tipo'), texto(riesgo, 'code'), opcion(riesgo, 'category')].filter(Boolean).join(' · ')}
         titulo={texto(riesgo, 'title')}
+        tituloDelDocumento={[texto(riesgo, 'code'), texto(riesgo, 'title')].filter(Boolean).join(' ')}
         chips={
           <>
-            <EstadoChip objeto="social_risk" estado={riesgo.state} />
-            <NivelDeRiesgo valor={atributo(riesgo, 'risk_level')} />
+            {/* los niveles con su rótulo y el puntaje que dice qué multiplica (U-28 del rediseño de UX) */}
+            <span className="inline-flex items-center gap-1">
+              <span className="text-sg-text-secondary">{t('fichaRiesgo.inherente')}</span>
+              <NivelDeRiesgo valor={atributo(riesgo, 'risk_level')} />
+            </span>
             {texto(riesgo, 'score') ? (
               <span className="tabular-nums">
-                {t('fichaRiesgo.puntaje', { p: texto(riesgo, 'probability'), i: texto(riesgo, 'impact'), s: texto(riesgo, 'score') })}
+                {t('fichaRiesgo.puntajeExplicado', { p: texto(riesgo, 'probability'), i: texto(riesgo, 'impact'), s: texto(riesgo, 'score') })}
               </span>
             ) : null}
-            {atributo(riesgo, 'residual_level') ? <NivelDeRiesgo valor={atributo(riesgo, 'residual_level')} residual /> : null}
+            {atributo(riesgo, 'residual_level') ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="text-sg-text-secondary">{t('fichaRiesgo.residual')}</span>
+                <NivelDeRiesgo valor={atributo(riesgo, 'residual_level')} residual />
+              </span>
+            ) : null}
             <span className="text-sg-text-secondary">
               {cadencia ? t('fichaRiesgo.cadencia', { n: cadencia, count: Number(cadencia) }) : t('fichaRiesgo.cadenciaDelProyecto')}
             </span>
           </>
         }
-        primaria={
-          <div className="flex flex-wrap items-start gap-2">
-            <BotonesDeTransicion
-              agrupadas
-              objeto="social_risk"
-              registro={riesgo}
-              proyecto={proyecto}
-              comprobarAntes={COMPROBAR}
-              sinPrimaria={revisa}
-              mas={relacionadas.length > 0 ? <ItemsRelacionados acciones={relacionadas} /> : undefined}
-            />
-            {revisa ? (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setHecha(null)
-                  setRevisando(true)
-                }}
-              >
-                {t('fichaRiesgo.revision.nueva')}
-              </Button>
-            ) : null}
-          </div>
+        objeto="social_risk"
+        registro={riesgo}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
+        // la siguiente acción del flujo es la primaria (DD-02 del rediseño de UX); sin una del camino, la nueva revisión
+        primariaPropia={
+          revisa ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setHecha(null)
+                setRevisando(true)
+              }}
+            >
+              {t('fichaRiesgo.revision.nueva')}
+            </Button>
+          ) : undefined
         }
-        secundarias={
-          <>
-            <VerEnElMapa objeto="social_risk" registro={riesgo} />
-            {edita ? (
-              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-                {t('fichaRiesgo.editar')}
-              </Button>
-            ) : null}
-          </>
-        }
+        secundarias={[
+          ...(edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                      {t('fichaRiesgo.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          // el compromiso que atiende el riesgo (revisión de UX, etapa 5); la medida se crea en su pestaña
+          ...(escribe && can('commitment', 'CREATE')
+            ? [
+                {
+                  clave: 'compromiso',
+                  nodo: (
+                    <Button asChild size="sm" variant="secondary">
+                      <Link to={`/projects/${encodeURIComponent(proyecto)}/commitments/new?social_risk=${encodeURIComponent(riesgo.id)}`}>
+                        {t('paginas.relacionados.compromiso')}
+                      </Link>
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          ...(rutaEnElMapa('social_risk', riesgo) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="social_risk" registro={riesgo} /> }] : [])
+        ]}
       />
       {hecha ? (
         <p role="status" className="text-sm text-sg-success">
           {hecha}
         </p>
       ) : null}
-      <CaminoDelFlujo objeto="social_risk" estado={riesgo.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="social_risk"
         estado={riesgo.state}
         desde={texto(riesgo, 'state_changed_at') || null}
@@ -337,29 +351,52 @@ function columnasDeMedidas(t: (clave: string) => string) {
   ]
 }
 
+// el resumen por tema (DD-06 y U-26 del rediseño de UX): de dónde nace y qué afecta, cómo se trata y lo que queda tras las
+// medidas; cada sección pliega sus campos sin dato
 function Resumen({ riesgo }: { riesgo: Registro }) {
   const { t } = useTranslation(NS)
-  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
-  const valor = (campo: string) => opcion(riesgo, campo) || '—'
   const adecuados = atributo(riesgo, 'controls_adequate')
+  const campo = (clave: string, valor: ReactNode, ancho = false): CampoDeFicha => ({ clave, termino: t(`fichaRiesgo.campos.${clave}`), valor, ancho })
   return (
-    <dl className="grid gap-3 pt-3 text-sm sm:grid-cols-2">
-      <Dato termino={t('fichaRiesgo.campos.fuente')}>{valor('risk_source')}</Dato>
-      <Dato termino={t('fichaRiesgo.campos.impacto')}>
-        {valor('impact_type')} · {valor('impact_nature')}
-      </Dato>
-      <Dato termino={t('fichaRiesgo.campos.tratamiento')}>{valor('treatment_decision')}</Dato>
-      <Dato termino={t('fichaRiesgo.campos.razon')}>{valor('treatment_rationale')}</Dato>
-      <Dato termino={t('fichaRiesgo.campos.controles')}>{valor('current_controls')}</Dato>
-      <Dato termino={t('fichaRiesgo.campos.adecuados')}>{adecuados === true ? t('comun.si') : adecuados === false ? t('comun.no') : '—'}</Dato>
-      <Dato termino={t('fichaRiesgo.campos.monitoreo')}>{valor('monitoring_sources')}</Dato>
-      <Dato termino={t('fichaRiesgo.campos.residual')}>
-        {texto(riesgo, 'residual_score')
-          ? t('fichaRiesgo.puntaje', { p: texto(riesgo, 'residual_probability'), i: texto(riesgo, 'residual_impact'), s: texto(riesgo, 'residual_score') })
-          : t('fichaRiesgo.sinResidual')}
-      </Dato>
-      {riesgo.state === 'closed' ? <Dato termino={t('fichaRiesgo.campos.cierre')}>{valor('close_reason')}</Dato> : null}
-    </dl>
+    <div className="space-y-4 pt-3">
+      <Seccion titulo={t('fichaRiesgo.secciones.origen')}>
+        <CamposPlegables
+          campos={[
+            campo('fuente', texto(riesgo, 'risk_source'), true),
+            campo('tipoDeImpacto', opcion(riesgo, 'impact_type')),
+            campo('naturaleza', opcion(riesgo, 'impact_nature'))
+          ]}
+        />
+      </Seccion>
+      <Seccion titulo={t('fichaRiesgo.secciones.tratamiento')}>
+        <CamposPlegables
+          campos={[
+            campo('tratamiento', opcion(riesgo, 'treatment_decision')),
+            campo('razon', texto(riesgo, 'treatment_rationale'), true),
+            campo('controles', texto(riesgo, 'current_controls'), true),
+            campo('adecuados', adecuados === true ? t('comun.si') : adecuados === false ? t('comun.no') : null),
+            campo('monitoreo', texto(riesgo, 'monitoring_sources'), true)
+          ]}
+        />
+      </Seccion>
+      <Seccion titulo={t('fichaRiesgo.secciones.residual')}>
+        <CamposPlegables
+          campos={[
+            campo(
+              'residual',
+              texto(riesgo, 'residual_score')
+                ? t('fichaRiesgo.puntajeExplicado', {
+                    p: texto(riesgo, 'residual_probability'),
+                    i: texto(riesgo, 'residual_impact'),
+                    s: texto(riesgo, 'residual_score')
+                  })
+                : t('fichaRiesgo.sinResidual')
+            ),
+            ...(riesgo.state === 'closed' ? [campo('cierre', opcion(riesgo, 'close_reason'), true)] : [])
+          ]}
+        />
+      </Seccion>
+    </div>
   )
 }
 
@@ -460,9 +497,14 @@ function NuevaRevision({
           {primera ? t('fichaRiesgo.revision.primera') : t('fichaRiesgo.revision.descripcion')}
         </DialogDescription>
         <div className="mt-4 space-y-3">
-          <Campo etiqueta={t('fichaRiesgo.revision.fecha')} error={intentado && faltaFecha ? t('fichaRiesgo.revision.fechaFutura') : undefined}>
-            {(p) => <Input {...p} type="date" max={hoy} value={fecha} onChange={(e) => setFecha(e.target.value)} />}
-          </Campo>
+          <CampoFecha
+            etiqueta={t('fichaRiesgo.revision.fecha')}
+            requerido
+            max={hoy}
+            valor={fecha || null}
+            alCambiar={(v) => setFecha(v ?? '')}
+            error={intentado && faltaFecha ? t('fichaRiesgo.revision.fechaFutura') : undefined}
+          />
           <div className="grid grid-cols-2 gap-3">
             <Campo
               etiqueta={t('fichaRiesgo.revision.probabilidad')}

@@ -17,6 +17,7 @@ import { AceptarSugerencia } from './AceptarSugerencia'
 import { useEstadoDeIa } from './contrato'
 import { TarjetaDeCandidatoEnBandeja, TarjetaDeSugerencia } from './Propuesta'
 import { enLaBandeja, ordenarPropuestas, type Propuesta } from './sugerencias'
+import { Seccion } from '../componentes/Seccion'
 
 // S52 · bandeja de revisión de IA (screens.md §13, ai-architecture.md §9.3, flujo 7): lo que la IA y las personas propusieron
 // en el proyecto, en proposed, por confianza y fecha. una persona decide cada propuesta; no hay acciones masivas. aceptar no
@@ -144,14 +145,14 @@ export function BandejaDeIaPage() {
             </ul>
           )}
         </div>
-        <aside aria-label={t('bandejaIa.reglas.titulo')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <Seccion elemento="aside" etiqueta={t('bandejaIa.reglas.titulo')} className="text-sm">
           <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('bandejaIa.reglas.titulo')}</h2>
           <ul className="ml-5 list-disc space-y-1">
             <li>{t('bandejaIa.reglas.unaPersona')}</li>
             <li>{t('bandejaIa.reglas.revisados')}</li>
             <li>{t('bandejaIa.reglas.motivo')}</li>
           </ul>
-        </aside>
+        </Seccion>
       </div>
       {enRevision ? <RevisionDeCandidato key={enRevision.id} candidato={enRevision} alCerrar={() => setRevisando(null)} /> : null}
       {enAceptacion ? <AceptarSugerencia key={enAceptacion.id} sugerencia={enAceptacion} alCerrar={() => setAceptando(null)} /> : null}

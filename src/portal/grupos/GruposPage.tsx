@@ -4,15 +4,19 @@ import { useSiguientePaso } from '../contexto/Rastro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
-import { useId, useState } from 'react'
+import { Alert, Button, Pagination } from '@wasichai/ui'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
-import { Cargando, ErrorDeCarga, NoDisponible, Restringido, ThConExplicacion, esProhibido } from '../componentes/Estados'
-import { ChipsDeFiltro, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
+import { Cargando, ErrorDeCarga, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
+import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { NombreDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
-import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
+import { BotonDeVistaPrevia, useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
@@ -32,12 +36,19 @@ import { Persona } from '../componentes/Persona'
 // de territorio. sin permiso para leer stance la columna dice "Restringido" y no se filtra por ella (security.md §7.9)
 const VISTAS = ['prioridad', 'mios', 'sinEvaluar', 'sinContacto', 'todos', 'retirados'] as const
 const FILTROS = ['influence_group', 'stance', 'stakeholder_scope', 'relationship_status', 'stakeholder_type'] as const
+// los tres a la vista en la barra (DD-04); el ámbito y el tipo, en «Más filtros»
+const FRECUENTES: readonly string[] = ['influence_group', 'stance', 'relationship_status']
 const POR_PAGINA = 25
+// el orden por columna (05-especificacion §1.6) es del portal, que filtra y pagina aquí: solo la prioridad informativa, por su orden
+// de negocio (de media a muy alta), nunca por su texto. el nombre no: es el de la persona o la organización de cada grupo, que se
+// lee aparte por fila (y el de una persona puede estar restringido); el grupo de influencia es un cuadrante, sin orden
+const ORDEN_DE_PRIORIDAD = ['MEDIA', 'ALTA', 'MUY ALTA'] as const
 
 export function GruposPage() {
   const { t } = useTranslation(NS)
   const { user, can } = useAuth()
   const navegar = useNavigate()
+  const previa = useRutaDeVistaPrevia()
   const { scope, territory } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const registroDelProyecto = useProyecto(proyecto)
@@ -81,7 +92,19 @@ export function GruposPage() {
     }
   }
   const conFiltros = (g: Registro) => filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f))
-  const filtrados = (grupos.data ?? []).filter((g) => enVistaLa(lista.vista, g) && conFiltros(g))
+  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página. sin elegir uno, el
+  // de la lectura
+  const [orden, setOrden] = useState<OrdenDeTabla | undefined>(undefined)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    lista.cambiar({ page: null })
+  }
+  const filtrados = ordenarEnCliente(
+    (grupos.data ?? []).filter((g) => enVistaLa(lista.vista, g) && conFiltros(g)),
+    orden,
+    // un grupo sin evaluar dice «Sin evaluar» en la columna: va al final, como uno sin prioridad
+    (g) => (g.state === 'assessed' || atributo(g, 'influence_group') ? posicionEn(ORDEN_DE_PRIORIDAD, atributo(g, 'information_priority')) : null)
+  )
   // la etapa 3 de la revisión de UX: cada vista dice cuántos tiene con los filtros puestos
   const conteoDe = (vista: string) => (grupos.data ? grupos.data.filter((g) => enVistaLa(vista, g) && conFiltros(g)).length : null)
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
@@ -101,7 +124,102 @@ export function GruposPage() {
   }
   const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` }))
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
+  const limpiarFiltros = () => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))
+  const filtroDe = (f: string) => (
+    <FiltroDeLista
+      key={f}
+      etiqueta={t(`grupos.filtros.${f}`)}
+      opciones={opciones(f)}
+      value={lista.filtro(f)}
+      onChange={(e) => lista.cambiar({ [f]: e.target.value })}
+    />
+  )
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
+  const paso = useSiguientePaso()
+
+  // la tabla de escritorio con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px cabe sin desplazar. esenciales lo que
+  // decide (quién, su grupo de influencia, su postura, su prioridad y su estado); secundarias, desde xl, el territorio, el
+  // responsable y el último contacto; la relación y la fecha de la evaluación son opcionales: desde 1536 px, hasta que las elija
+  // «Columnas». en «Míos» el responsable es siempre quien mira: no se dibuja
+  const columnas: ColumnaPriorizada[] = [
+    ...(proyecto ? [{ id: 'seleccionar', encabezado: t('comun.seleccionar'), prioridad: 'esencial' as const, encabezadoOculto: true }] : []),
+    { id: 'grupo', encabezado: t('grupos.columnas.grupo'), prioridad: 'esencial', claseDeCelda: 'min-w-48' },
+    ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('grupos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
+    { id: 'territorio', encabezado: t('grupos.columnas.territorio'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'influencia', encabezado: t('grupos.columnas.influencia'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
+    {
+      id: 'postura',
+      encabezado: t('grupos.columnas.postura'),
+      prioridad: 'esencial',
+      claseDeCelda: 'text-sm',
+      explicacion: leePostura ? undefined : { id: idDeLaPostura, tipo: 'restringido' }
+    },
+    { id: 'prioridad', encabezado: t('grupos.columnas.prioridad'), prioridad: 'esencial', claseDeCelda: 'text-sm', ordenable: true },
+    { id: 'estado', encabezado: t('grupos.columnas.estado'), prioridad: 'esencial' },
+    { id: 'relacion', encabezado: t('grupos.columnas.relacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
+    ...(lista.vista === 'mios'
+      ? []
+      : // en el alcance global la columna Proyecto ocupa su lugar: el responsable pasa a opcional para que la tabla quepa a 1440 px
+        [
+          {
+            id: 'responsable',
+            encabezado: t('grupos.columnas.responsable'),
+            prioridad: proyecto ? ('secundaria' as const) : ('opcional' as const),
+            claseDeCelda: 'text-sm'
+          }
+        ]),
+    { id: 'evaluacion', encabezado: t('grupos.columnas.evaluacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
+    { id: 'contacto', encabezado: t('grupos.columnas.contacto'), prioridad: 'secundaria', claseDeCelda: 'text-sm' }
+  ]
+  const celdaDe = (g: Registro, columna: string): ReactNode => {
+    const evaluado = g.state === 'assessed' || Boolean(atributo(g, 'influence_group'))
+    switch (columna) {
+      case 'seleccionar':
+        return (
+          <input
+            type="checkbox"
+            aria-label={`${t('comun.seleccionar')} ${g.id}`}
+            checked={seleccion.has(g.id)}
+            onChange={(e) => alternar(g.id, e.target.checked)}
+          />
+        )
+      case 'grupo':
+        return <CeldaDelGrupo grupo={g} />
+      case 'proyecto':
+        return <ProyectoDelGrupo grupo={g} />
+      case 'territorio':
+        return <LocalidadDelGrupo grupo={g} />
+      case 'influencia':
+        return evaluado ? opcion(g, 'influence_group') || '—' : t('grupos.sinEvaluarValor')
+      case 'postura':
+        return leePostura ? opcion(g, 'stance') || '—' : <Restringido describedPor={idDeLaPostura} />
+      case 'prioridad':
+        return evaluado ? opcion(g, 'information_priority') || '—' : t('grupos.sinEvaluarValor')
+      case 'estado':
+        return <EstadoChip objeto="stakeholder" estado={g.state} />
+      case 'relacion':
+        return opcion(g, 'relationship_status') || '—'
+      case 'responsable':
+        return <Persona correo={texto(g, 'owner_user_email')} />
+      case 'evaluacion':
+        return <Dia valor={texto(g, 'last_assessment_date')} />
+      default:
+        return <Dia valor={texto(g, 'last_contact_date')} />
+    }
+  }
+  // lo que decide si una columna no esencial dice lo mismo en toda la página: el dato guardado, no su rótulo
+  const valorPlano = (g: Registro, columna: string): string => {
+    switch (columna) {
+      case 'territorio':
+        return String(atributo(g, 'locality') ?? '')
+      case 'responsable':
+        return texto(g, 'owner_user_email').toLowerCase()
+      case 'contacto':
+        return texto(g, 'last_contact_date')
+      default:
+        return g.id
+    }
+  }
 
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
@@ -142,26 +260,24 @@ export function GruposPage() {
         <Cargando />
       ) : (
         <>
-          <VistasGuardadas
-            vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }), conteo: conteoDe(id) }))}
-            actual={lista.vista}
-            alCambiar={(id) => lista.cambiar({ view: id })}
-          />
-          <div className="flex flex-wrap gap-3">
-            {filtros.map((f) => (
-              <FiltroDeLista
-                key={f}
-                etiqueta={t(`grupos.filtros.${f}`)}
-                opciones={opciones(f)}
-                value={lista.filtro(f)}
-                onChange={(e) => lista.cambiar({ [f]: e.target.value })}
+          {/* la barra de filtros (hallazgos U-18 y U-22, DD-03 y DD-04): las vistas en el selector, con su conteo, en lugar de una
+              segunda fila de pestañas; tres filtros a la vista, el resto en «Más filtros», y un chip por filtro. ?view= y los
+              parámetros de filtro son los mismos */}
+          <BarraDeFiltros
+            vista={
+              <SelectorDeVista
+                etiqueta={t('comun.vistas')}
+                vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }), n: conteoDe(id) }))}
+                actual={lista.vista}
+                alElegir={(id) => lista.cambiar({ view: id })}
+                // cinco a la vista: solo «Retirados» va en «Más vistas»
+                visibles={5}
               />
-            ))}
-          </div>
-          <ChipsDeFiltro
-            chips={chips}
-            alQuitar={(c) => lista.cambiar({ [c]: null })}
-            alLimpiar={() => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))}
+            }
+            frecuentes={<>{filtros.filter((f) => FRECUENTES.includes(f)).map(filtroDe)}</>}
+            todos={<>{filtros.filter((f) => !FRECUENTES.includes(f)).map(filtroDe)}</>}
+            aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
+            alLimpiar={limpiarFiltros}
           />
           {elegidos.length > 0 && proyecto ? (
             <div
@@ -200,6 +316,7 @@ export function GruposPage() {
                 // proyecto, cada una con su casilla para registrar una interacción con los elegidos
                 <ListaEnTarjetas
                   etiqueta={t('grupos.titulo')}
+                  total={filtrados.length}
                   tarjetas={pagina.map((g) => ({
                     id: g.id,
                     titulo: <TituloDeGrupo grupo={g} seleccionado={seleccion.has(g.id)} alSeleccionar={proyecto ? (si) => alternar(g.id, si) : undefined} />,
@@ -209,58 +326,22 @@ export function GruposPage() {
                   }))}
                 />
               ) : (
-                <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-                  <Table aria-label={t('grupos.titulo')}>
-                    <thead>
-                      <tr>
-                        {proyecto ? (
-                          <Th>
-                            <span className="sr-only">{t('comun.seleccionar')}</span>
-                          </Th>
-                        ) : null}
-                        {(
-                          [
-                            'grupo',
-                            ...(proyecto ? [] : ['proyecto']),
-                            'territorio',
-                            'influencia',
-                            'postura',
-                            'prioridad',
-                            'estado',
-                            'relacion',
-                            'responsable',
-                            'evaluacion',
-                            'contacto'
-                          ] as const
-                        ).map((c) =>
-                          c === 'postura' && !leePostura ? (
-                            <ThConExplicacion key={c} explicacion={idDeLaPostura} tipo="restringido">
-                              {t(`grupos.columnas.${c}`)}
-                            </ThConExplicacion>
-                          ) : (
-                            // Responsable se oculta por debajo de 1440 px: así la evaluación se ve sin desplazar (revisión de UX)
-                            <Th key={c} scope="col" className={c === 'responsable' ? 'hidden 2xl:table-cell' : undefined}>
-                              {t(`grupos.columnas.${c}`)}
-                            </Th>
-                          )
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pagina.map((g) => (
-                        <Fila
-                          key={g.id}
-                          grupo={g}
-                          global={!proyecto}
-                          leePostura={leePostura}
-                          idDeLaPostura={idDeLaPostura}
-                          seleccionado={seleccion.has(g.id)}
-                          alSeleccionar={proyecto ? (si) => alternar(g.id, si) : undefined}
-                        />
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
+                <TablaPriorizada<Registro>
+                  etiqueta={t('grupos.titulo')}
+                  total={filtrados.length}
+                  idDeTabla="grupos"
+                  columnas={columnas}
+                  filas={pagina}
+                  clave={(g) => g.id}
+                  celda={celdaDe}
+                  valorPlano={valorPlano}
+                  ocultarUniformes
+                  orden={orden}
+                  alOrdenar={ordenar}
+                  alAbrir={(g) => navegar(rutaDelGrupo(g), { state: paso() })}
+                  // Espacio abre la vista previa, como el ojo de la fila
+                  alPrevisualizar={(g) => navegar(previa('stakeholder', g.id))}
+                />
               )}
               {filtrados.length > POR_PAGINA ? (
                 <Pagination
@@ -279,77 +360,26 @@ export function GruposPage() {
   )
 }
 
-function Fila({
-  grupo,
-  global,
-  leePostura,
-  idDeLaPostura,
-  seleccionado,
-  alSeleccionar
-}: {
-  grupo: Registro
-  global: boolean
-  leePostura: boolean
-  idDeLaPostura: string
-  seleccionado: boolean
-  alSeleccionar?: (si: boolean) => void
-}) {
-  const { t } = useTranslation(NS)
-  const proyecto = String(atributo(grupo, 'project'))
-  const localidad = useRegistro('locality', atributo<string>(grupo, 'locality'))
-  const del = useRegistro('project', global ? proyecto : undefined)
-  const evaluado = grupo.state === 'assessed' || Boolean(atributo(grupo, 'influence_group'))
+// las celdas de la tabla de escritorio: las que leen otro registro (la localidad, el proyecto, el nombre) son componentes
+function CeldaDelGrupo({ grupo }: { grupo: Registro }) {
   const nombre = useNombreDelGrupo(grupo)
   // la lista (con su territorio y sus filtros) queda en el rastro (revisión de UX, etapa 6)
   const paso = useSiguientePaso()
   return (
-    <tr>
-      {alSeleccionar ? (
-        <Td>
-          <input
-            type="checkbox"
-            aria-label={`${t('comun.seleccionar')} ${grupo.id}`}
-            checked={seleccionado}
-            onChange={(e) => alSeleccionar(e.target.checked)}
-          />
-        </Td>
-      ) : null}
-      <Td className="min-w-48">
-        <Link
-          to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(grupo.id)}`}
-          state={paso()}
-          className="font-medium text-sg-primary-text underline"
-        >
-          <NombreDelGrupo grupo={grupo} />
-        </Link>{' '}
-        {/* la vista previa sin dejar la lista (ux-architecture.md §8.3, paso 2; revisión de UX, etapa 6) */}
-        <BotonDeVistaPrevia objeto="stakeholder" id={grupo.id} nombre={nombre} />
-        <p className="text-sg-caption text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
-      </Td>
-      {global ? (
-        <Td className="text-sm">
-          <ProyectoEnLista proyecto={del.data} />
-        </Td>
-      ) : null}
-      <Td className="text-sm">{texto(localidad.data, 'name') || '—'}</Td>
-      <Td className="text-sm">{evaluado ? opcion(grupo, 'influence_group') || '—' : t('grupos.sinEvaluarValor')}</Td>
-      <Td className="text-sm">{leePostura ? opcion(grupo, 'stance') || '—' : <Restringido describedPor={idDeLaPostura} />}</Td>
-      <Td className="text-sm">{evaluado ? opcion(grupo, 'information_priority') || '—' : t('grupos.sinEvaluarValor')}</Td>
-      <Td>
-        <EstadoChip objeto="stakeholder" estado={grupo.state} />
-      </Td>
-      <Td className="text-sm">{opcion(grupo, 'relationship_status') || '—'}</Td>
-      <Td className="hidden text-sm 2xl:table-cell">
-        <Persona correo={texto(grupo, 'owner_user_email')} />
-      </Td>
-      <Td className="text-sm">
-        <Dia valor={texto(grupo, 'last_assessment_date')} />
-      </Td>
-      <Td className="text-sm">
-        <Dia valor={texto(grupo, 'last_contact_date')} />
-      </Td>
-    </tr>
+    <>
+      <Link to={rutaDelGrupo(grupo)} state={paso()} className="font-medium text-sg-primary-text underline">
+        <NombreDelGrupo grupo={grupo} />
+      </Link>{' '}
+      {/* la vista previa sin dejar la lista (ux-architecture.md §8.3, paso 2; revisión de UX, etapa 6) */}
+      <BotonDeVistaPrevia objeto="stakeholder" id={grupo.id} nombre={nombre} enFila />
+      <p className="text-sg-caption text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
+    </>
   )
+}
+
+function LocalidadDelGrupo({ grupo }: { grupo: Registro }) {
+  const localidad = useRegistro('locality', atributo<string>(grupo, 'locality'))
+  return <>{texto(localidad.data, 'name') || '—'}</>
 }
 
 // el título de la tarjeta de un grupo en el teléfono: su casilla (en un proyecto), su nombre como enlace (con su paso en el
@@ -380,6 +410,8 @@ function TituloDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro
     </span>
   )
 }
+
+const rutaDelGrupo = (grupo: Registro) => `/projects/${encodeURIComponent(String(atributo(grupo, 'project')))}/stakeholders/${encodeURIComponent(grupo.id)}`
 
 function ProyectoDelGrupo({ grupo }: { grupo: Registro }) {
   const del = useRegistro('project', String(atributo(grupo, 'project')))

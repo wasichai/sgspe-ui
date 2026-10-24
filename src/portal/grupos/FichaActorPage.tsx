@@ -16,6 +16,7 @@ import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro }
 import { NS } from '../i18n'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { Seccion } from '../componentes/Seccion'
 
 // S18 · ficha de actor (screens.md §5): la persona u organización detrás de uno o varios grupos de interés, con sus cargos,
 // su red de relaciones, los proyectos donde es grupo de interés y sus medios de contacto con consentimiento. el actor es
@@ -146,13 +147,11 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
           </section>
         </div>
         <aside className="space-y-4 text-sm">
-          <section aria-label={t('grupos.actor.proyectos')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-            <h2 className="font-medium">{t('grupos.actor.proyectos')}</h2>
+          <Seccion titulo={t('grupos.actor.proyectos')} className="space-y-1">
             <ProyectosDelActor grupos={grupos.data ?? []} />
             <EstadoDeLista consultas={[grupos]} vacio={t('grupos.actor.sinProyectos')} />
-          </section>
-          <section aria-label={t('grupos.actor.contactos')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-            <h2 className="font-medium">{t('grupos.actor.contactos')}</h2>
+          </Seccion>
+          <Seccion titulo={t('grupos.actor.contactos')} className="space-y-1">
             <ul>
               {(contactos.data ?? []).map((c) => (
                 <li key={c.id}>
@@ -165,7 +164,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
               ))}
             </ul>
             <EstadoDeLista consultas={[contactos]} vacio={t('grupos.actor.sinContactos')} />
-          </section>
+          </Seccion>
         </aside>
       </div>
       <Drawer titulo={t('comun.editar')} abierto={editando} alCerrar={() => setEditando(false)}>

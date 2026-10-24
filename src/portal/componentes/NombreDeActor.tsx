@@ -1,4 +1,6 @@
+import { useQueries } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { usePedir } from '../datos/http'
 import { atributo, texto, useRegistro, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
@@ -11,9 +13,13 @@ export function nombreDe(actor: Registro | undefined, objeto: 'person' | 'organi
   return nombre || personaRegistrada
 }
 
-export function useActorDelGrupo(grupo: Registro | undefined): { objeto: 'person' | 'organization'; id: string | undefined } {
+function actorDelGrupo(grupo: Registro | undefined): { objeto: 'person' | 'organization'; id: string | undefined } {
   const persona = atributo<string>(grupo, 'person')
   return persona ? { objeto: 'person', id: persona } : { objeto: 'organization', id: atributo<string>(grupo, 'organization') }
+}
+
+export function useActorDelGrupo(grupo: Registro | undefined): { objeto: 'person' | 'organization'; id: string | undefined } {
+  return actorDelGrupo(grupo)
 }
 
 // el nombre del actor de un grupo de interés
@@ -25,6 +31,30 @@ export function useNombreDelGrupo(grupo: Registro | undefined): string {
   // la persona queda como registrada, nunca un «…» eterno ni un nombre vacío
   if (!id || actor.isError) return t('comun.personaRegistrada')
   return nombreDe(actor.data, objeto, t('comun.personaRegistrada')) || (actor.isPending ? '…' : '')
+}
+
+// los nombres de varios grupos de interés a la vez (el selector de «Más filtros» busca por ellos), con las mismas reglas que
+// useNombreDelGrupo y la misma clave de caché que useRegistro: lo que se leyó para la lista o el chip no se vuelve a pedir
+export function useNombresDeGrupos(grupos: Registro[]): Map<string, string> {
+  const { t } = useTranslation(NS)
+  const pedir = usePedir()
+  const actores = grupos.map(actorDelGrupo)
+  const lecturas = useQueries({
+    queries: actores.map(({ objeto, id }) => ({
+      queryKey: ['record', objeto, id],
+      queryFn: () => pedir<Registro>(`/objects/${objeto}/records/${encodeURIComponent(id ?? '')}`),
+      enabled: Boolean(id)
+    }))
+  })
+  const registrada = t('comun.personaRegistrada')
+  return new Map(
+    grupos.map((g, i) => {
+      const { objeto, id } = actores[i]
+      const lectura = lecturas[i]
+      if (!id || lectura.isError) return [g.id, registrada]
+      return [g.id, nombreDe(lectura.data, objeto, registrada) || (lectura.isPending ? '…' : '')]
+    })
+  )
 }
 
 export function NombreDelGrupo({ grupo }: { grupo: Registro }) {

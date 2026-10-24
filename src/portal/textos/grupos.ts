@@ -76,6 +76,19 @@ export const ES_GRUPOS = {
     ajustado: 'ajustado a mano',
     perfil: 'Caracterización',
     editarPerfil: 'Editar la caracterización',
+    estado: 'Estado',
+    siglaExplicada: '{{sigla}} ({{explicacion}})',
+    siglas: { AIDS: 'área de influencia directa social', AIIS: 'área de influencia indirecta social' },
+    campos: {
+      inclusion_reason: 'Motivo de inclusión',
+      profile_summary: 'Resumen del perfil',
+      stakeholder_scope: 'Ámbito',
+      owner: 'Responsable',
+      interview_status: 'Entrevista',
+      relationship_status: 'Relación',
+      information_priority: 'Prioridad de información',
+      last_contact_date: 'Último contacto'
+    },
     trazabilidad: 'Qué generó',
     interacciones: 'Interacciones',
     compromisos: 'Compromisos que pidió',
@@ -125,6 +138,15 @@ export const ES_GRUPOS = {
     base: 'Base de la evaluación',
     interes: 'Interés: afectación y oportunidad',
     poder: 'Poder: recursos, acción, redes y movilización',
+    temas: {
+      afectacion: 'Afectación',
+      oportunidad: 'Oportunidad',
+      recursos: 'Recursos de poder',
+      accion: 'Acción y organización',
+      redes: 'Redes y movilización'
+    },
+    avance: '{{hechos}} de {{total}} temas calificados',
+    avanceDelTema: '{{hechos}} de {{total}}',
     anterior: 'antes: {{valor}}',
     indicadores: {
       affect_environment: 'Afectación del medio ambiente',
@@ -259,6 +281,19 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     ajustado: 'manually adjusted',
     perfil: 'Profile',
     editarPerfil: 'Edit the profile',
+    estado: 'Status',
+    siglaExplicada: '{{sigla}} ({{explicacion}})',
+    siglas: { AIDS: 'direct social area of influence', AIIS: 'indirect social area of influence' },
+    campos: {
+      inclusion_reason: 'Reason for inclusion',
+      profile_summary: 'Profile summary',
+      stakeholder_scope: 'Scope',
+      owner: 'Owner',
+      interview_status: 'Interview',
+      relationship_status: 'Relationship',
+      information_priority: 'Information priority',
+      last_contact_date: 'Last contact'
+    },
     trazabilidad: 'What it generated',
     interacciones: 'Engagements',
     compromisos: 'Commitments it requested',
@@ -307,6 +342,15 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     base: 'Basis of the assessment',
     interes: 'Interest: affectation and opportunity',
     poder: 'Power: resources, action, networks and mobilization',
+    temas: {
+      afectacion: 'Affectation',
+      oportunidad: 'Opportunity',
+      recursos: 'Power resources',
+      accion: 'Action and organization',
+      redes: 'Networks and mobilization'
+    },
+    avance: '{{hechos}} of {{total}} themes rated',
+    avanceDelTema: '{{hechos}} of {{total}}',
     anterior: 'before: {{valor}}',
     indicadores: {
       affect_environment: 'Environmental affectation',

@@ -1,5 +1,7 @@
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import { CamposPlegables } from '../componentes/CamposPlegables'
+import { Seccion } from '../componentes/Seccion'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useState } from 'react'
@@ -27,7 +29,6 @@ import {
   type Registro
 } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import type { Advertencia } from './api'
 import { Advertencias } from './Advertencias'
 import { EvaluacionDrawer } from './EvaluacionDrawer'
@@ -52,6 +53,9 @@ const CAMPOS_DEL_PERFIL = [
   'locality',
   'area_of_influence'
 ] as const
+
+// los ámbitos que son siglas del área de influencia: se dicen con su explicación
+const SIGLAS_DE_AMBITO = ['AIDS', 'AIIS']
 
 // el día de Lima de una marca de tiempo (una interacción de las 22:00 de Lima es del día siguiente en UTC)
 const diaEnLima = (marca: string): string => {
@@ -112,59 +116,53 @@ function Ficha({ grupo }: { grupo: Registro }) {
   useMigaDelRegistro(nombre)
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('grupos.ficha.tipo'), opcion(grupo, 'stakeholder_type')].filter(Boolean).join(' · ')}
         titulo={nombre}
         chips={
-          <>
-            <EstadoChip objeto="stakeholder" estado={grupo.state} />
-            {/* D9: lo que falta no deja un guion suelto junto a «Ver el actor» */}
-            {opcion(grupo, 'stakeholder_scope') ? <span className="text-sg-text-secondary">{opcion(grupo, 'stakeholder_scope')}</span> : null}
-            {texto(grupo, 'owner_user_email') ? (
-              <span className="text-sg-text-secondary">
-                <Persona correo={texto(grupo, 'owner_user_email')} />
-              </span>
-            ) : null}
-            {actor.id ? (
-              <Link
-                to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
-                state={paso(nombre)}
-                className="text-sg-primary-text underline"
-              >
-                {t('grupos.ficha.actor')}
+          actor.id ? (
+            <Link
+              to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
+              state={paso(nombre)}
+              className="text-sg-primary-text underline"
+            >
+              {t('grupos.ficha.actor')}
+            </Link>
+          ) : undefined
+        }
+        objeto="stakeholder"
+        registro={grupo}
+        proyecto={proyecto}
+        primariaPropia={
+          escribeEnElProyecto && can('engagement', 'CREATE') ? (
+            <Button asChild size="sm">
+              <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
+                {t('grupos.ficha.registrar')}
               </Link>
-            ) : null}
-          </>
-        }
-        primaria={
-          <div className="flex flex-wrap items-start gap-2">
-            <BotonesDeTransicion
-              agrupadas
-              objeto="stakeholder"
-              registro={grupo}
-              proyecto={proyecto}
-              sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')}
-            />
-            {escribeEnElProyecto && can('engagement', 'CREATE') ? (
-              <Button asChild size="sm">
-                <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
-                  {t('grupos.ficha.registrar')}
-                </Link>
-              </Button>
-            ) : null}
-          </div>
-        }
-        secundarias={
-          evalua ? (
-            <Button size="sm" variant="secondary" onClick={() => drawer(true)}>
-              {t('grupos.ficha.evaluar')}
             </Button>
           ) : undefined
         }
+        secundarias={
+          evalua
+            ? [
+                {
+                  clave: 'evaluar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => drawer(true)}>
+                      {t('grupos.ficha.evaluar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []
+        }
       />
       <Advertencias advertencias={advertencias} />
-      <section aria-label={t('grupos.ficha.paraDecidir')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* S17 no tiene panel de decisión: «Para decidir» hace sus veces y es el único lugar del estado (U-25) */}
+      <section aria-label={t('grupos.ficha.paraDecidir')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Tarjeta titulo={t('grupos.ficha.estado')}>
+          <EstadoChip objeto="stakeholder" estado={grupo.state} />
+        </Tarjeta>
         <Tarjeta titulo={t('grupos.ficha.influencia')}>
           {evaluado ? (
             <>
@@ -208,20 +206,16 @@ function Ficha({ grupo }: { grupo: Registro }) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           {ultima && definicionDeEvaluacion.data ? (
-            <section
-              aria-label={t('grupos.ficha.preocupaciones')}
-              className="grid gap-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm sm:grid-cols-2"
-            >
+            <Seccion etiqueta={t('grupos.ficha.preocupaciones')} className="grid gap-3 space-y-0 text-sm sm:grid-cols-2">
               {(['concerns', 'expectations'] as const).map((c) => (
                 <div key={c}>
                   <h3 className="font-medium">{t(c === 'concerns' ? 'grupos.ficha.preocupaciones' : 'grupos.ficha.expectativas')}</h3>
                   {puedeLeer(definicionDeEvaluacion.data, c) ? <p>{texto(ultima, c) || '—'}</p> : <Restringido />}
                 </div>
               ))}
-            </section>
+            </Seccion>
           ) : null}
-          <section aria-label={t('grupos.ficha.evaluaciones')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-            <h2 className="font-medium">{t('grupos.ficha.evaluaciones')}</h2>
+          <Seccion titulo={t('grupos.ficha.evaluaciones')}>
             {!leeEvaluaciones ? <NoDisponible motivo="OBJECT_NOT_READABLE" /> : null}
             {leeEvaluaciones && evaluaciones.isPending ? <Cargando compacto /> : null}
             {leeEvaluaciones && evaluaciones.isError && !evaluaciones.data ? (
@@ -253,19 +247,49 @@ function Ficha({ grupo }: { grupo: Registro }) {
                 </li>
               ))}
             </ol>
-          </section>
-          <section aria-label={t('grupos.ficha.perfil')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="font-medium">{t('grupos.ficha.perfil')}</h2>
-              {editaPerfil ? (
+          </Seccion>
+          <Seccion
+            titulo={t('grupos.ficha.perfil')}
+            acciones={
+              editaPerfil ? (
                 <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                   {t('grupos.ficha.editarPerfil')}
                 </Button>
-              ) : null}
-            </div>
-            <p>{texto(grupo, 'inclusion_reason') || '—'}</p>
-            <p className="text-sg-text-secondary">{texto(grupo, 'profile_summary')}</p>
-          </section>
+              ) : undefined
+            }
+          >
+            <CamposPlegables
+              campos={[
+                { clave: 'inclusion_reason', termino: t('grupos.ficha.campos.inclusion_reason'), valor: texto(grupo, 'inclusion_reason'), ancho: true },
+                { clave: 'profile_summary', termino: t('grupos.ficha.campos.profile_summary'), valor: texto(grupo, 'profile_summary'), ancho: true },
+                {
+                  clave: 'stakeholder_scope',
+                  termino: t('grupos.ficha.campos.stakeholder_scope'),
+                  // la sigla del ámbito, explicada (U-28 del rediseño de UX)
+                  valor:
+                    opcion(grupo, 'stakeholder_scope') && SIGLAS_DE_AMBITO.includes(texto(grupo, 'stakeholder_scope'))
+                      ? t('grupos.ficha.siglaExplicada', {
+                          sigla: opcion(grupo, 'stakeholder_scope'),
+                          explicacion: t(`grupos.ficha.siglas.${texto(grupo, 'stakeholder_scope')}`)
+                        })
+                      : opcion(grupo, 'stakeholder_scope')
+                },
+                {
+                  clave: 'owner',
+                  termino: t('grupos.ficha.campos.owner'),
+                  valor: texto(grupo, 'owner_user_email') ? <Persona correo={texto(grupo, 'owner_user_email')} /> : null
+                },
+                { clave: 'interview_status', termino: t('grupos.ficha.campos.interview_status'), valor: opcion(grupo, 'interview_status') },
+                { clave: 'relationship_status', termino: t('grupos.ficha.campos.relationship_status'), valor: opcion(grupo, 'relationship_status') },
+                { clave: 'information_priority', termino: t('grupos.ficha.campos.information_priority'), valor: opcion(grupo, 'information_priority') },
+                {
+                  clave: 'last_contact_date',
+                  termino: t('grupos.ficha.campos.last_contact_date'),
+                  valor: texto(grupo, 'last_contact_date') ? <Dia valor={texto(grupo, 'last_contact_date')} /> : null
+                }
+              ]}
+            />
+          </Seccion>
         </div>
         <Trazabilidad grupo={grupo} />
       </div>
@@ -294,12 +318,12 @@ function Ficha({ grupo }: { grupo: Registro }) {
 
 function Tarjeta({ titulo, ayuda, children }: { titulo: string; ayuda?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+    <Seccion etiqueta={titulo} className="space-y-1">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted" title={ayuda}>
         {titulo}
       </h3>
       {children}
-    </div>
+    </Seccion>
   )
 }
 
@@ -385,7 +409,7 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
   const proyecto = String(atributo(grupo, 'project'))
   const dia = (e: Registro) => diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))
   return (
-    <aside aria-label={t('grupos.ficha.trazabilidad')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+    <Seccion elemento="aside" etiqueta={t('grupos.ficha.trazabilidad')} className="text-sm">
       <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('grupos.ficha.trazabilidad')}</h2>
       <h3 className="font-medium">{t('grupos.ficha.interacciones')}</h3>
       {interacciones.isPending ? <Cargando compacto /> : null}
@@ -431,6 +455,6 @@ function Trazabilidad({ grupo }: { grupo: Registro }) {
           </ul>
         </>
       ) : null}
-    </aside>
+    </Seccion>
   )
 }

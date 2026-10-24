@@ -1,11 +1,12 @@
 import { useWasichaiConfig } from '@wasichai/core'
 import { cn } from '@wasichai/ui'
 import { ChevronDown, MoreHorizontal } from 'lucide-react'
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent as ClicDeReact, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { texto, useRegistro } from '../datos/registros'
 import { NS } from '../i18n'
+import { NavegacionDeOrigen } from './NavegacionDeOrigen'
 
 // las piezas de página de la revisión de UX (etapa 0, design-system.md §6.1 y §6.4): un ancho único para todas las
 // pantallas, un encabezado con el mismo orden y peso en todas, y el título del documento con la pantalla y el proyecto (D7)
@@ -94,6 +95,12 @@ export interface PropsDeEncabezado {
   ficha?: boolean
   // si el título visible no basta para el documento (el código de una ficha)
   tituloDelDocumento?: string
+  // el antetítulo en la letra del texto y no en la monoespaciada (la ficha de un registro, U-27 y DD-06 del rediseño de UX)
+  antetituloEnSans?: boolean
+  // la barra de acciones como un grupo con nombre (las acciones del registro de una ficha)
+  etiquetaDeAcciones?: string
+  // lo que va bajo las acciones, en la misma barra: lo que impide la primaria, la confirmación de una transición
+  pieDeAcciones?: ReactNode
 }
 
 export function EncabezadoDePagina({
@@ -107,62 +114,54 @@ export function EncabezadoDePagina({
   mas,
   vistas,
   ficha = false,
-  tituloDelDocumento
+  tituloDelDocumento,
+  antetituloEnSans = false,
+  etiquetaDeAcciones,
+  pieDeAcciones
 }: PropsDeEncabezado) {
-  const { t } = useTranslation(NS)
   useTituloDeDocumento(tituloDelDocumento ?? titulo)
-  // «Más acciones» con su nombre a la vista, como en las fichas: un «⋯» solo no dice qué hay detrás (rediseño de UX, 2026-10-20)
-  const menu = mas ? <MasAcciones etiqueta={t('paginas.mas')}>{mas}</MasAcciones> : null
   const acciones = primaria || secundarias || mas || vistas
   return (
     // un div y no un <header>: dentro de main no es la barra superior, y así nada lo confunde con ella (el banner de la página)
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1">
-        {antetitulo ? <p className="font-sg-mono text-sg-caption text-sg-text-muted">{antetitulo}</p> : null}
+        {/* una ficha abierta desde una lista: «‹ Volver a <lista> (N)», «Anterior» y «Siguiente» sobre el antetítulo (flujo F-C) */}
+        {ficha ? <NavegacionDeOrigen /> : null}
+        {antetitulo ? <p className={`${antetituloEnSans ? '' : 'font-sg-mono '}text-sg-caption text-sg-text-muted`}>{antetitulo}</p> : null}
         <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
         {chips ? <div className="flex flex-wrap items-center gap-2 text-sm">{chips}</div> : null}
         {descripcion ? <p className="text-sm text-sg-text-secondary">{descripcion}</p> : null}
         {conteo ? <p className="text-sm text-sg-text-muted">{conteo}</p> : null}
       </div>
-      {acciones && ficha ? (
-        // en el teléfono, solo la primaria y «Más acciones» van en la barra fija (rediseño de UX, 2026-10-20): las secundarias
-        // quedan bajo el título. seis botones apilados en la barra tapaban un cuarto de la pantalla
-        <div className="flex flex-wrap items-center gap-2">
+      {acciones ? (
+        <div
+          role={etiquetaDeAcciones ? 'group' : undefined}
+          aria-label={etiquetaDeAcciones}
+          data-barra-de-acciones={ficha ? '' : undefined}
+          className={cn(
+            'flex flex-wrap items-center gap-2',
+            ficha &&
+              'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-12 max-sm:z-20 max-sm:justify-end max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2'
+          )}
+        >
           {vistas}
           {secundarias}
-          {primaria || mas ? (
-            <div
-              data-barra-de-acciones=""
-              className="flex flex-wrap items-center gap-2 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-12 max-sm:z-20 max-sm:justify-end max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2"
-            >
-              {menu}
-              {primaria}
-            </div>
-          ) : null}
-        </div>
-      ) : acciones ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {vistas}
-          {secundarias}
-          {menu}
+          {mas ? <MasAcciones>{mas}</MasAcciones> : null}
           {primaria}
+          {pieDeAcciones ? <div className="basis-full space-y-1 sm:text-right">{pieDeAcciones}</div> : null}
         </div>
       ) : null}
     </div>
   )
 }
 
-// el aspecto de una acción dentro de MasAcciones (un enlace o un botón): a lo ancho del menú, sin borde, alineada a la izquierda
-export const ITEM_DE_MENU =
-  'flex w-full items-center rounded-sg-sm px-2.5 py-1.5 text-left text-sm text-sg-text hover:bg-sg-surface-hover disabled:cursor-not-allowed disabled:text-sg-text-muted disabled:hover:bg-transparent'
-
-// un desplegable sencillo (botón con aria-expanded y un grupo): Escape o un clic fuera lo cierran y el foco vuelve al botón.
-// elegir una acción también lo cierra y devuelve el foco al botón (rediseño de UX, 2026-10-20): el diálogo que esa acción abra
-// lo devuelve ahí al cerrarse, no al cuerpo de la página
-// el menú de acciones del encabezado: «Más» (solo el ícono) o, con etiqueta, un botón con su texto («Crear relacionado»)
-export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqueta?: string }) {
+// un desplegable sencillo (botón con aria-expanded y un grupo): Escape, un clic fuera o elegir una de sus opciones (un botón o
+// un enlace) lo cierran, y el foco vuelve al botón
+// el menú de acciones del encabezado: «Más» (solo el ícono) o, con etiqueta, un botón con su texto («Crear relacionado»). el
+// menú de una fila (P-08) es solo el ícono con un nombre propio («Acciones de …»), que también nombra al grupo
+export function MasAcciones({ children, etiqueta, nombre: nombreAccesible }: { children: ReactNode; etiqueta?: string; nombre?: string }) {
   const { t } = useTranslation(NS)
-  const nombre = etiqueta ?? t('paginas.mas')
+  const nombre = etiqueta ?? nombreAccesible ?? t('paginas.mas')
   const [abierto, setAbierto] = useState(false)
   const id = useId()
   const raiz = useRef<HTMLDivElement>(null)
@@ -175,6 +174,13 @@ export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqu
     document.addEventListener('mousedown', fuera)
     return () => document.removeEventListener('mousedown', fuera)
   }, [abierto])
+  // elegida una opción, el menú ya cumplió: se cierra (una vista elegida pasa a la fila; una transición abre su diálogo, que
+  // al cerrarse devuelve el foco al botón del menú)
+  const alElegir = (e: ClicDeReact<HTMLDivElement>) => {
+    if (!(e.target as Element).closest('button, a')) return
+    setAbierto(false)
+    boton.current?.focus()
+  }
   const alTeclear = (e: KeyboardEvent) => {
     if (e.key !== 'Escape') return
     e.preventDefault()
@@ -207,12 +213,7 @@ export function MasAcciones({ children, etiqueta }: { children: ReactNode; etiqu
           id={id}
           role="group"
           aria-label={nombre}
-          onClick={(e) => {
-            // un botón deshabilitado no recibe el clic; el del relleno del menú no elige nada
-            if (!(e.target as HTMLElement).closest('a, button')) return
-            setAbierto(false)
-            boton.current?.focus()
-          }}
+          onClick={alElegir}
           // en la barra de acciones del teléfono, abajo de todo, el menú se abre hacia arriba
           className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md max-sm:in-[[data-barra-de-acciones]]:top-auto max-sm:in-[[data-barra-de-acciones]]:bottom-full max-sm:in-[[data-barra-de-acciones]]:mb-1"
         >

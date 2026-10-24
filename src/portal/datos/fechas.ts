@@ -46,3 +46,29 @@ export function ahoraEnLima(ahora: Date = new Date()): string {
   )
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
 }
+
+// un día escrito como dd/mm/aaaa, ddmmaaaa o dd-mm-aaaa (hallazgo U-07: el orden es-PE en los dos idiomas, nunca el del
+// navegador) como AAAA-MM-DD; null si no es un día que exista. un día de calendario no tiene huso: Date.UTC solo comprueba
+// que el 31 de febrero no se corra al 3 de marzo
+export function diaDeTexto(texto: string): string | null {
+  const partes = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(texto.trim()) ?? /^(\d{2})(\d{2})(\d{4})$/.exec(texto.trim())
+  if (!partes) return null
+  const [d, m, a] = partes.slice(1).map(Number)
+  const fecha = new Date(Date.UTC(a, m - 1, d))
+  if (fecha.getUTCFullYear() !== a || fecha.getUTCMonth() !== m - 1 || fecha.getUTCDate() !== d) return null
+  return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+// un día AAAA-MM-DD (o el día de un AAAA-MM-DDTHH:mm) como lo muestra CampoFecha: dd/mm/aaaa; lo que no es un día, vacío
+export const textoDeDia = (dia: string): string => {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})/.exec(dia)
+  return partes ? `${partes[3]}/${partes[2]}/${partes[1]}` : ''
+}
+
+// una hora de 24 h escrita como HH:mm, H:mm o HHmm como HH:mm; null si no es una hora
+export function horaDeTexto(texto: string): string | null {
+  const partes = /^(\d{1,2}):?(\d{2})$/.exec(texto.trim())
+  if (!partes) return null
+  const [h, min] = partes.slice(1).map(Number)
+  return h < 24 && min < 60 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` : null
+}

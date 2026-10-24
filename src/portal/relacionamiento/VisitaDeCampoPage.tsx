@@ -1,5 +1,4 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
@@ -45,6 +44,7 @@ import { CodigoDeProyecto } from './InteraccionesPage'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S26 · visita de campo (screens.md §6, WF-L): el camino Planificada → En curso → Concluida o Parcial, el mapa con la ruta,
 // las interacciones y las observaciones, y "Agregar observación aquí" con la ubicación del teléfono o con coordenadas
@@ -232,15 +232,12 @@ function Visita({ visita }: { visita: Registro }) {
         antetitulo={t('relacionamiento.visita.tipo')}
         titulo={texto(visita, 'title')}
         chips={
-          <>
-            <EstadoChip objeto="field_visit" estado={visita.state} />
-            <span className="text-sg-text-secondary">
-              {t('relacionamiento.visita.periodo', {
-                desde: diaPe(texto(visita, 'actual_start_date') || texto(visita, 'planned_start_date')) || '…',
-                hasta: diaPe(texto(visita, 'actual_end_date') || texto(visita, 'planned_end_date')) || '…'
-              })}
-            </span>
-          </>
+          <span className="text-sg-text-secondary">
+            {t('relacionamiento.visita.periodo', {
+              desde: diaPe(texto(visita, 'actual_start_date') || texto(visita, 'planned_start_date')) || '…',
+              hasta: diaPe(texto(visita, 'actual_end_date') || texto(visita, 'planned_end_date')) || '…'
+            })}
+          </span>
         }
         primaria={
           <div className="flex flex-wrap gap-2">
@@ -267,8 +264,8 @@ function Visita({ visita }: { visita: Registro }) {
           ) : undefined
         }
       />
-      <CaminoDelFlujo objeto="field_visit" estado={visita.state} camino={[...CAMINO]} />
       <PanelDeDecision
+        camino={[...CAMINO]}
         objeto="field_visit"
         estado={visita.state}
         desde={texto(visita, 'state_changed_at') || null}
@@ -339,7 +336,7 @@ function Visita({ visita }: { visita: Registro }) {
             </CuerpoDeLista>
           </section>
         </div>
-        <aside className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <Seccion elemento="aside" className="space-y-3 text-sm">
           <h2 className="font-medium">{t('relacionamiento.visita.objetivo')}</h2>
           <p>{texto(visita, 'objective') || '—'}</p>
           <h2 className="font-medium">{t('relacionamiento.visita.itinerario')}</h2>
@@ -353,7 +350,7 @@ function Visita({ visita }: { visita: Registro }) {
               {t('relacionamiento.visita.editarResultado')}
             </Button>
           ) : null}
-        </aside>
+        </Seccion>
       </div>
       <Drawer titulo={t('relacionamiento.visita.agregarObservacion')} abierto={observando} alCerrar={() => setObservando(false)}>
         <NuevaObservacion visita={visita.id} alGuardar={() => setObservando(false)} />

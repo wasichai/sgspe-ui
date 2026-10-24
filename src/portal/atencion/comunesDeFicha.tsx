@@ -8,7 +8,10 @@ import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
+import { tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
+import { CamposPlegables, type CampoDeFicha } from '../componentes/CamposPlegables'
 import { Restringido } from '../componentes/Estados'
+import { Seccion } from '../componentes/Seccion'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { nombreDe, NombreDelGrupo } from '../componentes/NombreDeActor'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
@@ -70,16 +73,14 @@ export function PlazoQueCorre({ objeto, qcs }: { objeto: ObjetoDeQcs; qcs: Regis
   )
 }
 
-function Persona({ qcs }: { qcs: Registro }) {
-  const { t } = useTranslation(NS)
-  if (atributo(qcs, 'anonymous') === true) return <>{t('fichaQueja.comun.anonima')}</>
-  // un campo restringido no llega en el GET: «Restringido», nunca vacío
+// la persona que la plantea: anónima, restringida (un campo restringido no llega en el GET: «Restringido», nunca vacío), la
+// registrada o, sin ella, ningún dato (se pliega con los demás vacíos)
+function persona(qcs: Registro, anonima: string, registrada: string): ReactNode {
+  if (atributo(qcs, 'anonymous') === true) return anonima
   if (!('person' in qcs.attributes)) return <Restringido />
   return atributo(qcs, 'person') ? (
-    <RegistroVinculado objeto="person" id={atributo<string>(qcs, 'person')} rotulo={(p) => nombreDe(p, 'person', t('comun.personaRegistrada'))} />
-  ) : (
-    <>—</>
-  )
+    <RegistroVinculado objeto="person" id={atributo<string>(qcs, 'person')} rotulo={(p) => nombreDe(p, 'person', registrada)} />
+  ) : null
 }
 
 function Grupo({ id }: { id: string }) {
@@ -95,45 +96,63 @@ function Grupo({ id }: { id: string }) {
   )
 }
 
-// los datos del caso comunes a las tres QCS; children suma los propios del tipo
-export function DatosDelCaso({ qcs, children }: { qcs: Registro; children?: ReactNode }) {
+// el título de la ficha de una QCS dice lo que se planteó (U-27 del rediseño de UX)
+export const tituloDeQcs = (qcs: Registro, porCodigo: string): string => tituloQueDiceQueEs(texto(qcs, 'description'), porCodigo)
+
+// los datos del caso comunes a las tres QCS, por tema (DD-06 y U-26 del rediseño de UX): qué se plantea, cómo llegó y quién, y la
+// atención con su respuesta; cada sección pliega sus campos sin dato. planteamiento y atencion suman los propios del tipo
+export function DatosDelCaso({
+  qcs,
+  planteamiento = [],
+  atencion = []
+}: {
+  qcs: Registro
+  planteamiento?: readonly CampoDeFicha[]
+  atencion?: readonly CampoDeFicha[]
+}) {
   const { t } = useTranslation(NS)
-  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
-  const valor = (campo: string) => opcion(qcs, campo) || '—'
-  const momento = (campo: string) => (texto(qcs, campo) ? fechaYHoraPe(new Date(texto(qcs, campo))) : '—')
+  const momento = (campo: string) => (texto(qcs, campo) ? fechaYHoraPe(new Date(texto(qcs, campo))) : null)
+  const delEquipo = (campo: string) => (texto(qcs, campo) ? <PersonaDelEquipo correo={texto(qcs, campo)} /> : null)
   const anonima = atributo(qcs, 'anonymous') === true
+  const campo = (clave: string, valor: ReactNode, ancho = false): CampoDeFicha => ({ clave, termino: t(`fichaQueja.campos.${clave}`), valor, ancho })
   return (
-    <dl className="grid gap-3 pt-3 text-sm sm:grid-cols-2">
-      <div className="sm:col-span-2">
-        <Dato termino={t('fichaQueja.campos.description')}>{valor('description')}</Dato>
-      </div>
-      <Dato termino={t('fichaQueja.campos.category')}>{valor('category')}</Dato>
-      <Dato termino={t('fichaQueja.campos.priority')}>{valor('priority')}</Dato>
-      <Dato termino={t('fichaQueja.campos.channel')}>{valor('channel')}</Dato>
-      <Dato termino={t('fichaQueja.campos.received_at')}>{momento('received_at')}</Dato>
-      <Dato termino={t('fichaQueja.campos.received_by')}>
-        <PersonaDelEquipo correo={texto(qcs, 'received_by_user_email')} />
-      </Dato>
-      <Dato termino={t('fichaQueja.campos.owner')}>
-        <PersonaDelEquipo correo={texto(qcs, 'owner_user_email')} />
-      </Dato>
-      <Dato termino={t('fichaQueja.campos.person')}>
-        <Persona qcs={qcs} />
-      </Dato>
-      <Dato termino={t('fichaQueja.campos.stakeholder')}>
-        {anonima ? t('fichaQueja.comun.anonima') : atributo(qcs, 'stakeholder') ? <Grupo id={String(atributo(qcs, 'stakeholder'))} /> : '—'}
-      </Dato>
-      {children}
-      <div className="sm:col-span-2">
-        <Dato termino={t('fichaQueja.campos.response')}>{valor('response')}</Dato>
-      </div>
-      <Dato termino={t('fichaQueja.campos.responded_at')}>{momento('responded_at')}</Dato>
-      {texto(qcs, 'closed_date') ? (
-        <Dato termino={t('fichaQueja.campos.closed_date')}>
-          <Dia valor={texto(qcs, 'closed_date')} />
-        </Dato>
-      ) : null}
-    </dl>
+    <div className="space-y-4 pt-3">
+      <Seccion titulo={t('fichaQueja.comun.secciones.planteamiento')}>
+        <CamposPlegables
+          campos={[
+            campo('description', texto(qcs, 'description') ? <span className="whitespace-pre-line">{texto(qcs, 'description')}</span> : null, true),
+            campo('category', opcion(qcs, 'category')),
+            campo('priority', opcion(qcs, 'priority')),
+            ...planteamiento
+          ]}
+        />
+      </Seccion>
+      <Seccion titulo={t('fichaQueja.comun.secciones.llegada')}>
+        <CamposPlegables
+          campos={[
+            campo('channel', opcion(qcs, 'channel')),
+            campo('received_at', momento('received_at')),
+            campo('received_by', delEquipo('received_by_user_email')),
+            campo('person', persona(qcs, t('fichaQueja.comun.anonima'), t('comun.personaRegistrada'))),
+            campo(
+              'stakeholder',
+              anonima ? t('fichaQueja.comun.anonima') : atributo(qcs, 'stakeholder') ? <Grupo id={String(atributo(qcs, 'stakeholder'))} /> : null
+            )
+          ]}
+        />
+      </Seccion>
+      <Seccion titulo={t('fichaQueja.comun.secciones.atencion')}>
+        <CamposPlegables
+          campos={[
+            campo('owner', delEquipo('owner_user_email')),
+            ...atencion,
+            campo('response', texto(qcs, 'response') ? <span className="whitespace-pre-line">{texto(qcs, 'response')}</span> : null, true),
+            campo('responded_at', momento('responded_at')),
+            campo('closed_date', texto(qcs, 'closed_date') ? <Dia valor={texto(qcs, 'closed_date')} /> : null)
+          ]}
+        />
+      </Seccion>
+    </div>
   )
 }
 

@@ -4,10 +4,13 @@ import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
 import { Search } from 'lucide-react'
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { useNombreDelGrupo } from '../componentes/NombreDeActor'
+import { useVistaActual } from '../componentes/Pagina'
+import type { EstadoDeNavegacion } from '../contexto/Origen'
 import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { rutaDeFicha } from '../datos/fichas'
 import { usePedir } from '../datos/http'
 import { consulta, texto, type Pagina, type Registro } from '../datos/registros'
@@ -115,6 +118,9 @@ function DialogoDeBusqueda({ alCerrar }: { alCerrar: () => void }) {
   const { can } = useAuth()
   const pedir = usePedir()
   const navegar = useNavigate()
+  const paso = useSiguientePaso()
+  const vista = useVistaActual()
+  const { pathname, search } = useLocation()
   const idLista = useId()
   const [termino, setTermino] = useState(leerConsulta)
   const [activo, setActivo] = useState(0)
@@ -145,7 +151,12 @@ function DialogoDeBusqueda({ alCerrar }: { alCerrar: () => void }) {
     const ruta = elegido ? rutaDeFicha(elegido.objeto, elegido.registro) : null
     if (!ruta) return
     alCerrar()
-    navegar(ruta)
+    // la ficha ofrece volver a la pantalla desde la que se buscó (flujo F-C), sin «Anterior» ni «Siguiente» ni conteo
+    const estado: EstadoDeNavegacion = {
+      ...paso(undefined, ruta),
+      ...(vista ? { origen: { ruta: pathname + search, etiqueta: vista, total: null, fichas: [] } } : {})
+    }
+    navegar(ruta, { state: estado })
   }
   const alTeclear = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {

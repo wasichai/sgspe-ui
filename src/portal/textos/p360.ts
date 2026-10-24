@@ -7,19 +7,26 @@ export const ES_P360 = {
     fase: 'Fase de exploración',
     completar: 'Completar proyecto',
     registrarInteraccion: 'Registrar interacción',
-    atencion: 'Atención requerida',
+    atencion: 'Qué requiere atención',
+    atencionAyuda: 'Lo más urgente de cada grupo, con su motivo.',
     sinAtencion: 'Nada pide atención hoy.',
-    nuncaContactado: '{{nombre}} · nunca contactado',
+    // cada grupo de «Atención requerida» con su conteo al lado (ListaPriorizada) y el motivo de cada entrada
     grupos: {
-      actas_one: '{{count}} acta por redactar',
-      actas_other: '{{count}} actas por redactar',
-      sinContacto_one: '{{count}} grupo de interés sin contacto en más de {{dias}} días',
-      sinContacto_other: '{{count}} grupos de interés sin contacto en más de {{dias}} días',
-      evaluaciones_one: '{{count}} evaluación con más de {{dias}} días',
-      evaluaciones_other: '{{count}} evaluaciones con más de {{dias}} días'
+      actas: 'Actas por redactar',
+      sinContacto: 'Sin contacto en más de {{dias}} días',
+      evaluaciones: 'Evaluaciones con más de {{dias}} días'
+    },
+    motivos: {
+      acta: 'Realizada, sin acta',
+      nuncaContactado: 'Nunca contactado',
+      sinContacto_one: 'Último contacto hace {{count}} día',
+      sinContacto_other: 'Último contacto hace {{count}} días',
+      evaluacion_one: 'Evaluada hace {{count}} día',
+      evaluacion_other: 'Evaluada hace {{count}} días'
     },
     fuentes: { interacciones: 'Interacciones', grupos: 'Grupos de interés' },
     salud: 'Salud del proyecto',
+    pideAccion: 'Pide acción',
     kpis: {
       gruposVigentes: 'Grupos de interés vigentes',
       interacciones: 'Interacciones realizadas este mes',
@@ -53,12 +60,14 @@ export const ES_P360 = {
     asignar: 'Asignar',
     asignarme: 'Asignarme al proyecto',
     invalido: 'Revise este dato',
-    terminar: 'Terminar asignación',
+    terminar: 'Terminar la asignación…',
     vencida: 'Vencida: no da acceso de escritura',
     programada: 'Programada: aún no da acceso de escritura',
-    terminarDe: 'Terminar asignación de {{correo}}',
-    confirmarTerminar: '¿Terminar la asignación de {{correo}}? Dejará de dar acceso de escritura.',
-    terminarSi: 'Sí, terminar'
+    acciones: 'Acciones de {{persona}}',
+    tituloTerminar: 'Terminar la asignación de {{persona}}',
+    efectoVigente: '{{persona}} deja de trabajar en este proyecto desde hoy, {{fecha}}: la asignación queda terminada y ya no le da acceso de escritura.',
+    efectoProgramada: '{{persona}} no empezará a trabajar en este proyecto el {{fecha}}: la asignación queda terminada y nunca le dará acceso de escritura.',
+    terminarSi: 'Terminar la asignación'
   },
   equipo: {
     titulo: 'Equipo y parámetros',
@@ -182,20 +191,25 @@ export const EN_P360: typeof ES_P360 = {
     fase: 'Exploration phase',
     completar: 'Complete project',
     registrarInteraccion: 'Register engagement',
-    atencion: 'Needs attention',
+    atencion: 'What needs attention',
+    atencionAyuda: 'The most urgent items in each group, with why.',
     sinAtencion: 'Nothing needs attention today.',
-
-    nuncaContactado: '{{nombre}} · never contacted',
     grupos: {
-      actas_one: '{{count}} minutes to draft',
-      actas_other: '{{count}} minutes to draft',
-      sinContacto_one: '{{count}} stakeholder with no contact for more than {{dias}} days',
-      sinContacto_other: '{{count}} stakeholders with no contact for more than {{dias}} days',
-      evaluaciones_one: '{{count}} assessment older than {{dias}} days',
-      evaluaciones_other: '{{count}} assessments older than {{dias}} days'
+      actas: 'Minutes to draft',
+      sinContacto: 'No contact for more than {{dias}} days',
+      evaluaciones: 'Assessments older than {{dias}} days'
+    },
+    motivos: {
+      acta: 'Held, minutes not drafted',
+      nuncaContactado: 'Never contacted',
+      sinContacto_one: 'Last contact {{count}} day ago',
+      sinContacto_other: 'Last contact {{count}} days ago',
+      evaluacion_one: 'Assessed {{count}} day ago',
+      evaluacion_other: 'Assessed {{count}} days ago'
     },
     fuentes: { interacciones: 'Engagements', grupos: 'Stakeholders' },
     salud: 'Project health',
+    pideAccion: 'Needs action',
     kpis: {
       gruposVigentes: 'Current stakeholders',
       interacciones: 'Engagements held this month',
@@ -229,12 +243,14 @@ export const EN_P360: typeof ES_P360 = {
     asignar: 'Assign',
     asignarme: 'Assign me to the project',
     invalido: 'Check this value',
-    terminar: 'End assignment',
+    terminar: 'End the assignment…',
     vencida: 'Expired: grants no write access',
     programada: 'Scheduled: grants no write access yet',
-    terminarDe: 'End assignment of {{correo}}',
-    confirmarTerminar: 'End the assignment of {{correo}}? It will stop granting write access.',
-    terminarSi: 'Yes, end it'
+    acciones: 'Actions for {{persona}}',
+    tituloTerminar: 'End the assignment of {{persona}}',
+    efectoVigente: '{{persona}} stops working on this project as of today, {{fecha}}: the assignment ends and no longer grants write access.',
+    efectoProgramada: '{{persona}} will not start working on this project on {{fecha}}: the assignment ends and will never grant write access.',
+    terminarSi: 'End the assignment'
   },
   equipo: {
     titulo: 'Team and parameters',

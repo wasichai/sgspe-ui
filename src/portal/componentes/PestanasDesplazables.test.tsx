@@ -51,4 +51,58 @@ describe('PestanasDesplazables', () => {
     expect(screen.getByRole('button', { name: 'Ver las secciones anteriores' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Ver más secciones' })).not.toBeInTheDocument()
   })
+
+  // U-19: la pestaña activa nunca queda oculta; si la fila no cabe, se trae a la vista sin mover la página en vertical
+  it('trae la pestaña activa a la vista', () => {
+    const traer = vi.fn()
+    Element.prototype.scrollIntoView = traer
+    try {
+      montar()
+      expect(traer).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+      expect(traer.mock.contexts[0]).toBe(screen.getByRole('link', { name: 'Documentos' }))
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView
+    }
+  })
+})
+
+// U-19: las pestañas del proyecto llegan después de los permisos, y sus conteos después aún (y las ensanchan): la activa se
+// trae a la vista cuando aparece y con cada cambio de la fila, hasta que la persona la desplace por su cuenta
+describe('PestanasDesplazables, con pestañas que llegan después', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  function Fila({ conActiva, conteo = '' }: { conActiva: boolean; conteo?: string }) {
+    return (
+      <I18nextProvider i18n={crearI18n()}>
+        <MemoryRouter>
+          <PestanasDesplazables etiqueta="Secciones del proyecto">
+            <a href="#a">Resumen {conteo}</a>
+            {conActiva ? (
+              <a href="#b" aria-current="page">
+                Documentos
+              </a>
+            ) : null}
+          </PestanasDesplazables>
+        </MemoryRouter>
+      </I18nextProvider>
+    )
+  }
+
+  it('trae a la vista la pestaña activa que aparece después, y otra vez si la fila cambia, hasta que la persona la desplaza', async () => {
+    const llevar = vi.fn()
+    Element.prototype.scrollIntoView = llevar
+    const { rerender } = render(<Fila conActiva={false} />)
+    expect(llevar).not.toHaveBeenCalled()
+    rerender(<Fila conActiva />)
+    await vi.waitFor(() => expect(llevar).toHaveBeenCalledTimes(1))
+    expect(llevar.mock.contexts[0]).toBe(screen.getByRole('link', { name: 'Documentos' }))
+    // llega un conteo: la activa puede haberse corrido, se vuelve a traer
+    rerender(<Fila conActiva conteo="12" />)
+    await vi.waitFor(() => expect(llevar).toHaveBeenCalledTimes(2))
+    // la persona desplaza la fila: lo que llegue después ya no la mueve
+    act(() => screen.getByRole('navigation', { name: 'Secciones del proyecto' }).dispatchEvent(new WheelEvent('wheel', { bubbles: true })))
+    rerender(<Fila conActiva conteo="13" />)
+    await new Promise((r) => setTimeout(r, 20))
+    expect(llevar).toHaveBeenCalledTimes(2)
+  })
 })

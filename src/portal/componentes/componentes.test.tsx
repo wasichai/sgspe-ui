@@ -81,7 +81,7 @@ describe('estados comunes', () => {
     ['ROLE_REQUIRED', 'Su rol no puede dar este paso del flujo.'],
     ['FIELD_NOT_WRITABLE', 'Este paso escribe un dato que su rol no puede escribir.'],
     ['OBJECT_NOT_READABLE', 'Su rol no puede leer datos que esta regla necesita revisar.'],
-    ['COMMAND_ONLY', 'Este paso se hace desde su propia pantalla, no como una transición.']
+    ['COMMAND_ONLY', 'Este paso se hace desde su propia pantalla, no desde las acciones del registro.']
   ])('un 403 %s dice su texto, no el código ni el texto genérico', async (codigo, texto) => {
     montar(<ErrorDeCarga error={new ErrorDeSgspe(403, 'Prohibido', [{ field: 'record', message: codigo }], null)} />)
     expect(await screen.findByText(texto)).toBeInTheDocument()

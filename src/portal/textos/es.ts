@@ -62,6 +62,7 @@ import { ES_BORRADOR_DE_ACTA } from './borradorDeActa'
 import { ES_TABLEROS_F8 } from './tablerosF8'
 import { ES_ENTREGABLES } from './entregables'
 import { ES_PLANTILLAS } from './plantillas'
+import { ES_ADMINISTRACION } from './administracion'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
@@ -137,6 +138,8 @@ export const ES = {
   tablerosF8: ES_TABLEROS_F8,
   entregables: ES_ENTREGABLES,
   plantillas: ES_PLANTILLAS,
+  // el rediseño de UX: S53, la sección Administración
+  administracion: ES_ADMINISTRACION,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',
@@ -166,22 +169,28 @@ export const ES = {
     secciones: 'Secciones',
     leyendoPermisos: 'Leyendo los permisos de su cuenta…',
     sinPermisos: 'No se pudieron leer sus permisos',
-    sinAcceso: 'Su cuenta no puede abrir «{{seccion}}».',
     preguntar: 'Preguntar',
     idioma: 'Idioma',
     idiomaNoGuardado: 'No se pudo guardar el idioma',
-    // los bloques de la navegación, en el orden de las secciones (RNF-USA-001)
-    grupos: {
-      proyectos: 'Proyectos y territorio',
+    tema: 'Tema',
+    // los títulos de bloque de la navegación (navTree.ts, BLOQUES) y su «Contraer»
+    bloques: {
+      territorio: 'Proyectos y territorio',
       comunidades: 'Trabajo con las comunidades',
-      gestion: 'Riesgos e inversión social',
+      riesgos: 'Riesgos e inversión social',
       seguimiento: 'Documentos y seguimiento'
-    }
+    },
+    contraer: 'Contraer',
+    expandir: 'Expandir'
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
-  // el rótulo corto de una sección cuyo nombre no cabe en la barra lateral; el completo va en aria-label y title
+  // el rótulo corto de una sección en la pestaña del proyecto (ProyectoLayout); el completo va en aria-label y title
   seccionesCortas: {
     attention: 'QCS'
+  },
+  // el nombre de una sección en la barra lateral, si no es el de secciones (DD-10): el completo va en title
+  seccionesEnLaBarra: {
+    attention: 'Quejas y solicitudes'
   },
   secciones: {
     dashboard: 'Inicio',
@@ -211,16 +220,6 @@ export const ES = {
     sinRoles: 'Sin roles',
     sinPermisos: 'No se pudieron leer sus permisos',
     modulos: 'Sus secciones',
-    trabajo: {
-      titulo: 'Su trabajo',
-      nada: 'Nada pendiente a su cargo.',
-      tareas_one: '{{count}} tarea abierta',
-      tareas_other: '{{count}} tareas abiertas',
-      compromisos_one: '{{count}} compromiso a su cargo',
-      compromisos_other: '{{count}} compromisos a su cargo',
-      qcs_one: '{{count}} QCS a su cargo',
-      qcs_other: '{{count}} QCS a su cargo'
-    },
     rolesAsignados_one: '{{count}} rol asignado',
     rolesAsignados_other: '{{count}} roles asignados',
     resumen: '{{disponibles, number}} de {{total, number}} secciones disponibles para su cuenta'

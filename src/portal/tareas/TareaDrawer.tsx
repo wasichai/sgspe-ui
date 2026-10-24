@@ -6,6 +6,7 @@ import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
+import { ResultadoDeLista } from '../contexto/Origen'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { atributo, texto, useActualizar, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
@@ -33,14 +34,18 @@ export const origenDe = (tarea: Registro): { objeto: string; id: string } | null
 }
 
 // el origen de una tarea con su tipo y su nombre («Interacción · Asamblea de agosto», revisión de UX, etapa 6): el registro se lee
-// como quien mira, así que uno que no se lee (una QCS confidencial, otro proyecto) es «Registro reservado», sin enlace
+// como quien mira, así que uno que no se lee (una QCS confidencial, otro proyecto) es «Registro reservado», sin enlace. su ficha
+// ofrece volver a la tarea (flujo F-C), sin «Anterior» ni «Siguiente»: el origen no es un resultado de la lista
 export function OrigenDeTarea({ tarea }: { tarea: Registro }) {
   const { t } = useTranslation(NS)
   const origen = origenDe(tarea)
   if (!origen) return <>{t('tareas.sinOrigen')}</>
   return (
     <span>
-      {t(`tareas.origenes.${origen.objeto}`)} · <RegistroVinculado objeto={origen.objeto} id={origen.id} />
+      {t(`tareas.origenes.${origen.objeto}`)} ·{' '}
+      <ResultadoDeLista vecinos={false}>
+        <RegistroVinculado objeto={origen.objeto} id={origen.id} />
+      </ResultadoDeLista>
     </span>
   )
 }

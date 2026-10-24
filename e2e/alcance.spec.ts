@@ -28,8 +28,13 @@ test('quien lee todos los proyectos ve «Todos los proyectos» por defecto y tod
   await conAlcance(page, { project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'] }, [A, B])
   await page.goto('/projects')
   const selector = page.getByRole('combobox', { name: 'Proyecto' })
-  await expect(selector).toHaveValue('')
-  await expect(selector.locator('option')).toHaveText(['Todos los proyectos', 'PRJ-A · Proyecto Ejemplo A', 'PRJ-B · Proyecto Ejemplo B'])
+  await expect(selector).toHaveValue('Todos los proyectos')
+  await selector.click()
+  await expect(page.getByRole('listbox', { name: 'Proyecto' }).getByRole('option')).toHaveText([
+    'Todos los proyectos',
+    'PRJ-A · Proyecto Ejemplo A',
+    'PRJ-B · Proyecto Ejemplo B'
+  ])
 })
 
 test('una cuenta sin proyectos asignados lo dice en lugar de un selector vacío', async ({ page }) => {

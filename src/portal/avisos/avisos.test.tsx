@@ -123,9 +123,31 @@ describe('S04 · bandeja', () => {
   it('«Activos» y «Solo sin leer» dicen cuántos tienen; «Pospuestos», no', async () => {
     fetch = mockFetch(rutas())
     montar(<AvisosPage />, { ruta: '/notifications', camino: '/notifications' })
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Activos' })).toHaveAccessibleDescription('3 registros'))
-    expect(screen.getByRole('tab', { name: 'Solo sin leer' })).toHaveAccessibleDescription('3 registros')
-    expect(screen.getByRole('tab', { name: 'Pospuestos' })).not.toHaveAccessibleDescription()
+    expect(await screen.findByRole('radio', { name: 'Activos, 3' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Solo sin leer, 3' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Pospuestos' })).toBeInTheDocument()
+  })
+
+  // hallazgos U-18 y U-22 (DD-03, DD-04): las vistas en el selector de la barra de filtros, sin segunda fila de pestañas, y el
+  // tipo como filtro de la barra, con su chip y «Limpiar filtros». ?view= y ?kind= no cambian
+  it('las vistas van en el selector de la barra y el tipo es un filtro con su chip y «Limpiar filtros»', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed()
+    montar(<AvisosPage />, { ruta: '/notifications?view=sinLeer&kind=ACTION', camino: '/notifications' })
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(within(within(barra).getByRole('radiogroup', { name: 'Vistas' })).getByRole('radio', { name: /^Solo sin leer\b/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    expect(within(barra).getByRole('combobox', { name: 'Tipo' })).toHaveDisplayValue('Para hacer')
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').at(-1)?.ruta).toContain('kind=ACTION'))
+    const chips = within(barra).getByRole('list', { name: 'Filtros aplicados' })
+    expect(within(chips).getByRole('listitem')).toHaveTextContent('Tipo: Para hacer')
+    await userEvent.click(within(barra).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/notifications?view=sinLeer')
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').at(-1)?.ruta).not.toContain('kind='))
+    expect(within(barra).queryByRole('list', { name: 'Filtros aplicados' })).not.toBeInTheDocument()
   })
 
   it('filtra sin leer en el servidor; un ACTION de una fuente no se descarta y uno manual sí', async () => {
@@ -140,7 +162,7 @@ describe('S04 · bandeja', () => {
     expect(within(segundo).getByText('Este aviso no lleva a un registro que su cuenta pueda abrir.')).toBeInTheDocument()
     await userEvent.click(within(segundo).getByRole('button', { name: 'Descartar' }))
     await waitFor(() => expect(red!.a('POST', '/auth/me/notifications/n2/dismiss')).toHaveLength(1))
-    await userEvent.click(screen.getByRole('tab', { name: 'Solo sin leer' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Solo sin leer\b/ }))
     await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').at(-1)?.ruta).toContain('state=unread'))
   })
 
@@ -150,7 +172,10 @@ describe('S04 · bandeja', () => {
     red = espiarRed()
     montar(<AvisosPage />, { ruta: '/notifications?kind=WARNING', camino: '/notifications' })
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    // el del vacío, no el de la barra de filtros
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    const delVacio = screen.getAllByRole('button', { name: 'Limpiar filtros' }).find((b) => !barra.contains(b))!
+    await userEvent.click(delVacio)
     await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').at(-1)?.ruta).not.toContain('kind='))
   })
 

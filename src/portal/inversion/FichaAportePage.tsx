@@ -1,8 +1,9 @@
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha, tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
+import { CamposPlegables, type CampoDeFicha } from '../componentes/CamposPlegables'
+import { Seccion } from '../componentes/Seccion'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha, type PestanaDeFicha } from '../componentes/PestanasDeFicha'
@@ -18,7 +19,6 @@ import { Link, useParams } from 'react-router'
 import { BarraDelTope } from '../compromisos/BarraDelTope'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
-import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Historia } from '../componentes/Historia'
@@ -32,7 +32,6 @@ import { APORTE_TERMINADO, enSolicitud, monedaDe, TERMINOS_APROBADOS, totalDeIte
 import { atributo, texto, usePuedeEditar, useRegistro, useRegistros, useTodosConTope, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { NS, numeroPe } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { AntesDeAprobar } from './AntesDeAprobar'
 import { EntregaDelAporte } from './EntregaDelAporte'
 import { opcion } from '../datos/opciones'
@@ -128,27 +127,33 @@ function Ficha({ aporte }: { aporte: Registro }) {
   ]
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('fichaAporte.tipo'), texto(aporte, 'code'), opcion(aporte, 'contribution_type'), texto(aporte, 'occasion')].filter(Boolean).join(' · ')}
-        titulo={titulo}
-        chips={
-          <>
-            <EstadoChip objeto="social_contribution" estado={aporte.state} />
-            <span className="tabular-nums">{t('fichaAporte.total', { monto: montoPe(atributo(aporte, 'total_amount'), monedaDe(aporte)) })}</span>
-          </>
-        }
-        primaria={<BotonesDeTransicion agrupadas objeto="social_contribution" registro={aporte} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        titulo={tituloQueDiceQueEs(texto(aporte, 'declared_purpose'), titulo)}
+        tituloDelDocumento={titulo}
+        chips={<span className="tabular-nums">{t('fichaAporte.total', { monto: montoPe(atributo(aporte, 'total_amount'), monedaDe(aporte)) })}</span>}
+        objeto="social_contribution"
+        registro={aporte}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
         secundarias={
-          edita ? (
-            <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-              {t('fichaAporte.editar')}
-            </Button>
-          ) : undefined
+          edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                      {t('fichaAporte.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []
         }
       />
-      <CaminoDelFlujo objeto="social_contribution" estado={aporte.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="social_contribution"
         estado={aporte.state}
         desde={texto(aporte, 'state_changed_at') || null}
@@ -189,15 +194,6 @@ function Ficha({ aporte }: { aporte: Registro }) {
   )
 }
 
-function Dato({ termino, children }: { termino: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-sg-caption text-sg-text-muted">{termino}</dt>
-      <dd className="whitespace-pre-line">{children}</dd>
-    </div>
-  )
-}
-
 function Resumen({ aporte }: { aporte: Registro }) {
   return (
     <div className="space-y-4 pt-3 text-sm">
@@ -207,36 +203,43 @@ function Resumen({ aporte }: { aporte: Registro }) {
   )
 }
 
+// para qué y para quién (DD-06 y U-26 del rediseño de UX): primero a quién llega y para qué; después cómo se financia y a qué se
+// vincula. cada sección pliega sus campos sin dato
 function ParaQue({ aporte }: { aporte: Registro }) {
   const { t } = useTranslation(NS)
-  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
-  const valor = (campo: string) => opcion(aporte, campo) || '—'
-  const vinculo = (objeto: string, campo: string) => (texto(aporte, campo) ? <RegistroVinculado objeto={objeto} id={texto(aporte, campo)} /> : '—')
+  const vinculo = (objeto: string, campo: string) => (texto(aporte, campo) ? <RegistroVinculado objeto={objeto} id={texto(aporte, campo)} /> : null)
   const beneficiarios = atributo(aporte, 'beneficiaries_count')
+  const sinergia = atributo(aporte, 'has_institutional_synergy')
+  const campo = (clave: string, valor: ReactNode, ancho = false): CampoDeFicha => ({ clave, termino: t(`fichaAporte.paraQue.${clave}`), valor, ancho })
   return (
-    <section aria-label={t('fichaAporte.paraQue.titulo')} className="space-y-2">
-      <h2 className="font-semibold">{t('fichaAporte.paraQue.titulo')}</h2>
-      <dl className="grid gap-3 sm:grid-cols-2">
-        <Dato termino={t('fichaAporte.paraQue.proposito')}>{valor('declared_purpose')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.ocasion')}>{valor('occasion')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.recibe')}>{vinculo('organization', 'recipient_organization')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.grupo')}>{vinculo('stakeholder', 'stakeholder')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.localidad')}>{vinculo('locality', 'locality')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.festividad')}>{vinculo('festivity', 'festivity')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.condiciones')}>{valor('conditions')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.beneficiarios')}>
-          {beneficiarios === null || beneficiarios === undefined ? '—' : numeroPe(Number(beneficiarios))}
-        </Dato>
-        <Dato termino={t('fichaAporte.paraQue.pagador')}>{vinculo('organization', 'payer_organization')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.tema')}>{vinculo('topic', 'topic')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.sinergia')}>{atributo(aporte, 'has_institutional_synergy') === true ? t('comun.si') : t('comun.no')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.acuerdo')}>{vinculo('agreement', 'agreement')}</Dato>
-        <Dato termino={t('fichaAporte.paraQue.compromiso')}>{vinculo('commitment', 'commitment')}</Dato>
-        {texto(aporte, 'guideline_deviation_justification') ? (
-          <Dato termino={t('fichaAporte.paraQue.justificacion')}>{valor('guideline_deviation_justification')}</Dato>
-        ) : null}
-      </dl>
-    </section>
+    <>
+      <Seccion titulo={t('fichaAporte.paraQue.titulo')}>
+        <CamposPlegables
+          campos={[
+            campo('proposito', texto(aporte, 'declared_purpose'), true),
+            campo('ocasion', texto(aporte, 'occasion')),
+            campo('beneficiarios', beneficiarios === null || beneficiarios === undefined ? null : numeroPe(Number(beneficiarios))),
+            campo('recibe', vinculo('organization', 'recipient_organization')),
+            campo('grupo', vinculo('stakeholder', 'stakeholder')),
+            campo('localidad', vinculo('locality', 'locality')),
+            campo('festividad', vinculo('festivity', 'festivity')),
+            campo('condiciones', texto(aporte, 'conditions'), true)
+          ]}
+        />
+      </Seccion>
+      <Seccion titulo={t('fichaAporte.paraQue.financiacion')}>
+        <CamposPlegables
+          campos={[
+            campo('pagador', vinculo('organization', 'payer_organization')),
+            campo('tema', vinculo('topic', 'topic')),
+            campo('sinergia', sinergia === true ? t('comun.si') : sinergia === false ? t('comun.no') : null),
+            campo('acuerdo', vinculo('agreement', 'agreement')),
+            campo('compromiso', vinculo('commitment', 'commitment')),
+            ...(texto(aporte, 'guideline_deviation_justification') ? [campo('justificacion', texto(aporte, 'guideline_deviation_justification'), true)] : [])
+          ]}
+        />
+      </Seccion>
+    </>
   )
 }
 

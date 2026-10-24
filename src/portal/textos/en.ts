@@ -62,6 +62,7 @@ import { EN_BORRADOR_DE_ACTA } from './borradorDeActa'
 import { EN_TABLEROS_F8 } from './tablerosF8'
 import { EN_ENTREGABLES } from './entregables'
 import { EN_PLANTILLAS } from './plantillas'
+import { EN_ADMINISTRACION } from './administracion'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
@@ -137,6 +138,8 @@ export const EN: Textos = {
   tablerosF8: EN_TABLEROS_F8,
   entregables: EN_ENTREGABLES,
   plantillas: EN_PLANTILLAS,
+  // el rediseño de UX: S53, la sección Administración
+  administracion: EN_ADMINISTRACION,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',
@@ -166,19 +169,24 @@ export const EN: Textos = {
     secciones: 'Sections',
     leyendoPermisos: 'Reading your account permissions…',
     sinPermisos: 'Your permissions could not be read',
-    sinAcceso: 'Your account cannot open “{{seccion}}”.',
     preguntar: 'Ask',
     idioma: 'Language',
     idiomaNoGuardado: 'Could not save the language',
-    grupos: {
-      proyectos: 'Projects and territory',
-      comunidades: 'Community work',
-      gestion: 'Risks and social investment',
+    tema: 'Theme',
+    bloques: {
+      territorio: 'Projects and territory',
+      comunidades: 'Work with communities',
+      riesgos: 'Risks and social investment',
       seguimiento: 'Documents and follow-up'
-    }
+    },
+    contraer: 'Collapse',
+    expandir: 'Expand'
   },
   seccionesCortas: {
     attention: 'GIR'
+  },
+  seccionesEnLaBarra: {
+    attention: 'Grievances and requests'
   },
   secciones: {
     dashboard: 'Home',
@@ -208,16 +216,6 @@ export const EN: Textos = {
     sinRoles: 'No roles',
     sinPermisos: 'Your permissions could not be read',
     modulos: 'Your sections',
-    trabajo: {
-      titulo: 'Your work',
-      nada: 'Nothing pending on you.',
-      tareas_one: '{{count}} open task',
-      tareas_other: '{{count}} open tasks',
-      compromisos_one: '{{count}} commitment you own',
-      compromisos_other: '{{count}} commitments you own',
-      qcs_one: '{{count}} case you own',
-      qcs_other: '{{count}} cases you own'
-    },
     rolesAsignados_one: '{{count}} role assigned',
     rolesAsignados_other: '{{count}} roles assigned',
     resumen: '{{disponibles, number}} of {{total, number}} sections available to your account'

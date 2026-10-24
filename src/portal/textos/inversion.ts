@@ -9,10 +9,12 @@ export const ES_INVERSION = {
   altaProgramaAyuda: 'El presupuesto, los indicadores, las iniciativas, los hitos y los beneficiarios se cargan en la ficha del programa.',
   programas: {
     titulo: 'Programas',
+    vista: 'Programas',
     tabla: 'Programas del alcance',
     vacio: 'No hay programas registrados',
     vacioAyuda: 'Un programa social reúne las iniciativas, el presupuesto y los beneficiarios de un proyecto; se crea dentro del proyecto.',
     columnas: {
+      codigo: 'Código',
       programa: 'Programa',
       proyecto: 'Proyecto',
       socio: 'Socio',
@@ -30,7 +32,7 @@ export const ES_INVERSION = {
     vacio: 'No hay aportes en esta vista',
     vacioAyuda: 'Un aporte es un apoyo puntual a una comunidad u organización, con su tope de campaña; pruebe otra vista o regístrelo dentro de su proyecto.',
     estado: 'Estado',
-    vistas: { enCurso: 'En curso', terminados: 'Terminados', todos: 'Todos' },
+    vistas: { enCurso: 'Aportes en curso', terminados: 'Aportes terminados', todos: 'Todos los aportes' },
     columnas: { codigo: 'Código', proyecto: 'Proyecto', tipo: 'Tipo', recibe: 'Quién recibe', estado: 'Estado', monto: 'Monto', campana: 'Campaña' }
   },
   cifras: {
@@ -41,6 +43,8 @@ export const ES_INVERSION = {
     tope: 'Tope: {{monto}}',
     comprometido: 'Comprometido: {{monto}}',
     ejecutado: 'Ejecutado: {{monto}}',
+    comprometidoNada: 'Comprometido: nada todavía',
+    ejecutadoNada: 'Ejecutado: nada todavía',
     distintas: 'Lo comprometido cuenta para el tope al aprobar; lo ejecutado es lo entregado. Son cifras distintas.',
     sinMoneda: 'La campaña no tiene moneda: su tope no se compara.',
     otraMoneda: 'Montos en otra moneda que no se suman al tope: {{n}}.',
@@ -73,10 +77,12 @@ export const EN_INVERSION: typeof ES_INVERSION = {
   altaProgramaAyuda: 'Budget, indicators, initiatives, milestones and beneficiaries are added in the program record.',
   programas: {
     titulo: 'Programs',
+    vista: 'Programs',
     tabla: 'Programs in scope',
     vacio: 'There are no recorded programs',
     vacioAyuda: 'A social program brings together a project’s initiatives, budget and beneficiaries; it is created inside the project.',
     columnas: {
+      codigo: 'Code',
       programa: 'Program',
       proyecto: 'Project',
       socio: 'Partner',
@@ -95,7 +101,7 @@ export const EN_INVERSION: typeof ES_INVERSION = {
     vacioAyuda:
       'A contribution is a one-off support to a community or organization, within its campaign cap; try another view or record it inside its project.',
     estado: 'State',
-    vistas: { enCurso: 'In progress', terminados: 'Finished', todos: 'All' },
+    vistas: { enCurso: 'Contributions in progress', terminados: 'Finished contributions', todos: 'All contributions' },
     columnas: { codigo: 'Code', proyecto: 'Project', tipo: 'Type', recibe: 'Recipient', estado: 'State', monto: 'Amount', campana: 'Campaign' }
   },
   cifras: {
@@ -106,6 +112,8 @@ export const EN_INVERSION: typeof ES_INVERSION = {
     tope: 'Cap: {{monto}}',
     comprometido: 'Committed: {{monto}}',
     ejecutado: 'Executed: {{monto}}',
+    comprometidoNada: 'Committed: nothing yet',
+    ejecutadoNada: 'Executed: nothing yet',
     distintas: 'What is committed counts against the cap at approval; what is executed is what was delivered. They are different figures.',
     sinMoneda: 'The campaign has no currency: its cap is not compared.',
     otraMoneda: 'Amounts in another currency not added to the cap: {{n}}.',

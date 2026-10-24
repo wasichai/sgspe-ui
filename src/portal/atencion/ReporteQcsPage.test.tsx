@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeAtencion, EQUIPO_DE_RELACIONES } from '../../test/atencion'
-import { montar } from '../../test/montar'
+import { montar, ubicacion } from '../../test/montar'
 import { RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { ReporteQcsPage, type ReporteDeQcs } from './ReporteQcsPage'
@@ -108,6 +108,39 @@ describe('reporte unificado de QCS', () => {
     await waitFor(() =>
       expect(red!.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toBe('/sgspe/attention/report?project=p1&type=grievance&channel=CARTA&page=0&size=25')
     )
+  })
+
+  // hallazgo U-07 (DD-07): el periodo se escribe como dd/mm/aaaa y llega a la URL y a la consulta como AAAA-MM-DD, como antes
+  it('el periodo se escribe como 20/10/2026 y llega a la URL y a la consulta como 2026-10-20', async () => {
+    fetch = mockFetch([...baseDeAtencion(RELACIONISTA), { path: '/sgspe/attention/report', body: REPORTE }])
+    red = espiarRed()
+    abrir('/projects/p1/attention/report?periodEnd=2026-10-31&page=2')
+    await screen.findByRole('table', { name: 'Por tipo' })
+    expect(screen.getByLabelText('Recibidas hasta')).toHaveValue('31/10/2026')
+    await userEvent.type(screen.getByLabelText('Recibidas desde'), '20/10/2026')
+    await userEvent.tab()
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/attention/report?periodEnd=2026-10-31&periodStart=2026-10-20'))
+    await waitFor(() => expect(red!.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toContain('periodStart=2026-10-20'))
+    expect(red.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toContain('periodEnd=2026-10-31')
+    expect(screen.getByLabelText('Recibidas desde')).toHaveValue('20/10/2026')
+  })
+
+  it('un atajo de periodo llena las dos fechas, vuelve a la primera página y llega a la consulta', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-23T15:00:00Z'))
+    try {
+      fetch = mockFetch([...baseDeAtencion(RELACIONISTA), { path: '/sgspe/attention/report', body: REPORTE }])
+      red = espiarRed()
+      abrir('/projects/p1/attention/report?page=2')
+      await screen.findByRole('table', { name: 'Por tipo' })
+      await userEvent.click(within(screen.getByRole('group', { name: 'Atajos de periodo' })).getByRole('button', { name: 'Últimos 30 días' }))
+      await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/attention/report?periodStart=2026-09-24&periodEnd=2026-10-23'))
+      await waitFor(() => expect(red!.a('GET', '/sgspe/attention/report').at(-1)!.ruta).toContain('periodStart=2026-09-24&periodEnd=2026-10-23'))
+      expect(screen.getByLabelText('Recibidas desde')).toHaveValue('24/09/2026')
+      expect(screen.getByRole('button', { name: 'Últimos 30 días' })).toHaveAttribute('aria-pressed', 'true')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   // plan 4.2a: una página más allá del final responde 200 con la lista vacía (por ejemplo, tras cerrar casos o con un enlace viejo):

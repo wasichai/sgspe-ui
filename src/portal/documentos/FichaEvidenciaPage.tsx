@@ -6,13 +6,14 @@ import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useEffect, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { z } from 'zod'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando, Consulta, Restringido, NoEsDeSusProyectos } from '../componentes/Estados'
@@ -37,6 +38,7 @@ import {
 } from './api'
 import { FormularioDeEvidencia } from './FormularioDeEvidencia'
 import { opcion } from '../datos/opciones'
+import { Seccion } from '../componentes/Seccion'
 
 // S46 · ficha de evidencia (screens.md §11): qué sustenta, quién puede descargarla y si puede salir en un reporte externo.
 // la descarga y la vista previa solo con READ y, para CONFIDENCIAL y DATOS PERSONALES, DOWNLOAD_RESTRICTED (RF-DOC-003); sin
@@ -127,7 +129,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
           <Sustenta evidencia={evidencia} escribe={escribe} />
           <Versiones evidencia={evidencia} />
         </div>
-        <aside aria-label={t('documentos.ficha.privacidad')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
+        <Seccion elemento="aside" etiqueta={t('documentos.ficha.privacidad')} className="space-y-3 text-sm">
           <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.privacidad')}</h2>
           <dl className="space-y-1">
             <Dato termino={t('documentos.ficha.personas')} valor={atributo(evidencia, 'people_identifiable') === true ? t('comun.si') : t('comun.no')} />
@@ -179,7 +181,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
             />
             <Dato termino={t('evidencias.autor')} valor={texto(evidencia, 'author') || '—'} />
           </dl>
-        </aside>
+        </Seccion>
       </div>
       {editando ? <EditarEvidencia evidencia={evidencia} alCerrar={() => setEditando(false)} /> : null}
       <Drawer
@@ -507,9 +509,18 @@ function EditarEvidencia({ evidencia, alCerrar }: { evidencia: Registro; alCerra
         <Campo etiqueta={t('evidencias.tituloDelDocumento')} error={delServidor.title}>
           {(p) => <Input {...p} {...register('title')} maxLength={300} />}
         </Campo>
-        <Campo etiqueta={t('evidencias.fechaDelDocumento')} error={delServidor.document_date}>
-          {(p) => <Input {...p} type="date" {...register('document_date')} />}
-        </Campo>
+        <Controller
+          control={control}
+          name="document_date"
+          render={({ field }) => (
+            <CampoFecha
+              etiqueta={t('evidencias.fechaDelDocumento')}
+              error={delServidor.document_date}
+              valor={field.value || null}
+              alCambiar={(v) => field.onChange(v ?? '')}
+            />
+          )}
+        />
         <Campo etiqueta={t('evidencias.autor')} error={delServidor.author}>
           {(p) => <Input {...p} {...register('author')} maxLength={200} />}
         </Campo>

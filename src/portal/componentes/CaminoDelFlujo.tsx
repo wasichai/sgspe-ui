@@ -1,5 +1,6 @@
 import { cn } from '@wasichai/ui'
-import { useWorkflow, type WorkflowDefinition } from '@wasichai/workflow'
+import { type WorkflowDefinition } from '@wasichai/workflow'
+import { useWorkflow } from '../datos/flujos'
 import { Check } from 'lucide-react'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'

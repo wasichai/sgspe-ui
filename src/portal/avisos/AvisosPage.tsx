@@ -1,11 +1,14 @@
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { Alert, Button, cn, Pagination } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { ResultadoDeLista } from '../contexto/Origen'
+import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMensajeDeError } from '../componentes/errores'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
+import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import {
   CLASE_DE_TIPO,
   FUENTES_DE_SGSPE,
@@ -68,17 +71,30 @@ export function AvisosPage() {
         }
       />
       {leerTodos.isError ? <Alert tone="danger">{mensaje(leerTodos.error)}</Alert> : null}
-      <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v.id, etiqueta: t(`avisos.filtros.${v.id}`), conteo: conteos[v.id] }))}
-        actual={lista.vista}
-        alCambiar={(vista) => lista.cambiar({ view: vista })}
-      />
-      <FiltroDeLista
-        etiqueta={t('avisos.tipo')}
-        className="max-w-xs"
-        value={tipo ?? ''}
-        onChange={(e) => lista.cambiar({ kind: e.target.value })}
-        opciones={TIPOS_DE_AVISO.map((k) => ({ valor: k, etiqueta: t(`avisos.tipos.${k}`) }))}
+      {/* la barra de filtros (hallazgos U-18 y U-22, DD-03 y DD-04): las vistas en el selector, con su conteo, en lugar de una
+          segunda fila de pestañas, y el tipo como filtro de la barra, de su ancho y no del de la pantalla, con su chip. ?view= y
+          ?kind= son los mismos */}
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({ id: v.id, etiqueta: t(`avisos.filtros.${v.id}`), n: conteos[v.id] }))}
+            actual={lista.vista}
+            alElegir={(vista) => lista.cambiar({ view: vista })}
+          />
+        }
+        frecuentes={
+          <FiltroDeLista
+            etiqueta={t('avisos.tipo')}
+            value={tipo ?? ''}
+            onChange={(e) => lista.cambiar({ kind: e.target.value })}
+            opciones={TIPOS_DE_AVISO.map((k) => ({ valor: k, etiqueta: t(`avisos.tipos.${k}`) }))}
+          />
+        }
+        aplicados={
+          tipo ? [{ clave: 'kind', etiqueta: `${t('avisos.tipo')}: ${t(`avisos.tipos.${tipo}`)}`, alQuitar: () => lista.cambiar({ kind: null }) }] : []
+        }
+        alLimpiar={() => lista.cambiar({ kind: null })}
       />
       {avisos.isPending ? (
         <Cargando />
@@ -97,11 +113,14 @@ export function AvisosPage() {
         )
       ) : (
         <>
-          <ul className="space-y-2">
-            {avisos.data.content.map((a) => (
-              <AvisoDeLaBandeja key={a.id} aviso={a} />
-            ))}
-          </ul>
+          {/* la bandeja es un resultado (flujo F-C): el registro de un aviso ofrece volver a ella y pasar al del siguiente */}
+          <ResultadoDeLista total={avisos.data.totalElements ?? null}>
+            <ul className="space-y-2">
+              {avisos.data.content.map((a) => (
+                <AvisoDeLaBandeja key={a.id} aviso={a} />
+              ))}
+            </ul>
+          </ResultadoDeLista>
           {avisos.data.totalPages && avisos.data.totalPages > 1 ? (
             <Pagination
               page={avisos.data.page}
@@ -143,9 +162,9 @@ function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
       </p>
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {destino ? (
-          <Link to={destino} onClick={() => !aviso.read && accion.mutate({ aviso, accion: 'read' })} className="text-sg-primary-text underline">
+          <EnlaceConRastro to={destino} onClick={() => !aviso.read && accion.mutate({ aviso, accion: 'read' })} className="text-sg-primary-text underline">
             {t('avisos.abrir')}
-          </Link>
+          </EnlaceConRastro>
         ) : (
           <span className="text-sg-caption text-sg-text-muted">{t('avisos.sinEnlace')}</span>
         )}

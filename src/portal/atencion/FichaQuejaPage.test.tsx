@@ -10,6 +10,7 @@ import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { FichaQuejaPage } from './FichaQuejaPage'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
@@ -69,7 +70,8 @@ describe('S36 · ficha de queja', () => {
   it('dice el estado, la severidad y el plazo de resolución; «Resolver» de una grave sale bloqueada con su razón', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    expect(await screen.findByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeInTheDocument()
+    // el título dice lo que se planteó (U-27 del rediseño); el código va en el antetítulo y en el título del documento
+    expect(await screen.findByRole('heading', { name: 'El canal de riego quedó turbio tras la perforación', level: 1 })).toBeInTheDocument()
     expect(screen.getByText('Severidad Alta')).toBeInTheDocument()
     // en el encabezado y en el vencimiento del panel de decisión (revisión de UX, etapa 4)
     expect(screen.getAllByLabelText('Situación de plazo: Al día').length).toBeGreaterThan(0)
@@ -78,8 +80,6 @@ describe('S36 · ficha de queja', () => {
     await waitFor(() => expect(resolver).toBeDisabled())
     expect(resolver).toHaveAccessibleDescription('Una queja ALTA la resuelve quien aprueba')
     expect(await screen.findByText(/Es una queja Alta: la resuelve quien aprueba/)).toBeInTheDocument()
-    // las demás transiciones, en «Más acciones» (rediseño de UX, 2026-10-20)
-    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('button', { name: 'Registrar desistimiento' })).toBeEnabled()
   })
 
@@ -112,15 +112,16 @@ describe('S36 · ficha de queja', () => {
       ])
     )
     abrir({ ...EQUIPO_DE_QUEJAS, objects: { ...EQUIPO_DE_QUEJAS.objects, commitment: ['READ', 'CREATE'] } })
-    // lo que no se usa a diario va en «Más acciones», con la primaria a la vista (rediseño de UX, 2026-10-20)
-    expect(await screen.findByRole('button', { name: 'Acusar recibo' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
-    expect(await screen.findByRole('button', { name: 'Reclasificar…' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Crear compromiso desde esta queja' })).toHaveAttribute(
+      'href',
+      '/projects/p1/commitments/new?origin_grievance=g1'
+    )
     // la reclasificación es de comando: nunca un botón de transición
     expect(screen.queryByRole('button', { name: 'Cerrar por reclasificación' })).not.toBeInTheDocument()
     expect(screen.getByText(/Acuse hasta el 8 oct/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Crear compromiso desde esta queja' })).toHaveAttribute('href', '/projects/p1/commitments/new?origin_grievance=g1')
-    await userEvent.click(screen.getByRole('button', { name: 'Reclasificar…' }))
+    // con «Editar» y el compromiso a la vista, «Reclasificar…» va en «Más acciones» (CabeceraDeFicha: dos secundarias a la vista)
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Reclasificar…' }))
     expect(await screen.findByRole('dialog', { name: 'Reclasificar' })).toBeInTheDocument()
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
     await userEvent.click(screen.getByRole('tab', { name: 'Evidencias' }))
@@ -132,7 +133,8 @@ describe('S36 · ficha de queja', () => {
   it('dice el camino del flujo, el panel de decisión y los tres grupos de trazabilidad', async () => {
     fetch = mockFetch(rutas(QUEJA))
     abrir()
-    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(await abrirCamino()).toBeInTheDocument()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     const decision = screen.getByRole('region', { name: 'Situación' })
     expect(within(decision).getByRole('group', { name: 'Responsable' })).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
@@ -254,9 +256,53 @@ describe('S36 · ficha de queja', () => {
   it('quien solo lee no edita ni reclasifica', async () => {
     fetch = mockFetch(rutas(QUEJA, [{ path: '/objects/grievance/workflow', body: workflow('grievance', [['in_action', 'En atención']]) }]))
     abrir(permisos({ project: ['READ'], project_assignment: ['READ'], grievance: ['READ'], stakeholder: ['READ'], commitment: ['READ'] }))
-    expect(await screen.findByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'El canal de riego quedó turbio tras la perforación', level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Crear compromiso desde esta queja' })).not.toBeInTheDocument()
+  })
+})
+
+// P-09 del rediseño de UX (DD-02 y DD-06; U-02, U-03, U-25, U-26 y U-27): el título dice lo que se planteó y el antetítulo, en
+// la letra del texto, el tipo y el código; el estado se dice una sola vez (en el panel de decisión); una sola primaria, la
+// siguiente acción; desistir y rechazar, en «Más acciones»; y los datos del caso por tema, con los vacíos plegados
+describe('S36 · cabecera y cuerpo de la ficha (P-09)', () => {
+  const conDestinos = {
+    path: '/objects/grievance/records/g1/transitions',
+    body: [
+      { name: 'withdraw_in_action', label: 'Registrar desistimiento', to: 'withdrawn', toLabel: 'Desistida', allowed: true, reason: null },
+      { name: 'resolve', label: 'Resolver', to: 'resolved', toLabel: 'Resuelta', allowed: true, reason: null }
+    ]
+  }
+  const sinBloqueo = { method: 'POST' as const, path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } }
+
+  it('el título dice qué se planteó, una sola primaria, desistir en «Más acciones» y el estado una sola vez', async () => {
+    fetch = mockFetch(rutas(QUEJA, [conDestinos, sinBloqueo]))
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'El canal de riego quedó turbio tras la perforación', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText(/^Queja · Q-001/)).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).queryByText('En atención')).not.toBeInTheDocument()
+    const resolver = await screen.findByRole('button', { name: 'Resolver' })
+    expect(resolver).toHaveAttribute('data-variant', 'primary')
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    const acciones = screen.getByRole('group', { name: 'Acciones del registro' })
+    expect(within(acciones).queryByRole('button', { name: 'Registrar desistimiento' })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Registrar desistimiento' })).toBeInTheDocument()
+    expect(await screen.findAllByText('En atención', { selector: '[data-estado]' })).toHaveLength(1)
+    expect(within(screen.getByRole('region', { name: 'Situación' })).getByText('En atención')).toBeInTheDocument()
+  })
+
+  it('los datos del caso van por tema, con los campos sin dato plegados tras su conteo', async () => {
+    fetch = mockFetch(rutas(QUEJA))
+    abrir()
+    expect(await screen.findByRole('region', { name: 'Qué se plantea' })).toHaveTextContent('El canal de riego quedó turbio tras la perforación')
+    expect(screen.getByRole('region', { name: 'Cómo llegó y quién' })).toHaveTextContent('Presencial')
+    const atencion = screen.getByRole('region', { name: 'Atención y respuesta' })
+    expect(within(atencion).queryByText('Resolución')).not.toBeInTheDocument()
+    await userEvent.click(within(atencion).getByRole('button', { name: /^Mostrar los \d+ campos sin dato$/ }))
+    expect(within(atencion).getByText('Resolución')).toBeInTheDocument()
+    expect(within(atencion).getByText('Respuesta')).toBeInTheDocument()
   })
 })
 

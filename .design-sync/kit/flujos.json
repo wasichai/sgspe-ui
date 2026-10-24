@@ -1,0 +1,1754 @@
+{
+  "agreement": {
+    "name": "wf-i-agreement",
+    "label": "Acuerdo",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "draft",
+          "label": "Borrador",
+          "type": "INITIAL"
+        },
+        {
+          "name": "in_negotiation",
+          "label": "En negociación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "active",
+          "label": "Vigente",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "suspended",
+          "label": "Suspendido",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "concluded",
+          "label": "Concluido",
+          "type": "FINAL"
+        },
+        {
+          "name": "terminated",
+          "label": "Resuelto",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Anulado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "start_negotiation",
+          "label": "Iniciar negociación",
+          "from": "draft",
+          "to": "in_negotiation"
+        },
+        {
+          "name": "activate",
+          "label": "Registrar vigencia",
+          "from": "in_negotiation",
+          "to": "active"
+        },
+        {
+          "name": "activate_from_draft",
+          "label": "Registrar vigencia",
+          "from": "draft",
+          "to": "active"
+        },
+        {
+          "name": "suspend",
+          "label": "Suspender",
+          "from": "active",
+          "to": "suspended"
+        },
+        {
+          "name": "resume",
+          "label": "Reanudar",
+          "from": "suspended",
+          "to": "active"
+        },
+        {
+          "name": "conclude",
+          "label": "Concluir",
+          "from": "active",
+          "to": "concluded"
+        },
+        {
+          "name": "terminate",
+          "label": "Resolver",
+          "from": "active",
+          "to": "terminated"
+        },
+        {
+          "name": "terminate_suspended",
+          "label": "Resolver",
+          "from": "suspended",
+          "to": "terminated"
+        },
+        {
+          "name": "cancel_draft",
+          "label": "Anular",
+          "from": "draft",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_in_negotiation",
+          "label": "Anular",
+          "from": "in_negotiation",
+          "to": "cancelled"
+        }
+      ]
+    }
+  },
+  "ai_suggestion": {
+    "name": "wf-k-ai_suggestion",
+    "label": "Sugerencia de IA",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "proposed",
+          "label": "Propuesto",
+          "type": "INITIAL"
+        },
+        {
+          "name": "accepted",
+          "label": "Aceptado",
+          "type": "FINAL"
+        },
+        {
+          "name": "rejected",
+          "label": "Rechazado",
+          "type": "FINAL"
+        },
+        {
+          "name": "duplicate",
+          "label": "Duplicado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "accept",
+          "label": "Aceptar",
+          "from": "proposed",
+          "to": "accepted"
+        },
+        {
+          "name": "reject",
+          "label": "Rechazar",
+          "from": "proposed",
+          "to": "rejected"
+        },
+        {
+          "name": "mark_duplicate",
+          "label": "Marcar como duplicado",
+          "from": "proposed",
+          "to": "duplicate"
+        }
+      ]
+    }
+  },
+  "area_of_influence": {
+    "name": "wf-o-area_of_influence",
+    "label": "Área de influencia",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "draft",
+          "label": "Borrador",
+          "type": "INITIAL"
+        },
+        {
+          "name": "approved",
+          "label": "Aprobada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "superseded",
+          "label": "Reemplazada",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "approve",
+          "label": "Aprobar",
+          "from": "draft",
+          "to": "approved"
+        },
+        {
+          "name": "supersede",
+          "label": "Reemplazar",
+          "from": "approved",
+          "to": "superseded"
+        }
+      ]
+    }
+  },
+  "commitment": {
+    "name": "wf-d-commitment",
+    "label": "Compromiso",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "draft",
+          "label": "Borrador",
+          "type": "INITIAL"
+        },
+        {
+          "name": "pending_approval",
+          "label": "Pendiente de aprobación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "approved",
+          "label": "Aprobado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "in_progress",
+          "label": "En ejecución",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "blocked",
+          "label": "Bloqueado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "fulfilled",
+          "label": "Cumplido",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "verified",
+          "label": "Verificado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrado",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Cancelado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "submit",
+          "label": "Enviar a aprobación",
+          "from": "draft",
+          "to": "pending_approval"
+        },
+        {
+          "name": "return_to_draft",
+          "label": "Devolver",
+          "from": "pending_approval",
+          "to": "draft"
+        },
+        {
+          "name": "approve",
+          "label": "Aprobar",
+          "from": "pending_approval",
+          "to": "approved"
+        },
+        {
+          "name": "approve_senior",
+          "label": "Aprobar en nivel superior",
+          "from": "pending_approval",
+          "to": "approved"
+        },
+        {
+          "name": "approve_direct",
+          "label": "Aprobar sin revisión interna",
+          "from": "draft",
+          "to": "approved"
+        },
+        {
+          "name": "start",
+          "label": "Iniciar ejecución",
+          "from": "approved",
+          "to": "in_progress"
+        },
+        {
+          "name": "block",
+          "label": "Bloquear",
+          "from": "in_progress",
+          "to": "blocked"
+        },
+        {
+          "name": "unblock",
+          "label": "Desbloquear",
+          "from": "blocked",
+          "to": "in_progress"
+        },
+        {
+          "name": "register_fulfillment",
+          "label": "Registrar cumplimiento",
+          "from": "in_progress",
+          "to": "fulfilled"
+        },
+        {
+          "name": "reopen_execution",
+          "label": "Devolver a ejecución",
+          "from": "fulfilled",
+          "to": "in_progress"
+        },
+        {
+          "name": "verify",
+          "label": "Verificar",
+          "from": "fulfilled",
+          "to": "verified"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "verified",
+          "to": "closed"
+        },
+        {
+          "name": "cancel_draft",
+          "label": "Cancelar",
+          "from": "draft",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_pending_approval",
+          "label": "Cancelar",
+          "from": "pending_approval",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_approved",
+          "label": "Cancelar",
+          "from": "approved",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_in_progress",
+          "label": "Cancelar",
+          "from": "in_progress",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_blocked",
+          "label": "Cancelar",
+          "from": "blocked",
+          "to": "cancelled"
+        }
+      ]
+    }
+  },
+  "commitment_candidate": {
+    "name": "wf-k-commitment_candidate",
+    "label": "Candidato a compromiso",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "proposed",
+          "label": "Propuesto",
+          "type": "INITIAL"
+        },
+        {
+          "name": "accepted",
+          "label": "Aceptado",
+          "type": "FINAL"
+        },
+        {
+          "name": "rejected",
+          "label": "Rechazado",
+          "type": "FINAL"
+        },
+        {
+          "name": "duplicate",
+          "label": "Duplicado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "accept",
+          "label": "Aceptar",
+          "from": "proposed",
+          "to": "accepted"
+        },
+        {
+          "name": "reject",
+          "label": "Rechazar",
+          "from": "proposed",
+          "to": "rejected"
+        },
+        {
+          "name": "mark_duplicate",
+          "label": "Marcar como duplicado",
+          "from": "proposed",
+          "to": "duplicate"
+        }
+      ]
+    }
+  },
+  "deliverable": {
+    "name": "wf-h-deliverable",
+    "label": "Entregable",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "draft",
+          "label": "Borrador",
+          "type": "INITIAL"
+        },
+        {
+          "name": "in_review",
+          "label": "En revisión",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "observed",
+          "label": "Observado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "approved",
+          "label": "Aprobado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "issued",
+          "label": "Emitido",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "voided",
+          "label": "Anulado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "submit_for_review",
+          "label": "Enviar a revisión",
+          "from": "draft",
+          "to": "in_review"
+        },
+        {
+          "name": "observe",
+          "label": "Observar",
+          "from": "in_review",
+          "to": "observed"
+        },
+        {
+          "name": "resubmit",
+          "label": "Reenviar a revisión",
+          "from": "observed",
+          "to": "in_review"
+        },
+        {
+          "name": "approve",
+          "label": "Aprobar",
+          "from": "in_review",
+          "to": "approved"
+        },
+        {
+          "name": "return_to_draft",
+          "label": "Devolver a borrador",
+          "from": "approved",
+          "to": "draft"
+        },
+        {
+          "name": "issue",
+          "label": "Emitir",
+          "from": "approved",
+          "to": "issued"
+        },
+        {
+          "name": "start_revision",
+          "label": "Nueva revisión",
+          "from": "issued",
+          "to": "draft"
+        },
+        {
+          "name": "void_draft",
+          "label": "Anular",
+          "from": "draft",
+          "to": "voided"
+        },
+        {
+          "name": "void_in_review",
+          "label": "Anular",
+          "from": "in_review",
+          "to": "voided"
+        },
+        {
+          "name": "void_observed",
+          "label": "Anular",
+          "from": "observed",
+          "to": "voided"
+        },
+        {
+          "name": "void_approved",
+          "label": "Anular",
+          "from": "approved",
+          "to": "voided"
+        },
+        {
+          "name": "void_issued",
+          "label": "Anular",
+          "from": "issued",
+          "to": "voided"
+        }
+      ]
+    }
+  },
+  "early_warning": {
+    "name": "wf-j-early_warning",
+    "label": "Alerta temprana",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "detected",
+          "label": "Detectada",
+          "type": "INITIAL"
+        },
+        {
+          "name": "in_triage",
+          "label": "En triaje",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "confirmed",
+          "label": "Confirmada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "responding",
+          "label": "En respuesta",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "resolved",
+          "label": "Resuelta",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "dismissed",
+          "label": "Descartada",
+          "type": "FINAL"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrada",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "start_triage",
+          "label": "Iniciar triaje",
+          "from": "detected",
+          "to": "in_triage"
+        },
+        {
+          "name": "confirm",
+          "label": "Confirmar",
+          "from": "in_triage",
+          "to": "confirmed"
+        },
+        {
+          "name": "dismiss",
+          "label": "Descartar",
+          "from": "in_triage",
+          "to": "dismissed"
+        },
+        {
+          "name": "start_response",
+          "label": "Iniciar respuesta",
+          "from": "confirmed",
+          "to": "responding"
+        },
+        {
+          "name": "resolve",
+          "label": "Resolver",
+          "from": "responding",
+          "to": "resolved"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "resolved",
+          "to": "closed"
+        }
+      ]
+    }
+  },
+  "engagement": {
+    "name": "wf-c-engagement",
+    "label": "Interacción",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "planned",
+          "label": "Planificada",
+          "type": "INITIAL"
+        },
+        {
+          "name": "scheduled",
+          "label": "Programada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "held",
+          "label": "Realizada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "minutes_drafted",
+          "label": "Acta en borrador",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "minutes_in_review",
+          "label": "Acta en revisión",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "minutes_approved",
+          "label": "Acta aprobada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "postponed",
+          "label": "Postergada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrada",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Cancelada",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "schedule",
+          "label": "Programar",
+          "from": "planned",
+          "to": "scheduled"
+        },
+        {
+          "name": "register_held",
+          "label": "Registrar realización",
+          "from": "scheduled",
+          "to": "held"
+        },
+        {
+          "name": "register_held_unplanned",
+          "label": "Registrar realización",
+          "from": "planned",
+          "to": "held"
+        },
+        {
+          "name": "postpone",
+          "label": "Postergar",
+          "from": "scheduled",
+          "to": "postponed"
+        },
+        {
+          "name": "reschedule",
+          "label": "Reprogramar",
+          "from": "postponed",
+          "to": "scheduled"
+        },
+        {
+          "name": "draft_minutes",
+          "label": "Redactar acta",
+          "from": "held",
+          "to": "minutes_drafted"
+        },
+        {
+          "name": "submit_minutes",
+          "label": "Enviar acta a revisión",
+          "from": "minutes_drafted",
+          "to": "minutes_in_review"
+        },
+        {
+          "name": "return_minutes",
+          "label": "Devolver acta",
+          "from": "minutes_in_review",
+          "to": "minutes_drafted"
+        },
+        {
+          "name": "approve_minutes",
+          "label": "Aprobar acta",
+          "from": "minutes_in_review",
+          "to": "minutes_approved"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "minutes_approved",
+          "to": "closed"
+        },
+        {
+          "name": "close_light",
+          "label": "Cerrar sin acta",
+          "from": "held",
+          "to": "closed"
+        },
+        {
+          "name": "cancel_planned",
+          "label": "Cancelar",
+          "from": "planned",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_scheduled",
+          "label": "Cancelar",
+          "from": "scheduled",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_postponed",
+          "label": "Cancelar",
+          "from": "postponed",
+          "to": "cancelled"
+        }
+      ]
+    }
+  },
+  "field_visit": {
+    "name": "wf-l-field_visit",
+    "label": "Visita de campo",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "planned",
+          "label": "Planificada",
+          "type": "INITIAL"
+        },
+        {
+          "name": "in_progress",
+          "label": "En curso",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "completed",
+          "label": "Concluida",
+          "type": "FINAL"
+        },
+        {
+          "name": "partial",
+          "label": "Parcial",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Cancelada",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "start",
+          "label": "Iniciar",
+          "from": "planned",
+          "to": "in_progress"
+        },
+        {
+          "name": "complete",
+          "label": "Concluir",
+          "from": "in_progress",
+          "to": "completed"
+        },
+        {
+          "name": "complete_partial",
+          "label": "Concluir parcialmente",
+          "from": "in_progress",
+          "to": "partial"
+        },
+        {
+          "name": "cancel",
+          "label": "Cancelar",
+          "from": "planned",
+          "to": "cancelled"
+        }
+      ]
+    }
+  },
+  "grievance": {
+    "name": "wf-e1-grievance",
+    "label": "Queja",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "received",
+          "label": "Recibida",
+          "type": "INITIAL"
+        },
+        {
+          "name": "acknowledged",
+          "label": "Acusada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "in_assessment",
+          "label": "En evaluación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "in_investigation",
+          "label": "En investigación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "in_action",
+          "label": "En atención",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "resolved",
+          "label": "Resuelta",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "verified",
+          "label": "Verificada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrada",
+          "type": "FINAL"
+        },
+        {
+          "name": "rejected",
+          "label": "Rechazada",
+          "type": "FINAL"
+        },
+        {
+          "name": "withdrawn",
+          "label": "Desistida",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "acknowledge",
+          "label": "Acusar recibo",
+          "from": "received",
+          "to": "acknowledged"
+        },
+        {
+          "name": "assess",
+          "label": "Evaluar",
+          "from": "acknowledged",
+          "to": "in_assessment"
+        },
+        {
+          "name": "investigate",
+          "label": "Investigar",
+          "from": "in_assessment",
+          "to": "in_investigation"
+        },
+        {
+          "name": "start_action",
+          "label": "Atender",
+          "from": "in_assessment",
+          "to": "in_action"
+        },
+        {
+          "name": "start_action_after_investigation",
+          "label": "Atender",
+          "from": "in_investigation",
+          "to": "in_action"
+        },
+        {
+          "name": "resolve",
+          "label": "Resolver",
+          "from": "in_action",
+          "to": "resolved"
+        },
+        {
+          "name": "resolve_high_severity",
+          "label": "Resolver con aprobación",
+          "from": "in_action",
+          "to": "resolved"
+        },
+        {
+          "name": "reopen",
+          "label": "Reabrir",
+          "from": "resolved",
+          "to": "in_assessment"
+        },
+        {
+          "name": "verify",
+          "label": "Verificar",
+          "from": "resolved",
+          "to": "verified"
+        },
+        {
+          "name": "close_resolved",
+          "label": "Cerrar",
+          "from": "resolved",
+          "to": "closed"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "verified",
+          "to": "closed"
+        },
+        {
+          "name": "reject_received",
+          "label": "Rechazar",
+          "from": "received",
+          "to": "rejected"
+        },
+        {
+          "name": "reject_acknowledged",
+          "label": "Rechazar",
+          "from": "acknowledged",
+          "to": "rejected"
+        },
+        {
+          "name": "reject_in_assessment",
+          "label": "Rechazar",
+          "from": "in_assessment",
+          "to": "rejected"
+        },
+        {
+          "name": "withdraw_received",
+          "label": "Registrar desistimiento",
+          "from": "received",
+          "to": "withdrawn"
+        },
+        {
+          "name": "withdraw_acknowledged",
+          "label": "Registrar desistimiento",
+          "from": "acknowledged",
+          "to": "withdrawn"
+        },
+        {
+          "name": "withdraw_in_assessment",
+          "label": "Registrar desistimiento",
+          "from": "in_assessment",
+          "to": "withdrawn"
+        },
+        {
+          "name": "withdraw_in_investigation",
+          "label": "Registrar desistimiento",
+          "from": "in_investigation",
+          "to": "withdrawn"
+        },
+        {
+          "name": "withdraw_in_action",
+          "label": "Registrar desistimiento",
+          "from": "in_action",
+          "to": "withdrawn"
+        },
+        {
+          "name": "close_reclassified_received",
+          "label": "Cerrar por reclasificación",
+          "from": "received",
+          "to": "closed"
+        },
+        {
+          "name": "close_reclassified_acknowledged",
+          "label": "Cerrar por reclasificación",
+          "from": "acknowledged",
+          "to": "closed"
+        },
+        {
+          "name": "close_reclassified_in_assessment",
+          "label": "Cerrar por reclasificación",
+          "from": "in_assessment",
+          "to": "closed"
+        }
+      ]
+    }
+  },
+  "incident": {
+    "name": "wf-m-incident",
+    "label": "Incidente",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "reported",
+          "label": "Reportado",
+          "type": "INITIAL"
+        },
+        {
+          "name": "under_review",
+          "label": "En revisión",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "responding",
+          "label": "En respuesta",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "start_review",
+          "label": "Revisar",
+          "from": "reported",
+          "to": "under_review"
+        },
+        {
+          "name": "start_response",
+          "label": "Responder",
+          "from": "under_review",
+          "to": "responding"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "responding",
+          "to": "closed"
+        }
+      ]
+    }
+  },
+  "inquiry": {
+    "name": "wf-e2-inquiry",
+    "label": "Consulta",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "received",
+          "label": "Recibida",
+          "type": "INITIAL"
+        },
+        {
+          "name": "answered",
+          "label": "Respondida",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "referred",
+          "label": "Derivada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrada",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "answer",
+          "label": "Responder",
+          "from": "received",
+          "to": "answered"
+        },
+        {
+          "name": "refer",
+          "label": "Derivar",
+          "from": "received",
+          "to": "referred"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "answered",
+          "to": "closed"
+        },
+        {
+          "name": "close_referred",
+          "label": "Cerrar",
+          "from": "referred",
+          "to": "closed"
+        },
+        {
+          "name": "close_reclassified",
+          "label": "Cerrar por reclasificación",
+          "from": "received",
+          "to": "closed"
+        }
+      ]
+    }
+  },
+  "project": {
+    "name": "wf-a-project",
+    "label": "Proyecto",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "draft",
+          "label": "Borrador",
+          "type": "INITIAL"
+        },
+        {
+          "name": "in_review",
+          "label": "En revisión",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "active",
+          "label": "Activo",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "suspended",
+          "label": "Suspendido",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrado",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Anulado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "submit_for_review",
+          "label": "Enviar a revisión",
+          "from": "draft",
+          "to": "in_review"
+        },
+        {
+          "name": "return_to_draft",
+          "label": "Devolver",
+          "from": "in_review",
+          "to": "draft"
+        },
+        {
+          "name": "approve",
+          "label": "Aprobar",
+          "from": "in_review",
+          "to": "active"
+        },
+        {
+          "name": "suspend",
+          "label": "Suspender",
+          "from": "active",
+          "to": "suspended"
+        },
+        {
+          "name": "resume",
+          "label": "Reanudar",
+          "from": "suspended",
+          "to": "active"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "active",
+          "to": "closed"
+        },
+        {
+          "name": "close_suspended",
+          "label": "Cerrar",
+          "from": "suspended",
+          "to": "closed"
+        },
+        {
+          "name": "cancel_draft",
+          "label": "Anular",
+          "from": "draft",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_in_review",
+          "label": "Anular",
+          "from": "in_review",
+          "to": "cancelled"
+        }
+      ]
+    }
+  },
+  "social_contribution": {
+    "name": "wf-p-social_contribution",
+    "label": "Aporte social",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "requested",
+          "label": "Solicitado",
+          "type": "INITIAL"
+        },
+        {
+          "name": "approved",
+          "label": "Aprobado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "procured",
+          "label": "Adquirido",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "delivered",
+          "label": "Entregado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrado",
+          "type": "FINAL"
+        },
+        {
+          "name": "rejected",
+          "label": "Rechazado",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Anulado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "approve",
+          "label": "Aprobar",
+          "from": "requested",
+          "to": "approved"
+        },
+        {
+          "name": "approve_direct",
+          "label": "Aprobar sin revisión interna",
+          "from": "requested",
+          "to": "approved"
+        },
+        {
+          "name": "reject",
+          "label": "Rechazar",
+          "from": "requested",
+          "to": "rejected"
+        },
+        {
+          "name": "register_procurement",
+          "label": "Registrar adquisición",
+          "from": "approved",
+          "to": "procured"
+        },
+        {
+          "name": "register_delivery",
+          "label": "Registrar entrega",
+          "from": "procured",
+          "to": "delivered"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "delivered",
+          "to": "closed"
+        },
+        {
+          "name": "cancel_approved",
+          "label": "Anular",
+          "from": "approved",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_procured",
+          "label": "Anular",
+          "from": "procured",
+          "to": "cancelled"
+        }
+      ]
+    }
+  },
+  "social_program": {
+    "name": "wf-g-social_program",
+    "label": "Programa social",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "draft",
+          "label": "Borrador",
+          "type": "INITIAL"
+        },
+        {
+          "name": "pending_approval",
+          "label": "Pendiente de aprobación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "planned",
+          "label": "Planificado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "executing",
+          "label": "En ejecución",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "monitoring",
+          "label": "En monitoreo",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "evaluation",
+          "label": "En evaluación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "suspended",
+          "label": "Suspendido",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrado",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Cancelado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "submit",
+          "label": "Enviar a aprobación",
+          "from": "draft",
+          "to": "pending_approval"
+        },
+        {
+          "name": "return_to_draft",
+          "label": "Devolver",
+          "from": "pending_approval",
+          "to": "draft"
+        },
+        {
+          "name": "approve",
+          "label": "Aprobar",
+          "from": "pending_approval",
+          "to": "planned"
+        },
+        {
+          "name": "plan_direct",
+          "label": "Planificar sin aprobación interna",
+          "from": "draft",
+          "to": "planned"
+        },
+        {
+          "name": "start_execution",
+          "label": "Iniciar ejecución",
+          "from": "planned",
+          "to": "executing"
+        },
+        {
+          "name": "start_monitoring",
+          "label": "Pasar a monitoreo",
+          "from": "executing",
+          "to": "monitoring"
+        },
+        {
+          "name": "start_evaluation",
+          "label": "Evaluar",
+          "from": "monitoring",
+          "to": "evaluation"
+        },
+        {
+          "name": "close",
+          "label": "Cerrar",
+          "from": "evaluation",
+          "to": "closed"
+        },
+        {
+          "name": "suspend",
+          "label": "Suspender",
+          "from": "executing",
+          "to": "suspended"
+        },
+        {
+          "name": "resume",
+          "label": "Reanudar",
+          "from": "suspended",
+          "to": "executing"
+        },
+        {
+          "name": "cancel_draft",
+          "label": "Cancelar",
+          "from": "draft",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_pending_approval",
+          "label": "Cancelar",
+          "from": "pending_approval",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_planned",
+          "label": "Cancelar",
+          "from": "planned",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_suspended",
+          "label": "Cancelar",
+          "from": "suspended",
+          "to": "cancelled"
+        }
+      ]
+    }
+  },
+  "social_risk": {
+    "name": "wf-f-social_risk",
+    "label": "Riesgo social",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "identified",
+          "label": "Identificado",
+          "type": "INITIAL"
+        },
+        {
+          "name": "assessed",
+          "label": "Evaluado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "mitigating",
+          "label": "En mitigación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "monitoring",
+          "label": "En monitoreo",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrado",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "assess",
+          "label": "Evaluar",
+          "from": "identified",
+          "to": "assessed"
+        },
+        {
+          "name": "decide_mitigation",
+          "label": "Decidir mitigar",
+          "from": "assessed",
+          "to": "mitigating"
+        },
+        {
+          "name": "decide_monitoring",
+          "label": "Decidir monitorear",
+          "from": "assessed",
+          "to": "monitoring"
+        },
+        {
+          "name": "start_monitoring",
+          "label": "Pasar a monitoreo",
+          "from": "mitigating",
+          "to": "monitoring"
+        },
+        {
+          "name": "resume_mitigation",
+          "label": "Volver a mitigar",
+          "from": "monitoring",
+          "to": "mitigating"
+        },
+        {
+          "name": "close_identified",
+          "label": "Cerrar",
+          "from": "identified",
+          "to": "closed"
+        },
+        {
+          "name": "close_assessed",
+          "label": "Cerrar",
+          "from": "assessed",
+          "to": "closed"
+        },
+        {
+          "name": "close_mitigating",
+          "label": "Cerrar",
+          "from": "mitigating",
+          "to": "closed"
+        },
+        {
+          "name": "close_monitoring",
+          "label": "Cerrar",
+          "from": "monitoring",
+          "to": "closed"
+        }
+      ]
+    }
+  },
+  "stakeholder": {
+    "name": "wf-b-stakeholder",
+    "label": "Grupo de interés",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "identified",
+          "label": "Identificado",
+          "type": "INITIAL"
+        },
+        {
+          "name": "profiled",
+          "label": "Caracterizado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "assessed",
+          "label": "Evaluado",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "retired",
+          "label": "Retirado",
+          "type": "INTERMEDIATE"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "profile",
+          "label": "Caracterizar",
+          "from": "identified",
+          "to": "profiled"
+        },
+        {
+          "name": "assess",
+          "label": "Evaluar",
+          "from": "profiled",
+          "to": "assessed"
+        },
+        {
+          "name": "retire_identified",
+          "label": "Retirar",
+          "from": "identified",
+          "to": "retired"
+        },
+        {
+          "name": "retire_profiled",
+          "label": "Retirar",
+          "from": "profiled",
+          "to": "retired"
+        },
+        {
+          "name": "retire_assessed",
+          "label": "Retirar",
+          "from": "assessed",
+          "to": "retired"
+        },
+        {
+          "name": "reinstate",
+          "label": "Reincorporar",
+          "from": "retired",
+          "to": "identified"
+        }
+      ]
+    }
+  },
+  "stakeholder_request": {
+    "name": "wf-e3-stakeholder_request",
+    "label": "Solicitud",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "received",
+          "label": "Recibida",
+          "type": "INITIAL"
+        },
+        {
+          "name": "under_evaluation",
+          "label": "En evaluación",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "accepted",
+          "label": "Aceptada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "declined",
+          "label": "Declinada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "closed",
+          "label": "Cerrada",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "start_evaluation",
+          "label": "Evaluar",
+          "from": "received",
+          "to": "under_evaluation"
+        },
+        {
+          "name": "accept",
+          "label": "Aceptar",
+          "from": "under_evaluation",
+          "to": "accepted"
+        },
+        {
+          "name": "decline",
+          "label": "Declinar",
+          "from": "under_evaluation",
+          "to": "declined"
+        },
+        {
+          "name": "close_declined",
+          "label": "Cerrar",
+          "from": "declined",
+          "to": "closed"
+        },
+        {
+          "name": "close_accepted",
+          "label": "Cerrar por cierre del compromiso o del aporte",
+          "from": "accepted",
+          "to": "closed"
+        },
+        {
+          "name": "close_unfulfilled",
+          "label": "Cerrar sin ejecución",
+          "from": "accepted",
+          "to": "closed"
+        },
+        {
+          "name": "close_reclassified_received",
+          "label": "Cerrar por reclasificación",
+          "from": "received",
+          "to": "closed"
+        },
+        {
+          "name": "close_reclassified_under_evaluation",
+          "label": "Cerrar por reclasificación",
+          "from": "under_evaluation",
+          "to": "closed"
+        }
+      ]
+    }
+  },
+  "task": {
+    "name": "wf-n-task",
+    "label": "Tarea",
+    "enabled": true,
+    "definition": {
+      "states": [
+        {
+          "name": "open",
+          "label": "Abierta",
+          "type": "INITIAL"
+        },
+        {
+          "name": "in_progress",
+          "label": "En curso",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "blocked",
+          "label": "Bloqueada",
+          "type": "INTERMEDIATE"
+        },
+        {
+          "name": "done",
+          "label": "Hecha",
+          "type": "FINAL"
+        },
+        {
+          "name": "cancelled",
+          "label": "Cancelada",
+          "type": "FINAL"
+        }
+      ],
+      "transitions": [
+        {
+          "name": "start",
+          "label": "Iniciar",
+          "from": "open",
+          "to": "in_progress"
+        },
+        {
+          "name": "block",
+          "label": "Bloquear",
+          "from": "in_progress",
+          "to": "blocked"
+        },
+        {
+          "name": "unblock",
+          "label": "Desbloquear",
+          "from": "blocked",
+          "to": "in_progress"
+        },
+        {
+          "name": "complete",
+          "label": "Completar",
+          "from": "in_progress",
+          "to": "done"
+        },
+        {
+          "name": "complete_open",
+          "label": "Completar",
+          "from": "open",
+          "to": "done"
+        },
+        {
+          "name": "cancel_open",
+          "label": "Cancelar",
+          "from": "open",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_in_progress",
+          "label": "Cancelar",
+          "from": "in_progress",
+          "to": "cancelled"
+        },
+        {
+          "name": "cancel_blocked",
+          "label": "Cancelar",
+          "from": "blocked",
+          "to": "cancelled"
+        }
+      ]
+    }
+  }
+}

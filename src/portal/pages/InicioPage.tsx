@@ -3,38 +3,36 @@ import { Button } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { NS } from '../i18n'
-import { useCatalogoDeIndicadores } from '../datos/indicadores'
 import { INICIOS, inicioPara } from '../inicios'
 import { estadoDe, NAV_TREE, useOferta } from '../shell/navTree'
-import { RevisionEjecutivaPage } from '../tableros/RevisionEjecutivaPage'
-import { Cargando } from '../componentes/Estados'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useMisAsignaciones, vigenciaDeAsignacion } from '../contexto/proyectos'
+import { Agenda } from './Agenda'
+import { useSuTrabajo } from './aSuCargo'
 import { Atajos, useAtajos } from './Atajos'
-import { AtencionRequerida } from './AtencionRequerida'
+import { EsperanSuDecision } from './EsperanSuDecision'
+import { LoQueMeToca } from './LoQueMeToca'
 import { MisProyectos } from './MisProyectos'
-import { SuTrabajo, useSuTrabajo } from './SuTrabajo'
+import { VisionEjecutiva } from './VisionEjecutiva'
 
-// el inicio del portal (S02, ASM-078): la variante del rol si la cuenta tiene una (inicios.ts); si no, desde F8 la revisión
-// ejecutiva S51 para quien el catálogo le ofrece el tablero executive (decisión 7 del plan 8.3); si no, «Mi día». mientras el
-// catálogo se lee, la carga: un inicio que se dibuja y después cambia por otro desorienta (revisión de UX, etapa 2). si no se
-// puede leer (un backend sin F8 responde sin KPI-EXE), «Mi día»
+// el inicio del portal (S02, ASM-078): la variante del rol si la cuenta tiene una (inicios.ts); si no, «Mi día». desde el
+// rediseño de UX (DD-01, hallazgo U-01) la revisión ejecutiva S51 ya no es el inicio de quien el catálogo se la ofrece, que
+// llevaba a un tablero de «No disponible» a quien no lee sus cifras: vive en /dashboards/executive, y «Mi día» la resume en
+// la visión ejecutiva con las cifras que la cuenta lee
 export function InicioPage() {
   const oferta = useOferta()
   const variante = inicioPara(INICIOS, oferta)
-  const catalogo = useCatalogoDeIndicadores()
   if (variante) return <variante.Pantalla />
-  if (catalogo.isPending) return <Cargando />
-  const ejecutivo = (catalogo.data ?? []).some((i) => i.dashboard === 'executive' && i.available)
-  return ejecutivo ? <RevisionEjecutivaPage /> : <Bienvenida />
+  return <Bienvenida />
 }
 
-// «Mi día» (S02, revisión de UX, etapa 2): lo primero que se ve contesta, en este orden, qué está vencido o por vencer a su cargo
-// y qué espera su decisión (AtencionRequerida), cómo crea lo de siempre (Atajos), cómo van sus proyectos (MisProyectos) y todo lo
-// que tiene abierto (SuTrabajo). la grilla de secciones, que repite la barra lateral, solo queda cuando no hay nada de eso: la
-// bienvenida de F1, sin indicadores (dashboards.md §11). la cuenta vive en el menú del perfil (shell/Perfil.tsx). el monitoreo de
-// la Tabla 9.5 y el catálogo de indicadores se ofrecen aquí también a quien no tiene la revisión ejecutiva, que los enlaza: a quien
-// lee indicator o indicator_measurement, el monitoreo; a quien lee indicator, el catálogo
+// «Mi trabajo» (S02; P-01 y DD-01 del rediseño de UX): el inicio contesta por urgencia, no por módulo, y cada bloque se ofrece por
+// lo que la cuenta lee, sin dibujarse si no tiene nada legible: lo que le toca hoy, con lo vencido primero y lo que puede tomar de
+// sus proyectos (LoQueMeToca), lo que espera su decisión (EsperanSuDecision), su agenda de la semana (Agenda), cómo registra lo de
+// siempre (Atajos), cómo van sus proyectos (MisProyectos) y, al final, la visión ejecutiva con las cifras que lee. la grilla de
+// secciones, que repite la barra lateral, solo queda cuando no hay nada de eso: la bienvenida de F1, sin indicadores
+// (dashboards.md §11). la cuenta vive en el menú del perfil (shell/Perfil.tsx). el monitoreo de la Tabla 9.5 y el catálogo de
+// indicadores se ofrecen aquí también: a quien lee indicator o indicator_measurement, el monitoreo; a quien lee indicator, el catálogo
 function Bienvenida() {
   const { t } = useTranslation(NS)
   const { user, permissions, permissionsError, can } = useAuth()
@@ -51,7 +49,7 @@ function Bienvenida() {
   const conCatalogo = can('indicator', 'READ')
   const conMonitoreo = conCatalogo || can('indicator_measurement', 'READ')
   return (
-    <div className="mx-auto max-w-[1440px] space-y-8">
+    <div className="mx-auto max-w-[1440px] space-y-6">
       <EncabezadoDePagina
         titulo={t('inicio.titulo')}
         descripcion={t('inicio.bienvenida', { nombre: user?.displayName ?? '' })}
@@ -70,10 +68,12 @@ function Bienvenida() {
           ) : undefined
         }
       />
-      <AtencionRequerida />
+      <LoQueMeToca />
+      <EsperanSuDecision />
+      <Agenda />
       <Atajos />
       <MisProyectos />
-      <SuTrabajo />
+      <VisionEjecutiva />
       {conMiDia ? null : (
         <section aria-labelledby="inicio-modulos" className="space-y-3">
           <div className="space-y-1">

@@ -5,12 +5,13 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useEffect, useRef, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { esConflictoDeVersion, useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
 import { ConDefiniciones, FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -411,9 +412,19 @@ function Asistente() {
     ) : null
   const campoDeFecha = (campo: keyof Valores) =>
     escribible(campo) ? (
-      <Campo key={campo} etiqueta={nombreDeCampo(campo)} error={error(campo)}>
-        {(p) => <Input {...p} type="date" {...register(campo)} />}
-      </Campo>
+      <Controller
+        key={campo}
+        control={control}
+        name={campo}
+        render={({ field }) => (
+          <CampoFecha
+            etiqueta={nombreDeCampo(campo)}
+            error={error(campo)}
+            valor={typeof field.value === 'string' && field.value !== '' ? field.value : null}
+            alCambiar={(v) => field.onChange(v ?? '')}
+          />
+        )}
+      />
     ) : null
   const campoDeOpciones = (campo: keyof Valores) =>
     escribible(campo) ? (

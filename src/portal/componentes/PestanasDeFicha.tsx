@@ -1,7 +1,7 @@
 import { cn } from '@wasichai/ui'
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 import { NS } from '../i18n'
 import { PestanasDesplazables } from './PestanasDesplazables'
 
@@ -19,6 +19,7 @@ export interface PestanaDeFicha {
 export function PestanasDeFicha({ etiqueta, pestanas }: { etiqueta: string; pestanas: PestanaDeFicha[] }) {
   const { t } = useTranslation(NS)
   const [busqueda, fijarBusqueda] = useSearchParams()
+  const { state } = useLocation()
   const pedida = busqueda.get('tab')
   const actual = pestanas.some((p) => p.id === pedida) ? pedida! : (pestanas[0]?.id ?? '')
   const [visitadas, setVisitadas] = useState<string[]>([actual])
@@ -30,7 +31,8 @@ export function PestanasDeFicha({ etiqueta, pestanas }: { etiqueta: string; pest
   const elegir = (pestana: string) => {
     const siguiente = new URLSearchParams(busqueda)
     siguiente.set('tab', pestana)
-    fijarBusqueda(siguiente, { replace: true, preventScrollReset: true })
+    // el estado del historial (el rastro y el origen de la ficha) sigue con la pestaña
+    fijarBusqueda(siguiente, { replace: true, preventScrollReset: true, state })
   }
   const alTeclear = (e: KeyboardEvent, i: number) => {
     const ultima = pestanas.length - 1

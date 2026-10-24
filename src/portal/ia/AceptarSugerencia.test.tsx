@@ -309,6 +309,35 @@ describe('S52 · aceptar una sugerencia', () => {
     )
   })
 
+  // hallazgo U-07 (DD-07): la fecha propuesta se muestra como dd/mm/aaaa y la corregida viaja como AAAA-MM-DD
+  it('una fecha corregida como 20/10/2026 viaja como 2026-10-20', async () => {
+    const SUG_FECHA = registro(
+      's12',
+      {
+        project: 'p1',
+        suggestion_kind: 'EXTRACCION',
+        target_object: 'agreement',
+        target_record_id: 'a1',
+        suggested_value: JSON.stringify({ item: 'date', field: 'signed_date', value: '2026-10-01' }),
+        confidence: 0.6,
+        ai_interaction: 'ai1'
+      },
+      { state: 'proposed', updatedAt: '2026-10-09T18:00:00Z' }
+    )
+    const { montarlo } = montarDrawer(SUG_FECHA)
+    red = espiarRed([{ method: 'POST', path: aceptacion('s12'), responder: aceptada(SUG_FECHA) }])
+    montarlo()
+    const dialogo = await screen.findByRole('dialog', { name: 'Aceptar la propuesta' })
+    const fecha = within(dialogo).getByLabelText('Fecha de firma')
+    expect(fecha).toHaveValue('01/10/2026')
+    await userEvent.clear(fecha)
+    await userEvent.type(fecha, '20/10/2026')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Fecha del acta')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aceptar' }))
+    await waitFor(() => expect(red!.a('POST', aceptacion('s12'))).toHaveLength(1))
+    expect(red.a('POST', aceptacion('s12'))[0].cuerpo).toEqual({ attributes: { item: 'date', field: 'signed_date', value: '2026-10-20' } })
+  })
+
   // api.md §4.14: en CLASIFICACION, lugar y fecha se corrige el valor, nunca el campo guardado
   it('una clasificación solo deja corregir el valor; el campo es el que propuso la IA', async () => {
     const { montarlo } = montarDrawer(SUG_CLASIFICACION)

@@ -87,6 +87,11 @@ describe('useLeeTodosLosProyectos', () => {
   })
 })
 
+// el selector de proyecto es un combobox con búsqueda (DD-09): un campo con rol combobox que abre una lista (listbox) con «Todos
+// mis proyectos» y los proyectos; se escribe para filtrar por código o nombre, las flechas mueven la opción activa, Enter elige
+// y Escape cierra sin cambiar
+const opciones = () => screen.getAllByRole('option').map((o) => o.textContent)
+
 describe('selector de proyecto', () => {
   it('lista primero los proyectos de la persona y lleva a la misma sección del proyecto elegido', async () => {
     fetch = mockFetch([
@@ -95,37 +100,65 @@ describe('selector de proyecto', () => {
     ])
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
     const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() =>
-      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos mis proyectos', 'PRJ-02 · Qorihuasi', 'PRJ-01 · Pukaqaqa'])
-    )
-    await userEvent.selectOptions(selector, 'p1')
+    expect(selector).toHaveValue('Todos mis proyectos')
+    expect(selector).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(selector)
+    expect(selector).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('listbox', { name: 'Proyecto' })).toBeInTheDocument()
+    await waitFor(() => expect(opciones()).toEqual(['Todos mis proyectos', 'PRJ-02 · Qorihuasi', 'PRJ-01 · Pukaqaqa']))
+    expect(screen.getByRole('option', { name: 'Todos mis proyectos' })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('option', { name: 'PRJ-01 · Pukaqaqa' }))
     expect(ubicacion.actual).toBe('/projects/p1/stakeholders')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
-  // rediseño de UX (2026-10-20): el territorio es del tenant y el proyecto es su lente (ux-architecture.md §6.1). en Territorio, el
-  // selector de la barra es ese lente (?project=) y la pantalla ya no tiene su propio «Proyecto del mapa»
-  it('en Territorio el selector es el lente del mapa: dice «Todo el territorio» y escribe ?project= sin salir de la pantalla', async () => {
+  it('escribir filtra por código o nombre, sin distinguir tildes ni mayúsculas, y Enter elige la primera que coincide', async () => {
     fetch = mockFetch([
       { path: '/objects/project/records', body: pagina([P1, P2]) },
-      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+      { path: '/objects/project_assignment/records', body: pagina([]) }
     ])
-    montar(<SelectorDeProyecto />, { ruta: '/territory?periodStart=2026-07-01', permisos: LEE_PROYECTOS })
+    montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
     const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() => expect(screen.getAllByRole('option')[0]).toHaveTextContent('Todo el territorio'))
-    await userEvent.selectOptions(selector, 'p1')
-    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01&project=p1')
-    expect(selector).toHaveValue('p1')
-    await userEvent.selectOptions(selector, '')
-    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01')
+    await userEvent.type(selector, 'QORÍ')
+    // «Todos mis proyectos» queda siempre a mano
+    await waitFor(() => expect(opciones()).toEqual(['Todos mis proyectos', 'PRJ-02 · Qorihuasi']))
+    expect(selector).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'PRJ-02 · Qorihuasi' }).id)
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe('/projects/p2/stakeholders')
   })
 
-  it('en la ficha de una comunidad lee el proyecto del lente', async () => {
+  it('sin coincidencias lo dice', async () => {
     fetch = mockFetch([
       { path: '/objects/project/records', body: pagina([P1, P2]) },
-      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+      { path: '/objects/project_assignment/records', body: pagina([]) }
     ])
-    montar(<SelectorDeProyecto />, { ruta: '/territory/communities/c1?project=p2', permisos: LEE_PROYECTOS })
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto' })).toHaveValue('p2'))
+    montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await userEvent.type(selector, 'zzz')
+    expect(await screen.findByText('Ningún proyecto coincide con la búsqueda.')).toBeInTheDocument()
+    expect(opciones()).toEqual(['Todos mis proyectos'])
+  })
+
+  it('las flechas mueven la opción activa, Enter la elige y Escape cierra sin cambiar', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/projects/p1/stakeholders', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() => expect(selector).toHaveValue('PRJ-01 · Pukaqaqa'))
+    selector.focus()
+    // abre con la elegida activa
+    await userEvent.keyboard('{ArrowDown}')
+    expect(selector).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'PRJ-01 · Pukaqaqa' }).id)
+    await userEvent.keyboard('{ArrowDown}')
+    expect(selector).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'PRJ-02 · Qorihuasi' }).id)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(selector).toHaveValue('PRJ-01 · Pukaqaqa')
+    expect(ubicacion.actual).toBe('/projects/p1/stakeholders')
+    await userEvent.keyboard('{ArrowUp}{ArrowUp}{Enter}')
+    expect(ubicacion.actual).toBe('/stakeholders')
   })
 
   it('sin READ sobre project no se dibuja', () => {
@@ -144,10 +177,9 @@ describe('selector de proyecto', () => {
     ])
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: p })
     const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
-    await waitFor(() =>
-      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos los proyectos', 'PRJ-01 · Pukaqaqa', 'PRJ-02 · Qorihuasi'])
-    )
-    expect(selector).toHaveValue('')
+    await waitFor(() => expect(selector).toHaveValue('Todos los proyectos'))
+    await userEvent.click(selector)
+    await waitFor(() => expect(opciones()).toEqual(['Todos los proyectos', 'PRJ-01 · Pukaqaqa', 'PRJ-02 · Qorihuasi']))
   })
 
   it('con la acción de leer todos y una organización sin proyectos, sigue el selector y no el aviso de asignación', async () => {
@@ -156,7 +188,8 @@ describe('selector de proyecto', () => {
       { path: '/objects/project_assignment/records', body: pagina([]) }
     ])
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: permisos({ project: ['READ', 'READ_ALL_PROJECTS'] }) })
-    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos los proyectos']))
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Proyecto' }))
+    await waitFor(() => expect(opciones()).toEqual(['Todos los proyectos']))
     expect(screen.queryByText(/No tiene proyectos asignados/)).not.toBeInTheDocument()
   })
 
@@ -266,13 +299,17 @@ describe('barra de contexto y Project 360', () => {
     expect(within(migas).getByText('C-001')).toHaveAttribute('aria-current', 'page')
   })
 
-  // rediseño de UX (2026-10-20): una ficha que no vive bajo el segmento de su pestaña (una queja en /grievances/:id) decía
-  // «grievances» en las migas y no marcaba ninguna pestaña
+  // U-04 del rediseño: una ficha que no vive bajo el segmento de su pestaña (una queja en /grievances/:id) marca esa pestaña
+  // y la nombra en las migas, nunca con el segmento de la ruta
   it.each([
-    ['grievances', 'Quejas, consultas y solicitudes', 'Quejas, consultas y solicitudes', '/attention'],
-    ['contributions', 'Programas sociales', 'Programas sociales', '/programs'],
-    ['field-visits', 'Relacionamiento', 'Relacionamiento', '/engagements']
-  ])('la ficha bajo /%s marca su pestaña y la nombra en las migas', async (segmento, pestana, miga, ruta) => {
+    ['grievances/q1', 'Quejas, consultas y solicitudes', 'attention'],
+    ['inquiries/q2', 'Quejas, consultas y solicitudes', 'attention'],
+    ['requests/q3', 'Quejas, consultas y solicitudes', 'attention'],
+    ['contributions/a1', 'Programas sociales', 'programs'],
+    ['field-visits/v1', 'Relacionamiento', 'engagements'],
+    ['incidents/i1', 'Riesgos', 'risks'],
+    ['areas/z1', 'Mapa', 'map']
+  ])('en %s marca la pestaña %s y la nombra en las migas', async (ruta, pestana, segmento) => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     function Ficha() {
       useMigaDelRegistro('R-001')
@@ -281,16 +318,16 @@ describe('barra de contexto y Project 360', () => {
     montar(
       <Routes>
         <Route path="/projects/:projectId" element={<ProyectoLayout />}>
-          <Route path={`${segmento}/:id`} element={<Ficha />} />
+          <Route path="*" element={<Ficha />} />
         </Route>
       </Routes>,
-      { ruta: `/projects/p1/${segmento}/r1`, permisos: ADMIN_PERMISOS }
+      { ruta: `/projects/p1/${ruta}`, permisos: ADMIN_PERMISOS }
     )
-    const migas = await screen.findByRole('navigation', { name: 'Ubicación' })
-    expect(await within(migas).findByRole('link', { name: miga })).toHaveAttribute('href', `/projects/p1${ruta}`)
-    expect(within(migas).queryByText(segmento)).not.toBeInTheDocument()
-    const subnav = screen.getByRole('navigation', { name: 'Secciones del proyecto' })
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
     expect(within(subnav).getByRole('link', { name: pestana })).toHaveAttribute('aria-current', 'page')
+    const migas = await screen.findByRole('navigation', { name: 'Ubicación' })
+    expect(await within(migas).findByRole('link', { name: pestana })).toHaveAttribute('href', `/projects/p1/${segmento}`)
+    expect(within(migas).getByText('R-001')).toHaveAttribute('aria-current', 'page')
   })
 
   it('en el resumen, las migas terminan en el proyecto', async () => {
@@ -354,21 +391,27 @@ describe('barra de contexto y Project 360', () => {
     expect(within(subnav).getByRole('link', { name: 'Quejas, consultas y solicitudes' })).toHaveAccessibleDescription('6 en total, 3 vencidos')
   })
 
-  it('Acuerdos es una vista de Compromisos: la pestaña Compromisos queda marcada y la vista ofrece volver', async () => {
+  // DD-03 (U-18): una sola fila de pestañas. la segunda fila con las vistas de una pestaña («Vistas de Compromisos», con
+  // Compromisos y Acuerdos) ya no existe: Acuerdos se ofrece en el selector de páginas de su lista (compromisos.test.tsx y
+  // acuerdos.test.tsx). en Acuerdos, la pestaña marcada sigue siendo Compromisos
+  it('una sola fila de pestañas: en Acuerdos queda marcada Compromisos y no hay una segunda fila de vistas', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(
       <Routes>
         <Route path="/projects/:projectId" element={<ProyectoLayout />}>
           <Route path="agreements" element={<p>Acuerdos</p>} />
+          <Route path="commitments" element={<p>Compromisos</p>} />
         </Route>
       </Routes>,
       { ruta: '/projects/p1/agreements', permisos: ADMIN_PERMISOS }
     )
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
     expect(within(subnav).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('aria-current', 'page')
-    const vistas = screen.getByRole('navigation', { name: 'Vistas de Compromisos' })
-    expect(within(vistas).getByRole('link', { name: 'Acuerdos' })).toHaveAttribute('aria-current', 'page')
-    expect(within(vistas).getByRole('link', { name: 'Compromisos' })).toHaveAttribute('href', '/projects/p1/commitments')
+    expect(within(subnav).queryByRole('link', { name: 'Acuerdos' })).not.toBeInTheDocument()
+    // la única navegación del proyecto es su fila de pestañas
+    expect(screen.queryByRole('navigation', { name: /^Vistas de/ })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('navigation').map((n) => n.getAttribute('aria-label'))).not.toContain('Vistas de Compromisos')
+    expect(screen.queryByRole('link', { name: 'Acuerdos' })).not.toBeInTheDocument()
   })
 
   it('las pestañas de otra sección se ofrecen con sus permisos (revisión final, M7)', async () => {

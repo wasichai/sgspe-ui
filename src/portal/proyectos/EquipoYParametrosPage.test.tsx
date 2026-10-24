@@ -107,6 +107,8 @@ const PAD = permisos({
 })
 
 describe('S11 · equipo y parámetros', () => {
+  // U-16, P-08: terminar una asignación ya no es un botón rojo en cada fila, sino una opción del menú «…» de la fila que pide
+  // confirmar en un diálogo; la escritura es la de antes
   it('marca las asignaciones vencidas y programadas; termina una vigente con la fecha de Lima, tras confirmar', async () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed()
@@ -115,11 +117,22 @@ describe('S11 · equipo y parámetros', () => {
     expect(within(vencida).getByText('Vencida: no da acceso de escritura')).toBeInTheDocument()
     expect(within(vencida).queryByRole('button')).not.toBeInTheDocument()
     expect(within(programada).getByText('Programada: aún no da acceso de escritura')).toBeInTheDocument()
-    await userEvent.click(within(vigente).getByRole('button', { name: 'Terminar asignación de pad@sgspe.test' }))
-    // pide confirmar: nada se escribe todavía
+    // ninguna fila muestra un «Terminar…» a la vista: vive en el menú de la fila
+    expect(within(tabla).queryByRole('button', { name: /Terminar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(vigente).getByRole('button', { name: 'Acciones de pad@sgspe.test' }))
+    const opcion = within(within(vigente).getByRole('group', { name: 'Acciones de pad@sgspe.test' })).getByRole('button', {
+      name: 'Terminar la asignación…'
+    })
+    expect(opcion).toHaveClass('text-sg-danger')
+    await userEvent.click(opcion)
+    // pide confirmar en un diálogo que nombra a la persona y el efecto: nada se escribe todavía
+    const dialogo = await screen.findByRole('dialog', { name: 'Terminar la asignación de pad@sgspe.test' })
+    expect(within(dialogo).getByText(/pad@sgspe.test deja de trabajar en este proyecto desde hoy, 1 oct\. 2026/)).toBeInTheDocument()
+    expect(within(tabla).queryByRole('group', { name: 'Acciones de pad@sgspe.test' })).not.toBeInTheDocument()
     expect(red.a('PUT', '/objects/project_assignment/records/a1')).toHaveLength(0)
-    await userEvent.click(within(vigente).getByRole('button', { name: 'Sí, terminar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Terminar la asignación' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/project_assignment/records/a1')).toHaveLength(1))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     // son las 22:00 del 1 de octubre en Lima, no el 2 de UTC
     expect(red.a('PUT', '/objects/project_assignment/records/a1')[0].cuerpo).toMatchObject({ attributes: { active: false, end_date: '2026-10-01' } })
   })
@@ -188,11 +201,19 @@ describe('S11 · equipo y parámetros', () => {
     red = espiarRed()
     const tabla = await screen.findByRole('table', { name: 'Equipo' })
     const fila = () => within(tabla).getAllByRole('row')[3]
-    await userEvent.click(within(fila()).getByRole('button', { name: 'Terminar asignación de despues@sgspe.test' }))
-    await userEvent.click(within(fila()).getByRole('button', { name: 'Cancelar' }))
+    const abrir = async () => {
+      await userEvent.click(within(fila()).getByRole('button', { name: 'Acciones de despues@sgspe.test' }))
+      await userEvent.click(within(fila()).getByRole('button', { name: 'Terminar la asignación…' }))
+      return screen.findByRole('dialog', { name: 'Terminar la asignación de despues@sgspe.test' })
+    }
+    // una programada no se termina «desde hoy»: el diálogo dice que no llegará a empezar
+    let dialogo = await abrir()
+    expect(within(dialogo).getByText(/despues@sgspe.test no empezará a trabajar en este proyecto el 1 dic\. 2026/)).toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(red.a('PUT', '/objects/project_assignment/records/a3')).toHaveLength(0)
-    await userEvent.click(within(fila()).getByRole('button', { name: 'Terminar asignación de despues@sgspe.test' }))
-    await userEvent.click(within(fila()).getByRole('button', { name: 'Sí, terminar' }))
+    dialogo = await abrir()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Terminar la asignación' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/project_assignment/records/a3')).toHaveLength(1))
     expect(red.a('PUT', '/objects/project_assignment/records/a3')[0].cuerpo).toMatchObject({ attributes: { active: false, end_date: '2026-12-01' } })
   })
@@ -207,7 +228,7 @@ describe('S11 · equipo y parámetros', () => {
     expect(screen.getByText(/No está asignado a este proyecto/)).toBeInTheDocument()
     // revisión final, I3: las escrituras de project_assignment no pasan por ProjectScopeGuard (security.md §9.2, ítem 5)
     expect(screen.getByRole('button', { name: 'Asignar persona' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Terminar asignación de pad@sgspe.test' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Acciones de pad@sgspe.test' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Campañas' }))
     await screen.findByText('Perforación 2026')
     expect(screen.queryByRole('region', { name: 'Campaña de exploración' })).not.toBeInTheDocument()
@@ -229,10 +250,13 @@ describe('S11 · equipo y parámetros', () => {
     await userEvent.type(await screen.findByLabelText('Correo del usuario'), 'nueva@sgspe.test')
     await userEvent.type(screen.getByLabelText('Identificador del usuario'), '6f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f')
     await userEvent.type(screen.getByLabelText('Rol en el proyecto'), 'ROL_DE_PRUEBA')
+    // hallazgo U-07 (DD-07): el periodo se escribe como dd/mm/aaaa y viaja como AAAA-MM-DD
+    await userEvent.type(screen.getByLabelText('Desde'), '20/10/2026')
+    await userEvent.type(screen.getByLabelText('Hasta'), '31/12/2026')
     await userEvent.click(screen.getByRole('button', { name: 'Asignar' }))
     await waitFor(() => expect(red!.a('POST', '/objects/project_assignment/records')).toHaveLength(1))
     expect(red.a('POST', '/objects/project_assignment/records')[0].cuerpo).toMatchObject({
-      attributes: { project: 'p1', member_user_email: 'nueva@sgspe.test' }
+      attributes: { project: 'p1', member_user_email: 'nueva@sgspe.test', start_date: '2026-10-20', end_date: '2026-12-31' }
     })
   })
 
@@ -253,8 +277,9 @@ describe('S11 · equipo y parámetros', () => {
     fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
     red = espiarRed([{ method: 'PUT', path: '/objects/project_assignment/records/a1', responder: () => problema(412, 'Precondition Failed') }])
     const tabla = await screen.findByRole('table', { name: 'Equipo' })
-    await userEvent.click(within(tabla).getByRole('button', { name: 'Terminar asignación de pad@sgspe.test' }))
-    await userEvent.click(within(tabla).getByRole('button', { name: 'Sí, terminar' }))
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Acciones de pad@sgspe.test' }))
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Terminar la asignación…' }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Terminar la asignación' }))
     const antes = red.a('GET', '/objects/project_assignment/records').length
     const recargar = await screen.findByRole('button', { name: 'Recargar' })
     expect(screen.getByText(/pad@sgspe.test: /)).toBeInTheDocument()
@@ -543,7 +568,24 @@ describe('S11 · equipo y parámetros', () => {
     )
     await screen.findByRole('table', { name: 'Equipo' })
     expect(screen.queryByRole('button', { name: 'Asignar persona' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Terminar asignación/ })).not.toBeInTheDocument()
+    // sin UPDATE sobre project_assignment no hay menú en las filas
+    expect(screen.queryByRole('button', { name: /^Acciones de / })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Terminar/ })).not.toBeInTheDocument()
+  })
+
+  it('con el directorio de personas, el menú y el diálogo nombran a la persona por su nombre', async () => {
+    fetch = abrirPortal('/projects/p1/settings', ADMINISTRACION_DE_PROYECTO, PAD, [
+      { path: /^\/sgspe\/people/, body: [{ email: 'pad@sgspe.test', displayName: 'Persona de prueba' }] },
+      ...rutas()
+    ])
+    red = espiarRed()
+    const tabla = await screen.findByRole('table', { name: 'Equipo' })
+    await userEvent.click(await within(tabla).findByRole('button', { name: 'Acciones de Persona de prueba' }))
+    await userEvent.click(within(tabla).getByRole('button', { name: 'Terminar la asignación…' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Terminar la asignación de Persona de prueba' })
+    expect(within(dialogo).getByText(/Persona de prueba deja de trabajar en este proyecto desde hoy/)).toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
+    expect(red.a('PUT', '/objects/project_assignment/records/a1')).toHaveLength(0)
   })
 })
 

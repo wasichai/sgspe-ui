@@ -28,7 +28,8 @@ export const ES_PAGINAS = {
     responsable: 'Responsable',
     sinResponsable: 'Sin responsable',
     vencimiento: 'Vencimiento',
-    sinVencimiento: 'Sin fecha límite'
+    sinVencimiento: 'Sin fecha límite',
+    verCamino: 'Ver el camino'
   },
   flujo: {
     titulo: 'Camino del flujo',
@@ -38,7 +39,7 @@ export const ES_PAGINAS = {
     terminales: 'Otros cierres'
   },
   crearRelacionado: 'Crear relacionado',
-  vistasDelModulo: { titulo: 'Vistas del módulo', lista: 'Lista', mapa: 'Mapa', tablero: 'Tablero' },
+  vistasDelModulo: { titulo: 'Vistas del módulo', lista: 'Lista', tablero: 'Tablero' },
   filtroDeGrupo: 'Grupo de interés: {{nombre}}',
   vistaPrevia: { titulo: 'Vista previa', abrirFicha: 'Abrir ficha', abrir: 'Vista previa de {{nombre}}' },
   relacionados: { compromiso: 'Registrar compromiso', qcs: 'Registrar queja, consulta o solicitud' },
@@ -89,17 +90,18 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     responsable: 'Owner',
     sinResponsable: 'No owner',
     vencimiento: 'Due date',
-    sinVencimiento: 'No due date'
+    sinVencimiento: 'No due date',
+    verCamino: 'Show the path'
   },
   flujo: {
-    titulo: 'Workflow path',
+    titulo: 'Path of steps',
     actual: 'Current status',
     hecho: 'Step done',
     pendiente: 'Pending step',
     terminales: 'Other endings'
   },
   crearRelacionado: 'Create related',
-  vistasDelModulo: { titulo: 'Module views', lista: 'List', mapa: 'Map', tablero: 'Dashboard' },
+  vistasDelModulo: { titulo: 'Module views', lista: 'List', tablero: 'Dashboard' },
   filtroDeGrupo: 'Stakeholder: {{nombre}}',
   vistaPrevia: { titulo: 'Preview', abrirFicha: 'Open record', abrir: 'Preview of {{nombre}}' },
   relacionados: { compromiso: 'Record a commitment', qcs: 'Record a grievance, inquiry or request' },

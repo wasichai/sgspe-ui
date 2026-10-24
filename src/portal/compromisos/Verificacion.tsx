@@ -7,6 +7,7 @@ import { atributo, texto, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { Ejecutado } from './PestanaEntregas'
+import { Seccion } from '../componentes/Seccion'
 
 // el panel del verificador de S32 (?drawer=verify, flujo 11): lo entregado frente a lo comprometido, cuántas entregas tienen
 // conformidad y las dos salidas, «Verificar» (D11: VERIFY y no ser el responsable, comprobado antes con transition-checks) y
@@ -18,8 +19,7 @@ export function Verificacion({ compromiso }: { compromiso: Registro }) {
   const responsable = atributo(compromiso, 'owner_user_id') === user?.id
   const conConformidad = (entregas.data ?? []).filter((e) => atributo(e, 'conformity_given') === true).length
   return (
-    <section aria-label={t('entregas.verificacion.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">
-      <h2 className="text-sg-h3 font-semibold">{t('entregas.verificacion.titulo')}</h2>
+    <Seccion titulo={t('entregas.verificacion.titulo')} className="space-y-3 text-sm">
       <p className="text-sg-text-secondary">{t('entregas.verificacion.ayuda')}</p>
       <h3 className="font-medium">{t('entregas.verificacion.ejecutado')}</h3>
       <Ejecutado compromiso={compromiso} />
@@ -39,6 +39,6 @@ export function Verificacion({ compromiso }: { compromiso: Registro }) {
         solo={['verify', 'reopen_execution']}
         comprobarAntes={['verify']}
       />
-    </section>
+    </Seccion>
   )
 }

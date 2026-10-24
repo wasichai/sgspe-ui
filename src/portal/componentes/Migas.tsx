@@ -53,7 +53,7 @@ export function useMigaDelRegistro(etiqueta: string | null | undefined) {
 }
 
 // las fichas que no viven bajo el segmento de su pestaña: una queja vive en /grievances/:id y su pestaña es la de QCS
-export const PESTANA_DE_SEGMENTO: Partial<Record<string, string>> = {
+const PESTANA_DE_SEGMENTO: Partial<Record<string, string>> = {
   grievances: 'attention',
   inquiries: 'attention',
   requests: 'attention',
@@ -61,6 +61,11 @@ export const PESTANA_DE_SEGMENTO: Partial<Record<string, string>> = {
   'field-visits': 'engagements',
   incidents: 'risks',
   areas: 'map'
+}
+
+// la pestaña de un segmento de ruta: la suya si la ficha vive fuera de él, si no el segmento mismo
+export function pestanaDeSegmento(segmento: string): string {
+  return PESTANA_DE_SEGMENTO[segmento] ?? segmento
 }
 
 // las de una pantalla dentro de un proyecto: la pestaña es el segmento de la ruta tras el proyecto, o la que se diga cuando
@@ -72,7 +77,7 @@ export function MigasDelProyecto({ pestana, registro }: { pestana?: string; regi
   const { pathname } = useLocation()
   const proyecto = useRegistro('project', projectId || undefined)
   const segmento = pathname.split('/')[3] ?? 'overview'
-  const p = pestana ?? PESTANA_DE_SEGMENTO[segmento] ?? segmento
+  const p = pestana ?? pestanaDeSegmento(segmento)
   const base = `/projects/${encodeURIComponent(projectId)}`
   const pasos: Miga[] = [
     { etiqueta: t('secciones.projects'), ruta: '/projects' },

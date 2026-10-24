@@ -1,7 +1,7 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useAuth } from '@wasichai/core'
-import { Button } from '@wasichai/ui'
-import type { ReactNode } from 'react'
+import { Button, cn } from '@wasichai/ui'
+import { AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -9,7 +9,8 @@ import { useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Historia } from '../componentes/Historia'
 import { Cargando, Consulta, NoDisponible, esProhibido } from '../componentes/Estados'
-import { CifraFallida, KpiCard } from '../componentes/KpiCard'
+import { CifraFallida } from '../componentes/KpiCard'
+import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { ROL_DE_JEFATURA } from '../config'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto } from '../contexto/proyectos'
@@ -26,15 +27,19 @@ import { capa } from '../mapa/capas'
 import { Mapa } from '../mapa/Mapa'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { vigente, PARAMETROS_F2 } from './parametros'
-import { TableroDelProyecto, useIndicadoresDelProyecto } from './TableroDelProyecto'
+import { TableroDelProyecto, useIndicadoresDelProyecto, type LecturaDeIndicador } from './TableroDelProyecto'
 import { opcion } from '../datos/opciones'
-import { ListaPlegable } from '../componentes/ListaPlegable'
+import { ListaPriorizada, type EntradaPriorizada } from '../componentes/ListaPriorizada'
 import { Persona } from '../componentes/Persona'
+import { Seccion } from '../componentes/Seccion'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
 // project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
 // desde F7, el resumen ejecutivo (AI-04), los posibles duplicados (AI-07) y la pregunta a los documentos (AI-06). el bloque de posturas siempre se dibuja: sin permiso sobre stance (security.md §7.9) dice "no disponible" y por qué. una
 // consulta auxiliar que carga, falla o no se puede leer lo dice; nunca se lee como "sin datos" ni como "sin nada que atender"
+// P-03 y DD-13: sin subrayado en las listas ni en los accesos sueltos; el subrayado queda para los enlaces dentro de un texto
+const ACCESO = 'text-sg-caption font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline'
+const ENTRADA = 'text-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline'
 const TIPOS_FORMALES = ['REUNION', 'REUNION INFORMATIVA', 'TALLER', 'ASAMBLEA', 'MESA DE DIALOGO']
 
 export function ResumenPage() {
@@ -64,6 +69,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
   const capas = useCapas(['LYR-09', 'LYR-13'], { project: proyecto.id })
   // las capas son fijas y la consulta cubre todo el proyecto: un mapa en blanco dice si está bloqueado, falló o no tiene geometrías
   const avisoMapa = avisoDelMapa(capas, false)
+  const base = `/projects/${encodeURIComponent(proyecto.id)}`
   const parametro = (campo: string) =>
     vigente(
       proyecto.attributes,
@@ -111,80 +117,39 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
             </span>
           </div>
         </div>
-        {/* una sola primaria (rediseño de UX, 2026-10-20): con el proyecto activo, «Registrar interacción»; mientras no lo está,
-          su decisión (enviar a revisión, aprobar, reanudar). lo demás, en «Más acciones», y lo que lo anula al final */}
-        <div className="flex flex-wrap items-start gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
+            <Button asChild size="sm">
+              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
+            </Button>
+          ) : null}
           {proyecto.state === 'draft' && editaProyecto ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
             </Button>
           ) : null}
-          {escribeEnElProyecto && can('engagement', 'CREATE') && proyecto.state !== 'active' ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
-            </Button>
-          ) : null}
-          <BotonesDeTransicion
-            agrupadas
-            objeto="project"
-            registro={proyecto}
-            proyecto={proyecto.id}
-            sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE') && proyecto.state === 'active'}
-          />
-          {escribeEnElProyecto && can('engagement', 'CREATE') && proyecto.state === 'active' ? (
-            <Button asChild size="sm">
-              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
-            </Button>
-          ) : null}
+          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
         </div>
       </header>
+      {/* P-03: las cinco cifras, al inicio y en una sola superficie (U-34). todas salen del tablero del proyecto: si falla, cada
+          una lo dice en una línea y el aviso con «Reintentar» va una sola vez, en el tablero (D4, revisión de UX, etapa 7) */}
+      <FranjaDeCifras
+        titulo={t('p360.resumen.salud')}
+        cifras={[
+          // cada cifra lleva a su lista con el filtro puesto (design P8; revisión de UX, etapa 6)
+          { titulo: t('p360.resumen.kpis.gruposVigentes'), lectura: stk01, a: `${base}/stakeholders?view=todos` },
+          { titulo: t('p360.resumen.kpis.interacciones'), lectura: eng01, a: `${base}/engagements` },
+          // pide acción: un compromiso vencido y un riesgo alto; las QCS abiertas son el trabajo corriente
+          { titulo: t('p360.resumen.kpis.compromisos'), lectura: com03, a: `${base}/commitments?view=vencidos`, tono: 'aviso' },
+          { titulo: t('p360.resumen.kpis.qcs'), lectura: grv02, a: `${base}/attention` },
+          { titulo: t('p360.resumen.kpis.riesgos'), lectura: rsk01, a: `${base}/risks?level=alto`, tono: 'peligro' }
+        ]}
+      />
       <ResumenEjecutivo proyecto={proyecto} />
       <AccionesDeIa objeto="project" registro={proyecto} proyecto={proyecto.id} rotulo={texto(proyecto, 'name')} casos={['AI-07']} />
       <Atencion proyecto={proyecto} inactividad={parametro('inactivity_days')} revision={parametro('stakeholder_review_days')} />
-      {/* todas estas cifras salen del tablero del proyecto: si falla, cada una lo dice en una línea y el aviso con «Reintentar»
-          va una sola vez, en el tablero (D4, revisión de UX, etapa 7) */}
-      <section aria-label={t('p360.resumen.salud')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <h2 className="sr-only">{t('p360.resumen.salud')}</h2>
-        {/* cada cifra lleva a su lista con el filtro puesto (design P8; revisión de UX, etapa 6) */}
-        <KpiCard
-          titulo={t('p360.resumen.kpis.gruposVigentes')}
-          indicador={stk01.data}
-          cargando={stk01.isPending}
-          error={stk01.error}
-          a={`/projects/${encodeURIComponent(proyecto.id)}/stakeholders?view=todos`}
-        />
-        <KpiCard
-          titulo={t('p360.resumen.kpis.interacciones')}
-          indicador={eng01.data}
-          cargando={eng01.isPending}
-          error={eng01.error}
-          a={`/projects/${encodeURIComponent(proyecto.id)}/engagements`}
-        />
-        <KpiCard
-          titulo={t('p360.resumen.kpis.compromisos')}
-          indicador={com03.data}
-          cargando={com03.isPending}
-          error={com03.error}
-          a={`/projects/${encodeURIComponent(proyecto.id)}/commitments?view=vencidos`}
-        />
-        <KpiCard
-          titulo={t('p360.resumen.kpis.qcs')}
-          indicador={grv02.data}
-          cargando={grv02.isPending}
-          error={grv02.error}
-          a={`/projects/${encodeURIComponent(proyecto.id)}/attention`}
-        />
-        <KpiCard
-          titulo={t('p360.resumen.kpis.riesgos')}
-          indicador={rsk01.data}
-          cargando={rsk01.isPending}
-          error={rsk01.error}
-          a={`/projects/${encodeURIComponent(proyecto.id)}/risks?level=alto`}
-        />
-      </section>
       <div className="grid gap-4 lg:grid-cols-2">
-        <section aria-label={t('p360.resumen.paisaje')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.paisaje')}</h2>
+        <Seccion titulo={t('p360.resumen.paisaje')} className="space-y-3">
           <div className="flex flex-wrap gap-6">
             <div className="space-y-1">
               <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('p360.resumen.matriz')}</h3>
@@ -206,7 +171,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
                   {t('p360.resumen.sinEvaluar', { n: numeroPe((stk03.data.denominator ?? 0) - (stk03.data.numerator ?? 0)) })}
                 </p>
               ) : null}
-              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/stakeholders/matrix`} className="text-sg-caption text-sg-primary-text underline">
+              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/stakeholders/matrix`} className={ACCESO}>
                 {t('p360.resumen.verMatriz')}
               </Link>
             </div>
@@ -221,9 +186,8 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               )}
             </div>
           </div>
-        </section>
-        <section aria-label={t('p360.resumen.reuniones')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.reuniones')}</h2>
+        </Seccion>
+        <Seccion titulo={t('p360.resumen.reuniones')}>
           {eng02.isPending ? (
             <Cargando />
           ) : eng02.isError ? (
@@ -256,12 +220,11 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               })}
             </ul>
           )}
-        </section>
+        </Seccion>
       </div>
       <TableroDelProyecto tablero={tablero} proyecto={proyecto.id} />
       <div className="grid gap-4 lg:grid-cols-2">
-        <section aria-label={t('p360.resumen.areas')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-          <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.areas')}</h2>
+        <Seccion titulo={t('p360.resumen.areas')}>
           {areas.isPending ? <Cargando /> : null}
           {areas.isError ? <FalloDeLectura error={areas.error} alReintentar={() => void areas.refetch()} /> : null}
           <ul className="space-y-1 text-sm">
@@ -269,10 +232,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               .filter((a) => a.state === 'approved')
               .map((a) => (
                 <li key={a.id}>
-                  <EnlaceConRastro
-                    to={`/projects/${encodeURIComponent(proyecto.id)}/areas/${encodeURIComponent(a.id)}`}
-                    className="text-sg-primary-text underline"
-                  >
+                  <EnlaceConRastro to={`/projects/${encodeURIComponent(proyecto.id)}/areas/${encodeURIComponent(a.id)}`} className={ENTRADA}>
                     {opcion(a, 'area_type')} · v{texto(a, 'version_number')}
                   </EnlaceConRastro>
                 </li>
@@ -293,10 +253,10 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
               {t(`mapa.avisos.${avisoMapa}`)}
             </p>
           ) : null}
-          <Link to={`/projects/${encodeURIComponent(proyecto.id)}/map`} className="text-sg-caption text-sg-primary-text underline">
+          <Link to={`/projects/${encodeURIComponent(proyecto.id)}/map`} className={ACCESO}>
             {t('p360.resumen.verMapa')}
           </Link>
-        </section>
+        </Seccion>
         <Actividad proyecto={proyecto.id} />
       </div>
     </div>
@@ -312,46 +272,57 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   const interacciones = useTodos('engagement', { project: proyecto.id })
   const grupos = useTodos('stakeholder', { project: proyecto.id })
   const hoy = hoyEnLima()
-  const enlace = (ruta: string, contenido: ReactNode) => (
-    <Link to={ruta} className="text-sg-primary-text underline">
-      {contenido}
-    </Link>
-  )
-  const actas = (interacciones.data ?? [])
+  const base = `/projects/${encodeURIComponent(proyecto.id)}`
+  const aGrupo = (g: Registro) => `${base}/stakeholders/${encodeURIComponent(g.id)}`
+  // la más vieja primero: la que lleva más tiempo esperando su acta (la fecha realizada o, sin ella, la programada; sin ninguna, al final)
+  const instanteDe = (e: Registro) => texto(e, 'held_at') || texto(e, 'scheduled_at') || '9999'
+  const actas: EntradaPriorizada[] = (interacciones.data ?? [])
     .filter((e) => e.state === 'held' && TIPOS_FORMALES.includes(texto(e, 'engagement_type')))
+    .sort((x, y) => instanteDe(x).localeCompare(instanteDe(y)))
     .map((e) => ({
       clave: e.id,
-      contenido: enlace(`/projects/${encodeURIComponent(proyecto.id)}/engagements/${encodeURIComponent(e.id)}`, texto(e, 'title'))
+      titulo: texto(e, 'title'),
+      a: `${base}/engagements/${encodeURIComponent(e.id)}`,
+      motivo: t('p360.resumen.motivos.acta'),
+      tono: 'aviso'
     }))
-  const sinContacto = (grupos.data ?? [])
+  // primero quien nunca tuvo contacto y luego quien lleva más días sin él
+  const sinContacto: EntradaPriorizada[] = (grupos.data ?? [])
     // una cuenta que no lee last_contact_date (la clave no viene en el registro) no puede decir si hubo contacto
     .filter((g) => g.state !== 'retired' && 'last_contact_date' in g.attributes)
     .flatMap((g) => {
       const dias = diasEntre(atributo(g, 'last_contact_date'), hoy)
-      if (dias !== null && dias <= inactividad) return []
-      return [
-        {
-          clave: `c-${g.id}`,
-          contenido: enlace(
-            `/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`,
-            <AvisoDeGrupo grupo={g} nunca={dias === null} />
-          )
-        }
-      ]
+      return dias !== null && dias <= inactividad ? [] : [{ g, dias }]
     })
-  const evaluaciones = (grupos.data ?? [])
-    .filter((g) => g.state === 'assessed' && (diasEntre(atributo(g, 'last_assessment_date'), hoy) ?? 0) > revision)
-    .map((g) => ({
-      clave: `e-${g.id}`,
-      contenido: enlace(`/projects/${encodeURIComponent(proyecto.id)}/stakeholders/${encodeURIComponent(g.id)}`, <AvisoDeGrupo grupo={g} />)
+    .sort((x, y) => (y.dias ?? Infinity) - (x.dias ?? Infinity))
+    .map(({ g, dias }) => ({
+      clave: `c-${g.id}`,
+      titulo: <NombreDeGrupo grupo={g} />,
+      a: aGrupo(g),
+      motivo: dias === null ? t('p360.resumen.motivos.nuncaContactado') : t('p360.resumen.motivos.sinContacto', { count: dias }),
+      tono: dias === null ? 'peligro' : 'aviso'
     }))
-  // por tipo, con su conteo: cinco de cada uno y «Ver los N» (antes, una sola lista de más de cien enlaces)
-  const grupos_ = [
-    { clave: 'actas', elementos: actas, dias: 0 },
-    { clave: 'sinContacto', elementos: sinContacto, dias: inactividad },
-    { clave: 'evaluaciones', elementos: evaluaciones, dias: revision }
+  const evaluaciones: EntradaPriorizada[] = (grupos.data ?? [])
+    .flatMap((g) => {
+      const dias = g.state === 'assessed' ? (diasEntre(atributo(g, 'last_assessment_date'), hoy) ?? 0) : 0
+      return dias > revision ? [{ g, dias }] : []
+    })
+    .sort((x, y) => y.dias - x.dias)
+    .map(({ g, dias }) => ({
+      clave: `e-${g.id}`,
+      titulo: <NombreDeGrupo grupo={g} />,
+      a: aGrupo(g),
+      motivo: t('p360.resumen.motivos.evaluacion', { count: dias }),
+      tono: 'aviso'
+    }))
+  // por tipo, con su conteo: las tres más urgentes y «Ver los N» hacia la lista filtrada, si la hay (hallazgo U-05, DD-13). las
+  // actas por redactar y las evaluaciones viejas no tienen una vista propia en sus listas: dicen cuántas quedan, sin enlace
+  const grupos_: { clave: string; entradas: EntradaPriorizada[]; dias: number; verTodos?: string }[] = [
+    { clave: 'actas', entradas: actas, dias: 0 },
+    { clave: 'sinContacto', entradas: sinContacto, dias: inactividad, verTodos: `${base}/stakeholders?view=sinContacto` },
+    { clave: 'evaluaciones', entradas: evaluaciones, dias: revision }
   ]
-  const hayAvisos = grupos_.some((g) => g.elementos.length > 0)
+  const hayAvisos = grupos_.some((g) => g.entradas.length > 0)
   const fuentes = [
     { clave: 'interacciones', consulta: interacciones },
     { clave: 'grupos', consulta: grupos }
@@ -359,12 +330,17 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
   const cargando = fuentes.some((f) => f.consulta.isPending)
   const fallidas = fuentes.filter((f) => f.consulta.isError)
   return (
-    <section aria-label={t('p360.resumen.atencion')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.atencion')}</h2>
+    <Seccion titulo={t('p360.resumen.atencion')} descripcion={t('p360.resumen.atencionAyuda')}>
       {hayAvisos ? (
         <div className="grid gap-4 lg:grid-cols-3">
           {grupos_.map((g) => (
-            <ListaPlegable key={g.clave} titulo={t(`p360.resumen.grupos.${g.clave}`, { count: g.elementos.length, dias: g.dias })} elementos={g.elementos} />
+            <ListaPriorizada
+              key={g.clave}
+              titulo={t(`p360.resumen.grupos.${g.clave}`, { dias: g.dias })}
+              total={g.entradas.length}
+              entradas={g.entradas}
+              verTodos={g.verTodos ? { a: g.verTodos } : undefined}
+            />
           ))}
         </div>
       ) : null}
@@ -376,23 +352,91 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
         </div>
       ))}
       {!hayAvisos && !cargando && fallidas.length === 0 ? <p className="text-sm text-sg-text-muted">{t('p360.resumen.sinAtencion')}</p> : null}
-    </section>
+    </Seccion>
   )
 }
 
-// el grupo de interés de un aviso, por su nombre: el título del grupo ya dice qué le pasa; uno que nunca tuvo contacto lo dice
-function AvisoDeGrupo({ grupo, nunca = false }: { grupo: Registro; nunca?: boolean }) {
-  const { t } = useTranslation(NS)
-  const nombre = useNombreDelGrupo(grupo)
-  return <>{nunca ? t('p360.resumen.nuncaContactado', { nombre }) : nombre}</>
+// el grupo de interés de un aviso, por su nombre: el motivo de la entrada dice qué le pasa
+function NombreDeGrupo({ grupo }: { grupo: Registro }) {
+  return <>{useNombreDelGrupo(grupo)}</>
 }
 
 function Actividad({ proyecto }: { proyecto: string }) {
   const { t } = useTranslation(NS)
   return (
-    <section aria-label={t('p360.resumen.actividad')} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('p360.resumen.actividad')}</h2>
+    <Seccion titulo={t('p360.resumen.actividad')}>
       <Historia objeto="project" id={proyecto} limite={10} vacio={t('p360.resumen.sinActividad')} />
+    </Seccion>
+  )
+}
+
+type Tono = 'aviso' | 'peligro'
+interface CifraDeFranja {
+  titulo: string
+  lectura: LecturaDeIndicador
+  a: string
+  // el tono de la cifra cuando pide acción (un valor mayor que cero); en cero o sin valor, neutra
+  tono?: Tono
+}
+
+const COLOR: Record<Tono, string> = { aviso: 'text-sg-warning', peligro: 'text-sg-danger' }
+
+// la franja de cifras de P-03: una sola superficie con las cifras sin caja propia (nunca tarjetas dentro de tarjetas, U-34). una
+// cifra que pide acción se tiñe y lo dice con un ícono y un texto, nunca solo con el color. una cifra de QCS que no cuenta las
+// confidenciales lo dice con NotaDeConfidenciales, sin cuántas
+function FranjaDeCifras({ titulo, cifras }: { titulo: string; cifras: CifraDeFranja[] }) {
+  return (
+    <section aria-label={titulo} className="grid gap-1 rounded-sg-lg border border-sg-border bg-sg-surface p-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <h2 className="sr-only">{titulo}</h2>
+      {cifras.map((c) => (
+        <Cifra key={c.titulo} {...c} />
+      ))}
     </section>
+  )
+}
+
+function Cifra({ titulo, lectura, a, tono }: CifraDeFranja) {
+  const { t } = useTranslation(NS)
+  const indicador = lectura.data
+  let cuerpo
+  if (lectura.isError) cuerpo = <CifraFallida error={lectura.error} />
+  else if (!indicador) cuerpo = <Cargando compacto />
+  else if (!indicador.available) cuerpo = <NoDisponible motivo={indicador.unavailableReason} />
+  // sin valor en el periodo se dice: nunca un cero ni la unidad suelta
+  else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
+  else {
+    const pide = tono && indicador.value > 0 ? tono : undefined
+    cuerpo = (
+      <>
+        <p className="flex items-center gap-1.5 text-sg-kpi font-semibold tabular-nums">
+          <Link
+            to={a}
+            aria-label={`${titulo}: ${numeroPe(indicador.value)}`}
+            className={cn('no-underline hover:underline focus-visible:underline', pide ? COLOR[pide] : 'text-sg-text')}
+          >
+            {numeroPe(indicador.value)}
+          </Link>
+          {pide ? (
+            <>
+              <AlertTriangle aria-hidden className={cn('size-4', COLOR[pide])} />
+              <span className="sr-only">{t('p360.resumen.pideAccion')}</span>
+            </>
+          ) : null}
+        </p>
+        <p className="text-sg-caption text-sg-text-muted">
+          {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
+            ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `
+            : ''}
+          {indicador.unit ?? ''}
+        </p>
+        <NotaDeConfidenciales oculta={indicador.confidentialHidden} />
+      </>
+    )
+  }
+  return (
+    <div role="group" aria-label={titulo} className="space-y-1 rounded-sg-md p-3">
+      <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
+      {cuerpo}
+    </div>
   )
 }

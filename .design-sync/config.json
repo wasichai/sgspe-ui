@@ -1,0 +1,116 @@
+{
+  "shape": "package",
+  "pkg": "sgspe-kit",
+  "globalName": "SGSPE",
+  "entry": ".design-sync/kit/index.tsx",
+  "buildCmd": "node .design-sync/kit/build.mjs",
+  "tsconfig": "../../tsconfig.json",
+  "cssEntry": "dist/sgspe.css",
+  "provider": {
+    "component": "VistaSgspe"
+  },
+  "docsDir": "../docs",
+  "dtsPropsFor": {
+    "Button": "variant?: \"primary\" | \"secondary\" | \"ghost\" | \"danger\"; size?: \"md\" | \"sm\" | \"icon\"; asChild?: boolean; type?: \"button\" | \"submit\" | \"reset\"; disabled?: boolean; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void; className?: string; children?: React.ReactNode;",
+    "Input": "id?: string; name?: string; type?: string; value?: string; defaultValue?: string; placeholder?: string; disabled?: boolean; required?: boolean; onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void; className?: string;",
+    "Textarea": "id?: string; name?: string; rows?: number; value?: string; defaultValue?: string; placeholder?: string; disabled?: boolean; required?: boolean; onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void; className?: string;",
+    "ConfirmDialog": "title: React.ReactNode; description: React.ReactNode; confirmLabel?: React.ReactNode; cancelLabel?: React.ReactNode; variant?: \"danger\" | \"primary\"; busy?: boolean; error?: React.ReactNode; onConfirm: () => void; onCancel: () => void;",
+    "Tabs": "label: string; tabs: { id: string; label: string; render: () => React.ReactNode }[];",
+    "Pagination": "page: number; totalPages: number; totalElements: number; onPage: (page: number) => void;",
+    "PageSizePagination": "page: number; size: number; total: number; sizes?: readonly number[]; onPage: (page: number) => void; onSize: (size: number) => void;",
+    "Drawer": "titulo: string; descripcion?: string; abierto: boolean; alCerrar: () => void; children: React.ReactNode; pie?: React.ReactNode;",
+    "KpiCard": "titulo: string; indicador?: { code: string; label: string; available: boolean; value?: number | null; numerator?: number | null; denominator?: number | null; unit?: string; unavailableReason?: string }; llegaEn?: string; cargando?: boolean; error?: unknown; notas?: React.ReactNode; a?: string; alReintentar?: () => void; anidada?: boolean; cifra?: (indicador: { value: number; unit?: string; numerator?: number | null; denominator?: number | null }) => string; detalle?: (indicador: { value: number; unit?: string; numerator?: number | null; denominator?: number | null }) => React.ReactNode;",
+    "PanelDeDecision": "objeto: string; estado: string | null; camino?: string[]; desde?: string | null; por?: string | null; siguiente: { etiqueta: string; falta?: string } | null; responsable: string | null; vencimiento: string | null; situacion?: string; tipoDeSituacion?: \"plazo\" | \"revision\" | \"vigencia\";",
+    "PanelDeTrazabilidad": "deDondeViene?: { clave: string; titulo: string; contenido: React.ReactNode }[]; queGenero?: { clave: string; titulo: string; contenido: React.ReactNode }[]; loSustenta?: { clave: string; titulo: string; contenido: React.ReactNode }[]; vacios?: Partial<Record<\"deDondeViene\" | \"queGenero\" | \"loSustenta\", string>>; pie?: React.ReactNode;",
+    "ListaEnTarjetas": "etiqueta: string; tarjetas: { id: string; titulo: React.ReactNode; estado?: React.ReactNode; plazo?: React.ReactNode; proyecto?: React.ReactNode; detalle?: React.ReactNode }[];",
+    "Alert": "tone: \"success\" | \"warning\" | \"danger\" | \"notice\"; title?: React.ReactNode; children: React.ReactNode; onDismiss?: () => void; className?: string;"
+  },
+  "overrides": {
+    "ConfirmDialog": {
+      "cardMode": "single",
+      "viewport": "720x420"
+    },
+    "Dialog": {
+      "cardMode": "single",
+      "viewport": "720x420"
+    },
+    "DialogContent": {
+      "cardMode": "single",
+      "viewport": "720x420"
+    },
+    "DialogTitle": {
+      "cardMode": "single",
+      "viewport": "720x420"
+    },
+    "DialogDescription": {
+      "cardMode": "single",
+      "viewport": "720x420"
+    },
+    "DialogTrigger": {
+      "cardMode": "single",
+      "viewport": "720x420"
+    },
+    "Drawer": {
+      "cardMode": "single",
+      "viewport": "900x520"
+    },
+    "Select": {
+      "cardMode": "single",
+      "viewport": "480x320"
+    },
+    "SelectTrigger": {
+      "cardMode": "single",
+      "viewport": "480x320"
+    },
+    "SelectValue": {
+      "cardMode": "single",
+      "viewport": "480x320"
+    },
+    "SelectContent": {
+      "cardMode": "single",
+      "viewport": "480x320"
+    },
+    "SelectItem": {
+      "cardMode": "single",
+      "viewport": "480x320"
+    },
+    "Table": {
+      "cardMode": "column"
+    },
+    "Th": {
+      "cardMode": "column"
+    },
+    "Td": {
+      "cardMode": "column"
+    },
+    "EncabezadoDePagina": {
+      "cardMode": "column"
+    },
+    "FormularioPorPasos": {
+      "cardMode": "single",
+      "viewport": "1200x620"
+    },
+    "ContenedorDePagina": {
+      "cardMode": "column"
+    },
+    "KpiCard": {
+      "cardMode": "column"
+    },
+    "Pasos": {
+      "cardMode": "single",
+      "viewport": "1100x360"
+    },
+    "EstadoSinAcceso": {
+      "cardMode": "column"
+    },
+    "BarraDeFiltros": {
+      "cardMode": "column"
+    },
+    "TablaPriorizada": {
+      "cardMode": "single",
+      "viewport": "1320x420"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md",
+  "projectId": "3e0d73eb-0e55-42d1-8e7f-46566ea93a00"
+}

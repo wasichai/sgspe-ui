@@ -156,7 +156,7 @@ export const ES_ENTREGABLES = {
     mapaFallido: 'Un mapa del borrador falló: pida un borrador nuevo antes de emitir.',
     titulo: 'Emitir el entregable',
     ayuda: 'Se emite exactamente el borrador aprobado: sus versiones «Interno» y «Externo», sin la marca BORRADOR. No se deshace.',
-    modelo: 'Huella del modelo revisado',
+    modelo: 'Huella del contenido revisado',
     candidatas: 'Huellas de las versiones que se emitirán',
     lista: {
       titulo: 'Lista de verificación para la versión «Externo»',
@@ -341,7 +341,7 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     mapaFallido: 'A draft map failed: request a new draft before issuing.',
     titulo: 'Issue the deliverable',
     ayuda: 'Exactly the approved draft is issued: its «Interno» and «Externo» versions, without the BORRADOR mark. It cannot be undone.',
-    modelo: 'Fingerprint of the reviewed model',
+    modelo: 'Fingerprint of the reviewed content',
     candidatas: 'Fingerprints of the versions to be issued',
     lista: {
       titulo: 'Checklist for the «Externo» version',

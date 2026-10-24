@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { texto, useCrear, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
@@ -119,16 +120,28 @@ export function NuevoEntregable({ proyecto, alCerrar }: { proyecto: string; alCe
               {(p) => <Input {...p} value={titulo} onChange={(e) => setTitulo(e.target.value)} />}
             </Campo>
           </div>
-          <Campo etiqueta={t('entregables.nuevo.desde')} error={error('desde', 'period_start_date')}>
-            {(p) => <Input {...p} type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />}
-          </Campo>
-          <Campo etiqueta={t('entregables.nuevo.hasta')} error={error('hasta', 'period_end_date')}>
-            {(p) => <Input {...p} type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />}
-          </Campo>
+          <CampoFecha
+            etiqueta={t('entregables.nuevo.desde')}
+            requerido
+            error={error('desde', 'period_start_date')}
+            valor={desde || null}
+            alCambiar={(v) => setDesde(v ?? '')}
+          />
+          <CampoFecha
+            etiqueta={t('entregables.nuevo.hasta')}
+            requerido
+            error={error('hasta', 'period_end_date')}
+            valor={hasta || null}
+            alCambiar={(v) => setHasta(v ?? '')}
+          />
           {pide.includes('cutoff_date') ? (
-            <Campo etiqueta={t('entregables.nuevo.corte')} error={error('corte', 'cutoff_date')}>
-              {(p) => <Input {...p} type="date" value={corte} onChange={(e) => setCorte(e.target.value)} />}
-            </Campo>
+            <CampoFecha
+              etiqueta={t('entregables.nuevo.corte')}
+              requerido
+              error={error('corte', 'cutoff_date')}
+              valor={corte || null}
+              alCambiar={(v) => setCorte(v ?? '')}
+            />
           ) : null}
           {pide.includes('community') ? (
             <div className="space-y-1 md:col-span-2">

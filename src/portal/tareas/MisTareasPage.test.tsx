@@ -9,8 +9,8 @@ import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red
 import type { Registro } from '../datos/registros'
 import { MisTareasPage } from './MisTareasPage'
 
-// S47 (WF-N): las tareas de quien mira con sus conteos, el tablero por estado, el calendario por vencimiento y «Para tomar» en
-// el proyecto, donde tomar una tarea es un cambio con If-Match
+// S47 (WF-N): las tareas de quien mira con sus conteos, el tablero por estado, el calendario por vencimiento y «Para tomar»,
+// donde tomar una tarea es un cambio con If-Match
 let fetch: FetchMock | null = null
 let red: Red | null = null
 beforeEach(() => localStorage.clear())
@@ -262,12 +262,15 @@ describe('S47 · mis tareas', () => {
     fetch = mockFetch(rutas())
     red = espiarRed([{ path: '/objects/task/records', responder: () => respuesta.then((r) => r.clone()) }])
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
-    // la lectura sigue pendiente: «Cargando» en cada grupo («Mis tareas» y «Para tomar»), sin conteos ni lista vacía
-    for (const estado of await screen.findAllByRole('status')) expect(estado).toHaveTextContent('Cargando…')
+    // la lectura sigue pendiente: «Cargando» en cada grupo, sin conteos ni lista vacía
+    const estados = await screen.findAllByRole('status')
+    expect(estados.map((e) => e.textContent)).toEqual(['Cargando…', 'Cargando…'])
     expect(screen.queryByText('No tiene tareas abiertas.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No hay tareas sin asignar en sus proyectos.')).not.toBeInTheDocument()
     expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
     fallar()
-    expect((await screen.findAllByRole('button', { name: 'Reintentar' })).length).toBeGreaterThan(0)
+    expect(await within(screen.getByRole('region', { name: 'Mis tareas' })).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(await within(screen.getByRole('region', { name: 'Para tomar' })).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByText('No tiene tareas abiertas.')).not.toBeInTheDocument()
     expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
   })
@@ -289,7 +292,7 @@ describe('S47 · mis tareas', () => {
     expect(screen.queryByText(/Se muestran las primeras/)).not.toBeInTheDocument()
   })
 
-  it('fuera de un proyecto, ?view=paraTomar muestra la lista: «Para tomar» es un grupo, no una vista', async () => {
+  it('fuera de un proyecto, ?view=paraTomar muestra la lista: «Para tomar» es un grupo de la lista, no una vista', async () => {
     fetch = mockFetch(rutas())
     red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks?view=paraTomar', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
@@ -298,17 +301,55 @@ describe('S47 · mis tareas', () => {
     expect(screen.queryByRole('tab', { name: 'Para tomar' })).not.toBeInTheDocument()
   })
 
-  // rediseño de UX (2026-10-20): fuera de un proyecto, «Para tomar» mandaba al selector. el servidor ya acota la lectura a los
-  // proyectos de la cuenta (ADR-0029): el grupo se lee sin proyecto y dice el de cada tarea
-  it('fuera de un proyecto, «Para tomar» lista las sin asignar de sus proyectos, con el proyecto de cada una', async () => {
+  // B-04: el servidor acota la lectura de task a los proyectos de la cuenta (ADR-0029), así que «Para tomar» no exige un proyecto
+  it('sin proyecto elegido, «Para tomar» es una sola lectura sin project y dice el proyecto de cada tarea', async () => {
     fetch = mockFetch(rutas())
     red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     const paraTomar = await screen.findByRole('region', { name: 'Para tomar' })
     await waitFor(() => expect(within(paraTomar).getByRole('heading')).toHaveTextContent('Para tomar (1)'))
-    expect(within(paraTomar).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
-    const consultas = red.a('GET', '/objects/task/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
-    expect(consultas.find((c) => c.empty === 'assignee_user_id')).not.toHaveProperty('project')
+    const tabla = within(paraTomar).getByRole('table', { name: 'Para tomar' })
+    expect(within(tabla).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
+    expect(within(tabla).getByRole('button', { name: 'Abrir Escalamiento C-002 nivel 1' })).toBeInTheDocument()
+    const colas = red
+      .a('GET', '/objects/task/records')
+      .map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+      .filter((c) => c.empty === 'assignee_user_id')
+    expect(colas).toHaveLength(1)
+    expect(colas[0]).not.toHaveProperty('project')
+    expect(colas[0]).toMatchObject({ state: 'open,in_progress,blocked', page: '0', size: '25' })
     expect(screen.queryByText(/elija uno en el selector/)).not.toBeInTheDocument()
+  })
+
+  it('sin proyecto elegido y sin tareas sin asignar, «Para tomar» lo dice de sus proyectos', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor([T1, T2, T3])
+    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const paraTomar = await screen.findByRole('region', { name: 'Para tomar' })
+    expect(await within(paraTomar).findByText('No hay tareas sin asignar en sus proyectos.')).toBeInTheDocument()
+  })
+
+  // quien lee todos los proyectos traería la cola de todo el tenant: la ve dentro de cada proyecto
+  it('con alcance de tenant, sin proyecto elegido no lee «Para tomar» y pide elegir un proyecto', async () => {
+    const lectorDeTodo = { ...EQUIPO_DE_COMPROMISOS, objects: { ...EQUIPO_DE_COMPROMISOS.objects, project: ['READ', 'READ_ALL_PROJECTS'] } }
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: lectorDeTodo })
+    expect(await screen.findByRole('table', { name: 'Mis tareas' })).toBeInTheDocument()
+    expect(screen.getByText('Como ve todos los proyectos, las tareas para tomar se ven dentro de cada uno: elija uno en el selector.')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Para tomar' })).not.toBeInTheDocument()
+    expect(red.a('GET', '/objects/task/records').some((l) => l.ruta.includes('empty=assignee_user_id'))).toBe(false)
+  })
+
+  it('con alcance de tenant, en un proyecto «Para tomar» se lee con su project', async () => {
+    const lectorDeTodo = { ...EQUIPO_DE_COMPROMISOS, objects: { ...EQUIPO_DE_COMPROMISOS.objects, project: ['READ', 'READ_ALL_PROJECTS'] } }
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/projects/p1/tasks', camino: '/projects/:projectId/tasks', usuario: GESTORA, permisos: lectorDeTodo })
+    const paraTomar = await screen.findByRole('region', { name: 'Para tomar' })
+    await waitFor(() => expect(within(paraTomar).getByRole('heading')).toHaveTextContent('Para tomar (1)'))
+    const colas = red.a('GET', '/objects/task/records').filter((l) => l.ruta.includes('empty=assignee_user_id'))
+    expect(colas.length).toBeGreaterThan(0)
+    expect(colas.every((l) => new URLSearchParams(l.ruta.split('?')[1]).get('project') === 'p1')).toBe(true)
   })
 })

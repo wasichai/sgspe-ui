@@ -1,5 +1,5 @@
 import { useAuth } from '@wasichai/core'
-import { Button, Table, Tabs, Td, Th } from '@wasichai/ui'
+import { Button, ConfirmDialog, Table, Tabs, Td, Th } from '@wasichai/ui'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
@@ -30,6 +30,8 @@ import { TemasPriorizados } from './TemasPriorizados'
 import { PARAMETROS_F2, PARAMETROS_F4, PARAMETROS_INVERSION, problemasDeParametros, vigente, type Parametro } from './parametros'
 import { opcion } from '../datos/opciones'
 import { Persona } from '../componentes/Persona'
+import { MasAcciones } from '../componentes/Pagina'
+import { useNombreDePersona } from '../datos/personas'
 
 // S11 · equipo y parámetros del proyecto (screens.md §3): asignaciones con su vigencia (una vencida no da escritura,
 // RQ-SEC-006), campañas con su tope y lo ejecutado por moneda (ASM-063), partes y concesiones, y los parámetros de F2 con
@@ -88,7 +90,7 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
   const releer = useReleer()
   const [abierto, setAbierto] = useState(false)
   // la asignación que se está por terminar (pide confirmación) y la última que se intentó terminar (dice cuál falló)
-  const [confirmando, setConfirmando] = useState<string | null>(null)
+  const [confirmando, setConfirmando] = useState<Registro | null>(null)
   const [intentada, setIntentada] = useState('')
   const hoy = hoyEnLima()
   // terminar una asignación cierra su vigencia hoy (en Lima), nunca antes de su inicio: una programada termina el día que empezaría
@@ -142,29 +144,7 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
                     </Td>
                     {cambia ? (
                       <Td>
-                        {vigencia === 'vigente' || vigencia === 'programada' ? (
-                          confirmando === a.id ? (
-                            <span className="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label={t('p360.asignacion.terminarDe', { correo })}>
-                              {t('p360.asignacion.confirmarTerminar', { correo })}
-                              <Button size="sm" variant="danger" onClick={() => terminar(a)} disabled={actualizar.isPending}>
-                                {t('p360.asignacion.terminarSi')}
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => setConfirmando(null)}>
-                                {t('comun.cancelar')}
-                              </Button>
-                            </span>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-sg-danger"
-                              aria-label={t('p360.asignacion.terminarDe', { correo })}
-                              onClick={() => setConfirmando(a.id)}
-                            >
-                              {t('p360.asignacion.terminar')}
-                            </Button>
-                          )
-                        ) : null}
+                        {vigencia === 'vigente' || vigencia === 'programada' ? <MenuDeAsignacion correo={correo} alTerminar={() => setConfirmando(a)} /> : null}
                       </Td>
                     ) : null}
                   </tr>
@@ -174,6 +154,15 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
           </Table>
         )}
       </Consulta>
+      {confirmando ? (
+        <ConfirmarTerminar
+          asignacion={confirmando}
+          programada={vigenciaDeAsignacion(confirmando, hoy) === 'programada'}
+          hoy={hoy}
+          alConfirmar={() => terminar(confirmando)}
+          alCancelar={() => setConfirmando(null)}
+        />
+      ) : null}
       {actualizar.isError ? (
         <AvisoDeConflicto
           error={actualizar.error}
@@ -186,6 +175,58 @@ function Equipo({ proyecto, editable, cambia }: { proyecto: string; editable: bo
         <FormularioDeAsignacion proyecto={proyecto} alGuardar={() => setAbierto(false)} />
       </Drawer>
     </div>
+  )
+}
+
+// U-16, P-08: terminar una asignación no es un botón rojo en cada fila, sino una opción del menú «…» de la fila, en color de
+// peligro; el menú dice de quién son las acciones (el nombre visible o, sin él, el correo)
+function MenuDeAsignacion({ correo, alTerminar }: { correo: string; alTerminar: () => void }) {
+  const { t } = useTranslation(NS)
+  const persona = useNombreDePersona(correo) ?? correo
+  return (
+    <MasAcciones nombre={t('p360.asignacion.acciones', { persona })}>
+      <button
+        type="button"
+        onClick={alTerminar}
+        className="whitespace-nowrap rounded-sg-sm px-2 py-1.5 text-left text-sm text-sg-danger hover:bg-sg-surface-hover"
+      >
+        {t('p360.asignacion.terminar')}
+      </button>
+    </MasAcciones>
+  )
+}
+
+// la confirmación nombra a la persona y el efecto en lenguaje llano: una vigente termina hoy; una programada no llega a empezar
+function ConfirmarTerminar({
+  asignacion,
+  programada,
+  hoy,
+  alConfirmar,
+  alCancelar
+}: {
+  asignacion: Registro
+  programada: boolean
+  hoy: string
+  alConfirmar: () => void
+  alCancelar: () => void
+}) {
+  const { t } = useTranslation(NS)
+  const correo = texto(asignacion, 'member_user_email')
+  const persona = useNombreDePersona(correo) ?? correo
+  return (
+    <ConfirmDialog
+      title={t('p360.asignacion.tituloTerminar', { persona })}
+      description={
+        programada
+          ? t('p360.asignacion.efectoProgramada', { persona, fecha: diaPe(texto(asignacion, 'start_date')) })
+          : t('p360.asignacion.efectoVigente', { persona, fecha: diaPe(hoy) })
+      }
+      cancelLabel={t('comun.cancelar')}
+      confirmLabel={t('p360.asignacion.terminarSi')}
+      variant="danger"
+      onConfirm={alConfirmar}
+      onCancel={alCancelar}
+    />
   )
 }
 

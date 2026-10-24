@@ -50,7 +50,9 @@ test.beforeEach(async ({ page }) => {
 
 test('la ficha de una queja dice dónde se está, ofrece una primaria y vuelve a la lista por las migas', async ({ page }) => {
   await page.goto('/projects/p1/grievances/g1')
-  await expect(page.getByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeVisible()
+  // con CabeceraDeFicha (DD-02 y DD-06 del rediseño), el título dice lo que se planteó y el código va en el antetítulo
+  await expect(page.getByRole('heading', { name: 'El canal de riego quedó turbio', level: 1 })).toBeVisible()
+  await expect(page.getByText(/^Queja · Q-001/)).toBeVisible()
   const migas = page.getByRole('navigation', { name: 'Ubicación' })
   await expect(migas.getByRole('link', { name: 'Quejas, consultas y solicitudes' })).toHaveAttribute('href', '/projects/p1/attention')
   await expect(migas).not.toContainText('grievances')
@@ -58,16 +60,18 @@ test('la ficha de una queja dice dónde se está, ofrece una primaria y vuelve a
     'aria-current',
     'page'
   )
-  // la primaria es la del camino; «Rechazar» espera en «Más acciones»
-  await expect(page.getByRole('button', { name: 'Evaluar' })).toBeVisible()
+  // la primaria es la del camino; «Rechazar», destructiva, espera en «Más acciones»
+  const acciones = page.getByRole('group', { name: 'Acciones del registro' })
+  await expect(acciones.getByRole('button', { name: 'Evaluar' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Rechazar' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Más acciones' }).click()
+  const mas = acciones.getByRole('button', { name: 'Más acciones' })
+  await mas.click()
   await page.getByRole('button', { name: 'Rechazar' }).click()
   const dialogo = page.getByRole('dialog')
   await expect(dialogo).toBeVisible()
   await dialogo.getByRole('button', { name: 'Cancelar' }).click()
   // el foco vuelve al menú que abrió el diálogo
-  await expect(page.getByRole('button', { name: 'Más acciones' })).toBeFocused()
+  await expect(mas).toBeFocused()
   await migas.getByRole('link', { name: 'Quejas, consultas y solicitudes' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/attention$/)
 })

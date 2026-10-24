@@ -10,6 +10,7 @@ import { ErrorDeSgspe } from '../datos/http'
 import {
   hallazgosDe,
   intervaloDeConsulta,
+  marcaDe,
   rutaDeLaVersion,
   rutaDelBorrador,
   seccionDelTipo,
@@ -45,9 +46,12 @@ function Acciones() {
         Emitir
       </button>
       <button onClick={() => subir.mutate({ archivo, clave: 'informe-base', nombre: 'Plantilla Ejemplo' })}>Subir</button>
+      <button onClick={() => subir.mutate({ archivo, clave: 'informe-base', nombre: '', logo: LOGO, acento: '1f6f5c' })}>Subir con marca</button>
     </>
   )
 }
+
+const LOGO = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'logo.png', { type: 'image/png' })
 
 function Tipos() {
   const tipos = useTiposDeEntregable()
@@ -141,6 +145,38 @@ describe('contrato de entregables', () => {
     expect((subida.formulario?.get('file') as File).name).toBe('plantilla.dotx')
     expect(subida.cabeceras.get('Idempotency-Key')).toBeTruthy()
     expect(subida.cabeceras.get('Content-Type')).toBeNull()
+    // sin logo ni acento, las partes no van (StrictBody)
+    expect(subida.formulario?.has('logo')).toBe(false)
+    expect(subida.formulario?.has('accentColor')).toBe(false)
+  })
+
+  it('sube el logo y el acento de la marca (ASM-140): el acento en mayúsculas', async () => {
+    fetch = mockFetch([])
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/deliverable-templates',
+        responder: () => jsonResponse({ id: 't9', templateKey: 'informe-base', sha256: 'x', warnings: [] }, 201)
+      }
+    ])
+    montar(<Acciones />)
+    await userEvent.click(screen.getByRole('button', { name: 'Subir con marca' }))
+    await expect.poll(() => red!.a('POST', '/sgspe/deliverable-templates').length).toBe(1)
+    const [subida] = red.a('POST', '/sgspe/deliverable-templates')
+    expect((subida.formulario?.get('logo') as File).name).toBe('logo.png')
+    expect(subida.formulario?.get('accentColor')).toBe('1F6F5C')
+    expect(subida.formulario?.has('name')).toBe(false)
+  })
+
+  it('separa del resto las violaciones de la marca, que se dicen en su campo', () => {
+    const marca = marcaDe([
+      { code: 'MACROS', detail: 'la plantilla trae macros' },
+      { code: 'LOGO_INVALID', detail: 'el logo pasa de 4000 px por lado' },
+      { code: 'ACCENT_INVALID', detail: 'el acento debe ser hexadecimal' }
+    ])
+    expect(marca.resto).toEqual([{ code: 'MACROS', detail: 'la plantilla trae macros' }])
+    expect(marca.logo).toEqual([{ code: 'LOGO_INVALID', detail: 'el logo pasa de 4000 px por lado' }])
+    expect(marca.acento).toEqual([{ code: 'ACCENT_INVALID', detail: 'el acento debe ser hexadecimal' }])
   })
 
   it('lee los tipos de entregable con su clave de sesión', async () => {

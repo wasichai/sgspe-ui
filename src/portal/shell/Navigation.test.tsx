@@ -8,7 +8,7 @@ import { abrirSesion, ADMIN_PERMISOS, ADMINISTRACION, AUDITORA, permisosConCapac
 import { PortalApp } from '../PortalApp'
 import { ES } from '../textos/es'
 import { scopeFromPath, territoryFromSearch } from './context'
-import { arbolPara, estadoDe, NAV_TREE, type ClaveDeSeccion } from './navTree'
+import { arbolPara, BLOQUES, estadoDe, NAV_TREE, type ClaveDeSeccion } from './navTree'
 
 // RF-IAM-002 y RNF-USA-001 con las rutas de docs/ux/ux-architecture.md §6.2: las 13 secciones en su orden y su fase; una
 // sección se dibuja solo con pantalla y con los permisos de GET /api/auth/me/permissions; Administración solo para quien
@@ -26,6 +26,9 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   for (const clave of Object.keys(registradas)) delete registradas[clave]
+  // desde S53 (rediseño de UX, U-08) Administración es una pantalla del portal y no un enlace a /admin: como las demás
+  // secciones, sin pantalla no se dibuja. se registra en todas las pruebas para que digan quién la ve
+  registradas.admin = Prueba
 })
 afterEach(() => {
   fetch?.restore()
@@ -40,7 +43,7 @@ function start(user: AuthUser, rutas: MockRoute[], path = '/') {
 }
 
 const lateral = () => screen.getByRole('navigation', { name: 'Secciones' })
-// el nombre de cada sección: el accesible (el rótulo corto «QCS» lleva el completo en aria-label)
+// el nombre de cada sección en la barra lateral
 const enlaces = () =>
   within(lateral())
     .getAllByRole('link')
@@ -70,7 +73,7 @@ describe('NAV_TREE', () => {
       ['Documentos', '/documents', 'F3'],
       ['Tareas', '/tasks', 'F3'],
       ['Reportes', '/reports', 'F2, F8'],
-      ['Administración', '/admin', 'F1']
+      ['Administración', '/administration', 'F1']
     ])
     expect(NAV_TREE.filter((s) => !s.icon)).toEqual([])
     expect(new Set(NAV_TREE.map((s) => s.icon)).size).toBe(13)
@@ -80,9 +83,18 @@ describe('NAV_TREE', () => {
     for (const seccion of NAV_TREE) expect(ES.secciones[seccion.clave]).toBe(seccion.label)
   })
 
-  it('en F1, sin pantallas, el admin ve Dashboard y Administración y los demás solo Dashboard', () => {
-    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio', 'Administración'])
-    expect(arbolPara(NAV_TREE, { ...cuenta(['project READ']), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio'])
+  // ux-architecture.md §7.1 y DD-10: las secciones van en bloques contiguos con título, sin cambiar su orden
+  it('los bloques de la navegación reúnen las 13 secciones en su orden', () => {
+    expect(BLOQUES.flatMap((b) => b.secciones)).toEqual(NAV_TREE.map((s) => s.clave))
+    expect(BLOQUES.map((b) => b.clave ?? null)).toEqual([null, 'territorio', 'comunidades', 'riesgos', 'seguimiento', null])
+  })
+
+  it('en F1, con las pantallas de Inicio y Administración, el admin ve las dos y los demás solo Inicio', () => {
+    const deF1 = (clave: ClaveDeSeccion) => clave === 'dashboard' || clave === 'admin'
+    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: deF1 }).map((s) => s.label)).toEqual(['Inicio', 'Administración'])
+    expect(arbolPara(NAV_TREE, { ...cuenta(['project READ']), conPantalla: deF1 }).map((s) => s.label)).toEqual(['Inicio'])
+    // S53 ya no es un enlace externo: sin su pantalla, Administración no se dibuja, ni siquiera para el admin
+    expect(arbolPara(NAV_TREE, { ...cuenta([], true), conPantalla: soloDashboard }).map((s) => s.label)).toEqual(['Inicio'])
   })
 
   it.each([
@@ -130,11 +142,12 @@ describe('navegación del portal', () => {
     expect(await within(screen.getByRole('banner')).findByText('Administración de la organización')).toBeInTheDocument()
   })
 
-  it('el admin ve Dashboard y Administración, que lleva a /admin', async () => {
+  // S53: Administración lleva a su pantalla del portal, que enlaza la consola de /admin (AdministracionPage.test.tsx)
+  it('el admin ve Dashboard y Administración, que lleva a /administration', async () => {
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
     await screen.findByRole('navigation', { name: 'Secciones' })
     await waitFor(() => expect(enlaces()).toEqual(['Inicio', 'Administración']))
-    expect(within(lateral()).getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '/admin')
+    expect(within(lateral()).getByRole('link', { name: 'Administración' })).toHaveAttribute('href', '/administration')
   })
 
   // WAS-ADR-0053: la plataforma dice que la cuenta tiene MANAGE_METADATA o MANAGE_ORGANIZATION aunque no sea admin: el portal lo lee
@@ -178,7 +191,7 @@ describe('navegación del portal', () => {
       '/projects'
     )
     expect(await screen.findByText('No se pudieron leer sus permisos')).toBeInTheDocument()
-    expect(screen.queryByText(/no puede abrir/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/no puede abrir/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
   })
 
@@ -206,13 +219,70 @@ describe('navegación del portal', () => {
     expect(document.title).toBe('Compromisos · SGSPE')
   })
 
-  it('«Quejas, consultas y solicitudes» se ve como «QCS», con el nombre completo para lectores y en title', async () => {
+  // DD-10: en la barra, QCS se dice por su nombre largo; la sigla queda en la pestaña del proyecto (contexto.test.tsx)
+  it('en la barra, QCS se dice «Quejas y solicitudes», con el nombre completo en title', async () => {
     registradas.attention = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/attention')
-    const qcs = await within(lateral()).findByRole('link', { name: 'Quejas, consultas y solicitudes' })
-    expect(qcs).toHaveTextContent('QCS')
+    const qcs = await within(lateral()).findByRole('link', { name: 'Quejas y solicitudes' })
+    expect(qcs).toHaveTextContent('Quejas y solicitudes')
+    expect(qcs).not.toHaveTextContent('QCS')
     expect(qcs).toHaveAttribute('title', 'Quejas, consultas y solicitudes')
     expect(qcs).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('en inglés, la barra dice «Grievances and requests»', async () => {
+    localStorage.setItem('sgspe.lang', 'en')
+    registradas.attention = Prueba
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/attention')
+    expect(await within(screen.getByRole('navigation', { name: 'Sections' })).findByRole('link', { name: 'Grievances and requests' })).toBeInTheDocument()
+  })
+
+  // DD-10: expandida desde lg (1024 px), con los títulos de bloque a la vista; por debajo, solo íconos. jsdom no evalúa las
+  // media queries: se prueban las clases y la estructura
+  it('desde lg la barra lateral está expandida, con las etiquetas y los títulos de bloque a la vista', async () => {
+    for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
+    const nav = await screen.findByRole('navigation', { name: 'Secciones' })
+    expect(nav).toHaveClass('w-[52px]', 'lg:w-60')
+    const proyectos = await within(nav).findByRole('link', { name: 'Proyectos' })
+    expect(within(proyectos).getByText('Proyectos')).toHaveClass('sr-only', 'lg:not-sr-only')
+    // cada bloque con título es una lista nombrada por él, y el título se ve desde lg
+    const bloque = within(nav).getByRole('list', { name: 'Trabajo con las comunidades' })
+    expect(
+      within(bloque)
+        .getAllByRole('link')
+        .map((l) => l.textContent)
+    ).toEqual(['Grupos de interés', 'Relacionamiento', 'Compromisos', 'Quejas y solicitudes'])
+    expect(within(nav).getByText('Trabajo con las comunidades')).toHaveClass('sr-only', 'lg:not-sr-only')
+    expect(within(nav).getAllByRole('list').length).toBe(6)
+  })
+
+  it('un bloque sin secciones para la cuenta no se dibuja', async () => {
+    registradas.projects = Prueba
+    start(RELACIONISTA, rutasDeSesion(RELACIONISTA, { admin: false, objects: { project: ['READ'] } }))
+    const nav = await screen.findByRole('navigation', { name: 'Secciones' })
+    await within(nav).findByRole('list', { name: 'Proyectos y territorio' })
+    expect(within(nav).queryByRole('list', { name: 'Trabajo con las comunidades' })).not.toBeInTheDocument()
+    expect(within(nav).queryByText('Riesgos e inversión social')).not.toBeInTheDocument()
+  })
+
+  it('«Contraer» deja solo los íconos y se recuerda al volver a abrir el portal', async () => {
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
+    const nav = await screen.findByRole('navigation', { name: 'Secciones' })
+    const contraer = within(nav).getByRole('button', { name: 'Contraer' })
+    expect(contraer).toHaveClass('hidden', 'lg:flex')
+    await userEvent.click(contraer)
+    expect(nav).not.toHaveClass('lg:w-60')
+    expect(within(within(nav).getByRole('link', { name: 'Inicio' })).getByText('Inicio')).not.toHaveClass('lg:not-sr-only')
+    expect(localStorage.getItem('sgspe.navegacion')).toBe('contraida')
+    cleanup()
+    fetch?.restore()
+    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
+    const otra = await screen.findByRole('navigation', { name: 'Secciones' })
+    expect(otra).not.toHaveClass('lg:w-60')
+    await userEvent.click(within(otra).getByRole('button', { name: 'Expandir' }))
+    expect(otra).toHaveClass('lg:w-60')
+    expect(localStorage.getItem('sgspe.navegacion')).toBeNull()
   })
 
   // ASM-073: el asistente es el botón Preguntar de la barra superior, nunca una sección. llega en F7: se dibuja si
@@ -238,34 +308,9 @@ describe('navegación del portal', () => {
     for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
     await screen.findByRole('navigation', { name: 'Secciones' })
-    await waitFor(() => expect(enlaces()).toEqual(NAV_TREE.map((s) => s.label)))
+    // en la barra, QCS se nombra «Quejas y solicitudes» (DD-10)
+    await waitFor(() => expect(enlaces()).toEqual(NAV_TREE.map((s) => (s.clave === 'attention' ? 'Quejas y solicitudes' : s.label))))
     expect(enlaces()).toHaveLength(13)
-  })
-
-  // rediseño de UX (2026-10-20): las 13 secciones en su orden (RNF-USA-001), en bloques contiguos con su título, para no leer
-  // una lista plana de trece
-  it('agrupa las secciones en bloques con título sin cambiar su orden', async () => {
-    for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
-    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
-    await waitFor(() => expect(enlaces()).toHaveLength(13))
-    const grupo = (nombre: string) =>
-      within(within(lateral()).getByRole('group', { name: nombre }))
-        .getAllByRole('link')
-        .map((l) => l.getAttribute('aria-label') ?? l.textContent)
-    expect(grupo('Proyectos y territorio')).toEqual(['Proyectos', 'Territorio'])
-    expect(grupo('Trabajo con las comunidades')).toEqual(['Grupos de interés', 'Relacionamiento', 'Compromisos', 'Quejas, consultas y solicitudes'])
-    expect(grupo('Riesgos e inversión social')).toEqual(['Riesgos', 'Programas sociales'])
-    expect(grupo('Documentos y seguimiento')).toEqual(['Documentos', 'Tareas', 'Reportes'])
-    expect(enlaces()).toEqual(NAV_TREE.map((s) => s.label))
-  })
-
-  it('un bloque sin secciones para la cuenta no se dibuja', async () => {
-    registradas.projects = Prueba
-    registradas.risks = Prueba
-    start(RELACIONISTA, rutasDeSesion(RELACIONISTA, { admin: false, objects: { project: ['READ'] } }))
-    await within(await screen.findByRole('navigation', { name: 'Secciones' })).findByRole('link', { name: 'Proyectos' })
-    expect(within(lateral()).getByRole('group', { name: 'Proyectos y territorio' })).toBeInTheDocument()
-    expect(within(lateral()).queryByRole('group', { name: 'Riesgos e inversión social' })).not.toBeInTheDocument()
   })
 
   // design-system.md §6.5: una sección que aún no llega lo dice, sin un error técnico; llega en la primera de sus fases
@@ -304,7 +349,11 @@ describe('navegación del portal', () => {
   it('sin el permiso, la URL de la sección dice que la cuenta no puede abrirla', async () => {
     registradas.projects = Prueba
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, SIN_PERMISOS), '/projects')
-    expect(await screen.findByText('Su cuenta no puede abrir «Proyectos».')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No puede abrir «Proyectos»' })).toBeInTheDocument()
+    // hallazgo U-09: dice a quién pedirlo (fuera de un proyecto no se sabe la jefatura) y ofrece la salida al inicio
+    const bloque = screen.getByRole('region', { name: 'No puede abrir «Proyectos»' })
+    expect(bloque).toHaveTextContent('pídalo a la administración de su organización')
+    expect(within(bloque).getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/')
     expect(screen.queryByRole('heading', { name: 'Pantalla de prueba' })).not.toBeInTheDocument()
     expect(enlaces()).toEqual(['Inicio'])
   })

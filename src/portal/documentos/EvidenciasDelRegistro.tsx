@@ -64,8 +64,9 @@ export function EvidenciasDelRegistro({
     <section aria-label={t('evidencias.titulo')} className="space-y-3 pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sg-h3 font-semibold">{t('evidencias.titulo')}</h2>
+        {/* secundaria: la primaria de la ficha que la contiene es su siguiente acción (P-09 y DD-02, una sola primaria) */}
         {sube ? (
-          <Button size="sm" onClick={() => setSubiendo(true)}>
+          <Button size="sm" variant="secondary" onClick={() => setSubiendo(true)}>
             {textoSubir ?? t('evidencias.subir')}
           </Button>
         ) : null}

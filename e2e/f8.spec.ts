@@ -15,7 +15,13 @@ const EJECUTIVO = {
   indicators: [
     ind('KPI-EXE-01', 'Proyectos activos', 1),
     ind('KPI-COM-03', 'Compromisos vencidos', 3),
-    { ...ind('KPI-EXE-03', 'Tendencia mensual', null), series: [] }
+    {
+      ...ind('KPI-EXE-03', 'Tendencia mensual', null),
+      series: [
+        { period: '2026-09', engagements: 5, grievancesReceived: 2, grievancesClosed: 1, overdueCommitments: 2 },
+        { period: '2026-10', engagements: 7, grievancesReceived: 1, grievancesClosed: 2, overdueCommitments: 3 }
+      ]
+    }
   ],
   byProject: [{ project: 'p1', code: 'PRJ-01', name: 'Proyecto Ejemplo A', indicators: [ind('KPI-COM-03', 'Compromisos vencidos', 3)] }]
 }
@@ -193,9 +199,25 @@ test.beforeEach(async ({ page }) => {
 
 test('la revisión ejecutiva y el cierre de un periodo con su razón', async ({ page }) => {
   const { escrituras } = await prepararF8(page)
+  // desde el rediseño de UX (DD-01) el inicio es «Mi día» con la visión ejecutiva, y S51 vive en /dashboards/executive
   await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Inicio' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Visión ejecutiva' })).toBeVisible()
+  await page.getByRole('link', { name: 'Ver la revisión ejecutiva' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Proyecto Ejemplo A: 3 compromisos vencidos' })).toHaveAttribute('href', '/projects/p1/commitments')
+  await expect(page.getByRole('link', { name: 'Compromisos vencidos · Proyecto Ejemplo A' })).toHaveAttribute('href', '/projects/p1/commitments')
+  // P-07 y U-11: el periodo y la fecha de cálculo bajo el título; los filtros, plegados hasta pedirlos, con fechas dd/mm/aaaa
+  await expect(page.getByText(/ · todos sus proyectos · calculado /)).toBeVisible()
+  await expect(page.getByLabel('Desde', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cambiar el periodo y los filtros' }).click()
+  await page.getByLabel('Desde', { exact: true }).fill('01/09/2026')
+  await page.getByLabel('Hasta', { exact: true }).fill('30/09/2026')
+  await expect(page).toHaveURL(/periodStart=2026-09-01&periodEnd=2026-09-30/)
+  await expect(page.getByText(/^Setiembre de 2026 · todos sus proyectos · calculado /)).toBeVisible()
+  // P-07 (i): barras de color sólido, sin el relleno con trama (un patrón url() del decal de ECharts)
+  const interacciones = page.getByRole('group', { name: 'Interacciones realizadas' })
+  await expect(interacciones.locator('svg path[d$="Z"][fill^="#"]').first()).toBeVisible()
+  await expect(page.locator('main svg [fill^="url("]')).toHaveCount(0)
   await page.goto('/dashboards/monitoring?project=p1&month=2026-09')
   await page.getByRole('button', { name: 'Cerrar periodo…' }).click()
   const dialogo = page.getByRole('dialog')

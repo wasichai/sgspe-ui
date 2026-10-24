@@ -52,7 +52,7 @@ async function llenarHastaLaRevision() {
   await userEvent.type(await screen.findByLabelText('Buscar la interacción por título'), 'Ta')
   await userEvent.click(await screen.findByRole('button', { name: 'Taller de riego · Taller' }))
   await elegir('Cómo se pidió', 'ACUERDO EN REUNION')
-  await escribir('Fecha del acuerdo', '2026-09-10')
+  await escribir('Fecha del acuerdo', '10/09/2026')
   await siguiente()
   expect(await screen.findByText(JUSTIFICACION)).toBeInTheDocument()
   await escribir('Justificación del origen', 'La asamblea lo ratificó')
@@ -74,7 +74,7 @@ async function llenarHastaLaRevision() {
   await escribir('Monto', '15,000')
   await elegir('Campaña de exploración', 'camp1')
   await siguiente()
-  await escribir('Fecha de vencimiento', '2026-12-20')
+  await escribir('Fecha de vencimiento', '20/12/2026')
   await escribir('Responsable · correo', 'cmm@sgspe.test')
   await escribir('Responsable · identificador de usuario', 'u-cmm')
   await siguiente()
@@ -190,7 +190,10 @@ describe('S30 · crear compromiso', () => {
         owner_user_id: 'u-cmm',
         owner_user_email: 'cmm@sgspe.test',
         exploration_campaign: 'camp1',
-        currency: 'PEN'
+        currency: 'PEN',
+        // hallazgo U-07 (DD-07): escritas como dd/mm/aaaa, viajan como AAAA-MM-DD
+        agreed_date: '2026-09-10',
+        due_date: '2026-12-20'
       }
     })
     const [vinculo] = red.a('POST', '/objects/commitment/records/c9/related/commitment_stakeholder')

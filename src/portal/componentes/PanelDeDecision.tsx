@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
+import { CaminoDelFlujo } from './CaminoDelFlujo'
 import { Dia } from './Dia'
 import { EstadoChip } from './EstadoChip'
 import { Persona } from './Persona'
@@ -8,7 +10,8 @@ import { SituacionDePlazo } from './SituacionDePlazo'
 
 // el panel de decisión de design-system.md §6.1: cuatro tarjetas fijas que responden sin buscar. la siguiente acción la
 // decide cada ficha con una función pura (siguienteAccion, por objeto) que dice también lo que falta para darla. lo que no
-// llegó (desde cuándo, quién) no se dibuja: de dónde se lee se resuelve con cada ficha
+// llegó (desde cuándo, quién) no se dibuja: de dónde se lee se resuelve con cada ficha. el panel es el único lugar del
+// estado de la ficha (DD-06): el camino del flujo, si la ficha lo da, va plegado dentro de «Estado actual»
 export interface SiguienteAccion {
   etiqueta: string
   // lo que falta para darla, en el texto de la regla que la bloquea («Falta una entrega con conformidad»)
@@ -18,6 +21,7 @@ export interface SiguienteAccion {
 export function PanelDeDecision({
   objeto,
   estado,
+  camino,
   desde,
   por,
   siguiente,
@@ -28,6 +32,8 @@ export function PanelDeDecision({
 }: {
   objeto: string
   estado: string | null | undefined
+  // el camino del flujo que da la ficha (el de CaminoDelFlujo); sin él no se ofrece «Ver el camino»
+  camino?: string[]
   desde?: string | null
   por?: string | null
   siguiente: SiguienteAccion | null
@@ -53,6 +59,7 @@ export function PanelDeDecision({
             {t('paginas.decision.por')} <Persona correo={por} />
           </p>
         ) : null}
+        {camino ? <CaminoPlegado objeto={objeto} estado={estado} camino={camino} /> : null}
       </Tarjeta>
       <Tarjeta titulo={t('paginas.decision.siguiente')}>
         {siguiente ? (
@@ -78,6 +85,29 @@ export function PanelDeDecision({
         )}
       </Tarjeta>
     </section>
+  )
+}
+
+function CaminoPlegado({ objeto, estado, camino }: { objeto: string; estado: string | null | undefined; camino: string[] }) {
+  const { t } = useTranslation(NS)
+  const [abierto, setAbierto] = useState(false)
+  const id = useId()
+  return (
+    <div className="pt-1">
+      <button
+        type="button"
+        aria-expanded={abierto}
+        aria-controls={id}
+        onClick={() => setAbierto((a) => !a)}
+        className="inline-flex items-center gap-1 rounded-sg-sm text-sg-caption font-medium text-sg-primary-text hover:underline"
+      >
+        <ChevronDown aria-hidden className={abierto ? 'size-3.5 rotate-180' : 'size-3.5'} />
+        {t('paginas.decision.verCamino')}
+      </button>
+      <div id={id} hidden={!abierto} className="pt-2">
+        {abierto ? <CaminoDelFlujo objeto={objeto} estado={estado} camino={camino} /> : null}
+      </div>
+    </div>
   )
 }
 

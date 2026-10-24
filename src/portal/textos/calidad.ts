@@ -1,7 +1,8 @@
 // S63 · calidad de datos geográficos (spec §3.6, gis.md §8)
 export const ES_CALIDAD = {
   titulo: 'Calidad de datos',
-  ayuda: 'Lo que entra por la administración o la API genérica no pasa por la validación del portal: este listado lo muestra para corregirlo.',
+  ayuda:
+    'Los datos que llegan desde la consola de administración o desde otros sistemas no pasan por las revisiones de estas pantallas: este listado los muestra para que los corrija.',
   revisiones: {
     INVALID: 'Geometrías inválidas',
     OUT_OF_ZONE: 'Fuera de zona o región',
@@ -16,10 +17,10 @@ export const ES_CALIDAD = {
     NO_TERRITORY: 'QCS, compromisos, riesgos o incidentes sin localidad, comunidad ni ubicación: no cuentan en el mapa de calor.',
     NO_GEOMETRY: 'Localidades y comunidades sin geometría: no se dibujan ni ubican por relación los registros que dependen de ellas.'
   },
-  objeto: 'Objeto',
+  objeto: 'Tipo de registro',
   proyecto: 'Proyecto',
   todos: 'Todos',
-  columnas: { objeto: 'Objeto', registro: 'Registro', campo: 'Campo', detalle: 'Detalle' },
+  columnas: { objeto: 'Tipo de registro', registro: 'Registro', campo: 'Campo', detalle: 'Detalle' },
   campos: {
     community: { territory: 'Territorio' },
     locality: { location: 'Ubicación', boundary: 'Límite' },
@@ -27,7 +28,8 @@ export const ES_CALIDAD = {
     area_of_influence: { boundary: 'Límite' },
     mining_concession: { boundary: 'Límite' }
   },
-  notaTenant: 'Los objetos de la organización no se filtran por proyecto: con un proyecto elegido solo se ofrecen los que tienen proyecto.',
+  notaTenant:
+    'Algunos tipos de registro son de toda la organización y no de un proyecto: con un proyecto elegido, solo se ofrecen los que pertenecen a un proyecto.',
   objetos: {
     administrative_unit: 'Unidad administrativa',
     locality: 'Localidad',
@@ -60,7 +62,7 @@ export const ES_CALIDAD = {
 
 export const EN_CALIDAD: typeof ES_CALIDAD = {
   titulo: 'Data quality',
-  ayuda: 'What comes in through administration or the generic API skips the portal validation: this list shows it so it can be fixed.',
+  ayuda: 'Data that comes in from the administration console or from other systems skips the checks of these screens: this list shows it so you can fix it.',
   revisiones: {
     INVALID: 'Invalid geometries',
     OUT_OF_ZONE: 'Out of zone or region',
@@ -75,10 +77,10 @@ export const EN_CALIDAD: typeof ES_CALIDAD = {
     NO_TERRITORY: 'Grievances, commitments, risks or incidents without a locality, community or location: they do not count in the heat map.',
     NO_GEOMETRY: 'Localities and communities without geometry: the records that depend on them cannot be drawn or placed by relation.'
   },
-  objeto: 'Object',
+  objeto: 'Record type',
   proyecto: 'Project',
   todos: 'All',
-  columnas: { objeto: 'Object', registro: 'Record', campo: 'Field', detalle: 'Detail' },
+  columnas: { objeto: 'Record type', registro: 'Record', campo: 'Field', detalle: 'Detail' },
   campos: {
     community: { territory: 'Territory' },
     locality: { location: 'Location', boundary: 'Boundary' },
@@ -86,7 +88,7 @@ export const EN_CALIDAD: typeof ES_CALIDAD = {
     area_of_influence: { boundary: 'Boundary' },
     mining_concession: { boundary: 'Boundary' }
   },
-  notaTenant: 'Organization-wide objects are not filtered by project: with a project chosen only objects that have a project are offered.',
+  notaTenant: 'Some record types belong to the whole organization, not to a project: with a project chosen, only those that belong to a project are offered.',
   objetos: {
     administrative_unit: 'Administrative unit',
     locality: 'Locality',

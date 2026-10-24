@@ -1,10 +1,10 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { baseDeAtencion, CANALES, CONSULTA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA, SOLICITUD } from '../../test/atencion'
 import { P1 } from '../../test/compromisos'
-import { montar, pagina, registro } from '../../test/montar'
+import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos } from '../../test/portal'
 import { AtencionPage } from './AtencionPage'
 import { colaDelServidor } from '../../test/colaDeAtencion'
@@ -66,6 +66,21 @@ const abrir = (
 }
 
 describe('S35 · lista unificada de QCS', () => {
+  // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
+  it('Espacio en una fila de la cola abre la vista previa de la QCS, y Enter su ficha', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
+    within(vencidas).getAllByRole('row')[1].focus()
+    await userEvent.keyboard(' ')
+    expect(ubicacion.actual).toBe('/projects/p1/attention?peek=grievance%3Ag2')
+    within(screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas', hidden: true }))
+      .getAllByRole('row', { hidden: true })[1]
+      .focus()
+    await userEvent.keyboard('{Enter}')
+    expect(ubicacion.actual).toBe('/projects/p1/grievances/g2')
+  })
+
   it('agrupa las abiertas por su situación de plazo, con el plazo que corre en su estado y el registro para quien escribe', async () => {
     fetch = mockFetch(rutas())
     abrir()
@@ -95,34 +110,21 @@ describe('S35 · lista unificada de QCS', () => {
     fetch = mockFetch(rutas())
     abrir()
     await screen.findByRole('link', { name: /^Q-001\b/ })
-    await userEvent.click(screen.getByRole('tab', { name: 'Consultas' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Consultas\b/ }))
     expect(screen.queryByRole('link', { name: /^Q-001\b/ })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^C-001\b/ })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Mis QCS' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Mis QCS\b/ }))
     expect(screen.getByRole('link', { name: /^Q-001\b/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /^Q-002\b/ })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Todas' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Todas\b/ }))
     expect(screen.getByRole('link', { name: /^Q-003\b/ })).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Buscar por código o descripción'), 'turbio')
-    expect(screen.getAllByRole('link', { name: /^[QCS]-\d+\b/ }).map((l) => l.textContent?.split(' ')[0])).toEqual(['Q-002', 'Q-001', 'Q-003'])
+    // la búsqueda llega a la consulta 300 ms después de la última tecla (05-especificacion §1.4): antes filtraba con cada tecla
+    await waitFor(() =>
+      expect(screen.getAllByRole('link', { name: /^[QCS]-\d+\b/ }).map((l) => l.textContent?.split(' ')[0])).toEqual(['Q-002', 'Q-001', 'Q-003'])
+    )
     await userEvent.selectOptions(screen.getByLabelText('Severidad'), 'MEDIA')
     expect(screen.getAllByRole('link', { name: /^[QCS]-\d+\b/ }).map((l) => l.textContent?.split(' ')[0])).toEqual(['Q-002'])
-  })
-
-  // rediseño de UX (2026-10-20): diez columnas no cabían a 1440 px y «Responsable» quedaba cortada. el tipo va en la celda de la
-  // QCS y el canal bajo la categoría
-  it('la tabla tiene ocho columnas en lo global: el tipo con la QCS y el canal con la categoría', async () => {
-    fetch = mockFetch(rutas())
-    red = espiarRed([colaDelServidor(TODAS)])
-    montar(<AtencionPage />, { ruta: '/attention', camino: '/attention', usuario: GESTORA_DE_QUEJAS, permisos: EQUIPO_DE_QUEJAS })
-    const [tabla] = await screen.findAllByRole('table')
-    expect(
-      within(tabla)
-        .getAllByRole('columnheader')
-        .map((c) => c.textContent)
-    ).toEqual(['QCS', 'Proyecto', 'Categoría y canal', 'Severidad', 'Estado', 'Plazo que corre', 'Responsable', 'Quién la plantea'])
-    const fila = within(tabla).getAllByRole('row')[1]
-    expect(within(fila).getAllByRole('cell')[0]).toHaveTextContent(/^(Queja|Consulta|Solicitud)/)
   })
 
   it('solo lee los tipos que la cuenta lee y, mientras carga, no dice que no hay QCS', async () => {
@@ -170,8 +172,8 @@ describe('S35 · lista unificada de QCS', () => {
     abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?q=nada-coincide')
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
     expect(screen.getByText(/^Sin los filtros hay \d+\.$/)).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Atención' })).toHaveAccessibleDescription('0 registros')
-    await userEvent.click(screen.getByRole('button', { name: 'Quitar Contiene «nada-coincide»' }))
+    expect(screen.getByRole('radio', { name: 'Atención, 0' })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Contiene «nada-coincide»' }))
     const enlace = await screen.findByRole('link', { name: /^Q-002 El canal de riego quedó turbio/ })
     expect(enlace).toHaveAttribute('href', '/projects/p1/grievances/g2')
   })
@@ -214,6 +216,58 @@ describe('S35 · lista unificada de QCS', () => {
     await within(otra).findByText(/^No se pudo cargar/)
     expect(within(otra).queryByRole('alert')).not.toBeInTheDocument()
     expect(within(otra).getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+  })
+
+  // P-02 (DD-03, DD-04): una sola fila de pestañas; las vistas, en el selector de la barra de filtros, con su conteo y ?view=
+  it('las vistas van en el selector de la barra de filtros, con su conteo, y escriben ?view=', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await screen.findByRole('link', { name: /^Q-001\b/ })
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('radiogroup', { name: 'Vistas' })).toBeInTheDocument()
+    expect(within(barra).getByRole('radio', { name: /^Atención, \d+$/ })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(within(barra).getByRole('radio', { name: /^Quejas\b/ }))
+    expect(ubicacion.actual).toContain('view=quejas')
+  })
+
+  // DD-04: cada filtro es un chip; quitar uno quita solo su parámetro y «Limpiar filtros» deja la vista
+  it('los filtros puestos son chips; «Limpiar filtros» los quita todos y conserva la vista', async () => {
+    fetch = mockFetch(rutas())
+    abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?view=todas&severity=MEDIA&q=turbio')
+    const aplicados = await screen.findByRole('list', { name: 'Filtros aplicados' })
+    const media = `Severidad: ${rotuloDeOpcion('MEDIA')}`
+    expect(within(aplicados).getByText(media)).toBeInTheDocument()
+    await userEvent.click(within(aplicados).getByRole('button', { name: `Quitar el filtro ${media}` }))
+    expect(ubicacion.actual).not.toContain('severity=')
+    expect(ubicacion.actual).toContain('q=turbio')
+    await userEvent.click(within(screen.getByRole('group', { name: 'Filtros' })).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/attention?view=todas')
+  })
+
+  // U-24: las cifras de la cabecera se entienden sin conocer el modelo: nunca «0 / 4 · %»
+  it('la cifra de respondidas dice de qué es el porcentaje y su base, sin «n / N · %»', async () => {
+    fetch = mockFetch(rutas([indicador('KPI-GRV-07', 0, { label: '#6 QCS absueltas', unit: '%', numerator: 0, denominator: 4 })]))
+    abrir()
+    const cifras = await screen.findByRole('region', { name: 'Indicadores' })
+    const respondidas = await within(cifras).findByRole('region', { name: 'Respondidas' })
+    expect(respondidas).toHaveTextContent('0 %')
+    expect(respondidas).toHaveTextContent('0 de 4 recibidas en el periodo tienen respuesta')
+    expect(respondidas).not.toHaveTextContent('/ 4')
+    expect(respondidas).not.toHaveTextContent('#6')
+    expect(await within(cifras).findByRole('region', { name: 'Abiertas' })).toHaveTextContent('siguen en atención')
+    expect(within(cifras).getByRole('region', { name: 'Vencidas' })).toHaveTextContent('abiertas con el plazo vencido')
+  })
+
+  it('la columna de quien la plantea dice si dio su nombre, no «Identificada»', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Al día o sin plazo' })
+    // las tres del grupo dieron su nombre: la columna dice lo mismo en todas y sale a la nota de encima (DD-05)
+    const alDia = screen.getByRole('region', { name: 'Al día o sin plazo' })
+    expect(within(alDia).getByRole('list', { name: 'Igual en todas las filas' })).toHaveTextContent('Quien la plantea: Dio su nombre')
+    expect(within(alDia).queryByRole('columnheader', { name: 'Quien la plantea' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Identificada')).not.toBeInTheDocument()
   })
 
   it('la tabla de cada grupo muestra primero la que vence antes', async () => {

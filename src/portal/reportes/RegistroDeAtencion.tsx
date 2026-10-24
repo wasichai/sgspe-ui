@@ -1,8 +1,10 @@
 import { ApiError, useAuth } from '@wasichai/core'
-import { useWorkflow } from '@wasichai/workflow'
+import { useWorkflow } from '../datos/flujos'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Campo, CONTROL, SelectNativo } from '../componentes/Campo'
+import { Campo, SelectNativo } from '../componentes/Campo'
+import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { LEE_CONFIDENCIALES, OBJETOS_DE_QCS } from '../datos/atencion'
@@ -18,6 +20,7 @@ import {
   useExportacion,
   useProyectoElegido
 } from './exportacion'
+import { Seccion } from '../componentes/Seccion'
 
 // S49 en F4 · el registro de quejas, consultas y solicitudes (POST /api/sgspe/exports/attention-register, api.md §4.13;
 // deliverables.md §10): el proyecto (o «todos mis proyectos»), el periodo de recepción en fechas de Lima, los tipos, los estados
@@ -80,18 +83,30 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
     (flujos[i].data?.definition.states ?? []).map((s) => ({ valor: `${o}:${s.name}`, etiqueta: `${t(`comun.qcs.${o}`)} · ${s.label}` }))
   )
   return (
-    <section aria-label={t('reportes.atencion.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('reportes.atencion.titulo')}</h2>
+    <Seccion titulo={t('reportes.atencion.titulo')} className="space-y-3">
       <p className="text-sm text-sg-text-secondary">{t('reportes.atencion.ayuda')}</p>
       <div className="grid gap-3 md:grid-cols-2">
         <AlcanceDeLaExportacion proyecto={proyecto} />
         <SelectorDeNivel exportacion={exportacion} niveles={niveles} descripciones="reportes.atencion.niveles" />
-        <Campo etiqueta={t('reportes.atencion.desde')} ayuda={t('reportes.atencion.periodoAyuda')}>
-          {(p) => <input {...p} type="date" className={CONTROL} value={desde} onChange={(e) => cambiar(setDesde)(e.target.value)} />}
-        </Campo>
-        <Campo etiqueta={t('reportes.atencion.hasta')}>
-          {(p) => <input {...p} type="date" className={CONTROL} value={hasta} onChange={(e) => cambiar(setHasta)(e.target.value)} />}
-        </Campo>
+        <div className="space-y-1">
+          <CampoFecha
+            etiqueta={t('reportes.atencion.desde')}
+            valor={desde || null}
+            ayuda={t('reportes.atencion.periodoAyuda')}
+            alCambiar={(v) => cambiar(setDesde)(v ?? '')}
+          />
+        </div>
+        <CampoFecha etiqueta={t('reportes.atencion.hasta')} valor={hasta || null} alCambiar={(v) => cambiar(setHasta)(v ?? '')} />
+        <div className="md:col-span-2">
+          <AtajosDePeriodo
+            desde={desde}
+            hasta={hasta}
+            alElegir={(periodo) => {
+              cambiar(setDesde)(periodo.desde)
+              cambiar(setHasta)(periodo.hasta)
+            }}
+          />
+        </div>
         <Campo etiqueta={t('reportes.atencion.canal')}>
           {(p) => (
             <SelectNativo
@@ -155,6 +170,6 @@ export function RegistroDeAtencion({ niveles }: { niveles: string[] }) {
         </p>
       ) : null}
       <ErrorYBotonDeExportar exportacion={exportacion} propios={propios} etiqueta={t('reportes.atencion.exportar')} />
-    </section>
+    </Seccion>
   )
 }

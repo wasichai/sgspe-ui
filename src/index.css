@@ -20,6 +20,8 @@
 @import '@fontsource/ibm-plex-mono/latin-ext-500.css';
 /* los paquetes @wasichai traen nombres de clase, no css: tailwind los escanea */
 @source '../node_modules/@wasichai';
+/* .design-sync/ es de design-sync (previews de Claude Design): no aporta clases al portal */
+@source not '../.design-sync';
 
 /* el teléfono sin desplazamiento horizontal de página (revisión de UX, etapa 8, D3) */
 @layer base {

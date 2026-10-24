@@ -1,9 +1,8 @@
-import { VerEnElMapa } from '../componentes/VerEnElMapa'
+import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina, ITEM_DE_MENU } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad, type SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
@@ -27,8 +26,7 @@ import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro }
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { AccionesDeIa } from '../ia/AccionesDeIa'
 import { NS } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
-import { AvisoDeConfidencial, Dato, DatosDelCaso, EditarQcs, MarcasDeQcs, PlazoQueCorre, useOrigenDeQcs } from './comunesDeFicha'
+import { AvisoDeConfidencial, DatosDelCaso, EditarQcs, MarcasDeQcs, PlazoQueCorre, tituloDeQcs, useOrigenDeQcs } from './comunesDeFicha'
 import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeReclasificacion'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
@@ -114,60 +112,69 @@ function Ficha({ queja }: { queja: Registro }) {
   const evidencias = useEvidenciasDe('grievance', queja.id)
   const origen = useOrigenDeQcs('grievance', queja)
   const plazo = plazoQueCorre('grievance', queja)
+  const porCodigo = t('fichaQueja.titulo', { codigo: texto(queja, 'code') })
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('comun.qcs.grievance'), texto(queja, 'code'), opcion(queja, 'channel'), opcion(queja, 'category')].filter(Boolean).join(' · ')}
-        titulo={t('fichaQueja.titulo', { codigo: texto(queja, 'code') })}
+        titulo={tituloDeQcs(queja, porCodigo)}
+        tituloDelDocumento={porCodigo}
         chips={
           <>
-            <EstadoChip objeto="grievance" estado={queja.state} />
             {opcion(queja, 'severity') ? <span>{t('fichaQueja.severidad', { valor: opcion(queja, 'severity') })}</span> : null}
             <PlazoQueCorre objeto="grievance" qcs={queja} />
             <MarcasDeQcs qcs={queja} />
           </>
         }
-        primaria={
-          <BotonesDeTransicion
-            agrupadas
-            objeto="grievance"
-            registro={queja}
-            proyecto={proyecto}
-            comprobarAntes={COMPROBAR}
-            mas={
-              reclasifica || (escribe && can('commitment', 'CREATE')) ? (
-                <>
-                  {reclasifica ? (
-                    <button type="button" className={ITEM_DE_MENU} onClick={() => setReclasificando(true)}>
+        objeto="grievance"
+        registro={queja}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
+        secundarias={[
+          ...(edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                      {t('fichaQueja.comun.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          ...(escribe && can('commitment', 'CREATE')
+            ? [
+                {
+                  clave: 'compromiso',
+                  nodo: (
+                    <Button asChild size="sm" variant="secondary">
+                      <Link to={`${base}/commitments/new?origin_grievance=${encodeURIComponent(queja.id)}`}>{t('fichaQueja.crearCompromiso')}</Link>
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          ...(reclasifica
+            ? [
+                {
+                  clave: 'reclasificar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setReclasificando(true)}>
                       {t('piezas.reclasificar.boton')}
-                    </button>
-                  ) : null}
-                  {escribe && can('commitment', 'CREATE') ? (
-                    <Link className={ITEM_DE_MENU} to={`${base}/commitments/new?origin_grievance=${encodeURIComponent(queja.id)}`}>
-                      {t('fichaQueja.crearCompromiso')}
-                    </Link>
-                  ) : null}
-                </>
-              ) : undefined
-            }
-          />
-        }
-        secundarias={
-          <>
-            <VerEnElMapa objeto="grievance" registro={queja} />
-            {edita ? (
-              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-                {t('fichaQueja.comun.editar')}
-              </Button>
-            ) : null}
-          </>
-        }
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          ...(rutaEnElMapa('grievance', queja) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="grievance" registro={queja} /> }] : [])
+        ]}
       />
       <AvisoDeConfidencial qcs={queja} />
       {grave ? <Alert tone="notice">{t('fichaQueja.grave', { severidad: opcion(queja, 'severity') })}</Alert> : null}
-      <CaminoDelFlujo objeto="grievance" estado={queja.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="grievance"
         estado={queja.state}
         desde={texto(queja, 'state_changed_at') || null}
@@ -179,24 +186,39 @@ function Ficha({ queja }: { queja: Registro }) {
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <PestanasDeFicha
-          etiqueta={t('fichaQueja.titulo', { codigo: texto(queja, 'code') })}
+          etiqueta={porCodigo}
           pestanas={[
             {
               id: 'resumen',
               etiqueta: t('fichaQueja.pestanas.resumen'),
               render: () => (
-                <DatosDelCaso qcs={queja}>
-                  <Dato termino={t('fichaQueja.campos.severity')}>{opcion(queja, 'severity') || '—'}</Dato>
-                  <div className="sm:col-span-2">
-                    <Dato termino={t('fichaQueja.campos.resolution')}>{texto(queja, 'resolution') || '—'}</Dato>
-                  </div>
-                  <Dato termino={t('fichaQueja.campos.resolved_date')}>
-                    <Dia valor={texto(queja, 'resolved_date')} />
-                  </Dato>
-                  <Dato termino={t('fichaQueja.campos.complainant_conformity_given')}>
-                    {atributo(queja, 'complainant_conformity_given') === true ? t('comun.si') : t('comun.no')}
-                  </Dato>
-                </DatosDelCaso>
+                <DatosDelCaso
+                  qcs={queja}
+                  planteamiento={[{ clave: 'severity', termino: t('fichaQueja.campos.severity'), valor: opcion(queja, 'severity') }]}
+                  atencion={[
+                    {
+                      clave: 'resolution',
+                      termino: t('fichaQueja.campos.resolution'),
+                      valor: texto(queja, 'resolution') ? <span className="whitespace-pre-line">{texto(queja, 'resolution')}</span> : null,
+                      ancho: true
+                    },
+                    {
+                      clave: 'resolved_date',
+                      termino: t('fichaQueja.campos.resolved_date'),
+                      valor: texto(queja, 'resolved_date') ? <Dia valor={texto(queja, 'resolved_date')} /> : null
+                    },
+                    {
+                      clave: 'complainant_conformity_given',
+                      termino: t('fichaQueja.campos.complainant_conformity_given'),
+                      valor:
+                        typeof atributo(queja, 'complainant_conformity_given') === 'boolean'
+                          ? atributo(queja, 'complainant_conformity_given')
+                            ? t('comun.si')
+                            : t('comun.no')
+                          : null
+                    }
+                  ]}
+                />
               )
             },
             {

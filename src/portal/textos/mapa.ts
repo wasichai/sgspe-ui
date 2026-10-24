@@ -9,7 +9,7 @@ export const ES_MAPA = {
   capas: 'Capas',
   grupos: { referencia: 'Referencia', proyecto: 'Proyecto', tenencia: 'Tenencia', gestion: 'Gestión' },
   bloqueada: 'Su cuenta no puede ver esta capa',
-  periodoFueraDeRango: 'El periodo elegido está fuera del rango que admite el servidor: revise las fechas.',
+  periodoFueraDeRango: 'El periodo elegido está fuera del rango permitido: revise las fechas.',
   fechaInvalida: 'Una fecha del periodo no es válida: revise las fechas.',
   notas: {
     incompleta: 'Su cuenta no puede leer parte de los datos de esta capa.',
@@ -83,7 +83,16 @@ export const ES_MAPA = {
   lugares: 'Lugares visibles',
   sinLugares: 'Acerque el mapa a una zona con comunidades o localidades.',
   elegirLugar: 'Elija un lugar en el mapa o en la lista para abrir su ficha.',
-  nuevaComunidad: 'Nueva comunidad'
+  nuevaComunidad: 'Nueva comunidad',
+  // los paneles plegables de S12 sobre el mapa (DD-11)
+  paneles: {
+    capas: 'Capas ({{n}})',
+    enElMapa: 'Capas en el mapa',
+    ningunaEncendida: 'Ninguna capa encendida.',
+    todas: 'Todas las capas ({{n}})',
+    otras: 'Las demás capas',
+    lugares: 'Lugares ({{n}})'
+  }
 }
 
 export const EN_MAPA: typeof ES_MAPA = {
@@ -96,7 +105,7 @@ export const EN_MAPA: typeof ES_MAPA = {
   capas: 'Layers',
   grupos: { referencia: 'Reference', proyecto: 'Project', tenencia: 'Land tenure', gestion: 'Management' },
   bloqueada: 'Your account cannot see this layer',
-  periodoFueraDeRango: 'The chosen period is outside the range the server accepts: check the dates.',
+  periodoFueraDeRango: 'The chosen period is outside the allowed range: check the dates.',
   fechaInvalida: 'A date of the period is not valid: check the dates.',
   notas: {
     incompleta: 'Your account cannot read part of the data in this layer.',
@@ -169,5 +178,13 @@ export const EN_MAPA: typeof ES_MAPA = {
   lugares: 'Visible places',
   sinLugares: 'Zoom the map to an area with communities or localities.',
   elegirLugar: 'Pick a place on the map or in the list to open its card.',
-  nuevaComunidad: 'New community'
+  nuevaComunidad: 'New community',
+  paneles: {
+    capas: 'Layers ({{n}})',
+    enElMapa: 'Layers on the map',
+    ningunaEncendida: 'No layer turned on.',
+    todas: 'All layers ({{n}})',
+    otras: 'Other layers',
+    lugares: 'Places ({{n}})'
+  }
 }

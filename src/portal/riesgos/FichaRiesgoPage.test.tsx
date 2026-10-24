@@ -83,7 +83,8 @@ describe('S40 · ficha de riesgo', () => {
     abrir()
     expect(await screen.findByRole('heading', { name: 'Bloqueo de la vía de acceso por la comunidad', level: 1 })).toBeInTheDocument()
     expect(screen.getAllByLabelText('Nivel de riesgo: Crítico').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('4 × 4 = 16').length).toBeGreaterThan(0)
+    // el puntaje dice qué multiplica (U-28 del rediseño de UX)
+    expect(screen.getByText('Probabilidad 4 × impacto 4 = 16')).toBeInTheDocument()
     expect(screen.getByLabelText('Situación de revisión: Al día')).toBeInTheDocument()
     const monitoreo = await screen.findByRole('button', { name: 'Pasar a monitoreo' })
     await waitFor(() => expect(monitoreo).toBeDisabled())
@@ -91,12 +92,58 @@ describe('S40 · ficha de riesgo', () => {
     expect(screen.queryByRole('button', { name: 'Evaluar' })).not.toBeInTheDocument()
   })
 
-  // el alta relacionada va en «Más acciones», con las transiciones que no son la siguiente (rediseño de UX, 2026-10-20)
-  it('«Más acciones» lleva al compromiso que atiende el riesgo (revisión de UX, etapa 5)', async () => {
+  // U-02 del rediseño (DD-02): la primaria es la siguiente acción del flujo, aunque la regla la bloquee (dice qué falta), y
+  // «Nueva revisión» pasa a secundaria; sin una transición del camino, «Nueva revisión» es la primaria
+  it('la primaria es la siguiente acción del flujo y «Nueva revisión» es secundaria', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const monitoreo = await screen.findByRole('button', { name: 'Pasar a monitoreo' })
+    expect(monitoreo).toHaveAttribute('data-variant', 'primary')
+    expect(screen.getByRole('button', { name: 'Nueva revisión' })).toHaveAttribute('data-variant', 'secondary')
+  })
+
+  it('sin una transición del camino, «Nueva revisión» es la primaria', async () => {
+    fetch = mockFetch(rutas([{ path: '/objects/social_risk/records/k1/transitions', body: [] }]))
+    abrir()
+    expect(await screen.findByRole('button', { name: 'Nueva revisión' })).toHaveAttribute('data-variant', 'primary')
+  })
+
+  // el compromiso que atiende el riesgo (revisión de UX, etapa 5): con CabeceraDeFicha es una acción más de la cabecera (un menú
+  // dentro de «Más acciones» no se podría abrir), a la vista o en «Más acciones» según las que haya
+  it('«Registrar compromiso» lleva al compromiso que atiende el riesgo', async () => {
     fetch = mockFetch(rutas())
     abrir(GESTOR_DE_RIESGOS, { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, commitment: ['READ', 'CREATE'] } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
-    expect(screen.getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new?social_risk=k1')
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    await userEvent.click(await within(acciones).findByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute(
+      'href',
+      '/projects/p1/commitments/new?social_risk=k1'
+    )
+  })
+
+  // P-09 del rediseño de UX (DD-06; U-25, U-26, U-27 y U-28): el antetítulo en sans, el estado una sola vez (en el panel de
+  // decisión), los niveles con su rótulo de inherente y residual y el puntaje que dice qué multiplica; el resumen por tema, con
+  // los campos sin dato plegados
+  it('los niveles dicen si son inherente o residual, el estado va una sola vez y el resumen pliega lo vacío', async () => {
+    const conResidual = { ...RIESGO, attributes: { ...RIESGO.attributes, residual_level: 'MEDIO' } }
+    fetch = mockFetch(rutas([], conResidual))
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Bloqueo de la vía de acceso por la comunidad', level: 1 })
+    const cabecera = titulo.parentElement!
+    expect(within(cabecera).getByText(/^Riesgo · R-001/)).not.toHaveClass('font-sg-mono')
+    expect(within(cabecera).getByText('Inherente')).toBeInTheDocument()
+    expect(within(cabecera).getByText('Probabilidad 4 × impacto 4 = 16')).toBeInTheDocument()
+    expect(within(cabecera).getByText('Residual')).toBeInTheDocument()
+    expect(within(cabecera).getByLabelText('Nivel residual: Medio')).toBeInTheDocument()
+    expect(within(cabecera).queryByText('En mitigación')).not.toBeInTheDocument()
+    expect(await screen.findAllByText('En mitigación', { selector: '[data-estado]' })).toHaveLength(1)
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    expect(screen.getByRole('region', { name: 'Origen e impacto' })).toHaveTextContent('Expectativas de empleo local no atendidas')
+    const tratamiento = screen.getByRole('region', { name: 'Tratamiento' })
+    expect(within(tratamiento).getByText('Mitigar')).toBeInTheDocument()
+    expect(within(tratamiento).queryByText('Controles actuales')).not.toBeInTheDocument()
+    await userEvent.click(within(tratamiento).getByRole('button', { name: /^Mostrar los \d+ campos sin dato$/ }))
+    expect(within(tratamiento).getByText('Controles actuales')).toBeInTheDocument()
   })
 
   it('una nueva revisión manda la fecha de Lima, P e I, el motivo y anticipa el nivel; el reintento repite la clave', async () => {
@@ -115,7 +162,10 @@ describe('S40 · ficha de riesgo', () => {
     abrir()
     await userEvent.click(await screen.findByRole('button', { name: 'Nueva revisión' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Nueva revisión' })
-    expect(within(dialogo).getByLabelText('Fecha de la revisión')).toHaveValue('2026-10-09')
+    // hallazgo U-07 (DD-07): la fecha se propone y se escribe como dd/mm/aaaa, y viaja como AAAA-MM-DD
+    expect(within(dialogo).getByLabelText('Fecha de la revisión')).toHaveValue('09/10/2026')
+    await userEvent.clear(within(dialogo).getByLabelText('Fecha de la revisión'))
+    await userEvent.type(within(dialogo).getByLabelText('Fecha de la revisión'), '05/10/2026')
     await userEvent.selectOptions(within(dialogo).getByLabelText('Probabilidad (1 a 5)'), '3')
     expect(within(dialogo).getByText(/Puntaje 12: nivel Alto con los umbrales del proyecto/)).toBeInTheDocument()
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Registrar revisión' }))
@@ -126,7 +176,7 @@ describe('S40 · ficha de riesgo', () => {
     await userEvent.click(await within(dialogo).findByRole('button', { name: 'Registrar revisión' }))
     expect(await screen.findByText('Revisión registrada: el riesgo queda en nivel Alto.')).toBeInTheDocument()
     const [primera, segunda] = red.a('POST', '/sgspe/social-risks/k1/assessments')
-    expect(primera.cuerpo).toEqual({ attributes: { assessment_date: '2026-10-09', probability: 3, impact: 4, residual: false } })
+    expect(primera.cuerpo).toEqual({ attributes: { assessment_date: '2026-10-05', probability: 3, impact: 4, residual: false } })
     expect(segunda.cabeceras.get('Idempotency-Key')).toBe(primera.cabeceras.get('Idempotency-Key'))
   })
 

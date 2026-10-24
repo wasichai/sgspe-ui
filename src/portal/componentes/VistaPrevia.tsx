@@ -1,4 +1,4 @@
-import { Button } from '@wasichai/ui'
+import { Button, cn } from '@wasichai/ui'
 import { Eye } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
@@ -30,8 +30,10 @@ export function useRutaDeVistaPrevia(): (objeto: string, id: string) => string {
   }
 }
 
-// el ojo junto al nombre de un registro en una lista: abre su vista previa sin dejar la lista
-export function BotonDeVistaPrevia({ objeto, id, nombre }: { objeto: string; id: string; nombre: string }) {
+// el ojo junto al nombre de un registro en una lista: abre su vista previa sin dejar la lista. con enFila (hallazgo U-17), en
+// una fila de TablaPriorizada (group/fila) y con un puntero fino aparece al pasar sobre la fila o con el foco en ella; en una
+// pantalla táctil se ve siempre. su nombre accesible y su rótulo emergente nombran el registro
+export function BotonDeVistaPrevia({ objeto, id, nombre, enFila }: { objeto: string; id: string; nombre: string; enFila?: boolean }) {
   const { t } = useTranslation(NS)
   const previa = useRutaDeVistaPrevia()
   const etiqueta = t('paginas.vistaPrevia.abrir', { nombre })
@@ -40,7 +42,11 @@ export function BotonDeVistaPrevia({ objeto, id, nombre }: { objeto: string; id:
       to={previa(objeto, id)}
       aria-label={etiqueta}
       title={etiqueta}
-      className="inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text"
+      className={cn(
+        'inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text',
+        enFila &&
+          'pointer-fine:opacity-0 pointer-fine:group-hover/fila:opacity-100 pointer-fine:group-focus-within/fila:opacity-100 pointer-fine:focus-visible:opacity-100'
+      )}
     >
       <Eye aria-hidden className="size-4" />
     </Link>

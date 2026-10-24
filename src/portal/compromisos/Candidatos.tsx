@@ -3,13 +3,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { z } from 'zod'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuario'
 import { useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
@@ -164,7 +165,7 @@ function RegistrarCandidato({ proyecto, abierto, alCerrar }: { proyecto: string;
   const erroresDeCampo = useErroresDeCampo()
   const mensaje = useMensajeDeError()
   const [interaccion, setInteraccion] = useState<Registro | null>(null)
-  const { register, handleSubmit, formState, reset } = useForm<Alta>({
+  const { register, handleSubmit, formState, reset, control } = useForm<Alta>({
     resolver: zodResolver(esquemaDeAlta),
     defaultValues: { proposed_text: '', beneficiaries_text: '', suggested_owner_user_email: '', suggested_due_date: '' }
   })
@@ -218,9 +219,18 @@ function RegistrarCandidato({ proyecto, abierto, alCerrar }: { proyecto: string;
         >
           {(p) => <Input {...p} type="email" {...register('suggested_owner_user_email')} />}
         </Campo>
-        <Campo etiqueta={t('compromisos.candidatos.venceSugerido')} error={delServidor.suggested_due_date}>
-          {(p) => <Input {...p} type="date" {...register('suggested_due_date')} />}
-        </Campo>
+        <Controller
+          control={control}
+          name="suggested_due_date"
+          render={({ field }) => (
+            <CampoFecha
+              etiqueta={t('compromisos.candidatos.venceSugerido')}
+              error={delServidor.suggested_due_date}
+              valor={field.value || null}
+              alCambiar={(v) => field.onChange(v ?? '')}
+            />
+          )}
+        />
         <div className="space-y-1">
           <p className="text-sg-body-sm font-medium">{t('compromisos.candidatos.interaccion')}</p>
           {interaccion ? (
@@ -303,7 +313,7 @@ function Revision({ candidato, propuesto, alCerrar }: { candidato: Registro; pro
   const ia = atributo(candidato, 'ai_generated') === true
   // por puntos de código (no parte un emoji) y sin partir un marcador: si uno cruza el 120 entra entero y el formulario bloquea
   const texto120 = recortar(propuesto, 120)
-  const { register, handleSubmit, formState } = useForm<Aceptacion>({
+  const { register, handleSubmit, formState, control } = useForm<Aceptacion>({
     resolver: zodResolver(esquemaDeAceptacion),
     defaultValues: {
       code: '',
@@ -396,9 +406,18 @@ function Revision({ candidato, propuesto, alCerrar }: { candidato: Registro; pro
               <Campo etiqueta={t('compromisos.candidatos.moneda')} error={falta('currency')}>
                 {(p) => <SelectNativo {...p} vacio={false} {...register('currency')} opciones={monedas} />}
               </Campo>
-              <Campo etiqueta={t('compromisos.candidatos.vence')} error={falta('due_date')}>
-                {(p) => <Input {...p} type="date" {...register('due_date')} />}
-              </Campo>
+              <Controller
+                control={control}
+                name="due_date"
+                render={({ field }) => (
+                  <CampoFecha
+                    etiqueta={t('compromisos.candidatos.vence')}
+                    error={falta('due_date')}
+                    valor={field.value || null}
+                    alCambiar={(v) => field.onChange(v ?? '')}
+                  />
+                )}
+              />
               {ia ? <p className="text-sg-caption text-sg-text-muted">{t('compromisos.candidatos.responsableAyuda')}</p> : null}
               <SelectorDeUsuario etiqueta={t('compromisos.candidatos.responsable')} valor={responsable} alCambiar={setResponsable} />
               <Campo etiqueta={t('comun.motivoObligatorio')} error={delServidor.reason ?? (formState.errors.motivo ? t('comun.motivoFalta') : undefined)}>

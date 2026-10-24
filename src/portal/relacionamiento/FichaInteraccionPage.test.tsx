@@ -7,6 +7,7 @@ import { abrirPortal } from '../../test/pantalla'
 import { GERENCIA_SOCIAL, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { E1, EQUIPO, base } from '../../test/relacionamiento'
+import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -82,7 +83,8 @@ describe('S23 · ficha de interacción', () => {
   // revisión de UX, etapa 4: la anatomía común; la siguiente acción es la del camino (redactar el acta), no cerrar sin ella
   it('dice el camino del flujo, la siguiente acción del camino y los tres grupos de trazabilidad', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
-    expect(await screen.findByRole('list', { name: 'Camino del flujo' })).toBeInTheDocument()
+    expect(await abrirCamino()).toBeInTheDocument()
+    expect(estadosDeLaFicha()).toHaveLength(1)
     expect(await within(screen.getByRole('group', { name: 'Siguiente acción' })).findByText('Redactar acta')).toBeInTheDocument()
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
     expect(
@@ -92,21 +94,54 @@ describe('S23 · ficha de interacción', () => {
     ).toEqual(['De dónde viene', 'Qué generó', 'Lo sustenta'])
   })
 
-  it('«Crear relacionado» lleva al compromiso y a la QCS con esta interacción como origen (revisión de UX, etapa 5)', async () => {
+  // lo que nace de la interacción (revisión de UX, etapa 5): con CabeceraDeFicha, el compromiso y la QCS son acciones de la
+  // cabecera (un menú dentro de «Más acciones» no se podría abrir)
+  it('«Registrar compromiso» y la QCS llevan al alta con esta interacción como origen', async () => {
     const conCompromisos = { ...EQUIPO, objects: { ...EQUIPO.objects, commitment: ['READ', 'CREATE'], grievance: ['READ', 'CREATE'] } }
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, conCompromisos, rutas())
-    await userEvent.click(await screen.findByRole('button', { name: 'Crear relacionado' }))
-    expect(screen.getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new?origin_engagement=e1')
-    expect(screen.getByRole('link', { name: 'Registrar queja, consulta o solicitud' })).toHaveAttribute(
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute(
+      'href',
+      '/projects/p1/commitments/new?origin_engagement=e1'
+    )
+    expect(within(acciones).getByRole('link', { name: 'Registrar queja, consulta o solicitud' })).toHaveAttribute(
       'href',
       '/projects/p1/attention/new?origin_engagement=e1'
     )
   })
 
+  // P-09 del rediseño de UX (DD-02 y DD-06; U-03, U-25, U-26, U-27 y U-28): el antetítulo en sans; una sola primaria, la
+  // siguiente acción; cancelar en «Más acciones»; el estado una sola vez (en el panel de decisión); qué pasó en su sección con
+  // los campos sin dato plegados; las siglas de ámbito explicadas
+  it('una sola primaria, cancelar en «Más acciones», el estado una sola vez, lo vacío plegado y las siglas explicadas', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, [
+      {
+        path: '/objects/engagement/records/e1/transitions',
+        body: [
+          { name: 'cancel_scheduled', label: 'Cancelar', to: 'cancelled', toLabel: 'Cancelada', allowed: true, reason: null },
+          { name: 'draft_minutes', label: 'Redactar acta', to: 'minutes_drafted', toLabel: 'Acta en borrador', allowed: true, reason: null }
+        ]
+      },
+      ...rutas()
+    ])
+    const titulo = await screen.findByRole('heading', { name: 'Asamblea comunal', level: 1 })
+    expect(within(titulo.parentElement!).getByText(/^Interacción/)).not.toHaveClass('font-sg-mono')
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    expect(await within(acciones).findByRole('button', { name: 'Redactar acta' })).toHaveAttribute('data-variant', 'primary')
+    expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
+    expect(within(acciones).queryByRole('button', { name: /^Cancelar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Cancelar/ })).toBeInTheDocument()
+    expect(await screen.findAllByText('Realizada', { selector: '[data-estado]' })).toHaveLength(1)
+    const quePaso = screen.getByRole('region', { name: 'Qué pasó' })
+    expect(within(quePaso).queryByText('Resultados')).not.toBeInTheDocument()
+    await userEvent.click(within(quePaso).getByRole('button', { name: /^Mostrar (el campo|los \d+ campos) sin dato$/ }))
+    expect(within(quePaso).getByText('Resultados')).toBeInTheDocument()
+    expect(screen.getByText(/AIDS: área de influencia directa social/)).toBeInTheDocument()
+  })
+
   it('"Cerrar sin acta" sale deshabilitado con la razón mientras haya preguntas pendientes', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, rutas())
-    // «Cerrar sin acta» no es la siguiente acción: va en «Más acciones», con su razón a la vista (rediseño de UX, 2026-10-20)
-    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     const cerrar = await screen.findByRole('button', { name: 'Cerrar sin acta' })
     await waitFor(() => expect(cerrar).toBeDisabled())
     expect(cerrar).toHaveAccessibleDescription('Hay 1 pregunta sin respuesta ni derivación')
@@ -261,7 +296,6 @@ describe('S23 · ficha de interacción', () => {
       ...rutas()
     ])
     red = espiarRed()
-    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cerrar sin acta' })).toBeDisabled())
     const comprobaciones = () => red!.a('POST', '/sgspe/transition-checks').length
     const antes = comprobaciones()

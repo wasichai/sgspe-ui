@@ -36,6 +36,8 @@ export const ES_FICHA_QUEJA = {
     closed_date: 'Cerrada'
   },
   comun: {
+    // los datos del caso por tema (hallazgo U-26)
+    secciones: { planteamiento: 'Qué se plantea', llegada: 'Cómo llegó y quién', atencion: 'Atención y respuesta' },
     anonima: 'Anónima',
     confidencial: 'Confidencial',
     confidencialAyuda:
@@ -106,6 +108,7 @@ export const EN_FICHA_QUEJA: typeof ES_FICHA_QUEJA = {
     closed_date: 'Closed'
   },
   comun: {
+    secciones: { planteamiento: 'What is raised', llegada: 'How it arrived and who', atencion: 'Handling and response' },
     anonima: 'Anonymous',
     confidencial: 'Confidential',
     confidencialAyuda:

@@ -1,6 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { Button, cn } from '@wasichai/ui'
-import { useAvailableTransitions } from '@wasichai/workflow'
+import { useAvailableTransitions } from '../datos/flujos'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'

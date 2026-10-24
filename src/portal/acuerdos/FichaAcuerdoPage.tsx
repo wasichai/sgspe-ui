@@ -1,9 +1,10 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import { CamposPlegables } from '../componentes/CamposPlegables'
+import { Seccion } from '../componentes/Seccion'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { RegistroVinculado, useRotuloDeRegistro } from '../componentes/RegistroVinculado'
@@ -33,7 +34,6 @@ import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { usePedir } from '../datos/http'
 import { atributo, texto, useRegistro, useRelacionados, useTodos, usePuedeEditar, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { CAMPOS_DEL_ACUERDO } from './AcuerdosPage'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
@@ -61,6 +61,7 @@ export function FichaAcuerdoPage() {
 
 // el camino de WF-I sin sus excepciones (suspender, terminar, cancelar); un estado fuera de él se agrega
 const CAMINO = ['draft', 'in_negotiation', 'active', 'concluded']
+const COMPROBAR = ['activate', 'activate_from_draft', 'resume']
 
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la asamblea que lo autoriza y la comunidad),
 // qué generó (los compromisos que lo implementan) y lo que lo sustenta (sus evidencias)
@@ -133,38 +134,36 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
   // decisión con el vencimiento y la vigencia, y trazabilidad en tres grupos; las cláusulas, las partes y los predios siguen
   useMigaDelRegistro(texto(acuerdo, 'code') || texto(acuerdo, 'title'))
-  const siguiente = useSiguienteAccion('agreement', acuerdo, ['activate', 'activate_from_draft', 'resume'])
+  const siguiente = useSiguienteAccion('agreement', acuerdo, COMPROBAR)
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
-      <EncabezadoDePagina
-        ficha
+      <CabeceraDeFicha
         antetitulo={[t('acuerdos.ficha.tipo'), texto(acuerdo, 'code'), rotuloDeOpcion(tipo)].filter(Boolean).join(' · ')}
         titulo={texto(acuerdo, 'title')}
-        chips={
-          <>
-            <EstadoChip objeto="agreement" estado={acuerdo.state} />
-            <SituacionDePlazo valor={atributo(acuerdo, 'validity_status')} vigencia />
-          </>
-        }
-        primaria={
-          <BotonesDeTransicion
-            agrupadas
-            objeto="agreement"
-            registro={acuerdo}
-            proyecto={proyecto}
-            comprobarAntes={['activate', 'activate_from_draft', 'resume']}
-          />
-        }
+        tituloDelDocumento={[texto(acuerdo, 'code'), texto(acuerdo, 'title')].filter(Boolean).join(' ')}
+        chips={<SituacionDePlazo valor={atributo(acuerdo, 'validity_status')} vigencia />}
+        objeto="agreement"
+        registro={acuerdo}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
         secundarias={
-          edita ? (
-            <Button variant="secondary" size="sm" onClick={() => setEditando(true)}>
-              {t('acuerdos.ficha.editar')}
-            </Button>
-          ) : undefined
+          edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button variant="secondary" size="sm" onClick={() => setEditando(true)}>
+                      {t('acuerdos.ficha.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []
         }
       />
-      <CaminoDelFlujo objeto="agreement" estado={acuerdo.state} camino={CAMINO} />
       <PanelDeDecision
+        camino={CAMINO}
         objeto="agreement"
         estado={acuerdo.state}
         desde={texto(acuerdo, 'state_changed_at') || null}
@@ -175,27 +174,45 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
         situacion={atributo(acuerdo, 'validity_status')}
         tipoDeSituacion="vigencia"
       />
-      <section aria-label={t('acuerdos.ficha.vigencia')} className="flex flex-wrap gap-4 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
-        <span>
-          {t('acuerdos.ficha.firmado')}: {texto(acuerdo, 'signed_date') ? diaPe(texto(acuerdo, 'signed_date')) : t('acuerdos.ficha.sinFecha')}
-        </span>
-        <span>
-          {t('acuerdos.ficha.desde')}: {texto(acuerdo, 'effective_date') ? diaPe(texto(acuerdo, 'effective_date')) : t('acuerdos.ficha.sinFecha')}
-        </span>
-        <span>
-          {t('acuerdos.ficha.hasta')}: {texto(acuerdo, 'expiry_date') ? diaPe(texto(acuerdo, 'expiry_date')) : t('acuerdos.ficha.sinFecha')}
-        </span>
-        <span className="text-sg-text-muted">{t('acuerdos.ficha.vencerNoConcluye')}</span>
-      </section>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
-          <section aria-label={t('acuerdos.ficha.resumen')} className="space-y-1 text-sm">
-            <h2 className="text-sg-h3 font-semibold">{t('acuerdos.ficha.resumen')}</h2>
-            <p className="whitespace-pre-line">{texto(acuerdo, 'summary') || '—'}</p>
-            <p>
-              {t('acuerdos.ficha.monto')}: {montoPe(atributo(acuerdo, 'amount'), atributo(acuerdo, 'currency'))}
-            </p>
-          </section>
+          {/* lo acordado y su vigencia, cada uno en su sección con los campos sin dato plegados (DD-06 y U-26 del rediseño de UX) */}
+          <Seccion titulo={t('acuerdos.ficha.queSeAcordo')}>
+            <CamposPlegables
+              campos={[
+                {
+                  clave: 'summary',
+                  termino: t('acuerdos.ficha.resumen'),
+                  valor: texto(acuerdo, 'summary') ? <span className="whitespace-pre-line">{texto(acuerdo, 'summary')}</span> : null,
+                  ancho: true
+                },
+                {
+                  clave: 'amount',
+                  termino: t('acuerdos.ficha.monto'),
+                  valor:
+                    atributo(acuerdo, 'amount') === null || atributo(acuerdo, 'amount') === undefined
+                      ? null
+                      : montoPe(atributo(acuerdo, 'amount'), atributo(acuerdo, 'currency'))
+                }
+              ]}
+            />
+          </Seccion>
+          <Seccion titulo={t('acuerdos.ficha.vigencia')} descripcion={t('acuerdos.ficha.vencerNoConcluye')}>
+            <CamposPlegables
+              columnas={3}
+              campos={(
+                [
+                  ['signed_date', 'firmado'],
+                  ['effective_date', 'desde'],
+                  ['expiry_date', 'hasta']
+                ] as const
+              ).map(([campo, termino]) => ({
+                clave: campo,
+                termino: t(`acuerdos.ficha.${termino}`),
+                valor: texto(acuerdo, campo) ? diaPe(texto(acuerdo, campo)) : null
+              }))}
+            />
+          </Seccion>
           <Clausulas acuerdo={acuerdo} escribe={escribe} />
           <EvidenciasDelRegistro objeto="agreement" registro={acuerdo} escribe={escribe} />
           <section aria-label={t('acuerdos.ficha.actividad')} className="space-y-2">
@@ -241,8 +258,9 @@ function Clausulas({ acuerdo, escribe }: { acuerdo: Registro; escribe: boolean }
     <section aria-label={t('acuerdos.ficha.clausulas')} className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sg-h3 font-semibold">{t('acuerdos.ficha.clausulas')}</h2>
+        {/* secundaria: la primaria de la ficha es su siguiente acción (P-09, una sola primaria) */}
         {escribe && can('agreement_clause', 'CREATE') ? (
-          <Button size="sm" onClick={() => setNueva(true)}>
+          <Button size="sm" variant="secondary" onClick={() => setNueva(true)}>
             {t('acuerdos.ficha.nuevaClausula')}
           </Button>
         ) : null}

@@ -1,5 +1,5 @@
 import { ApiError } from '@wasichai/core'
-import { useWorkflow } from '@wasichai/workflow'
+import { useWorkflow } from '../datos/flujos'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Campo } from '../componentes/Campo'
@@ -16,6 +16,7 @@ import {
   useExportacion,
   useProyectoElegido
 } from './exportacion'
+import { Seccion } from '../componentes/Seccion'
 
 // S49 en F3 · la matriz de compromisos (POST /api/sgspe/exports/commitment-matrix, api.md §4.13; deliverables.md §10): el
 // proyecto (o «todos mis proyectos»), la campaña, los estados de WF-D y el nivel de divulgación, con la lista de verificación
@@ -46,8 +47,7 @@ export function MatrizDeCompromisos({ niveles }: { niveles: string[] }) {
       : {})
   })
   return (
-    <section aria-label={t('reportes.matriz.titulo')} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 className="text-sg-h3 font-semibold">{t('reportes.matriz.titulo')}</h2>
+    <Seccion titulo={t('reportes.matriz.titulo')} className="space-y-3">
       <p className="text-sm text-sg-text-secondary">{t('reportes.matriz.ayuda')}</p>
       <div className="grid gap-3 md:grid-cols-2">
         <AlcanceDeLaExportacion proyecto={proyecto} />
@@ -111,6 +111,6 @@ export function MatrizDeCompromisos({ niveles }: { niveles: string[] }) {
         textos={{ externoAyuda: t('reportes.matriz.externoAyuda'), publicoAyuda: t('reportes.matriz.publicoAyuda'), checklist: t('reportes.matriz.checklist') }}
       />
       <ErrorYBotonDeExportar exportacion={exportacion} propios={propios} etiqueta={t('reportes.matriz.exportar')} />
-    </section>
+    </Seccion>
   )
 }

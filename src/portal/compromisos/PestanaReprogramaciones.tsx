@@ -1,9 +1,10 @@
 import { useAuth } from '@wasichai/core'
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Table, Td, Textarea, Th } from '@wasichai/ui'
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
+import { CampoFecha } from '../componentes/CampoFecha'
 import { useErroresDeCampo } from '../componentes/errores'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
@@ -135,19 +136,16 @@ function DialogoDeReprogramacion({
           {t('reprogramaciones.anterior', { fecha: vigente ? diaPe(vigente) : '—' })}
         </DialogDescription>
         <div className="mt-3 space-y-3">
-          <Campo etiqueta={t('reprogramaciones.nueva')} error={errorDeFecha}>
-            {(p) => (
-              <Input
-                {...p}
-                type="date"
-                value={nueva}
-                onChange={(e) => {
-                  setNueva(e.target.value)
-                  alEditar()
-                }}
-              />
-            )}
-          </Campo>
+          <CampoFecha
+            etiqueta={t('reprogramaciones.nueva')}
+            requerido
+            valor={nueva || null}
+            alCambiar={(v) => {
+              setNueva(v ?? '')
+              alEditar()
+            }}
+            error={errorDeFecha}
+          />
           <Campo etiqueta={t('reprogramaciones.motivo')} error={errorDeMotivo}>
             {(p) => (
               // X-Change-Reason admite 500 caracteres (api.md §3.7)

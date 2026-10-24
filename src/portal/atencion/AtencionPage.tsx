@@ -2,17 +2,23 @@ import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { ApiError, useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
-import { CONTROL, SelectNativo } from '../componentes/Campo'
+import { Link, useNavigate } from 'react-router'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { useSiguientePaso } from '../contexto/Rastro'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, Vacio } from '../componentes/Estados'
 import { KpiCard } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { ChipsDeFiltro, PaginacionDelServidor, useParametrosDeLista, VacioDeLista, VistasGuardadas } from '../componentes/Lista'
+import { PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
@@ -62,6 +68,10 @@ export function AtencionPage() {
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const lista = useParametrosDeLista('atencion')
+  // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
+  const navegar = useNavigate()
+  const previa = useRutaDeVistaPrevia()
+  const paso = useSiguientePaso()
   const telefono = useEsTelefono()
   const legibles = OBJETOS_DE_QCS.filter((o) => can(o, 'READ'))
   const proyectos = useProyectos()
@@ -117,16 +127,99 @@ export function AtencionPage() {
   const indicadores = [abiertas, vencidas, absueltas]
   const fallanTodos = indicadores.every((i) => i.isError && !i.data && !(i.error instanceof ApiError && i.error.status === 403))
   const reintentarTodos = () => indicadores.forEach((i) => void i.refetch())
-  const tarjeta = (titulo: string, consulta: { data?: Indicador; error: unknown; isPending: boolean; refetch: () => unknown }) => (
+  // los títulos y lo que cuenta cada cifra son del portal (hallazgo U-24): el rótulo del indicador es del catálogo y no se entiende
+  // sin conocer el modelo, y «n / N · %» tampoco
+  const tarjeta = (
+    titulo: string,
+    consulta: { data?: Indicador; error: unknown; isPending: boolean; refetch: () => unknown },
+    textos: Pick<Parameters<typeof KpiCard>[0], 'cifra' | 'detalle'>
+  ) => (
     <KpiCard
       titulo={titulo}
       indicador={consulta.data}
       cargando={consulta.isPending}
       error={consulta.error}
       alReintentar={fallanTodos ? undefined : () => void consulta.refetch()}
+      {...textos}
     />
   )
+  const respondidas = {
+    cifra: (i: Indicador & { value: number }) => (i.unit === '%' ? `${numeroPe(i.value)} %` : numeroPe(i.value)),
+    detalle: (i: Indicador) =>
+      i.numerator != null && i.denominator
+        ? t('atencion.tarjetas.respondidasDetalle', { n: numeroPe(i.numerator), total: numeroPe(i.denominator) })
+        : t('atencion.tarjetas.respondidasSinBase')
+  }
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
+  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px cabe sin desplazar. esenciales la QCS (con su tipo
+  // encima), el proyecto, el estado y el plazo; secundarias, desde xl, el canal, la categoría, la severidad y el responsable;
+  // opcional, quien la plantea. una columna no esencial que dice lo mismo en todo el grupo sale a una nota encima, y en «Mis
+  // QCS» el responsable es siempre quien mira: no se dibuja
+  const columnas: ColumnaPriorizada[] = [
+    { id: 'codigo', encabezado: t('atencion.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm' },
+    ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('atencion.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
+    { id: 'canal', encabezado: t('atencion.columnas.canal'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'categoria', encabezado: t('atencion.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    ...(conSeveridad ? [{ id: 'severidad', encabezado: t('atencion.columnas.severidad'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }] : []),
+    { id: 'estado', encabezado: t('atencion.columnas.estado'), prioridad: 'esencial' },
+    { id: 'plazo', encabezado: t('atencion.columnas.plazo'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
+    ...(vista === 'mias'
+      ? []
+      : [{ id: 'responsable', encabezado: t('atencion.columnas.responsable'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }]),
+    { id: 'plantea', encabezado: t('atencion.columnas.planteaQuien'), prioridad: 'opcional', claseDeCelda: 'text-sm' }
+  ]
+  const celdaDe = (f: Fila, columna: string): ReactNode => {
+    const { objeto, registro } = f
+    switch (columna) {
+      case 'codigo':
+        return (
+          <span className="block" title={texto(registro, 'description') || undefined}>
+            <span className="block text-sg-caption text-sg-text-muted">{t(`comun.qcs.${objeto}`)}</span>
+            <EnlaceDeRegistro
+              codigo={texto(registro, 'code')}
+              titulo={asuntoDe(registro)}
+              ruta={rutaDeQcs(texto(registro, 'project'), objeto, registro.id)}
+              desde={t('atencion.titulo')}
+              previa={{ objeto, id: registro.id }}
+              codigoEnElEnlace
+            />
+          </span>
+        )
+      case 'proyecto':
+        return nombreDelProyecto(texto(registro, 'project'))
+      case 'canal':
+        return opcion(registro, 'channel') || '—'
+      case 'categoria':
+        return opcion(registro, 'category') || '—'
+      case 'severidad':
+        return opcion(registro, 'severity') || '—'
+      case 'estado':
+        return <EstadoChip objeto={objeto} estado={registro.state} />
+      case 'plazo':
+        return <PlazoDeQcs fila={f} />
+      case 'responsable':
+        return <Persona correo={texto(registro, 'owner_user_email')} />
+      default:
+        return atributo(registro, 'anonymous') === true ? t('atencion.anonima') : t('atencion.identificada')
+    }
+  }
+  // lo que decide si una columna no esencial dice lo mismo en todo el grupo: el dato guardado, no su rótulo
+  const valorPlano = ({ objeto, registro }: Fila, columna: string): string => {
+    switch (columna) {
+      case 'canal':
+        return String(atributo(registro, 'channel') ?? '')
+      case 'categoria':
+        return String(atributo(registro, 'category') ?? '')
+      case 'severidad':
+        return String(atributo(registro, 'severity') ?? '')
+      case 'responsable':
+        return texto(registro, 'owner_user_email').toLowerCase()
+      case 'plantea':
+        return String(atributo(registro, 'anonymous') === true)
+      default:
+        return `${objeto}:${registro.id}`
+    }
+  }
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
@@ -145,10 +238,11 @@ export function AtencionPage() {
       <section aria-label={t('atencion.indicadores')} className="space-y-2">
         {fallanTodos ? <ErrorDeCarga error={abiertas.error} alReintentar={reintentarTodos} /> : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {tarjeta(abiertas.data?.label || t('atencion.tarjetas.abiertas'), abiertas)}
-          {tarjeta(vencidas.data?.label || t('atencion.tarjetas.vencidas'), vencidas)}
+          {tarjeta(t('atencion.tarjetas.abiertas'), abiertas, { detalle: () => t('atencion.tarjetas.abiertasDetalle') })}
+          {tarjeta(t('atencion.tarjetas.vencidas'), vencidas, { detalle: () => t('atencion.tarjetas.vencidasDetalle') })}
           <KpiCard
             titulo={t('atencion.tarjetas.porVencer')}
+            detalle={() => t('atencion.tarjetas.porVencerDetalle')}
             cargando={legibles.length > 0 && cargando}
             indicador={
               legibles.length === 0
@@ -160,51 +254,50 @@ export function AtencionPage() {
             }
             error={fallida?.error}
           />
-          {tarjeta(absueltas.data?.label || t('atencion.tarjetas.absueltas'), absueltas)}
+          {tarjeta(t('atencion.tarjetas.absueltas'), absueltas, respondidas)}
         </div>
         <NotaDeConfidenciales oculta={conConfidencialesOcultas} />
       </section>
-      <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`atencion.vistas.${v}`), conteo: conteoDe(v) }))}
-        actual={vista}
-        alCambiar={(vista) => lista.cambiar({ view: vista })}
-      />
-      <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-        <label className="space-y-1">
-          <span className="block">{t('atencion.buscar')}</span>
-          <input type="search" className={CONTROL} value={lista.filtro('q')} onChange={(e) => lista.cambiar({ q: e.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="block">{t('atencion.canal')}</span>
-          <SelectNativo
-            textoVacio={t('comun.todos')}
-            value={canal}
-            onChange={(e) => lista.cambiar({ channel: e.target.value })}
-            opciones={opciones('channel')}
+      {/* la barra de filtros (P-02; hallazgos U-18 y U-22): las vistas en una sola fila con su conteo, la búsqueda, los tres filtros
+          frecuentes y un chip por filtro con «Limpiar». ?view= y los parámetros de filtro siguen siendo los mismos */}
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`atencion.vistas.${v}`), n: conteoDe(v) }))}
+            actual={vista}
+            alElegir={(v) => lista.cambiar({ view: v })}
+            visibles={VISTAS.length}
           />
-        </label>
-        <label className="space-y-1">
-          <span className="block">{t('atencion.categoria')}</span>
-          <SelectNativo
-            textoVacio={t('comun.todos')}
-            value={categoria}
-            onChange={(e) => lista.cambiar({ category: e.target.value })}
-            opciones={opciones('category')}
-          />
-        </label>
-        {conSeveridad ? (
-          <label className="space-y-1">
-            <span className="block">{t('atencion.severidad')}</span>
-            <SelectNativo
-              textoVacio={t('comun.todos')}
-              value={severidad}
-              onChange={(e) => lista.cambiar({ severity: e.target.value })}
-              opciones={opciones('severity')}
+        }
+        busqueda={{ etiqueta: t('atencion.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
+        frecuentes={
+          <>
+            <FiltroDeLista
+              etiqueta={t('atencion.canal')}
+              value={canal}
+              onChange={(e) => lista.cambiar({ channel: e.target.value })}
+              opciones={opciones('channel')}
             />
-          </label>
-        ) : null}
-      </div>
-      <ChipsDeFiltro chips={chips} alQuitar={(clave) => lista.cambiar({ [clave]: null })} alLimpiar={limpiar} />
+            <FiltroDeLista
+              etiqueta={t('atencion.categoria')}
+              value={categoria}
+              onChange={(e) => lista.cambiar({ category: e.target.value })}
+              opciones={opciones('category')}
+            />
+            {conSeveridad ? (
+              <FiltroDeLista
+                etiqueta={t('atencion.severidad')}
+                value={severidad}
+                onChange={(e) => lista.cambiar({ severity: e.target.value })}
+                opciones={opciones('severity')}
+              />
+            ) : null}
+          </>
+        }
+        aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
+        alLimpiar={limpiar}
+      />
       {legibles.length === 0 ? (
         <Alert tone="notice">{t('atencion.sinLectura')}</Alert>
       ) : cargando ? (
@@ -253,35 +346,22 @@ export function AtencionPage() {
                     }))}
                   />
                 ) : (
-                  <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-                    <Table aria-label={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}>
-                      <thead>
-                        <tr>
-                          {/* ocho columnas y no diez (rediseño de UX, 2026-10-20): el tipo va con la QCS y el canal con la
-                            categoría, para que «Responsable» no quede cortada a 1440 px */}
-                          <Th scope="col">{t('atencion.columnas.codigo')}</Th>
-                          {proyecto ? null : <Th scope="col">{t('atencion.columnas.proyecto')}</Th>}
-                          <Th scope="col">{t('atencion.columnas.categoriaYCanal')}</Th>
-                          {conSeveridad ? <Th scope="col">{t('atencion.columnas.severidad')}</Th> : null}
-                          <Th scope="col">{t('atencion.columnas.estado')}</Th>
-                          <Th scope="col">{t('atencion.columnas.plazo')}</Th>
-                          <Th scope="col">{t('atencion.columnas.responsable')}</Th>
-                          <Th scope="col">{t('atencion.columnas.planteaQuien')}</Th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {delGrupo.map((f) => (
-                          <FilaDeQcs
-                            key={`${f.objeto}:${f.registro.id}`}
-                            fila={f}
-                            conProyecto={!proyecto}
-                            conSeveridad={conSeveridad}
-                            nombreDelProyecto={nombreDelProyecto}
-                          />
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
+                  <TablaPriorizada<Fila>
+                    etiqueta={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}
+                    // los grupos de la cola comparten la elección de «Columnas»
+                    idDeTabla="atencion"
+                    columnas={columnas}
+                    filas={delGrupo}
+                    clave={(f) => `${f.objeto}:${f.registro.id}`}
+                    celda={celdaDe}
+                    valorPlano={valorPlano}
+                    ocultarUniformes
+                    alAbrir={(f) => {
+                      const ruta = rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)
+                      navegar(ruta, { state: paso(t('atencion.titulo'), ruta) })
+                    }}
+                    alPrevisualizar={(f) => navegar(previa(f.objeto, f.registro.id))}
+                  />
                 )}
               </section>
             )
@@ -304,51 +384,5 @@ function PlazoDeQcs({ fila: { objeto, registro } }: { fila: Fila }) {
     </span>
   ) : (
     <span className="text-sg-text-muted">{t('atencion.sinPlazo')}</span>
-  )
-}
-
-function FilaDeQcs({
-  fila,
-  conProyecto,
-  conSeveridad,
-  nombreDelProyecto
-}: {
-  fila: Fila
-  conProyecto: boolean
-  conSeveridad: boolean
-  nombreDelProyecto: (id: string) => React.ReactNode
-}) {
-  const { t } = useTranslation(NS)
-  const { objeto, registro } = fila
-  return (
-    <tr>
-      <Td className="min-w-56 text-sm" title={texto(registro, 'description') || undefined}>
-        <span className="block text-sg-caption text-sg-text-muted">{t(`comun.qcs.${objeto}`)}</span>
-        <EnlaceDeRegistro
-          codigo={texto(registro, 'code')}
-          titulo={asuntoDe(registro)}
-          ruta={rutaDeQcs(texto(registro, 'project'), objeto, registro.id)}
-          desde={t('atencion.titulo')}
-          previa={{ objeto, id: registro.id }}
-          codigoEnElEnlace
-        />
-      </Td>
-      {conProyecto ? <Td className="text-sm">{nombreDelProyecto(texto(registro, 'project'))}</Td> : null}
-      <Td className="text-sm">
-        <span className="block">{opcion(registro, 'category') || '—'}</span>
-        {opcion(registro, 'channel') ? <span className="block text-sg-caption text-sg-text-muted">{opcion(registro, 'channel')}</span> : null}
-      </Td>
-      {conSeveridad ? <Td className="text-sm">{opcion(registro, 'severity') || '—'}</Td> : null}
-      <Td>
-        <EstadoChip objeto={objeto} estado={registro.state} />
-      </Td>
-      <Td className="text-sm">
-        <PlazoDeQcs fila={fila} />
-      </Td>
-      <Td className="text-sm">
-        <Persona correo={texto(registro, 'owner_user_email')} />
-      </Td>
-      <Td className="text-sm">{atributo(registro, 'anonymous') === true ? t('atencion.anonima') : t('atencion.identificada')}</Td>
-    </tr>
   )
 }
