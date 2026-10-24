@@ -7,12 +7,15 @@ import { useEnlaceConOrigen, useSiguientePaso } from '../contexto/Rastro'
 // nunca un enlace a «#». suma el paso al rastro (ux-architecture.md §8.1) con «desde» o, sin él, con el título de la página
 // dentro del resultado de una lista, lleva también su origen (flujo F-C): la ficha ofrece «Volver a <lista>», «Anterior» y «Siguiente»
 // con codigoEnElEnlace, el código va dentro del enlace (una QCS, que no tiene título: código y asunto son el mismo enlace)
+// con codigoAparte, el código va en su propia columna (una tabla que ordena por código y por título): no se dibuja aquí, pero
+// sigue nombrando la vista previa
 export function EnlaceDeRegistro({
   codigo,
   titulo,
   ruta,
   desde,
   codigoEnElEnlace = false,
+  codigoAparte = false,
   previa
 }: {
   codigo?: string | null
@@ -20,13 +23,14 @@ export function EnlaceDeRegistro({
   ruta: string | null
   desde?: string
   codigoEnElEnlace?: boolean
+  codigoAparte?: boolean
   // con el objeto y el id, el ojo de su vista previa junto al título (revisión de UX, etapa 6): se mira sin dejar la lista
   previa?: { objeto: string; id: string }
 }) {
   const paso = useSiguientePaso()
   const estado = paso(desde, ruta ?? undefined)
   const conOrigen = useEnlaceConOrigen(ruta ?? undefined, estado, desde)
-  const elCodigo = codigo ? <span className="font-sg-mono text-sg-caption text-sg-text-muted">{codigo}</span> : null
+  const elCodigo = codigo && !codigoAparte ? <span className="font-sg-mono text-sg-caption text-sg-text-muted">{codigo}</span> : null
   const ojo = previa && ruta ? <BotonDeVistaPrevia objeto={previa.objeto} id={previa.id} nombre={[codigo, titulo].filter(Boolean).join(' ')} /> : null
   if (codigoEnElEnlace && ruta) {
     const enlace = (

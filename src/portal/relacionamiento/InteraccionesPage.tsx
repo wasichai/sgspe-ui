@@ -7,7 +7,7 @@ import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn } from '@wasichai/ui'
-import { useId, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -15,7 +15,8 @@ import { Cargando, ErrorDeCarga, NoDisponible, esProhibido } from '../componente
 import { VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { ordenarEnCliente } from '../componentes/ordenEnCliente'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { hoyEnLima } from '../datos/fechas'
@@ -39,6 +40,10 @@ type Vista = 'mes' | 'semana' | 'lista'
 const VISTAS: readonly Vista[] = ['mes', 'semana', 'lista']
 const CINCO_MINUTOS = 300_000
 const POR_PAGINA = 25
+// las columnas de la lista que el servidor ordena: el título y la fecha programada (la que la lista ya pedía, de la más reciente a
+// la más antigua). el tipo y el estado no: su código no dice su orden
+const CAMPO_DE_ORDEN: Record<string, string> = { titulo: 'title', fecha: 'scheduled_at' }
+const ORDEN_INICIAL: OrdenDeTabla = { columna: 'fecha', dir: 'desc' }
 
 export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const { t } = useTranslation(NS)
@@ -75,7 +80,16 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const desde = semanas[0][0]
   const hasta = diaSiguiente(semanas[semanas.length - 1][6])
   const enLista = vista === 'lista'
-  const pagina = useRegistros('engagement', { ...alcance, sort: 'scheduled_at', dir: 'desc', page: paginaDeLista, size: POR_PAGINA }, enLista)
+  // el orden es de esta visita, como en Alertas: no viaja en la URL
+  const [orden, setOrden] = useState(ORDEN_INICIAL)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    // otro orden empieza en la primera página
+    const sinPagina = new URLSearchParams(busqueda)
+    sinPagina.delete('page')
+    fijar(sinPagina, { replace: true })
+  }
+  const pagina = useRegistros('engagement', { ...alcance, sort: CAMPO_DE_ORDEN[orden.columna], dir: orden.dir, page: paginaDeLista, size: POR_PAGINA }, enLista)
   // el servidor lee un día como su comienzo en Lima: el rango [primer día, día siguiente al último) cubre justo los días de la grilla
   const delCalendario = useTodosConTope(
     'engagement',
@@ -162,7 +176,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
             )
           ) : vista === 'lista' ? (
             <>
-              <Lista interacciones={interacciones.data ?? []} global={!proyecto} />
+              <Lista interacciones={interacciones.data ?? []} global={!proyecto} orden={orden} alOrdenar={ordenar} />
               <PaginacionDelServidor
                 datos={pagina.data}
                 alPagina={(p) => {
@@ -294,7 +308,17 @@ function Calendario({
   )
 }
 
-function Lista({ interacciones, global }: { interacciones: Registro[]; global: boolean }) {
+function Lista({
+  interacciones,
+  global,
+  orden,
+  alOrdenar
+}: {
+  interacciones: Registro[]
+  global: boolean
+  orden: OrdenDeTabla
+  alOrdenar: (orden: OrdenDeTabla) => void
+}) {
   const { t } = useTranslation(NS)
   const idDeProyecto = useId()
   const telefono = useEsTelefono()
@@ -304,8 +328,9 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
         {t('relacionamiento.vacio')}
       </VacioDeLista>
     )
-  // por su día de Lima, la más reciente primero; las que no tienen fecha, al final
-  const ordenadas = [...interacciones].sort((a, b) => (diaDe(b) ?? '').localeCompare(diaDe(a) ?? ''))
+  // por la fecha, la página se acomoda por el día de Lima que la columna muestra (la realizada o, si no, la programada), en el
+  // sentido elegido; las que no tienen fecha, al final. por el título, como la manda el servidor
+  const ordenadas = orden.columna === 'fecha' ? ordenarEnCliente(interacciones, orden, (i) => diaDe(i)) : interacciones
   // en el teléfono, tarjetas con el título, el estado, el día y el proyecto (revisión de UX, etapa 8)
   if (telefono)
     return (
@@ -327,7 +352,7 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
   // página sale a la nota. el título toma el ancho que queda (w-full con max-w-0) y se corta en una línea. no se sabe de
   // antemano qué proyectos no se podrán leer: la explicación única va en el encabezado, solo para los lectores de pantalla
   const columnas: ColumnaPriorizada[] = [
-    { id: 'titulo', encabezado: t('relacionamiento.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'w-full max-w-0' },
+    { id: 'titulo', encabezado: t('relacionamiento.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'w-full max-w-0', ordenable: true },
     ...(global
       ? [
           {
@@ -341,7 +366,7 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
       : []),
     { id: 'tipo', encabezado: t('relacionamiento.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('relacionamiento.columnas.estado'), prioridad: 'esencial' },
-    { id: 'fecha', encabezado: t('relacionamiento.columnas.fecha'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap' },
+    { id: 'fecha', encabezado: t('relacionamiento.columnas.fecha'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap', ordenable: true },
     { id: 'lugar', encabezado: t('relacionamiento.columnas.lugar'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
     { id: 'asistentes', encabezado: t('relacionamiento.columnas.asistentes'), prioridad: 'opcional', numerica: true, claseDeCelda: 'text-sm' }
   ]
@@ -380,6 +405,8 @@ function Lista({ interacciones, global }: { interacciones: Registro[]; global: b
       celda={celda}
       valorPlano={valorPlano}
       ocultarUniformes
+      orden={orden}
+      alOrdenar={alOrdenar}
     />
   )
 }

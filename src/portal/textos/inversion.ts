@@ -14,6 +14,7 @@ export const ES_INVERSION = {
     vacio: 'No hay programas registrados',
     vacioAyuda: 'Un programa social reúne las iniciativas, el presupuesto y los beneficiarios de un proyecto; se crea dentro del proyecto.',
     columnas: {
+      codigo: 'Código',
       programa: 'Programa',
       proyecto: 'Proyecto',
       socio: 'Socio',
@@ -81,6 +82,7 @@ export const EN_INVERSION: typeof ES_INVERSION = {
     vacio: 'There are no recorded programs',
     vacioAyuda: 'A social program brings together a project’s initiatives, budget and beneficiaries; it is created inside the project.',
     columnas: {
+      codigo: 'Code',
       programa: 'Program',
       proyecto: 'Project',
       socio: 'Partner',

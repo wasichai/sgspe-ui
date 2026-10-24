@@ -280,6 +280,65 @@ describe('S42 · programas e inversión', () => {
     expect(consultas).toContainEqual(expect.objectContaining({ state_not: expect.stringContaining('closed'), size: '1' }))
   })
 
+  // 05-especificacion §1.6: el código y el nombre de un programa se ordenan en el servidor; el orden dura la visita
+  it('los programas se ordenan por código y por nombre en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+    // 26 programas: la segunda página tiene uno, el primero (PS-001) va en la primera
+    const otros = Array.from({ length: 25 }, (_, i) =>
+      registro(`sp${i + 2}`, { ...PROGRAMA.attributes, code: `PS-${String(i + 2).padStart(3, '0')}`, name: `Programa ${i + 2}` }, { state: 'executing' })
+    )
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_program', [PROGRAMA, ...otros])])
+    abrir({ ruta: '/projects/p1/programs?pp=1' })
+    const tabla = () => screen.getByRole('table', { name: 'Programas del alcance' })
+    await screen.findByRole('table', { name: 'Programas del alcance' })
+    expect(within(tabla()).getAllByRole('row')).toHaveLength(2)
+    const consultas = () => red!.a('GET', '/objects/social_program/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '1' }))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
+    // el código va en su columna y la vista previa lo sigue nombrando
+    expect(within(tabla()).getByRole('cell', { name: 'PS-026' })).toBeInTheDocument()
+    expect(within(tabla()).getByRole('link', { name: 'Vista previa de PS-026 Programa 26' })).toBeInTheDocument()
+    // el estado y las cifras del tablero no se ordenan
+    expect(within(tabla()).queryByRole('button', { name: 'Estado' })).not.toBeInTheDocument()
+    expect(within(tabla()).queryByRole('button', { name: /^Presupuesto/ })).not.toBeInTheDocument()
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Programa' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'name', dir: 'asc', page: '0' })))
+    expect(ubicacion.actual).toBe('/projects/p1/programs')
+    await waitFor(() => expect(within(tabla()).getByRole('columnheader', { name: 'Programa' })).toHaveAttribute('aria-sort', 'ascending'))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).not.toHaveAttribute('aria-sort')
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
+  })
+
+  it('los aportes se ordenan por código en el servidor, nunca por el monto, y otro orden vuelve a la primera página', async () => {
+    // 26 aportes: con el código de mayor a menor, la segunda página tiene solo AP-001
+    const otros = Array.from({ length: 25 }, (_, i) =>
+      registro(`a${i + 2}`, { ...APORTE.attributes, code: `AP-${String(i + 2).padStart(3, '0')}` }, { state: 'requested' })
+    )
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, ...otros])])
+    abrir({ ruta: '/projects/p1/programs?view=todos&page=1' })
+    const tabla = () => screen.getByRole('table', { name: 'Aportes del alcance' })
+    const consultas = () =>
+      red!
+        .a('GET', '/objects/social_contribution/records')
+        .map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+        .filter((c) => c.size === '25')
+    await screen.findByRole('table', { name: 'Aportes del alcance' })
+    expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'desc', page: '1' }))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'descending')
+    // el monto mezcla monedas: no se ordena (ASM-063)
+    expect(within(tabla()).queryByRole('button', { name: 'Monto' })).not.toBeInTheDocument()
+    expect(within(tabla()).getAllByRole('row')).toHaveLength(2)
+    expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('AP-001')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0' })))
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
+    expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('AP-001')
+    expect(within(tabla()).getAllByRole('row')[2]).toHaveTextContent('AP-002')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
+  })
+
   it('«Nuevo aporte» pide el motivo, propone PEN, manda el proyecto y abre la ficha del aporte creado', async () => {
     const definicionCorta = definicion('social_contribution', [
       ['code', { required: true }],

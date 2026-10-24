@@ -27,6 +27,22 @@ describe('EnlaceDeRegistro', () => {
     expect(screen.getByRole('link', { name: 'Q-002 Agua turbia en el canal' })).toHaveAttribute('href', '/projects/p1/grievances/g2')
   })
 
+  // una tabla que ordena por código y por título lleva el código en su propia columna
+  it('con el código aparte, no lo dibuja pero la vista previa sigue nombrándolo', () => {
+    montar(
+      <EnlaceDeRegistro
+        codigo="COM-2026-031"
+        titulo="Reservorio de agua"
+        ruta="/projects/p1/commitments/c1"
+        codigoAparte
+        previa={{ objeto: 'commitment', id: 'c1' }}
+      />
+    )
+    expect(screen.queryByText('COM-2026-031')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Reservorio de agua' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
+    expect(screen.getByRole('link', { name: 'Vista previa de COM-2026-031 Reservorio de agua' })).toBeInTheDocument()
+  })
+
   it('sin código, solo el título', () => {
     montar(<EnlaceDeRegistro titulo="Junta directiva" ruta="/projects/p1/stakeholders/g1" />)
     expect(screen.getByRole('link', { name: 'Junta directiva' })).toBeInTheDocument()

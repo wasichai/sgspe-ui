@@ -241,6 +241,41 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     expect(red.a('GET', '/objects/engagement/records').map((l) => l.ruta)).toContainEqual(expect.stringContaining('dir=desc&page=1&size=25'))
   })
 
+  // 05-especificacion §1.6: el título y la fecha se ordenan en el servidor; el orden dura la visita y vuelve a la primera página
+  it('el título y la fecha ordenan la lista en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+    const muchas = Array.from({ length: 30 }, (_, i) =>
+      registro(
+        `l${i}`,
+        {
+          project: 'p1',
+          title: `Visita ${String(i).padStart(2, '0')}`,
+          engagement_type: 'VISITA',
+          scheduled_at: `2026-10-${String((i % 28) + 1).padStart(2, '0')}T15:00:00Z`
+        },
+        { state: 'planned' }
+      )
+    )
+    fetch = abrirPortal('/projects/p1/engagements?view=lista&page=1', RELACIONISTA, EQUIPO, base())
+    red = espiarRed([listaDelServidor('engagement', muchas)])
+    const tabla = () => screen.getByRole('table', { name: 'Relacionamiento' })
+    await screen.findByRole('table', { name: 'Relacionamiento' })
+    expect(within(tabla()).getByRole('columnheader', { name: 'Fecha' })).toHaveAttribute('aria-sort', 'descending')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Interacción' })).not.toHaveAttribute('aria-sort')
+    // el tipo y el estado no se ordenan: su código no dice su orden
+    expect(within(tabla()).queryByRole('button', { name: 'Estado' })).not.toBeInTheDocument()
+    const consultas = () => red!.a('GET', '/objects/engagement/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Fecha' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'scheduled_at', dir: 'asc', page: '0' })))
+    expect(rutaActual()).toBe('/projects/p1/engagements?view=lista')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Fecha' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Interacción' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'title', dir: 'asc', page: '0' })))
+    await waitFor(() => expect(within(tabla()).getByRole('columnheader', { name: 'Interacción' })).toHaveAttribute('aria-sort', 'ascending'))
+    // por el título, la página queda como la manda el servidor
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('Visita 00'))
+    expect(within(tabla()).getAllByRole('row')[2]).toHaveTextContent('Visita 01')
+  })
+
   it('con todas las interacciones leídas no hay aviso de truncamiento', async () => {
     fetch = abrirPortal('/projects/p1/engagements/calendar?month=2026-10', RELACIONISTA, EQUIPO, [
       ...base(),

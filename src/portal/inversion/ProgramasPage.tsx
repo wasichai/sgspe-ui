@@ -15,7 +15,7 @@ import { Campo } from '../componentes/Campo'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, NoDisponible, Vacio } from '../componentes/Estados'
@@ -67,6 +67,13 @@ const CAMPOS_DEL_PROGRAMA = ['code', 'name', 'description', 'topic', 'partner_or
 const VISTAS = ['enCurso', 'terminados', 'todos'] as const
 const PROGRAMAS = 'programas'
 const POR_PAGINA = 25
+// las columnas que el servidor ordena (05-especificacion §1.6). en los programas, el código y el nombre; el estado no (su código
+// no dice su orden), ni el presupuesto ni lo ejecutado, que salen del tablero y no son campos de la lista. en los aportes, el
+// código; el monto no, porque la lista mezcla monedas (ASM-063)
+const ORDEN_DE_PROGRAMAS: Record<string, string> = { codigo: 'code', programa: 'name' }
+const ORDEN_INICIAL_DE_PROGRAMAS: OrdenDeTabla = { columna: 'codigo', dir: 'asc' }
+const ORDEN_DE_APORTES: Record<string, string> = { codigo: 'code' }
+const ORDEN_INICIAL_DE_APORTES: OrdenDeTabla = { columna: 'codigo', dir: 'desc' }
 
 export function ProgramasPage() {
   const { t } = useTranslation(NS)
@@ -95,7 +102,23 @@ export function ProgramasPage() {
   const estado = enProgramas ? '' : lista.filtro('state')
   // los programas y los aportes se paginan en el servidor (D10 de la revisión de UX); la página de los programas va en ?pp=
   const paginaDeProgramas = Number(lista.filtro('pp')) || 0
-  const programas = useRegistros('social_program', { project: proyecto, sort: 'code', dir: 'asc', page: paginaDeProgramas, size: POR_PAGINA }, leeProgramas)
+  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
+  const [ordenDeProgramas, setOrdenDeProgramas] = useState(ORDEN_INICIAL_DE_PROGRAMAS)
+  const ordenarProgramas = (siguiente: OrdenDeTabla) => {
+    setOrdenDeProgramas(siguiente)
+    lista.cambiar({ pp: null })
+  }
+  const programas = useRegistros(
+    'social_program',
+    {
+      project: proyecto,
+      sort: ORDEN_DE_PROGRAMAS[ordenDeProgramas.columna],
+      dir: ordenDeProgramas.dir,
+      page: paginaDeProgramas,
+      size: POR_PAGINA
+    },
+    leeProgramas
+  )
   const conteos = useConteos(
     'social_contribution',
     Object.fromEntries(VISTAS.map((v) => [v, consultaDeAportes(v, proyecto, lista.filtro('state'))])),
@@ -167,7 +190,7 @@ export function ProgramasPage() {
         <ConsultaDeTablero consulta={tablero}>{(datos) => <Cifras indicadores={datos.indicators} deProgramas={enProgramas} />}</ConsultaDeTablero>
       ) : null}
       {enProgramas ? (
-        <Programas proyecto={proyecto} indicadores={indicadores} programas={programas} />
+        <Programas proyecto={proyecto} indicadores={indicadores} programas={programas} orden={ordenDeProgramas} alOrdenar={ordenarProgramas} />
       ) : vista ? (
         <Aportes proyecto={proyecto} vista={vista} estado={estado} />
       ) : null}
@@ -239,7 +262,19 @@ function useNombreDelProyecto(): (id: string) => React.ReactNode {
   return (id) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
 }
 
-function Programas({ proyecto, indicadores, programas }: { proyecto?: string; indicadores?: Indicador[]; programas: UseQueryResult<Pagina> }) {
+function Programas({
+  proyecto,
+  indicadores,
+  programas,
+  orden,
+  alOrdenar
+}: {
+  proyecto?: string
+  indicadores?: Indicador[]
+  programas: UseQueryResult<Pagina>
+  orden: OrdenDeTabla
+  alOrdenar: (orden: OrdenDeTabla) => void
+}) {
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista(PROGRAMAS)
   const filas = programas.data?.content ?? []
@@ -256,19 +291,28 @@ function Programas({ proyecto, indicadores, programas }: { proyecto?: string; in
     const alcanzado = cifraDe(fila?.reached)
     return fila && meta !== null && alcanzado !== null ? t('inversion.programas.alcanzados', { alcanzados: numeroPe(alcanzado), meta: numeroPe(meta) }) : '—'
   }
-  const enlace = (p: Registro) => (
+  // en la tabla, el código va en su columna (se ordena aparte del nombre); en la tarjeta del teléfono, junto al nombre
+  const enlace = (p: Registro, codigoAparte = false) => (
     <EnlaceDeRegistro
       codigo={texto(p, 'code')}
+      codigoAparte={codigoAparte}
       titulo={texto(p, 'name')}
       ruta={rutaDeFicha('social_program', p)}
       previa={{ objeto: 'social_program', id: p.id }}
       desde={t('inversion.titulo')}
     />
   )
-  // la tabla con prioridad de columnas (DD-05): esenciales el programa, el proyecto, el estado y el presupuesto del año;
-  // secundarias el socio, lo ejecutado y los beneficiarios
+  // la tabla con prioridad de columnas (DD-05): esenciales el código, el programa, el proyecto, el estado y el presupuesto del
+  // año; secundarias el socio, lo ejecutado y los beneficiarios
   const columnas: ColumnaPriorizada[] = [
-    { id: 'programa', encabezado: t('inversion.programas.columnas.programa'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm' },
+    {
+      id: 'codigo',
+      encabezado: t('inversion.programas.columnas.codigo'),
+      prioridad: 'esencial',
+      claseDeCelda: 'font-sg-mono text-sg-caption whitespace-nowrap',
+      ordenable: true
+    },
+    { id: 'programa', encabezado: t('inversion.programas.columnas.programa'), prioridad: 'esencial', claseDeCelda: 'min-w-48 text-sm', ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('inversion.programas.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'socio', encabezado: t('inversion.programas.columnas.socio'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('inversion.programas.columnas.estado'), prioridad: 'esencial' },
@@ -278,8 +322,10 @@ function Programas({ proyecto, indicadores, programas }: { proyecto?: string; in
   ]
   const celda = (p: Registro, columna: string): ReactNode => {
     switch (columna) {
+      case 'codigo':
+        return texto(p, 'code') || '—'
       case 'programa':
-        return enlace(p)
+        return enlace(p, true)
       case 'proyecto':
         return nombreDelProyecto(texto(p, 'project'))
       case 'socio':
@@ -329,6 +375,8 @@ function Programas({ proyecto, indicadores, programas }: { proyecto?: string; in
           celda={celda}
           alAbrir={fila.abrir}
           alPrevisualizar={fila.previsualizar}
+          orden={orden}
+          alOrdenar={alOrdenar}
         />
       )}
       <PaginacionDelServidor datos={programas.data} alPagina={(p) => lista.cambiar({ pp: String(p), page: lista.filtro('page') || null })} />
@@ -349,7 +397,17 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista(vista)
   const actual = consultaDeAportes(vista, proyecto, estado)
-  const aportes = useRegistros('social_contribution', { ...actual, sort: 'code', dir: 'desc', page: lista.pagina, size: POR_PAGINA }, actual !== null)
+  // el orden es de esta visita: no viaja en la URL, y otro orden vuelve a la primera página
+  const [orden, setOrden] = useState(ORDEN_INICIAL_DE_APORTES)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    lista.cambiar({ page: null })
+  }
+  const aportes = useRegistros(
+    'social_contribution',
+    { ...actual, sort: ORDEN_DE_APORTES[orden.columna], dir: orden.dir, page: lista.pagina, size: POR_PAGINA },
+    actual !== null
+  )
   const nombreDelProyecto = useNombreDelProyecto()
   const telefono = useEsTelefono()
   const filtrados = actual ? (aportes.data?.content ?? []) : []
@@ -365,7 +423,7 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
   // la tabla con prioridad de columnas (DD-05): esenciales el aporte, el proyecto, quién recibe, el estado y el monto (en su
   // moneda, «—» si no vino); secundarias el tipo y la campaña
   const columnas: ColumnaPriorizada[] = [
-    { id: 'codigo', encabezado: t('inversion.aportes.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'font-sg-mono text-sm' },
+    { id: 'codigo', encabezado: t('inversion.aportes.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'font-sg-mono text-sm', ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('inversion.aportes.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'tipo', encabezado: t('inversion.aportes.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'recibe', encabezado: t('inversion.aportes.columnas.recibe'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
@@ -425,6 +483,8 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
           celda={celda}
           alAbrir={fila.abrir}
           alPrevisualizar={fila.previsualizar}
+          orden={orden}
+          alOrdenar={ordenar}
         />
       )}
       <PaginacionDelServidor datos={aportes.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
