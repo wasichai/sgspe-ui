@@ -111,18 +111,31 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
-            <Button asChild size="sm">
-              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
-            </Button>
-          ) : null}
+        {/* una sola primaria (rediseño de UX, 2026-10-20): con el proyecto activo, «Registrar interacción»; mientras no lo está,
+          su decisión (enviar a revisión, aprobar, reanudar). lo demás, en «Más acciones», y lo que lo anula al final */}
+        <div className="flex flex-wrap items-start gap-2">
           {proyecto.state === 'draft' && editaProyecto ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
             </Button>
           ) : null}
-          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
+          {escribeEnElProyecto && can('engagement', 'CREATE') && proyecto.state !== 'active' ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
+            </Button>
+          ) : null}
+          <BotonesDeTransicion
+            agrupadas
+            objeto="project"
+            registro={proyecto}
+            proyecto={proyecto.id}
+            sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE') && proyecto.state === 'active'}
+          />
+          {escribeEnElProyecto && can('engagement', 'CREATE') && proyecto.state === 'active' ? (
+            <Button asChild size="sm">
+              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
+            </Button>
+          ) : null}
         </div>
       </header>
       <ResumenEjecutivo proyecto={proyecto} />

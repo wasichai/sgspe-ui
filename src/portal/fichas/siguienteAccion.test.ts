@@ -34,5 +34,7 @@ describe('siguienteTransicion', () => {
     expect(
       siguienteTransicion('social_risk', [tr('close_assessed', 'closed'), tr('decide_monitoring', 'monitoring'), tr('decide_mitigation', 'mitigating')])?.name
     ).toBe('decide_mitigation')
+    // rediseño de UX (2026-10-20): el proyecto también tiene camino; «Devolver» y «Anular» no son lo siguiente
+    expect(siguienteTransicion('project', [tr('return_to_draft', 'draft'), tr('approve', 'active'), tr('cancel_in_review', 'cancelled')])?.name).toBe('approve')
   })
 })

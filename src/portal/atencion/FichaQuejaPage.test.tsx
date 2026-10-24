@@ -78,6 +78,8 @@ describe('S36 · ficha de queja', () => {
     await waitFor(() => expect(resolver).toBeDisabled())
     expect(resolver).toHaveAccessibleDescription('Una queja ALTA la resuelve quien aprueba')
     expect(await screen.findByText(/Es una queja Alta: la resuelve quien aprueba/)).toBeInTheDocument()
+    // las demás transiciones, en «Más acciones» (rediseño de UX, 2026-10-20)
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('button', { name: 'Registrar desistimiento' })).toBeEnabled()
   })
 
@@ -110,6 +112,9 @@ describe('S36 · ficha de queja', () => {
       ])
     )
     abrir({ ...EQUIPO_DE_QUEJAS, objects: { ...EQUIPO_DE_QUEJAS.objects, commitment: ['READ', 'CREATE'] } })
+    // lo que no se usa a diario va en «Más acciones», con la primaria a la vista (rediseño de UX, 2026-10-20)
+    expect(await screen.findByRole('button', { name: 'Acusar recibo' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(await screen.findByRole('button', { name: 'Reclasificar…' })).toBeInTheDocument()
     // la reclasificación es de comando: nunca un botón de transición
     expect(screen.queryByRole('button', { name: 'Cerrar por reclasificación' })).not.toBeInTheDocument()

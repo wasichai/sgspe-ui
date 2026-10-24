@@ -276,7 +276,7 @@ describe('S27 · tablero de compromisos', () => {
     ])
     abrir()
     const pendientes = screen.getByRole('region', { name: 'Pendientes: vencidos y por vencer' })
-    expect(await within(pendientes).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(await within(pendientes).findByText('No se pudo cargar esta información.')).toBeInTheDocument()
   })
 
   it('400 TOO_MANY_RECORDS es «Acote los filtros», no un error de carga ni ceros', async () => {

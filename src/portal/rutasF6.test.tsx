@@ -1,4 +1,5 @@
 import { cleanup, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { FetchMock, MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { abrirPortal } from '../test/pantalla'
@@ -31,7 +32,10 @@ describe('rutas de F6', () => {
   it('/territory/dashboard es el tablero territorial y /territory/quality la calidad de datos', async () => {
     fetch = abrirPortal('/territory/dashboard?project=p1', ANALISTA_SIG, EQUIPO_SIG, deSig())
     expect(await screen.findByRole('heading', { name: 'Tablero territorial', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ir al mapa territorial' })).toHaveAttribute('href', '/territory?project=p1')
+    // Mapa · Tablero son las vistas del módulo, con el proyecto del mapa (rediseño de UX, 2026-10-20)
+    const vistas = screen.getByRole('navigation', { name: 'Vistas del módulo' })
+    expect(within(vistas).getByRole('link', { name: 'Mapa' })).toHaveAttribute('href', '/territory?project=p1')
+    expect(within(vistas).getByRole('link', { name: 'Tablero' })).toHaveAttribute('aria-current', 'page')
     cleanup()
     fetch.restore()
     fetch = abrirPortal('/territory/quality', ANALISTA_SIG, EQUIPO_SIG, deSig())
@@ -45,13 +49,17 @@ describe('rutas de F6', () => {
       EQUIPO_SIG,
       deSig([{ code: 'KPI-TER-02', label: 'Superficie', dashboard: 'territory', available: true }])
     )
-    expect(await screen.findByRole('link', { name: 'Tablero territorial' })).toHaveAttribute('href', '/territory/dashboard?project=p1')
+    // el tablero es una vista del módulo y la calidad de datos va en «Más acciones» (rediseño de UX, 2026-10-20)
+    const vistas = await screen.findByRole('navigation', { name: 'Vistas del módulo' })
+    expect(within(vistas).getByRole('link', { name: 'Tablero' })).toHaveAttribute('href', '/territory/dashboard?project=p1')
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('link', { name: 'Calidad de datos' })).toHaveAttribute('href', '/territory/quality')
     cleanup()
     fetch.restore()
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, deSig())
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
     await screen.findByRole('link', { name: 'Calidad de datos' })
-    expect(screen.queryByRole('link', { name: 'Tablero territorial' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Vistas del módulo' })).not.toBeInTheDocument()
   })
 
   it('sin leer el territorio, la sección no se ofrece ni abre sus rutas de F6', async () => {

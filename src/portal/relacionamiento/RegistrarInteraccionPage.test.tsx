@@ -625,7 +625,7 @@ describe('S24 · registrar interacción', () => {
     it('si no se pueden leer los grupos de interés, la lista dice el error y no queda vacía', async () => {
       fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, [
         ...sin('/objects/stakeholder/records'),
-        { path: '/objects/stakeholder/records', status: 404, body: { title: 'Error', status: 404, detail: 'No existe', errors: [] } }
+        { path: '/objects/stakeholder/records', status: 500, body: { title: 'Error', status: 500, detail: 'Falló', errors: [] } }
       ])
       await screen.findByRole('option', { name: 'Asamblea' })
       await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')

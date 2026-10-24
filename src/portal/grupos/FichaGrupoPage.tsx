@@ -138,7 +138,14 @@ function Ficha({ grupo }: { grupo: Registro }) {
           </>
         }
         primaria={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-start gap-2">
+            <BotonesDeTransicion
+              agrupadas
+              objeto="stakeholder"
+              registro={grupo}
+              proyecto={proyecto}
+              sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')}
+            />
             {escribeEnElProyecto && can('engagement', 'CREATE') ? (
               <Button asChild size="sm">
                 <Link to={`/projects/${encodeURIComponent(proyecto)}/engagements/new?stakeholders=${encodeURIComponent(grupo.id)}`}>
@@ -146,7 +153,6 @@ function Ficha({ grupo }: { grupo: Registro }) {
                 </Link>
               </Button>
             ) : null}
-            <BotonesDeTransicion objeto="stakeholder" registro={grupo} proyecto={proyecto} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
           </div>
         }
         secundarias={

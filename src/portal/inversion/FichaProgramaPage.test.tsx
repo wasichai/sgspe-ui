@@ -63,6 +63,8 @@ describe('S43 · ficha del programa', () => {
     expect(await screen.findByRole('link', { name: 'Asociación Ejemplo' })).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: 'AC-001 · Convenio de sinergia de ejemplo' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
     expect(await screen.findByRole('button', { name: 'Pasar a monitoreo' })).toBeInTheDocument()
+    // las demás transiciones van en «Más acciones» (rediseño de UX, 2026-10-20)
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('button', { name: 'Suspender' })).toBeInTheDocument()
     expect(screen.getByText('Total del programa: S/ 80,000.00')).toBeInTheDocument()
   })

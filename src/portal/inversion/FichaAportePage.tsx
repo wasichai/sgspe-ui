@@ -138,7 +138,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
             <span className="tabular-nums">{t('fichaAporte.total', { monto: montoPe(atributo(aporte, 'total_amount'), monedaDe(aporte)) })}</span>
           </>
         }
-        primaria={<BotonesDeTransicion objeto="social_contribution" registro={aporte} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        primaria={<BotonesDeTransicion agrupadas objeto="social_contribution" registro={aporte} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
         secundarias={
           edita ? (
             <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>

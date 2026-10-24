@@ -53,7 +53,7 @@ export function useMigaDelRegistro(etiqueta: string | null | undefined) {
 }
 
 // las fichas que no viven bajo el segmento de su pestaña: una queja vive en /grievances/:id y su pestaña es la de QCS
-const PESTANA_DE_SEGMENTO: Partial<Record<string, string>> = {
+export const PESTANA_DE_SEGMENTO: Partial<Record<string, string>> = {
   grievances: 'attention',
   inquiries: 'attention',
   requests: 'attention',

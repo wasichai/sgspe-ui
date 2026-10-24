@@ -42,11 +42,12 @@ describe('PanelDeDecision', () => {
     expect(within(tarjeta('Vencimiento')).getByLabelText('Situación de plazo: Por vencer')).toBeInTheDocument()
   })
 
-  it('sin siguiente acción ni vencimiento lo dice; «desde» que no llegó es «—»', async () => {
+  // rediseño de UX (2026-10-20): «Desde —» no decía nada; un registro anterior a state_changed_at no lo tiene
+  it('sin siguiente acción ni vencimiento lo dice; sin «desde», la línea no se dibuja', async () => {
     fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
     montar(<PanelDeDecision objeto="commitment" estado="draft" siguiente={null} responsable={null} vencimiento={null} />)
     expect(await within(tarjeta('Estado actual')).findByText('Borrador')).toBeInTheDocument()
-    expect(within(tarjeta('Estado actual')).getByText('Desde', { exact: false })).toHaveTextContent('Desde —')
+    expect(within(tarjeta('Estado actual')).queryByText('Desde', { exact: false })).not.toBeInTheDocument()
     expect(within(tarjeta('Siguiente acción')).getByText('Nada pendiente')).toBeInTheDocument()
     expect(within(tarjeta('Vencimiento')).getByText('Sin fecha límite')).toBeInTheDocument()
   })

@@ -380,12 +380,28 @@ describe('celdas de tabla restringidas', () => {
 
 describe('KpiCard', () => {
   it.each([
-    [{ code: 'KPI-STK-05', label: 'x', available: true, value: 40, numerator: 4, denominator: 10, unit: '%' }, ['40', '4 / 10 · %']],
+    [{ code: 'KPI-STK-05', label: 'x', available: true, value: 40, numerator: 4, denominator: 10, unit: '%' }, ['40', '%', '4 de 10']],
     [{ code: 'KPI-STK-02', label: 'x', available: false, unavailableReason: 'FIELD_NOT_READABLE', missingFields: ['stakeholder.stance'] }, ['No disponible']]
   ])('%j se lee como %j', async (indicador, textos) => {
     montar(<KpiCard titulo="Cifra" indicador={indicador} />)
     for (const texto of textos) expect(await screen.findByText(texto)).toBeInTheDocument()
     expect(screen.queryByText('0')).not.toBeInTheDocument()
+  })
+
+  // rediseño de UX (2026-10-20): un porcentaje decía «0» grande y debajo «0 / 1 · %», con la unidad suelta
+  it('un porcentaje lleva su signo junto a la cifra y debajo la base, «n de N»', async () => {
+    montar(<KpiCard titulo="Absueltas" indicador={{ code: 'KPI-GRV-07', label: 'x', available: true, value: 0, numerator: 0, denominator: 1, unit: '%' }} />)
+    const tarjeta = await screen.findByRole('region', { name: 'Absueltas' })
+    expect(tarjeta).toHaveTextContent('0 %')
+    expect(within(tarjeta).getByText('0 de 1')).toBeInTheDocument()
+    expect(tarjeta).not.toHaveTextContent('· %')
+  })
+
+  it('una cifra con unidad de conteo la dice debajo', async () => {
+    montar(<KpiCard titulo="Abiertas" indicador={{ code: 'KPI-GRV-01', label: 'x', available: true, value: 3, unit: 'QCS' }} />)
+    const tarjeta = await screen.findByRole('region', { name: 'Abiertas' })
+    expect(within(tarjeta).getByText('3')).toBeInTheDocument()
+    expect(within(tarjeta).getByText('QCS')).toBeInTheDocument()
   })
 
   it('una cifra sin valor en el periodo lo dice, sin «—» ni la unidad suelta', async () => {

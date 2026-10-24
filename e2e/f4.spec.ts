@@ -114,6 +114,8 @@ test('reclasificar una queja manda If-Match, motivo y clave, y abre la ficha de 
   const escrituras = await prepararF4(page)
   await page.goto('/projects/p1/grievances/g1')
   await expect(page.getByRole('heading', { name: 'Queja Q-001', level: 1 })).toBeVisible()
+  // en «Más acciones», con lo que no se usa a diario (rediseño de UX, 2026-10-20)
+  await page.getByRole('button', { name: 'Más acciones' }).click()
   await page.getByRole('button', { name: 'Reclasificar…' }).click()
   const dialogo = page.getByRole('dialog', { name: 'Reclasificar' })
   await dialogo.getByRole('radio', { name: 'Consulta' }).check()

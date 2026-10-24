@@ -3,7 +3,7 @@ import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { EncabezadoDePagina, ITEM_DE_MENU } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { useSumasDeConteos } from '../datos/conteos'
@@ -134,22 +134,35 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
                 <Dia valor={texto(compromiso, 'due_date')} />
               </span>
             ) : null}
-            <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
+            {/* sin monto, nada: un «—» suelto entre los chips no dice qué falta (rediseño de UX, 2026-10-20) */}
+            {atributo(compromiso, 'amount') !== null && atributo(compromiso, 'amount') !== undefined ? (
+              <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
+            ) : null}
           </>
         }
-        primaria={<BotonesDeTransicion objeto="commitment" registro={compromiso} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        primaria={
+          <BotonesDeTransicion
+            agrupadas
+            objeto="commitment"
+            registro={compromiso}
+            proyecto={proyecto}
+            comprobarAntes={COMPROBAR}
+            mas={
+              edita ? (
+                <button type="button" className={ITEM_DE_MENU} onClick={() => setEditando('riesgo')}>
+                  {t('fichaCompromiso.riesgo')}
+                </button>
+              ) : undefined
+            }
+          />
+        }
         secundarias={
           <>
             <VerEnElMapa objeto="commitment" registro={compromiso} />
             {edita ? (
-              <>
-                <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
-                  {t('fichaCompromiso.editar')}
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => setEditando('riesgo')}>
-                  {t('fichaCompromiso.riesgo')}
-                </Button>
-              </>
+              <Button size="sm" variant="secondary" onClick={() => setEditando('todo')}>
+                {t('fichaCompromiso.editar')}
+              </Button>
             ) : null}
           </>
         }

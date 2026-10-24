@@ -11,6 +11,17 @@ export const ES_TABLEROS_F8 = {
     sinProyectos: 'No tiene proyectos asignados.',
     irAProyectos: 'Ir a Proyectos',
     atencion: 'Lo que necesita atención hoy',
+    suTrabajo: 'Su trabajo pendiente',
+    filtros: {
+      titulo: 'Periodo, ámbito y proyectos',
+      mesEnCurso: 'Mes en curso',
+      rango: 'Del {{desde}} al {{hasta}}',
+      desde: 'Desde el {{desde}}',
+      hasta: 'Hasta el {{hasta}}',
+      susProyectos: 'Sus proyectos',
+      proyectos_one: '{{count}} proyecto elegido',
+      proyectos_other: '{{count}} proyectos elegidos'
+    },
     atencionAyuda: 'Ordenado por una regla fija: alertas activas, riesgos altos o críticos, compromisos vencidos y quejas abiertas.',
     sinAtencion: 'Nada pide atención con estos filtros.',
     items: {
@@ -131,6 +142,17 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
     sinProyectos: 'You have no assigned projects.',
     irAProyectos: 'Go to Projects',
     atencion: 'What needs attention today',
+    suTrabajo: 'Your pending work',
+    filtros: {
+      titulo: 'Period, scope and projects',
+      mesEnCurso: 'Current month',
+      rango: 'From {{desde}} to {{hasta}}',
+      desde: 'From {{desde}}',
+      hasta: 'Until {{hasta}}',
+      susProyectos: 'Your projects',
+      proyectos_one: '{{count}} project chosen',
+      proyectos_other: '{{count}} projects chosen'
+    },
     atencionAyuda: 'Ordered by a fixed rule: active alerts, high or critical risks, overdue commitments and open grievances.',
     sinAtencion: 'Nothing needs attention with these filters.',
     items: {

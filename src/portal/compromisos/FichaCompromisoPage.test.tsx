@@ -66,7 +66,18 @@ describe('S29 · ficha de compromiso', () => {
     const cumplimiento = await screen.findByRole('button', { name: 'Registrar cumplimiento' })
     await waitFor(() => expect(cumplimiento).toBeDisabled())
     expect(cumplimiento).toHaveAccessibleDescription('Falta una entrega con conformidad')
+    // las demás transiciones van en «Más acciones» (rediseño de UX, 2026-10-20)
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
     expect(screen.getByRole('button', { name: 'Bloquear' })).toBeEnabled()
+  })
+
+  // rediseño de UX (2026-10-20): sin monto, los chips no terminan en un «—» suelto
+  it('sin monto, el encabezado no dibuja un «—» entre sus chips', async () => {
+    fetch = mockFetch(rutas({ ...C1, attributes: { ...C1.attributes, amount: null } }))
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })
+    const chips = titulo.nextElementSibling as HTMLElement
+    expect(chips).not.toHaveTextContent('—')
   })
 
   // revisión de UX, etapa 4: la anatomía común de la ficha (design-system.md §6.1)
@@ -159,7 +170,7 @@ describe('S29 · ficha de compromiso', () => {
     fetch = mockFetch(rutas(C1, [{ path: '/objects/commitment/records/c1', status: 404, body: { title: 'Not Found', status: 404 } }]))
     abrir()
     expect(await screen.findByText('Este compromiso no existe o no es de sus proyectos.')).toBeInTheDocument()
-    expect(screen.queryByText('No se pudo cargar esta información. Los filtros se conservan.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No se pudo cargar esta información.')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Compromisos del proyecto' })).toHaveAttribute('href', '/projects/p1/commitments')
   })

@@ -3,7 +3,7 @@ import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { EncabezadoDePagina, ITEM_DE_MENU } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad, type SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
@@ -269,9 +269,23 @@ function Ficha({
           </>
         }
         primaria={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-start gap-2">
+            <BotonesDeTransicion
+              agrupadas
+              objeto={objeto}
+              registro={qcs}
+              proyecto={proyecto}
+              comprobarAntes={comprobar}
+              sinPrimaria={Boolean(acciones)}
+              mas={
+                reclasifica ? (
+                  <button type="button" className={ITEM_DE_MENU} onClick={() => setReclasificando(true)}>
+                    {t('piezas.reclasificar.boton')}
+                  </button>
+                ) : undefined
+              }
+            />
             {acciones}
-            <BotonesDeTransicion objeto={objeto} registro={qcs} proyecto={proyecto} comprobarAntes={comprobar} sinPrimaria={Boolean(acciones)} />
           </div>
         }
         secundarias={
@@ -279,11 +293,6 @@ function Ficha({
             {edita ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('fichaQueja.comun.editar')}
-              </Button>
-            ) : null}
-            {reclasifica ? (
-              <Button size="sm" variant="secondary" onClick={() => setReclasificando(true)}>
-                {t('piezas.reclasificar.boton')}
               </Button>
             ) : null}
           </>

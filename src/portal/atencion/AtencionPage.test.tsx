@@ -109,6 +109,22 @@ describe('S35 · lista unificada de QCS', () => {
     expect(screen.getAllByRole('link', { name: /^[QCS]-\d+\b/ }).map((l) => l.textContent?.split(' ')[0])).toEqual(['Q-002'])
   })
 
+  // rediseño de UX (2026-10-20): diez columnas no cabían a 1440 px y «Responsable» quedaba cortada. el tipo va en la celda de la
+  // QCS y el canal bajo la categoría
+  it('la tabla tiene ocho columnas en lo global: el tipo con la QCS y el canal con la categoría', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([colaDelServidor(TODAS)])
+    montar(<AtencionPage />, { ruta: '/attention', camino: '/attention', usuario: GESTORA_DE_QUEJAS, permisos: EQUIPO_DE_QUEJAS })
+    const [tabla] = await screen.findAllByRole('table')
+    expect(
+      within(tabla)
+        .getAllByRole('columnheader')
+        .map((c) => c.textContent)
+    ).toEqual(['QCS', 'Proyecto', 'Categoría y canal', 'Severidad', 'Estado', 'Plazo que corre', 'Responsable', 'Quién la plantea'])
+    const fila = within(tabla).getAllByRole('row')[1]
+    expect(within(fila).getAllByRole('cell')[0]).toHaveTextContent(/^(Queja|Consulta|Solicitud)/)
+  })
+
   it('solo lee los tipos que la cuenta lee y, mientras carga, no dice que no hay QCS', async () => {
     fetch = mockFetch(rutas())
     abrir(permisos({ project: ['READ'], project_assignment: ['READ'], inquiry: ['READ'] }), undefined, { legibles: ['inquiry'] })

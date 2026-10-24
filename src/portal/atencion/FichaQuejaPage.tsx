@@ -3,7 +3,7 @@ import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { EncabezadoDePagina, ITEM_DE_MENU } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad, type SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
@@ -128,23 +128,37 @@ function Ficha({ queja }: { queja: Registro }) {
             <MarcasDeQcs qcs={queja} />
           </>
         }
-        primaria={<BotonesDeTransicion objeto="grievance" registro={queja} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        primaria={
+          <BotonesDeTransicion
+            agrupadas
+            objeto="grievance"
+            registro={queja}
+            proyecto={proyecto}
+            comprobarAntes={COMPROBAR}
+            mas={
+              reclasifica || (escribe && can('commitment', 'CREATE')) ? (
+                <>
+                  {reclasifica ? (
+                    <button type="button" className={ITEM_DE_MENU} onClick={() => setReclasificando(true)}>
+                      {t('piezas.reclasificar.boton')}
+                    </button>
+                  ) : null}
+                  {escribe && can('commitment', 'CREATE') ? (
+                    <Link className={ITEM_DE_MENU} to={`${base}/commitments/new?origin_grievance=${encodeURIComponent(queja.id)}`}>
+                      {t('fichaQueja.crearCompromiso')}
+                    </Link>
+                  ) : null}
+                </>
+              ) : undefined
+            }
+          />
+        }
         secundarias={
           <>
             <VerEnElMapa objeto="grievance" registro={queja} />
             {edita ? (
               <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
                 {t('fichaQueja.comun.editar')}
-              </Button>
-            ) : null}
-            {reclasifica ? (
-              <Button size="sm" variant="secondary" onClick={() => setReclasificando(true)}>
-                {t('piezas.reclasificar.boton')}
-              </Button>
-            ) : null}
-            {escribe && can('commitment', 'CREATE') ? (
-              <Button asChild size="sm" variant="secondary">
-                <Link to={`${base}/commitments/new?origin_grievance=${encodeURIComponent(queja.id)}`}>{t('fichaQueja.crearCompromiso')}</Link>
               </Button>
             ) : null}
           </>

@@ -6,12 +6,13 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
+import { EncabezadoDePagina, ITEM_DE_MENU } from '../componentes/Pagina'
+import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { useProyecto, useProyectos } from '../contexto/proyectos'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
 import { rutaParaAbrir } from '../datos/fichas'
-import { texto } from '../datos/registros'
 import { NS } from '../i18n'
 import { useTableroDisponible } from '../tableros/comunes'
 import { destinoDe, encuadreDeGeometrias, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
@@ -144,41 +145,48 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
 
   return (
     <section className="mx-auto max-w-[1440px] space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{modo === 'tablero' ? t('tableroTerritorial.titulo') : t('mapa.mapaTerritorial')}</h1>
-        <div className="flex flex-wrap gap-2">
-          {modo === 'tablero' ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/territory${sufijo}`}>{t('tableroTerritorial.irAlMapa')}</Link>
-            </Button>
-          ) : conTablero ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/territory/dashboard${sufijo}`}>{t('tableroTerritorial.irAlTablero')}</Link>
-            </Button>
-          ) : null}
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/territory/quality">{t('calidad.titulo')}</Link>
-          </Button>
-          <Button variant="secondary" size="sm" onClick={descargar}>
-            {t('mapa.capturar')}
-          </Button>
-          {capasExportables(can).length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={() => setExportando(true)}>
-              {t('exportacionGeografica.abrir')}
-            </Button>
-          ) : null}
-          {can('community', 'CREATE') ? (
+      {/* rediseño de UX (2026-10-20): seis botones del mismo peso con la primaria en medio. ahora Mapa · Tablero como vistas del
+        módulo, importar y exportar a la vista, «Nueva comunidad» como primaria y lo ocasional (calidad de datos, la captura) en
+        «Más acciones» */}
+      <EncabezadoDePagina
+        titulo={modo === 'tablero' ? t('tableroTerritorial.titulo') : t('mapa.mapaTerritorial')}
+        vistas={
+          modo === 'tablero' || conTablero ? (
+            <VistasDelModulo modulo="territory" actual={modo === 'tablero' ? 'tablero' : 'lista'} sufijo={sufijo} />
+          ) : undefined
+        }
+        secundarias={
+          <>
+            {DESTINOS.some((d) => importaA(can, d)) ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link to={`/territory/imports/new${sufijo}`}>{t('mapa.importar')}</Link>
+              </Button>
+            ) : null}
+            {capasExportables(can).length > 0 ? (
+              <Button variant="secondary" size="sm" onClick={() => setExportando(true)}>
+                {t('exportacionGeografica.abrir')}
+              </Button>
+            ) : null}
+          </>
+        }
+        mas={
+          <>
+            <Link to="/territory/quality" className={ITEM_DE_MENU}>
+              {t('calidad.titulo')}
+            </Link>
+            <button type="button" className={ITEM_DE_MENU} onClick={descargar}>
+              {t('mapa.capturar')}
+            </button>
+          </>
+        }
+        primaria={
+          can('community', 'CREATE') ? (
             <Button size="sm" onClick={() => setCreando(true)}>
               {t('mapa.nuevaComunidad')}
             </Button>
-          ) : null}
-          {DESTINOS.some((d) => importaA(can, d)) ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/territory/imports/new${sufijo}`}>{t('mapa.importar')}</Link>
-            </Button>
-          ) : null}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
       <FiltrosDelMapa />
       {servicio.caido ? (
         <Alert tone="warning">
@@ -344,7 +352,6 @@ export function problemaDelPeriodo(desde: string, hasta: string, hoy: string = h
 export function FiltrosDelMapa() {
   const { t } = useTranslation(NS)
   const [busqueda, fijar] = useSearchParams()
-  const proyectos = useProyectos()
   // las fechas tecleadas que no forman un periodo válido: se muestran y se dicen, sin escribirlas en la URL. valen mientras el
   // periodo de la URL sea el mismo que cuando se teclearon: si cambia por otro camino (atrás, un enlace), mandan las de la URL
   const enLaUrl = `${busqueda.get('periodStart') ?? ''}|${busqueda.get('periodEnd') ?? ''}`
@@ -373,17 +380,7 @@ export function FiltrosDelMapa() {
   return (
     <div role="group" aria-label={t('sig.filtros')} className="space-y-1 text-sm">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('sig.proyecto')}</span>
-          <select className={CONTROL} value={busqueda.get('project') ?? ''} onChange={(e) => escribir({ project: e.target.value })}>
-            <option value="">{t('sig.todosLosLugares')}</option>
-            {(proyectos.data ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {texto(p, 'code')} · {texto(p, 'name')}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* el proyecto del mapa es el selector de la barra superior (rediseño de UX, 2026-10-20) */}
         <label className="space-y-1">
           <span className="block text-sg-label">{t('sig.desde')}</span>
           <input

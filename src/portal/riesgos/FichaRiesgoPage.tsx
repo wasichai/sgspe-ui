@@ -1,7 +1,7 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
-import { CrearRelacionado } from '../componentes/CrearRelacionado'
+import { ItemsRelacionados, useRelacionadas } from '../componentes/CrearRelacionado'
 import { CaminoDelFlujo } from '../componentes/CaminoDelFlujo'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -126,6 +126,14 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
   // decisión (con la próxima revisión como vencimiento), pestañas con conteo y trazabilidad en tres grupos
   useMigaDelRegistro(texto(riesgo, 'code') || texto(riesgo, 'title'))
+  // el compromiso que atiende el riesgo (revisión de UX, etapa 5), en «Más acciones»; la medida se crea en su pestaña
+  const relacionadas = useRelacionadas(proyecto, [
+    {
+      objeto: 'commitment',
+      etiqueta: t('paginas.relacionados.compromiso'),
+      a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?social_risk=${encodeURIComponent(riesgo.id)}`
+    }
+  ])
   const siguiente = useSiguienteAccion('social_risk', riesgo, COMPROBAR)
   const medidas = useTodos('mitigation_measure', { social_risk: riesgo.id })
   const evidencias = useEvidenciasDe('social_risk', riesgo.id)
@@ -151,7 +159,16 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
           </>
         }
         primaria={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-start gap-2">
+            <BotonesDeTransicion
+              agrupadas
+              objeto="social_risk"
+              registro={riesgo}
+              proyecto={proyecto}
+              comprobarAntes={COMPROBAR}
+              sinPrimaria={revisa}
+              mas={relacionadas.length > 0 ? <ItemsRelacionados acciones={relacionadas} /> : undefined}
+            />
             {revisa ? (
               <Button
                 size="sm"
@@ -163,7 +180,6 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
                 {t('fichaRiesgo.revision.nueva')}
               </Button>
             ) : null}
-            <BotonesDeTransicion objeto="social_risk" registro={riesgo} proyecto={proyecto} comprobarAntes={COMPROBAR} sinPrimaria={revisa} />
           </div>
         }
         secundarias={
@@ -174,17 +190,6 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
                 {t('fichaRiesgo.editar')}
               </Button>
             ) : null}
-            {/* el compromiso que atiende el riesgo (revisión de UX, etapa 5); la medida se crea en su pestaña */}
-            <CrearRelacionado
-              proyecto={proyecto}
-              acciones={[
-                {
-                  objeto: 'commitment',
-                  etiqueta: t('paginas.relacionados.compromiso'),
-                  a: `/projects/${encodeURIComponent(proyecto)}/commitments/new?social_risk=${encodeURIComponent(riesgo.id)}`
-                }
-              ]}
-            />
           </>
         }
       />

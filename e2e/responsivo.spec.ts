@@ -57,12 +57,24 @@ test('a 390 px la lista de compromisos es de tarjetas con su estado y su plazo',
   await expect(page.getByRole('table', { name: 'Compromisos' })).toHaveCount(0)
 })
 
-// en el teléfono, las acciones de la ficha quedan en una barra fija sobre la barra de accesos: a mano mientras se lee
+// en el teléfono, la acción primaria y «Más acciones» quedan en una barra fija sobre la barra de accesos: a mano mientras se lee.
+// las secundarias («Ver en el mapa») quedan bajo el título (rediseño de UX, 2026-10-20)
 test('a 390 px las acciones de la ficha van en una barra fija sobre la barra de accesos', async ({ page }) => {
+  await page.route('**/api/objects/commitment/records/k1/transitions', (route) =>
+    route.fulfill({
+      json: [
+        { name: 'register_fulfillment', label: 'Registrar cumplimiento', to: 'fulfilled', toLabel: 'Cumplido', allowed: true, reason: null },
+        { name: 'block', label: 'Bloquear', to: 'blocked', toLabel: 'Bloqueado', allowed: true, reason: null }
+      ]
+    })
+  )
   await page.goto('/projects/p1/commitments/k1')
   await expect(page.getByRole('heading', { name: 'Reservorio de agua', level: 1 })).toBeVisible()
   const barra = page.locator('[data-barra-de-acciones]')
-  await expect(barra.getByRole('link', { name: 'Ver en el mapa' })).toBeVisible()
+  await expect(barra.getByRole('button', { name: 'Registrar cumplimiento' })).toBeVisible()
+  await expect(barra.getByRole('button', { name: 'Más acciones' })).toBeVisible()
+  await expect(barra.getByRole('link', { name: 'Ver en el mapa' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Ver en el mapa' })).toBeVisible()
   expect(await barra.evaluate((e) => getComputedStyle(e).position)).toBe('fixed')
   const accesos = (await page.getByRole('navigation', { name: 'Accesos' }).boundingBox())!
   const caja = (await barra.boundingBox())!

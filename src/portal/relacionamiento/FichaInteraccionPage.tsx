@@ -125,7 +125,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
             ) : null}
           </>
         }
-        primaria={<BotonesDeTransicion objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />}
+        primaria={<BotonesDeTransicion agrupadas objeto="engagement" registro={interaccion} comprobarAntes={['close', 'close_light']} proyecto={proyecto} />}
         secundarias={
           <>
             <VerEnElMapa objeto="engagement" registro={interaccion} />

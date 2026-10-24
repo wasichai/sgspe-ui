@@ -1,10 +1,12 @@
 import { useAuth } from '@wasichai/core'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, LogOut } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { useCuenta, useOrganizacion } from '../queries'
+import { LanguageMenu } from './LanguageMenu'
+import { ThemeMenu } from './ThemeMenu'
 
 // la cuenta de quien usa el portal (revisión de UX, etapa 2): pasó del inicio al menú del perfil de la barra superior. usuario,
 // organización y roles por su rótulo, que solo lee quien administra (/api/roles); sin él, cuántos son, nunca su código técnico.
@@ -39,10 +41,12 @@ export function DatosDeLaCuenta() {
   )
 }
 
-// el botón con el nombre y, debajo, los rótulos de los roles; abre la cuenta. Escape o un clic fuera lo cierran
+// el botón con el nombre y, debajo, los rótulos de los roles; abre la cuenta con sus preferencias (idioma y tema) y la salida,
+// como pide ux-architecture.md §7.1 (rediseño de UX, 2026-10-20): sueltos en la barra superior competían con lo que se usa a
+// diario. Escape o un clic fuera lo cierran; el Escape del menú de tema cierra solo ese menú
 export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
   const { t } = useTranslation(NS)
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [abierto, setAbierto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
   const boton = useRef<HTMLButtonElement>(null)
@@ -60,7 +64,7 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
       ref={raiz}
       className="relative hidden sm:block"
       onKeyDown={(e) => {
-        if (e.key !== 'Escape') return
+        if (e.key !== 'Escape' || e.defaultPrevented) return
         setAbierto(false)
         boton.current?.focus()
       }}
@@ -89,6 +93,18 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
           className="absolute top-full right-0 z-30 mt-1 w-80 rounded-sg-md border border-sg-border bg-sg-surface p-4 text-left shadow-sg-md"
         >
           <DatosDeLaCuenta />
+          <div className="mt-3 flex items-center gap-3 border-t border-sg-border pt-3">
+            <LanguageMenu />
+            <ThemeMenu />
+            <button
+              type="button"
+              onClick={signOut}
+              className="ml-auto flex h-8 items-center gap-1.5 rounded-sg-md px-2 text-sm text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
+            >
+              <LogOut aria-hidden className="size-4" />
+              {t('shell.salir')}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

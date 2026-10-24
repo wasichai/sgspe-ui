@@ -3,7 +3,7 @@
 export const ES_COMUN = {
   cargando: 'Cargando…',
   reintentar: 'Reintentar',
-  errorDeCarga: 'No se pudo cargar esta información. Los filtros se conservan.',
+  errorDeCarga: 'No se pudo cargar esta información.',
   correlacion: 'Código para soporte: {{id}}',
   restringido: 'Restringido',
   restringidoAyuda: 'Su rol no puede leer este dato',
@@ -49,6 +49,9 @@ export const ES_COMUN = {
   sinResultados: 'Nada coincide con los filtros',
   vacio: 'Aún no hay registros',
   sinDatosEnElPeriodo: 'Sin datos en el periodo',
+  // la base de un porcentaje en una tarjeta de cifra
+  nDeN: '{{n}} de {{total}}',
+  listaNoDisponible: 'Esta información no está disponible en su organización.',
   seleccionar: 'Seleccionar…',
   todos: 'Todos',
   verTodos_one: 'Ver el {{count}}',
@@ -335,7 +338,7 @@ export const ES_COMUN = {
 export const EN_COMUN: typeof ES_COMUN = {
   cargando: 'Loading…',
   reintentar: 'Retry',
-  errorDeCarga: 'This information could not be loaded. Your filters are kept.',
+  errorDeCarga: 'This information could not be loaded.',
   correlacion: 'Support code: {{id}}',
   restringido: 'Restricted',
   restringidoAyuda: 'Your role cannot read this data',
@@ -377,6 +380,8 @@ export const EN_COMUN: typeof ES_COMUN = {
   sinResultados: 'Nothing matches the filters',
   vacio: 'No records yet',
   sinDatosEnElPeriodo: 'No data for the period',
+  nDeN: '{{n}} of {{total}}',
+  listaNoDisponible: 'This information is not available in your organization.',
   seleccionar: 'Select…',
   todos: 'All',
   verTodos_one: 'Show {{count}}',

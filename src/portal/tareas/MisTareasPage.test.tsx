@@ -262,12 +262,12 @@ describe('S47 · mis tareas', () => {
     fetch = mockFetch(rutas())
     red = espiarRed([{ path: '/objects/task/records', responder: () => respuesta.then((r) => r.clone()) }])
     montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
-    // la lectura sigue pendiente: «Cargando», sin conteos ni lista vacía
-    expect(await screen.findByRole('status')).toHaveTextContent('Cargando…')
+    // la lectura sigue pendiente: «Cargando» en cada grupo («Mis tareas» y «Para tomar»), sin conteos ni lista vacía
+    for (const estado of await screen.findAllByRole('status')) expect(estado).toHaveTextContent('Cargando…')
     expect(screen.queryByText('No tiene tareas abiertas.')).not.toBeInTheDocument()
     expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
     fallar()
-    expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect((await screen.findAllByRole('button', { name: 'Reintentar' })).length).toBeGreaterThan(0)
     expect(screen.queryByText('No tiene tareas abiertas.')).not.toBeInTheDocument()
     expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
   })
@@ -289,12 +289,26 @@ describe('S47 · mis tareas', () => {
     expect(screen.queryByText(/Se muestran las primeras/)).not.toBeInTheDocument()
   })
 
-  it('fuera de un proyecto, ?view=paraTomar muestra la lista: «Para tomar» solo existe en el proyecto', async () => {
+  it('fuera de un proyecto, ?view=paraTomar muestra la lista: «Para tomar» es un grupo, no una vista', async () => {
     fetch = mockFetch(rutas())
     red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks?view=paraTomar', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     expect(await screen.findByRole('button', { name: 'Abrir Ejecutar compromiso C-001' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Lista' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByRole('tab', { name: 'Para tomar' })).not.toBeInTheDocument()
+  })
+
+  // rediseño de UX (2026-10-20): fuera de un proyecto, «Para tomar» mandaba al selector. el servidor ya acota la lectura a los
+  // proyectos de la cuenta (ADR-0029): el grupo se lee sin proyecto y dice el de cada tarea
+  it('fuera de un proyecto, «Para tomar» lista las sin asignar de sus proyectos, con el proyecto de cada una', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const paraTomar = await screen.findByRole('region', { name: 'Para tomar' })
+    await waitFor(() => expect(within(paraTomar).getByRole('heading')).toHaveTextContent('Para tomar (1)'))
+    expect(within(paraTomar).getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
+    const consultas = red.a('GET', '/objects/task/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    expect(consultas.find((c) => c.empty === 'assignee_user_id')).not.toHaveProperty('project')
+    expect(screen.queryByText(/elija uno en el selector/)).not.toBeInTheDocument()
   })
 })

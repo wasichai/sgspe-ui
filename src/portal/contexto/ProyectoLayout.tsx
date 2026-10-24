@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { Insignia } from '../componentes/Insignia'
-import { MigasDelProyecto, ProveedorDeMigas } from '../componentes/Migas'
+import { MigasDelProyecto, PESTANA_DE_SEGMENTO, ProveedorDeMigas } from '../componentes/Migas'
 import { useTituloDeDocumento } from '../componentes/Pagina'
 import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
 import { NS } from '../i18n'
@@ -85,7 +85,9 @@ export function ProyectoLayout() {
     const de = PESTANA_DE_VISTA[p]
     return de && pestanas.includes(de) ? de : undefined
   }
-  const marcada = contenedora(pestanaActual) ?? pestanaActual
+  // la ficha que vive fuera del segmento de su pestaña (una queja en /grievances/:id) marca la suya: QCS, no «grievances»
+  const deLaFicha = PESTANA_DE_SEGMENTO[pestanaActual] ?? pestanaActual
+  const marcada = contenedora(deLaFicha) ?? deLaFicha
   const visibles = pestanas.filter((p) => !EN_MAS.includes(p) && !contenedora(p))
   const enMas = pestanas.filter((p) => EN_MAS.includes(p))
   // las vistas de la pestaña marcada, solo en su lista (no en una ficha) y si la cuenta tiene más de una
