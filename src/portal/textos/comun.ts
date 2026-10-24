@@ -391,6 +391,11 @@ export const ES_COMUN = {
     // el nombre de un día feriado en la grilla
     feriado: '{{dia}} (feriado)'
   },
+  // CampoMes: el mes por su nombre es-PE y el año, en dos listas, nunca el formato del navegador
+  campoMes: {
+    mes: 'Mes',
+    anio: 'Año'
+  },
   // AtajosDePeriodo: llenan las dos fechas de un periodo según el día de hoy en Lima. ningún nombre lleva «Desde» ni «Hasta»,
   // que son las etiquetas de los campos que llenan
   atajosDePeriodo: {
@@ -766,6 +771,10 @@ export const EN_COMUN: typeof ES_COMUN = {
     mesAnterior: 'Previous month',
     mesSiguiente: 'Next month',
     feriado: '{{dia}} (holiday)'
+  },
+  campoMes: {
+    mes: 'Month',
+    anio: 'Year'
   },
   atajosDePeriodo: {
     grupo: 'Period shortcuts',

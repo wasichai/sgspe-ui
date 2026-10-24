@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 import { CONTROL } from '../componentes/Campo'
+import { CampoMes } from '../componentes/CampoMes'
 import { NoDisponible } from '../componentes/Estados'
 import { useLeeTodosLosProyectos, useProyectos } from '../contexto/proyectos'
 import { hoyEnLima } from '../datos/fechas'
@@ -61,10 +62,7 @@ export function MonitoreoPage() {
         </Link>
       </header>
       <div role="group" aria-label={t('tableros.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('tablerosF8.monitoreo.mes')}</span>
-          <input type="month" className={CONTROL} value={mes} onChange={(e) => cambiar('month', e.target.value)} />
-        </label>
+        <CampoMes etiqueta={t('tablerosF8.monitoreo.mes')} claseDeEtiqueta="block text-sg-label" valor={mes} alCambiar={(valor) => cambiar('month', valor)} />
         <label className="space-y-1">
           <span className="block text-sg-label">{t('tablerosF8.monitoreo.proyecto')}</span>
           <select className={CONTROL} value={proyecto} onChange={(e) => cambiar('project', e.target.value)}>

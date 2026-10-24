@@ -1,4 +1,6 @@
 import { opcion, rotuloDeFila, rotuloDeOpcion, rotuloEnIdioma } from './opciones'
+import { EN_OPCIONES } from './opcionesEnIngles'
+import palabras from './option-words.json'
 import type { Registro } from './registros'
 
 // los mismos casos que ReportLabelsTest en sgspe: el portal y los entregables escriben igual una opción del modelo
@@ -53,5 +55,32 @@ describe('rotuloDeOpcion', () => {
     expect(rotuloEnIdioma('RELACION ACTIVA', 'en', catalogo)).toBe('Active relationship')
     expect(rotuloEnIdioma('EN CONTRA', 'en', catalogo)).toBe('En contra')
     expect(rotuloEnIdioma('RELACION ACTIVA', 'es-PE', catalogo)).toBe('Relación activa')
+  })
+})
+
+// option-words.json clasifica toda palabra de todo enum del modelo: una clave de EN_OPCIONES con una palabra que no está ahí
+// no es un valor del modelo (una errata, un valor que ya no existe) y nunca se usaría
+describe('EN_OPCIONES', () => {
+  const conocidas = new Set([...palabras.acronyms, ...Object.keys(palabras.accents), ...palabras.plain])
+
+  it('solo tiene valores del modelo, tal como se guardan, con su texto en inglés', () => {
+    for (const [valor, enIngles] of Object.entries(EN_OPCIONES)) {
+      expect(valor, valor).toBe(valor.toUpperCase())
+      expect(
+        valor.split(' ').filter((p) => !conocidas.has(p)),
+        valor
+      ).toEqual([])
+      expect(enIngles.trim(), valor).not.toBe('')
+      expect(enIngles, valor).not.toBe(valor)
+    }
+  })
+
+  it('traduce las opciones que se ven en las listas', () => {
+    expect(rotuloEnIdioma('RELACION ACTIVA', 'en', EN_OPCIONES)).toBe('Active relationship')
+    expect(rotuloEnIdioma('EN CONTRA PERO ABIERTO A ESCUCHAR', 'en', EN_OPCIONES)).toBe('Opposed but open to dialogue')
+    expect(rotuloEnIdioma('CRITICA', 'en', EN_OPCIONES)).toBe('Critical')
+    expect(rotuloEnIdioma('AIDS', 'en', EN_OPCIONES)).toBe('Direct social area of influence')
+    expect(rotuloEnIdioma('EPSG 32718', 'en', EN_OPCIONES)).toBe('EPSG 32718')
+    expect(rotuloEnIdioma('RELACION ACTIVA', 'es-PE', EN_OPCIONES)).toBe('Relación activa')
   })
 })
