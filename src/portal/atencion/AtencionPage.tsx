@@ -3,7 +3,7 @@ import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
@@ -11,7 +11,7 @@ import { useSiguientePaso } from '../contexto/Rastro'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, Vacio } from '../componentes/Estados'
 import { KpiCard } from '../componentes/KpiCard'
@@ -50,6 +50,12 @@ const DE_LA_VISTA: Record<(typeof VISTAS)[number], VistaDeLaCola> = {
 const GRUPOS = ['vencidas', 'porVencer', 'alDia'] as const
 const DEL_GRUPO: Record<(typeof GRUPOS)[number], GrupoDePlazo> = { vencidas: 'overdue', porVencer: 'dueSoon', alDia: 'onTime' }
 const POR_PAGINA = 25
+// las columnas que el servidor ordena (sort y dir de la cola, issue #160 de sgspe): el código y el plazo que corre. el canal, la
+// categoría, la severidad y el estado no: su código no dice su orden
+const CAMPO_DE_ORDEN: Record<string, string> = { codigo: 'code', plazo: 'due_at' }
+// sin orden elegido, el de la cola (por plazo) y la consulta sin sort: un servidor que aún no ordena por columna responde 422 a un
+// sort
+const ORDEN_INICIAL: OrdenDeTabla | undefined = undefined
 
 // el asunto de una QCS, que no tiene título: el comienzo de su descripción
 const asuntoDe = (registro: Registro) => {
@@ -92,6 +98,13 @@ export function AtencionPage() {
   const grupo = lista.filtro('stakeholder')
   const chipDeGrupo = useChipDeGrupo(grupo)
   const vista = (VISTAS as readonly string[]).includes(lista.vista) ? (lista.vista as (typeof VISTAS)[number]) : 'atencion'
+  // el orden es de esta visita: la cola no tiene parámetros de orden en la URL
+  const [orden, setOrden] = useState(ORDEN_INICIAL)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    // otro orden empieza en la primera página
+    lista.cambiar({ page: null })
+  }
   const cola = useColaDeAtencion(
     {
       project: proyecto,
@@ -101,6 +114,8 @@ export function AtencionPage() {
       category: categoria,
       severity: severidad,
       stakeholder: grupo,
+      sort: orden ? CAMPO_DE_ORDEN[orden.columna] : undefined,
+      dir: orden?.dir,
       page: lista.pagina,
       size: POR_PAGINA
     },
@@ -156,13 +171,13 @@ export function AtencionPage() {
   // opcional, quien la plantea. una columna no esencial que dice lo mismo en todo el grupo sale a una nota encima, y en «Mis
   // QCS» el responsable es siempre quien mira: no se dibuja
   const columnas: ColumnaPriorizada[] = [
-    { id: 'codigo', encabezado: t('atencion.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm' },
+    { id: 'codigo', encabezado: t('atencion.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm', ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('atencion.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'canal', encabezado: t('atencion.columnas.canal'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'categoria', encabezado: t('atencion.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     ...(conSeveridad ? [{ id: 'severidad', encabezado: t('atencion.columnas.severidad'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }] : []),
     { id: 'estado', encabezado: t('atencion.columnas.estado'), prioridad: 'esencial' },
-    { id: 'plazo', encabezado: t('atencion.columnas.plazo'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
+    { id: 'plazo', encabezado: t('atencion.columnas.plazo'), prioridad: 'esencial', claseDeCelda: 'text-sm', ordenable: true },
     ...(vista === 'mias'
       ? []
       : [{ id: 'responsable', encabezado: t('atencion.columnas.responsable'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }]),
@@ -313,7 +328,8 @@ export function AtencionPage() {
       ) : (
         <>
           {GRUPOS.map((grupo) => {
-            // la página llega ordenada por el servidor; el total del grupo es el de todas sus páginas
+            // la página llega ordenada por el servidor (por plazo o por la columna elegida); el total del grupo es el de todas sus
+            // páginas
             const delGrupo = visibles.filter((f) => f.grupo === DEL_GRUPO[grupo])
             if (delGrupo.length === 0) return null
             return (
@@ -356,6 +372,8 @@ export function AtencionPage() {
                     celda={celdaDe}
                     valorPlano={valorPlano}
                     ocultarUniformes
+                    orden={orden}
+                    alOrdenar={ordenar}
                     alAbrir={(f) => {
                       const ruta = rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)
                       navegar(ruta, { state: paso(t('atencion.titulo'), ruta) })
