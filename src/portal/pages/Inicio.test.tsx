@@ -388,7 +388,11 @@ describe('Mi trabajo', () => {
     )
     const hoy = within(await pagina().findByRole('region', { name: 'Lo que me toca hoy' }))
     expect(await hoy.findByRole('link', { name: 'Levantar fotos del tramo' })).toBeInTheDocument()
-    expect(await hoy.findByRole('region', { name: /^Para tomar en PRJ-01 · Proyecto Ejemplo A/ })).toBeInTheDocument()
+    // la cola de sus proyectos en una sola lectura (B-04), y cada tarea dice su proyecto
+    const cola = await hoy.findByRole('region', { name: /^Para tomar en sus proyectos/ })
+    expect((await within(cola).findByRole('link', { name: 'Registrar la asistencia de la asamblea' })).closest('li')).toHaveTextContent(
+      'Sin asignar · PRJ-01 · Proyecto Ejemplo A · Al día'
+    )
     const agenda = within(await pagina().findByRole('region', { name: 'Agenda de la semana' }))
     expect(await agenda.findByRole('link', { name: 'Encuesta de línea base en Rumichaca' })).toBeInTheDocument()
     await waitFor(() => expect(fetch?.calls.some((c) => c.url.includes('/sgspe/dashboards/executive'))).toBe(true))

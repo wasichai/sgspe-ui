@@ -11,6 +11,7 @@ export const ES_MI_DIA = {
     vence: 'vence el {{fecha}}',
     paraTomar: 'Para tomar en {{proyecto}}',
     paraTomarSinNombre: 'Para tomar en uno de sus proyectos',
+    paraTomarEnSusProyectos: 'Para tomar en sus proyectos',
     sinAsignar: 'Sin asignar',
     otrosProyectos_one: 'Lo que puede tomar en su otro proyecto está en su lista de tareas',
     otrosProyectos_other: 'Lo que puede tomar en sus otros {{count}} proyectos está en la lista de tareas de cada uno'
@@ -79,6 +80,7 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     vence: 'due {{fecha}}',
     paraTomar: 'Up for grabs in {{proyecto}}',
     paraTomarSinNombre: 'Up for grabs in one of your projects',
+    paraTomarEnSusProyectos: 'Up for grabs in your projects',
     sinAsignar: 'Unassigned',
     otrosProyectos_one: 'What you can take in your other project is in its task list',
     otrosProyectos_other: 'What you can take in your other {{count}} projects is in the task list of each one'

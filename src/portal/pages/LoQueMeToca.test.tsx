@@ -7,8 +7,7 @@ import { permisos, RELACIONISTA } from '../../test/portal'
 import { LoQueMeToca } from './LoQueMeToca'
 
 // P-01 «Lo que me toca hoy» (rediseño de UX, U-05 y U-13): lo que la persona tiene a su cargo, lo vencido primero y cada entrada
-// con su motivo y su fecha, sin muros de enlaces; y las tareas para tomar de cada proyecto con asignación vigente, sin elegir un
-// proyecto en el selector
+// con su motivo y su fecha, sin muros de enlaces; y las tareas para tomar de sus proyectos, sin elegir un proyecto en el selector
 let fetch: FetchMock | null = null
 afterEach(() => {
   fetch?.restore()
@@ -80,7 +79,66 @@ describe('Lo que me toca hoy', () => {
     expect(within(region()).getByRole('link', { name: 'Ver mis tareas' })).toHaveAttribute('href', '/tasks')
   })
 
-  it('las tareas para tomar de cada proyecto con asignación vigente, sin elegir proyecto, con «Ver los N» hacia su lista', async () => {
+  // B-04: el servidor acota la lectura de task a los proyectos de la cuenta (ADR-0029): la cola es una sola lectura, sin project
+  it('las tareas para tomar de sus proyectos en una sola lectura, sin elegir proyecto, cada una con su proyecto', async () => {
+    fetch = mockFetch([
+      { path: /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/, body: pagina([]) },
+      {
+        path: /^\/objects\/project_assignment\/records/,
+        body: pagina([asignacion('a1', 'p1'), asignacion('a2', 'p2'), asignacion('a3', 'p3', { end_date: '2026-01-31' })])
+      },
+      { path: /^\/objects\/project\/records/, body: pagina([P1, P2, P3]) },
+      {
+        path: /^\/objects\/task\/records\?.*empty=assignee_user_id/,
+        body: pagina([
+          registro('q1', { title: 'Registrar la asistencia', project: 'p1', due_date: '2026-10-19', deadline_status: 'VENCIDO' }, { state: 'open' }),
+          registro('q2', { title: 'Georreferenciar la captación', project: 'p2', due_date: '2026-10-28', deadline_status: 'AL DIA' }, { state: 'open' }),
+          registro('q3', { title: 'Fotografiar el tramo', project: 'p1' }, { state: 'open' })
+        ])
+      }
+    ])
+    montar(<LoQueMeToca />, { usuario: RELACIONISTA, permisos: permisos({ task: ['READ'], project: ['READ'], project_assignment: ['READ'] }) })
+    const cola = await screen.findByRole('region', { name: /^Para tomar en sus proyectos/ })
+    expect(within(cola).getByRole('heading')).toHaveTextContent('3')
+    await waitFor(() =>
+      expect(
+        within(cola)
+          .getAllByRole('listitem')
+          .map((li) => li.textContent)
+      ).toEqual([
+        'Registrar la asistenciaSin asignar · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19/10/2026',
+        'Georreferenciar la captaciónSin asignar · PRJ-02 · Proyecto Ejemplo B · Al día · vence el 28/10/2026',
+        'Fotografiar el tramoSin asignar · PRJ-01 · Proyecto Ejemplo A'
+      ])
+    )
+    expect(within(cola).getByRole('link', { name: 'Georreferenciar la captación' })).toHaveAttribute('href', '/projects/p2/tasks?task=q2')
+    // todas a la vista: no hay «Ver los N»
+    expect(within(cola).queryByRole('link', { name: /^Ver / })).not.toBeInTheDocument()
+    const colas = fetch.calls.filter((c) => c.path.startsWith('/objects/task/records') && c.path.includes('empty=assignee_user_id'))
+    expect(colas).toHaveLength(1)
+    const busqueda = new URLSearchParams(colas[0].path.split('?')[1])
+    expect(busqueda.has('project')).toBe(false)
+    expect(busqueda.get('state')).toBe('open,in_progress,blocked')
+    expect(busqueda.get('size')).toBe('5')
+    expect(screen.queryByText(/Lo que puede tomar en sus otros/)).not.toBeInTheDocument()
+  })
+
+  it('la cola de sus proyectos lee hasta cinco tareas y «Ver los N» lleva a Mis tareas', async () => {
+    const cinco = ['a', 'b', 'c', 'd', 'e'].map((x) => registro(`q${x}`, { title: `Tarea ${x}`, project: 'p1' }, { state: 'open' }))
+    fetch = mockFetch([
+      { path: /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/, body: pagina([]) },
+      ...sinAsignaciones,
+      { path: /^\/objects\/task\/records\?.*empty=assignee_user_id/, body: pagina(cinco, { totalElements: 12 }) }
+    ])
+    montar(<LoQueMeToca />, { usuario: RELACIONISTA, permisos: permisos({ task: ['READ'], project: ['READ'], project_assignment: ['READ'] }) })
+    const cola = await screen.findByRole('region', { name: /^Para tomar en sus proyectos/ })
+    expect(within(cola).getByRole('heading')).toHaveTextContent('12')
+    expect(within(cola).getAllByRole('listitem')).toHaveLength(5)
+    expect(within(cola).getByRole('link', { name: 'Ver los 12' })).toHaveAttribute('href', '/tasks')
+  })
+
+  // quien lee todos los proyectos traería la cola de todo el tenant: se le lee la de cada proyecto con asignación vigente
+  it('con alcance de tenant, las tareas para tomar de cada proyecto con asignación vigente, con «Ver los N» hacia su lista', async () => {
     fetch = mockFetch([
       { path: /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/, body: pagina([]) },
       {
@@ -101,7 +159,10 @@ describe('Lo que me toca hoy', () => {
       },
       { path: /^\/objects\/task\/records\?(?=.*project=p2)(?=.*empty=assignee_user_id)/, body: pagina([]) }
     ])
-    montar(<LoQueMeToca />, { usuario: RELACIONISTA, permisos: permisos({ task: ['READ'], project: ['READ'], project_assignment: ['READ'] }) })
+    montar(<LoQueMeToca />, {
+      usuario: RELACIONISTA,
+      permisos: permisos({ task: ['READ'], project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'] })
+    })
     const cola = await screen.findByRole('region', { name: /^Para tomar en PRJ-01 · Proyecto Ejemplo A/ })
     expect(within(cola).getByRole('heading')).toHaveTextContent('4')
     expect(
@@ -115,11 +176,31 @@ describe('Lo que me toca hoy', () => {
     ])
     expect(within(cola).getByRole('link', { name: 'Registrar la asistencia' })).toHaveAttribute('href', '/projects/p1/tasks?task=q1')
     expect(within(cola).getByRole('link', { name: 'Ver los 4' })).toHaveAttribute('href', '/projects/p1/tasks')
-    // un proyecto sin cola no se dibuja, y la asignación vencida no se consulta
+    // un proyecto sin cola no se dibuja, la asignación vencida no se consulta y nunca se lee la cola de todo el tenant
     expect(screen.queryByRole('region', { name: /PRJ-02/ })).not.toBeInTheDocument()
     const colas = fetch.calls.filter((c) => c.path.startsWith('/objects/task/records') && c.path.includes('empty=assignee_user_id'))
     expect(colas.map((c) => new URLSearchParams(c.path.split('?')[1]).get('project')).sort()).toEqual(['p1', 'p2'])
     expect(colas.every((c) => new URLSearchParams(c.path.split('?')[1]).get('state') === 'open,in_progress,blocked')).toBe(true)
+    expect(screen.queryByRole('region', { name: /^Para tomar en sus proyectos/ })).not.toBeInTheDocument()
+  })
+
+  it('con alcance de tenant, lee la cola de seis proyectos como mucho y dice dónde ver la de los demás', async () => {
+    const ocho = Array.from({ length: 8 }, (_, i) => asignacion(`a${i}`, `p${i}`))
+    fetch = mockFetch([
+      { path: /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/, body: pagina([]) },
+      { path: /^\/objects\/project_assignment\/records/, body: pagina(ocho) },
+      { path: /^\/objects\/project\/records/, body: pagina([]) },
+      {
+        path: /^\/objects\/task\/records\?.*empty=assignee_user_id/,
+        body: pagina([registro('q1', { title: 'Registrar la asistencia', project: 'p0' }, { state: 'open' })])
+      }
+    ])
+    montar(<LoQueMeToca />, {
+      usuario: RELACIONISTA,
+      permisos: permisos({ task: ['READ'], project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'] })
+    })
+    expect(await screen.findByText('Lo que puede tomar en sus otros 2 proyectos está en la lista de tareas de cada uno')).toBeInTheDocument()
+    await waitFor(() => expect(fetch!.calls.filter((c) => c.path.includes('empty=assignee_user_id'))).toHaveLength(6))
   })
 
   it('sin lectura de tareas no pide la cola para tomar', async () => {

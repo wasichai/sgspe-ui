@@ -3,7 +3,7 @@ import { cn } from '@wasichai/ui'
 import { ChipsDeFiltro } from '../componentes/Lista'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
-import { useProyectos } from '../contexto/proyectos'
+import { useLeeTodosLosProyectos, useProyectos } from '../contexto/proyectos'
 import { useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
@@ -36,8 +36,9 @@ import { Dia } from '../componentes/Dia'
 
 // S47 · mis tareas (screens.md §11, WF-N): ¿qué tengo que hacer hoy y qué se me venció? en /tasks, las asignadas a quien mira
 // (assignee_user_id, indexado); en /projects/:projectId/tasks, las del proyecto. la lista va en grupos (D10 de la revisión de UX):
-// «Mis tareas», las abiertas asignadas a quien mira, y, en un proyecto, «Para tomar», las de escalamiento de JOB-01 que llegan sin
-// asignar (empty=assignee_user_id). cada grupo es una consulta del servidor por estado, con su página y su total; el tablero pide
+// «Mis tareas», las abiertas asignadas a quien mira, y «Para tomar», las de escalamiento de JOB-01 que llegan sin asignar
+// (empty=assignee_user_id): sin proyecto elegido, una sola lectura que el servidor acota a sus proyectos (ADR-0029); quien lee
+// todos los proyectos la ve solo dentro de uno, para no traer la cola de todo el tenant. cada grupo es una consulta del servidor por estado, con su página y su total; el tablero pide
 // cada columna y el calendario el rango del mes (range_field=due_date). una tarea se abre en su drawer (?task=id) con sus
 // transiciones. una tarea vencida sigue en su estado: la situación es deadline_status (RN-WFL-001)
 const ABIERTAS = ['open', 'in_progress', 'blocked']
@@ -66,10 +67,20 @@ export function MisTareasPage() {
     Boolean(user) && vista === 'lista'
   )
   const paginaParaTomar = Number(lista.filtro('pt')) || 0
+  const leeTodos = useLeeTodosLosProyectos()
+  const conParaTomar = Boolean(proyecto) || !leeTodos
   const paraTomar = useRegistros(
     'task',
-    { project: proyecto, empty: 'assignee_user_id', state: estados(ABIERTAS), sort: 'due_date', dir: 'asc', page: paginaParaTomar, size: POR_PAGINA },
-    Boolean(proyecto) && vista === 'lista'
+    {
+      ...(proyecto ? { project: proyecto } : {}),
+      empty: 'assignee_user_id',
+      state: estados(ABIERTAS),
+      sort: 'due_date',
+      dir: 'asc',
+      page: paginaParaTomar,
+      size: POR_PAGINA
+    },
+    conParaTomar && vista === 'lista'
   )
   const cifras = useConteos(
     'task',
@@ -132,19 +143,26 @@ export function MisTareasPage() {
           <GrupoDeTareas titulo={t('tareas.grupos.mias')} lectura={enLaLista} alPagina={(p) => lista.cambiar({ page: String(p) })}>
             {(tareas) => <TablaDeTareas tareas={tareas} vacio={t('tareas.vacia')} alAbrir={abrir} conProyecto={!proyecto} />}
           </GrupoDeTareas>
-          {proyecto ? (
+          {conParaTomar ? (
             <GrupoDeTareas titulo={t('tareas.grupos.paraTomar')} lectura={paraTomar} alPagina={(p) => lista.cambiar({ pt: String(p), page: pagina })}>
               {(tareas) => (
                 <>
                   <p className="text-sm text-sg-text-secondary">{t('tareas.paraTomarAyuda')}</p>
-                  <TablaDeTareas tareas={tareas} vacio={t('tareas.vaciaParaTomar')} alAbrir={abrir} etiqueta={t('tareas.grupos.paraTomar')} />
+                  <TablaDeTareas
+                    tareas={tareas}
+                    vacio={proyecto ? t('tareas.vaciaParaTomar') : t('tareas.vaciaParaTomarEnSusProyectos')}
+                    alAbrir={abrir}
+                    etiqueta={t('tareas.grupos.paraTomar')}
+                    conProyecto={!proyecto}
+                  />
                 </>
               )}
             </GrupoDeTareas>
-          ) : null}
+          ) : (
+            <p className="text-sm text-sg-text-muted">{t('tareas.paraTomarGlobal')}</p>
+          )}
         </>
       )}
-      {!proyecto ? <p className="text-sm text-sg-text-muted">{t('tareas.paraTomarGlobal')}</p> : null}
       {abierta.data ? <TareaDrawer tarea={abierta.data} alCerrar={() => lista.cambiar({ task: null, page: pagina })} /> : null}
     </section>
   )
