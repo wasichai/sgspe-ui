@@ -386,7 +386,9 @@ export const ES_COMUN = {
     abrir: 'Elegir {{etiqueta}} en el calendario',
     calendario: 'Calendario de {{etiqueta}}',
     mesAnterior: 'Mes anterior',
-    mesSiguiente: 'Mes siguiente'
+    mesSiguiente: 'Mes siguiente',
+    // el nombre de un día feriado en la grilla
+    feriado: '{{dia}} (feriado)'
   },
   // AtajosDePeriodo: llenan las dos fechas de un periodo según el día de hoy en Lima. ningún nombre lleva «Desde» ni «Hasta»,
   // que son las etiquetas de los campos que llenan
@@ -760,7 +762,8 @@ export const EN_COMUN: typeof ES_COMUN = {
     abrir: 'Choose {{etiqueta}} on the calendar',
     calendario: '{{etiqueta}} calendar',
     mesAnterior: 'Previous month',
-    mesSiguiente: 'Next month'
+    mesSiguiente: 'Next month',
+    feriado: '{{dia}} (holiday)'
   },
   atajosDePeriodo: {
     grupo: 'Period shortcuts',

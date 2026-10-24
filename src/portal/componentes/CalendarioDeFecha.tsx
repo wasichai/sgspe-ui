@@ -2,13 +2,15 @@ import { Button, cn } from '@wasichai/ui'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useFeriados } from '../datos/feriados'
 import { hoyEnLima } from '../datos/fechas'
 import { NS } from '../i18n'
 
 // la grilla de mes de CampoFecha (05-especificacion §1.5, DD-07), con el patrón «Date Picker Dialog» de WAI-ARIA APG, como
 // diálogo no modal: lunes primero en los dos idiomas, las flechas mueven un día o una semana, RePág y AvPág un mes (con
 // Mayús, un año), Inicio y Fin van al lunes y al domingo, Enter o Espacio eligen. los días son AAAA-MM-DD de calendario,
-// sin huso: se cuentan en UTC para que el reloj del navegador no los corra; hoy es el de Lima
+// sin huso: se cuentan en UTC para que el reloj del navegador no los corra; hoy es el de Lima. un feriado del mes visible
+// (useFeriados, wasichai/sgspe#159) lleva un punto bajo el número, no solo un color, y « (feriado)» en su nombre
 export interface PropsDeCalendario {
   // el día escrito en el campo, si es un día
   elegido: string | null
@@ -64,6 +66,7 @@ export function CalendarioDeFecha({ elegido, etiqueta, min, max, alElegir }: Pro
   const enfocar = useRef(true)
   const grilla = useRef<HTMLTableElement>(null)
   const tituloId = useId()
+  const feriados = useFeriados(Number(foco.slice(0, 4)))
 
   useLayoutEffect(() => {
     if (!enfocar.current) return
@@ -151,7 +154,7 @@ export function CalendarioDeFecha({ elegido, etiqueta, min, max, alElegir }: Pro
                     role="gridcell"
                     data-dia={dia}
                     tabIndex={dia === foco ? 0 : -1}
-                    aria-label={largo.format(aFecha(dia))}
+                    aria-label={feriados.has(dia) ? t('comun.campoFecha.feriado', { dia: largo.format(aFecha(dia)) }) : largo.format(aFecha(dia))}
                     aria-selected={dia === elegido}
                     aria-current={dia === hoy ? 'date' : undefined}
                     aria-disabled={fuera(dia) || undefined}
@@ -163,7 +166,16 @@ export function CalendarioDeFecha({ elegido, etiqueta, min, max, alElegir }: Pro
                       fuera(dia) && 'cursor-not-allowed text-sg-text-muted line-through hover:bg-transparent'
                     )}
                   >
-                    {Number(dia.slice(8))}
+                    <span className="relative inline-flex flex-col items-center leading-none">
+                      {Number(dia.slice(8))}
+                      {feriados.has(dia) && (
+                        <span
+                          data-testid="feriado"
+                          aria-hidden="true"
+                          className={cn('mt-0.5 size-1 rounded-full', dia === elegido ? 'bg-sg-on-primary' : 'bg-sg-warning')}
+                        />
+                      )}
+                    </span>
                   </td>
                 )
               )}
