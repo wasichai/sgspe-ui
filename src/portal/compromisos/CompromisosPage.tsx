@@ -3,9 +3,10 @@ import { PaginasDeCompromisos } from '../acuerdos/PaginasDeCompromisos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
+import { Alert, Button, Pagination } from '@wasichai/ui'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
@@ -13,6 +14,10 @@ import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { ordenarEnCliente } from '../componentes/ordenEnCliente'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
@@ -41,6 +46,10 @@ type VistaDeCompromisos = (typeof VISTAS)[number]
 const DE_LA_LISTA = VISTAS.filter((v) => v !== 'candidatos')
 const CERRADOS = ['closed', 'cancelled']
 const POR_PAGINA = 25
+// las columnas que se ordenan (05-especificacion §1.6): el código, el título y el vencimiento (el orden que la lista ya pedía). el
+// estado y la situación no: su código no dice su orden; el monto tampoco, porque mezcla monedas (ASM-063)
+const CAMPO_DE_ORDEN: Record<string, string> = { codigo: 'code', compromiso: 'title', vence: 'due_date' }
+const ORDEN_INICIAL: OrdenDeTabla = { columna: 'vence', dir: 'asc' }
 
 export function enVista(vista: string, c: Registro, usuario: string | undefined): boolean {
   switch (vista as VistaDeCompromisos) {
@@ -103,6 +112,16 @@ export function CompromisosPage() {
     ...(q ? [{ clave: 'q', etiqueta: t('compromisos.filtroBusqueda', { texto: busqueda }) }] : [])
   ]
   const limpiar = () => lista.cambiar({ state: null, q: null, stakeholder: null })
+  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
+  const [orden, setOrden] = useState(ORDEN_INICIAL)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    lista.cambiar({ page: null })
+  }
+  // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
+  const navegar = useNavigate()
+  const previa = useRutaDeVistaPrevia()
+  const paso = useSiguientePaso()
 
   // sin grupo: el servidor. la consulta de una vista lleva el alcance, el territorio, el estado elegido y la búsqueda
   const alcance: Parametros = { project: proyecto, ...(territorio ?? {}) }
@@ -112,7 +131,11 @@ export function CompromisosPage() {
   }
   const actual = consultaDe(lista.vista)
   const servidor = !grupo && !enCandidatos
-  const pedida = useRegistros('commitment', { ...actual, sort: 'due_date', dir: 'asc', page: lista.pagina, size: POR_PAGINA }, servidor && actual !== null)
+  const pedida = useRegistros(
+    'commitment',
+    { ...actual, sort: CAMPO_DE_ORDEN[orden.columna], dir: orden.dir, page: lista.pagina, size: POR_PAGINA },
+    servidor && actual !== null
+  )
   const conteos = useConteos('commitment', Object.fromEntries(DE_LA_LISTA.map((v) => [v, consultaDe(v)])), !grupo)
   // el vacío por filtros dice cuántos hay en la vista sin ellos
   const deLaVista = consultaDeVista(lista.vista, user?.id)
@@ -124,7 +147,12 @@ export function CompromisosPage() {
   )
   const conFiltros = (c: Registro) =>
     (!estado || c.state === estado) && (!q || texto(c, 'code').toLowerCase().includes(q) || texto(c, 'title').toLowerCase().includes(q))
-  const filtrados = relacionados.filter((c) => enVista(lista.vista, c, user?.id) && conFiltros(c))
+  // con grupo se filtra y pagina aquí: el orden también, por el mismo campo que se pediría al servidor
+  const filtrados = ordenarEnCliente(
+    relacionados.filter((c) => enVista(lista.vista, c, user?.id) && conFiltros(c)),
+    orden,
+    (c, columna) => texto(c, CAMPO_DE_ORDEN[columna])
+  )
 
   const lectura = grupo ? delGrupo : pedida
   const filas = grupo ? filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA) : actual ? (pedida.data?.content ?? []) : []
@@ -137,6 +165,57 @@ export function CompromisosPage() {
   // la lista relacionada llega en una página de 200: si el grupo tiene más, se dice
   const truncado = Boolean(grupo && delGrupo.data && (delGrupo.data.totalElements ?? 0) > delGrupo.data.content.length)
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
+  const rutaDe = (c: Registro) => `/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`
+  // en la tabla el código va en su columna (se ordena aparte del título); en la tarjeta del teléfono, junto al título
+  const enlace = (c: Registro, codigoAparte = false) => (
+    <EnlaceDeRegistro
+      codigo={texto(c, 'code')}
+      codigoAparte={codigoAparte}
+      titulo={texto(c, 'title')}
+      ruta={rutaDe(c)}
+      desde={t('compromisos.titulo')}
+      previa={{ objeto: 'commitment', id: c.id }}
+    />
+  )
+  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el código, el compromiso, el proyecto (en lo global), el
+  // estado, la situación y el vencimiento; secundario, desde xl, el responsable; el monto es secundario en un proyecto y, en lo
+  // global, donde la columna Proyecto ocupa su lugar, opcional (desde 1536 px o elegido en «Columnas»)
+  const columnas: ColumnaPriorizada[] = [
+    {
+      id: 'codigo',
+      encabezado: t('compromisos.columnas.codigo'),
+      prioridad: 'esencial',
+      claseDeCelda: 'font-sg-mono text-sg-caption whitespace-nowrap',
+      ordenable: true
+    },
+    { id: 'compromiso', encabezado: t('compromisos.columnas.compromiso'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm', ordenable: true },
+    ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('compromisos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
+    { id: 'estado', encabezado: t('compromisos.columnas.estado'), prioridad: 'esencial' },
+    { id: 'situacion', encabezado: t('compromisos.columnas.situacion'), prioridad: 'esencial' },
+    { id: 'vence', encabezado: t('compromisos.columnas.vence'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap', ordenable: true },
+    { id: 'responsable', encabezado: t('compromisos.columnas.responsable'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'monto', encabezado: t('compromisos.columnas.monto'), prioridad: proyecto ? 'secundaria' : 'opcional', numerica: true, claseDeCelda: 'text-sm' }
+  ]
+  const celda = (c: Registro, columna: string): ReactNode => {
+    switch (columna) {
+      case 'codigo':
+        return texto(c, 'code') || '—'
+      case 'compromiso':
+        return enlace(c, true)
+      case 'proyecto':
+        return nombreDelProyecto(texto(c, 'project'))
+      case 'estado':
+        return <EstadoChip objeto="commitment" estado={c.state} />
+      case 'situacion':
+        return <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
+      case 'vence':
+        return <Dia valor={texto(c, 'due_date')} />
+      case 'responsable':
+        return <Persona correo={texto(c, 'owner_user_email')} />
+      default:
+        return montoPe(atributo(c, 'amount'), atributo(c, 'currency'))
+    }
+  }
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
@@ -208,15 +287,7 @@ export function CompromisosPage() {
                   etiqueta={t('compromisos.tabla')}
                   tarjetas={filas.map((c) => ({
                     id: c.id,
-                    titulo: (
-                      <EnlaceDeRegistro
-                        codigo={texto(c, 'code')}
-                        titulo={texto(c, 'title')}
-                        ruta={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
-                        desde={t('compromisos.titulo')}
-                        previa={{ objeto: 'commitment', id: c.id }}
-                      />
-                    ),
+                    titulo: enlace(c),
                     estado: <EstadoChip objeto="commitment" estado={c.state} />,
                     plazo: (
                       <>
@@ -228,52 +299,18 @@ export function CompromisosPage() {
                   }))}
                 />
               ) : (
-                <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-                  <Table aria-label={t('compromisos.tabla')}>
-                    <thead>
-                      <tr>
-                        <Th scope="col">{t('compromisos.columnas.compromiso')}</Th>
-                        {proyecto ? null : <Th scope="col">{t('compromisos.columnas.proyecto')}</Th>}
-                        <Th scope="col">{t('compromisos.columnas.estado')}</Th>
-                        <Th scope="col">{t('compromisos.columnas.situacion')}</Th>
-                        <Th scope="col">{t('compromisos.columnas.vence')}</Th>
-                        <Th scope="col">{t('compromisos.columnas.responsable')}</Th>
-                        <Th scope="col" className="text-right">
-                          {t('compromisos.columnas.monto')}
-                        </Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filas.map((c) => (
-                        <tr key={c.id}>
-                          <Td className="min-w-64 text-sm">
-                            <EnlaceDeRegistro
-                              codigo={texto(c, 'code')}
-                              titulo={texto(c, 'title')}
-                              ruta={`/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`}
-                              desde={t('compromisos.titulo')}
-                              previa={{ objeto: 'commitment', id: c.id }}
-                            />
-                          </Td>
-                          {proyecto ? null : <Td className="text-sm">{nombreDelProyecto(texto(c, 'project'))}</Td>}
-                          <Td>
-                            <EstadoChip objeto="commitment" estado={c.state} />
-                          </Td>
-                          <Td>
-                            <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
-                          </Td>
-                          <Td className="text-sm">
-                            <Dia valor={texto(c, 'due_date')} />
-                          </Td>
-                          <Td className="text-sm">
-                            <Persona correo={texto(c, 'owner_user_email')} />
-                          </Td>
-                          <Td className="text-right text-sm tabular-nums">{montoPe(atributo(c, 'amount'), atributo(c, 'currency'))}</Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
+                <TablaPriorizada<Registro>
+                  etiqueta={t('compromisos.tabla')}
+                  total={total}
+                  columnas={columnas}
+                  filas={filas}
+                  clave={(c) => c.id}
+                  celda={celda}
+                  orden={orden}
+                  alOrdenar={ordenar}
+                  alAbrir={(c) => navegar(rutaDe(c), { state: paso(t('compromisos.titulo'), rutaDe(c)) })}
+                  alPrevisualizar={(c) => navegar(previa('commitment', c.id))}
+                />
               )}
               {total !== null && total > POR_PAGINA ? (
                 <Pagination

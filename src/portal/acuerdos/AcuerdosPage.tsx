@@ -5,10 +5,13 @@ import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
-import { Button, Table, Td, Textarea, Th } from '@wasichai/ui'
-import { useState } from 'react'
+import { Button, Textarea } from '@wasichai/ui'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { useSiguientePaso } from '../contexto/Rastro'
 import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -18,11 +21,10 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyectos } from '../contexto/proyectos'
-import { atributo, texto, useRegistros } from '../datos/registros'
+import { atributo, texto, useRegistros, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
-import { ResultadoDeLista } from '../contexto/Origen'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 
@@ -30,6 +32,10 @@ import { Dia } from '../componentes/Dia'
 // vigencia (validity_status, de JOB-01: vencer no concluye el acuerdo), paginados en el servidor (D10 de la revisión de UX). el alta va en un drawer con los campos de la ficha y
 // el motivo, porque agreement es requiresReason (un alta sin motivo es 400)
 const POR_PAGINA = 25
+// las columnas que el servidor ordena (05-especificacion §1.6): el acuerdo por su código (el orden que la lista ya pedía) y el
+// vencimiento. el tipo, el estado y la vigencia no: su código no dice su orden
+const CAMPO_DE_ORDEN: Record<string, string> = { acuerdo: 'code', vence: 'expiry_date' }
+const ORDEN_INICIAL: OrdenDeTabla = { columna: 'acuerdo', dir: 'asc' }
 
 export const CAMPOS_DEL_ACUERDO = [
   'code',
@@ -53,7 +59,19 @@ export function AcuerdosPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const escribe = useEscribeEnProyecto(proyecto)
   const parametros = useParametrosDeLista('todos')
-  const acuerdos = useRegistros('agreement', { project: proyecto, sort: 'code', dir: 'asc', page: parametros.pagina, size: POR_PAGINA })
+  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
+  const [orden, setOrden] = useState(ORDEN_INICIAL)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    parametros.cambiar({ page: null })
+  }
+  const acuerdos = useRegistros('agreement', {
+    project: proyecto,
+    sort: CAMPO_DE_ORDEN[orden.columna],
+    dir: orden.dir,
+    page: parametros.pagina,
+    size: POR_PAGINA
+  })
   const proyectos = useProyectos()
   const telefono = useEsTelefono()
   const lista = acuerdos.data?.content ?? []
@@ -62,6 +80,46 @@ export function AcuerdosPage() {
   const [creando, setCreando] = useState(busqueda.get('nuevo') === '1')
   const [motivo, setMotivo] = useState('')
   const fijos = proyecto ? { project: proyecto } : undefined
+  // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
+  const previa = useRutaDeVistaPrevia()
+  const paso = useSiguientePaso()
+  const rutaDe = (a: Registro) => `/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`
+  const enlace = (a: Registro) => (
+    <EnlaceDeRegistro
+      codigo={texto(a, 'code')}
+      titulo={texto(a, 'title')}
+      ruta={rutaDe(a)}
+      desde={t('acuerdos.titulo')}
+      previa={{ objeto: 'agreement', id: a.id }}
+    />
+  )
+  const proyectoDe = (a: Registro) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === texto(a, 'project'))} />
+  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el acuerdo, el proyecto (en lo global), el estado, la
+  // vigencia y el vencimiento; secundario, desde xl, el tipo
+  const columnas: ColumnaPriorizada[] = [
+    { id: 'acuerdo', encabezado: t('acuerdos.columnas.acuerdo'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm', ordenable: true },
+    ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('acuerdos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
+    { id: 'tipo', encabezado: t('acuerdos.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'estado', encabezado: t('acuerdos.columnas.estado'), prioridad: 'esencial' },
+    { id: 'vigencia', encabezado: t('acuerdos.columnas.vigencia'), prioridad: 'esencial' },
+    { id: 'vence', encabezado: t('acuerdos.columnas.vence'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap', ordenable: true }
+  ]
+  const celda = (a: Registro, columna: string): ReactNode => {
+    switch (columna) {
+      case 'acuerdo':
+        return enlace(a)
+      case 'proyecto':
+        return proyectoDe(a)
+      case 'tipo':
+        return opcion(a, 'agreement_type')
+      case 'estado':
+        return <EstadoChip objeto="agreement" estado={a.state} />
+      case 'vigencia':
+        return <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
+      default:
+        return <Dia valor={texto(a, 'expiry_date')} />
+    }
+  }
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
@@ -93,15 +151,7 @@ export function AcuerdosPage() {
           total={acuerdos.data?.totalElements ?? null}
           tarjetas={lista.map((a) => ({
             id: a.id,
-            titulo: (
-              <EnlaceDeRegistro
-                codigo={texto(a, 'code')}
-                titulo={texto(a, 'title')}
-                ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
-                desde={t('acuerdos.titulo')}
-                previa={{ objeto: 'agreement', id: a.id }}
-              />
-            ),
+            titulo: enlace(a),
             estado: <EstadoChip objeto="agreement" estado={a.state} />,
             plazo: (
               <>
@@ -109,60 +159,23 @@ export function AcuerdosPage() {
                 <Dia valor={texto(a, 'expiry_date')} />
               </>
             ),
-            proyecto: proyecto ? undefined : <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === texto(a, 'project'))} />,
+            proyecto: proyecto ? undefined : proyectoDe(a),
             detalle: opcion(a, 'agreement_type') || undefined
           }))}
         />
       ) : (
-        <ResultadoDeLista total={acuerdos.data?.totalElements ?? null}>
-          <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-            <Table aria-label={t('acuerdos.tabla')}>
-              <thead>
-                <tr>
-                  <Th scope="col">{t('acuerdos.columnas.acuerdo')}</Th>
-                  {proyecto ? null : <Th scope="col">{t('acuerdos.columnas.proyecto')}</Th>}
-                  <Th scope="col">{t('acuerdos.columnas.tipo')}</Th>
-                  <Th scope="col">{t('acuerdos.columnas.estado')}</Th>
-                  <Th scope="col">{t('acuerdos.columnas.vigencia')}</Th>
-                  <Th scope="col">{t('acuerdos.columnas.vence')}</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.map((a) => {
-                  const p = proyectos.data?.find((x) => x.id === texto(a, 'project'))
-                  return (
-                    <tr key={a.id}>
-                      <Td className="min-w-64 text-sm">
-                        <EnlaceDeRegistro
-                          codigo={texto(a, 'code')}
-                          titulo={texto(a, 'title')}
-                          ruta={`/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`}
-                          desde={t('acuerdos.titulo')}
-                          previa={{ objeto: 'agreement', id: a.id }}
-                        />
-                      </Td>
-                      {proyecto ? null : (
-                        <Td className="text-sm">
-                          <ProyectoEnLista proyecto={p} />
-                        </Td>
-                      )}
-                      <Td className="text-sm">{opcion(a, 'agreement_type')}</Td>
-                      <Td>
-                        <EstadoChip objeto="agreement" estado={a.state} />
-                      </Td>
-                      <Td>
-                        <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
-                      </Td>
-                      <Td className="text-sm">
-                        <Dia valor={texto(a, 'expiry_date')} />
-                      </Td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </Table>
-          </div>
-        </ResultadoDeLista>
+        <TablaPriorizada<Registro>
+          etiqueta={t('acuerdos.tabla')}
+          total={acuerdos.data?.totalElements ?? null}
+          columnas={columnas}
+          filas={lista}
+          clave={(a) => a.id}
+          celda={celda}
+          orden={orden}
+          alOrdenar={ordenar}
+          alAbrir={(a) => navegar(rutaDe(a), { state: paso(t('acuerdos.titulo'), rutaDe(a)) })}
+          alPrevisualizar={(a) => navegar(previa('agreement', a.id))}
+        />
       )}
       <PaginacionDelServidor datos={acuerdos.data} alPagina={(p) => parametros.cambiar({ page: String(p) })} />
       {proyecto && fijos ? (

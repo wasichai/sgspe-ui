@@ -256,6 +256,81 @@ describe('S28 · lista de compromisos', () => {
     expect(consultasA(red)).toEqual([])
   })
 
+  // 05-especificacion §1.6 y DD-05: el código, el título y el vencimiento se ordenan en el servidor; el orden dura la visita
+  it('el código, el título y el vencimiento ordenan en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+    const muchos = Array.from({ length: 30 }, (_, i) =>
+      registro(
+        `m${i}`,
+        {
+          ...C1.attributes,
+          code: `C-${String(i + 100)}`,
+          title: `Compromiso ${String(i).padStart(2, '0')}`,
+          due_date: `2026-11-${String((i % 28) + 1).padStart(2, '0')}`
+        },
+        { state: 'in_progress' }
+      )
+    )
+    fetch = mockFetch(rutas())
+    red = conServidor([], muchos)
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?page=1')
+    const tabla = () => screen.getByRole('table', { name: 'Compromisos' })
+    await screen.findByRole('table', { name: 'Compromisos' })
+    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
+    // la prioridad de columnas (DD-05): el responsable y el monto, desde xl
+    expect(within(tabla()).getByRole('columnheader', { name: 'Responsable' })).toHaveClass('hidden', 'xl:table-cell')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Monto' })).toHaveClass('hidden', 'xl:table-cell')
+    // el estado, la situación y el monto no se ordenan
+    for (const c of ['Estado', 'Plazo', 'Monto']) expect(within(tabla()).queryByRole('button', { name: c })).not.toBeInTheDocument()
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0', size: '25' })))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments')
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('C-100'))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'desc' })))
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('C-129'))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'descending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Compromiso' }))
+    await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'title', dir: 'asc' })))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Compromiso' })).toHaveAttribute('aria-sort', 'ascending')
+  })
+
+  it('con el filtro de un grupo de interés, el orden es del portal por la misma columna, estable, y vuelve a la primera página', async () => {
+    const delGrupo = [
+      registro('g1', { ...C1.attributes, code: 'C-003', title: 'Óvalo deportivo', due_date: '2026-12-01' }, { state: 'in_progress' }),
+      registro('g2', { ...C1.attributes, code: 'C-001', title: 'Zanja de riego', due_date: null }, { state: 'in_progress' }),
+      registro('g3', { ...C1.attributes, code: 'C-002', title: 'Aula comunal', due_date: '2026-10-15' }, { state: 'in_progress' })
+    ]
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/stakeholder/records/s1', body: registro('s1', { project: 'p1', name: 'Junta directiva' }) },
+        { path: '/objects/stakeholder/records/s1/related/commitment_stakeholder', body: pagina(delGrupo) }
+      ])
+    )
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?stakeholder=s1&page=0')
+    const tabla = () => screen.getByRole('table', { name: 'Compromisos' })
+    const codigos = () =>
+      within(tabla())
+        .getAllByRole('row')
+        .slice(1)
+        .map((f) => within(f).getAllByRole('cell')[0].textContent)
+    await screen.findByRole('table', { name: 'Compromisos' })
+    // por el vencimiento, de antes a después; el que no tiene fecha, al final
+    expect(codigos()).toEqual(['C-002', 'C-003', 'C-001'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Vence' }))
+    expect(codigos()).toEqual(['C-003', 'C-002', 'C-001'])
+    // el título con el colador del español: la «Ó» va con la «O», no al final
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Compromiso' }))
+    expect(codigos()).toEqual(['C-002', 'C-003', 'C-001'])
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    expect(codigos()).toEqual(['C-001', 'C-002', 'C-003'])
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?stakeholder=s1')
+    // el servidor no ordena lo que filtra el portal
+    expect(consultasA(red)).toEqual([])
+  })
+
   it('consultaDeVista dice lo mismo que enVista; «Míos» sin quien mira no pide nada; conEstado cruza el estado con la vista', () => {
     expect(consultaDeVista('abiertos', 'u-cmm')).toEqual({ state_not: 'closed,cancelled' })
     expect(consultaDeVista('cerrados', 'u-cmm')).toEqual({ state: 'closed,cancelled' })

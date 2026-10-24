@@ -154,6 +154,38 @@ describe('S33 · acuerdos', () => {
     expect(red.a('GET', '/objects/agreement/records').map((l) => l.ruta)).toContain('/objects/agreement/records?sort=code&dir=asc&page=1&size=25')
   })
 
+  // 05-especificacion §1.6 y DD-05: el código y el vencimiento se ordenan en el servidor; el orden dura la visita
+  it('el acuerdo (por su código) y el vencimiento ordenan en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+    const muchos = Array.from({ length: 27 }, (_, i) =>
+      registro(`ag${i + 10}`, {
+        ...SERVIDUMBRE.attributes,
+        code: `A-${100 + i}`,
+        title: `Acuerdo ${i}`,
+        expiry_date: `2027-01-${String(27 - i).padStart(2, '0')}`
+      })
+    )
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('agreement', muchos)])
+    montar(<AcuerdosPage />, { ruta: '/agreements?page=1', camino: '/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
+    const tabla = () => screen.getByRole('table', { name: 'Acuerdos' })
+    await screen.findByRole('table', { name: 'Acuerdos' })
+    expect(within(tabla()).getByRole('columnheader', { name: 'Acuerdo' })).toHaveAttribute('aria-sort', 'ascending')
+    // el tipo, desde xl (DD-05); el estado y la vigencia no se ordenan
+    expect(within(tabla()).getByRole('columnheader', { name: 'Tipo' })).toHaveClass('hidden', 'xl:table-cell')
+    for (const c of ['Estado', 'Vigencia']) expect(within(tabla()).queryByRole('button', { name: c })).not.toBeInTheDocument()
+    const rutasPedidas = () => red!.a('GET', '/objects/agreement/records').map((l) => l.ruta)
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Vence' }))
+    await waitFor(() => expect(rutasPedidas()).toContain('/objects/agreement/records?sort=expiry_date&dir=asc&page=0&size=25'))
+    expect(ubicacion.actual).toBe('/agreements')
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
+    expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('A-126')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Acuerdo' })).not.toHaveAttribute('aria-sort')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Acuerdo' }))
+    await waitFor(() => expect(rutasPedidas()).toContain('/objects/agreement/records?sort=code&dir=asc&page=0&size=25'))
+    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('A-100'))
+  })
+
   it('lista el acuerdo con su vigencia y lo registra con el proyecto fijo y el motivo', async () => {
     fetch = mockFetch(rutas([{ method: 'POST', path: '/objects/agreement/records', status: 201, body: registro('ag9', { project: 'p1' }) }]))
     red = espiarRed()
