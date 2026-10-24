@@ -13,6 +13,7 @@ import { usePedir } from '../datos/http'
 import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, consulta, estados, texto, useRegistros, type Pagina, type Parametros, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
+import { sinFiltroDeAsignados, soloAsignados } from '../tareas/paraTomar'
 import { useSuTrabajo } from './aSuCargo'
 
 // «Lo que me toca hoy», lo primero del inicio (P-01 del rediseño de UX; hallazgos U-05 y U-13): lo abierto a su cargo (tareas,
@@ -20,8 +21,9 @@ import { useSuTrabajo } from './aSuCargo'
 // y su fecha y el resto desplegable en el lugar; y lo que puede tomar: la cola compartida (tareas abiertas sin asignar, como el
 // grupo «Para tomar» de Mis tareas), sin elegir un proyecto en el selector. es una sola lectura, que el servidor acota a sus
 // proyectos (ADR-0029), con un tope y «Ver los N» hacia Mis tareas; cada tarea dice su proyecto. quien lee todos los proyectos
-// traería la cola de todo el tenant: a esa cuenta se le lee la de cada proyecto con asignación vigente, con un tope de proyectos y
-// «Ver los N» hacia la lista de tareas de cada uno. todo es lo que la API devolvió a quien mira: nada cuenta lo que no lee
+// la pide con assigned=true, para recibir la de sus proyectos asignados y no la de todo el tenant (B-04, tareas/paraTomar.ts); con
+// un servidor que no lo conoce (422) se le lee la de cada proyecto con asignación vigente, con un tope de proyectos y «Ver los N»
+// hacia la lista de tareas de cada uno. todo es lo que la API devolvió a quien mira: nada cuenta lo que no lee
 const A_LA_VISTA = 5
 const PARA_TOMAR = 5
 const POR_PROYECTO = 3
@@ -61,15 +63,17 @@ export function LoQueMeToca() {
   const leeTodos = useLeeTodosLosProyectos()
   const asignaciones = useMisAsignaciones()
   const proyectos = useProyectos()
-  const vigentes = leeTodos
+  const enSusProyectos = useRegistros(
+    'task',
+    { ...soloAsignados(leeTodos), empty: 'assignee_user_id', state: estados(TAREA_ABIERTA), sort: 'due_date', dir: 'asc', size: PARA_TOMAR },
+    leeTareas
+  )
+  // un servidor sin assigned: la cola de cada proyecto con asignación vigente, como antes del filtro
+  const porProyecto = leeTodos && sinFiltroDeAsignados(enSusProyectos.error)
+  const vigentes = porProyecto
     ? [...new Set((asignaciones.data ?? []).filter((a) => vigenciaDeAsignacion(a) === 'vigente').map((a) => String(atributo(a, 'project'))))]
     : []
   const consultados = vigentes.slice(0, TOPE_DE_PROYECTOS)
-  const enSusProyectos = useRegistros(
-    'task',
-    { empty: 'assignee_user_id', state: estados(TAREA_ABIERTA), sort: 'due_date', dir: 'asc', size: PARA_TOMAR },
-    leeTareas && !leeTodos
-  )
   const pedir = usePedir()
   const colas = useQueries({
     queries: consultados.map((proyecto) => {
@@ -112,7 +116,7 @@ export function LoQueMeToca() {
   const sinAsignar = t('miDia.hoy.sinAsignar')
   const paraTomar: { clave: string; titulo: string; pagina: Pagina; limite: number; a: string; entradas: EntradaPriorizada[] }[] = !leeTareas
     ? []
-    : leeTodos
+    : porProyecto
       ? consultados.flatMap((proyecto, i) => {
           const pagina = colas[i]?.data
           if (!pagina || pagina.content.length === 0) return []

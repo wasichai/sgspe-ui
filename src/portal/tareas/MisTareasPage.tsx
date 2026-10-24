@@ -33,12 +33,15 @@ import { useContextFilters } from '../shell/context'
 import { OrigenDeTarea, TareaDrawer } from './TareaDrawer'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { sinFiltroDeAsignados, soloAsignados } from './paraTomar'
 
 // S47 · mis tareas (screens.md §11, WF-N): ¿qué tengo que hacer hoy y qué se me venció? en /tasks, las asignadas a quien mira
 // (assignee_user_id, indexado); en /projects/:projectId/tasks, las del proyecto. la lista va en grupos (D10 de la revisión de UX):
 // «Mis tareas», las abiertas asignadas a quien mira, y «Para tomar», las de escalamiento de JOB-01 que llegan sin asignar
 // (empty=assignee_user_id): sin proyecto elegido, una sola lectura que el servidor acota a sus proyectos (ADR-0029); quien lee
-// todos los proyectos la ve solo dentro de uno, para no traer la cola de todo el tenant. cada grupo es una consulta del servidor por estado, con su página y su total; el tablero pide
+// todos los proyectos la pide con assigned=true, para recibir la de sus proyectos asignados y no la de todo el tenant (B-04,
+// paraTomar.ts), y con un servidor que no lo conoce la ve solo dentro de un proyecto. cada grupo es una consulta del servidor por
+// estado, con su página y su total; el tablero pide
 // cada columna y el calendario el rango del mes (range_field=due_date). una tarea se abre en su drawer (?task=id) con sus
 // transiciones. una tarea vencida sigue en su estado: la situación es deadline_status (RN-WFL-001)
 const ABIERTAS = ['open', 'in_progress', 'blocked']
@@ -68,11 +71,10 @@ export function MisTareasPage() {
   )
   const paginaParaTomar = Number(lista.filtro('pt')) || 0
   const leeTodos = useLeeTodosLosProyectos()
-  const conParaTomar = Boolean(proyecto) || !leeTodos
   const paraTomar = useRegistros(
     'task',
     {
-      ...(proyecto ? { project: proyecto } : {}),
+      ...(proyecto ? { project: proyecto } : soloAsignados(leeTodos)),
       empty: 'assignee_user_id',
       state: estados(ABIERTAS),
       sort: 'due_date',
@@ -80,8 +82,9 @@ export function MisTareasPage() {
       page: paginaParaTomar,
       size: POR_PAGINA
     },
-    conParaTomar && vista === 'lista'
+    vista === 'lista'
   )
+  const conParaTomar = Boolean(proyecto) || !leeTodos || !sinFiltroDeAsignados(paraTomar.error)
   const cifras = useConteos(
     'task',
     { vencidas: { ...abiertasMias, deadline_status: 'VENCIDO' }, porVencer: { ...abiertasMias, deadline_status: 'POR VENCER' }, abiertas: abiertasMias },

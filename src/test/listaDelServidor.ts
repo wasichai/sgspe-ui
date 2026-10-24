@@ -4,8 +4,25 @@ import type { RutaEspecial } from './red'
 
 // la lista genérica de wasichai en las pruebas, con lo que hace el servidor (api.md §3.4): igualdad por atributo, el estado del
 // workflow en state y state_not (separados por comas; state_not conserva los registros sin estado), el rango [range_from, range_to)
-// sobre el primer campo con valor de range_field, los campos vacíos de empty, q sobre los textos, orden, página y conteo. se instala con espiarRed, después de mockFetch
-const RESERVADOS = new Set(['page', 'size', 'sort', 'dir', 'q', 'count', 'after', 'state', 'state_not', 'range_field', 'range_from', 'range_to', 'empty'])
+// sobre el primer campo con valor de range_field, los campos vacíos de empty, q sobre los textos, orden, página y conteo. assigned
+// (los proyectos asignados de quien llama) no filtra: el conjunto ya es lo que ve quien mira. se instala con espiarRed, después de
+// mockFetch
+const RESERVADOS = new Set([
+  'page',
+  'size',
+  'sort',
+  'dir',
+  'q',
+  'count',
+  'after',
+  'state',
+  'state_not',
+  'range_field',
+  'range_from',
+  'range_to',
+  'empty',
+  'assigned'
+])
 
 // los registros pueden ser una función: el conjunto que ve el servidor en cada pedido (una tarea que alguien toma)
 export function listaDelServidor(objeto: string, conjunto: Registro[] | (() => Registro[])): RutaEspecial {
