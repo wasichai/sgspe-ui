@@ -100,6 +100,39 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     expect(ubicacion.actual).toBe(ficha)
   })
 
+  // 05-especificacion §1.6: el portal tiene todos los riesgos y los ordena aquí, el nivel por su orden de negocio y no por su texto
+  it('el riesgo, P × I y el nivel ordenan en el portal, con aria-sort; el nivel va de bajo a crítico y lo sin dato, al final', async () => {
+    const ALTO = registro('k7', { ...MEDIO.attributes, code: 'R-007', probability: 3, impact: 3, score: 9, risk_level: 'ALTO' }, { state: 'assessed' })
+    const BAJO = registro('k8', { ...MEDIO.attributes, code: 'R-008', probability: 1, impact: 2, score: 2, risk_level: 'BAJO' }, { state: 'assessed' })
+    // llegan desordenados: el orden inicial es el del código
+    fetch = mockFetch(rutas([], [ALTO, NUEVO, RIESGO, BAJO, MEDIO]))
+    red = espiarRed()
+    abrir()
+    await screen.findByRole('table', { name: 'Riesgos' })
+    const tabla = () => screen.getByRole('table', { name: 'Riesgos' })
+    const codigos = () =>
+      within(tabla())
+        .getAllByRole('row')
+        .slice(1)
+        .map((f) => within(f).getByText(/^R-\d+$/).textContent)
+    expect(codigos()).toEqual(['R-001', 'R-002', 'R-003', 'R-007', 'R-008'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Riesgo' })).toHaveAttribute('aria-sort', 'ascending')
+    // el nivel por su orden (bajo, medio, alto, crítico), no alfabético; el sin evaluar, al final en los dos sentidos
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel' }))
+    expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel' }))
+    expect(codigos()).toEqual(['R-001', 'R-007', 'R-003', 'R-008', 'R-002'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel' })).toHaveAttribute('aria-sort', 'descending')
+    // el puntaje como número: 2, 6, 9, 16 (no «16» antes de «2»)
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'P × I' }))
+    expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
+    // el estado y la revisión no se ordenan; el orden no escribe la URL ni vuelve a pedir la lista
+    expect(within(tabla()).queryByRole('button', { name: 'Estado' })).not.toBeInTheDocument()
+    expect(ubicacion.actual).toBe('/projects/p1/risks/register')
+    expect(red.a('GET', '/objects/social_risk/records').every((l) => l.ruta.includes('sort=code&dir=asc'))).toBe(true)
+  })
+
   it('elegir una celda filtra la tabla y «Quitar filtro de celda» la devuelve entera', async () => {
     fetch = mockFetch(rutas())
     abrir()

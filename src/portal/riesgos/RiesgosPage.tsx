@@ -18,7 +18,8 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useParametrosDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { ordenarEnCliente, posicionEn, type ValorDeOrden } from '../componentes/ordenEnCliente'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
@@ -30,7 +31,7 @@ import { atributo, texto, useTodosSinTope, type Registro } from '../datos/regist
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
-import { nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
+import { NIVELES, nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
@@ -63,6 +64,21 @@ const CAMPOS_DEL_ALTA = [
 const cerrado = (r: Registro) => r.state === 'closed'
 
 const NIVELES_ALTOS = ['ALTO', 'CRITICO']
+
+// el orden por columna (05-especificacion §1.6) es del portal, que ya tiene todos los riesgos del alcance: el riesgo por su código
+// (el orden que la lista ya pedía), P × I por su puntaje y el nivel por su orden de negocio (bajo, medio, alto, crítico), nunca por
+// su texto. un riesgo sin puntaje o sin nivel va al final en los dos sentidos
+const ORDEN_INICIAL: OrdenDeTabla = { columna: 'riesgo', dir: 'asc' }
+export function valorDeOrden(r: Registro, columna: string): ValorDeOrden {
+  switch (columna) {
+    case 'puntaje':
+      return celdaDe(r) && texto(r, 'score') ? Number(texto(r, 'score')) : null
+    case 'nivel':
+      return posicionEn(NIVELES, atributo(r, 'risk_level'))
+    default:
+      return texto(r, 'code')
+  }
+}
 
 export function enVista(vista: string, r: Registro, usuario: string | undefined): boolean {
   switch (vista) {
@@ -106,7 +122,9 @@ export function RiesgosPage() {
   // ?level=alto: los de nivel alto o crítico, como «Riesgos altos» (KPI-RSK-01) del resumen y del tablero (revisión de UX, etapa 6)
   const soloAltos = lista.filtro('level') === 'alto'
   const enLaVista = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id) && (!soloAltos || NIVELES_ALTOS.includes(texto(r, 'risk_level'))))
-  const filtrados = celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista
+  // el orden es de esta visita, como en Alertas: no viaja en la URL. la lista no se pagina: no hay página a la que volver
+  const [orden, setOrden] = useState(ORDEN_INICIAL)
+  const filtrados = ordenarEnCliente(celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista, orden, valorDeOrden)
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
   const crea = proyecto !== undefined && escribe && can('social_risk', 'CREATE')
   const nuevo = busqueda.get('nuevo') === '1'
@@ -130,11 +148,11 @@ export function RiesgosPage() {
   // revisión; secundarias, desde xl, la categoría, P × I y el responsable. una columna no esencial que dice lo mismo en todas las
   // filas sale a una nota encima, y en «Mis riesgos» el responsable es quien mira: no se dibuja
   const columnas: ColumnaPriorizada[] = [
-    { id: 'riesgo', encabezado: t('riesgos.columnas.riesgo'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm' },
+    { id: 'riesgo', encabezado: t('riesgos.columnas.riesgo'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm', ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('riesgos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'categoria', encabezado: t('riesgos.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    { id: 'puntaje', encabezado: t('riesgos.columnas.puntaje'), prioridad: 'secundaria', claseDeCelda: 'text-sm tabular-nums' },
-    { id: 'nivel', encabezado: t('riesgos.columnas.nivel'), prioridad: 'esencial' },
+    { id: 'puntaje', encabezado: t('riesgos.columnas.puntaje'), prioridad: 'secundaria', claseDeCelda: 'text-sm tabular-nums', ordenable: true },
+    { id: 'nivel', encabezado: t('riesgos.columnas.nivel'), prioridad: 'esencial', ordenable: true },
     { id: 'estado', encabezado: t('riesgos.columnas.estado'), prioridad: 'esencial' },
     { id: 'revision', encabezado: t('riesgos.columnas.revision'), prioridad: 'esencial', claseDeCelda: 'space-x-1 text-sm' },
     ...(lista.vista === 'mios'
@@ -286,6 +304,8 @@ export function RiesgosPage() {
               celda={celdaDeTabla}
               valorPlano={valorPlano}
               ocultarUniformes
+              orden={orden}
+              alOrdenar={setOrden}
               alAbrir={(r) => {
                 const ruta = rutaDeFicha('social_risk', r)
                 if (ruta) navegar(ruta, { state: paso(t('riesgos.titulo'), ruta) })

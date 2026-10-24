@@ -7,7 +7,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { base, LEE, P1, S1, S2 } from '../../test/grupos'
+import { base, hace, LEE, P1, S1, S2 } from '../../test/grupos'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -172,6 +172,39 @@ describe('S16 · lista de grupos de interés', () => {
     await waitFor(() => expect(filas()).toHaveLength(1))
     expect(screen.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
     expect(screen.queryByText(/^Responsable:/)).not.toBeInTheDocument()
+  })
+
+  // 05-especificacion §1.6: el portal filtra y pagina los grupos, y los ordena por la prioridad informativa, por su orden de negocio
+  it('la prioridad ordena en el portal de media a muy alta, sin evaluar al final, con aria-sort, y vuelve a la primera página', async () => {
+    const grupo = (id: string, prioridad: string, n: number) =>
+      registro(id, { ...S1.attributes, organization: `o-${id}`, information_priority: prioridad, last_contact_date: hace(n) }, { state: 'assessed' })
+    // 26 grupos: 24 de prioridad alta, uno media, uno muy alta, y el sin evaluar (S2)
+    const altos = Array.from({ length: 24 }, (_, i) => grupo(`a${i}`, 'ALTA', i))
+    fetch = abrirPortal('/projects/p1/stakeholders?page=1', RELACIONISTA, LEE, [
+      { path: '/objects/stakeholder/records', body: pagina([grupo('muy', 'MUY ALTA', 1), S2, ...altos, grupo('media', 'MEDIA', 2)]) },
+      { path: /^\/objects\/organization\/records\/o-/, body: registro('ox', { name: 'Organización' }) },
+      ...base()
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    const tabla = () => within(screen.getByRole('table', { name: 'Grupos de interés' }))
+    expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).not.toHaveAttribute('aria-sort')
+    // el nombre y el grupo de influencia no se ordenan
+    expect(tabla().queryByRole('button', { name: 'Grupo de interés' })).not.toBeInTheDocument()
+    expect(tabla().queryByRole('button', { name: 'Grupo de influencia' })).not.toBeInTheDocument()
+    await userEvent.click(tabla().getByRole('button', { name: 'Prioridad' }))
+    expect(rutaActual()).toBe('/projects/p1/stakeholders')
+    await waitFor(() => expect(filas()).toHaveLength(25))
+    expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(filas()[0]).toHaveTextContent('Media')
+    expect(filas()[24]).toHaveTextContent('Alta')
+    await userEvent.click(tabla().getByRole('button', { name: 'Prioridad' }))
+    expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).toHaveAttribute('aria-sort', 'descending')
+    expect(filas()[0]).toHaveTextContent('Muy alta')
+    // el sin evaluar queda al final también al revés: en la segunda página, tras la media
+    await userEvent.click(screen.getByRole('button', { name: /siguiente|next/i }))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(filas()[0]).toHaveTextContent('Media')
+    expect(filas()[1]).toHaveTextContent('Sin evaluar')
   })
 
   it('Enter en una fila enfocada abre la ficha del grupo', async () => {

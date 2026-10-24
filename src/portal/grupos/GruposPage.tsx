@@ -10,7 +10,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
-import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
 import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
@@ -38,6 +39,10 @@ const FILTROS = ['influence_group', 'stance', 'stakeholder_scope', 'relationship
 // los tres a la vista en la barra (DD-04); el ámbito y el tipo, en «Más filtros»
 const FRECUENTES: readonly string[] = ['influence_group', 'stance', 'relationship_status']
 const POR_PAGINA = 25
+// el orden por columna (05-especificacion §1.6) es del portal, que filtra y pagina aquí: solo la prioridad informativa, por su orden
+// de negocio (de media a muy alta), nunca por su texto. el nombre no: es el de la persona o la organización de cada grupo, que se
+// lee aparte por fila (y el de una persona puede estar restringido); el grupo de influencia es un cuadrante, sin orden
+const ORDEN_DE_PRIORIDAD = ['MEDIA', 'ALTA', 'MUY ALTA'] as const
 
 export function GruposPage() {
   const { t } = useTranslation(NS)
@@ -87,7 +92,19 @@ export function GruposPage() {
     }
   }
   const conFiltros = (g: Registro) => filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f))
-  const filtrados = (grupos.data ?? []).filter((g) => enVistaLa(lista.vista, g) && conFiltros(g))
+  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página. sin elegir uno, el
+  // de la lectura
+  const [orden, setOrden] = useState<OrdenDeTabla | undefined>(undefined)
+  const ordenar = (siguiente: OrdenDeTabla) => {
+    setOrden(siguiente)
+    lista.cambiar({ page: null })
+  }
+  const filtrados = ordenarEnCliente(
+    (grupos.data ?? []).filter((g) => enVistaLa(lista.vista, g) && conFiltros(g)),
+    orden,
+    // un grupo sin evaluar dice «Sin evaluar» en la columna: va al final, como uno sin prioridad
+    (g) => (g.state === 'assessed' || atributo(g, 'influence_group') ? posicionEn(ORDEN_DE_PRIORIDAD, atributo(g, 'information_priority')) : null)
+  )
   // la etapa 3 de la revisión de UX: cada vista dice cuántos tiene con los filtros puestos
   const conteoDe = (vista: string) => (grupos.data ? grupos.data.filter((g) => enVistaLa(vista, g) && conFiltros(g)).length : null)
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
@@ -137,7 +154,7 @@ export function GruposPage() {
       claseDeCelda: 'text-sm',
       explicacion: leePostura ? undefined : { id: idDeLaPostura, tipo: 'restringido' }
     },
-    { id: 'prioridad', encabezado: t('grupos.columnas.prioridad'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
+    { id: 'prioridad', encabezado: t('grupos.columnas.prioridad'), prioridad: 'esencial', claseDeCelda: 'text-sm', ordenable: true },
     { id: 'estado', encabezado: t('grupos.columnas.estado'), prioridad: 'esencial' },
     { id: 'relacion', encabezado: t('grupos.columnas.relacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
     ...(lista.vista === 'mios'
@@ -319,6 +336,8 @@ export function GruposPage() {
                   celda={celdaDe}
                   valorPlano={valorPlano}
                   ocultarUniformes
+                  orden={orden}
+                  alOrdenar={ordenar}
                   alAbrir={(g) => navegar(rutaDelGrupo(g), { state: paso() })}
                   // Espacio abre la vista previa, como el ojo de la fila
                   alPrevisualizar={(g) => navegar(previa('stakeholder', g.id))}
