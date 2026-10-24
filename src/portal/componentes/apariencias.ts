@@ -190,6 +190,13 @@ export const APARIENCIAS: Record<string, Record<string, Apariencia>> = {
     issued: a('success', BadgeCheck),
     voided: a('final', X)
   },
+  // las presentaciones y su MP4 no tienen workflow: su estado de generación (EN COLA, EN PROCESO, LISTO, FALLIDO; ADR-0031)
+  deliverable_presentation: {
+    'EN COLA': a('neutral', Clock),
+    'EN PROCESO': a('progress', Play),
+    LISTO: a('success', CircleCheck),
+    FALLIDO: a('danger', X)
+  },
   social_contribution: {
     requested: a('neutral', Inbox),
     approved: a('info', CircleCheck),

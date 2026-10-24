@@ -36,10 +36,11 @@ describe('dependencias de F2 y F3', () => {
     expect(leer('node_modules/maplibre-gl/package.json').version).toBe('6.10.0')
   })
 
-  it('todos los @wasichai/* van en la misma versión', () => {
+  // @wasichai/sgspe-slides no es de la plataforma: sale con la versión de sgspe (ADR-0031) y tiene su prueba abajo
+  it('todos los @wasichai/* de la plataforma van en la misma versión', () => {
     const versiones = new Set(
       Object.entries({ ...paquete.dependencies, ...paquete.devDependencies })
-        .filter(([nombre]) => nombre.startsWith('@wasichai/'))
+        .filter(([nombre]) => nombre.startsWith('@wasichai/') && nombre !== '@wasichai/sgspe-slides')
         .map(([, v]) => v)
     )
     expect([...versiones]).toEqual(['1.1.0'])
@@ -55,5 +56,28 @@ describe('dependencias de F8', () => {
 
   it('es la versión de tiptap que trae @wasichai/documents', () => {
     expect(leer('node_modules/@wasichai/documents/package.json').dependencies['@tiptap/core']).toBe('3.32.0')
+  })
+})
+
+// las presentaciones (ADR-0031, plan de presentaciones de sgspe, paso 8): las láminas de @wasichai/sgspe-slides, que sale con el
+// release de sgspe, sobre Remotion y React en las versiones exactas que el paquete pide como peerDependencies. el reproductor y el
+// compositor del PDF tienen que ser el mismo Remotion: si no, el navegador no mostraría lo que dice el PDF
+describe('dependencias de las presentaciones', () => {
+  const laminas = leer('node_modules/@wasichai/sgspe-slides/package.json')
+
+  it('@wasichai/sgspe-slides va fijado en 3.2.0', () => {
+    expect(paquete.dependencies['@wasichai/sgspe-slides']).toBe('3.2.0')
+    expect(laminas.version).toBe('3.2.0')
+  })
+
+  it.each(['remotion', '@remotion/player'])('%s va fijado en la versión de Remotion que pide el paquete', (nombre) => {
+    expect(laminas.peerDependencies.remotion).toBe('4.0.533')
+    expect(paquete.dependencies[nombre]).toBe(laminas.peerDependencies.remotion)
+    expect(leer(`node_modules/${nombre}/package.json`).version).toBe(laminas.peerDependencies.remotion)
+  })
+
+  it('React y zod son los que pide el paquete', () => {
+    expect(paquete.dependencies.react).toBe(laminas.peerDependencies.react)
+    expect(paquete.dependencies.zod).toBe(laminas.dependencies.zod)
   })
 })

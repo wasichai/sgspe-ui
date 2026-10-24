@@ -2,7 +2,16 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { baseDeF8, CIERRE, INDICADORES_DEL_CATALOGO, TABLERO_MONITOREO } from '../test/f8'
+import {
+  baseDeF8,
+  CIERRE,
+  entregableEn,
+  EQUIPO_DE_ENTREGABLES,
+  INDICADORES_DEL_CATALOGO,
+  PRESENTACION_LISTA,
+  TABLERO_MONITOREO,
+  VERSION_EXTERNO
+} from '../test/f8'
 import { pagina } from '../test/montar'
 import { abrirPortal, rutaActual } from '../test/pantalla'
 import { GERENCIA_SOCIAL } from '../test/portal'
@@ -62,5 +71,17 @@ describe('rutas de F8', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Volver al tablero' }))
     await waitFor(() => expect(rutaActual()).toBe('/dashboards/monitoring?month=2026-07&project=p1'))
     expect(await screen.findByRole('heading', { level: 1, name: 'Monitoreo del plan de relaciones comunitarias' })).toBeInTheDocument()
+  })
+
+  // la página de presentaciones de un entregable (deliverables.md §16): bajo Reportes y bajo los Reportes de un proyecto
+  it.each(['/reports/deliverables/d1/presentations', '/projects/p1/reports/deliverables/d1/presentations'])('las presentaciones viven en %s', async (ruta) => {
+    fetch = abrirPortal(ruta, GERENCIA_SOCIAL, EQUIPO_DE_ENTREGABLES, [
+      { path: '/objects/deliverable/records/d1', body: entregableEn('issued') },
+      { path: '/objects/deliverable_version/records', body: pagina([VERSION_EXTERNO]) },
+      { path: '/sgspe/deliverables/d1/presentations', body: [PRESENTACION_LISTA] },
+      ...baseDeF8(GERENCIA_SOCIAL)
+    ])
+    expect(await screen.findByRole('heading', { level: 1, name: 'Presentaciones' })).toBeInTheDocument()
+    expect(await screen.findByRole('table', { name: 'Presentaciones pedidas' })).toBeInTheDocument()
   })
 })

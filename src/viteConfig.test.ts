@@ -55,4 +55,12 @@ describe('vite.config', () => {
     expect(partirEnChunks('/x/node_modules/zrender/lib/zrender.js')).toBe('echarts')
     expect(partirEnChunks('/x/src/main.tsx')).toBeUndefined()
   })
+
+  // ADR-0031: las láminas resuelven sus fuentes desde el paquete; preempaquetado en desarrollo, new URL(…, import.meta.url)
+  // apuntaría a la carpeta de Vite y las fuentes no cargarían. remotion se preempaqueta con el Player para que haya una sola copia
+  it('no preempaqueta @wasichai/sgspe-slides en desarrollo, y remotion va con el Player', async () => {
+    const config = await cargar(undefined)
+    expect(config.optimizeDeps?.exclude).toContain('@wasichai/sgspe-slides')
+    expect(config.optimizeDeps?.include).toEqual(expect.arrayContaining(['remotion', '@remotion/player']))
+  })
 })

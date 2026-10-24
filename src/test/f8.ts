@@ -1,6 +1,6 @@
 import type { AuthUser } from '@wasichai/core'
 import type { MockRoute } from '@wasichai/testing'
-import type { EstadoDelBorrador } from '../portal/entregables/contrato'
+import type { EstadoDelBorrador, Presentacion } from '../portal/entregables/contrato'
 import { definicion, pagina, registro, workflow } from './montar'
 import { permisos } from './portal'
 
@@ -22,6 +22,7 @@ export const EQUIPO_DE_ENTREGABLES = permisos({
   deliverable: ['READ', 'CREATE', 'UPDATE', 'GENERATE', 'APPROVE', 'ISSUE', 'EXPORT', 'DOWNLOAD_RESTRICTED'],
   deliverable_section: ['READ', 'CREATE', 'UPDATE', 'DELETE'],
   deliverable_version: ['READ', 'CREATE'],
+  deliverable_presentation: ['READ', 'CREATE', 'UPDATE'],
   deliverable_template: ['READ'],
   indicator: ['READ', 'UPDATE'],
   indicator_measurement: ['READ', 'CREATE'],
@@ -59,6 +60,7 @@ export const SOLO_LECTURA_F8 = permisos({
   deliverable: ['READ'],
   deliverable_section: ['READ'],
   deliverable_version: ['READ'],
+  deliverable_presentation: ['READ'],
   deliverable_template: ['READ'],
   indicator: ['READ'],
   indicator_measurement: ['READ']
@@ -576,3 +578,55 @@ export const baseDeF8 = (usuario: AuthUser): MockRoute[] => [
   { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } },
   { path: '/auth/me/notifications/summary', status: 404, body: { title: 'Not Found', status: 404 } }
 ]
+
+// las presentaciones de un entregable emitido (api.md §4.12, ADR-0031), con la forma de PresentationStatus de sgspe
+export const SHA_ESPECIFICACION = '5a'.repeat(32)
+export const SHA_LAMINAS = '69'.repeat(32)
+export const SHA_VIDEO = '78'.repeat(32)
+const PRESENTACION_BASE: Presentacion = {
+  id: 'pr1',
+  versionNumber: 2,
+  audience: 'INSTITUCIONES',
+  level: 'EXTERNO',
+  status: 'LISTO',
+  failureCode: null,
+  slideCount: 12,
+  requestedAt: '2026-10-20T15:00:00Z',
+  generatedAt: '2026-10-20T15:01:00Z',
+  modelSha256: SHA_MODELO,
+  specSha256: SHA_ESPECIFICACION,
+  pdfSha256: SHA_LAMINAS,
+  plannerVersion: '3',
+  designVersion: '2',
+  rendererVersion: '4.0.533',
+  videoStatus: null,
+  videoFailureCode: null,
+  videoRequestedAt: null,
+  videoGeneratedAt: null,
+  videoSha256: null
+}
+export const PRESENTACION_LISTA: Presentacion = PRESENTACION_BASE
+export const PRESENTACION_EN_COLA: Presentacion = {
+  ...PRESENTACION_BASE,
+  id: 'pr2',
+  audience: 'DIRECCION',
+  level: 'INTERNO',
+  versionNumber: 1,
+  status: 'EN COLA',
+  slideCount: null,
+  generatedAt: null,
+  specSha256: null,
+  pdfSha256: null
+}
+export const PRESENTACION_FALLIDA: Presentacion = {
+  ...PRESENTACION_BASE,
+  id: 'pr3',
+  audience: 'COMUNIDAD',
+  level: 'PUBLICO',
+  status: 'FALLIDO',
+  failureCode: 'SLIDE_OVERFLOW',
+  slideCount: null,
+  specSha256: null,
+  pdfSha256: null
+}
+export const PRESENTACION_INTERNA: Presentacion = { ...PRESENTACION_BASE, id: 'pr4', audience: 'CAMPO', level: 'INTERNO', versionNumber: 1 }

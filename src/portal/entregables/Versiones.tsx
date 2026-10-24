@@ -2,6 +2,7 @@ import { useAuth } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link, useParams } from 'react-router'
 import { useMensajeDeError } from '../componentes/errores'
 import { Vacio } from '../componentes/Estados'
 import { DeLista } from '../componentes/LecturaConEstados'
@@ -14,6 +15,7 @@ import { rotuloDeOpcion } from '../datos/opciones'
 import { Huella } from '../componentes/Huella'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
+import { rutaDePresentaciones } from './tipos'
 
 // las versiones emitidas de S50 (deliverables.md §8.4 y §12): cada una con su número, su revisión, su nivel, quién y cuándo, la
 // huella de su PDF y las secciones asistidas por IA. las descargas, por nivel y permiso: INTERNO (PDF y DOCX) con
@@ -46,8 +48,20 @@ export function Versiones({ entregable }: { entregable: Registro }) {
       .catch(setFallo)
   }
   const titulo = t('entregables.versiones.titulo')
+  // las presentaciones (deliverables.md §16) salen de una versión emitida: su página, en la misma ruta que S50
+  const { projectId } = useParams()
+  const conVersiones = (versiones.data?.length ?? 0) > 0
   return (
-    <Seccion titulo={titulo}>
+    <Seccion
+      titulo={titulo}
+      acciones={
+        conVersiones ? (
+          <Link to={rutaDePresentaciones(entregable.id, projectId)} className="text-sm text-sg-primary-text underline">
+            {t('presentaciones.enlace')}
+          </Link>
+        ) : undefined
+      }
+    >
       <DeLista consulta={versiones}>
         {(lista) =>
           lista.length === 0 ? (

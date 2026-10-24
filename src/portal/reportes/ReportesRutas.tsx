@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router'
 import { PorRuta } from '../componentes/PorRuta'
 import { EntregablePage } from '../entregables/EntregablePage'
+import { PresentacionesPage } from '../entregables/PresentacionesPage'
 import { PlantillasPage } from '../entregables/PlantillasPage'
 import { ReportesPage } from './ReportesPage'
 import { NoEncontrada } from '../shell/NoEncontrada'
@@ -13,6 +14,7 @@ export function ReportesRutas() {
       <Route index element={<ReportesPage />} />
       <Route path="templates" element={<PlantillasPage />} />
       <Route path="deliverables/:deliverableId" element={<PorRuta parametros={['deliverableId']} Pantalla={EntregablePage} />} />
+      <Route path="deliverables/:deliverableId/presentations" element={<PorRuta parametros={['deliverableId']} Pantalla={PresentacionesPage} />} />
       <Route path="*" element={<NoEncontrada />} />
     </Routes>
   )
