@@ -62,11 +62,13 @@ test.describe('a 1024 px', () => {
     expect((await nav.boundingBox())!.width).toBeGreaterThan(200)
     await nav.getByRole('button', { name: 'Contraer' }).click()
     await expect(nav.getByRole('button', { name: 'Expandir' })).toBeVisible()
-    expect((await nav.boundingBox())!.width).toBeLessThan(60)
+    // el ancho se asienta en el cuadro siguiente al del rótulo «Expandir» (medido: 240 px al instante, 52 px a los 50 ms):
+    // se espera la medida en lugar de leerla una vez
+    await expect.poll(async () => (await nav.boundingBox())!.width).toBeLessThan(60)
     await page.reload()
     const otra = page.getByRole('navigation', { name: 'Secciones' })
     await expect(otra.getByRole('button', { name: 'Expandir' })).toBeVisible()
-    expect((await otra.boundingBox())!.width).toBeLessThan(60)
+    await expect.poll(async () => (await otra.boundingBox())!.width).toBeLessThan(60)
     // contraída, la etiqueta y el título quedan solo para lectores de pantalla (sr-only: una caja de 1 px)
     expect((await otra.getByRole('link', { name: 'Proyectos' }).getByText('Proyectos').boundingBox())!.width).toBeLessThanOrEqual(1)
     expect((await otra.getByText('Proyectos y territorio').boundingBox())!.width).toBeLessThanOrEqual(1)
