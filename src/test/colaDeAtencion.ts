@@ -4,7 +4,7 @@ import { texto, type Registro } from '../portal/datos/registros'
 import type { RutaEspecial } from './red'
 
 // la cola de atención en las pruebas (GET /sgspe/attention/queue), con lo que hace el servidor (AttentionQueueRows de sgspe): las
-// vistas, los grupos de plazo, el orden por el plazo que corre, la recepción y el código, los filtros, la página y los conteos. solo
+// vistas, los grupos de plazo, el orden por el plazo que corre, la recepción y el código (o por sort y dir), los filtros, la página y los conteos. solo
 // llegan los tipos legibles. se instala con espiarRed, después de mockFetch
 export interface Fila {
   objeto: ObjetoDeQcs
@@ -35,6 +35,19 @@ const orden = (a: Fila, b: Fila) =>
   ultimo(texto(a.registro, 'received_at')).localeCompare(ultimo(texto(b.registro, 'received_at'))) ||
   texto(a.registro, 'code').localeCompare(texto(b.registro, 'code'))
 
+// con sort (issue #160 de sgspe), la columna en su sentido, sin valor al final, y el id a igualdad
+const COLUMNAS: Record<string, (f: Fila) => string | null> = {
+  received_at: (f) => texto(f.registro, 'received_at') || null,
+  code: (f) => texto(f.registro, 'code') || null,
+  due_at: (f) => plazoQueCorre(f.objeto, f.registro)?.fecha ?? null
+}
+
+const ordenPor = (sort: string, dir: string) => (a: Fila, b: Fila) => {
+  const [x, y] = [COLUMNAS[sort](a), COLUMNAS[sort](b)]
+  const valores = x === y ? 0 : x === null ? 1 : y === null ? -1 : (dir === 'desc' ? -1 : 1) * x.localeCompare(y)
+  return valores || a.registro.id.localeCompare(b.registro.id)
+}
+
 export function colaDelServidor(
   porTipo: Partial<Record<ObjetoDeQcs, Registro[]>>,
   { usuario = 'u-gvm', legibles = OBJETOS_DE_QCS as readonly ObjetoDeQcs[] }: { usuario?: string; legibles?: readonly ObjetoDeQcs[] } = {}
@@ -55,7 +68,8 @@ export function colaDelServidor(
           (!q || texto(f.registro, 'code').toLowerCase().includes(q) || texto(f.registro, 'description').toLowerCase().includes(q))
       )
       const vista = p.get('view') ?? 'attention'
-      const enLaVista = filtradas.filter((f) => enVista(vista, f, usuario)).sort(orden)
+      const sort = p.get('sort')
+      const enLaVista = filtradas.filter((f) => enVista(vista, f, usuario)).sort(sort ? ordenPor(sort, p.get('dir') ?? 'asc') : orden)
       const size = Number(p.get('size') ?? 25)
       const page = Number(p.get('page') ?? 0)
       const vistas = ['attention', 'grievances', 'inquiries', 'requests', 'mine', 'all']

@@ -280,4 +280,48 @@ describe('S35 · lista unificada de QCS', () => {
       .map((a) => a.textContent?.split(' ')[0])
     expect(codigos).toEqual(['Q-010', 'Q-002'])
   })
+
+  // issue #160 de sgspe: el código y el plazo se ordenan en el servidor; sin pedirlo, la consulta no lleva sort (un servidor sin
+  // el orden responde 422 a un sort)
+  it('el código y el plazo ordenan la cola en el servidor cuando la persona lo pide, y el encabezado lo dice con aria-sort', async () => {
+    const antes = registro('g9', { ...VENCIDA.attributes, code: 'Q-010', ack_due_date: '2026-10-01' }, { state: 'received' })
+    fetch = mockFetch(rutas())
+    abrir(EQUIPO_DE_QUEJAS, undefined, { porTipo: { grievance: [VENCIDA, antes] } })
+    const tabla = () => screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
+    await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
+    const consultas = () => red!.a('GET', '/sgspe/attention/queue').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
+    const codigos = () =>
+      within(tabla())
+        .getAllByRole('link', { name: /^Q-/ })
+        .map((a) => a.textContent?.split(' ')[0])
+    expect(consultas().every((c) => !('sort' in c) && !('dir' in c))).toBe(true)
+    expect(within(tabla()).getByRole('columnheader', { name: 'QCS' })).not.toHaveAttribute('aria-sort')
+    expect(codigos()).toEqual(['Q-010', 'Q-002'])
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'QCS' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0' })))
+    await waitFor(() => expect(codigos()).toEqual(['Q-002', 'Q-010']))
+    expect(within(tabla()).getByRole('columnheader', { name: 'QCS' })).toHaveAttribute('aria-sort', 'ascending')
+    // el orden no escribe parámetros nuevos en la URL
+    expect(ubicacion.actual).toBe('/projects/p1/attention')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'QCS' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'desc' })))
+    await waitFor(() => expect(codigos()).toEqual(['Q-010', 'Q-002']))
+    expect(within(tabla()).getByRole('columnheader', { name: 'QCS' })).toHaveAttribute('aria-sort', 'descending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Plazo que corre' }))
+    await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'due_at', dir: 'asc' })))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Plazo que corre' })).toHaveAttribute('aria-sort', 'ascending')
+    // el canal no se ordena: su código no dice su orden
+    expect(within(tabla()).queryByRole('button', { name: 'Canal' })).not.toBeInTheDocument()
+  })
+
+  it('otro orden vuelve a la primera página', async () => {
+    const muchas = Array.from({ length: 26 }, (_, i) =>
+      registro(`g${i + 10}`, { ...QUEJA.attributes, code: `Q-${i + 10}`, deadline_status: null }, { state: 'acknowledged' })
+    )
+    fetch = mockFetch(rutas())
+    abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?page=1', { porTipo: { grievance: muchas } })
+    const tabla = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Al día o sin plazo' })
+    await userEvent.click(within(tabla).getByRole('button', { name: 'QCS' }))
+    expect(ubicacion.actual).toBe('/projects/p1/attention')
+  })
 })
