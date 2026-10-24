@@ -376,6 +376,71 @@ describe('barra de contexto y Project 360', () => {
     expect(screen.getByRole('button', { name: 'Más secciones del proyecto: Equipo y parámetros' })).toHaveAttribute('aria-current', 'page')
   })
 
+  // B-03 (wasichai/sgspe#161): los conteos de todas las pestañas en una sola lectura de /api/sgspe/projects/{id}/counts
+  const CONTEOS_DEL_SERVIDOR = {
+    counts: {
+      'stakeholders:total': 7,
+      'engagements:total': 4,
+      'commitments:total': 12,
+      'commitments:accion': 3,
+      'attention:total': 6,
+      'attention:accion': 3,
+      'risks:total': null,
+      'programs:total': 2,
+      'documents:total': 9
+    },
+    confidentialHidden: false
+  }
+  const lecturasGenericas = (llamadas: FetchMock['calls']) =>
+    llamadas.filter((c) => /^\/objects\/(?!project)[a-z_]+\/records\?/.test(c.path) && c.path.includes('size=1'))
+
+  it('una sola petición al abrir el proyecto da las mismas insignias, y la que es null no se dibuja', async () => {
+    fetch = mockFetch([
+      ...RUTAS_DEL_PROYECTO,
+      { path: '/objects/project_assignment/records', body: pagina([]) },
+      { path: '/sgspe/projects/p1/counts', body: CONTEOS_DEL_SERVIDOR }
+    ])
+    montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    await waitFor(() => expect(within(subnav).getByRole('link', { name: 'Compromisos' })).toHaveAccessibleDescription('12 en total, 3 vencidos'))
+    expect(within(subnav).getByRole('link', { name: 'Quejas, consultas y solicitudes' })).toHaveAccessibleDescription('6 en total, 3 vencidos')
+    expect(within(subnav).getByRole('link', { name: 'Documentos' })).toHaveAccessibleDescription('9 en total')
+    expect(within(subnav).getByRole('link', { name: 'Riesgos' })).not.toHaveAttribute('aria-describedby')
+    expect(fetch.calls.filter((c) => c.path.startsWith('/sgspe/projects/p1/counts'))).toHaveLength(1)
+    expect(lecturasGenericas(fetch.calls)).toEqual([])
+  })
+
+  it.each([
+    ['un 404', 404],
+    ['un 5xx', 503]
+  ])('ante %s de la lectura única vuelve a las lecturas por pestaña', async (_, status) => {
+    fetch = mockFetch([
+      ...RUTAS_DEL_PROYECTO,
+      { path: '/objects/project_assignment/records', body: pagina([]) },
+      { path: '/sgspe/projects/p1/counts', status, body: { title: 'Error', status, detail: 'x', errors: [] } },
+      { path: /\/objects\/commitment\/records\?.*deadline_status=VENCIDO/, body: pagina([], { totalElements: 3 }) },
+      { path: '/objects/commitment/records', body: pagina([], { totalElements: 12 }) }
+    ])
+    montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    await waitFor(() => expect(within(subnav).getByRole('link', { name: 'Compromisos' })).toHaveAccessibleDescription('12 en total, 3 vencidos'))
+    expect(lecturasGenericas(fetch.calls).length).toBeGreaterThan(1)
+  })
+
+  it('ante otro error de la lectura única no hay insignias ni lecturas por pestaña', async () => {
+    fetch = mockFetch([
+      ...RUTAS_DEL_PROYECTO,
+      { path: '/objects/project_assignment/records', body: pagina([]) },
+      { path: '/sgspe/projects/p1/counts', status: 422, body: { title: 'Error', status: 422, detail: 'x', errors: [] } }
+    ])
+    montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS })
+    const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
+    await waitFor(() => expect(fetch?.calls.some((c) => c.path.startsWith('/sgspe/projects/p1/counts'))).toBe(true))
+    expect(within(subnav).getByRole('link', { name: 'Compromisos' })).not.toHaveAttribute('aria-describedby')
+    expect(lecturasGenericas(fetch.calls)).toEqual([])
+  })
+
+  // sin la ruta nueva (un backend anterior a B-03 responde 404), las lecturas de siempre
   it('cada pestaña dice su total y lo vencido, sin cambiar su nombre; QCS suma sus tres objetos', async () => {
     fetch = mockFetch([
       ...RUTAS_DEL_PROYECTO,
