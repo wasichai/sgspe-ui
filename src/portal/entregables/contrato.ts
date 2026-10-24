@@ -118,6 +118,9 @@ export interface Plantilla {
   sha256: string | null
   createdAt: string | null
   warnings: Hallazgo[]
+  // la marca del PDF (ASM-140): si trae logo y su color de acento RRGGBB; sin acento rige el de la plantilla base
+  hasLogo: boolean
+  accentColor: string | null
 }
 
 export interface PlantillaSubida {
@@ -137,16 +140,23 @@ export interface Subida {
   archivo: File
   clave: string
   nombre: string
+  // la marca del PDF (ASM-140): un PNG o JPEG y el acento en seis dígitos hexadecimales, los dos opcionales
+  logo?: File | null
+  acento?: string
 }
 
-// POST multipart (file, templateKey, name) con Idempotency-Key; name solo si se escribió (StrictBody)
+// POST multipart (file, templateKey, name, logo y accentColor) con Idempotency-Key; name, logo y accentColor solo si se dieron
+// (StrictBody). el acento va sin '#' y en mayúsculas, como lo guarda el backend
 export function useSubirPlantilla() {
   return useComando<PlantillaSubida, Subida>(
-    ({ archivo, clave, nombre }) => {
+    ({ archivo, clave, nombre, logo, acento }) => {
       const formulario = new FormData()
       formulario.append('file', archivo, archivo.name)
       formulario.append('templateKey', clave)
       if (nombre.trim()) formulario.append('name', nombre.trim())
+      if (logo) formulario.append('logo', logo, logo.name)
+      const color = acento?.trim().replace(/^#/, '').toUpperCase()
+      if (color) formulario.append('accentColor', color)
       return { ruta: '/sgspe/deliverable-templates', formulario }
     },
     { invalidar: () => [['deliverable-templates']] }
@@ -166,6 +176,17 @@ const lista = (valor: unknown): Hallazgo[] =>
 export function hallazgosDe(error: unknown): { violaciones: Hallazgo[]; avisos: Hallazgo[] } | null {
   if (codigoDelError(error) !== 'TEMPLATE_INVALID' || !(error instanceof ErrorDeSgspe)) return null
   return { violaciones: lista(error.cuerpo?.violations), avisos: lista(error.cuerpo?.warnings) }
+}
+
+// las violaciones de la marca (BrandLogo del backend) se dicen en su campo; el resto, en la lista de problemas
+export const LOGO_INVALIDO = 'LOGO_INVALID'
+export const ACENTO_INVALIDO = 'ACCENT_INVALID'
+export function marcaDe(violaciones: Hallazgo[]): { logo: Hallazgo[]; acento: Hallazgo[]; resto: Hallazgo[] } {
+  return {
+    logo: violaciones.filter((v) => v.code === LOGO_INVALIDO),
+    acento: violaciones.filter((v) => v.code === ACENTO_INVALIDO),
+    resto: violaciones.filter((v) => v.code !== LOGO_INVALIDO && v.code !== ACENTO_INVALIDO)
+  }
 }
 
 // la descarga nativa de wasichai-files (READ): la plantilla no tiene marca ni export_log

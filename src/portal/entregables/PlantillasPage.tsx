@@ -10,7 +10,7 @@ import { DeLista } from '../componentes/LecturaConEstados'
 import { tamanoPe } from '../datos/archivos'
 import { guardarArchivo, usePedir } from '../datos/http'
 import { fechaPe, NS } from '../i18n'
-import { hallazgosDe, rutaDeLaPlantilla, usePlantillas, useSubirPlantilla, type Hallazgo, type PlantillaSubida } from './contrato'
+import { hallazgosDe, marcaDe, rutaDeLaPlantilla, usePlantillas, useSubirPlantilla, type Hallazgo, type PlantillaSubida } from './contrato'
 import { Seccion } from '../componentes/Seccion'
 
 // S64 · Plantillas de entregables (screens.md, api.md §4.12, ASM-135): solo para la administración (isAdmin o MANAGE_METADATA
@@ -22,15 +22,46 @@ export const FUENTES_PERMITIDAS = ['Carlito', 'Caladea', 'Liberation Sans', 'Lib
 // spring.webflux.multipart.max-disk-usage-per-part: lo que sube el navegador (ASM-138)
 export const TOPE_DE_PLANTILLA = 20 * 1024 * 1024
 const CLAVE = /^[a-z0-9][a-z0-9-]{0,63}$/
+// la marca del PDF (ASM-140, BrandLogo del backend): PNG o JPEG de hasta 2 MB (nunca SVG) y el acento RRGGBB. los 4000 px por
+// lado los juzga el servidor, que lee la cabecera de la imagen
+export const TOPE_DE_LOGO = 2 * 1024 * 1024
+const TIPOS_DE_LOGO = ['image/png', 'image/jpeg']
+const EXTENSION_DE_LOGO = /\.(png|jpe?g)$/i
+const ACENTO = /^[0-9A-F]{6}$/
+// el acento escrito, sin '#' ni espacios y en mayúsculas: '' si está vacío
+const acentoDe = (texto: string) => texto.trim().replace(/^#/, '').toUpperCase()
+// el tipo del navegador manda; sin tipo (algunos sistemas no lo dan), la extensión
+const esLogoAdmitido = (logo: File) => (logo.type ? TIPOS_DE_LOGO.includes(logo.type) : EXTENSION_DE_LOGO.test(logo.name))
 
 // sin nombre en Content-Disposition, la extensión sale del tipo del archivo: se aceptan .dotx y .docx (menor 1 de la revisión)
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const extensionDe = (blob: Blob) => (blob.type.split(';')[0].trim() === DOCX ? '.docx' : '.dotx')
 
+type Traducir = ReturnType<typeof useTranslation>['t']
+const textoDeHallazgo = (t: Traducir, hallazgo: Hallazgo) => {
+  const texto = t(`plantillas.codigos.${hallazgo.code}`, { defaultValue: t('plantillas.codigos.otro') })
+  return hallazgo.detail ? `${texto}: ${hallazgo.detail}` : texto
+}
+
 function TextoDeHallazgo({ hallazgo }: { hallazgo: Hallazgo }) {
   const { t } = useTranslation(NS)
-  const texto = t(`plantillas.codigos.${hallazgo.code}`, { defaultValue: t('plantillas.codigos.otro') })
-  return <>{hallazgo.detail ? `${texto}: ${hallazgo.detail}` : texto}</>
+  return <>{textoDeHallazgo(t, hallazgo)}</>
+}
+
+// el rechazo de la marca en su campo: con su detalle, o el texto del código de comun.codigos si no lo trae
+const textoEnCampo = (t: Traducir, hallazgos: Hallazgo[]) =>
+  hallazgos.length === 0 ? undefined : hallazgos.map((h) => (h.detail ? textoDeHallazgo(t, h) : t(`comun.codigos.${h.code}`))).join(' ')
+
+// la muestra del acento: un cuadro del color, con su nombre para el lector de pantalla
+function MuestraDeAcento({ color, nombre }: { color: string; nombre: string }) {
+  return (
+    <span
+      role="img"
+      aria-label={nombre}
+      className="inline-block size-4 shrink-0 rounded-sg-sm border border-sg-border-strong"
+      style={{ backgroundColor: `#${color}` }}
+    />
+  )
 }
 
 export function PlantillasPage() {
@@ -78,7 +109,7 @@ function Plantillas() {
               <Table aria-label={titulo}>
                 <thead>
                   <tr>
-                    {(['clave', 'nombre', 'huella', 'fecha', 'avisos', 'acciones'] as const).map((c) => (
+                    {(['clave', 'nombre', 'huella', 'fecha', 'logo', 'acento', 'avisos', 'acciones'] as const).map((c) => (
                       <Th key={c} scope="col">
                         {t(`plantillas.columnas.${c}`)}
                       </Th>
@@ -92,6 +123,17 @@ function Plantillas() {
                       <Td className="text-sm">{p.name ?? '—'}</Td>
                       <Td className="break-all font-sg-mono text-sg-caption">{p.sha256 ?? '—'}</Td>
                       <Td className="text-sm">{p.createdAt ? fechaPe(new Date(p.createdAt)) : '—'}</Td>
+                      <Td className="text-sm">{p.hasLogo ? t('plantillas.conLogo') : t('plantillas.sinLogo')}</Td>
+                      <Td className="text-sm">
+                        {p.accentColor ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <MuestraDeAcento color={p.accentColor} nombre={t('plantillas.muestraDeAcento', { color: `#${p.accentColor}` })} />
+                            <span className="font-sg-mono">{`#${p.accentColor}`}</span>
+                          </span>
+                        ) : (
+                          <span className="text-sg-text-muted">{t('plantillas.acentoBase')}</span>
+                        )}
+                      </Td>
                       <Td className="text-sm">
                         {p.warnings.length === 0 ? (
                           '—'
@@ -158,6 +200,8 @@ function SubirPlantilla({ alCerrar }: { alCerrar: () => void }) {
   const [archivo, setArchivo] = useState<File | null>(null)
   const [clave, setClave] = useState('')
   const [nombre, setNombre] = useState('')
+  const [logo, setLogo] = useState<File | null>(null)
+  const [acentoEscrito, setAcentoEscrito] = useState('')
   const [intentado, setIntentado] = useState(false)
   const [aceptada, setAceptada] = useState<PlantillaSubida | null>(null)
   const faltaArchivo = !archivo
@@ -166,11 +210,23 @@ function SubirPlantilla({ alCerrar }: { alCerrar: () => void }) {
       ? t('plantillas.subida.muyGrande', { tamano: tamanoPe(archivo.size) })
       : undefined
   const claveInvalida = CLAVE.test(clave) ? undefined : t('plantillas.subida.claveInvalida')
+  // el tipo y el peso del logo se dicen al elegirlo; el acento, al intentar
+  const logoInvalido = !logo
+    ? undefined
+    : !esLogoAdmitido(logo)
+      ? t('plantillas.subida.logoTipo')
+      : logo.size > TOPE_DE_LOGO
+        ? t('plantillas.subida.logoGrande', { tamano: tamanoPe(logo.size) })
+        : undefined
+  const acento = acentoDe(acentoEscrito)
+  const acentoValido = ACENTO.test(acento)
+  const acentoInvalido = acento && !acentoValido ? t('plantillas.subida.acentoInvalido') : undefined
   const rechazo = subir.isError ? hallazgosDe(subir.error) : null
+  const marca = marcaDe(rechazo?.violaciones ?? [])
   const enviar = () => {
     setIntentado(true)
-    if (faltaArchivo || claveInvalida || !archivo) return
-    subir.mutate({ archivo, clave, nombre }, { onSuccess: setAceptada })
+    if (faltaArchivo || claveInvalida || logoInvalido || acentoInvalido || !archivo) return
+    subir.mutate({ archivo, clave, nombre, logo, acento }, { onSuccess: setAceptada })
   }
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && alCerrar()}>
@@ -194,6 +250,44 @@ function SubirPlantilla({ alCerrar }: { alCerrar: () => void }) {
           <Campo etiqueta={t('plantillas.subida.nombre')}>
             {(p) => <Input {...p} maxLength={200} value={nombre} onChange={(e) => setNombre(e.target.value)} />}
           </Campo>
+          <Campo etiqueta={t('plantillas.subida.logo')} ayuda={t('plantillas.subida.logoAyuda')} error={logoInvalido ?? textoEnCampo(t, marca.logo)}>
+            {(p) => <input {...p} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} />}
+          </Campo>
+          <Campo
+            etiqueta={t('plantillas.subida.acento')}
+            ayuda={t('plantillas.subida.acentoAyuda')}
+            error={(intentado ? acentoInvalido : undefined) ?? textoEnCampo(t, marca.acento)}
+          >
+            {(p) => (
+              <div className="flex items-center gap-2">
+                {/* la paleta del navegador y el valor escrito son el mismo dato: cada uno sigue al otro */}
+                <input
+                  type="color"
+                  aria-label={t('plantillas.subida.acentoPaleta')}
+                  className="h-9 w-12 shrink-0 cursor-pointer rounded-sg-md border border-sg-border-strong bg-sg-surface p-1"
+                  value={`#${acentoValido ? acento.toLowerCase() : '000000'}`}
+                  onChange={(e) => setAcentoEscrito(e.target.value.replace(/^#/, '').toUpperCase())}
+                />
+                <Input
+                  {...p}
+                  className="font-sg-mono"
+                  maxLength={7}
+                  spellCheck={false}
+                  autoComplete="off"
+                  value={acentoEscrito}
+                  onChange={(e) => setAcentoEscrito(e.target.value)}
+                />
+              </div>
+            )}
+          </Campo>
+          {acentoValido ? (
+            <div className="flex items-center gap-2 rounded-sg-md border border-sg-border bg-sg-surface px-3 py-2">
+              <MuestraDeAcento color={acento} nombre={t('plantillas.subida.vistaPrevia', { color: `#${acento}` })} />
+              <span className="text-sg-h3 font-semibold" style={{ color: `#${acento}` }}>
+                {t('plantillas.subida.tituloDeEjemplo')}
+              </span>
+            </div>
+          ) : null}
           {aceptada ? (
             <div role="status" className="space-y-1 text-sm">
               <p className="text-sg-success">{t('plantillas.subida.aceptada')}</p>
@@ -210,13 +304,15 @@ function SubirPlantilla({ alCerrar }: { alCerrar: () => void }) {
           ) : null}
           {rechazo ? (
             <Alert tone="danger" title={t('plantillas.subida.rechazada')}>
-              <ul aria-label={t('plantillas.subida.problemas')} className="space-y-0.5">
-                {rechazo.violaciones.map((v, i) => (
-                  <li key={i}>
-                    <TextoDeHallazgo hallazgo={v} />
-                  </li>
-                ))}
-              </ul>
+              {marca.resto.length > 0 ? (
+                <ul aria-label={t('plantillas.subida.problemas')} className="space-y-0.5">
+                  {marca.resto.map((v, i) => (
+                    <li key={i}>
+                      <TextoDeHallazgo hallazgo={v} />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </Alert>
           ) : subir.isError ? (
             <Alert tone="danger">{mensaje(subir.error)}</Alert>

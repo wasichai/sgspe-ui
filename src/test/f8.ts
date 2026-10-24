@@ -261,7 +261,9 @@ export const PLANTILLA = {
   name: 'Plantilla Ejemplo',
   sha256: SHA_PLANTILLA,
   createdAt: '2026-10-08T15:00:00Z',
-  warnings: [{ code: 'FONT_IN_TABLE', detail: 'Calibri' }]
+  warnings: [{ code: 'FONT_IN_TABLE', detail: 'Calibri' }],
+  hasLogo: true,
+  accentColor: '1F6F5C'
 }
 
 export const DEF_ENTREGABLE = definicion('deliverable', [
