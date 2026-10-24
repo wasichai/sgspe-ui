@@ -151,6 +151,18 @@ describe('S52 · bandeja de revisión de IA', () => {
     expect(within(await lista()).getAllByText(TIPO)).toHaveLength(1)
   })
 
+  // rediseño de UX (2026-10-20): sin coincidencias, el vacío dice cuántas hay sin los filtros y los limpia
+  it('si los filtros no dejan ninguna propuesta, el vacío ofrece limpiarlos', async () => {
+    montarBandeja()
+    const antes = within(await lista()).getAllByRole('listitem').length
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'DUPLICADO')
+    await userEvent.selectOptions(screen.getByLabelText('Origen'), 'persona')
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    expect(screen.getByText(/^Sin los filtros hay \d+\.$/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    expect(within(await lista()).getAllByRole('listitem')).toHaveLength(antes)
+  })
+
   it('un candidato se revisa como en S28', async () => {
     montarBandeja()
     await userEvent.click(await within(await tarjeta('Candidato a compromiso')).findByRole('button', { name: 'Revisar' }))

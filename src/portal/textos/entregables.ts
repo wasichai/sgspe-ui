@@ -6,7 +6,6 @@ export const ES_ENTREGABLES = {
     ayuda: 'Los informes que se generan en DOCX y PDF, se revisan, se aprueban y se emiten. Cada uno lleva a su página.',
     nuevo: 'Nuevo entregable',
     plantillas: 'Plantillas',
-    eligeProyecto: 'Elija un proyecto para crear un entregable.',
     sinAsignacion: 'Para crear un entregable en este proyecto hace falta una asignación vigente a él.',
     vacio: 'Todavía no hay entregables.',
     columnas: {
@@ -200,7 +199,6 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     ayuda: 'The reports that are generated in DOCX and PDF, reviewed, approved and issued. Each one opens its page.',
     nuevo: 'New deliverable',
     plantillas: 'Templates',
-    eligeProyecto: 'Choose a project to create a deliverable.',
     sinAsignacion: 'Creating a deliverable in this project needs a current assignment to it.',
     vacio: 'There are no deliverables yet.',
     columnas: { entregable: 'Deliverable', tipo: 'Type', corte: 'Cutoff', estado: 'State', borrador: 'Draft', revision: 'Revision', niveles: 'Levels' }

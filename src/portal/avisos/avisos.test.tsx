@@ -166,6 +166,19 @@ describe('S04 · bandeja', () => {
     await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').at(-1)?.ruta).toContain('state=unread'))
   })
 
+  // rediseño de UX (2026-10-20): un tipo sin avisos se puede quitar desde el vacío
+  it('con un tipo elegido y ningún aviso, el vacío ofrece limpiar el filtro', async () => {
+    fetch = mockFetch([{ path: /^\/auth\/me\/notifications\?.*kind=WARNING/, body: pagina([]) }, ...rutas()])
+    red = espiarRed()
+    montar(<AvisosPage />, { ruta: '/notifications?kind=WARNING', camino: '/notifications' })
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    // el del vacío, no el de la barra de filtros
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    const delVacio = screen.getAllByRole('button', { name: 'Limpiar filtros' }).find((b) => !barra.contains(b))!
+    await userEvent.click(delVacio)
+    await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').at(-1)?.ruta).not.toContain('kind='))
+  })
+
   it('nombra las fuentes de F4: riesgos y alerta temprana; el aviso genérico de una QCS confidencial no lleva enlace', async () => {
     fetch = mockFetch(
       rutas([

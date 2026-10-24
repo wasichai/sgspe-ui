@@ -130,7 +130,10 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
                 <Dia valor={texto(compromiso, 'due_date')} />
               </span>
             ) : null}
-            <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
+            {/* sin monto, nada: un «—» suelto entre los chips no dice qué falta (rediseño de UX, 2026-10-20) */}
+            {atributo(compromiso, 'amount') !== null && atributo(compromiso, 'amount') !== undefined ? (
+              <span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>
+            ) : null}
           </>
         }
         objeto="commitment"

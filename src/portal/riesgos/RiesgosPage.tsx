@@ -15,7 +15,7 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista } from '../componentes/Lista'
+import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
@@ -125,6 +125,7 @@ export function RiesgosPage() {
   // el orden es de esta visita, como en Alertas: no viaja en la URL. la lista no se pagina: no hay página a la que volver
   const [orden, setOrden] = useState(ORDEN_INICIAL)
   const filtrados = ordenarEnCliente(celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista, orden, valorDeOrden)
+  const enLaVistaSinFiltros = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id)).length
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
   const crea = proyecto !== undefined && escribe && can('social_risk', 'CREATE')
   const nuevo = busqueda.get('nuevo') === '1'
@@ -251,6 +252,10 @@ export function RiesgosPage() {
         <Cargando />
       ) : riesgos.isError && !riesgos.data ? (
         <FalloDeLectura error={riesgos.error} alReintentar={() => void riesgos.refetch()} />
+      ) : (riesgos.data ?? []).length === 0 ? (
+        // sin ningún riesgo, ni la matriz llena de ceros ni «esta vista»: el registro está vacío y se dice cómo empezarlo (rediseño de
+        // UX, 2026-10-20)
+        <Vacio titulo={t('riesgos.sinRiesgos')}>{can('social_risk', 'CREATE') ? t('riesgos.sinRiesgosAyuda') : null}</Vacio>
       ) : (
         <div className="grid gap-4 min-[105rem]:grid-cols-[360px_minmax(0,1fr)]">
           <Seccion titulo={t('riesgos.mapa.titulo')} className="w-full max-w-md min-[105rem]:max-w-none">
@@ -263,7 +268,12 @@ export function RiesgosPage() {
             ) : null}
           </Seccion>
           {filtrados.length === 0 ? (
-            <Vacio titulo={t('riesgos.vacio')} />
+            // con la celda o el nivel puestos, el vacío los quita (rediseño de UX, 2026-10-20); sin ellos, la vista está vacía
+            celda || soloAltos ? (
+              <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ cell: null, level: null })} sinFiltros={enLaVistaSinFiltros || undefined} />
+            ) : (
+              <Vacio titulo={t('riesgos.vacio')} />
+            )
           ) : telefono ? (
             <ListaEnTarjetas
               etiqueta={t('riesgos.tabla')}

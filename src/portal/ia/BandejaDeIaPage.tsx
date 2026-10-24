@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { Cargando, Vacio } from '../componentes/Estados'
+import { VacioDeLista } from '../componentes/Lista'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { RevisionDeCandidato } from '../compromisos/Candidatos'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -119,7 +120,15 @@ export function BandejaDeIaPage() {
           ) : visibles.length === 0 ? (
             <Vacio titulo={t('bandejaIa.vacio')} />
           ) : filtradas.length === 0 ? (
-            <Vacio titulo={t('bandejaIa.vacioPorFiltros')} />
+            // el vacío por filtros dice cuántas hay sin ellos y los limpia (rediseño de UX, 2026-10-20)
+            <VacioDeLista
+              conFiltros
+              sinFiltros={visibles.length}
+              alLimpiar={() => {
+                setTipo('todos')
+                setOrigen('todos')
+              }}
+            />
           ) : (
             <ul aria-label={t('bandejaIa.lista')} className="space-y-3">
               {filtradas.map((p) =>

@@ -420,7 +420,7 @@ describe('S31 · aprobación de compromiso', () => {
     ])
     abrirS31('c1')
     const bandeja = await screen.findByRole('navigation', { name: 'Por aprobar' })
-    expect(await within(bandeja).findByText('No se pudo cargar esta información. Los filtros se conservan.')).toBeInTheDocument()
+    expect(await within(bandeja).findByText('No se pudo cargar esta información.')).toBeInTheDocument()
     const resumen = screen.getByRole('region', { name: 'El compromiso' })
     expect(await within(resumen).findByText('No disponible')).toBeInTheDocument()
     expect(within(resumen).queryByText('…')).not.toBeInTheDocument()

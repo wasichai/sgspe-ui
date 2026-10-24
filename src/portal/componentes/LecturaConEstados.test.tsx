@@ -3,9 +3,21 @@ import userEvent from '@testing-library/user-event'
 import { ApiError } from '@wasichai/core'
 import { describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
-import { FalloDeLectura } from './LecturaConEstados'
+import { DeLista, FalloDeLectura } from './LecturaConEstados'
 
 const codigo = (message: string) => new ApiError(403, 'Sin acceso', [{ field: 'record', message }])
+
+// rediseño de UX (2026-10-20): una lista cuyo objeto el servidor no tiene (un despliegue sin el módulo) respondía 404 y se decía
+// en rojo «El registro no existe o no es de sus proyectos», con un «Reintentar» que no servía
+describe('DeLista', () => {
+  it('un 404 de la lista dice que la información no está disponible en su organización, sin reintento ni alarma', () => {
+    const consulta = { isPending: false, isError: true, data: undefined, error: new ApiError(404, 'Not Found', []), refetch: vi.fn() }
+    montar(<DeLista consulta={consulta as never}>{() => <p>datos</p>}</DeLista>)
+    expect(screen.getByText('Esta información no está disponible en su organización.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/no es de sus proyectos/)).not.toBeInTheDocument()
+  })
+})
 
 describe('FalloDeLectura', () => {
   it('un 403 con código dice su motivo, nunca el código', () => {

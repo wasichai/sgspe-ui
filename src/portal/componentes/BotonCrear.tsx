@@ -15,26 +15,38 @@ import { useContextFilters } from '../shell/context'
 // el botón lleva al alta de ese proyecto; con el alcance global, pide el proyecto entre los que puede escribir (la regla de
 // useEscribeEnProyecto: ADMIN en todos, los demás con una asignación vigente), con los suyos primero, y con uno solo va
 // directo. «resto» es el trozo fijo de la ruta del alta dentro del proyecto («commitments/new»)
-// «objeto» puede ser varios: se ofrece si la cuenta crea alguno (el alta de QCS registra una queja, una consulta o una solicitud)
-export function BotonCrear({ objeto, etiqueta, resto }: { objeto: string | readonly string[]; etiqueta: string; resto: string }) {
+// «objeto» puede ser varios: se ofrece si la cuenta crea alguno (el alta de QCS registra una queja, una consulta o una solicitud).
+// un alta que es un diálogo y no una página (el entregable de S49) da alElegir en lugar de resto: recibe el proyecto
+export type DestinoDelAlta = { resto: string; alElegir?: never } | { alElegir: (proyecto: string) => void; resto?: never }
+
+export function BotonCrear({ objeto, etiqueta, ...destino }: { objeto: string | readonly string[]; etiqueta: string } & DestinoDelAlta) {
   const { can } = useAuth()
   const { scope } = useContextFilters()
   if (!(typeof objeto === 'string' ? [objeto] : objeto).some((o) => can(o, 'CREATE'))) return null
   return scope.kind === 'project' ? (
-    <CrearEnProyecto proyecto={scope.projectId} etiqueta={etiqueta} resto={resto} />
+    <CrearEnProyecto proyecto={scope.projectId} etiqueta={etiqueta} destino={destino} />
   ) : (
-    <CrearEligiendoProyecto etiqueta={etiqueta} resto={resto} />
+    <CrearEligiendoProyecto etiqueta={etiqueta} destino={destino} />
   )
 }
 
 const rutaDeAlta = (proyecto: string, resto: string) => `/projects/${encodeURIComponent(proyecto)}/${resto}`
 
-function CrearEnProyecto({ proyecto, etiqueta, resto }: { proyecto: string; etiqueta: string; resto: string }) {
+function CrearEnProyecto({ proyecto, etiqueta, destino }: { proyecto: string; etiqueta: string; destino: DestinoDelAlta }) {
   const escribe = useEscribeEnProyecto(proyecto)
   if (!escribe) return null
+  if (destino.alElegir) {
+    const { alElegir } = destino
+    return (
+      <Button size="sm" onClick={() => alElegir(proyecto)}>
+        <Plus aria-hidden className="size-4" />
+        {etiqueta}
+      </Button>
+    )
+  }
   return (
     <Button asChild size="sm">
-      <Link to={rutaDeAlta(proyecto, resto)}>
+      <Link to={rutaDeAlta(proyecto, destino.resto)}>
         <Plus aria-hidden className="size-4" />
         {etiqueta}
       </Link>
@@ -61,15 +73,20 @@ function useProyectosParaCrear(): { proyectos: Registro[]; cargando: boolean; fa
   }
 }
 
-function CrearEligiendoProyecto({ etiqueta, resto }: { etiqueta: string; resto: string }) {
+function CrearEligiendoProyecto({ etiqueta, destino }: { etiqueta: string; destino: DestinoDelAlta }) {
   const { t } = useTranslation(NS)
-  const navegar = useNavigate()
+  const navegarA = useNavigate()
   const { proyectos, cargando, fallo, releer } = useProyectosParaCrear()
   const [abierto, setAbierto] = useState(false)
   const [elegido, setElegido] = useState('')
   const id = useId()
+  const ir = (proyecto: string) => {
+    setAbierto(false)
+    if (destino.alElegir) destino.alElegir(proyecto)
+    else navegarA(rutaDeAlta(proyecto, destino.resto))
+  }
   const abrir = () => {
-    if (!cargando && !fallo && proyectos.length === 1) return navegar(rutaDeAlta(proyectos[0].id, resto))
+    if (!cargando && !fallo && proyectos.length === 1) return ir(proyectos[0].id)
     setElegido('')
     setAbierto(true)
   }
@@ -101,7 +118,7 @@ function CrearEligiendoProyecto({ etiqueta, resto }: { etiqueta: string; resto: 
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault()
-                if (elegido) navegar(rutaDeAlta(elegido, resto))
+                if (elegido) ir(elegido)
               }}
             >
               <DialogDescription>{t('paginas.crear.texto')}</DialogDescription>

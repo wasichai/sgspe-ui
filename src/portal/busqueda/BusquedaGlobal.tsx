@@ -5,18 +5,24 @@ import { Search } from 'lucide-react'
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router'
+import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { useVistaActual } from '../componentes/Pagina'
 import type { EstadoDeNavegacion } from '../contexto/Origen'
+import { nombreDeProyecto, useProyectos } from '../contexto/proyectos'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { rutaDeFicha } from '../datos/fichas'
 import { usePedir } from '../datos/http'
 import { consulta, texto, type Pagina, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
+import { useContextFilters } from '../shell/context'
 
 // la búsqueda global (ux-architecture.md §7.3): se abre con ⌘K o Ctrl K desde cualquier pantalla, o con su botón de la barra
 // superior. busca con ?q= de la API genérica en cada objeto que la cuenta puede leer (nunca en lo que no), cinco por categoría,
-// y agrupa los resultados con su conteo. ↑ ↓ se mueven, Enter abre la ficha, Esc cierra
+// y agrupa los resultados con su conteo. ↑ ↓ se mueven, Enter abre la ficha, Esc cierra.
+// rediseño de UX (2026-10-20): cada resultado dice su proyecto y su estado, para reconocerlo antes de abrirlo; sin resultados dice
+// cómo ampliar la búsqueda; la consulta se conserva en la sesión del navegador al cerrar y volver (solo lo escrito, nunca un
+// resultado); y dentro de un proyecto busca primero en él, con «en todos sus proyectos» a un clic (ux-architecture.md §7.3)
 const CATEGORIAS = [
   'project',
   'stakeholder',
@@ -34,6 +40,35 @@ const CATEGORIAS = [
 type Categoria = (typeof CATEGORIAS)[number]
 const POR_CATEGORIA = 5
 const ESPERA = 250
+// los que pertenecen a un proyecto: dentro de uno, se buscan en él primero. el territorio es del tenant y un proyecto es él mismo
+const CON_PROYECTO: ReadonlySet<Categoria> = new Set([
+  'stakeholder',
+  'engagement',
+  'commitment',
+  'grievance',
+  'inquiry',
+  'stakeholder_request',
+  'social_risk',
+  'social_program',
+  'evidence'
+])
+const CLAVE_DE_LA_CONSULTA = 'sgspe.busqueda'
+
+// lo escrito, en la sesión del navegador: sin almacenamiento (una ventana privada que lo bloquea) se empieza vacío
+function leerConsulta(): string {
+  try {
+    return sessionStorage.getItem(CLAVE_DE_LA_CONSULTA) ?? ''
+  } catch {
+    return ''
+  }
+}
+function guardarConsulta(termino: string) {
+  try {
+    sessionStorage.setItem(CLAVE_DE_LA_CONSULTA, termino)
+  } catch {
+    // sin almacenamiento, la próxima búsqueda empieza vacía
+  }
+}
 
 // el rótulo de un resultado: el código y el título o el nombre que el objeto tenga
 const rotuloDe = (registro: Registro): string =>
@@ -65,6 +100,7 @@ export function BotonBuscar() {
     <>
       <button
         type="button"
+        aria-label={t('busqueda.boton')}
         onClick={() => setAbierta(true)}
         className="flex h-8 items-center gap-2 rounded-sg-md border border-sg-border px-2 text-sm text-sg-text-secondary hover:bg-sg-surface-hover"
       >
@@ -86,17 +122,23 @@ function DialogoDeBusqueda({ alCerrar }: { alCerrar: () => void }) {
   const vista = useVistaActual()
   const { pathname, search } = useLocation()
   const idLista = useId()
-  const [termino, setTermino] = useState('')
+  const [termino, setTermino] = useState(leerConsulta)
   const [activo, setActivo] = useState(0)
+  const { scope } = useContextFilters()
+  const [enTodos, setEnTodos] = useState(false)
+  const proyecto = scope.kind === 'project' && !enTodos ? scope.projectId : undefined
   const buscado = useTerminoConEspera(termino.trim())
   const legibles = useMemo(() => CATEGORIAS.filter((c) => can(c, 'READ')), [can])
   const consultas = useQueries({
-    queries: legibles.map((objeto) => ({
-      queryKey: ['busqueda', objeto, buscado],
-      queryFn: () => pedir<Pagina>(`/objects/${objeto}/records?${consulta({ q: buscado, size: POR_CATEGORIA })}`),
-      enabled: buscado.length >= 2,
-      staleTime: 30_000
-    }))
+    queries: legibles.map((objeto) => {
+      const filtro = proyecto && CON_PROYECTO.has(objeto) ? proyecto : undefined
+      return {
+        queryKey: ['busqueda', objeto, buscado, filtro ?? ''],
+        queryFn: () => pedir<Pagina>(`/objects/${objeto}/records?${consulta({ q: buscado, size: POR_CATEGORIA, project: filtro })}`),
+        enabled: buscado.length >= 2,
+        staleTime: 30_000
+      }
+    })
   })
   const grupos = legibles
     .map((objeto, i) => ({ objeto, pagina: consultas[i]?.data }))
@@ -142,13 +184,30 @@ function DialogoDeBusqueda({ alCerrar }: { alCerrar: () => void }) {
             aria-controls={idLista}
             aria-activedescendant={resultados.length ? `${idLista}-${activo}` : undefined}
             autoFocus
+            // al volver con una consulta, seleccionada: escribir la reemplaza
+            onFocus={(e) => e.currentTarget.select()}
             value={termino}
-            onChange={(e) => setTermino(e.target.value)}
+            onChange={(e) => {
+              setTermino(e.target.value)
+              guardarConsulta(e.target.value)
+            }}
             onKeyDown={alTeclear}
             placeholder={t('busqueda.placeholder')}
             className="w-full bg-transparent py-1 text-sg-body text-sg-text outline-none"
           />
         </div>
+        {scope.kind === 'project' ? (
+          <div role="radiogroup" aria-label={t('busqueda.alcance')} className="flex flex-wrap gap-4 text-sm text-sg-text-secondary">
+            <label className="flex items-center gap-1.5">
+              <input type="radio" name="alcance-de-la-busqueda" checked={!enTodos} onChange={() => setEnTodos(false)} />
+              {t('busqueda.enEsteProyecto')}
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input type="radio" name="alcance-de-la-busqueda" checked={enTodos} onChange={() => setEnTodos(true)} />
+              {t('busqueda.enTodos')}
+            </label>
+          </div>
+        ) : null}
         {termino.trim().length < 2 ? (
           <p className="text-sm text-sg-text-muted">{t('busqueda.minimo')}</p>
         ) : cargando && resultados.length === 0 ? (
@@ -156,7 +215,10 @@ function DialogoDeBusqueda({ alCerrar }: { alCerrar: () => void }) {
             {t('comun.cargando')}
           </p>
         ) : resultados.length === 0 ? (
-          <p className="text-sm text-sg-text-muted">{t('busqueda.sinResultados', { termino: buscado })}</p>
+          <div className="space-y-1 text-sm">
+            <p className="text-sg-text">{t('busqueda.sinResultados', { termino: buscado })}</p>
+            <p className="text-sg-text-muted">{t(proyecto ? 'busqueda.sinResultadosEnProyecto' : 'busqueda.sinResultadosAyuda')}</p>
+          </div>
         ) : (
           <div id={idLista} role="listbox" aria-label={t('busqueda.resultados')} className="max-h-[60vh] space-y-3 overflow-y-auto">
             {grupos.map((g) => (
@@ -190,10 +252,30 @@ function DialogoDeBusqueda({ alCerrar }: { alCerrar: () => void }) {
   )
 }
 
-// un grupo de interés no tiene título propio: se nombra por su actor
+// un grupo de interés no tiene título propio: se nombra por su actor. debajo, su proyecto y su estado
 function Resultado({ objeto, registro }: { objeto: Categoria; registro: Registro }) {
-  if (objeto === 'stakeholder') return <NombreDeGrupo registro={registro} />
-  return <>{rotuloDe(registro) || registro.id}</>
+  return (
+    <span className="flex flex-col">
+      <span>{objeto === 'stakeholder' ? <NombreDeGrupo registro={registro} /> : rotuloDe(registro) || registro.id}</span>
+      <ContextoDelResultado objeto={objeto} registro={registro} />
+    </span>
+  )
+}
+
+// el proyecto (de la lista que ya lee el selector de proyecto) y la etiqueta del estado; lo que no se sabe no se dice
+function ContextoDelResultado({ objeto, registro }: { objeto: Categoria; registro: Registro }) {
+  const proyectos = useProyectos()
+  const estados = useEtiquetasDeEstado(objeto)
+  const id = CON_PROYECTO.has(objeto) ? texto(registro, 'project') : ''
+  const proyecto = id ? nombreDeProyecto(proyectos.data?.find((p) => p.id === id)) : ''
+  const estado = registro.state ? estados[registro.state] : ''
+  if (!proyecto && !estado) return null
+  return (
+    <span className="flex flex-wrap gap-x-2 text-sg-caption text-sg-text-muted">
+      {proyecto ? <span>{proyecto}</span> : null}
+      {estado ? <span>{estado}</span> : null}
+    </span>
+  )
 }
 
 function NombreDeGrupo({ registro }: { registro: Registro }) {

@@ -10,7 +10,7 @@ import { SituacionDePlazo } from './SituacionDePlazo'
 
 // el panel de decisión de design-system.md §6.1: cuatro tarjetas fijas que responden sin buscar. la siguiente acción la
 // decide cada ficha con una función pura (siguienteAccion, por objeto) que dice también lo que falta para darla. lo que no
-// llegó (desde cuándo, quién) se dice «—»: de dónde se lee se resuelve con cada ficha. el panel es el único lugar del
+// llegó (desde cuándo, quién) no se dibuja: de dónde se lee se resuelve con cada ficha. el panel es el único lugar del
 // estado de la ficha (DD-06): el camino del flujo, si la ficha lo da, va plegado dentro de «Estado actual»
 export interface SiguienteAccion {
   etiqueta: string
@@ -48,9 +48,12 @@ export function PanelDeDecision({
     <section aria-label={t('paginas.decision.titulo')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Tarjeta titulo={t('paginas.decision.estado')}>
         <EstadoChip objeto={objeto} estado={estado} />
-        <p className="text-sg-caption text-sg-text-muted">
-          {t('paginas.decision.desde')} <Dia valor={desde} />
-        </p>
+        {/* sin la fecha (un registro anterior a state_changed_at) no se dibuja: «Desde —» no decía nada (rediseño de UX, 2026-10-20) */}
+        {desde ? (
+          <p className="text-sg-caption text-sg-text-muted">
+            {t('paginas.decision.desde')} <Dia valor={desde} />
+          </p>
+        ) : null}
         {por ? (
           <p className="text-sg-caption text-sg-text-muted">
             {t('paginas.decision.por')} <Persona correo={por} />

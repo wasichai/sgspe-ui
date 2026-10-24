@@ -57,30 +57,35 @@ export function KpiCard({
   else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
   else {
     const conValor = indicador as Indicador & { value: number }
-    const dicha = cifra ? cifra(conValor) : numeroPe(indicador.value)
+    // sin cifra propia, un porcentaje lleva su signo junto a la cifra y debajo su base, «n de N» (rediseño de UX, 2026-10-20: se
+    // leía «0 / 1 · %»); otra unidad («QCS», «compromisos») va debajo
+    const porcentaje = indicador.unit === '%'
+    const dicha = cifra ? cifra(conValor) : `${numeroPe(indicador.value)}${porcentaje ? ' %' : ''}`
+    const base =
+      porcentaje && indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
+        ? t('comun.nDeN', { n: numeroPe(indicador.numerator), total: numeroPe(indicador.denominator) })
+        : ''
+    const dibujada =
+      porcentaje && !cifra ? (
+        <>
+          <span>{numeroPe(indicador.value)}</span>
+          <span className="text-sg-h3"> %</span>
+        </>
+      ) : (
+        dicha
+      )
     cuerpo = (
       <>
         <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">
           {a ? (
             <Link to={a} aria-label={`${titulo}: ${dicha}`} className="hover:underline">
-              {dicha}
+              {dibujada}
             </Link>
           ) : (
-            dicha
+            dibujada
           )}
         </p>
-        <p className="text-sg-caption text-sg-text-muted">
-          {detalle ? (
-            detalle(conValor)
-          ) : (
-            <>
-              {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
-                ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `
-                : ''}
-              {indicador.unit ?? ''}
-            </>
-          )}
-        </p>
+        <p className="text-sg-caption text-sg-text-muted">{detalle ? detalle(conValor) : porcentaje ? base : (indicador.unit ?? '')}</p>
       </>
     )
   }

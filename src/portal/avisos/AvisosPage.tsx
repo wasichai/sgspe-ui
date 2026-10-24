@@ -6,7 +6,7 @@ import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMensajeDeError } from '../componentes/errores'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista } from '../componentes/Lista'
+import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import {
@@ -105,7 +105,12 @@ export function AvisosPage() {
           <FalloDeLectura error={avisos.error} alReintentar={() => void avisos.refetch()} />
         )
       ) : avisos.data.content.length === 0 ? (
-        <Vacio titulo={lista.vista === 'todos' && !tipo ? t('avisos.vacio') : t('avisos.vacioFiltrado')} />
+        // un tipo elegido se quita desde el vacío (rediseño de UX, 2026-10-20)
+        tipo ? (
+          <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ kind: null })} />
+        ) : (
+          <Vacio titulo={lista.vista === 'todos' ? t('avisos.vacio') : t('avisos.vacioFiltrado')} />
+        )
       ) : (
         <>
           {/* la bandeja es un resultado (flujo F-C): el registro de un aviso ofrece volver a ella y pasar al del siguiente */}

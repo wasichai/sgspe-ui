@@ -207,7 +207,7 @@ describe('S19 · matriz y tablero de grupos de interés', () => {
     expect(screen.queryByRole('table', { name: 'coverage' })).not.toBeInTheDocument()
     expect(screen.queryByText('evaluated')).not.toBeInTheDocument()
     expect(screen.getByRole('note')).toHaveTextContent('Esta cifra no aplica el filtro de comunidad, campaña de exploración')
-    expect(screen.getByText('2 / 4 · %')).toBeInTheDocument()
+    expect(screen.getByText('2 de 4')).toBeInTheDocument()
   })
 
   it('el detalle de la matriz no dibuja sus puntos ni sus umbrales como barras', async () => {
