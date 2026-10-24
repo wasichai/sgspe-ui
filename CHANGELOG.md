@@ -6,6 +6,7 @@
 ### Features
 
 * **atencion:** la cola de QCS ordena por el código y el plazo en el servidor ([#78](https://github.com/wasichai/sgspe-ui/issues/78)) ([f406275](https://github.com/wasichai/sgspe-ui/commit/f406275a31df9b697b60bc9bbd910ae46d7ebbc9))
+* **opciones:** traduce las opciones al inglés y elige el mes en es-PE ([#82](https://github.com/wasichai/sgspe-ui/issues/82)) ([3668461](https://github.com/wasichai/sgspe-ui/commit/3668461f42c52e59d308517c727d23483edb93b3))
 * **portal:** «Atención requerida» agrupada por tipo y plurales bien formados ([c88d541](https://github.com/wasichai/sgspe-ui/commit/c88d541f945eb3ae2e82d0a5b795c95c4caad9f9))
 * **portal:** «Atención requerida» agrupada por tipo y plurales bien formados ([34afa43](https://github.com/wasichai/sgspe-ui/commit/34afa435fa25f2a52ca7f0abb462d3c8b509f734))
 * **portal:** «Atención requerida» con lo vencido, lo por vencer, las decisiones y los avisos ([c0569fb](https://github.com/wasichai/sgspe-ui/commit/c0569fbd65d5e0ac0d6de307c228cb8ef00e8b96))
