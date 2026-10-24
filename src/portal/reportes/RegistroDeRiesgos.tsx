@@ -1,5 +1,5 @@
 import { ApiError } from '@wasichai/core'
-import { useWorkflow } from '@wasichai/workflow'
+import { useWorkflow } from '../datos/flujos'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Cargando } from '../componentes/Estados'

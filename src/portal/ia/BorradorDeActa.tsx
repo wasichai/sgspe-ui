@@ -1,6 +1,6 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Textarea } from '@wasichai/ui'
-import { useAvailableTransitions } from '@wasichai/workflow'
+import { useAvailableTransitions } from '../datos/flujos'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
