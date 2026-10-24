@@ -256,6 +256,71 @@ describe('S28 · lista de compromisos', () => {
     expect(consultasA(red)).toEqual([])
   })
 
+  // flujo F-C (02-arquitectura-de-informacion §6, issue #77): Compromisos → «Vencidos» → «Más filtros» → Grupo de interés → chip,
+  // con la URL para compartir. el grupo se busca por el nombre que lee quien mira; una persona sin nombres legibles dice «Persona
+  // registrada», como su chip
+  const GRUPOS: MockRoute[] = [
+    {
+      path: '/objects/stakeholder/records',
+      body: pagina([registro('s1', { project: 'p1', organization: 'o-junta' }), registro('s2', { project: 'p1', person: 'pe2' })])
+    },
+    { path: '/objects/stakeholder/records/s1', body: registro('s1', { project: 'p1', organization: 'o-junta' }) },
+    { path: '/objects/organization/records/o-junta', body: registro('o-junta', { name: 'Junta de regantes' }) },
+    { path: '/objects/person/records/pe2', body: registro('pe2', {}) },
+    { path: '/objects/stakeholder/records/s1/related/commitment_stakeholder', body: pagina([C1, C2, C4]) }
+  ]
+
+  it('F-C: en «Vencidos» con un estado, «Más filtros» busca el grupo de interés, deja ?stakeholder= y su chip', async () => {
+    fetch = mockFetch(rutas(GRUPOS))
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=vencidos&state=blocked')
+    await screen.findByRole('table', { name: 'Compromisos' })
+    await userEvent.click(within(screen.getByRole('group', { name: 'Filtros' })).getByRole('button', { name: 'Más filtros' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Más filtros' })
+    const grupos = await within(drawer).findByRole('list', { name: 'Grupos de interés' })
+    expect(await within(grupos).findByRole('button', { name: 'Junta de regantes' })).toBeInTheDocument()
+    expect(await within(grupos).findByRole('button', { name: 'Persona registrada' })).toBeInTheDocument()
+    // los grupos que lee quien mira, del proyecto
+    expect(consultasA(red, 'stakeholder')).toContainEqual(expect.objectContaining({ project: 'p1' }))
+    const buscar = within(drawer).getByRole('searchbox', { name: 'Buscar el grupo de interés' })
+    await userEvent.type(buscar, 'junta')
+    expect(within(grupos).queryByRole('button', { name: 'Persona registrada' })).not.toBeInTheDocument()
+    await userEvent.click(within(grupos).getByRole('button', { name: 'Junta de regantes' }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=vencidos&state=blocked&stakeholder=s1')
+    expect(within(grupos).getByRole('button', { name: 'Junta de regantes' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.type(buscar, 'xyz')
+    expect(within(drawer).getByText('Ningún grupo de interés coincide con la búsqueda.')).toBeInTheDocument()
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Ver resultados' }))
+    // el chip es el mismo que deja la ficha del grupo; la vista y el estado siguen filtrando sus compromisos
+    const chips = within(screen.getByRole('list', { name: 'Filtros aplicados' })).getAllByRole('listitem')
+    expect(chips.map((c) => c.textContent)).toContain('Grupo de interés: Junta de regantes')
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    expect(within(tabla).getAllByRole('row')).toHaveLength(2)
+    expect(within(tabla).getByText('Taller de costura')).toBeInTheDocument()
+  })
+
+  it('en el alcance global, «Más filtros» ofrece los grupos de todos los proyectos que lee', async () => {
+    fetch = mockFetch(rutas(GRUPOS))
+    red = conServidor()
+    montar(<CompromisosPage />, { ruta: '/commitments', camino: '/commitments', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await screen.findByRole('table', { name: 'Compromisos' })
+    await userEvent.click(screen.getByRole('button', { name: 'Más filtros' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Más filtros' })
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Junta de regantes' }))
+    expect(ubicacion.actual).toBe('/commitments?stakeholder=s1')
+    expect(consultasA(red, 'stakeholder').length).toBeGreaterThan(0)
+    expect(consultasA(red, 'stakeholder').every((c) => !('project' in c))).toBe(true)
+  })
+
+  it('sin leer grupos de interés, la lista no ofrece «Más filtros»', async () => {
+    const { stakeholder: _sinGrupos, ...sinGrupos } = EQUIPO_DE_COMPROMISOS.objects
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(permisos(sinGrupos))
+    await screen.findByRole('table', { name: 'Compromisos' })
+    expect(screen.queryByRole('button', { name: 'Más filtros' })).not.toBeInTheDocument()
+  })
+
   // 05-especificacion §1.6 y DD-05: el código, el título y el vencimiento se ordenan en el servidor; el orden dura la visita
   it('el código, el título y el vencimiento ordenan en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
     const muchos = Array.from({ length: 30 }, (_, i) =>

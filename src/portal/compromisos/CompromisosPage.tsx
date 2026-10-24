@@ -1,7 +1,7 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { PaginasDeCompromisos } from '../acuerdos/PaginasDeCompromisos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
-import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
+import { SelectorDeGrupo, useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
@@ -238,8 +238,9 @@ export function CompromisosPage() {
           </>
         }
       />
-      {/* la barra de filtros (hallazgos U-18 y U-22): las vistas en una sola fila, con su conteo, la búsqueda, el estado y un
-          chip por filtro. ?view= y los parámetros de filtro siguen siendo los mismos; los candidatos no se filtran */}
+      {/* la barra de filtros (hallazgos U-18 y U-22): las vistas en una sola fila, con su conteo, la búsqueda, el estado, el grupo
+          de interés en «Más filtros» y un chip por filtro. ?view= y los parámetros de filtro siguen siendo los mismos; los
+          candidatos no se filtran */}
       <BarraDeFiltros
         vista={
           <SelectorDeVista
@@ -257,6 +258,24 @@ export function CompromisosPage() {
               value={estado}
               onChange={(e) => lista.cambiar({ state: e.target.value })}
               opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}
+            />
+          )
+        }
+        // «Más filtros» (flujo F-C): el grupo de interés, con su búsqueda; escribe el mismo ?stakeholder= que las cifras de la ficha
+        // del grupo, y su chip es el mismo. solo para quien lee los grupos
+        todos={
+          enCandidatos || !can('stakeholder', 'READ') ? undefined : (
+            <SelectorDeGrupo
+              proyecto={proyecto}
+              valor={grupo}
+              alElegir={(id) => lista.cambiar({ stakeholder: id })}
+              textos={{
+                etiqueta: t('compromisos.porGrupo.etiqueta'),
+                buscar: t('compromisos.porGrupo.buscar'),
+                lista: t('compromisos.porGrupo.lista'),
+                ninguno: t('compromisos.porGrupo.ninguno'),
+                vacio: t('compromisos.porGrupo.vacio')
+              }}
             />
           )
         }

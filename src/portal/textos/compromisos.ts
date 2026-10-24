@@ -9,6 +9,13 @@ export const ES_COMPROMISOS = {
   filtroBusqueda: 'Contiene «{{texto}}»',
   buscar: 'Buscar por código o título',
   estado: 'Estado',
+  porGrupo: {
+    etiqueta: 'Grupo de interés',
+    buscar: 'Buscar el grupo de interés',
+    lista: 'Grupos de interés',
+    ninguno: 'Ningún grupo de interés coincide con la búsqueda.',
+    vacio: 'No hay grupos de interés que pueda ver.'
+  },
   tabla: 'Compromisos',
   truncado: 'Se muestran los primeros {{n}} compromisos del grupo de interés.',
   territorioNoAplica: 'Ese territorio no filtra compromisos: se muestran todos los del alcance.',
@@ -95,6 +102,13 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
   filtroBusqueda: 'Contains “{{texto}}”',
   buscar: 'Search by code or title',
   estado: 'Status',
+  porGrupo: {
+    etiqueta: 'Stakeholder',
+    buscar: 'Search for the stakeholder',
+    lista: 'Stakeholders',
+    ninguno: 'No stakeholder matches the search.',
+    vacio: 'There are no stakeholders you can see.'
+  },
   tabla: 'Commitments',
   truncado: 'The first {{n}} commitments of the stakeholder are shown.',
   territorioNoAplica: 'That territory does not filter commitments: all of the scope are shown.',
