@@ -1,4 +1,4 @@
-import { useWorkflow } from '@wasichai/workflow'
+import { useWorkflow } from '../datos/flujos'
 import { cn } from '@wasichai/ui'
 import { aparienciaDe, CLASE_DE_TONO } from './apariencias'
 

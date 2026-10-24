@@ -4,7 +4,7 @@ import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasich
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { ADMIN_PERMISOS, ADMINISTRACION, permisos, RELACIONISTA } from '../../test/portal'
-import { useAvailableTransitions } from '@wasichai/workflow'
+import { useAvailableTransitions } from '../datos/flujos'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { useRegistro } from '../datos/registros'

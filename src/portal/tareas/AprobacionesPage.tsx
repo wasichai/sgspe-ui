@@ -1,6 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useQueryClient } from '@tanstack/react-query'
-import { useAvailableTransitions } from '@wasichai/workflow'
+import { useAvailableTransitions } from '../datos/flujos'
 import { Alert, Button, cn } from '@wasichai/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'

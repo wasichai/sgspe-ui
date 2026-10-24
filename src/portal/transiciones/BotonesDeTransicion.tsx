@@ -1,5 +1,6 @@
 import { Button } from '@wasichai/ui'
-import { useAvailableTransitions, type AvailableTransition } from '@wasichai/workflow'
+import { type AvailableTransition } from '@wasichai/workflow'
+import { useAvailableTransitions } from '../datos/flujos'
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MasAcciones } from '../componentes/Pagina'

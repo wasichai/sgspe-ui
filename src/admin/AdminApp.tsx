@@ -13,7 +13,8 @@ import { ZONA_DE_LIMA } from '../portal/datos/fechas'
 // la configuración de /admin. storagePrefix 'sgspe' es el del portal: un solo login, el mismo tema y el mismo idioma, y
 // <html lang> sigue al idioma (idiomaHtmlModule: core lo escribe como `es`). timeZone: los DATETIME de los formularios de
 // registro (DynamicForm) se leen y se escriben en la hora de Lima, sea cual sea el huso del navegador (core 0.6.0). el
-// administrador sembrado se propone solo en desarrollo
+// administrador sembrado se propone solo en desarrollo. modelInRepository: el modelo, los workflows y los roles viven en
+// model/ de sgspe (GAP-030) y core avisa en sus pantallas que un cambio hecho aquí se pierde en la próxima subida de fase
 export const configDeAdministracion: WasichaiConfig = {
   apiBaseUrl: '/api',
   appName: 'SGSPE',
@@ -22,6 +23,7 @@ export const configDeAdministracion: WasichaiConfig = {
   basename: '/admin',
   languages: ['es', 'en'],
   timeZone: ZONA_DE_LIMA,
+  modelInRepository: true,
   defaultLoginEmail: import.meta.env.DEV ? 'admin@wasichai.local' : ''
 }
 
