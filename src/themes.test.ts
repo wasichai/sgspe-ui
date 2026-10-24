@@ -121,11 +121,14 @@ describe('borde de control, superficie flotante y tokens de datos', () => {
     expect(colores.filter((v) => valor(tema, `--color-${v.slice(2)}`) !== `var(${v})`)).toEqual([])
   })
 
-  it('los campos de @wasichai/ui llevan el borde de control, salvo el inválido, y su texto de ejemplo en --sg-text-muted', () => {
-    const regla = (selector: string) => bloque(indexCss, selector)
-    const campos = ":where([data-slot='input'], [data-slot='textarea'], [data-slot='native-select'], [data-slot='select-trigger']):not([aria-invalid='true']) {"
-    expect(valor(regla(campos), 'border-color')).toBe('var(--sg-border-control)')
-    expect(valor(regla(":where([data-slot='input'], [data-slot='textarea'])::placeholder,"), 'color')).toBe('var(--sg-text-muted)')
-    expect(indexCss).toContain("[data-slot='select-trigger'][data-placeholder] {")
+  // desde @wasichai/ui 1.1.0 (W-06 y W-07, wasichai/wasichai-ui#69) los campos, los menús y los diálogos leen sus tokens:
+  // el puente los asigna y index.css ya no corrige nada por selector
+  it('los campos, los menús y los diálogos de @wasichai/ui leen el borde de control, el ejemplo y la superficie flotante', () => {
+    const puenteClaro = bloque(puente, ":root,\n[data-theme='light'],")
+    expect(valor(puenteClaro, '--border-control')).toBe('var(--sg-border-control)')
+    expect(valor(puenteClaro, '--placeholder')).toBe('var(--sg-text-muted)')
+    expect(valor(puenteClaro, '--surface-raised')).toBe('var(--sg-surface-raised)')
+    expect(indexCss).not.toContain("[data-slot='input']")
+    expect(indexCss).not.toContain('--sg-border-control')
   })
 })
