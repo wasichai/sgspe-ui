@@ -1,5 +1,6 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
@@ -440,5 +441,67 @@ describe('CampoFecha, calendario', () => {
     // el 1 de octubre de 2026 es jueves: la primera fila tiene tres celdas vacías antes
     const primeraFila = screen.getAllByRole('row')[1]
     expect(primeraFila.querySelectorAll('[role="gridcell"]:not([aria-label])')).toHaveLength(3)
+  })
+})
+
+// los feriados del calendario (wasichai/sgspe#159): GET /api/sgspe/calendar/holidays?year=AAAA. un feriado del mes visible
+// lleva una marca que no es solo color y « (feriado)» en el nombre del día; sin respuesta, el calendario es el de siempre
+describe('CampoFecha, feriados', () => {
+  let fetch: FetchMock | null = null
+  afterEach(() => {
+    fetch?.restore()
+    fetch = null
+  })
+  const abrir = () => userEvent.click(screen.getByRole('button', { name: /^(Elegir .+ en el calendario|Choose .+ on the calendar)$/ }))
+  const celda = (nombre: string) => screen.getByRole('gridcell', { name: nombre })
+  const feriados = (holidays: string[]) => ({ year: 2026, configured: true, holidays })
+
+  it('pide los feriados del año visible; en octubre, sin feriados ese mes, no marca nada', async () => {
+    fetch = mockFetch([{ path: '/sgspe/calendar/holidays', body: feriados(['2026-01-01', '2026-12-08', '2026-12-25']) }])
+    montar(<Controlado etiqueta="Inicio" inicial="2026-10-20" espia={vi.fn()} />)
+    await abrir()
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path === '/sgspe/calendar/holidays?year=2026')).toBe(true))
+    expect(screen.queryAllByRole('gridcell', { name: / \(feriado\)$/ })).toHaveLength(0)
+    expect(screen.queryAllByTestId('feriado')).toHaveLength(0)
+  })
+
+  it('en diciembre marca el 8 y el 25 con « (feriado)» en su nombre y una marca visible', async () => {
+    fetch = mockFetch([{ path: '/sgspe/calendar/holidays', body: feriados(['2026-01-01', '2026-12-08', '2026-12-25']) }])
+    montar(<Controlado etiqueta="Inicio" inicial="2026-12-01" espia={vi.fn()} />)
+    await abrir()
+    const ocho = await screen.findByRole('gridcell', { name: 'martes, 8 de diciembre de 2026 (feriado)' })
+    expect(celda('viernes, 25 de diciembre de 2026 (feriado)')).toBeInTheDocument()
+    expect(celda('miércoles, 9 de diciembre de 2026')).toBeInTheDocument()
+    expect(screen.getAllByRole('gridcell', { name: / \(feriado\)$/ })).toHaveLength(2)
+    expect(screen.getAllByTestId('feriado')).toHaveLength(2)
+    expect(ocho).toContainElement(screen.getAllByTestId('feriado')[0])
+  })
+
+  it('en inglés el nombre dice « (holiday)»', async () => {
+    localStorage.setItem('sgspe.lang', 'en')
+    fetch = mockFetch([{ path: '/sgspe/calendar/holidays', body: feriados(['2026-12-25']) }])
+    montar(<Controlado etiqueta="Inicio" inicial="2026-12-01" espia={vi.fn()} />)
+    await abrir()
+    expect(await screen.findByRole('gridcell', { name: /25.* \(holiday\)$/ })).toBeInTheDocument()
+  })
+
+  it('si la ruta responde 500, el calendario abre y elige como siempre, sin marcas', async () => {
+    fetch = mockFetch([{ path: '/sgspe/calendar/holidays', status: 500, body: { title: 'Error', status: 500 } }])
+    const espia = vi.fn()
+    montar(<Controlado etiqueta="Inicio" inicial="2026-12-01" espia={espia} />)
+    await abrir()
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path.startsWith('/sgspe/calendar/holidays'))).toBe(true))
+    expect(screen.queryAllByTestId('feriado')).toHaveLength(0)
+    await userEvent.click(celda('martes, 8 de diciembre de 2026'))
+    expect(ultimo(espia)).toBe('2026-12-08')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('al pasar a otro año pide sus feriados', async () => {
+    fetch = mockFetch([{ path: '/sgspe/calendar/holidays', body: feriados([]) }])
+    montar(<Controlado etiqueta="Inicio" inicial="2026-12-20" espia={vi.fn()} />)
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }))
+    await waitFor(() => expect(fetch!.calls.some((c) => c.path === '/sgspe/calendar/holidays?year=2027')).toBe(true))
   })
 })
