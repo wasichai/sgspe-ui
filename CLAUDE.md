@@ -124,3 +124,11 @@ ADR-0024; la seguridad, `docs/security.md` §3.2 y §5.10.
   `/projects/:projectId/reports/deliverables/:deliverableId` (`rutaDeEntregable`, `entregables/tipos.ts`): «Volver» no sale del
   proyecto. El monitoreo y el catálogo de indicadores se enlazan desde S51 y desde «Mi día», a quien lee `indicator` (los dos)
   o `indicator_measurement` (el monitoreo).
+- Las presentaciones (ADR-0031 de `sgspe`) viven en `/reports/deliverables/:deliverableId/presentations` y bajo los Reportes de un
+  proyecto (`PresentacionesPage`); su contrato está en `entregables/contrato.ts`. Remotion (`remotion`, `@remotion/player`) y
+  `@wasichai/sgspe-slides` solo se importan en `presentaciones/PresentadorImpl.tsx` y `presentaciones/especificacion.ts`, en un
+  chunk diferido (`boundaries.test.ts`); las pruebas de pantalla usan `src/test/presentadorFalso.tsx`. Remotion y React van en las
+  versiones exactas que el paquete pide como `peerDependencies` (`dependencias.test.ts`). El Player inyecta un `<style>` que la CSP
+  autoriza por su hash (`ESTILO_DEL_REPRODUCTOR` en `csp.ts`; `reproductorCsp.test.tsx` falla si una subida de Remotion lo cambia).
+  En desarrollo el paquete no se preempaqueta (sus fuentes se cargan con `new URL(…, import.meta.url)`) y `remotion` sí, junto
+  con el Player, para que haya una sola copia. EXTERNO y PUBLICO piden la lista de verificación al ver o bajar, no al pedir.

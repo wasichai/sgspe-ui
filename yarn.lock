@@ -865,6 +865,13 @@
   resolved "https://registry.yarnpkg.com/@remix-run/route-pattern/-/route-pattern-0.22.1.tgz#4937466528a59a7c9d882f725aac92536d20e010"
   integrity sha512-czdGJWh09Lapvcqt7Vb09KlrU2PhRJ8xQaI+AItTuD9aDJ5MAgxnS38lnys6Ll+6RJEqPiaUqTwIQhVLwFvv+w==
 
+"@remotion/player@4.0.533":
+  version "4.0.533"
+  resolved "https://registry.yarnpkg.com/@remotion/player/-/player-4.0.533.tgz#39791c3302eb387786287e47c1cc2efa838d91f3"
+  integrity sha512-fZaoSO7K99W8FRwMxUdz2g+bouPVYvliHoNtUPYjdRG7AZYQalOQWnhOqFNnZkZPKjhVBzzmruID6P8V5fDjYA==
+  dependencies:
+    remotion "4.0.533"
+
 "@rolldown/binding-android-arm-eabi@1.2.12":
   version "1.2.12"
   resolved "https://registry.yarnpkg.com/@rolldown/binding-android-arm-eabi/-/binding-android-arm-eabi-1.2.12.tgz#efba4353480c76804606f106c9ac01f0ddfa7d13"
@@ -1588,6 +1595,13 @@
   dependencies:
     "@dnd-kit/core" "6.3.1"
     lucide-react "^1.57.0"
+
+"@wasichai/sgspe-slides@3.2.0":
+  version "3.2.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/sgspe-slides/3.2.0/36002db053baff386d05ac27e52e49cf0f4a4fad#36002db053baff386d05ac27e52e49cf0f4a4fad"
+  integrity sha512-v49eFWaecMnWA+a3lzwaI4/w8FInilhH8Hj0AcgJOSRiTPCpouU2OB4Pdl6+9A1IH9sNM4SjZTbAwYlgm6UNOQ==
+  dependencies:
+    zod "4.6.5"
 
 "@wasichai/testing@1.1.0":
   version "1.1.0"
@@ -2726,6 +2740,11 @@ redent@^3.0.0:
   dependencies:
     indent-string "^4.0.0"
     strip-indent "^3.0.0"
+
+remotion@4.0.533:
+  version "4.0.533"
+  resolved "https://registry.yarnpkg.com/remotion/-/remotion-4.0.533.tgz#e652e58153b1d49a0db5b27a664ca8a32ba55b23"
+  integrity sha512-M3XIFxeZ6tp+P5UMw2tb9wkMbjMrFN6BPgWFWSzeWAP1/aKWz331Wf4vGiOrz+NIq9xVX6G6dwRDQqDQbaxm2A==
 
 require-from-string@^2.0.2:
   version "2.0.2"

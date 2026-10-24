@@ -111,6 +111,16 @@ describe('fronteras de la interfaz', () => {
     expect(hallazgos(/from\s+['"]\.{1,2}\/(?:entregables\/)?EditorMarkdown['"]/)).toEqual([])
   })
 
+  // ADR-0031: Remotion y las láminas van en el chunk diferido del reproductor, que solo baja quien presenta. nadie importa
+  // PresentadorImpl de forma estática (las pantallas usan Presentador, y sus pruebas, src/test/presentadorFalso.tsx)
+  it('Remotion y @wasichai/sgspe-slides solo se importan en el reproductor diferido', () => {
+    const lugares = hallazgos(/['"](?:remotion|@remotion\/[a-z-]+|@wasichai\/sgspe-slides)['"]/).map((h) => h.split(':')[0])
+    expect([...new Set(lugares)].sort()).toEqual(['portal/presentaciones/PresentadorImpl.tsx', 'portal/presentaciones/especificacion.ts'])
+    expect(hallazgos(/from\s+['"]\.{1,2}\/(?:presentaciones\/)?(?:PresentadorImpl|especificacion)['"]/)).toEqual([
+      expect.stringMatching(/^portal\/presentaciones\/PresentadorImpl\.tsx:/)
+    ])
+  })
+
   it('los vigías reconocen lo prohibido y dejan pasar lo permitido', () => {
     const rol = (line: string) => ROL.test(sinComentario(line))
     expect(rol("user.roles.includes('AUDITOR')")).toBe(true)

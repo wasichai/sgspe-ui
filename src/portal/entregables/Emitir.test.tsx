@@ -255,6 +255,13 @@ describe('versiones', () => {
     expect(await screen.findByRole('button', { name: /CE-2026-0001/ })).toBeInTheDocument()
   })
 
+  // deliverables.md §16: las presentaciones salen de una versión emitida, en su propia página
+  it('con versiones emitidas, lleva a las presentaciones del entregable', async () => {
+    montarVersiones()
+    await screen.findByRole('table', { name: 'Versiones emitidas' })
+    expect(screen.getByRole('link', { name: 'Presentaciones' })).toHaveAttribute('href', '/reports/deliverables/d1/presentations')
+  })
+
   it('un fallo de descarga se limpia al descargar de nuevo', async () => {
     montarVersiones()
     let n = 0
