@@ -21,6 +21,9 @@ export const PARAMETROS: Readonly<Record<string, readonly Parametro[]>> = {
 export const rutaDeEntregable = (id: string, proyecto?: string | null): string =>
   proyecto ? `/projects/${encodeURIComponent(proyecto)}/reports/deliverables/${encodeURIComponent(id)}` : `/reports/deliverables/${encodeURIComponent(id)}`
 
+// la página de presentaciones del entregable (deliverables.md §16), bajo la misma ruta que S50
+export const rutaDePresentaciones = (id: string, proyecto?: string | null): string => `${rutaDeEntregable(id, proyecto)}/presentations`
+
 // deliverables.md §8.3: el editor solo permite editar las secciones en draft y observed
 export const EDITABLE_EN: readonly string[] = ['draft', 'observed']
 export const seEditan = (entregable: Registro): boolean => EDITABLE_EN.includes(entregable.state ?? '')

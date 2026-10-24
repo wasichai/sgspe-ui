@@ -336,7 +336,10 @@ export const ES_COMUN = {
     INDICATOR_NOT_CLOSABLE: 'Este indicador no se puede cerrar.',
     PERIOD_NOT_ENDED: 'El periodo todavía no terminó: se cierra desde el día siguiente a su fin.',
     MEASUREMENT_EXISTS: 'Ese periodo ya está cerrado para este indicador y este alcance.',
-    FILE_WRITE_NOT_ALLOWED: 'Los archivos de los entregables y de las plantillas no se suben por esta vía.'
+    FILE_WRITE_NOT_ALLOWED: 'Los archivos de los entregables y de las plantillas no se suben por esta vía.',
+    LEVEL_NOT_ALLOWED: 'Una presentación no puede tener un nivel menos reservado que el de su versión.',
+    AUDIENCE_LEVEL_MISMATCH: 'Ese público no admite ese nivel de divulgación.',
+    PUBLIC_NOT_AVAILABLE: 'Esta versión no trae los datos que el nivel público necesita: elija otro nivel.'
   },
   // el texto de un código que dice otra cosa según su campo (plan 4.2a; componentes/errores.ts)
   codigosEnCampo: {
@@ -726,7 +729,10 @@ export const EN_COMUN: typeof ES_COMUN = {
     INDICATOR_NOT_CLOSABLE: 'This indicator cannot be closed.',
     PERIOD_NOT_ENDED: 'The period has not ended yet: it can be closed from the day after it ends.',
     MEASUREMENT_EXISTS: 'That period is already closed for this indicator and this scope.',
-    FILE_WRITE_NOT_ALLOWED: 'Deliverable and template files are not uploaded this way.'
+    FILE_WRITE_NOT_ALLOWED: 'Deliverable and template files are not uploaded this way.',
+    LEVEL_NOT_ALLOWED: 'A presentation cannot have a less restricted level than its version.',
+    AUDIENCE_LEVEL_MISMATCH: 'That audience does not accept that disclosure level.',
+    PUBLIC_NOT_AVAILABLE: 'This version does not carry the data the public level needs: choose another level.'
   },
   codigosEnCampo: {
     vinculoDeComando:

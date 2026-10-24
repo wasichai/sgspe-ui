@@ -62,6 +62,7 @@ import { EN_BORRADOR_DE_ACTA } from './borradorDeActa'
 import { EN_TABLEROS_F8 } from './tablerosF8'
 import { EN_ENTREGABLES } from './entregables'
 import { EN_PLANTILLAS } from './plantillas'
+import { EN_PRESENTACIONES } from './presentaciones'
 import { EN_ADMINISTRACION } from './administracion'
 import type { Textos } from './es'
 
@@ -138,6 +139,7 @@ export const EN: Textos = {
   tablerosF8: EN_TABLEROS_F8,
   entregables: EN_ENTREGABLES,
   plantillas: EN_PLANTILLAS,
+  presentaciones: EN_PRESENTACIONES,
   // el rediseño de UX: S53, la sección Administración
   administracion: EN_ADMINISTRACION,
   app: { lema: 'Social management for extractive projects' },

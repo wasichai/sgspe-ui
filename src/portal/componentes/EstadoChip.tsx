@@ -7,8 +7,13 @@ import { aparienciaDe, CLASE_DE_TONO } from './apariencias'
 export function EstadoChip({ objeto, estado }: { objeto: string; estado: string | null | undefined }) {
   const workflow = useWorkflow(objeto)
   if (!estado) return null
-  const { tono, Icono } = aparienciaDe(objeto, estado)
   const etiqueta = workflow.data?.definition.states.find((s) => s.name === estado)?.label ?? estado
+  return <ChipDeEstado objeto={objeto} estado={estado} etiqueta={etiqueta} />
+}
+
+// el mismo chip para un estado que no es de workflow (el de generación de una presentación), con la etiqueta que da la pantalla
+export function ChipDeEstado({ objeto, estado, etiqueta }: { objeto: string; estado: string; etiqueta: string }) {
+  const { tono, Icono } = aparienciaDe(objeto, estado)
   return (
     <span
       data-estado={estado}

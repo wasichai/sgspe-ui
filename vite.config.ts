@@ -28,6 +28,10 @@ export default defineConfig({
   define: {
     __SGSPE_ROL_JEFATURA__: JSON.stringify(rolJefatura)
   },
+  // @wasichai/sgspe-slides llega como TypeScript sin compilar y carga sus fuentes con new URL('../fonts/…', import.meta.url): en
+  // desarrollo no se preempaqueta, para que esas URL sigan apuntando a los archivos del paquete (el build las emite como assets).
+  // remotion sí, junto con el Player: así el paquete y el Player usan la misma copia (dos copias no comparten el fotograma)
+  optimizeDeps: { exclude: ['@wasichai/sgspe-slides'], include: ['remotion', '@remotion/player'] },
   server: { port: 5182, strictPort: true, proxy: { '/api': api }, headers: csp },
   preview: { port: 5182, strictPort: true, proxy: { '/api': api }, headers: csp },
   build: {

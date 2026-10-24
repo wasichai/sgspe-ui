@@ -224,3 +224,123 @@ export function useTiposDeEntregable() {
 // la sección de un tipo por su clave; undefined si el tipo o la sección no están (o los tipos todavía no se leyeron)
 export const seccionDelTipo = (tipos: TipoDeEntregable[] | undefined, tipo: string, clave: string): SeccionDelTipo | undefined =>
   tipos?.find((t) => t.type === tipo)?.sections.find((s) => s.key === clave)
+
+// las presentaciones de una versión emitida (api.md §4.12, ADR-0031, deliverables.md §16; DeliverablePresentations.kt de sgspe):
+// el pedido por público y nivel, la lista con su estado, el PDF de láminas, la especificación para el reproductor y el MP4 a
+// pedido. una pantalla no pide /api/sgspe/presentations/** por su cuenta
+export const PUBLICOS = ['DIRECCION', 'CAMPO', 'INVESTIGACION', 'INSTITUCIONES', 'COMUNIDAD'] as const
+export type Publico = (typeof PUBLICOS)[number]
+// del menos al más restrictivo (Presentations.ORDER)
+export const NIVELES_DE_PRESENTACION = ['INTERNO', 'EXTERNO', 'PUBLICO'] as const
+export type NivelDePresentacion = (typeof NIVELES_DE_PRESENTACION)[number]
+
+// los niveles que admite cada público (Audience.kt, deliverables.md §16.5): un público solo restringe, nunca relaja
+const NIVELES_DEL_PUBLICO: Readonly<Record<Publico, readonly NivelDePresentacion[]>> = {
+  DIRECCION: NIVELES_DE_PRESENTACION,
+  CAMPO: NIVELES_DE_PRESENTACION,
+  INVESTIGACION: NIVELES_DE_PRESENTACION,
+  INSTITUCIONES: ['EXTERNO', 'PUBLICO'],
+  COMUNIDAD: ['PUBLICO']
+}
+
+// los niveles que se pueden pedir de una versión para un público: igual o más restrictivo que el de la versión (si no, 422
+// LEVEL_NOT_ALLOWED) y admitido por el público (422 AUDIENCE_LEVEL_MISMATCH). PUBLICO también exige hechos tipados en el modelo
+// (422 PUBLIC_NOT_AVAILABLE), que el portal no sabe de antemano: lo dice el servidor
+export function nivelesPosibles(nivelDeLaVersion: string, publico: Publico): NivelDePresentacion[] {
+  const desde = NIVELES_DE_PRESENTACION.indexOf(nivelDeLaVersion as NivelDePresentacion)
+  if (desde < 0) return []
+  return NIVELES_DE_PRESENTACION.slice(desde).filter((n) => NIVELES_DEL_PUBLICO[publico].includes(n))
+}
+
+// la acción de descarga de cada nivel sobre deliverable: la exigen el pedido y cada descarga
+export const accionDelNivel = (nivel: string): 'DOWNLOAD_RESTRICTED' | 'EXPORT' => (nivel === 'INTERNO' ? 'DOWNLOAD_RESTRICTED' : 'EXPORT')
+// EXTERNO y PUBLICO piden la lista de verificación al bajar el PDF, abrir la especificación o bajar el MP4 (ASM-147), no al pedir
+export const pideLista = (nivel: string): boolean => nivel !== 'INTERNO'
+
+export interface Presentacion {
+  id: string
+  versionNumber: number | null
+  audience: string | null
+  level: string | null
+  // EN COLA, EN PROCESO, LISTO o FALLIDO
+  status: string | null
+  failureCode: string | null
+  slideCount: number | null
+  requestedAt: string | null
+  generatedAt: string | null
+  modelSha256: string | null
+  specSha256: string | null
+  pdfSha256: string | null
+  plannerVersion: string | null
+  designVersion: string | null
+  rendererVersion: string | null
+  // el MP4 a pedido (ASM-148): vacíos si no se pidió; su FALLIDO no toca el PDF
+  videoStatus: string | null
+  videoFailureCode: string | null
+  videoRequestedAt: string | null
+  videoGeneratedAt: string | null
+  videoSha256: string | null
+}
+
+const PENDIENTES: readonly (string | null)[] = ['EN COLA', 'EN PROCESO']
+export const estaPendiente = (estado: string | null | undefined): boolean => PENDIENTES.includes(estado ?? null)
+
+// como el borrador: cada 5 s mientras una presentación o su video está en cola o en proceso; un error deja de consultar
+export const consultaDePresentaciones = (lista: Presentacion[] | undefined, conError: boolean): number | false =>
+  !conError && (lista ?? []).some((p) => estaPendiente(p.status) || estaPendiente(p.videoStatus)) ? CADA_CUANTO : false
+
+export function usePresentaciones(id: string, activa = true) {
+  const pedir = usePedir()
+  return useQuery({
+    queryKey: ['deliverable-presentations', id],
+    queryFn: () => pedir<Presentacion[]>(`/sgspe/deliverables/${encodeURIComponent(id)}/presentations`),
+    enabled: activa,
+    refetchInterval: (consulta) => consultaDePresentaciones(consulta.state.data, consulta.state.status === 'error')
+  })
+}
+
+export interface PedidoDePresentacion {
+  numero: number
+  publico: Publico
+  nivel: NivelDePresentacion
+}
+
+// POST …/versions/{n}/presentations con Idempotency-Key: 202 { presentation }, EN COLA o la existente con la misma versión,
+// público, nivel y versión del planificador (una FALLIDO vuelve a la cola)
+export function usePedirPresentacion(id: string) {
+  return useComando<{ presentation: Presentacion }, PedidoDePresentacion>(
+    ({ numero, publico, nivel }) => ({
+      ruta: `/sgspe/deliverables/${encodeURIComponent(id)}/versions/${numero}/presentations`,
+      json: { audience: publico, level: nivel }
+    }),
+    { invalidar: () => [['deliverable-presentations', id]] }
+  )
+}
+
+// POST /presentations/{id}/video sin cuerpo y con Idempotency-Key: pone el MP4 EN COLA; uno pendiente o LISTO vuelve como está
+export function usePedirVideo(entregable: string) {
+  return useComando<{ presentation: Presentacion }, { presentacion: string }>(
+    ({ presentacion }) => ({ ruta: `/sgspe/presentations/${encodeURIComponent(presentacion)}/video` }),
+    { invalidar: () => [['deliverable-presentations', entregable]] }
+  )
+}
+
+export type ArchivoDePresentacion = 'content' | 'spec' | 'video'
+
+// content es el PDF de láminas, spec la especificación del reproductor y video el MP4; cada descarga queda en export_log. en
+// EXTERNO y PUBLICO la ruta lleva la lista confirmada (si no, 400 CHECKLIST_REQUIRED)
+export const rutaDeLaPresentacion = (id: string, archivo: ArchivoDePresentacion, listaConfirmada: boolean): string =>
+  `/sgspe/presentations/${encodeURIComponent(id)}/${archivo}${listaConfirmada ? '?checklistConfirmed=true' : ''}`
+
+// la especificación para el reproductor: cada apertura es una descarga (export_log, formato deck), así que no se guarda en la
+// caché al cerrar ni se reintenta sola
+export function useEspecificacion(id: string, listaConfirmada: boolean) {
+  const pedir = usePedir()
+  return useQuery({
+    queryKey: ['presentation-spec', id, listaConfirmada],
+    queryFn: () => pedir<unknown>(rutaDeLaPresentacion(id, 'spec', listaConfirmada)),
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false
+  })
+}
