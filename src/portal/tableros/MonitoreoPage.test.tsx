@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeF8, CIERRE, TABLERO_MONITOREO } from '../../test/f8'
-import { montar } from '../../test/montar'
+import { montar, ubicacion } from '../../test/montar'
 import { ADMIN_PERMISOS, ADMINISTRACION, GERENCIA_SOCIAL } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
 import { MonitoreoPage } from './MonitoreoPage'
@@ -19,6 +19,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
@@ -63,6 +64,22 @@ describe('Monitoreo del plan de relaciones comunitarias', () => {
     const llamada = red!.a('GET', '/sgspe/dashboards/monitoring')[0]
     expect(llamada.ruta).toContain('periodStart=2026-09-01')
     expect(llamada.ruta).toContain('periodEnd=2026-09-30')
+  })
+
+  it('el mes se dice y se elige en es-PE (Setiembre 2026, nunca September 2026) y gobierna el pedido', async () => {
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-US')
+    vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-US'])
+    localStorage.setItem('sgspe.lang', 'es')
+    abrir()
+    await fila('1')
+    const mes = screen.getByRole('group', { name: 'Mes' })
+    expect(within(mes).getByRole('combobox', { name: 'Mes' })).toHaveDisplayValue('Setiembre')
+    expect(within(mes).getByRole('combobox', { name: 'Año' })).toHaveDisplayValue('2026')
+    expect(screen.queryByText(/September/)).not.toBeInTheDocument()
+    await userEvent.selectOptions(within(mes).getByRole('combobox', { name: 'Mes' }), 'Agosto')
+    expect(ubicacion.actual).toBe('/dashboards/monitoring?month=2026-08')
+    await waitFor(() => expect(red!.a('GET', '/sgspe/dashboards/monitoring').some((l) => l.ruta.includes('periodStart=2026-08-01'))).toBe(true))
+    expect(red!.a('GET', '/sgspe/dashboards/monitoring').some((l) => l.ruta.includes('periodEnd=2026-08-31'))).toBe(true)
   })
 
   it('cierra el periodo del proyecto con el indicador del catálogo y dice la cifra oficial', async () => {
