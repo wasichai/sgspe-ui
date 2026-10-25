@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/wasichai/sgspe-ui/compare/v3.1.0...v3.2.0) (2026-10-24)
+
+
+### Features
+
+* **entregables:** presentaciones de una versión emitida con el Player de Remotion ([#84](https://github.com/wasichai/sgspe-ui/issues/84)) ([e006df2](https://github.com/wasichai/sgspe-ui/commit/e006df2072110401474fffb170cae0c9aa479c48))
+
 ## [3.1.0](https://github.com/wasichai/sgspe-ui/compare/v3.0.0...v3.1.0) (2026-10-24)
 
 
