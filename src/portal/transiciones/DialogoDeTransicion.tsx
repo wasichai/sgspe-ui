@@ -2,7 +2,7 @@ import { useFocoDeRegreso } from '../componentes/foco'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
 import type { AvailableTransition } from '@wasichai/workflow'
 import type { FieldMeta } from '@wasichai/core'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
@@ -32,6 +32,7 @@ export function DialogoDeTransicion({
   transicion,
   alCerrar,
   alAplicar,
+  focoAlAplicar,
   anexo
 }: {
   objeto: string
@@ -40,6 +41,8 @@ export function DialogoDeTransicion({
   alCerrar: () => void
   // la transición se aplicó: quien abrió el diálogo lo confirma (transiciones.hecho)
   alAplicar?: () => void
+  // a dónde va el foco tras aplicar (la confirmación, que dice qué sigue); sin él, vuelve a quien abrió el diálogo
+  focoAlAplicar?: () => HTMLElement | null
   // lo que la pantalla agrega al motivo que escribe la persona (decisión 13 del plan 8.3: «Aprobar» un entregable lleva el SHA-256
   // del modelo revisado); se muestra antes de confirmar
   anexo?: string
@@ -55,6 +58,7 @@ export function DialogoDeTransicion({
   const [motivo, setMotivo] = useState('')
   const [datos, setDatos] = useState<Record<string, string>>({})
   const [intentado, setIntentado] = useState(false)
+  const aplicado = useRef(false)
 
   const advertencias = comprobacion.data?.warnings ?? []
   const { pedidos, otros } = useBloqueosDelPaso(objeto, comprobacion.data?.blocking ?? [])
@@ -78,6 +82,7 @@ export function DialogoDeTransicion({
         { registro: version, transicion: transicion.name, motivo: motivoDelPaso },
         {
           onSuccess: () => {
+            aplicado.current = true
             alAplicar?.()
             alCerrar()
           }
@@ -96,11 +101,17 @@ export function DialogoDeTransicion({
   const verbo = destructiva ? [transicion.label, t(`transiciones.elObjeto.${objeto}`, { defaultValue: '' })].filter(Boolean).join(' ') : transicion.label
   const cerrarDice = verbo.trim().toLowerCase() === t('comun.cancelar').toLowerCase() ? t('transiciones.volver') : t('comun.cancelar')
 
-  // el foco vuelve al botón que abrió el diálogo (revisión de UX, etapa 8)
+  // el foco vuelve al botón que abrió el diálogo (revisión de UX, etapa 8) o, aplicado el paso, a lo que dice qué sigue (1.4)
   const regreso = useFocoDeRegreso()
+  const alCerrarElFoco = (evento: Event) => {
+    const destino = aplicado.current ? focoAlAplicar?.() : null
+    if (!destino) return regreso.onCloseAutoFocus(evento)
+    evento.preventDefault()
+    destino.focus()
+  }
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && alCerrar()}>
-      <DialogContent className="max-w-lg" {...regreso}>
+      <DialogContent className="max-w-lg" onOpenAutoFocus={regreso.onOpenAutoFocus} onCloseAutoFocus={alCerrarElFoco}>
         <DialogTitle className="text-sg-h3 font-semibold">{transicion.label}</DialogTitle>
         <DialogDescription className="text-sm text-sg-text-secondary">{t('transiciones.deA', { de: desde, a: transicion.toLabel })}</DialogDescription>
         <div className="mt-4 space-y-3">

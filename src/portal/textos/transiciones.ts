@@ -75,7 +75,9 @@ export const ES_TRANSICIONES = {
   // cerrar el diálogo cuando el paso mismo se llama «Cancelar»
   volver: 'Volver',
   anexo: 'Se agrega al motivo: {{anexo}}',
-  hecho: 'Listo: el registro está en «{{a}}».'
+  hecho: 'Listo: el registro está en «{{a}}».',
+  // lo que sigue tras el paso (la siguiente acción del camino)
+  ahora: 'Ahora: «{{accion}}».'
 }
 
 export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
@@ -146,5 +148,6 @@ export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
   confirmando: 'Applying…',
   volver: 'Back',
   anexo: 'Added to the reason: {{anexo}}',
-  hecho: 'Done: the record is now “{{a}}”.'
+  hecho: 'Done: the record is now “{{a}}”.',
+  ahora: 'Next: “{{accion}}”.'
 }

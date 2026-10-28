@@ -192,21 +192,44 @@ describe('transiciones', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
   })
 
-  it('la confirmación se va sola a los pocos segundos (re-revisión, menor 3)', async () => {
+  // tercera pasada de UX (1.4, DD-34): la confirmación ya no se va sola a los 6 s (no se alcanzaba a leer): queda hasta la siguiente
+  // acción, dice qué sigue con las transiciones releídas y recibe el foco, porque el botón que abrió el diálogo se va con el estado
+  it('la confirmación queda, dice qué sigue y recibe el foco; abrir otra transición la quita', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
     const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    start([{ method: 'POST', path: '/objects/project/records/p1/transitions/suspend', body: { ...PROYECTO, state: 'suspended' } }])
+    let aplicada = false
+    const REANUDAR = { name: 'resume', label: 'Reanudar', to: 'active', toLabel: 'Activo', allowed: true, reason: null }
+    fetch = mockFetch([
+      { path: '/objects/project/workflow', body: WF },
+      { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } }
+    ])
+    red = espiarRed([
+      { path: '/objects/project/records/p1/transitions', responder: () => jsonResponse(aplicada ? [REANUDAR] : transiciones) },
+      {
+        method: 'POST',
+        path: '/objects/project/records/p1/transitions/suspend',
+        responder: () => {
+          aplicada = true
+          return jsonResponse({ ...PROYECTO, state: 'suspended' })
+        }
+      }
+    ])
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await usuario.click(await screen.findByRole('button', { name: 'Suspender' }))
     const dialogo = await screen.findByRole('dialog')
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
     await usuario.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
     await usuario.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
-    expect(await screen.findByText('Listo: el registro está en «Suspendido».')).toBeInTheDocument()
+    const listo = await screen.findByRole('status')
+    await waitFor(() => expect(listo).toHaveTextContent('Listo: el registro está en «Suspendido». Ahora: «Reanudar».'))
+    await waitFor(() => expect(listo).toHaveFocus())
     await act(async () => {
       await vi.advanceTimersByTimeAsync(8000)
     })
-    expect(screen.queryByText('Listo: el registro está en «Suspendido».')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
+    await usuario.click(screen.getByRole('button', { name: 'Reanudar' }))
+    await screen.findByRole('dialog')
+    expect(screen.queryByText(/^Listo: el registro está en «Suspendido»/)).not.toBeInTheDocument()
   })
 
   it('una regla que bloquea no deja confirmar y dice qué falta y en qué campo', async () => {

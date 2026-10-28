@@ -1,7 +1,7 @@
 import { Button } from '@wasichai/ui'
 import { type AvailableTransition } from '@wasichai/workflow'
 import { useAvailableTransitions } from '../datos/flujos'
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MasAcciones } from '../componentes/Pagina'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -21,7 +21,6 @@ import { esDeComando, esDestructiva } from './reglas'
 // cancelan, retiran o terminan van al final, como secundarias con texto de peligro y nombrando el objeto («Anular el
 // proyecto»), para que no se confundan con «cerrar el diálogo»; con destructivasEnMenu, en «Más acciones», lejos de la primaria. las de comprobarAntes consultan transition-checks al dibujarse y, si una regla las
 // bloquea, salen deshabilitadas con la razón dicha a la vista, bajo su nombre
-const DURACION_DE_LA_CONFIRMACION = 6000
 
 // una transición ofrecida, lista para dibujarse donde la pantalla la ponga (la cabecera de una ficha la reparte)
 export interface TransicionOfrecida {
@@ -72,14 +71,11 @@ export function useTransicionesOfrecidas({
   const transiciones = useAvailableTransitions(objeto, registro.id)
   const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
   const [abierta, setAbierta] = useState<AvailableTransition | null>(null)
-  // el estado al que llevó la última transición aplicada: se confirma aunque el estado nuevo ya no ofrezca botones
-  const [hecha, setHecha] = useState<string | null>(null)
-  // la confirmación se va sola a los pocos segundos, o al abrir otra transición (re-revisión, menor 3)
-  useEffect(() => {
-    if (!hecha) return
-    const plazo = setTimeout(() => setHecha(null), DURACION_DE_LA_CONFIRMACION)
-    return () => clearTimeout(plazo)
-  }, [hecha])
+  // el estado al que llevó la última transición aplicada y cuándo: se confirma aunque el estado nuevo ya no ofrezca botones y queda
+  // hasta la siguiente acción, abrir otra transición (DD-34 de la tercera pasada de UX: la que se iba sola a los 6 s no se leía)
+  const [hecha, setHecha] = useState<{ a: string; en: number } | null>(null)
+  // aplicado el paso, el foco va a la confirmación: el botón que abrió el diálogo puede irse con el estado nuevo
+  const confirmacion = useRef<HTMLParagraphElement>(null)
   const ofrece = proyecto === undefined || escribeEnElProyecto
   const permitidas = ofrece
     ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name) && (!solo || solo.includes(tr.name)))
@@ -88,6 +84,9 @@ export function useTransicionesOfrecidas({
   const destructivas = permitidas.filter(esDestructiva)
   const delCamino = siguienteTransicion(objeto, avanzan)
   const primaria = sinPrimaria ? null : (delCamino ?? (primariaSoloDelCamino ? null : (avanzan[0] ?? null)))
+  // lo que sigue, solo con las transiciones ya releídas tras el paso: las de antes dirían el paso que se acaba de dar
+  const releidas = hecha !== null && transiciones.dataUpdatedAt >= hecha.en && !transiciones.isFetching
+  const ahora = releidas ? delCamino?.label : undefined
   const abrir = (tr: AvailableTransition) => {
     setHecha(null)
     setAbierta(tr)
@@ -113,8 +112,9 @@ export function useTransicionesOfrecidas({
     otras: avanzan.filter((tr) => tr !== primaria).map(ofrecida),
     destructivas: destructivas.map(ofrecida),
     confirmacion: hecha ? (
-      <p role="status" className="text-sm text-sg-success">
-        {t('transiciones.hecho', { a: hecha })}
+      <p ref={confirmacion} role="status" tabIndex={-1} className="text-sm text-sg-success">
+        {t('transiciones.hecho', { a: hecha.a })}
+        {ahora ? ` ${t('transiciones.ahora', { accion: ahora })}` : null}
       </p>
     ) : null,
     dialogo: abierta ? (
@@ -124,9 +124,10 @@ export function useTransicionesOfrecidas({
         transicion={abierta}
         alCerrar={() => setAbierta(null)}
         alAplicar={() => {
-          setHecha(abierta.toLabel)
+          setHecha({ a: abierta.toLabel, en: Date.now() })
           alAplicar?.(abierta)
         }}
+        focoAlAplicar={() => confirmacion.current}
         anexo={anexos?.[abierta.name]}
       />
     ) : null
