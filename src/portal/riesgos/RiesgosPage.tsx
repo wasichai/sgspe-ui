@@ -37,6 +37,7 @@ import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { comparable } from '../componentes/FiltroDeGrupo'
 
 // S38 y S39 · registro y matriz de riesgos (screens.md §9): qué riesgos hay, de qué nivel y cuáles piden revisión. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076). la API genérica no filtra por estado ni por situación, así que,
@@ -124,7 +125,16 @@ export function RiesgosPage() {
   const enLaVista = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id) && (!soloAltos || NIVELES_ALTOS.includes(texto(r, 'risk_level'))))
   // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva
   const [orden, setOrden] = ordenEnUrl(lista, ORDEN_INICIAL, ['riesgo', 'puntaje', 'nivel'])
-  const filtrados = ordenarEnCliente(celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista, orden, valorDeOrden)
+  // la búsqueda (?q=) por código o título, sin tildes ni mayúsculas (tercera pasada de UX, 3.7); como la celda, filtra la lista y
+  // no la matriz
+  const buscadoEnUrl = lista.filtro('q').trim()
+  const buscado = comparable(buscadoEnUrl)
+  const coincide = (r: Registro) => !buscado || comparable(`${texto(r, 'code')} ${texto(r, 'title')}`).includes(buscado)
+  const filtrados = ordenarEnCliente(
+    enLaVista.filter((r) => (!celda || celdaDe(r) === celda) && coincide(r)),
+    orden,
+    valorDeOrden
+  )
   const enLaVistaSinFiltros = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id)).length
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
   const crea = proyecto !== undefined && escribe && can('social_risk', 'CREATE')
@@ -143,7 +153,8 @@ export function RiesgosPage() {
   const [p, i] = celda.split('-')
   const chips = [
     ...(soloAltos ? [{ clave: 'level', etiqueta: t('riesgos.filtroAltos') }] : []),
-    ...(celda ? [{ clave: 'cell', etiqueta: t('riesgos.filtroCelda', { p, i }) }] : [])
+    ...(celda ? [{ clave: 'cell', etiqueta: t('riesgos.filtroCelda', { p, i }) }] : []),
+    ...(buscadoEnUrl ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: buscadoEnUrl }) }] : [])
   ]
   // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el riesgo, el proyecto, el nivel, el estado y la
   // revisión; secundarias, desde xl, la categoría, P × I y el responsable. una columna no esencial que dice lo mismo en todas las
@@ -245,8 +256,9 @@ export function RiesgosPage() {
             alElegir={(vista) => lista.cambiar({ view: vista, cell: null })}
           />
         }
+        busqueda={{ etiqueta: t('riesgos.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
         aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
-        alLimpiar={() => lista.cambiar({ level: null, cell: null })}
+        alLimpiar={() => lista.cambiar({ level: null, cell: null, q: null })}
       />
       {riesgos.isPending ? (
         <Cargando />
@@ -269,8 +281,8 @@ export function RiesgosPage() {
           </Seccion>
           {filtrados.length === 0 ? (
             // con la celda o el nivel puestos, el vacío los quita (rediseño de UX, 2026-10-20); sin ellos, la vista está vacía
-            celda || soloAltos ? (
-              <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ cell: null, level: null })} sinFiltros={enLaVistaSinFiltros || undefined} />
+            celda || soloAltos || buscado ? (
+              <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ cell: null, level: null, q: null })} sinFiltros={enLaVistaSinFiltros || undefined} />
             ) : (
               <Vacio titulo={t('riesgos.vacio')} />
             )

@@ -175,6 +175,8 @@ export const ES_COMUN = {
     recuperadoSinFecha: 'Se recuperó lo que escribió antes.',
     descartar: 'Descartar el borrador'
   },
+  // el chip de una búsqueda en una lista (?q=)
+  contiene: 'Contiene «{{texto}}»',
   eleccionDeGrupos: {
     buscar: 'Buscar un grupo de interés',
     elegidos_one: '{{count}} elegido',
@@ -616,6 +618,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     recuperadoSinFecha: 'What you typed earlier was recovered.',
     descartar: 'Discard the draft'
   },
+  contiene: 'Contains “{{texto}}”',
   eleccionDeGrupos: {
     buscar: 'Search for a stakeholder group',
     elegidos_one: '{{count}} selected',

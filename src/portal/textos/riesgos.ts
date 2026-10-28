@@ -13,6 +13,7 @@ export const ES_RIESGOS = {
     rules: 'Reglas de alerta'
   },
   filtroAltos: 'Nivel alto o crítico',
+  buscar: 'Buscar por código o título',
   filtroCelda: 'Probabilidad {{p}} × impacto {{i}}',
   vacio: 'No hay riesgos en esta vista.',
   sinRiesgos: 'Aún no hay riesgos registrados.',
@@ -65,6 +66,7 @@ export const EN_RIESGOS: typeof ES_RIESGOS = {
     rules: 'Warning rules'
   },
   filtroAltos: 'High or critical level',
+  buscar: 'Search by code or title',
   filtroCelda: 'Probability {{p}} × impact {{i}}',
   vacio: 'There are no risks in this view.',
   sinRiesgos: 'No risks recorded yet.',

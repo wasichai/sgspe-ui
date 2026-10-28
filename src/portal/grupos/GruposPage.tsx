@@ -15,7 +15,8 @@ import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
 import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { NombreDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
+import { NombreDelGrupo, useNombreDelGrupo, useNombresDeGrupos } from '../componentes/NombreDeActor'
+import { comparable } from '../componentes/FiltroDeGrupo'
 import { BotonDeVistaPrevia, useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
@@ -91,7 +92,13 @@ export function GruposPage() {
         return g.state !== 'retired'
     }
   }
-  const conFiltros = (g: Registro) => filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f))
+  // la búsqueda (?q=) por el nombre que ve quien mira, sin tildes ni mayúsculas (tercera pasada de UX, 3.7): el nombre está en la
+  // persona u organización del grupo, así que se leen solo mientras se busca
+  const busqueda = lista.filtro('q').trim()
+  const buscado = comparable(busqueda)
+  const nombres = useNombresDeGrupos(buscado ? (grupos.data ?? []) : [])
+  const conFiltros = (g: Registro) =>
+    filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f)) && (!buscado || comparable(nombres.get(g.id) ?? '').includes(buscado))
   // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página. sin
   // elegir uno, el de la lectura
   const [orden, ordenar] = ordenEnUrl(lista, undefined, ['prioridad'])
@@ -105,7 +112,7 @@ export function GruposPage() {
   const conteoDe = (vista: string) => (grupos.data ? grupos.data.filter((g) => enVistaLa(vista, g) && conFiltros(g)).length : null)
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
   // la selección es de lo que se ve: al cambiar de vista, de filtro o de página se reinicia, y nunca viaja una fila oculta
-  const claveDeVista = [lista.vista, lista.pagina, ...FILTROS.map((f) => lista.filtro(f))].join('|')
+  const claveDeVista = [lista.vista, lista.pagina, busqueda, ...FILTROS.map((f) => lista.filtro(f))].join('|')
   const [claveVista, setClaveVista] = useState(claveDeVista)
   if (claveVista !== claveDeVista) {
     setClaveVista(claveDeVista)
@@ -118,9 +125,12 @@ export function GruposPage() {
     else siguiente.delete(id)
     setSeleccion(siguiente)
   }
-  const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` }))
+  const chips = [
+    ...filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` })),
+    ...(busqueda ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: busqueda }) }] : [])
+  ]
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
-  const limpiarFiltros = () => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))
+  const limpiarFiltros = () => lista.cambiar({ q: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })
   const filtroDe = (f: string) => (
     <FiltroDeLista
       key={f}
@@ -263,6 +273,7 @@ export function GruposPage() {
                 visibles={5}
               />
             }
+            busqueda={{ etiqueta: t('grupos.buscarEnLista'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
             frecuentes={<>{filtros.filter((f) => FRECUENTES.includes(f)).map(filtroDe)}</>}
             todos={<>{filtros.filter((f) => !FRECUENTES.includes(f)).map(filtroDe)}</>}
             aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
@@ -294,7 +305,7 @@ export function GruposPage() {
             <VacioDeLista
               conFiltros={chips.length > 0 || lista.vista !== 'todos'}
               sinFiltros={(grupos.data ?? []).filter((g) => g.state !== 'retired').length}
-              alLimpiar={() => lista.cambiar({ view: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })}
+              alLimpiar={() => lista.cambiar({ view: null, q: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })}
             >
               {t('grupos.vacio')}
             </VacioDeLista>

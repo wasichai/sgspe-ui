@@ -38,6 +38,7 @@ export const ES_GRUPOS = {
   sinEvaluarValor: 'Sin evaluar',
   registrarConEllos: 'Registrar una interacción con ellos',
   vacio: 'Un grupo de interés nace al buscar a la persona u organización y vincularla al proyecto.',
+  buscarEnLista: 'Buscar por nombre',
   nuevoGrupo: {
     buscar: 'Buscar antes de crear',
     organizacion: 'Organización',
@@ -244,6 +245,7 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
   sinEvaluarValor: 'Not assessed',
   registrarConEllos: 'Register an engagement with them',
   vacio: 'A stakeholder starts by searching the person or organization and linking it to the project.',
+  buscarEnLista: 'Search by name',
   nuevoGrupo: {
     buscar: 'Search before creating',
     organizacion: 'Organization',

@@ -86,6 +86,19 @@ describe('S16 · lista de grupos de interés', () => {
     await waitFor(() => expect(filas()).toHaveLength(1))
   })
 
+  // tercera pasada de UX, 3.7: buscar por el nombre que ve quien mira, sin tildes ni mayúsculas, con su chip
+  it('busca por nombre sin tildes ni mayúsculas, y la búsqueda es un chip más', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por nombre' }), 'TÚNAS')
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(filas()[0]).toHaveTextContent('Ronda campesina Tunas')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders?q=T%C3%9ANAS'))
+    expect(within(screen.getByRole('list', { name: 'Filtros aplicados' })).getByRole('listitem')).toHaveTextContent('Contiene «TÚNAS»')
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+  })
+
   it('los filtros aplicados son chips: quitar uno quita su parámetro y «Limpiar filtros» deja la vista', async () => {
     fetch = abrirPortal(
       '/projects/p1/stakeholders?view=todos&stance=EN%20CONTRA&influence_group=ESTRATEGICO',
