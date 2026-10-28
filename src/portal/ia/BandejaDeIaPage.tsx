@@ -125,7 +125,7 @@ export function BandejaDeIaPage() {
           </div>
           {aceptada ? (
             <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-sg-success">
-              {t('bandejaIa.aceptada')}
+              {t('bandejaIa.aceptadaEn')}
               {texto(aceptada, 'target_record_id') ? (
                 <RegistroVinculado objeto={texto(aceptada, 'target_object')} id={texto(aceptada, 'target_record_id')} />
               ) : null}
