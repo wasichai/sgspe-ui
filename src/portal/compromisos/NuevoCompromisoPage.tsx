@@ -16,7 +16,7 @@ import { esConflictoDeVersion, useErroresDeCampo, useMensajeDeError } from '../c
 import { Cargando } from '../componentes/Estados'
 import { ConDefiniciones, FalloDeLectura } from '../componentes/LecturaConEstados'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
-import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { EleccionDeGrupos } from '../componentes/EleccionDeGrupos'
 import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuario'
@@ -577,27 +577,16 @@ function Asistente() {
           ) : grupos.isError && !grupos.data ? (
             <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} />
           ) : (
-            <fieldset className="space-y-1">
-              <legend className="sr-only">{t('nuevoCompromiso.pasos.solicitantes')}</legend>
+            <>
               {solicitantes.size === 0 ? <p className="text-sm text-sg-text-muted">{t('nuevoCompromiso.sinSolicitantes')}</p> : null}
-              {grupos.data
-                .filter((g) => g.state !== 'retired')
-                .map((g) => (
-                  <label key={g.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={solicitantes.has(g.id)}
-                      onChange={(e) => {
-                        const siguiente = new Set(solicitantes)
-                        if (e.target.checked) siguiente.add(g.id)
-                        else siguiente.delete(g.id)
-                        setSolicitantes(siguiente)
-                      }}
-                    />
-                    <NombreDelGrupo grupo={g} />
-                  </label>
-                ))}
-            </fieldset>
+              <EleccionDeGrupos
+                etiqueta={t('nuevoCompromiso.pasos.solicitantes')}
+                etiquetaOculta
+                grupos={grupos.data}
+                elegidos={[...solicitantes]}
+                alCambiar={(ids) => setSolicitantes(new Set(ids))}
+              />
+            </>
           )
         ) : null}
         {paso === 'beneficiarios' ? (

@@ -17,7 +17,7 @@ export function useChipDeGrupo(id: string): string {
 }
 
 // sin mayúsculas ni tildes: «pena» encuentra «Peña»
-const comparable = (s: string) =>
+export const comparable = (s: string) =>
   s
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')

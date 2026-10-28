@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { DeLista } from '../componentes/LecturaConEstados'
-import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { EleccionDeGrupos } from '../componentes/EleccionDeGrupos'
 import { hoyEnLima } from '../datos/fechas'
 import { nuevaClave } from '../datos/http'
 import { texto, useTodos } from '../datos/registros'
@@ -139,26 +139,9 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
         <LugaresDelPunto punto={ubicacion} alUsar={({ locality, community }) => setLugares({ locality: locality?.id, community: community?.id })} />
         {telefono.sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
       </div>
-      <fieldset className="space-y-1">
-        <legend className="text-sg-label font-medium">{t('relacionamiento.registro.grupos')}</legend>
-        <DeLista consulta={grupos}>
-          {(todos) =>
-            todos
-              .filter((g) => g.state !== 'retired')
-              .map((g) => (
-                <label key={g.id} className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="size-5"
-                    checked={presentes.includes(g.id)}
-                    onChange={(e) => setPresentes(e.target.checked ? [...presentes, g.id] : presentes.filter((x) => x !== g.id))}
-                  />
-                  <NombreDelGrupo grupo={g} />
-                </label>
-              ))
-          }
-        </DeLista>
-      </fieldset>
+      <DeLista consulta={grupos}>
+        {(todos) => <EleccionDeGrupos etiqueta={t('relacionamiento.registro.grupos')} grupos={todos} elegidos={presentes} alCambiar={setPresentes} grande />}
+      </DeLista>
       <fieldset className="space-y-2">
         <legend className="text-sg-label font-medium">{t('relacionamiento.ficha.asistentes')}</legend>
         {sexos.flatMap((sexo) =>

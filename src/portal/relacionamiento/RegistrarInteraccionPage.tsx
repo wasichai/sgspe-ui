@@ -11,6 +11,7 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { EleccionDeGrupos } from '../componentes/EleccionDeGrupos'
 import { Cargando, NoDisponible } from '../componentes/Estados'
 import { ConDefiniciones, DeLista, FalloDeLectura } from '../componentes/LecturaConEstados'
 import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
@@ -408,25 +409,17 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
               }}
             />
           </div>
-          <fieldset className="space-y-1">
-            <legend className="text-sg-label font-medium">{t('relacionamiento.registro.grupos')}</legend>
-            <DeLista consulta={grupos}>
-              {(todos) => (
-                <ul className="max-h-60 overflow-y-auto rounded-sg-md border border-sg-border p-2 text-sm">
-                  {todos
-                    .filter((g) => g.state !== 'retired')
-                    .map((g) => (
-                      <li key={g.id}>
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" value={g.id} {...register('grupos')} />
-                          <NombreDelGrupo grupo={g} />
-                        </label>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </DeLista>
-          </fieldset>
+          <DeLista consulta={grupos}>
+            {(todos) => (
+              <Controller
+                control={control}
+                name="grupos"
+                render={({ field }) => (
+                  <EleccionDeGrupos etiqueta={t('relacionamiento.registro.grupos')} grupos={todos} elegidos={field.value ?? []} alCambiar={field.onChange} />
+                )}
+              />
+            )}
+          </DeLista>
           <Campo etiqueta={t('relacionamiento.registro.convocante')}>
             {(p) => (
               <select {...p} {...register('convener')} className="h-9 w-full rounded-sg-md border border-sg-border-strong bg-sg-surface px-2.5 text-sm">

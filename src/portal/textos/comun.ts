@@ -166,6 +166,12 @@ export const ES_COMUN = {
     noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.',
     asignarme: 'Asignarme como {{etiqueta}}'
   },
+  eleccionDeGrupos: {
+    buscar: 'Buscar un grupo de interés',
+    elegidos_one: '{{count}} elegido',
+    elegidos_other: '{{count}} elegidos',
+    ninguno: 'Ningún grupo de interés coincide con «{{q}}».'
+  },
   // la ayuda de un campo en un formulario armado desde el modelo (FormularioDeRegistro): la descripción del modelo es
   // documentación y no se muestra; aquí, la de los campos que la necesitan, por objeto
   ayudas: {
@@ -591,6 +597,12 @@ export const EN_COMUN: typeof ES_COMUN = {
     aMano: 'Your account does not list the organization’s users: type the email and the identifier; the system checks they name someone in your organization.',
     noLeido: 'The user list could not be read; type the email and the identifier.',
     asignarme: 'Assign to me as {{etiqueta}}'
+  },
+  eleccionDeGrupos: {
+    buscar: 'Search for a stakeholder group',
+    elegidos_one: '{{count}} selected',
+    elegidos_other: '{{count}} selected',
+    ninguno: 'No stakeholder group matches “{{q}}”.'
   },
   ayudas: {
     social_risk: { review_every_days: 'From 1 to 365; empty = the project’s frequency.' },
