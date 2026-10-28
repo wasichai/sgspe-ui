@@ -20,6 +20,8 @@ import { NS, numeroPe } from '../i18n'
 import { INDICADORES, useGuardarEvaluacion, useVistaPreviaDeEvaluacion, type EvaluacionGuardada } from './api'
 import { Advertencias } from './Advertencias'
 import { rotuloDeOpcion } from '../datos/opciones'
+import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
+import { leerBorrador, useBorradorLocal, useClaveDelBorrador, type Borrador } from '../datos/borrador'
 
 // S20 · nueva evaluación (screens.md §5, flujo 3): fecha, base, los 15 indicadores de 1 a 5 con su valor anterior, postura
 // (restringida), apertura, confianza, razones, preocupaciones y expectativas, y el motivo obligatorio. la vista previa se
@@ -126,6 +128,22 @@ export function EvaluacionDrawer({
   const fecha = useWatch({ control, name: 'assessment_date' })
   const postura = useWatch({ control, name: 'stance' })
   const completos = INDICADORES.every((i) => typeof indicadores?.[i] === 'number')
+  // el borrador de este navegador (tercera pasada de UX, 2.4): quince escalas no se pierden si la pestaña se cierra o la ficha se
+  // deja. se recupera al abrir el cajón; cancelar lo descarta, igual que guardar. la fecha que era la de hoy al guardarlo vuelve
+  // a ser la de hoy: el borrador de ayer no se vuelve una evaluación con fecha pasada sin que nadie lo elija
+  const claveDelBorrador = useClaveDelBorrador('evaluacion', grupo.id)
+  const todo = useWatch({ control }) as Valores
+  const borrador = useBorradorLocal(claveDelBorrador, { valores: todo }, abierto && formState.isDirty)
+  const [recuperado, setRecuperado] = useState<Borrador<Valores> | null>(null)
+  useEffect(() => {
+    if (!abierto) return
+    const previo = leerBorrador<Valores>(claveDelBorrador)
+    if (!previo) return
+    const deEseDia = previo.valores.assessment_date === hoyEnLima(new Date(previo.guardado))
+    reset({ ...valoresIniciales(), ...previo.valores, ...(deEseDia ? { assessment_date: hoyEnLima() } : {}) }, { keepDefaultValues: true })
+    setRecuperado(previo)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierto])
   // el tema abierto: el primero al empezar; calificar el último indicador de un tema abre el siguiente sin calificar
   const [temaAbierto, setTemaAbierto] = useState<number | null>(0)
   const temasHechos = TEMAS.filter((tema) => completo(tema, indicadores)).length
@@ -135,7 +153,7 @@ export function EvaluacionDrawer({
   }
   const calificar = (indice: number, indicador: Indicador, n: number) => {
     const antes = indicadores
-    setValue(`indicadores.${indicador}`, n, { shouldValidate: formState.isSubmitted })
+    setValue(`indicadores.${indicador}`, n, { shouldValidate: formState.isSubmitted, shouldDirty: true })
     const despues = { ...antes, [indicador]: n }
     if (!completo(TEMAS[indice], antes) && completo(TEMAS[indice], despues)) setTemaAbierto(primeroSinCalificar(despues, indice + 1))
   }
@@ -163,6 +181,8 @@ export function EvaluacionDrawer({
         {
           onSuccess: (r) => {
             setClave(nuevaClave())
+            borrador.descartar()
+            setRecuperado(null)
             reset(valoresIniciales())
             setTemaAbierto(0)
             alGuardar(r)
@@ -186,6 +206,8 @@ export function EvaluacionDrawer({
   // no se renovaría ni se reiniciaría el formulario si el servidor guardó)
   const cerrar = () => {
     if (guardar.isPending) return
+    borrador.descartar()
+    setRecuperado(null)
     reset(valoresIniciales())
     setTemaAbierto(0)
     guardar.reset()
@@ -204,6 +226,7 @@ export function EvaluacionDrawer({
       abierto={abierto}
       alCerrar={cerrar}
       ocupado={guardar.isPending}
+      conCambios={formState.isDirty}
       pie={
         <>
           <Button variant="secondary" onClick={cerrar} disabled={guardar.isPending}>
@@ -216,6 +239,17 @@ export function EvaluacionDrawer({
       }
     >
       {retirado ? <Alert tone="warning">{t('grupos.evaluacion.retirado')}</Alert> : null}
+      {recuperado ? (
+        <AvisoDeBorrador
+          guardado={recuperado.guardado}
+          alDescartar={() => {
+            borrador.descartar()
+            setRecuperado(null)
+            reset(valoresIniciales())
+            setTemaAbierto(0)
+          }}
+        />
+      ) : null}
       {definicion.isPending ? <Cargando /> : null}
       {definicion.isError && !definicion.data ? <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} /> : null}
       <form hidden={!definicion.data} className="space-y-4" onSubmit={(e) => void enviar(e)} aria-label={t('grupos.evaluacion.titulo')}>
@@ -225,7 +259,7 @@ export function EvaluacionDrawer({
             etiqueta={t('grupos.evaluacion.fecha')}
             requerido
             valor={fecha || null}
-            alCambiar={(v) => setValue('assessment_date', v ?? '', { shouldValidate: formState.isSubmitted })}
+            alCambiar={(v) => setValue('assessment_date', v ?? '', { shouldValidate: formState.isSubmitted, shouldDirty: true })}
             error={formState.errors.assessment_date ? t('proyectos.asistente.obligatorio') : undefined}
           />
           <Campo etiqueta={t('grupos.evaluacion.base')} error={formState.errors.basis ? t('proyectos.asistente.obligatorio') : undefined}>
