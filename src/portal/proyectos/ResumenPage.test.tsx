@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, pagina, registro, workflow } from '../../test/montar'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
 import { abrirPortal } from '../../test/pantalla'
-import { GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
+import { ADMIN_PERMISOS, ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
 
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -221,6 +221,48 @@ describe('S08 · Project 360, resumen', () => {
     await screen.findByRole('region', { name: 'Paisaje de grupos de interés' })
     await waitFor(() => expect(red!.a('GET', '/metadata/objects/project').length).toBeGreaterThan(0))
     expect(screen.queryByRole('link', { name: 'Completar proyecto' })).not.toBeInTheDocument()
+  })
+
+  // A13 de la segunda pasada, recuperado en la tercera: un proyecto en revisión ofrecía «Registrar interacción», «Devolver»,
+  // «Aprobar» y «Anular el proyecto» con el mismo peso. mientras no está activo, su decisión es la primaria y lo demás va en
+  // «Más acciones»; activo, la primaria es «Registrar interacción» y suspender o cerrar van en el menú
+  const transicion = (name: string, label: string, to: string) => ({ name, label, to, toLabel: to, allowed: true, reason: null })
+  it('en revisión, «Aprobar» es la primaria y «Devolver» y «Anular» van en «Más acciones»', async () => {
+    const enRevision = registro('p1', { ...P1.attributes }, { state: 'in_review' })
+    fetch = abrirPortal('/projects/p1/overview', ADMINISTRACION, ADMIN_PERMISOS, [
+      { path: '/objects/project/records/p1', body: enRevision },
+      {
+        path: '/objects/project/records/p1/transitions',
+        body: [
+          transicion('return_to_draft', 'Devolver', 'draft'),
+          transicion('approve', 'Aprobar', 'active'),
+          transicion('cancel_in_review', 'Anular', 'cancelled')
+        ]
+      },
+      ...rutas(SIN_STANCE)
+    ])
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar' })
+    expect(aprobar).toHaveAttribute('data-variant', 'primary')
+    expect(screen.getByRole('link', { name: 'Registrar interacción' })).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.queryByRole('button', { name: 'Devolver' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
+    expect(screen.getByRole('button', { name: 'Devolver' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Anular el proyecto' })).toBeInTheDocument()
+  })
+
+  it('activo, «Registrar interacción» es la única primaria y suspender o cerrar van en «Más acciones»', async () => {
+    fetch = abrirPortal('/projects/p1/overview', ADMINISTRACION, ADMIN_PERMISOS, [
+      {
+        path: '/objects/project/records/p1/transitions',
+        body: [transicion('suspend', 'Suspender', 'suspended'), transicion('close', 'Cerrar', 'closed')]
+      },
+      ...rutas(SIN_STANCE)
+    ])
+    expect(await screen.findByRole('link', { name: 'Registrar interacción' })).toHaveAttribute('data-variant', 'primary')
+    expect(screen.queryByRole('button', { name: 'Suspender' })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
+    expect(screen.getByRole('button', { name: 'Suspender' })).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.getByRole('button', { name: 'Cerrar' })).toBeInTheDocument()
   })
 
   it('las reuniones del mes se comparan con la meta y la actividad trae el motivo', async () => {

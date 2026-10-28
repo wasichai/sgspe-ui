@@ -26,7 +26,9 @@ export const CAMINO_DE: Readonly<Record<string, readonly string[]>> = {
   social_contribution: ['approve', 'register_procurement', 'register_delivery', 'close'],
   social_program: ['submit', 'approve', 'start_execution', 'start_monitoring', 'start_evaluation', 'close', 'resume'],
   field_visit: ['start', 'complete'],
-  area_of_influence: ['approve']
+  area_of_influence: ['approve'],
+  // suspender o cerrar un proyecto activo no es lo siguiente: es una decisión de excepción
+  project: ['submit_for_review', 'approve', 'resume']
 }
 
 export function siguienteTransicion(objeto: string, transiciones: readonly AvailableTransition[]): AvailableTransition | null {

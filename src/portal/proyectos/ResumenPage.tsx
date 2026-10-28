@@ -25,13 +25,14 @@ import { useCapas } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { capa } from '../mapa/capas'
 import { Mapa } from '../mapa/Mapa'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { useTransicionesOfrecidas } from '../transiciones/BotonesDeTransicion'
 import { vigente, PARAMETROS_F2 } from './parametros'
 import { TableroDelProyecto, useIndicadoresDelProyecto, type LecturaDeIndicador } from './TableroDelProyecto'
 import { opcion } from '../datos/opciones'
 import { ListaPriorizada, type EntradaPriorizada } from '../componentes/ListaPriorizada'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
+import { MasAcciones } from '../componentes/Pagina'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
 // project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
@@ -117,19 +118,11 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
-            <Button asChild size="sm">
-              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
-            </Button>
-          ) : null}
-          {proyecto.state === 'draft' && editaProyecto ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
-            </Button>
-          ) : null}
-          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
-        </div>
+        <AccionesDelProyecto
+          proyecto={proyecto}
+          registra={escribeEnElProyecto && can('engagement', 'CREATE')}
+          completa={proyecto.state === 'draft' && editaProyecto}
+        />
       </header>
       {/* P-03: las cinco cifras, al inicio y en una sola superficie (U-34). todas salen del tablero del proyecto: si falla, cada
           una lo dice en una línea y el aviso con «Reintentar» va una sola vez, en el tablero (D4, revisión de UX, etapa 7) */}
@@ -437,6 +430,43 @@ function Cifra({ titulo, lectura, a, tono }: CifraDeFranja) {
     <div role="group" aria-label={titulo} className="space-y-1 rounded-sg-md p-3">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
       {cuerpo}
+    </div>
+  )
+}
+
+// una sola primaria (A13 de la segunda pasada de UX, recuperado en la tercera): con el proyecto activo, «Registrar interacción»;
+// mientras no lo está, su decisión (enviar a revisión, aprobar, reanudar: siguienteTransicion) y «Registrar interacción» como
+// secundaria. lo demás (devolver, suspender, cerrar) y lo destructivo (anular) van en «Más acciones», lejos de la primaria
+function AccionesDelProyecto({ proyecto, registra, completa }: { proyecto: Registro; registra: boolean; completa: boolean }) {
+  const { t } = useTranslation(NS)
+  const activo = proyecto.state === 'active'
+  const transiciones = useTransicionesOfrecidas({
+    objeto: 'project',
+    registro: proyecto,
+    proyecto: proyecto.id,
+    sinPrimaria: activo && registra,
+    primariaSoloDelCamino: true
+  })
+  const registrar = (variante: 'primary' | 'secondary') => (
+    <Button asChild size="sm" variant={variante}>
+      <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
+    </Button>
+  )
+  const enMenu = [...transiciones.otras, ...transiciones.destructivas]
+  return (
+    <div className="space-y-2">
+      <div role="group" aria-label={t('transiciones.acciones')} className="flex flex-wrap items-center gap-2">
+        {completa ? (
+          <Button asChild size="sm" variant="secondary">
+            <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
+          </Button>
+        ) : null}
+        {registra && !activo ? registrar('secondary') : null}
+        {enMenu.length > 0 ? <MasAcciones>{enMenu.map((x) => x.nodo)}</MasAcciones> : null}
+        {registra && activo ? registrar('primary') : transiciones.primaria?.nodo}
+      </div>
+      {transiciones.confirmacion}
+      {transiciones.dialogo}
     </div>
   )
 }
