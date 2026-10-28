@@ -106,7 +106,6 @@ function MasIndicadores() {
       <ul className="space-y-1 text-sm">
         {sinZona.map((i) => (
           <li key={i.code} className="flex flex-wrap items-center gap-2">
-            <span className="font-sg-mono text-sg-caption text-sg-text-muted">{i.code}</span>
             {i.available ? (
               <Link to={`${base}/${i.code}${search}`} className="text-sg-primary-text underline">
                 {i.label}

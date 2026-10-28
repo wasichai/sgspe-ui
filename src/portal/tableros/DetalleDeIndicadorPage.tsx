@@ -70,8 +70,8 @@ export function DetalleDeIndicadorPage() {
       <Link to={volver()} className="text-sm text-sg-primary-text underline">
         {t('tableros.volverAlTablero')}
       </Link>
+      {/* el título dice la cifra por su nombre; su código técnico vive en el catálogo de indicadores (tercera pasada de UX, 4.7) */}
       <h1 className="text-sg-h1 font-semibold">{indicador.data ? rotulo(indicador.data) : t('tableros.indicador')}</h1>
-      <p className="font-sg-mono text-sg-caption text-sg-text-muted">{code}</p>
       <FiltrosDeTablero alActualizar={() => void indicador.refetch()} />
       <ConsultaDeTablero consulta={indicador}>
         {(i) => (
