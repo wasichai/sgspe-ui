@@ -127,9 +127,9 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     // el puntaje como número: 2, 6, 9, 16 (no «16» antes de «2»)
     await userEvent.click(within(tabla()).getByRole('button', { name: 'P × I' }))
     expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
-    // el estado y la revisión no se ordenan; el orden no escribe la URL ni vuelve a pedir la lista
+    // el estado y la revisión no se ordenan; el orden viaja en la URL (DD-37) y no vuelve a pedir la lista
     expect(within(tabla()).queryByRole('button', { name: 'Estado' })).not.toBeInTheDocument()
-    expect(ubicacion.actual).toBe('/projects/p1/risks/register')
+    expect(ubicacion.actual).toBe('/projects/p1/risks/register?sort=puntaje&dir=asc')
     expect(red.a('GET', '/objects/social_risk/records').every((l) => l.ruta.includes('sort=code&dir=asc'))).toBe(true)
   })
 

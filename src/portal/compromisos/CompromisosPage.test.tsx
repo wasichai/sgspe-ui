@@ -348,7 +348,8 @@ describe('S28 · lista de compromisos', () => {
     for (const c of ['Estado', 'Plazo', 'Monto']) expect(within(tabla()).queryByRole('button', { name: c })).not.toBeInTheDocument()
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
     await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0', size: '25' })))
-    expect(ubicacion.actual).toBe('/projects/p1/commitments')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?sort=codigo&dir=asc')
     await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('C-100'))
     expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
@@ -391,7 +392,7 @@ describe('S28 · lista de compromisos', () => {
     expect(codigos()).toEqual(['C-002', 'C-003', 'C-001'])
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
     expect(codigos()).toEqual(['C-001', 'C-002', 'C-003'])
-    expect(ubicacion.actual).toBe('/projects/p1/commitments?stakeholder=s1')
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?stakeholder=s1&sort=codigo&dir=asc')
     // el servidor no ordena lo que filtra el portal
     expect(consultasA(red)).toEqual([])
   })

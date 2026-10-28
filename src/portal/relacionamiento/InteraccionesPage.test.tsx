@@ -278,7 +278,8 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     const consultas = () => red!.a('GET', '/objects/engagement/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Fecha' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'scheduled_at', dir: 'asc', page: '0' })))
-    expect(rutaActual()).toBe('/projects/p1/engagements?view=lista')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(rutaActual()).toBe('/projects/p1/engagements?view=lista&sort=fecha&dir=asc')
     expect(within(tabla()).getByRole('columnheader', { name: 'Fecha' })).toHaveAttribute('aria-sort', 'ascending')
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Interacción' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'title', dir: 'asc', page: '0' })))

@@ -205,7 +205,8 @@ describe('S16 · lista de grupos de interés', () => {
     expect(tabla().queryByRole('button', { name: 'Grupo de interés' })).not.toBeInTheDocument()
     expect(tabla().queryByRole('button', { name: 'Grupo de influencia' })).not.toBeInTheDocument()
     await userEvent.click(tabla().getByRole('button', { name: 'Prioridad' }))
-    expect(rutaActual()).toBe('/projects/p1/stakeholders')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?sort=prioridad&dir=asc')
     await waitFor(() => expect(filas()).toHaveLength(25))
     expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).toHaveAttribute('aria-sort', 'ascending')
     expect(filas()[0]).toHaveTextContent('Media')

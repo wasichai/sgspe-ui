@@ -316,7 +316,8 @@ describe('S42 · programas e inversión', () => {
     expect(within(tabla()).queryByRole('button', { name: /^Presupuesto/ })).not.toBeInTheDocument()
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Programa' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'name', dir: 'asc', page: '0' })))
-    expect(ubicacion.actual).toBe('/projects/p1/programs')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(ubicacion.actual).toBe('/projects/p1/programs?sort=programa&dir=asc')
     await waitFor(() => expect(within(tabla()).getByRole('columnheader', { name: 'Programa' })).toHaveAttribute('aria-sort', 'ascending'))
     expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).not.toHaveAttribute('aria-sort')
     await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
@@ -349,7 +350,7 @@ describe('S42 · programas e inversión', () => {
     expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('AP-001')
     expect(within(tabla()).getAllByRole('row')[2]).toHaveTextContent('AP-002')
     expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
-    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos&sort=codigo&dir=asc')
   })
 
   it('«Nuevo aporte» pide el motivo, propone PEN, manda el proyecto y abre la ficha del aporte creado', async () => {

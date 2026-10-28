@@ -176,7 +176,8 @@ describe('S33 · acuerdos', () => {
     const rutasPedidas = () => red!.a('GET', '/objects/agreement/records').map((l) => l.ruta)
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Vence' }))
     await waitFor(() => expect(rutasPedidas()).toContain('/objects/agreement/records?sort=expiry_date&dir=asc&page=0&size=25'))
-    expect(ubicacion.actual).toBe('/agreements')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(ubicacion.actual).toBe('/agreements?sort=vence&dir=asc')
     await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
     expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('A-126')
     expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
