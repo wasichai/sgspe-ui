@@ -1,10 +1,13 @@
 // S47 · mis tareas: lista, tablero y calendario (WF-N, screens.md §11)
 export const ES_TAREAS = {
   titulo: 'Mis tareas',
-  delProyecto: 'Tareas del proyecto',
+  // dentro de un proyecto se ven las de quien mira, no las de todo el equipo (tercera pasada de UX)
+  delProyecto: 'Mis tareas en este proyecto',
   vistas: { lista: 'Lista', tablero: 'Tablero', calendario: 'Calendario' },
   grupos: { mias: 'Mis tareas', paraTomar: 'Para tomar' },
-  masEnLaColumna: 'Y {{n}} más.',
+  verRestoEnLaLista: 'Ver las {{n}} restantes en la lista',
+  calendarioCortado: 'Este mes tiene más tareas de las que el calendario puede mostrar: véalas todas en la lista.',
+  irALaLista: 'Ir a la lista',
   contadores: { vencidas: 'Vencidas', porVencer: 'Por vencer', abiertas: 'Abiertas' },
   conteo_one: '{{count}} abierta',
   conteo_other: '{{count}} abiertas',
@@ -48,10 +51,12 @@ export const ES_TAREAS = {
 
 export const EN_TAREAS: typeof ES_TAREAS = {
   titulo: 'My tasks',
-  delProyecto: 'Project tasks',
+  delProyecto: 'My tasks in this project',
   vistas: { lista: 'List', tablero: 'Board', calendario: 'Calendar' },
   grupos: { mias: 'My tasks', paraTomar: 'To take' },
-  masEnLaColumna: 'And {{n}} more.',
+  verRestoEnLaLista: 'See the other {{n}} in the list',
+  calendarioCortado: 'This month has more tasks than the calendar can show: see them all in the list.',
+  irALaLista: 'Go to the list',
   contadores: { vencidas: 'Overdue', porVencer: 'Due soon', abiertas: 'Open' },
   conteo_one: '{{count}} open',
   conteo_other: '{{count}} open',

@@ -95,6 +95,9 @@ export function MisTareasPage() {
   const pagina = lista.pagina ? String(lista.pagina) : null
   const abrir = (tarea: Registro) => lista.cambiar({ task: tarea.id, page: pagina })
   const chips = situacion ? [{ clave: 'situacion', etiqueta: t(`tareas.contadores.${situacion === 'VENCIDO' ? 'vencidas' : 'porVencer'}`) }] : []
+  // el tablero y el calendario aplican la situación elegida, como la lista: su chip no puede quedar a la vista sin filtrar
+  const conSituacion: Parametros = situacion ? { ...mias, deadline_status: situacion } : mias
+  const verLista = () => lista.cambiar({ view: null })
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
@@ -110,7 +113,8 @@ export function MisTareasPage() {
               ['abiertas', cifras.abiertas, null]
             ] as const
           ).map(([clave, n, valor]) => {
-            const activo = vista === 'lista' && (valor ? situacion === valor : !situacion)
+            // la cifra elegida queda marcada en toda vista: el tablero y el calendario también la aplican (tercera pasada de UX)
+            const activo = valor ? situacion === valor : !situacion
             return (
               <button
                 key={clave}
@@ -133,10 +137,11 @@ export function MisTareasPage() {
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
       {vista === 'tablero' ? (
-        <Tablero consulta={mias} alAbrir={abrir} />
+        <Tablero consulta={conSituacion} alAbrir={abrir} alVerLista={verLista} />
       ) : vista === 'calendario' ? (
         <Calendario
-          consulta={mias}
+          consulta={conSituacion}
+          alVerLista={verLista}
           mes={lista.filtro('month') || hoyEnLima().slice(0, 7)}
           alCambiarMes={(mes) => lista.cambiar({ month: mes })}
           alAbrir={abrir}
@@ -304,11 +309,11 @@ function TablaDeTareas({
 
 // el tablero por estado: una columna por estado de WF-N (las canceladas no se muestran), cada una con su consulta y su total; cada
 // tarjeta abre la tarea, donde están las transiciones con el teclado y con motivo, en lugar de arrastrar (screens.md S47)
-function Tablero({ consulta, alAbrir }: { consulta: Parametros; alAbrir: (tarea: Registro) => void }) {
+function Tablero({ consulta, alAbrir, alVerLista }: { consulta: Parametros; alAbrir: (tarea: Registro) => void; alVerLista: () => void }) {
   return (
     <div className="grid gap-3 md:grid-cols-4">
       {COLUMNAS.map((estado) => (
-        <ColumnaDelTablero key={estado} consulta={consulta} estado={estado} alAbrir={alAbrir} />
+        <ColumnaDelTablero key={estado} consulta={consulta} estado={estado} alAbrir={alAbrir} alVerLista={alVerLista} />
       ))}
     </div>
   )
@@ -316,7 +321,17 @@ function Tablero({ consulta, alAbrir }: { consulta: Parametros; alAbrir: (tarea:
 
 const POR_COLUMNA = 50
 
-function ColumnaDelTablero({ consulta, estado, alAbrir }: { consulta: Parametros; estado: string; alAbrir: (tarea: Registro) => void }) {
+function ColumnaDelTablero({
+  consulta,
+  estado,
+  alAbrir,
+  alVerLista
+}: {
+  consulta: Parametros
+  estado: string
+  alAbrir: (tarea: Registro) => void
+  alVerLista: () => void
+}) {
   const { t } = useTranslation(NS)
   const lectura = useRegistros('task', { ...consulta, state: estado, sort: 'due_date', dir: 'asc', size: POR_COLUMNA })
   const tareas = lectura.data?.content ?? []
@@ -349,8 +364,11 @@ function ColumnaDelTablero({ consulta, estado, alAbrir }: { consulta: Parametros
           ))}
         </ul>
       )}
+      {/* las que no caben en la columna se ven en la lista (tercera pasada de UX: «Y N más.» no llevaba a ninguna parte) */}
       {total !== null && total > tareas.length ? (
-        <p className="text-sg-caption text-sg-text-muted">{t('tareas.masEnLaColumna', { n: numeroPe(total - tareas.length) })}</p>
+        <button type="button" onClick={alVerLista} className="text-sg-caption font-medium text-sg-primary-text hover:underline focus-visible:underline">
+          {t('tareas.verRestoEnLaLista', { n: numeroPe(total - tareas.length) })}
+        </button>
       ) : null}
     </section>
   )
@@ -367,12 +385,14 @@ function Calendario({
   consulta,
   mes,
   alCambiarMes,
-  alAbrir
+  alAbrir,
+  alVerLista
 }: {
   consulta: Parametros
   mes: string
   alCambiarMes: (mes: string) => void
   alAbrir: (tarea: Registro) => void
+  alVerLista: () => void
 }) {
   const { t, i18n } = useTranslation(NS)
   const valido = /^\d{4}-\d{2}$/.test(mes) ? mes : hoyEnLima().slice(0, 7)
@@ -426,6 +446,15 @@ function Calendario({
         )}
       </div>
       {sinFecha > 0 ? <p className="text-sm text-sg-text-muted">{t('tareas.sinFecha', { n: sinFecha })}</p> : null}
+      {/* la lectura del mes tiene tope: si lo alcanza, el calendario no las muestra todas y lo dice (tercera pasada de UX) */}
+      {delMes.truncado ? (
+        <p className="text-sm text-sg-warning">
+          {t('tareas.calendarioCortado')}{' '}
+          <button type="button" onClick={alVerLista} className="font-medium text-sg-primary-text hover:underline focus-visible:underline">
+            {t('tareas.irALaLista')}
+          </button>
+        </p>
+      ) : null}
     </section>
   )
 }

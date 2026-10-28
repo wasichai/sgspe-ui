@@ -275,6 +275,47 @@ describe('S47 · mis tareas', () => {
     expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
   })
 
+  // tercera pasada de UX: el tablero no ignora la situación elegida, que sigue marcada en su cifra
+  it('el tablero aplica la situación elegida y su cifra queda marcada', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/tasks?view=tablero&situacion=VENCIDO', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await waitFor(() => expect(red!.a('GET', '/objects/task/records').some((l) => /[?&]state=done(&|$)/.test(l.ruta))).toBe(true))
+    const columnas = red.a('GET', '/objects/task/records').filter((l) => /[?&]state=(open|in_progress|blocked|done)(&|$)/.test(l.ruta))
+    expect(columnas.length).toBeGreaterThanOrEqual(4)
+    expect(columnas.every((l) => l.ruta.includes('deadline_status=VENCIDO'))).toBe(true)
+    expect(within(screen.getByRole('group', { name: 'Mis tareas' })).getByRole('button', { name: 'Vencidas 1' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('una columna con más de las que muestra lleva a la lista, y el calendario dice cuando no le caben todas', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-09T15:00:00Z'))
+    const muchas = Array.from({ length: 52 }, (_, i) =>
+      registro(`x${i}`, { project: 'p1', title: `Tarea ${i}`, assignee_user_id: 'u-cmm', due_date: '2026-10-20' }, { state: 'open' })
+    )
+    // el mes se lee por cursor de 200 en 200: un servidor que siempre tiene más corta la lectura en el tope
+    const pagina = Array.from({ length: 200 }, (_, i) => registro(`m${i}`, { project: 'p1', title: `Del mes ${i}`, due_date: '2026-10-20' }, { state: 'open' }))
+    const delMes: RutaEspecial = {
+      path: /\/objects\/task\/records\?.*range_field=due_date/,
+      responder: () => jsonResponse({ content: pagina, page: 0, size: 200, nextCursor: 'mas' })
+    }
+    fetch = mockFetch(rutas())
+    red = servidor(muchas, [delMes])
+    montar(<MisTareasPage />, { ruta: '/tasks?view=tablero', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const abiertas = await screen.findByRole('region', { name: 'Abiertas' })
+    await userEvent.click(await within(abiertas).findByRole('button', { name: 'Ver las 2 restantes en la lista' }))
+    expect(ubicacion.actual).toBe('/tasks')
+    await userEvent.click(screen.getByRole('tab', { name: 'Calendario' }))
+    expect(await screen.findByText('Este mes tiene más tareas de las que el calendario puede mostrar: véalas todas en la lista.')).toBeInTheDocument()
+  })
+
+  it('dentro de un proyecto, el título dice que son las tareas de quien mira', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/projects/p1/tasks', camino: '/projects/:projectId/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mis tareas en este proyecto' })).toBeInTheDocument()
+  })
+
   it('en el proyecto, la lista agrupa «Mis tareas» y «Para tomar», cada grupo con su consulta y su total', async () => {
     fetch = mockFetch(rutas())
     red = servidor()
