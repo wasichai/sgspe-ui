@@ -7,12 +7,12 @@ import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn } from '@wasichai/ui'
-import { useId, useState, type ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, esProhibido } from '../componentes/Estados'
-import { VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
@@ -80,15 +80,23 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const desde = semanas[0][0]
   const hasta = diaSiguiente(semanas[semanas.length - 1][6])
   const enLista = vista === 'lista'
-  // el orden es de esta visita, como en Alertas: no viaja en la URL
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    // otro orden empieza en la primera página
-    const sinPagina = new URLSearchParams(busqueda)
-    sinPagina.delete('page')
-    fijar(sinPagina, { replace: true })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(
+    {
+      filtro: (clave) => busqueda.get(clave) ?? '',
+      cambiar: (cambios) => {
+        const siguiente = new URLSearchParams(busqueda)
+        for (const [k, v] of Object.entries(cambios)) {
+          if (v === null || v === '') siguiente.delete(k)
+          else siguiente.set(k, v)
+        }
+        siguiente.delete('page')
+        fijar(siguiente, { replace: true })
+      }
+    },
+    ORDEN_INICIAL,
+    ['titulo', 'fecha']
+  )
   const pagina = useRegistros('engagement', { ...alcance, sort: CAMPO_DE_ORDEN[orden.columna], dir: orden.dir, page: paginaDeLista, size: POR_PAGINA }, enLista)
   // el servidor lee un día como su comienzo en Lima: el rango [primer día, día siguiente al último) cubre justo los días de la grilla
   const delCalendario = useTodosConTope(

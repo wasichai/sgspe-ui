@@ -4,7 +4,7 @@ import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { SelectorDeGrupo, useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination } from '@wasichai/ui'
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
@@ -12,7 +12,7 @@ import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente } from '../componentes/ordenEnCliente'
@@ -112,12 +112,8 @@ export function CompromisosPage() {
     ...(q ? [{ clave: 'q', etiqueta: t('compromisos.filtroBusqueda', { texto: busqueda }) }] : [])
   ]
   const limpiar = () => lista.cambiar({ state: null, q: null, stakeholder: null })
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    lista.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL, ['codigo', 'compromiso', 'vence'])
   // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
   const navegar = useNavigate()
   const previa = useRutaDeVistaPrevia()

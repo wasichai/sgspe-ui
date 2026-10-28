@@ -9,6 +9,7 @@ import { ResultadoDeLista } from '../contexto/Origen'
 import { NS } from '../i18n'
 import { Cargando, ErrorDeCarga, Vacio } from './Estados'
 import type { UseQueryResult } from '@tanstack/react-query'
+import type { OrdenDeTabla } from './TablaPriorizada'
 
 // el patrón de lista de design-system.md §6.4: vistas guardadas en pestañas, filtros como chips en la URL, tabla real con
 // encabezados, selección para acciones masivas y paginación. las vistas personales (ASM-079) se guardan en el navegador
@@ -44,6 +45,36 @@ export function useParametrosDeLista(porDefecto: string) {
     fijar(siguiente, { replace: true, state })
   }
   return { vista, pagina, filtro, cambiar, busqueda }
+}
+export type ParametrosDeLista = ReturnType<typeof useParametrosDeLista>
+
+// el orden de una tabla también vive en la URL (?sort=&dir=; tercera pasada de UX, 3.6 y DD-37): volver de una ficha monta la
+// lista con el mismo orden, y el enlace lo comparte. una columna que la pantalla no ordena (un ?sort= de otra vista o escrito a
+// mano) vuelve al orden inicial; ordenar vuelve a la primera página
+type ConOrden = Pick<ParametrosDeLista, 'filtro' | 'cambiar'>
+export function ordenEnUrl(
+  lista: ConOrden,
+  inicial: OrdenDeTabla,
+  ordenables: readonly string[],
+  pagina?: string
+): [OrdenDeTabla, (orden: OrdenDeTabla) => void]
+export function ordenEnUrl(
+  lista: ConOrden,
+  inicial: OrdenDeTabla | undefined,
+  ordenables: readonly string[],
+  pagina?: string
+): [OrdenDeTabla | undefined, (orden: OrdenDeTabla) => void]
+// pagina: el parámetro de la página que el orden reinicia (los programas paginan con ?pp=)
+export function ordenEnUrl(
+  lista: ConOrden,
+  inicial: OrdenDeTabla | undefined,
+  ordenables: readonly string[],
+  pagina = 'page'
+): [OrdenDeTabla | undefined, (orden: OrdenDeTabla) => void] {
+  const columna = lista.filtro('sort')
+  const dir = lista.filtro('dir')
+  const orden = ordenables.includes(columna) && (dir === 'asc' || dir === 'desc') ? { columna, dir } : inicial
+  return [orden, (siguiente) => lista.cambiar({ sort: siguiente.columna, dir: siguiente.dir, [pagina]: null })]
 }
 
 export function VistasGuardadas({ vistas, actual, alCambiar }: { vistas: Vista[]; actual: string; alCambiar: (id: string) => void }) {

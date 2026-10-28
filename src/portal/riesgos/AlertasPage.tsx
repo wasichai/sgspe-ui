@@ -14,7 +14,7 @@ import { Cargando, Consulta, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
-import { PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
@@ -78,13 +78,8 @@ export function AlertasPage() {
   // la barra de filtros (P-02; hallazgos U-18 y U-22): la búsqueda y la severidad van en la consulta de cada vista, y cada
   // filtro puesto es un chip con «Limpiar». ?view= sigue siendo el mismo
   const filtros: Parametros = { q: busqueda, severity: severidad }
-  // el orden es de esta visita: la lista no tiene parámetros de orden en la URL
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    // otro orden empieza en la primera página
-    lista.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL, ['detectada', 'titulo'])
   const alertas = useRegistros('early_warning', {
     ...consultaDe(projectId, vista),
     ...filtros,

@@ -10,9 +10,9 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
-import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
-import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { NombreDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
@@ -92,13 +92,9 @@ export function GruposPage() {
     }
   }
   const conFiltros = (g: Registro) => filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f))
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página. sin elegir uno, el
-  // de la lectura
-  const [orden, setOrden] = useState<OrdenDeTabla | undefined>(undefined)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    lista.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página. sin
+  // elegir uno, el de la lectura
+  const [orden, ordenar] = ordenEnUrl(lista, undefined, ['prioridad'])
   const filtrados = ordenarEnCliente(
     (grupos.data ?? []).filter((g) => enVistaLa(lista.vista, g) && conFiltros(g)),
     orden,

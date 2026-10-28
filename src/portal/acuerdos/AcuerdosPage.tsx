@@ -23,7 +23,7 @@ import { useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useRegistros, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
@@ -60,12 +60,8 @@ export function AcuerdosPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const escribe = useEscribeEnProyecto(proyecto)
   const parametros = useParametrosDeLista('todos')
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    parametros.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(parametros, ORDEN_INICIAL, ['acuerdo', 'vence'])
   const acuerdos = useRegistros('agreement', {
     project: proyecto,
     sort: CAMPO_DE_ORDEN[orden.columna],

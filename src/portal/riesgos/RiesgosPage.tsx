@@ -3,7 +3,7 @@ import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn } from '@wasichai/ui'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
@@ -14,7 +14,7 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
@@ -122,8 +122,8 @@ export function RiesgosPage() {
   // ?level=alto: los de nivel alto o crítico, como «Riesgos altos» (KPI-RSK-01) del resumen y del tablero (revisión de UX, etapa 6)
   const soloAltos = lista.filtro('level') === 'alto'
   const enLaVista = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id) && (!soloAltos || NIVELES_ALTOS.includes(texto(r, 'risk_level'))))
-  // el orden es de esta visita, como en Alertas: no viaja en la URL. la lista no se pagina: no hay página a la que volver
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva
+  const [orden, setOrden] = ordenEnUrl(lista, ORDEN_INICIAL, ['riesgo', 'puntaje', 'nivel'])
   const filtrados = ordenarEnCliente(celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista, orden, valorDeOrden)
   const enLaVistaSinFiltros = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id)).length
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length

@@ -20,7 +20,7 @@ import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, NoDisponible, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -103,12 +103,8 @@ export function ProgramasPage() {
   const estado = enProgramas ? '' : lista.filtro('state')
   // los programas y los aportes se paginan en el servidor (D10 de la revisión de UX); la página de los programas va en ?pp=
   const paginaDeProgramas = Number(lista.filtro('pp')) || 0
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
-  const [ordenDeProgramas, setOrdenDeProgramas] = useState(ORDEN_INICIAL_DE_PROGRAMAS)
-  const ordenarProgramas = (siguiente: OrdenDeTabla) => {
-    setOrdenDeProgramas(siguiente)
-    lista.cambiar({ pp: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [ordenDeProgramas, ordenarProgramas] = ordenEnUrl(lista, ORDEN_INICIAL_DE_PROGRAMAS, Object.keys(ORDEN_DE_PROGRAMAS), 'pp')
   const programas = useRegistros(
     'social_program',
     {
@@ -398,12 +394,8 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista(vista)
   const actual = consultaDeAportes(vista, proyecto, estado)
-  // el orden es de esta visita: no viaja en la URL, y otro orden vuelve a la primera página
-  const [orden, setOrden] = useState(ORDEN_INICIAL_DE_APORTES)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    lista.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL_DE_APORTES, Object.keys(ORDEN_DE_APORTES))
   const aportes = useRegistros(
     'social_contribution',
     { ...actual, sort: ORDEN_DE_APORTES[orden.columna], dir: orden.dir, page: lista.pagina, size: POR_PAGINA },
