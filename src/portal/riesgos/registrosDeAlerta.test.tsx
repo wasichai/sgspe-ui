@@ -89,6 +89,24 @@ describe('S58 · menciones en medios', () => {
   })
 })
 
+// tercera pasada de UX, 3.12: una lista de página cortada por el tope dice que la búsqueda mira solo lo leído
+describe('una lista cortada con búsqueda', () => {
+  it('dice que la búsqueda mira solo los registros leídos', async () => {
+    // cinco páginas de 200, cada una con el cursor de la siguiente y la última con otra más: el tope de 1000 corta la lectura
+    const paginas: MockRoute[] = Array.from({ length: 5 }, (_, i) => ({
+      path: i === 0 ? /^\/objects\/media_mention\/records\?(?!.*after=)/ : new RegExp(`^/objects/media_mention/records\\?.*after=c${i}(&|$)`),
+      body: pagina(
+        Array.from({ length: 200 }, (_, j) => registro(`m${i}-${j}`, { project: 'p1', headline: `Nota ${i}-${j}`, tone: 'NEUTRO' })),
+        { nextCursor: `c${i + 1}` }
+      )
+    }))
+    fetch = mockFetch([...paginas, ...baseDeRiesgos()])
+    montarEn(<MencionesPage />, '/projects/p1/risks/mentions', '/projects/:projectId/risks/mentions/:mentionId?')
+    // el número va con el formato es-PE
+    expect(await screen.findByText(/^Se muestran los primeros 1\D?000 registros y la búsqueda mira solo esos: hay más\.$/)).toBeInTheDocument()
+  })
+})
+
 describe('S59 · señales de alerta', () => {
   const SIN_ALERTA = registro('sg1', { project: 'p1', source_type: 'EQUIPO SOCIAL', received_at: '2026-10-04T15:00:00Z', description: 'x'.repeat(120) })
   const CON_ALERTA = registro('sg2', {

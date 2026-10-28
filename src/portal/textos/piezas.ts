@@ -17,6 +17,8 @@ export const ES_PIEZAS = {
   },
   registros: {
     truncado: 'Se muestran los primeros {{n}} registros: hay más.',
+    // con la búsqueda de la lista: busca en lo leído, así que no encuentra lo que el tope dejó fuera
+    truncadoConBusqueda: 'Se muestran los primeros {{n}} registros y la búsqueda mira solo esos: hay más.',
     borrar: 'Borrar',
     borrando: 'Borrando…',
     borrarConfirmar: '¿Borrar este registro? No se puede deshacer.',
@@ -43,6 +45,7 @@ export const EN_PIEZAS: typeof ES_PIEZAS = {
   },
   registros: {
     truncado: 'The first {{n}} records are shown: there are more.',
+    truncadoConBusqueda: 'The first {{n}} records are shown and the search looks only at them: there are more.',
     borrar: 'Delete',
     borrando: 'Deleting…',
     borrarConfirmar: 'Delete this record? It cannot be undone.',

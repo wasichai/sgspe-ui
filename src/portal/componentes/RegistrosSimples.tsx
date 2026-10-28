@@ -113,7 +113,11 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
         ) : null}
       </div>
       {props.congelado ? <p className="text-sm text-sg-text-muted">{props.congelado}</p> : null}
-      {lista.truncado ? <Alert tone="warning">{t('piezas.registros.truncado', { n: numeroPe(lista.data?.length ?? 0) })}</Alert> : null}
+      {lista.truncado ? (
+        <Alert tone="warning">
+          {t(props.busqueda ? 'piezas.registros.truncadoConBusqueda' : 'piezas.registros.truncado', { n: numeroPe(lista.data?.length ?? 0) })}
+        </Alert>
+      ) : null}
       {lista.isPending ? (
         <Cargando compacto />
       ) : lista.isError && !lista.data ? (
