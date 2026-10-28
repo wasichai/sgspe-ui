@@ -51,7 +51,10 @@ describe('S51 · revisión ejecutiva', () => {
       ['QCS abiertas', 'Proyecto Ejemplo B', '3'],
       ['QCS abiertas', 'Proyecto Ejemplo A', '1']
     ])
-    expect(within(filas[0]).getByRole('link', { name: 'Alertas activas · Proyecto Ejemplo A' })).toHaveAttribute('href', '/projects/p1/risks/warnings')
+    expect(within(filas[0]).getByRole('link', { name: 'Alertas activas · Proyecto Ejemplo A' })).toHaveAttribute(
+      'href',
+      '/projects/p1/risks/warnings?view=activas'
+    )
     const tiles = screen.getByRole('region', { name: 'Indicadores de la cartera' })
     expect(within(within(tiles).getByRole('region', { name: 'Proyectos activos' })).getByText('2')).toBeInTheDocument()
     expect(within(within(tiles).getByRole('region', { name: 'Alertas activas' })).getByText('2')).toBeInTheDocument()
@@ -153,6 +156,25 @@ describe('S51 · revisión ejecutiva', () => {
       // el nombre de una Seccion con título sale de su encabezado (aria-labelledby), el de las demás de aria-label
       .map((r) => r.getAttribute('aria-label') ?? document.getElementById(r.getAttribute('aria-labelledby') ?? '')?.textContent)
     expect(zonas.indexOf('Tendencia de 12 meses')).toBeLessThan(zonas.indexOf('Inversión ejecutada frente a presupuesto y topes'))
+  })
+
+  // tercera pasada de UX, 4.1: cada tile que tiene una lista que cuenta lo mismo la enlaza, ya filtrada; con varios proyectos
+  // elegidos, que la lista no aplica, no se enlaza
+  it('las tiles llevan a su lista filtrada, salvo con varios proyectos elegidos o sin una lista que cuente lo mismo', async () => {
+    abrir()
+    const tiles = await screen.findByRole('region', { name: 'Indicadores de la cartera' })
+    expect(within(tiles).getByRole('link', { name: 'Compromisos vencidos: 3' })).toHaveAttribute('href', '/commitments?view=vencidos')
+    expect(within(tiles).getByRole('link', { name: 'Riesgos altos: 1' })).toHaveAttribute('href', '/risks/register?level=alto')
+    expect(within(tiles).getByRole('link', { name: /^Proyectos activos: / })).toHaveAttribute('href', '/projects?view=active')
+    // la lista de interacciones no filtra por periodo ni por realizadas: la cifra no se enlaza
+    expect(within(within(tiles).getByRole('region', { name: 'Interacciones realizadas' })).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('con varios proyectos elegidos las tiles no se enlazan', async () => {
+    abrir(TABLERO_EJECUTIVO, '/?project=p1&project=p2')
+    const tiles = await screen.findByRole('region', { name: 'Indicadores de la cartera' })
+    await within(tiles).findByRole('region', { name: 'Compromisos vencidos' })
+    expect(within(tiles).queryAllByRole('link')).toHaveLength(0)
   })
 
   // una cifra de QCS con confidenciales ocultas lo dice, sin contarlas
