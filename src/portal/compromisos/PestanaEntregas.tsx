@@ -19,14 +19,16 @@ import { FormularioDeEvidencia } from '../documentos/FormularioDeEvidencia'
 import { hoyEnLima } from '../datos/fechas'
 import { atributo, puedeEscribir, texto, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
+import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { ESTADOS_CONGELADOS, ESTADOS_DE_EJECUCION, useCorregirEntrega, useRegistrarEntrega } from './entregas'
-import { opcion } from '../datos/opciones'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 
 // la pestaña Entregas de S29 y el drawer de S32 (screens.md §7, flujo 10): lo ejecutado frente a lo comprometido, cada
 // entrega con su conformidad (quiénes la dieron y los receptores son restringidos, security.md §7.9) y sus evidencias, y el
 // registro de una entrega con el acta y las fotos subidas antes de guardarla. guardar no cambia el estado: después viene
 // «Registrar cumplimiento» (D9 y D10, en el diálogo de transición). con el compromiso cumplido las entregas no cambian
-// (DELIVERY_FROZEN). el «Acta de entrega» como documento emitido espera a UPS-23 (plan 3.1): no se ofrece
+// (DELIVERY_FROZEN). el «Acta de entrega» como documento emitido espera a UPS-23 (plan 3.1): no se ofrece. guardada la entrega,
+// «Registrar cumplimiento» se ofrece en el mismo lugar, con sus reglas comprobadas (tercera pasada de UX, 1.6)
 export function PestanaEntregas({ compromiso, escribe }: { compromiso: Registro; escribe: boolean }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
@@ -79,9 +81,19 @@ export function PestanaEntregas({ compromiso, escribe }: { compromiso: Registro;
         </ul>
       )}
       {guardada ? (
-        <p role="status" className="text-sm text-sg-success">
-          {t('entregas.guardada')}
-        </p>
+        <div className="space-y-2">
+          <p role="status" className="text-sm text-sg-success">
+            {t('entregas.guardada')}
+          </p>
+          <BotonesDeTransicion
+            objeto="commitment"
+            registro={compromiso}
+            proyecto={texto(compromiso, 'project')}
+            solo={['register_fulfillment']}
+            comprobarAntes={['register_fulfillment']}
+            sinPrimaria
+          />
+        </div>
       ) : null}
       {editando ? (
         <EntregaDrawer
@@ -169,6 +181,10 @@ function TarjetaDeEntrega({
   )
 }
 
+// la evidencia mínima de D9 (Fulfillment.kt): con material, las dos; sin material, una de las tres
+const EVIDENCIA_MATERIAL = ['ACTA DE ENTREGA', 'FOTO']
+const EVIDENCIA_NO_MATERIAL = ['ACTA', 'CARTA', 'OTRO']
+
 const esquema = z.object({
   delivery_date: z.string().min(1),
   place: z.string(),
@@ -224,7 +240,7 @@ function EntregaDrawer({
   alCerrar: () => void
   alGuardar: () => void
 }) {
-  const { t } = useTranslation(NS)
+  const { t, i18n } = useTranslation(NS)
   const nombreDeEvidencia = useNombreDeEvidencia()
   const definicion = useDefinicion('delivery')
   const registrar = useRegistrarEntrega(compromiso.id)
@@ -239,7 +255,17 @@ function EntregaDrawer({
   const comando = entrega ? corregir : registrar
   const delServidor = Object.fromEntries(Object.entries(erroresDeCampo(comando.error)).map(([c, x]) => [c.replace(/^attributes\./, ''), x]))
   const recurso = texto(compromiso, 'resource_type')
-  const tipoInicial = recurso === 'MATERIAL' ? 'ACTA DE ENTREGA' : recurso === 'NO MATERIAL' ? 'ACTA' : ''
+  // lo que le falta a esta entrega para el cumplimiento (D9), como en la entrega de un aporte: con material, «Acta de entrega» y
+  // «Foto»; sin material, una de «Acta», «Carta» u «Otro». la evidencia que se sube propone el tipo que sigue (tercera pasada de UX,
+  // 1.6)
+  const subidos = new Set(subidas.map((e) => texto(e, 'evidence_type')))
+  const faltan =
+    recurso === 'MATERIAL'
+      ? EVIDENCIA_MATERIAL.filter((tipo) => !subidos.has(tipo))
+      : recurso === 'NO MATERIAL' && !EVIDENCIA_NO_MATERIAL.some((tipo) => subidos.has(tipo))
+        ? ['ACTA']
+        : []
+  const tipoInicial = faltan[0] ?? ''
   const error = (campo: keyof Valores) => {
     if (delServidor[campo]) return delServidor[campo]
     if (!formState.errors[campo]) return undefined
@@ -368,7 +394,23 @@ function EntregaDrawer({
               ))}
             </ul>
           )}
-          <FormularioDeEvidencia proyecto={texto(compromiso, 'project')} tipoInicial={tipoInicial} alRegistrar={(e) => setSubidas((s) => [...s, e])} />
+          {recurso === 'MATERIAL' && faltan.length > 0 ? (
+            <p className="text-sg-caption text-sg-warning">
+              {t('entregas.faltan', {
+                tipos: new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(faltan.map((tipo) => `«${rotuloDeOpcion(tipo)}»`))
+              })}
+            </p>
+          ) : recurso === 'NO MATERIAL' && faltan.length > 0 ? (
+            <p className="text-sg-caption text-sg-warning">{t('entregas.faltaUnaDe')}</p>
+          ) : recurso === 'MATERIAL' || recurso === 'NO MATERIAL' ? (
+            <p className="text-sg-caption text-sg-success">{t('entregas.completas')}</p>
+          ) : null}
+          <FormularioDeEvidencia
+            key={tipoInicial || 'otra'}
+            proyecto={texto(compromiso, 'project')}
+            tipoInicial={tipoInicial}
+            alRegistrar={(e) => setSubidas((s) => [...s, e])}
+          />
         </section>
       )}
     </Drawer>
