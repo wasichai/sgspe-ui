@@ -10,7 +10,8 @@ import { Pasos } from './Pasos'
 // descripción arriba; los pasos a la izquierda (arriba en el teléfono); el paso actual con su título; y abajo, siempre en el mismo
 // lugar, «Cancelar» y «Anterior» a la izquierda y «Guardar y salir» y la acción del paso a la derecha. con cambios sin guardar,
 // salir avisa: por un enlace del portal (useBlocker, solo bajo un router de datos) y al cerrar o recargar la pestaña. la lógica
-// del alta (validar, el borrador, el comando) sigue en cada pantalla: esta pieza solo le da la forma
+// del alta (validar, el borrador, el comando) sigue en cada pantalla: esta pieza solo le da la forma. el foco (tercera pasada de UX,
+// 2.3): al cambiar de paso va a su título, y si un intento de avanzar o de registrar deja errores, al primer control inválido
 export interface PropsDeFormularioPorPasos {
   titulo: string
   descripcion?: ReactNode
@@ -69,24 +70,38 @@ export function FormularioPorPasos({
   children
 }: PropsDeFormularioPorPasos) {
   const { t } = useTranslation(NS)
+  const contenedor = useRef<HTMLFormElement & HTMLDivElement>(null)
+  const tituloDelPaso = useRef<HTMLHeadingElement>(null)
+  const pasoAnterior = useRef(actual)
+  useEffect(() => {
+    if (pasoAnterior.current === actual) return
+    pasoAnterior.current = actual
+    tituloDelPaso.current?.focus()
+  }, [actual])
+  // después de que la pantalla validó y dibujó sus errores (o cambió de paso, incluso al que tiene la falta)
+  const enfocarElPrimerError = () => setTimeout(() => contenedor.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0)
   const contenido = (
     <>
-      {encabezadoDelPaso ?? <h2 className="text-sg-h2 font-semibold">{pasos[actual]}</h2>}
+      {encabezadoDelPaso ?? (
+        <h2 ref={tituloDelPaso} tabIndex={-1} className="text-sg-h2 font-semibold focus:outline-none">
+          {pasos[actual]}
+        </h2>
+      )}
       {children}
       <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
         <div className="flex flex-wrap gap-2">
           {alCancelar ? (
-            <Button type="button" variant="ghost" disabled={ocupado} onClick={alCancelar}>
+            <Button type="button" variant="ghost" data-navegacion disabled={ocupado} onClick={alCancelar}>
               {t('paginas.formulario.cancelar')}
             </Button>
           ) : null}
-          <Button type="button" variant="secondary" disabled={anteriorDeshabilitado ?? (actual === 0 || ocupado)} onClick={alAnterior}>
+          <Button type="button" variant="secondary" data-navegacion disabled={anteriorDeshabilitado ?? (actual === 0 || ocupado)} onClick={alAnterior}>
             {t('paginas.formulario.anterior')}
           </Button>
         </div>
         <div className="flex flex-wrap gap-2">
           {alGuardarYSalir ? (
-            <Button type="button" variant="secondary" disabled={ocupado} onClick={alGuardarYSalir}>
+            <Button type="button" variant="secondary" data-navegacion disabled={ocupado} onClick={alGuardarYSalir}>
               {t('paginas.formulario.guardarYSalir')}
             </Button>
           ) : null}
@@ -103,11 +118,24 @@ export function FormularioPorPasos({
         <Pasos pasos={pasos} actual={actual} visitados={visitados} alIr={alIr} />
         {alEnviar ? (
           // cada pantalla valida con su esquema y lo dice junto al control: la validación nativa no detiene el paso
-          <form className="space-y-3" aria-label={etiquetaDelPaso ?? pasos[actual]} onSubmit={alEnviar} noValidate>
+          <form
+            ref={contenedor}
+            className="space-y-3"
+            aria-label={etiquetaDelPaso ?? pasos[actual]}
+            onSubmit={(e) => {
+              alEnviar(e)
+              enfocarElPrimerError()
+            }}
+            onClickCapture={(e) => {
+              // la acción del último paso puede ser un botón que no envía (registrar): también busca el primer error
+              if (e.target instanceof HTMLElement && e.target.closest('button[type="button"]:not([data-navegacion])')) enfocarElPrimerError()
+            }}
+            noValidate
+          >
             {contenido}
           </form>
         ) : (
-          <div role="group" className="space-y-3" aria-label={etiquetaDelPaso ?? pasos[actual]}>
+          <div ref={contenedor} role="group" className="space-y-3" aria-label={etiquetaDelPaso ?? pasos[actual]}>
             {contenido}
           </div>
         )}

@@ -11,13 +11,16 @@ export function Campo({
   error,
   ayuda,
   id: idPropio,
+  requerido = false,
   children
 }: {
   etiqueta: string
   error?: string
   ayuda?: string
   id?: string
-  children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }) => ReactNode
+  // obligatorio: lo dice al lector de pantalla (aria-required); la etiqueta lo dice con su texto donde la pantalla lo pone
+  requerido?: boolean
+  children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean; 'aria-required'?: boolean }) => ReactNode
 }) {
   const generado = useId()
   const id = idPropio ?? generado
@@ -27,7 +30,7 @@ export function Campo({
       <label htmlFor={id} className="block text-sg-body-sm font-medium text-sg-text">
         {etiqueta}
       </label>
-      {children({ id, 'aria-describedby': descripcion, 'aria-invalid': error ? true : undefined })}
+      {children({ id, 'aria-describedby': descripcion, 'aria-invalid': error ? true : undefined, 'aria-required': requerido || undefined })}
       {!error && ayuda ? (
         <p id={`${id}-ayuda`} className="text-sg-caption text-sg-text-muted">
           {ayuda}
