@@ -75,6 +75,8 @@ export function BandejaDeIaPage() {
   const limpiar = () => lista.cambiar({ kind: null, origin: null, target: null })
   const [revisando, setRevisando] = useState<string | null>(null)
   const [aceptando, setAceptando] = useState<string | null>(null)
+  // la última aceptada: la bandeja dice qué pasó y lleva al registro donde quedó (tercera pasada de UX, 4.4)
+  const [aceptada, setAceptada] = useState<Registro | null>(null)
   const propuestas = ordenarPropuestas([
     ...(sugerencias.data ?? []).filter((s) => s.state === 'proposed' && enLaBandeja(s)).map((registro) => ({ clase: 'sugerencia' as const, registro })),
     ...(candidatos.data ?? []).filter((c) => c.state === 'proposed').map((registro) => ({ clase: 'candidato' as const, registro }))
@@ -121,6 +123,14 @@ export function BandejaDeIaPage() {
               )}
             </Campo>
           </div>
+          {aceptada ? (
+            <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-sg-success">
+              {t('bandejaIa.aceptada')}
+              {texto(aceptada, 'target_record_id') ? (
+                <RegistroVinculado objeto={texto(aceptada, 'target_object')} id={texto(aceptada, 'target_record_id')} />
+              ) : null}
+            </p>
+          ) : null}
           {idDestino ? (
             <p className="flex flex-wrap items-center gap-2 text-sm">
               {t('bandejaIa.filtros.delRegistro')} <RegistroVinculado objeto={objetoDestino} id={idDestino} />
@@ -164,7 +174,9 @@ export function BandejaDeIaPage() {
         </Seccion>
       </div>
       {enRevision ? <RevisionDeCandidato key={enRevision.id} candidato={enRevision} alCerrar={() => setRevisando(null)} /> : null}
-      {enAceptacion ? <AceptarSugerencia key={enAceptacion.id} sugerencia={enAceptacion} alCerrar={() => setAceptando(null)} /> : null}
+      {enAceptacion ? (
+        <AceptarSugerencia key={enAceptacion.id} sugerencia={enAceptacion} alCerrar={() => setAceptando(null)} alAceptar={() => setAceptada(enAceptacion)} />
+      ) : null}
     </section>
   )
 }

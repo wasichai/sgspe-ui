@@ -20,7 +20,8 @@ import { nombresReales, TextoDeIa, useNombresDePersonas } from './TextoDeIa'
 // S52 · aceptar una sugerencia (ai-architecture.md §4.2, decisiones 14 y 15 del plan): los valores que la persona revisa, nunca
 // los guardados; cada texto libre sin marcadores; el motivo siempre. el duplicado se decide en su comparación (Tarea 8) y el
 // borrador de acta en S25 (Tarea 11)
-export function AceptarSugerencia({ sugerencia, alCerrar }: { sugerencia: Registro; alCerrar: () => void }) {
+// alAceptar: tras aceptar, quien la abrió dice qué pasó (tercera pasada de UX, 4.4); sin él, solo se cierra
+export function AceptarSugerencia({ sugerencia, alCerrar, alAceptar }: { sugerencia: Registro; alCerrar: () => void; alAceptar?: () => void }) {
   const { t } = useTranslation(NS)
   const fila = filaDe(sugerencia)
   const citadas = !fila ? [] : 'texto' in fila ? personasCitadas(fila.texto) : 'nombre' in fila ? personasCitadas(fila.nombre) : []
@@ -33,7 +34,7 @@ export function AceptarSugerencia({ sugerencia, alCerrar }: { sugerencia: Regist
         <Cargando />
       </Drawer>
     )
-  return <Formulario sugerencia={sugerencia} iniciales={iniciales} alCerrar={alCerrar} />
+  return <Formulario sugerencia={sugerencia} iniciales={iniciales} alCerrar={alCerrar} alAceptar={alAceptar} />
 }
 
 // los errores del servidor que van junto a un control del formulario; los demás (state, record…) van en el aviso
@@ -57,7 +58,17 @@ const CAMPOS_DEL_FORMULARIO: readonly string[] = [
 // un valor de catálogo que la IA propuso fuera de la lista vigente se muestra igual, para que la persona lo vea y lo cambie
 const conValor = (opciones: readonly string[], valor: string): readonly string[] => (valor && !opciones.includes(valor) ? [valor, ...opciones] : opciones)
 
-function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro; iniciales: ValoresRevisados; alCerrar: () => void }) {
+function Formulario({
+  sugerencia,
+  iniciales,
+  alCerrar,
+  alAceptar
+}: {
+  sugerencia: Registro
+  iniciales: ValoresRevisados
+  alCerrar: () => void
+  alAceptar?: () => void
+}) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const aceptar = useAceptarSugerencia()
@@ -89,7 +100,15 @@ function Formulario({ sugerencia, iniciales, alCerrar }: { sugerencia: Registro;
   const confirmar = () => {
     setIntentado(true)
     if (faltan.length > 0 || conMarcadores || sinNombres || sinCrearOrganizacion || !motivo.trim()) return
-    aceptar.mutate({ sugerencia, atributos: cuerpoDeAceptacion(v), motivo: motivo.trim() }, { onSuccess: alCerrar })
+    aceptar.mutate(
+      { sugerencia, atributos: cuerpoDeAceptacion(v), motivo: motivo.trim() },
+      {
+        onSuccess: () => {
+          alAceptar?.()
+          alCerrar()
+        }
+      }
+    )
   }
   return (
     <Drawer
