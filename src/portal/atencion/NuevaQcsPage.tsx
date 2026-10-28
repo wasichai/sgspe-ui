@@ -22,6 +22,8 @@ import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos,
 import { NS } from '../i18n'
 import { Seccion } from '../componentes/Seccion'
 import { conHecho } from '../componentes/AvisoDeExito'
+import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
+import { leerBorrador, useBorradorLocal, useClaveDelBorrador } from '../datos/borrador'
 
 // los campos que, escritos, son cambios por perder al salir (la fecha de recepción ya viene propuesta)
 const CON_CAMBIOS = ['code', 'channel', 'category', 'description', 'priority', 'severity', 'request_medium', 'requested_resource'] as const
@@ -94,6 +96,27 @@ interface Valores {
   request_medium: string
   requested_resource: string
 }
+const VALORES_VACIOS: Valores = {
+  code: '',
+  channel: '',
+  received_at: '',
+  category: '',
+  description: '',
+  priority: '',
+  severity: '',
+  request_medium: '',
+  requested_resource: ''
+}
+
+// el borrador del alta en este navegador (tercera pasada de UX, 2.4): lo escrito, el tipo, la recepción y el grupo de interés. el
+// código y la fecha de recepción propuestos no se guardan (al volver se proponen de nuevo); la persona, que es restringida, nunca;
+// y una QCS confidencial no deja borrador
+interface BorradorDeQcs extends Valores {
+  tipo: string
+  anonima: boolean
+  motivo: string
+  responsable: Usuaria | null
+}
 
 function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const { t } = useTranslation(NS)
@@ -104,7 +127,17 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const mensaje = useMensajeDeError()
   const erroresDeCampo = useErroresDeCampo()
   const pedido = busqueda.get('type') ?? ''
-  const [tipo, setTipo] = useState<ObjetoDeQcs>(esQcs(pedido) && tipos.includes(pedido) ? pedido : tipos[0])
+  const origen = busqueda.get('origin_engagement')
+  const claveDelBorrador = useClaveDelBorrador('qcs', projectId, origen)
+  const [recuperado] = useState(() => leerBorrador<BorradorDeQcs>(claveDelBorrador))
+  const [avisoDeBorrador, setAvisoDeBorrador] = useState(recuperado !== null)
+  const previo = recuperado?.valores
+  // el tipo pedido por la URL gana al del borrador
+  const [tipo, setTipo] = useState<ObjetoDeQcs>(() => {
+    if (esQcs(pedido) && tipos.includes(pedido)) return pedido
+    const delBorrador = previo?.tipo ?? ''
+    return esQcs(delBorrador) && tipos.includes(delBorrador) ? delBorrador : tipos[0]
+  })
   const crearQueja = useCrear('grievance')
   const crearConsulta = useCrear('inquiry')
   const crearSolicitud = useCrear('stakeholder_request')
@@ -112,18 +145,18 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const definicion = useDefinicion(tipo)
   const proyecto = useProyecto(projectId)
   const grupos = useTodos('stakeholder', { project: projectId })
-  const origen = busqueda.get('origin_engagement')
-  const [valores, setValores] = useState<Valores>({
-    code: '',
-    channel: '',
-    received_at: ahoraEnLima(),
-    category: '',
-    description: '',
-    priority: '',
-    severity: '',
-    request_medium: '',
-    requested_resource: ''
-  })
+  const [recepcionPropuesta] = useState(ahoraEnLima)
+  const [valores, setValores] = useState<Valores>(() => ({
+    code: previo?.code ?? '',
+    channel: previo?.channel ?? '',
+    received_at: previo?.received_at || recepcionPropuesta,
+    category: previo?.category ?? '',
+    description: previo?.description ?? '',
+    priority: previo?.priority ?? '',
+    severity: previo?.severity ?? '',
+    request_medium: previo?.request_medium ?? '',
+    requested_resource: previo?.requested_resource ?? ''
+  }))
   // el código que propone el backend para el tipo elegido (decisión 6 de la revisión de UX), editable: cambia con el tipo mientras
   // la persona no lo haya tocado, y no cuenta como un cambio por avisar al salir
   const codigoPropuesto = useCodigoPropuesto(tipo, projectId).codigo
@@ -135,13 +168,13 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     ultimoPropuesto.current = codigoPropuesto
     setValores((v) => (v.code === '' || v.code === anterior ? { ...v, code: codigoPropuesto } : v))
   }, [codigoPropuesto])
-  const [anonima, setAnonima] = useState(false)
+  const [anonima, setAnonima] = useState(() => previo?.anonima ?? false)
   const salida = useSalidaPermitida()
   const [confidencial, setConfidencial] = useState(false)
-  const [responsable, setResponsable] = useState<Usuaria | null>(null)
-  const [grupo, setGrupo] = useState('')
+  const [responsable, setResponsable] = useState<Usuaria | null>(() => previo?.responsable ?? null)
+  const [grupo, setGrupo] = useState(() => recuperado?.elegidos?.grupo?.[0] ?? '')
   const [persona, setPersona] = useState<Registro | null>(null)
-  const [motivo, setMotivo] = useState('')
+  const [motivo, setMotivo] = useState(() => previo?.motivo ?? '')
   const [actual, setActual] = useState(0)
   const [visitados, setVisitados] = useState(0)
   // los pasos que ya se intentó dejar: sus faltas se dicen junto al control
@@ -215,6 +248,7 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
       {
         onSuccess: (r) => {
           salida.current = true
+          borrador.descartar()
           // la ficha dice lo que se hizo y lo que el modelo hizo con ello: el acuse de una queja no confidencial (AUT-02)
           const codigo = texto(r, 'code') || valores.code.trim()
           const hecho = [t(`nuevaQcs.hecho.${tipo}`, { codigo }), tipo === 'grievance' && !confidencial ? t('nuevaQcs.hecho.acuse') : '']
@@ -240,6 +274,37 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     responsable !== null ||
     grupo !== '' ||
     persona !== null
+  const borrador = useBorradorLocal<BorradorDeQcs>(
+    claveDelBorrador,
+    {
+      valores: {
+        ...valores,
+        code: valores.code === codigoPropuesto ? '' : valores.code,
+        received_at: valores.received_at === recepcionPropuesta ? '' : valores.received_at,
+        tipo,
+        anonima,
+        motivo,
+        responsable
+      },
+      elegidos: { grupo: grupo ? [grupo] : [] }
+    },
+    conCambios && !confidencial
+  )
+  // marcarla confidencial borra el borrador que hubiera: lo confidencial no queda en el navegador
+  useEffect(() => {
+    if (confidencial) borrador.descartar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confidencial])
+  const descartar = () => {
+    borrador.descartar()
+    setTipo(esQcs(pedido) && tipos.includes(pedido) ? pedido : tipos[0])
+    setValores({ ...VALORES_VACIOS, code: codigoPropuesto ?? '', received_at: recepcionPropuesta })
+    setAnonima(false)
+    setResponsable(null)
+    setGrupo('')
+    setMotivo('')
+    setAvisoDeBorrador(false)
+  }
   const volverA = origen
     ? `/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(origen)}`
     : `/projects/${encodeURIComponent(projectId)}/attention`
@@ -265,7 +330,9 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
         alCancelar={() => navegar(volverA)}
         ocupado={crear.isPending}
         conCambios={conCambios}
+        conBorrador={!confidencial}
         salidaPermitida={salida}
+        avisos={avisoDeBorrador && recuperado ? <AvisoDeBorrador guardado={recuperado.guardado} alDescartar={descartar} /> : null}
         acciones={
           paso === 'revision' ? (
             <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>

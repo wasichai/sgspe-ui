@@ -232,6 +232,37 @@ describe('S37 · registrar QCS', () => {
     expect(attributes).not.toHaveProperty('person')
   })
 
+  // tercera pasada de UX, 2.4: el borrador del navegador, sin lo restringido ni lo confidencial
+  it('lo escrito queda como borrador de quien lo escribe y vuelve con su aviso; la persona no se guarda', async () => {
+    fetch = mockFetch(rutas())
+    const { unmount } = abrir()
+    await llenar('Q-030')
+    await userEvent.selectOptions(screen.getByLabelText('Grupo de interés'), 's1')
+    const clave = 'sgspe.borrador.qcs.p1.u-relacionista'
+    await waitFor(() => expect(localStorage.getItem(clave)).toContain('Polvo en la vía'))
+    expect(localStorage.getItem(clave)).not.toContain('pe1')
+    unmount()
+    abrir()
+    expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Código')).toHaveValue('Q-030')
+    expect(screen.getByLabelText('Descripción')).toHaveValue('Polvo en la vía')
+    await siguiente()
+    await waitFor(() => expect(screen.getByLabelText('Grupo de interés')).toHaveValue('s1'))
+  })
+
+  it('una QCS confidencial no deja borrador en el navegador', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await llenar('Q-031')
+    const clave = 'sgspe.borrador.qcs.p1.u-relacionista'
+    await waitFor(() => expect(localStorage.getItem(clave)).toContain('Polvo en la vía'))
+    await userEvent.click(screen.getByLabelText(/^Confidencial/))
+    expect(localStorage.getItem(clave)).toBeNull()
+    // lo que esperaba su medio segundo tampoco se guarda
+    await new Promise((r) => setTimeout(r, 600))
+    expect(localStorage.getItem(clave)).toBeNull()
+  })
+
   // revisión de UX, decisión 6: el código propuesto sigue al tipo mientras no se toque, y uno escrito no se pisa
   it('propone el código del tipo elegido y no pisa uno escrito', async () => {
     fetch = mockFetch(
