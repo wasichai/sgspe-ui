@@ -59,6 +59,7 @@ export const ES_NUEVA_QCS = {
   quitar: 'Quitar',
   recibidaPor: 'La recibe: {{correo}}',
   origen: 'Nace de la interacción de origen indicada en el enlace.',
+  recepcionDeOrigen: 'La fecha de recepción propuesta es la de esa interacción.',
   quePasara: {
     codigo: 'Se registra con el código {{codigo}} en estado «Recibida».',
     sinCodigo: 'Se registra en estado «Recibida» con el código que escriba.',
@@ -136,6 +137,7 @@ export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
   quitar: 'Remove',
   recibidaPor: 'Received by: {{correo}}',
   origen: 'It comes from the origin engagement given in the link.',
+  recepcionDeOrigen: 'The proposed reception date is that engagement’s.',
   quePasara: {
     codigo: 'It is recorded with code {{codigo}} in state «Received».',
     sinCodigo: 'It is recorded in state «Received» with the code you type.',

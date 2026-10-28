@@ -284,6 +284,22 @@ describe('S37 · registrar QCS', () => {
     expect(screen.getByLabelText('Código')).toHaveValue('C-PROPIO')
   })
 
+  // tercera pasada de UX, 2.6: lo que se sabe del registro de origen se propone, editable
+  it('abierta desde una interacción propone su fecha como recepción y su único grupo de interés', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/engagement/records/e5', body: registro('e5', { project: 'p1', held_at: '2026-10-06T15:30:00Z' }, { state: 'held' }) },
+        { path: '/objects/engagement/records/e5/related/engagement_stakeholder', body: pagina([GRUPO]) }
+      ])
+    )
+    abrir('/projects/p1/attention/new?origin_engagement=e5')
+    await llenar('Q-040')
+    await waitFor(() => expect(screen.getByLabelText('Fecha y hora de recepción')).toHaveValue('06/10/2026'))
+    expect(screen.getByLabelText('Fecha y hora de recepción (hora)')).toHaveValue('10:30')
+    expect(screen.getByText(/La fecha de recepción propuesta es la de esa interacción/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText('Grupo de interés')).toHaveValue('s1'))
+  })
+
   it('el tipo de la URL, sus datos propios y su regla de plazos; sin plazo en las solicitudes', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed()

@@ -23,7 +23,8 @@ import { SelectorDeUsuario, type Usuaria } from '../componentes/SelectorDeUsuari
 import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
-import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
+import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
+import { hoyEnLima } from '../datos/fechas'
 import { NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
 import { opcion } from '../datos/opciones'
@@ -216,6 +217,26 @@ function Asistente() {
     defaultValues: recuperado ? { ...VACIO, ...recuperado.valores } : VACIO
   })
   const valores = useWatch({ control })
+  // del origen se proponen sus grupos de interés como solicitantes (si no se eligió ninguno) y su día como fecha del acuerdo (si
+  // está vacía), una vez por origen (tercera pasada de UX, 2.6): lo propuesto se cambia como lo demás
+  const gruposDelOrigen = useRelacionados('engagement', origen?.id, 'engagement_stakeholder')
+  const gruposPropuestosPara = useRef<string | null>(null)
+  useEffect(() => {
+    const delOrigen = gruposDelOrigen.data?.content
+    if (!origen || !delOrigen || gruposPropuestosPara.current === origen.id) return
+    gruposPropuestosPara.current = origen.id
+    const vigentes = delOrigen.filter((g) => g.state !== 'retired').map((g) => g.id)
+    setSolicitantes((actuales) => (actuales.size === 0 && vigentes.length > 0 ? new Set(vigentes) : actuales))
+  }, [gruposDelOrigen.data, origen])
+  const fechaPropuestaPara = useRef<string | null>(null)
+  useEffect(() => {
+    const realizada = texto(origen, 'held_at')
+    if (!origen || !realizada || fechaPropuestaPara.current === origen.id) return
+    fechaPropuestaPara.current = origen.id
+    if (getValues('agreed_date')) return
+    reset({ ...(formState.defaultValues as Valores), agreed_date: hoyEnLima(new Date(realizada)) }, { keepDirtyValues: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origen])
   // el código que propone el backend (decisión 6 de la revisión de UX), editable: queda como valor por defecto, así que no es un
   // cambio por guardar ni por avisar. un borrador recuperado con su código no se pisa
   const codigoPropuesto = useCodigoPropuesto(recuperado?.valores.code ? undefined : 'commitment', projectId)

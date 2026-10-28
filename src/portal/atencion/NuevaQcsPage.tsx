@@ -18,7 +18,7 @@ import { useMisAsignaciones, useProyecto } from '../contexto/proyectos'
 import { esQcs, OBJETOS_DE_QCS, rutaDeQcs, SEVERIDADES_GRAVES, type ObjetoDeQcs } from '../datos/atencion'
 import { ahoraEnLima, instanteDeLima, textoDeDia } from '../datos/fechas'
 import { rotuloDeOpcion } from '../datos/opciones'
-import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
+import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { Seccion } from '../componentes/Seccion'
 import { conHecho } from '../componentes/AvisoDeExito'
@@ -145,7 +145,7 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const definicion = useDefinicion(tipo)
   const proyecto = useProyecto(projectId)
   const grupos = useTodos('stakeholder', { project: projectId })
-  const [recepcionPropuesta] = useState(ahoraEnLima)
+  const [recepcionPropuesta, setRecepcionPropuesta] = useState(ahoraEnLima)
   const [valores, setValores] = useState<Valores>(() => ({
     code: previo?.code ?? '',
     channel: previo?.channel ?? '',
@@ -173,6 +173,26 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const [confidencial, setConfidencial] = useState(false)
   const [responsable, setResponsable] = useState<Usuaria | null>(() => previo?.responsable ?? null)
   const [grupo, setGrupo] = useState(() => recuperado?.elegidos?.grupo?.[0] ?? '')
+  // abierta desde una interacción (tercera pasada de UX, 2.6): su fecha de realización como recepción y, si tiene un solo grupo
+  // de interés, ese grupo. se proponen una vez, sobre lo que la persona no tocó, y no cuentan como cambios por avisar
+  const interaccion = useRegistro('engagement', origen ?? undefined)
+  const gruposDeLaInteraccion = useRelacionados('engagement', origen ?? undefined, 'engagement_stakeholder')
+  const [grupoPropuesto, setGrupoPropuesto] = useState('')
+  useEffect(() => {
+    const realizada = atributo<string>(interaccion.data, 'held_at')
+    if (!realizada) return
+    const propuesta = ahoraEnLima(new Date(realizada))
+    setValores((v) => (v.received_at === recepcionPropuesta ? { ...v, received_at: propuesta } : v))
+    setRecepcionPropuesta(propuesta)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interaccion.data])
+  useEffect(() => {
+    const vigentes = (gruposDeLaInteraccion.data?.content ?? []).filter((g) => g.state !== 'retired')
+    if (vigentes.length !== 1) return
+    setGrupoPropuesto(vigentes[0].id)
+    setGrupo((g) => g || vigentes[0].id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gruposDeLaInteraccion.data])
   const [persona, setPersona] = useState<Registro | null>(null)
   const [motivo, setMotivo] = useState(() => previo?.motivo ?? '')
   const [actual, setActual] = useState(0)
@@ -272,7 +292,7 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     CON_CAMBIOS.some((c) => valores[c].trim() !== '' && !(c === 'code' && valores.code === codigoPropuesto)) ||
     motivo.trim() !== '' ||
     responsable !== null ||
-    grupo !== '' ||
+    (grupo !== '' && grupo !== grupoPropuesto) ||
     persona !== null
   const borrador = useBorradorLocal<BorradorDeQcs>(
     claveDelBorrador,
@@ -419,7 +439,12 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
               error={errorDe('received_at')}
             />
             <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.recibidaPor', { correo: user?.email ?? '' })}</p>
-            {origen ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.origen')}</p> : null}
+            {origen ? (
+              <p className="text-sg-caption text-sg-text-muted">
+                {t('nuevaQcs.origen')}
+                {valores.received_at === recepcionPropuesta && atributo(interaccion.data, 'held_at') ? ` ${t('nuevaQcs.recepcionDeOrigen')}` : ''}
+              </p>
+            ) : null}
             <Casilla
               etiqueta={etiqueta('anonymous')}
               ayuda={t('nuevaQcs.anonimaAyuda')}
