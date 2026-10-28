@@ -473,7 +473,11 @@ describe('S16 · lista de grupos de interés', () => {
       ])
       await waitFor(() => expect(filas()).toHaveLength(1))
       // la fila es la del grupo «pasado»: su enlace lleva a su ficha (la casilla ya no se anuncia con el id)
-      expect(within(filas()[0]).getAllByRole('link').some((a) => a.getAttribute('href')?.endsWith('/pasado'))).toBe(true)
+      expect(
+        within(filas()[0])
+          .getAllByRole('link')
+          .some((a) => a.getAttribute('href')?.endsWith('/pasado'))
+      ).toBe(true)
     } finally {
       vi.useRealTimers()
     }
