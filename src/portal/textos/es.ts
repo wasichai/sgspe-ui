@@ -157,6 +157,7 @@ export const ES = {
     incorrecta: 'La contraseña no es correcta.'
   },
   shell: {
+    saltar: 'Saltar al contenido',
     insignias: {
       tareas_one: '{{count}} tarea suya vencida o por vencer',
       tareas_other: '{{count}} tareas suyas vencidas o por vencer',

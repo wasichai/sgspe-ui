@@ -3,7 +3,7 @@ import { Rastro } from '../contexto/Rastro'
 import { useAuth, useWasichaiConfig } from '@wasichai/core'
 import { Dialog, DialogContent, DialogTitle, cn } from '@wasichai/ui'
 import { Bell, ExternalLink, House, LayoutDashboard, ListChecks, LogOut, Menu, Mountain, MoreHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Campana } from '../avisos/Campana'
@@ -22,6 +22,7 @@ import { ThemeMenu } from './ThemeMenu'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
 import { useCerrarSesion } from '../auth/cerrarSesion'
+import { useLugarDeLaPagina } from './lugarDeLaPagina'
 
 // text-sm es el cuerpo de 14/20 de tokens.css: dentro de cn(), text-sg-body se confundiría con un color
 const ENLACE = 'flex h-9 items-center gap-2.5 rounded-sg-md px-2.5 text-sm'
@@ -96,9 +97,23 @@ export function AppShell() {
   // el panel del menú se cierra al cambiar de ruta: al elegir una sección o un proyecto en su selector
   const { pathname } = useLocation()
   useEffect(() => setMenuAbierto(false), [pathname])
+  // volver a una lista la deja donde estaba; avanzar a otra página lleva el foco a su título (tercera pasada de UX, 3.6)
+  const principal = useRef<HTMLElement>(null)
+  useLugarDeLaPagina(principal)
   return (
     <ProveedorDelAsistente>
       <TituloDeSeccion />
+      {/* el primer tabulador: saltar la barra y las secciones (WCAG 2.4.1) */}
+      <a
+        href="#content"
+        onClick={(e) => {
+          e.preventDefault()
+          principal.current?.focus()
+        }}
+        className="sr-only z-50 rounded-sg-md bg-sg-surface-raised px-3 py-2 text-sm font-medium text-sg-primary-text shadow-sg-md focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+      >
+        {t('shell.saltar')}
+      </a>
       <div className="flex h-full flex-col bg-sg-bg text-sg-text">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-sg-border bg-sg-surface px-4">
           <button
@@ -148,6 +163,8 @@ export function AppShell() {
           </nav>
           <main
             id="content"
+            ref={principal}
+            tabIndex={-1}
             className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-5 pb-20 has-[[data-barra-de-acciones]]:max-sm:pb-36 sm:pb-5 md:px-6 2xl:px-8"
           >
             {/* el rastro, en un solo lugar para todas las pantallas (revisión de UX, etapa 6): aparece al seguir un enlace */}
