@@ -218,21 +218,22 @@ Van en un PR a `wasichai/sgspe` (`docs/ux/` y `docs/ux/redesign/07-decisiones-y-
 - **Ola 2:** dos rojos.
   - En Web, una prueba que escribía la fecha después de un «Siguiente» que la hora propuesta (T-30) ya deja pasar. Se
     corrigió en su propio commit.
-  - En «Conventional commits», una línea de 101 caracteres en el cuerpo de aaa84f1 (commitlint admite 100). Corregirla
-    exige reescribir ese mensaje con un push forzado a la rama del PR, y eso lo decide el usuario.
+  - En «Conventional commits», una línea de 101 caracteres en el cuerpo de un commit de la ola 2 (commitlint admite
+    100). Con la autorización del usuario se reescribió solo ese mensaje y se forzó el push de la rama: el árbol quedó
+    idéntico, y los commits desde ese cambiaron de hash.
 - **Ola 3:** tres rojos en Web.
   - 17 pruebas que esperaban el canon anterior: el orden fuera de la URL (DD-37), una caja a mano donde va `Seccion`, las
     lecturas del flujo de objetos que la cuenta no lee y una columna Origen que ya no se dibuja vacía. Se corrigieron en
-    3e5cb93 y abd6fae.
+    bf71717 y 27e7f1e.
   - En e2e, «Lo que me toca hoy» esperaba «Tarea · Vencido», y la línea ya dice también el proyecto (T-38).
   - Una prueba de aprobaciones que fallaba según el orden de las respuestas destapó un defecto propio: la bandeja elegía sola
     la única aprobación aunque su registro respondiera 404, y el detalle volvía a pedirlo. Ahora se elige cuando el registro
-    se leyó (4119159).
+    se leyó (1e9d3da).
 - **Ola 4:** tres rojos en Web.
   - En e2e, dos expectativas viejas: lo crítico de la revisión ejecutiva lleva ahora a `?view=vencidos` (T-50), y la espera
-    del borrador ya no dice que el estado se consulta cada 5 segundos (T-55). Se corrigieron en ea9e205.
+    del borrador ya no dice que el estado se consulta cada 5 segundos (T-55). Se corrigieron en 89ae6a8.
   - En `typecheck`, una clave de texto repetida en la bandeja de IA («aceptada»), que además tapaba a la nueva en
-    ejecución. Pasó a «aceptadaEn» (5d0acb3).
+    ejecución. Pasó a «aceptadaEn» (8cb25ee).
   - En Web, la prueba de `?target=` en la bandeja de IA suponía una sola propuesta sobre la queja g1; el fixture tiene dos
     (la clasificación y el posible duplicado) y la prueba contaba los `<li>` anidados de las tarjetas. Ahora las cuenta
     por su tipo; el filtro estaba bien.
