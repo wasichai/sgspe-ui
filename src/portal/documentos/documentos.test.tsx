@@ -142,6 +142,30 @@ describe('S45 · biblioteca', () => {
   })
 })
 
+describe('S45 · búsqueda de la biblioteca', () => {
+  // tercera pasada de UX: la búsqueda espera a que se deje de escribir, como la de BarraDeFiltros; antes cada tecla pedía al
+  // servidor y reescribía la URL
+  it('pide al servidor una vez, cuando se deja de escribir', async () => {
+    fetch = mockFetch([
+      { path: '/metadata/objects/evidence', body: DEF },
+      { path: '/objects/project/records', body: pagina([P1]) },
+      { path: '/objects/evidence/records', body: pagina([EV]) }
+    ])
+    red = espiarRed()
+    montar(<BibliotecaPage />, { ruta: '/documents', camino: '/documents', permisos: EQUIPO_DE_COMPROMISOS })
+    await screen.findByRole('table', { name: 'Evidencias' })
+    const antes = red.a('GET', '/objects/evidence/records').length
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por título o autor' }), 'acta')
+    await waitFor(() => expect(red!.a('GET', '/objects/evidence/records').at(-1)?.ruta).toContain('q=acta'))
+    const conQ = red
+      .a('GET', '/objects/evidence/records')
+      .slice(antes)
+      .filter((l) => l.ruta.includes('q='))
+    // ninguna consulta con lo escrito a medias («a», «ac», «act»)
+    expect([...new Set(conQ.map((l) => new URLSearchParams(l.ruta.split('?')[1]).get('q')))]).toEqual(['acta'])
+  })
+})
+
 describe('S46 · ficha de evidencia', () => {
   // revisión de UX, etapa 4: en un proyecto, el encabezado común sin el enlace suelto a la biblioteca (lo dicen las migas)
   it('la ficha de evidencia lleva el encabezado común, con su tipo y sin el enlace suelto a la biblioteca', async () => {

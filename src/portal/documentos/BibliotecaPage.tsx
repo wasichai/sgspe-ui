@@ -6,7 +6,8 @@ import { Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import { CONTROL, SelectNativo } from '../componentes/Campo'
+import { CajaDeBusqueda } from '../componentes/BarraDeFiltros'
+import { SelectNativo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { Restringido } from '../componentes/Estados'
 import { ChipsDeFiltro, TablaDeRegistros, useParametrosDeLista, VacioDeLista, type Columna } from '../componentes/Lista'
@@ -118,10 +119,8 @@ export function BibliotecaPage() {
         }
       />
       <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-        <label className="space-y-1">
-          <span className="block">{t('documentos.buscar')}</span>
-          <input type="search" className={CONTROL} value={lista.filtro('q')} onChange={(e) => lista.cambiar({ q: e.target.value })} />
-        </label>
+        {/* la búsqueda espera a que se deje de escribir, como la de BarraDeFiltros (tercera pasada de UX) */}
+        <CajaDeBusqueda etiqueta={t('documentos.buscar')} valor={lista.filtro('q')} alCambiar={(q) => lista.cambiar({ q })} />
         <label className="space-y-1">
           <span className="block">{t('documentos.tipo')}</span>
           <SelectNativo
