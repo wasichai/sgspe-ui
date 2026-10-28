@@ -231,6 +231,19 @@ describe('S42 · programas e inversión', () => {
     expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
   })
 
+  // tercera pasada de UX, 3.7: la búsqueda va al servidor con ?q= en programas y en aportes, y es un chip
+  it('buscar pide los aportes al servidor con q y «Limpiar filtros» la quita', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir({ ruta: '/projects/p1/programs?view=todos' })
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar por código o propósito' }), 'útiles')
+    await waitFor(() => expect(red!.a('GET', '/objects/social_contribution/records').some((l) => l.ruta.includes('q=%C3%BAtiles'))).toBe(true))
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('button', { name: 'Quitar el filtro Contiene «útiles»' })).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
+  })
+
   // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
   it('Espacio en una fila de programas o de aportes abre su vista previa, y Enter su ficha', async () => {
     fetch = mockFetch(rutas())

@@ -103,6 +103,8 @@ export function ProgramasPage() {
   const estado = enProgramas ? '' : lista.filtro('state')
   // los programas y los aportes se paginan en el servidor (D10 de la revisión de UX); la página de los programas va en ?pp=
   const paginaDeProgramas = Number(lista.filtro('pp')) || 0
+  // la búsqueda (?q=) en el servidor, por los textos de programas y aportes (tercera pasada de UX, 3.7)
+  const q = lista.filtro('q').trim()
   // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
   const [ordenDeProgramas, ordenarProgramas] = ordenEnUrl(lista, ORDEN_INICIAL_DE_PROGRAMAS, Object.keys(ORDEN_DE_PROGRAMAS), 'pp')
   const programas = useRegistros(
@@ -112,18 +114,22 @@ export function ProgramasPage() {
       sort: ORDEN_DE_PROGRAMAS[ordenDeProgramas.columna],
       dir: ordenDeProgramas.dir,
       page: paginaDeProgramas,
-      size: POR_PAGINA
+      size: POR_PAGINA,
+      ...(q ? { q } : {})
     },
     leeProgramas
   )
   const conteos = useConteos(
     'social_contribution',
-    Object.fromEntries(VISTAS.map((v) => [v, consultaDeAportes(v, proyecto, lista.filtro('state'))])),
+    Object.fromEntries(VISTAS.map((v) => [v, consultaDeAportes(v, proyecto, lista.filtro('state'), q)])),
     leeAportes
   )
   const etiquetas = useEtiquetasDeEstado('social_contribution')
   const conteoDe = (v: string) => (v === PROGRAMAS ? (programas.data?.totalElements ?? null) : (conteos[v] ?? null))
-  const chips = estado ? [{ clave: 'state', etiqueta: `${t('inversion.aportes.estado')}: ${etiquetas[estado] ?? rotuloDeOpcion(estado)}` }] : []
+  const chips = [
+    ...(estado ? [{ clave: 'state', etiqueta: `${t('inversion.aportes.estado')}: ${etiquetas[estado] ?? rotuloDeOpcion(estado)}` }] : []),
+    ...(q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }) }] : [])
+  ]
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
@@ -169,6 +175,11 @@ export function ProgramasPage() {
               alElegir={(v) => lista.cambiar({ view: v, pp: null })}
             />
           }
+          busqueda={{
+            etiqueta: t(enProgramas ? 'inversion.programas.buscar' : 'inversion.aportes.buscar'),
+            valor: lista.filtro('q'),
+            alCambiar: (valor) => lista.cambiar({ q: valor, pp: null })
+          }}
           frecuentes={
             enProgramas ? undefined : (
               <FiltroDeLista
@@ -180,7 +191,7 @@ export function ProgramasPage() {
             )
           }
           aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
-          alLimpiar={() => lista.cambiar({ state: null })}
+          alLimpiar={() => lista.cambiar({ state: null, q: null, pp: null })}
         />
       ) : null}
       {conTablero ? (
@@ -189,7 +200,7 @@ export function ProgramasPage() {
       {enProgramas ? (
         <Programas proyecto={proyecto} indicadores={indicadores} programas={programas} orden={ordenDeProgramas} alOrdenar={ordenarProgramas} />
       ) : vista ? (
-        <Aportes proyecto={proyecto} vista={vista} estado={estado} />
+        <Aportes proyecto={proyecto} vista={vista} estado={estado} q={q} />
       ) : null}
       {alta && proyecto ? <Alta objeto={alta} proyecto={proyecto} alCerrar={() => setAlta(null)} /> : null}
     </section>
@@ -385,15 +396,15 @@ function Programas({
 // estado no cabe en la vista
 const consultaDeVista = (vista: string): Parametros =>
   vista === 'todos' ? {} : vista === 'terminados' ? { state: estados(APORTE_TERMINADO) } : { state_not: estados(APORTE_TERMINADO) }
-const consultaDeAportes = (vista: string, proyecto: string | undefined, estado: string): Parametros | null => {
+const consultaDeAportes = (vista: string, proyecto: string | undefined, estado: string, q: string): Parametros | null => {
   const deLaVista = conEstado(consultaDeVista(vista), estado)
-  return deLaVista && { project: proyecto, ...deLaVista }
+  return deLaVista && { project: proyecto, ...deLaVista, ...(q ? { q } : {}) }
 }
 
-function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string; estado: string }) {
+function Aportes({ proyecto, vista, estado, q }: { proyecto?: string; vista: string; estado: string; q: string }) {
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista(vista)
-  const actual = consultaDeAportes(vista, proyecto, estado)
+  const actual = consultaDeAportes(vista, proyecto, estado, q)
   // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
   const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL_DE_APORTES, Object.keys(ORDEN_DE_APORTES))
   const aportes = useRegistros(

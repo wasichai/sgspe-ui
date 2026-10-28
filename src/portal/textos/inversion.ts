@@ -17,6 +17,7 @@ export const ES_INVERSION = {
   hechoPrograma: 'Se registró el programa {{codigo}}.',
   altaProgramaAyuda: 'El presupuesto, los indicadores, las iniciativas, los hitos y los beneficiarios se cargan en la ficha del programa.',
   programas: {
+    buscar: 'Buscar por código o nombre',
     titulo: 'Programas',
     vista: 'Programas',
     tabla: 'Programas del alcance',
@@ -36,6 +37,7 @@ export const ES_INVERSION = {
     alcanzados: '{{alcanzados}} de {{meta}}'
   },
   aportes: {
+    buscar: 'Buscar por código o propósito',
     titulo: 'Aportes',
     tabla: 'Aportes del alcance',
     vacio: 'No hay aportes en esta vista',
@@ -93,6 +95,7 @@ export const EN_INVERSION: typeof ES_INVERSION = {
   hechoPrograma: 'Program {{codigo}} was recorded.',
   altaProgramaAyuda: 'Budget, indicators, initiatives, milestones and beneficiaries are added in the program record.',
   programas: {
+    buscar: 'Search by code or name',
     titulo: 'Programs',
     vista: 'Programs',
     tabla: 'Programs in scope',
@@ -112,6 +115,7 @@ export const EN_INVERSION: typeof ES_INVERSION = {
     alcanzados: '{{alcanzados}} of {{meta}}'
   },
   aportes: {
+    buscar: 'Search by code or purpose',
     titulo: 'Contributions',
     tabla: 'Contributions in scope',
     vacio: 'There are no contributions in this view',

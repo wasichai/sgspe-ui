@@ -63,6 +63,17 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   // cada vista pide lo suyo al servidor (D10 de la revisión de UX): la lista, su página; el calendario, los días que dibuja por el
   // rango de su fecha (la realizada o, si no, la programada: range_field=held_at,scheduled_at); y el panel, lo pendiente por estado
   const alcance: Parametros = { project: proyecto, ...(territorio ?? {}) }
+  // la búsqueda (?q=) en el servidor, por los textos de la interacción (tercera pasada de UX, 3.7): va a la lista y al calendario;
+  // el total del encabezado sigue siendo el del alcance
+  const q = (busqueda.get('q') ?? '').trim()
+  const buscar = (valor: string) => {
+    const siguiente = new URLSearchParams(busqueda)
+    if (valor.trim()) siguiente.set('q', valor)
+    else siguiente.delete('q')
+    siguiente.delete('page')
+    fijar(siguiente, { replace: true })
+  }
+  const conBusqueda: Parametros = q ? { ...alcance, q } : alcance
   const paginaDeLista = Number(busqueda.get('page') ?? '0') || 0
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const cambiar = (cambios: Record<string, string>) => {
@@ -97,11 +108,15 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
     ORDEN_INICIAL,
     ['titulo', 'fecha']
   )
-  const pagina = useRegistros('engagement', { ...alcance, sort: CAMPO_DE_ORDEN[orden.columna], dir: orden.dir, page: paginaDeLista, size: POR_PAGINA }, enLista)
+  const pagina = useRegistros(
+    'engagement',
+    { ...conBusqueda, sort: CAMPO_DE_ORDEN[orden.columna], dir: orden.dir, page: paginaDeLista, size: POR_PAGINA },
+    enLista
+  )
   // el servidor lee un día como su comienzo en Lima: el rango [primer día, día siguiente al último) cubre justo los días de la grilla
   const delCalendario = useTodosConTope(
     'engagement',
-    { ...alcance, range_field: 'held_at,scheduled_at', range_from: desde, range_to: hasta, sort: 'scheduled_at', dir: 'asc' },
+    { ...conBusqueda, range_field: 'held_at,scheduled_at', range_from: desde, range_to: hasta, sort: 'scheduled_at', dir: 'asc' },
     !enLista
   )
   const total = useConteo('engagement', alcance)
@@ -168,7 +183,9 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
             ) : null}
           </div>
         }
-        aplicados={[]}
+        busqueda={{ etiqueta: t('relacionamiento.buscar'), valor: busqueda.get('q') ?? '', alCambiar: buscar }}
+        aplicados={q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }), alQuitar: () => buscar('') }] : []}
+        alLimpiar={() => buscar('')}
       />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-3">
@@ -184,7 +201,14 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
             )
           ) : vista === 'lista' ? (
             <>
-              <Lista interacciones={interacciones.data ?? []} global={!proyecto} orden={orden} alOrdenar={ordenar} />
+              <Lista
+                interacciones={interacciones.data ?? []}
+                global={!proyecto}
+                orden={orden}
+                alOrdenar={ordenar}
+                conBusqueda={Boolean(q)}
+                alLimpiar={() => buscar('')}
+              />
               <PaginacionDelServidor
                 datos={pagina.data}
                 alPagina={(p) => {
@@ -320,19 +344,24 @@ function Lista({
   interacciones,
   global,
   orden,
-  alOrdenar
+  alOrdenar,
+  conBusqueda = false,
+  alLimpiar
 }: {
   interacciones: Registro[]
   global: boolean
   orden: OrdenDeTabla
   alOrdenar: (orden: OrdenDeTabla) => void
+  // con una búsqueda puesta, el vacío ofrece quitarla
+  conBusqueda?: boolean
+  alLimpiar?: () => void
 }) {
   const { t } = useTranslation(NS)
   const idDeProyecto = useId()
   const telefono = useEsTelefono()
   if (interacciones.length === 0)
     return (
-      <VacioDeLista conFiltros={false} alLimpiar={() => undefined}>
+      <VacioDeLista conFiltros={conBusqueda} alLimpiar={alLimpiar ?? (() => undefined)}>
         {t('relacionamiento.vacio')}
       </VacioDeLista>
     )
