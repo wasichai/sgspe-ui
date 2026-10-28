@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/wasichai/sgspe-ui/compare/v3.2.0...v3.3.0) (2026-10-28)
+
+
+### Features
+
+* **portal:** tercera pasada de UX: secuencia de uso e información ([#86](https://github.com/wasichai/sgspe-ui/issues/86)) ([5b0d644](https://github.com/wasichai/sgspe-ui/commit/5b0d644fbb44a7f9d1f3c7d1e16646ca634715bc))
+
 ## [3.2.0](https://github.com/wasichai/sgspe-ui/compare/v3.1.0...v3.2.0) (2026-10-24)
 
 
