@@ -28,7 +28,7 @@ export const ES_AVISOS = {
   posponer: 'Posponer hasta mañana',
   pospuesto: 'Pospuesto hasta el {{fecha}}',
   descartar: 'Descartar',
-  noDescartable: 'Se va solo cuando el trabajo se hace',
+  noDescartables: 'Los avisos que piden hacer algo no se descartan: se van solos cuando el trabajo se hace.',
   preferencias: {
     titulo: 'Avisos por correo',
     ayuda: 'La bandeja recibe todos los avisos; elija cuáles le llegan además por correo.',
@@ -73,7 +73,7 @@ export const EN_AVISOS: typeof ES_AVISOS = {
   posponer: 'Snooze until tomorrow',
   pospuesto: 'Snoozed until {{fecha}}',
   descartar: 'Dismiss',
-  noDescartable: 'It leaves on its own when the work is done',
+  noDescartables: 'Notifications that ask you to do something cannot be dismissed: they leave on their own when the work is done.',
   preferencias: {
     titulo: 'Email notices',
     ayuda: 'The inbox gets every notice; pick which ones also reach you by email.',

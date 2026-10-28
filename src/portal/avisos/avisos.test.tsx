@@ -167,7 +167,9 @@ describe('S04 · bandeja', () => {
     red = espiarRed()
     montar(<AvisosPage />, { ruta: '/notifications', camino: '/notifications' })
     const primero = (await screen.findByRole('heading', { name: 'Compromiso C-001 pendiente de aprobación' })).closest('li') as HTMLElement
-    expect(within(primero).getByText('Se va solo cuando el trabajo se hace')).toBeInTheDocument()
+    // la nota va una vez, sobre la lista, y no en cada aviso (tercera pasada de UX, 3.5)
+    expect(screen.getByText('Los avisos que piden hacer algo no se descartan: se van solos cuando el trabajo se hace.')).toBeInTheDocument()
+    expect(within(primero).queryByText('Se va solo cuando el trabajo se hace')).not.toBeInTheDocument()
     expect(within(primero).queryByRole('button', { name: 'Descartar' })).not.toBeInTheDocument()
     expect(within(primero).getByRole('link', { name: 'Abrir' })).toHaveAttribute('href', '/r/commitment/c1')
     const segundo = screen.getByRole('heading', { name: 'Minuta emitida' }).closest('li') as HTMLElement
