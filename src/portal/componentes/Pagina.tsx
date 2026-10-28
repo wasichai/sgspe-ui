@@ -215,7 +215,7 @@ export function MasAcciones({ children, etiqueta, nombre: nombreAccesible }: { c
           aria-label={nombre}
           onClick={alElegir}
           // en la barra de acciones del teléfono, abajo de todo, el menú se abre hacia arriba
-          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md max-sm:in-[[data-barra-de-acciones]]:top-auto max-sm:in-[[data-barra-de-acciones]]:bottom-full max-sm:in-[[data-barra-de-acciones]]:mb-1"
+          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-sg-md border border-sg-border bg-sg-surface-raised p-1 shadow-sg-md max-sm:in-[[data-barra-de-acciones]]:top-auto max-sm:in-[[data-barra-de-acciones]]:bottom-full max-sm:in-[[data-barra-de-acciones]]:mb-1"
         >
           {children}
         </div>

@@ -200,7 +200,7 @@ function MasPestanas({ base, pestanas, marcada }: { base: string; pestanas: read
           id={id}
           role="group"
           aria-label={t('contexto.masPestanas')}
-          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md"
+          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col rounded-sg-md border border-sg-border bg-sg-surface-raised p-1 shadow-sg-md"
         >
           {pestanas.map((p) => (
             <Link

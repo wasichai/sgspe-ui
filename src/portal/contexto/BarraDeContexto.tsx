@@ -36,8 +36,10 @@ export function BarraDeContexto({ principal }: { principal?: ReactNode }) {
       {territory ? (
         <span className="inline-flex items-center gap-1 rounded-sg-sm border border-sg-territory-border bg-sg-territory-soft px-2 py-0.5 text-sg-territory">
           {t('contexto.territorio', { nombre: `${t(`contexto.tipos.${territory.kind}`)} ${nombreDelLugar}` })}
+          {/* un objetivo de 24 px como mínimo (WCAG 2.5.8): el ícono solo medía 12 */}
           <button
             type="button"
+            className="-my-1 -mr-1 inline-flex size-6 items-center justify-center rounded-sg-sm hover:bg-sg-surface-hover"
             aria-label={t('contexto.quitarTerritorio')}
             onClick={() => {
               const siguiente = new URLSearchParams(busqueda)

@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { Fragment, useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useSearchParams } from 'react-router'
-import type { Pagina, Registro } from '../datos/registros'
+import { texto, type Pagina, type Registro } from '../datos/registros'
 import { ResultadoDeLista } from '../contexto/Origen'
 import { NS } from '../i18n'
 import { Cargando, ErrorDeCarga, Vacio } from './Estados'
@@ -106,6 +106,9 @@ export function ChipsDeFiltro({ chips, alQuitar, alLimpiar }: { chips: Chip[]; a
   )
 }
 
+// cómo se anuncia una fila al seleccionarla: su código y su título o nombre, nunca su id (tercera pasada de UX)
+const nombreDeFila = (registro: Registro): string => [texto(registro, 'code'), texto(registro, 'title') || texto(registro, 'name')].filter(Boolean).join(' · ')
+
 export function TablaDeRegistros({
   consulta,
   columnas,
@@ -146,7 +149,7 @@ export function TablaDeRegistros({
                   {alSeleccionar ? (
                     <input
                       type="checkbox"
-                      aria-label={`${t('comun.seleccionar')} ${registro.id}`}
+                      aria-label={t('comun.seleccionarA', { nombre: nombreDeFila(registro) || t('comun.esteRegistro') })}
                       checked={seleccion?.has(registro.id) ?? false}
                       onChange={(e) => alSeleccionar(registro.id, e.target.checked)}
                     />
@@ -206,7 +209,7 @@ export function TablaDeRegistros({
                       <Td onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                          aria-label={`${t('comun.seleccionar')} ${registro.id}`}
+                          aria-label={t('comun.seleccionarA', { nombre: nombreDeFila(registro) || t('comun.esteRegistro') })}
                           checked={seleccion?.has(registro.id) ?? false}
                           onChange={(e) => alSeleccionar(registro.id, e.target.checked)}
                         />

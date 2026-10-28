@@ -91,6 +91,9 @@ export const ES_COMUN = {
   nDeN: '{{n}} de {{total}}',
   listaNoDisponible: 'Esta información no está disponible en su organización.',
   seleccionar: 'Seleccionar…',
+  // el nombre accesible de la casilla que elige un registro de una lista
+  seleccionarA: 'Seleccionar {{nombre}}',
+  esteRegistro: 'este registro',
   todos: 'Todos',
   verTodos_one: 'Ver el {{count}}',
   verTodos_other: 'Ver los {{count}}',
@@ -501,6 +504,8 @@ export const EN_COMUN: typeof ES_COMUN = {
   nDeN: '{{n}} of {{total}}',
   listaNoDisponible: 'This information is not available in your organization.',
   seleccionar: 'Select…',
+  seleccionarA: 'Select {{nombre}}',
+  esteRegistro: 'this record',
   todos: 'All',
   verTodos_one: 'Show {{count}}',
   verTodos_other: 'Show all {{count}}',

@@ -175,14 +175,7 @@ export function GruposPage() {
     const evaluado = g.state === 'assessed' || Boolean(atributo(g, 'influence_group'))
     switch (columna) {
       case 'seleccionar':
-        return (
-          <input
-            type="checkbox"
-            aria-label={`${t('comun.seleccionar')} ${g.id}`}
-            checked={seleccion.has(g.id)}
-            onChange={(e) => alternar(g.id, e.target.checked)}
-          />
-        )
+        return <CasillaDeGrupo grupo={g} seleccionado={seleccion.has(g.id)} alSeleccionar={(si) => alternar(g.id, si)} />
       case 'grupo':
         return <CeldaDelGrupo grupo={g} />
       case 'proyecto':
@@ -382,6 +375,14 @@ function LocalidadDelGrupo({ grupo }: { grupo: Registro }) {
   return <>{texto(localidad.data, 'name') || '—'}</>
 }
 
+// la casilla de un grupo en la tabla: se anuncia con su nombre, como la de la tarjeta del teléfono, nunca con su id (tercera pasada
+// de UX: un lector de pantalla leía «Seleccionar 3f2a…»)
+function CasillaDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro; seleccionado: boolean; alSeleccionar: (si: boolean) => void }) {
+  const { t } = useTranslation(NS)
+  const nombre = useNombreDelGrupo(grupo)
+  return <input type="checkbox" aria-label={t('comun.seleccionarA', { nombre })} checked={seleccionado} onChange={(e) => alSeleccionar(e.target.checked)} />
+}
+
 // el título de la tarjeta de un grupo en el teléfono: su casilla (en un proyecto), su nombre como enlace (con su paso en el
 // rastro) y su vista previa
 function TituloDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro; seleccionado: boolean; alSeleccionar?: (si: boolean) => void }) {
@@ -393,7 +394,7 @@ function TituloDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro
       {alSeleccionar ? (
         <input
           type="checkbox"
-          aria-label={`${t('comun.seleccionar')} ${nombre}`}
+          aria-label={t('comun.seleccionarA', { nombre })}
           checked={seleccionado}
           onChange={(e) => alSeleccionar(e.target.checked)}
           className="mr-1 size-5"

@@ -286,6 +286,10 @@ describe('S16 · lista de grupos de interés', () => {
   it('seleccionar varios abre el registro de interacción con ellos', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
+    // la casilla se anuncia con el nombre del grupo, nunca con su id (tercera pasada de UX)
+    await waitFor(() => expect(within(filas()[0]).getByRole('checkbox')).not.toHaveAccessibleName(/…/))
+    expect(within(filas()[0]).getByRole('checkbox')).toHaveAccessibleName(/^Seleccionar \S/)
+    expect(within(filas()[0]).getByRole('checkbox')).not.toHaveAccessibleName(/s1/)
     await userEvent.click(within(filas()[0]).getByRole('checkbox'))
     await userEvent.click(within(filas()[1]).getByRole('checkbox'))
     await userEvent.click(screen.getByRole('button', { name: 'Registrar una interacción con ellos' }))

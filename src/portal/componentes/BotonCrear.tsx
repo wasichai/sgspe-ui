@@ -130,7 +130,7 @@ function CrearEligiendoProyecto({ etiqueta, destino }: { etiqueta: string; desti
                   id={id}
                   value={elegido}
                   onChange={(e) => setElegido(e.target.value)}
-                  className="h-9 w-full rounded-sg-md border border-sg-border bg-sg-surface px-2 text-sm"
+                  className="h-9 w-full rounded-sg-md border border-sg-border-control bg-sg-surface px-2 text-sm"
                 >
                   <option value="">{t('paginas.crear.elegir')}</option>
                   {proyectos.map((p) => (

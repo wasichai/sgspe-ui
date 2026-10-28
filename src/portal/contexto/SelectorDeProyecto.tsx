@@ -56,7 +56,7 @@ function Chip({ alAbrir }: { alAbrir: () => void }) {
       type="button"
       onClick={alAbrir}
       aria-label={t('contexto.cambiarProyecto', { proyecto: actual })}
-      className="max-w-24 shrink-0 truncate rounded-full border border-sg-border-strong px-2.5 py-0.5 text-sg-caption text-sg-text-secondary md:hidden"
+      className="min-h-8 max-w-24 shrink-0 truncate rounded-full border border-sg-border-strong px-2.5 py-1.5 text-sg-caption text-sg-text-secondary md:hidden"
     >
       {actual}
     </button>

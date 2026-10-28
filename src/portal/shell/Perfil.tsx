@@ -90,7 +90,7 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
           id={id}
           role="group"
           aria-label={t('inicio.cuenta')}
-          className="absolute top-full right-0 z-30 mt-1 w-80 rounded-sg-md border border-sg-border bg-sg-surface p-4 text-left shadow-sg-md"
+          className="absolute top-full right-0 z-30 mt-1 w-80 rounded-sg-md border border-sg-border bg-sg-surface-raised p-4 text-left shadow-sg-md"
         >
           <DatosDeLaCuenta />
           {/* las preferencias: cada control ya tiene su nombre accesible, el rótulo visible es para la vista */}

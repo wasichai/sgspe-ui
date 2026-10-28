@@ -116,6 +116,17 @@ describe('MasAcciones', () => {
     expect(boton).toHaveFocus()
   })
 
+  // DD-15: lo que flota (menús, diálogos, cajones) va sobre --sg-surface-raised, que en oscuro se distingue del fondo sin sombra
+  it('el menú abierto flota sobre la superficie elevada', async () => {
+    montar(
+      <MasAcciones>
+        <button type="button">Cerrados</button>
+      </MasAcciones>
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones' }))
+    expect(screen.getByRole('group', { name: 'Más acciones' })).toHaveClass('bg-sg-surface-raised')
+  })
+
   // el menú de una fila (P-08): solo el ícono, con un nombre accesible que dice de quién son las acciones
   it('con nombre, el botón de solo ícono y su grupo se llaman así; sin él, «Más acciones»', async () => {
     const { unmount } = montar(
