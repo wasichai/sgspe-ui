@@ -35,7 +35,7 @@ describe('el anexo del motivo', () => {
     const dialogo = screen.getByRole('dialog')
     expect(within(dialogo).getByText('Se agrega al motivo: Modelo revisado SHA-256 abc')).toBeInTheDocument()
     await userEvent.type(within(dialogo).getByRole('textbox'), 'Revisado')
-    await userEvent.click(await within(dialogo).findByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(await within(dialogo).findByRole('button', { name: 'Aprobar' }))
     await waitFor(() => expect(red!.a('POST', '/objects/deliverable/records/d1/transitions/approve')).toHaveLength(1))
     expect(red!.a('POST', '/objects/deliverable/records/d1/transitions/approve')[0].cabeceras.get('X-Change-Reason')).toBe(
       `UTF-8''${encodeURIComponent('Revisado · Modelo revisado SHA-256 abc')}`
@@ -60,7 +60,7 @@ describe('el anexo del motivo', () => {
     const caja = within(dialogo).getByRole('textbox')
     await userEvent.click(caja)
     await userEvent.paste('a'.repeat(600))
-    await userEvent.click(await within(dialogo).findByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(await within(dialogo).findByRole('button', { name: 'Aprobar' }))
     await waitFor(() => expect(red!.a('POST', '/objects/deliverable/records/d1/transitions/approve')).toHaveLength(1))
     const enviado = decodeURIComponent(
       red!.a('POST', '/objects/deliverable/records/d1/transitions/approve')[0].cabeceras.get('X-Change-Reason')!.replace("UTF-8''", '')

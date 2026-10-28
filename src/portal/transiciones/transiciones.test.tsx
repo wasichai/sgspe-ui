@@ -100,7 +100,7 @@ describe('transiciones', () => {
     await userEvent.tab()
     expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
     await userEvent.tab()
-    expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toHaveFocus()
+    expect(within(dialogo).getByRole('button', { name: 'Suspender' })).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(boton).toHaveFocus()
@@ -114,11 +114,11 @@ describe('transiciones', () => {
     const dialogo = await screen.findByRole('dialog')
     expect(within(dialogo).getByText('Activo → Suspendido')).toBeInTheDocument()
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     expect(await within(dialogo).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
     expect(red.a('POST', '/objects/project/records/p1/transitions/suspend')).toHaveLength(0)
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     await waitFor(() => expect(red!.a('POST', '/objects/project/records/p1/transitions/suspend')).toHaveLength(1))
     const [llamada] = red.a('POST', '/objects/project/records/p1/transitions/suspend')
     expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00.123456Z"')
@@ -160,7 +160,7 @@ describe('transiciones', () => {
     const dialogo = await screen.findByRole('dialog')
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     await waitFor(() => expect([tareas(), avisos()]).toEqual([2, 2]))
   })
 
@@ -186,7 +186,7 @@ describe('transiciones', () => {
     const dialogo = await screen.findByRole('dialog')
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     expect(await screen.findByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Suspender' })).not.toBeInTheDocument())
     expect(screen.getByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
@@ -201,7 +201,7 @@ describe('transiciones', () => {
     const dialogo = await screen.findByRole('dialog')
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
     await usuario.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
-    await usuario.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText('Listo: el registro está en «Suspendido».')).toBeInTheDocument()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(8000)
@@ -219,7 +219,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText('El proyecto no tiene CRS de trabajo')).toBeInTheDocument()
     expect(await screen.findByText('Campo: CRS de trabajo')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeDisabled()
   })
 
   it('una regla que nombra la transición o el campo por su nombre de la API dice la acción y la etiqueta (humo F4, D3)', async () => {
@@ -303,7 +303,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     await screen.findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
-    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText('Solo quien registró este dato puede cambiarlo: su cuenta no edita registros de otras personas.')).toBeInTheDocument()
     expect(screen.queryByText('NOT_OWN_RECORD')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument()
@@ -322,7 +322,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     await screen.findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
-    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
     expect(screen.getByLabelText('Motivo (obligatorio)')).toHaveValue('Paralización')
     const lecturas = () => red!.a('GET', '/objects/project/records/p1').length
@@ -356,7 +356,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     await screen.findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
-    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
     await waitFor(() => expect(screen.queryByText(/Otra persona cambió este registro/)).not.toBeInTheDocument())
     expect(screen.queryByText(/No se pudo recargar/)).not.toBeInTheDocument()
@@ -379,10 +379,10 @@ describe('transiciones', () => {
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     const reintentar = await screen.findByRole('button', { name: 'Reintentar' })
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeDisabled()
     await userEvent.click(reintentar)
     expect(await screen.findByText('Se cumplen las reglas para este paso.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeEnabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(intentos).toBe(2)
   })
@@ -392,7 +392,7 @@ describe('transiciones', () => {
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText(/Este paso no se puede dar ahora/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeDisabled()
     expect(screen.queryByText('Se cumplen las reglas para este paso.')).not.toBeInTheDocument()
   })
 
@@ -540,12 +540,12 @@ describe('los datos que pide el paso', () => {
     // la regla no se dice como un bloqueo: se pide el dato
     expect(within(dialogo).queryByText(/falta «Resolución»/)).not.toBeInTheDocument()
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Acuerdo con la contratista')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Resolver' }))
     expect(await within(dialogo).findAllByText('Complete este dato para dar el paso.')).toHaveLength(2)
     expect(red.a('PUT', '/objects/grievance/records/q1')).toHaveLength(0)
     await userEvent.type(within(dialogo).getByLabelText('Resolución (obligatorio)'), 'Turno rotativo')
     await userEvent.type(within(dialogo).getByLabelText('Respuesta (obligatorio)'), 'Se publica la lista')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Resolver' }))
     await waitFor(() => expect(red!.a('POST', '/objects/grievance/records/q1/transitions/resolve')).toHaveLength(1))
     const [cambio] = red.a('PUT', '/objects/grievance/records/q1')
     expect(cambio.cuerpo).toMatchObject({ attributes: { resolution: 'Turno rotativo', response: 'Se publica la lista' } })
@@ -586,5 +586,38 @@ describe('los datos que pide el paso', () => {
     const aprobar = await screen.findByRole('button', { name: 'Aprobar' })
     await waitFor(() => expect(aprobar).toBeDisabled())
     expect(aprobar).toHaveAccessibleDescription('Falta el tipo de aporte.')
+  })
+})
+
+// tercera pasada de UX (1.3): el diálogo dice lo que hace. el botón repite el verbo de la transición («Aprobar», no «Confirmar»);
+// el que cierra el registro nombra el objeto y va con peligro, para que no se lea como cerrar el diálogo; «Qué pasará» suma lo que
+// el paso hace además del estado (la tarea que crea una automatización)
+describe('un diálogo que dice lo que hace', () => {
+  const COMPROMISO = registro('c1', { code: 'C-001' }, { state: 'pending_approval' })
+  const compromiso = (lista: unknown[]): MockRoute[] => [
+    { path: '/objects/commitment/records/c1/transitions', body: lista },
+    { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } }
+  ]
+
+  it('«Aprobar» un compromiso dice que se crea la tarea de ejecutarlo, y el botón dice «Aprobar»', async () => {
+    fetch = mockFetch(compromiso([{ name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }]))
+    montar(<BotonesDeTransicion objeto="commitment" registro={COMPROMISO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aprobar' })
+    expect(within(dialogo).getByText('Se crea la tarea de ejecutarlo, a cargo de su responsable y con su fecha límite.')).toBeInTheDocument()
+    expect(within(dialogo).getByRole('button', { name: 'Aprobar' })).toHaveAttribute('data-variant', 'primary')
+    expect(within(dialogo).queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument()
+    expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
+  })
+
+  it('el paso que cancela nombra el objeto y va con peligro; cerrar el diálogo sigue siendo «Cancelar»', async () => {
+    fetch = mockFetch(compromiso([{ name: 'cancel_pending_approval', label: 'Cancelar', to: 'cancelled', toLabel: 'Cancelado', allowed: true, reason: null }]))
+    montar(<BotonesDeTransicion objeto="commitment" registro={COMPROMISO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar el compromiso' }))
+    const dialogo = await screen.findByRole('dialog')
+    expect(within(dialogo).getByRole('button', { name: 'Cancelar el compromiso' })).toHaveAttribute('data-variant', 'danger')
+    expect(within(dialogo).getAllByRole('button', { name: 'Cancelar' })).toHaveLength(1)
+    // sin efecto propio, solo el texto general
+    expect(within(dialogo).getByText('El registro pasa a «Cancelado». El cambio y su motivo quedan en el historial.')).toBeInTheDocument()
   })
 })

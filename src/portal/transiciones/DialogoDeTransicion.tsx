@@ -13,14 +13,15 @@ import { NS } from '../i18n'
 import { useAplicarTransicion, useComprobacion } from './api'
 import { useTextoDeAviso, type TextoDeAviso } from './avisos'
 import { DatoDelPaso, datoVacio, useBloqueosDelPaso, valorInicial, valorParaEnviar } from './DatosDelPaso'
-import { exigeMotivo } from './reglas'
+import { esDestructiva, exigeMotivo } from './reglas'
 
 // el diálogo de transición de design-system.md §6.2: de dónde a dónde, las reglas que la bloquearían o que piden
 // justificación (transition-checks), qué pasará y el motivo, obligatorio cuando la transición lo exige o hay advertencias.
 // un 412 dice "otra persona cambió este registro" con "Recargar", y lo escrito se conserva; un 403 o un 409 con código
 // dice el texto de su código. cada regla se dice con useTextoDeAviso: el campo con su etiqueta y la acción con su nombre,
 // nunca sus nombres de la API. los datos que el paso exige y quien mira puede escribir (useBloqueosDelPaso) se piden aquí, con el
-// mismo motivo: se guardan primero y la transición se aplica sobre la versión nueva (tercera pasada de UX, 1.2)
+// mismo motivo: se guardan primero y la transición se aplica sobre la versión nueva (tercera pasada de UX, 1.2). el botón repite el
+// verbo de la transición («Resolver», no «Confirmar») y «Qué pasará» suma lo que el paso hace además del estado (1.3)
 // X-Change-Reason admite 500 caracteres (RQ-AUD-002): con un anexo, lo que la persona escribe deja sitio al anexo y al separador
 const LIMITE_DEL_MOTIVO = 500
 const SEPARADOR = ' · '
@@ -88,6 +89,12 @@ export function DialogoDeTransicion({
   }
   const error = actualizar.error ?? aplicar.error
   const lista = new Intl.ListFormat(i18n.language, { type: 'conjunction' })
+  const efecto = t(`transiciones.efectos.${objeto}.${transicion.name}`, { defaultValue: '' })
+  // el verbo, con el objeto si el paso cierra el registro («Cancelar el compromiso»), como su botón en la ficha; si aun así se lee
+  // igual que cerrar el diálogo (en inglés el objeto no se nombra), cerrar dice «Volver»
+  const destructiva = esDestructiva(transicion)
+  const verbo = destructiva ? [transicion.label, t(`transiciones.elObjeto.${objeto}`, { defaultValue: '' })].filter(Boolean).join(' ') : transicion.label
+  const cerrarDice = verbo.trim().toLowerCase() === t('comun.cancelar').toLowerCase() ? t('transiciones.volver') : t('comun.cancelar')
 
   // el foco vuelve al botón que abrió el diálogo (revisión de UX, etapa 8)
   const regreso = useFocoDeRegreso()
@@ -141,6 +148,7 @@ export function DialogoDeTransicion({
           <section className="rounded-sg-md bg-sg-surface-sunken p-3 text-sm">
             <h3 className="font-medium">{t('transiciones.quePasara')}</h3>
             <p>{t('transiciones.quePasaraTexto', { a: transicion.toLabel })}</p>
+            {efecto ? <p>{efecto}</p> : null}
             {reglasOk && pedidos.length > 0 ? (
               <p>{t('transiciones.seGuardan', { campos: lista.format(pedidos.map((campo) => `«${campo.label || campo.name}»`)) })}</p>
             ) : null}
@@ -174,10 +182,10 @@ export function DialogoDeTransicion({
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="secondary" onClick={alCerrar}>
-            {t('comun.cancelar')}
+            {cerrarDice}
           </Button>
-          <Button onClick={confirmar} disabled={!reglasOk || ocupado} aria-busy={ocupado}>
-            {ocupado ? t('transiciones.confirmando') : t('transiciones.confirmar')}
+          <Button variant={destructiva ? 'danger' : 'primary'} onClick={confirmar} disabled={!reglasOk || ocupado} aria-busy={ocupado}>
+            {ocupado ? t('transiciones.confirmando') : verbo}
           </Button>
         </div>
       </DialogContent>

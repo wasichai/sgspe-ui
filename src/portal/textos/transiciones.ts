@@ -52,8 +52,28 @@ export const ES_TRANSICIONES = {
   },
   quePasara: 'Qué pasará',
   quePasaraTexto: 'El registro pasa a «{{a}}». El cambio y su motivo quedan en el historial.',
-  confirmar: 'Confirmar',
+  // lo que el paso hace además del cambio de estado (las automatizaciones del modelo y las reglas que congelan datos):
+  // efectos.<objeto>.<transición>; sin entrada, solo el texto general (tercera pasada de UX, 1.3)
+  efectos: {
+    commitment: {
+      approve: 'Se crea la tarea de ejecutarlo, a cargo de su responsable y con su fecha límite.',
+      approve_senior: 'Se crea la tarea de ejecutarlo, a cargo de su responsable y con su fecha límite.',
+      approve_direct: 'Se crea la tarea de ejecutarlo, a cargo de su responsable y con su fecha límite.'
+    },
+    engagement: {
+      approve_minutes: 'Se generan la minuta y la lista de asistentes del acta.',
+      cancel_planned: 'Se crea una tarea para reprogramarla o reemplazarla.',
+      cancel_scheduled: 'Se crea una tarea para reprogramarla o reemplazarla.',
+      cancel_postponed: 'Se crea una tarea para reprogramarla o reemplazarla.'
+    },
+    social_contribution: {
+      approve: 'Sus ítems quedan congelados: un cambio después es otro aporte.',
+      approve_direct: 'Sus ítems quedan congelados: un cambio después es otro aporte.'
+    }
+  },
   confirmando: 'Aplicando…',
+  // cerrar el diálogo cuando el paso mismo se llama «Cancelar»
+  volver: 'Volver',
   anexo: 'Se agrega al motivo: {{anexo}}',
   hecho: 'Listo: el registro está en «{{a}}».'
 }
@@ -106,8 +126,25 @@ export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
   },
   quePasara: 'What will happen',
   quePasaraTexto: 'The record moves to “{{a}}”. The change and its reason are kept in the history.',
-  confirmar: 'Confirm',
+  efectos: {
+    commitment: {
+      approve: 'A task to carry it out is created, assigned to its owner and with its due date.',
+      approve_senior: 'A task to carry it out is created, assigned to its owner and with its due date.',
+      approve_direct: 'A task to carry it out is created, assigned to its owner and with its due date.'
+    },
+    engagement: {
+      approve_minutes: 'The minutes and the attendance list are generated.',
+      cancel_planned: 'A task to reschedule or replace it is created.',
+      cancel_scheduled: 'A task to reschedule or replace it is created.',
+      cancel_postponed: 'A task to reschedule or replace it is created.'
+    },
+    social_contribution: {
+      approve: 'Its items are frozen: a later change is another contribution.',
+      approve_direct: 'Its items are frozen: a later change is another contribution.'
+    }
+  },
   confirmando: 'Applying…',
+  volver: 'Back',
   anexo: 'Added to the reason: {{anexo}}',
   hecho: 'Done: the record is now “{{a}}”.'
 }

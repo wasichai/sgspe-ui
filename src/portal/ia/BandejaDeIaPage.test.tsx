@@ -134,7 +134,7 @@ describe('S52 · bandeja de revisión de IA', () => {
     await userEvent.click(await within(await tarjeta('Clasificación')).findByRole('button', { name: 'Rechazar' }))
     const dialogo = await screen.findByRole('dialog')
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'La queja es de empleo, no de agua')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Rechazar' }))
     await waitFor(() => expect(red!.a('POST', '/objects/ai_suggestion/records/s1/transitions/reject')).toHaveLength(1))
     const [llamada] = red.a('POST', '/objects/ai_suggestion/records/s1/transitions/reject')
     expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-09T15:00:00Z"')
