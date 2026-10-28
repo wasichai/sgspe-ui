@@ -73,7 +73,7 @@ export function ordenEnUrl(
 ): [OrdenDeTabla | undefined, (orden: OrdenDeTabla) => void] {
   const columna = lista.filtro('sort')
   const dir = lista.filtro('dir')
-  const orden = ordenables.includes(columna) && (dir === 'asc' || dir === 'desc') ? { columna, dir } : inicial
+  const orden: OrdenDeTabla | undefined = ordenables.includes(columna) && (dir === 'asc' || dir === 'desc') ? { columna, dir } : inicial
   return [orden, (siguiente) => lista.cambiar({ sort: siguiente.columna, dir: siguiente.dir, [pagina]: null })]
 }
 
