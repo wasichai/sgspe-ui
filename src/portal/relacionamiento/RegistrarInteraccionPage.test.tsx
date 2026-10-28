@@ -355,7 +355,6 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     await escribirRealizada('06/10/2026', '10:30')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pulsar en el mapa' }))
