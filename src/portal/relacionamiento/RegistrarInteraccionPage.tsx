@@ -21,7 +21,7 @@ import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { nuevaClave } from '../datos/http'
 import { puedeLeer, texto, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
-import { instanteDeLima } from '../datos/fechas'
+import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
 import { fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
@@ -222,6 +222,8 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   }
 
   const [faltaAsistente, setFaltaAsistente] = useState(false)
+  // la hora que se propuso al elegir «Sí, ya se realizó»: mientras siga esa, se dice que es una propuesta
+  const [horaPropuesta, setHoraPropuesta] = useState<string | null>(null)
   // «Programar» sin fecha no se deshabilita en silencio: lleva al paso de la fecha y lo dice ahí (tercera pasada de UX, 2.8)
   const [faltaProgramada, setFaltaProgramada] = useState(false)
   const [conErrores, setConErrores] = useState<number | null>(null)
@@ -375,7 +377,21 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             <Controller
               control={control}
               name="realizada"
-              render={({ field }) => <SelectorDeRealizada valor={field.value} alCambiar={field.onChange} alSalir={field.onBlur} />}
+              render={({ field }) => (
+                <SelectorDeRealizada
+                  valor={field.value}
+                  alCambiar={(realizada) => {
+                    field.onChange(realizada)
+                    // «Sí, ya se realizó» propone la hora de ahora (tercera pasada de UX, 2.6): casi siempre se registra al terminar
+                    if (realizada && !getValues('held_at')) {
+                      const ahora = ahoraEnLima()
+                      setHoraPropuesta(ahora)
+                      setValue('held_at', ahora, { shouldDirty: true })
+                    }
+                  }}
+                  alSalir={field.onBlur}
+                />
+              )}
             />
           </div>
           {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
@@ -390,6 +406,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                   conHora
                   requerido
                   error={errorDeFecha}
+                  ayuda={field.value && field.value === horaPropuesta ? t('relacionamiento.registro.horaPropuesta') : undefined}
                   valor={field.value || null}
                   alCambiar={(x) => field.onChange(x ?? '')}
                 />

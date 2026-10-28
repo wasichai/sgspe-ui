@@ -10,6 +10,7 @@ import { espiarRed, problema, type Red } from '../../test/red'
 import { UBICADOS } from '../../test/sig'
 import { EQUIPO, base } from '../../test/relacionamiento'
 import { useGuardarInteraccion } from './guardarInteraccion'
+import { ahoraEnLima, textoDeDia } from '../datos/fechas'
 
 // lo que se teclea es la hora del reloj del navegador: el huso se fija para que el instante UTC sea el mismo en cualquier máquina
 process.env.TZ = 'America/Lima'
@@ -34,6 +35,15 @@ vi.mock('./FichaInteraccionPage', async (original) => {
 
 let fetch: FetchMock | null = null
 let red: Red | null = null
+// «Sí, ya se realizó» propone la hora de ahora (tercera pasada de UX, 2.6): la prueba la reemplaza por su día y su hora
+const escribirRealizada = async (dia: string, hora: string) => {
+  const fecha = screen.getByLabelText('Fecha y hora en que se realizó')
+  const campoDeHora = screen.getByLabelText('Fecha y hora en que se realizó (hora)')
+  await userEvent.clear(fecha)
+  await userEvent.type(fecha, dia)
+  await userEvent.clear(campoDeHora)
+  await userEvent.type(campoDeHora, hora)
+}
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
@@ -164,10 +174,14 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
+    // se propone la hora de ahora (tercera pasada de UX, 2.6); sin fecha, el paso no avanza
+    expect(screen.getByLabelText('Fecha y hora en que se realizó')).toHaveValue(textoDeDia(ahoraEnLima().slice(0, 10)))
+    expect(screen.getByText('Se propuso la hora de ahora; si fue antes, corrija el día y la hora.')).toBeInTheDocument()
+    await userEvent.clear(screen.getByLabelText('Fecha y hora en que se realizó'))
+    await userEvent.clear(screen.getByLabelText('Fecha y hora en que se realizó (hora)'))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByText('Indique la fecha')).toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
+    await escribirRealizada('06/10/2026', '10:30')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByRole('checkbox', { name: 'Ronda campesina' })).toBeChecked()
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
@@ -342,8 +356,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
+    await escribirRealizada('06/10/2026', '10:30')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pulsar en el mapa' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
@@ -439,8 +452,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea tardía')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '23:30')
+    await escribirRealizada('06/10/2026', '23:30')
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
@@ -553,8 +565,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
+    await escribirRealizada('06/10/2026', '10:30')
     for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
     expect(await screen.findByText('Para guardar como realizada, agregue al menos un participante que asistió.')).toBeInTheDocument()
