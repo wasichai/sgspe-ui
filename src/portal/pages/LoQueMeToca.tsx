@@ -1,20 +1,27 @@
 import { useQueries } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
+import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { ListaPriorizada, type EntradaPriorizada, type TonoDeEntrada } from '../componentes/ListaPriorizada'
 import { Seccion } from '../componentes/Seccion'
 import { nombreDeProyecto, useLeeTodosLosProyectos, useMisAsignaciones, useProyectos, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { esQcs, plazoQueCorre } from '../datos/atencion'
-import { textoDeDia } from '../datos/fechas'
+import { hoyEnLima } from '../datos/fechas'
 import { rutaDeFicha } from '../datos/fichas'
 import { usePedir } from '../datos/http'
 import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, consulta, estados, texto, useRegistros, type Pagina, type Parametros, type Registro } from '../datos/registros'
-import { NS } from '../i18n'
+import { diaPe, NS } from '../i18n'
 import { sinFiltroDeAsignados, soloAsignados } from '../tareas/paraTomar'
+import { TomarTarea } from '../tareas/TomarTarea'
 import { useSuTrabajo } from './aSuCargo'
+import { useReleerAlVolver } from './alDia'
+import { minutosDesde, useAhora } from '../componentes/ahora'
 
 // «Lo que me toca hoy», lo primero del inicio (P-01 del rediseño de UX; hallazgos U-05 y U-13): lo abierto a su cargo (tareas,
 // compromisos y QCS de useSuTrabajo), lo vencido primero, luego lo por vencer y lo demás por fecha, cinco a la vista con su motivo
@@ -39,6 +46,9 @@ interface DeSuCargo {
 
 // la fecha que vence: la de una tarea o un compromiso, o el plazo que corre en el estado de una QCS
 const fechaDe = ({ objeto, registro }: DeSuCargo): string => (esQcs(objeto) ? (plazoQueCorre(objeto, registro)?.fecha ?? '') : texto(registro, 'due_date'))
+// se lee como el resto del portal («17 oct. 2026», diaPe), no en el formato de escritura de CampoFecha: un instante, por su día de
+// Lima (tercera pasada de UX: el inicio decía «17/10/2026» al lado de «desde el 23 oct. 2026»)
+const diaLegible = (fecha: string): string => diaPe(/^\d{4}-\d{2}-\d{2}T/.test(fecha) ? hoyEnLima(new Date(fecha)) : fecha.slice(0, 10))
 
 const porUrgencia = (a: DeSuCargo, b: DeSuCargo): number => {
   const urgencia = (x: DeSuCargo) => URGENCIA[texto(x.registro, 'deadline_status')] ?? 2
@@ -52,7 +62,8 @@ const porUrgencia = (a: DeSuCargo, b: DeSuCargo): number => {
 const nombreDe = ({ objeto, registro }: DeSuCargo): string => {
   if (objeto === 'task') return texto(registro, 'title') || registro.id
   if (objeto === 'commitment') return [texto(registro, 'code'), texto(registro, 'title')].filter(Boolean).join(' · ') || registro.id
-  return texto(registro, 'code') || registro.id
+  // una QCS dice también lo que plantea (tercera pasada de UX, 3.2): el código solo no dice de qué se trata
+  return [texto(registro, 'code'), tituloQueDiceQueEs(texto(registro, 'description'), '')].filter(Boolean).join(' · ') || registro.id
 }
 
 export function LoQueMeToca() {
@@ -75,6 +86,18 @@ export function LoQueMeToca() {
     : []
   const consultados = vigentes.slice(0, TOPE_DE_PROYECTOS)
   const pedir = usePedir()
+  // el estado de cada entrada con el rótulo de su flujo, pedido solo de lo que la cuenta lee; sin el flujo legible, la entrada no
+  // lo dice
+  const leido = (objeto: string) => (can(objeto, 'READ') ? objeto : undefined)
+  const etiquetas: Record<string, Record<string, string>> = {
+    task: useEtiquetasDeEstado(leido('task')),
+    commitment: useEtiquetasDeEstado(leido('commitment')),
+    grievance: useEtiquetasDeEstado(leido('grievance')),
+    inquiry: useEtiquetasDeEstado(leido('inquiry')),
+    stakeholder_request: useEtiquetasDeEstado(leido('stakeholder_request'))
+  }
+  // lo que se acaba de tomar en la línea: la tarea pasa a «A su cargo» y aquí se dice
+  const [tomada, setTomada] = useState<string | null>(null)
   const colas = useQueries({
     queries: consultados.map((proyecto) => {
       const busqueda = consulta({
@@ -89,22 +112,42 @@ export function LoQueMeToca() {
     })
   })
 
+  // al día (tercera pasada de UX, 4.8): lo a su cargo y lo para tomar se releen al volver a la pestaña, y la sección dice cuánto
+  // hace que se leyó lo más viejo, con «Actualizar»
+  const ahora = useAhora()
+  const releer = () => {
+    trabajo.releer()
+    if (leeTareas) void enSusProyectos.refetch()
+    for (const cola of colas) void cola.refetch()
+  }
+  useReleerAlVolver(releer, trabajo.actualizado)
+  const minutos = trabajo.actualizado !== null ? minutosDesde(trabajo.actualizado, ahora) : null
+  const actualizado =
+    minutos === null
+      ? null
+      : minutos === 0
+        ? t('miDia.hoy.actualizadoAhora')
+        : minutos < 60
+          ? t('miDia.hoy.actualizadoMinutos', { n: minutos })
+          : t('miDia.hoy.actualizadoHoras', { count: Math.floor(minutos / 60) })
   const nombreDelProyecto = (id: string): string | null => {
     const registro = (proyectos.data ?? []).find((p) => p.id === id)
     return registro ? nombreDeProyecto(registro) : null
   }
-  // el motivo de una entrada: qué es, de qué proyecto (en la cola de sus proyectos) y en qué situación de plazo está; y cuándo
-  // vence o venció
-  const entrada = (item: DeSuCargo, tipo: string, proyecto?: string | null): EntradaPriorizada => {
+  // el motivo de una entrada: qué es, de qué proyecto, en qué estado (tercera pasada de UX, 3.2) y en qué situación de plazo está;
+  // y cuándo vence o venció. una tarea para tomar lleva «Tomar» en la línea
+  const entrada = (item: DeSuCargo, tipo: string, proyecto?: string | null, paraTomar = false): EntradaPriorizada => {
     const situacion = texto(item.registro, 'deadline_status')
     const fecha = fechaDe(item)
+    const estado = paraTomar ? '' : (etiquetas[item.objeto]?.[item.registro.state ?? ''] ?? '')
     return {
       clave: `${item.objeto}-${item.registro.id}`,
       titulo: nombreDe(item),
       a: rutaDeFicha(item.objeto, item.registro) ?? '/tasks',
-      motivo: [tipo, proyecto ?? '', situacion ? rotuloDeOpcion(situacion) : ''].filter(Boolean).join(' · '),
-      cuando: fecha ? t(situacion === 'VENCIDO' ? 'miDia.hoy.vencio' : 'miDia.hoy.vence', { fecha: textoDeDia(fecha) }) : undefined,
-      tono: TONO[situacion] ?? 'neutro'
+      motivo: [tipo, proyecto ?? '', estado, situacion ? rotuloDeOpcion(situacion) : ''].filter(Boolean).join(' · '),
+      cuando: fecha ? t(situacion === 'VENCIDO' ? 'miDia.hoy.vencio' : 'miDia.hoy.vence', { fecha: diaLegible(fecha) }) : undefined,
+      tono: TONO[situacion] ?? 'neutro',
+      accion: paraTomar ? <TomarTarea tarea={item.registro} alTomar={(r) => setTomada(texto(r, 'title'))} /> : undefined
     }
   }
 
@@ -128,7 +171,7 @@ export function LoQueMeToca() {
               pagina,
               limite: POR_PROYECTO,
               a: `/projects/${encodeURIComponent(proyecto)}/tasks`,
-              entradas: pagina.content.map((registro) => entrada({ objeto: 'task', registro }, sinAsignar))
+              entradas: pagina.content.map((registro) => entrada({ objeto: 'task', registro }, sinAsignar, null, true))
             }
           ]
         })
@@ -141,7 +184,7 @@ export function LoQueMeToca() {
               limite: PARA_TOMAR,
               a: '/tasks',
               entradas: enSusProyectos.data.content.map((registro) =>
-                entrada({ objeto: 'task', registro }, sinAsignar, nombreDelProyecto(texto(registro, 'project')))
+                entrada({ objeto: 'task', registro }, sinAsignar, nombreDelProyecto(texto(registro, 'project')), true)
               )
             }
           ]
@@ -153,25 +196,49 @@ export function LoQueMeToca() {
       titulo={t('miDia.hoy.titulo')}
       descripcion={t('miDia.hoy.descripcion')}
       acciones={
-        leeTareas ? (
-          <Link to="/tasks" className="text-sg-body-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
-            {t('miDia.hoy.verTareas')}
-          </Link>
-        ) : undefined
+        <>
+          {actualizado ? (
+            <span className="flex items-center gap-2 text-sg-caption text-sg-text-muted">
+              {actualizado}
+              <button type="button" className="text-sg-primary-text underline" onClick={releer}>
+                {t('miDia.hoy.actualizar')}
+              </button>
+            </span>
+          ) : null}
+          {leeTareas ? (
+            <Link to="/tasks" className="text-sg-body-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
+              {t('miDia.hoy.verTareas')}
+            </Link>
+          ) : null}
+        </>
       }
     >
       {trabajo.lee ? (
         trabajo.cargando ? (
           <Cargando compacto />
         ) : (
-          <ListaPriorizada
-            titulo={t('miDia.hoy.aCargo')}
-            total={aCargo.length}
-            limite={A_LA_VISTA}
-            vacio={t('miDia.hoy.nada')}
-            entradas={aCargo.map((item) => entrada(item, t(`miDia.tipos.${item.objeto}`)))}
-          />
+          <>
+            {/* una lectura que falló se dice con su reintento; con alguna fallida, la lista vacía no dice «nada pendiente» */}
+            {trabajo.fallidas.map((f) => (
+              <div key={f.objeto} className="space-y-2">
+                <p className="text-sm text-sg-text-secondary">{t('miDia.hoy.noSeLeyo', { que: t(`miDia.fuentes.${f.objeto}`) })}</p>
+                <FalloDeLectura error={f.error} alReintentar={f.reintentar} />
+              </div>
+            ))}
+            <ListaPriorizada
+              titulo={t('miDia.hoy.aCargo')}
+              total={aCargo.length}
+              limite={A_LA_VISTA}
+              vacio={trabajo.fallidas.length > 0 ? undefined : t('miDia.hoy.nada')}
+              entradas={aCargo.map((item) => entrada(item, t(`miDia.tipos.${item.objeto}`), nombreDelProyecto(texto(item.registro, 'project'))))}
+            />
+          </>
         )
+      ) : null}
+      {tomada ? (
+        <p role="status" className="text-sm text-sg-success">
+          {t('miDia.hoy.tomada', { titulo: tomada })}
+        </p>
       ) : null}
       {paraTomar.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">

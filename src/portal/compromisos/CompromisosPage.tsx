@@ -4,7 +4,7 @@ import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { SelectorDeGrupo, useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Pagination } from '@wasichai/ui'
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
@@ -12,7 +12,7 @@ import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente } from '../componentes/ordenEnCliente'
@@ -31,7 +31,7 @@ import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { Candidatos } from './Candidatos'
-import { Dia } from '../componentes/Dia'
+import { FechaDePlazo } from '../componentes/CuandoVence'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 
@@ -112,12 +112,8 @@ export function CompromisosPage() {
     ...(q ? [{ clave: 'q', etiqueta: t('compromisos.filtroBusqueda', { texto: busqueda }) }] : [])
   ]
   const limpiar = () => lista.cambiar({ state: null, q: null, stakeholder: null })
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    lista.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL, ['codigo', 'compromiso', 'vence'])
   // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
   const navegar = useNavigate()
   const previa = useRutaDeVistaPrevia()
@@ -209,7 +205,7 @@ export function CompromisosPage() {
       case 'situacion':
         return <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
       case 'vence':
-        return <Dia valor={texto(c, 'due_date')} />
+        return <FechaDePlazo dia={texto(c, 'due_date')} situacion={atributo(c, 'deadline_status')} />
       case 'responsable':
         return <Persona correo={texto(c, 'owner_user_email')} />
       default:
@@ -296,7 +292,8 @@ export function CompromisosPage() {
             chips.length > 0 ? (
               <VacioDeLista conFiltros alLimpiar={limpiar} sinFiltros={sinFiltros} />
             ) : (
-              <Vacio titulo={t('compromisos.vacio')} />
+              // cómo se empieza, sin otro botón: «Nuevo compromiso» ya está en la cabecera (tercera pasada de UX, 3.12)
+              <Vacio titulo={t('compromisos.vacio')}>{t('compromisos.comoEmpezar')}</Vacio>
             )
           ) : (
             // el resultado de la vista con sus filtros (flujo F-C): la ficha abierta desde aquí dice «Volver a Compromisos (N)»
@@ -311,7 +308,7 @@ export function CompromisosPage() {
                     plazo: (
                       <>
                         <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
-                        <Dia valor={texto(c, 'due_date')} />
+                        <FechaDePlazo dia={texto(c, 'due_date')} situacion={atributo(c, 'deadline_status')} />
                       </>
                     ),
                     proyecto: proyecto ? undefined : nombreDelProyecto(texto(c, 'project'))

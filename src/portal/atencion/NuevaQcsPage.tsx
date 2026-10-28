@@ -18,9 +18,12 @@ import { useMisAsignaciones, useProyecto } from '../contexto/proyectos'
 import { esQcs, OBJETOS_DE_QCS, rutaDeQcs, SEVERIDADES_GRAVES, type ObjetoDeQcs } from '../datos/atencion'
 import { ahoraEnLima, instanteDeLima, textoDeDia } from '../datos/fechas'
 import { rotuloDeOpcion } from '../datos/opciones'
-import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
+import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { Seccion } from '../componentes/Seccion'
+import { conHecho } from '../componentes/AvisoDeExito'
+import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
+import { leerBorrador, useBorradorLocal, useClaveDelBorrador } from '../datos/borrador'
 
 // los campos que, escritos, son cambios por perder al salir (la fecha de recepción ya viene propuesta)
 const CON_CAMBIOS = ['code', 'channel', 'category', 'description', 'priority', 'severity', 'request_medium', 'requested_resource'] as const
@@ -93,6 +96,27 @@ interface Valores {
   request_medium: string
   requested_resource: string
 }
+const VALORES_VACIOS: Valores = {
+  code: '',
+  channel: '',
+  received_at: '',
+  category: '',
+  description: '',
+  priority: '',
+  severity: '',
+  request_medium: '',
+  requested_resource: ''
+}
+
+// el borrador del alta en este navegador (tercera pasada de UX, 2.4): lo escrito, el tipo, la recepción y el grupo de interés. el
+// código y la fecha de recepción propuestos no se guardan (al volver se proponen de nuevo); la persona, que es restringida, nunca;
+// y una QCS confidencial no deja borrador
+interface BorradorDeQcs extends Valores {
+  tipo: string
+  anonima: boolean
+  motivo: string
+  responsable: Usuaria | null
+}
 
 function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const { t } = useTranslation(NS)
@@ -103,7 +127,17 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const mensaje = useMensajeDeError()
   const erroresDeCampo = useErroresDeCampo()
   const pedido = busqueda.get('type') ?? ''
-  const [tipo, setTipo] = useState<ObjetoDeQcs>(esQcs(pedido) && tipos.includes(pedido) ? pedido : tipos[0])
+  const origen = busqueda.get('origin_engagement')
+  const claveDelBorrador = useClaveDelBorrador('qcs', projectId, origen)
+  const [recuperado] = useState(() => leerBorrador<BorradorDeQcs>(claveDelBorrador))
+  const [avisoDeBorrador, setAvisoDeBorrador] = useState(recuperado !== null)
+  const previo = recuperado?.valores
+  // el tipo pedido por la URL gana al del borrador
+  const [tipo, setTipo] = useState<ObjetoDeQcs>(() => {
+    if (esQcs(pedido) && tipos.includes(pedido)) return pedido
+    const delBorrador = previo?.tipo ?? ''
+    return esQcs(delBorrador) && tipos.includes(delBorrador) ? delBorrador : tipos[0]
+  })
   const crearQueja = useCrear('grievance')
   const crearConsulta = useCrear('inquiry')
   const crearSolicitud = useCrear('stakeholder_request')
@@ -111,18 +145,18 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const definicion = useDefinicion(tipo)
   const proyecto = useProyecto(projectId)
   const grupos = useTodos('stakeholder', { project: projectId })
-  const origen = busqueda.get('origin_engagement')
-  const [valores, setValores] = useState<Valores>({
-    code: '',
-    channel: '',
-    received_at: ahoraEnLima(),
-    category: '',
-    description: '',
-    priority: '',
-    severity: '',
-    request_medium: '',
-    requested_resource: ''
-  })
+  const [recepcionPropuesta, setRecepcionPropuesta] = useState(ahoraEnLima)
+  const [valores, setValores] = useState<Valores>(() => ({
+    code: previo?.code ?? '',
+    channel: previo?.channel ?? '',
+    received_at: previo?.received_at || recepcionPropuesta,
+    category: previo?.category ?? '',
+    description: previo?.description ?? '',
+    priority: previo?.priority ?? '',
+    severity: previo?.severity ?? '',
+    request_medium: previo?.request_medium ?? '',
+    requested_resource: previo?.requested_resource ?? ''
+  }))
   // el código que propone el backend para el tipo elegido (decisión 6 de la revisión de UX), editable: cambia con el tipo mientras
   // la persona no lo haya tocado, y no cuenta como un cambio por avisar al salir
   const codigoPropuesto = useCodigoPropuesto(tipo, projectId).codigo
@@ -134,13 +168,33 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     ultimoPropuesto.current = codigoPropuesto
     setValores((v) => (v.code === '' || v.code === anterior ? { ...v, code: codigoPropuesto } : v))
   }, [codigoPropuesto])
-  const [anonima, setAnonima] = useState(false)
+  const [anonima, setAnonima] = useState(() => previo?.anonima ?? false)
   const salida = useSalidaPermitida()
   const [confidencial, setConfidencial] = useState(false)
-  const [responsable, setResponsable] = useState<Usuaria | null>(null)
-  const [grupo, setGrupo] = useState('')
+  const [responsable, setResponsable] = useState<Usuaria | null>(() => previo?.responsable ?? null)
+  const [grupo, setGrupo] = useState(() => recuperado?.elegidos?.grupo?.[0] ?? '')
+  // abierta desde una interacción (tercera pasada de UX, 2.6): su fecha de realización como recepción y, si tiene un solo grupo
+  // de interés, ese grupo. se proponen una vez, sobre lo que la persona no tocó, y no cuentan como cambios por avisar
+  const interaccion = useRegistro('engagement', origen ?? undefined)
+  const gruposDeLaInteraccion = useRelacionados('engagement', origen ?? undefined, 'engagement_stakeholder')
+  const [grupoPropuesto, setGrupoPropuesto] = useState('')
+  useEffect(() => {
+    const realizada = atributo<string>(interaccion.data, 'held_at')
+    if (!realizada) return
+    const propuesta = ahoraEnLima(new Date(realizada))
+    setValores((v) => (v.received_at === recepcionPropuesta ? { ...v, received_at: propuesta } : v))
+    setRecepcionPropuesta(propuesta)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interaccion.data])
+  useEffect(() => {
+    const vigentes = (gruposDeLaInteraccion.data?.content ?? []).filter((g) => g.state !== 'retired')
+    if (vigentes.length !== 1) return
+    setGrupoPropuesto(vigentes[0].id)
+    setGrupo((g) => g || vigentes[0].id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gruposDeLaInteraccion.data])
   const [persona, setPersona] = useState<Registro | null>(null)
-  const [motivo, setMotivo] = useState('')
+  const [motivo, setMotivo] = useState(() => previo?.motivo ?? '')
   const [actual, setActual] = useState(0)
   const [visitados, setVisitados] = useState(0)
   // los pasos que ya se intentó dejar: sus faltas se dicen junto al control
@@ -214,7 +268,11 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
       {
         onSuccess: (r) => {
           salida.current = true
-          navegar(rutaDeQcs(projectId, tipo, r.id))
+          borrador.descartar()
+          // la ficha dice lo que se hizo y lo que el modelo hizo con ello: el acuse de una queja no confidencial (AUT-02)
+          const codigo = texto(r, 'code') || valores.code.trim()
+          const hecho = [t(`nuevaQcs.hecho.${tipo}`, { codigo }), tipo === 'grievance' && !confidencial ? t('nuevaQcs.hecho.acuse') : '']
+          navegar(rutaDeQcs(projectId, tipo, r.id), { state: conHecho(null, hecho.filter(Boolean).join(' ')) })
         },
         // un error de un campo vuelve al paso donde se escribe, con su texto junto al control; si alguno no tiene paso (o no hay
         // errores de campo), el aviso queda en la revisión: nada se pierde en silencio
@@ -234,8 +292,39 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
     CON_CAMBIOS.some((c) => valores[c].trim() !== '' && !(c === 'code' && valores.code === codigoPropuesto)) ||
     motivo.trim() !== '' ||
     responsable !== null ||
-    grupo !== '' ||
+    (grupo !== '' && grupo !== grupoPropuesto) ||
     persona !== null
+  const borrador = useBorradorLocal<BorradorDeQcs>(
+    claveDelBorrador,
+    {
+      valores: {
+        ...valores,
+        code: valores.code === codigoPropuesto ? '' : valores.code,
+        received_at: valores.received_at === recepcionPropuesta ? '' : valores.received_at,
+        tipo,
+        anonima,
+        motivo,
+        responsable
+      },
+      elegidos: { grupo: grupo ? [grupo] : [] }
+    },
+    conCambios && !confidencial
+  )
+  // marcarla confidencial borra el borrador que hubiera: lo confidencial no queda en el navegador
+  useEffect(() => {
+    if (confidencial) borrador.descartar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confidencial])
+  const descartar = () => {
+    borrador.descartar()
+    setTipo(esQcs(pedido) && tipos.includes(pedido) ? pedido : tipos[0])
+    setValores({ ...VALORES_VACIOS, code: codigoPropuesto ?? '', received_at: recepcionPropuesta })
+    setAnonima(false)
+    setResponsable(null)
+    setGrupo('')
+    setMotivo('')
+    setAvisoDeBorrador(false)
+  }
   const volverA = origen
     ? `/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(origen)}`
     : `/projects/${encodeURIComponent(projectId)}/attention`
@@ -261,7 +350,9 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
         alCancelar={() => navegar(volverA)}
         ocupado={crear.isPending}
         conCambios={conCambios}
+        conBorrador={!confidencial}
         salidaPermitida={salida}
+        avisos={avisoDeBorrador && recuperado ? <AvisoDeBorrador guardado={recuperado.guardado} alDescartar={descartar} /> : null}
         acciones={
           paso === 'revision' ? (
             <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>
@@ -348,7 +439,12 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
               error={errorDe('received_at')}
             />
             <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.recibidaPor', { correo: user?.email ?? '' })}</p>
-            {origen ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.origen')}</p> : null}
+            {origen ? (
+              <p className="text-sg-caption text-sg-text-muted">
+                {t('nuevaQcs.origen')}
+                {valores.received_at === recepcionPropuesta && atributo(interaccion.data, 'held_at') ? ` ${t('nuevaQcs.recepcionDeOrigen')}` : ''}
+              </p>
+            ) : null}
             <Casilla
               etiqueta={etiqueta('anonymous')}
               ayuda={t('nuevaQcs.anonimaAyuda')}

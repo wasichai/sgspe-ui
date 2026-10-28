@@ -3,14 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { Button } from '@wasichai/ui'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, describe, expect, it } from 'vitest'
-import { montar, registro } from '../../test/montar'
+import { definicion, montar, registro } from '../../test/montar'
+import { espiarRed, type Red } from '../../test/red'
 import type { Registro } from '../datos/registros'
 import { CabeceraDeFicha, type AccionDeFicha } from './CabeceraDeFicha'
 
 // la cabecera de una ficha con la regla de la acción principal (DD-02 y DD-06 del rediseño de UX): una sola primaria, la
 // siguiente acción del flujo, con lo que falta debajo; dos secundarias a la vista como mucho; lo destructivo, en «Más acciones»
 let fetch: FetchMock | null = null
+let red: Red | null = null
 afterEach(() => {
+  red?.restaurar()
+  red = null
   fetch?.restore()
   fetch = null
 })
@@ -143,6 +147,40 @@ describe('CabeceraDeFicha', () => {
     await waitFor(() => expect(cumplimiento).toHaveAccessibleDescription('Falta una entrega con conformidad'))
   })
 
+  // tercera pasada de UX (A3 de la segunda, perdido al integrar): en «Más acciones», una transición bloqueada dice por qué a la
+  // vista, bajo su nombre; en un title o solo para lectores de pantalla no la ve nadie, y en el teléfono no hay title
+  it('una transición bloqueada en «Más acciones» dice su razón a la vista, bajo su nombre', async () => {
+    fetch = mockFetch(
+      rutas(
+        [CUMPLIMIENTO, BLOQUEAR],
+        [
+          {
+            method: 'POST',
+            path: '/sgspe/transition-checks',
+            body: { allowed: false, blocking: [{ code: 'OPEN_DEPENDENCY', message: 'Hay una dependencia abierta', field: null }], warnings: [] }
+          }
+        ]
+      )
+    )
+    montar(
+      <CabeceraDeFicha
+        antetitulo="Compromiso · C-001"
+        titulo="Reservorio de agua"
+        objeto="commitment"
+        registro={C1}
+        comprobarAntes={['block']}
+        secundarias={[accion('a', 'Uno'), accion('b', 'Dos')]}
+      />
+    )
+    await screen.findByRole('button', { name: 'Registrar cumplimiento' })
+    const mas = await abrirMas()
+    const bloquear = within(mas).getByRole('button', { name: 'Bloquear' })
+    await waitFor(() => expect(bloquear).toBeDisabled())
+    const razon = within(mas).getByText('Hay una dependencia abierta')
+    expect(razon).not.toHaveClass('sr-only')
+    expect(bloquear).toHaveAccessibleDescription('Hay una dependencia abierta')
+  })
+
   it('CA-1.2.3: la que cancela solo está en «Más acciones», y elegirla abre el diálogo de transición', async () => {
     fetch = mockFetch(rutas([CUMPLIMIENTO, BLOQUEAR, CANCELAR]))
     montar(<CabeceraDeFicha antetitulo="Compromiso · C-001" titulo="Reservorio de agua" objeto="commitment" registro={C1} />)
@@ -229,5 +267,96 @@ describe('CabeceraDeFicha', () => {
     expect(primarias()).toHaveLength(1)
     const botones = within(acciones()).getAllByRole('button')
     expect(botones.map((b) => b.textContent || b.getAttribute('aria-label'))).toEqual(['Nueva revisión', 'Editar', 'Más acciones', 'Registrar cumplimiento'])
+  })
+})
+
+// tercera pasada de UX (1.1): lo que falta se resuelve donde se informa. si una regla bloquea la siguiente acción por un campo del
+// registro que quien mira puede escribir (y que el diálogo del paso no pide: un dato de la matriz de un compromiso), junto al bloqueo
+// va «Completar ‹campo›»: abre un cajón con solo ese campo (y el motivo, si el objeto lo exige) y, al guardar, las reglas se vuelven
+// a comprobar sin recargar
+describe('CabeceraDeFicha: completar lo que falta', () => {
+  const C2 = registro('c2', { project: 'p1', code: 'C-002', objective: null, description: 'Reservorio' }, { state: 'draft' }) as Registro
+  const ENVIAR = tr('submit_for_review', 'Enviar a revisión', 'in_review', 'En revisión')
+  const FALTA = {
+    code: 'FIELD_REQUIRED',
+    message: 'Falta objective: la matriz de compromisos lo exige antes de enviar y de aprobar (D1, D2)',
+    field: 'objective'
+  }
+  const CAMPOS: [string, Record<string, unknown>][] = [
+    ['code', { label: 'Código' }],
+    ['objective', { label: 'Objetivo', type: 'LONG_TEXT' }],
+    ['description', { label: 'Descripción', type: 'LONG_TEXT' }]
+  ]
+  const rutasDelCompromiso = (campos = CAMPOS): MockRoute[] => [
+    { path: '/metadata/objects/commitment', body: { ...definicion('commitment', campos), requiresReason: true } },
+    { path: '/objects/commitment/records/c2/transitions', body: [ENVIAR] },
+    { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: false, blocking: [FALTA], warnings: [] } },
+    {
+      method: 'PUT',
+      path: '/objects/commitment/records/c2',
+      body: registro('c2', { project: 'p1', code: 'C-002', objective: 'Agua para riego', description: 'Reservorio' }, { state: 'draft' })
+    }
+  ]
+  // sinCampo: lo que falta no es un campo (un parámetro con valor por defecto no sirve: undefined lo toma)
+  const cabecera = (sinCampo = false) => (
+    <CabeceraDeFicha
+      antetitulo="Compromiso · C-002"
+      titulo="Reservorio"
+      objeto="commitment"
+      registro={C2}
+      proyecto="p1"
+      comprobarAntes={['submit_for_review']}
+      falta="Falta el objetivo."
+      faltaCampo={sinCampo ? undefined : 'objective'}
+    />
+  )
+  const transicionesDelCompromiso = () => waitFor(() => expect(fetch!.calls.some((c) => c.path.endsWith('/records/c2/transitions'))).toBe(true))
+
+  it('ofrece completar el campo junto al bloqueo y lo guarda solo, con su motivo; después vuelve a comprobar las reglas', async () => {
+    fetch = mockFetch(rutasDelCompromiso())
+    red = espiarRed()
+    montar(cabecera())
+    const enviar = await screen.findByRole('button', { name: 'Enviar a revisión' })
+    await waitFor(() => expect(enviar).toBeDisabled())
+    await userEvent.click(await screen.findByRole('button', { name: 'Completar «Objetivo»' }))
+    const cajon = await screen.findByRole('dialog', { name: 'Completar «Objetivo»' })
+    expect(cajon).toHaveAccessibleDescription('Al guardar se vuelven a comprobar las reglas de «Enviar a revisión».')
+    // solo el campo que falta: ni la descripción ni el código
+    const campo = await within(cajon).findByLabelText(/^Objetivo/)
+    expect(within(cajon).queryByLabelText(/^Descripción/)).not.toBeInTheDocument()
+    expect(within(cajon).queryByLabelText(/^Código/)).not.toBeInTheDocument()
+    await userEvent.type(campo, 'Agua para riego')
+    await userEvent.type(within(cajon).getByLabelText('Motivo (obligatorio)'), 'acuerdo de la asamblea')
+    const antes = red.a('POST', '/sgspe/transition-checks').length
+    await userEvent.click(within(cajon).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const [cambio] = red.a('PUT', '/objects/commitment/records/c2')
+    expect(cambio.cuerpo).toMatchObject({ attributes: { objective: 'Agua para riego' } })
+    expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''acuerdo%20de%20la%20asamblea")
+    await waitFor(() => expect(red!.a('POST', '/sgspe/transition-checks').length).toBeGreaterThan(antes))
+  })
+
+  it('no lo ofrece si quien mira no puede escribir ese campo', async () => {
+    fetch = mockFetch(rutasDelCompromiso([CAMPOS[0], ['objective', { label: 'Objetivo', type: 'LONG_TEXT', editable: false }], CAMPOS[2]]))
+    montar(cabecera())
+    const enviar = await screen.findByRole('button', { name: 'Enviar a revisión' })
+    await waitFor(() => expect(enviar).toBeDisabled())
+    expect(screen.getByText('Falta el objetivo.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
+  })
+
+  it('no lo ofrece a quien no puede cambiar el objeto', async () => {
+    fetch = mockFetch(rutasDelCompromiso())
+    montar(cabecera(), { permisos: { admin: false, objects: { commitment: ['READ'] } } })
+    await transicionesDelCompromiso()
+    expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
+  })
+
+  it('sin un campo que falte, no hay nada que completar', async () => {
+    fetch = mockFetch(rutasDelCompromiso())
+    montar(cabecera(true))
+    const enviar = await screen.findByRole('button', { name: 'Enviar a revisión' })
+    await waitFor(() => expect(enviar).toBeDisabled())
+    expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
   })
 })

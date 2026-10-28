@@ -25,13 +25,14 @@ import { useCapas } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
 import { capa } from '../mapa/capas'
 import { Mapa } from '../mapa/Mapa'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { useTransicionesOfrecidas } from '../transiciones/BotonesDeTransicion'
 import { vigente, PARAMETROS_F2 } from './parametros'
 import { TableroDelProyecto, useIndicadoresDelProyecto, type LecturaDeIndicador } from './TableroDelProyecto'
 import { opcion } from '../datos/opciones'
 import { ListaPriorizada, type EntradaPriorizada } from '../componentes/ListaPriorizada'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
+import { MasAcciones } from '../componentes/Pagina'
 
 // S08 · Project 360, resumen (screens.md §3): cómo está el proyecto y qué pide atención hoy. desde F8, el tablero
 // project en una sola llamada (TableroDelProyecto), repartido entre las zonas.
@@ -109,27 +110,24 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
                 <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>
               )}
             </span>
-            <span>
-              {t('p360.resumen.etapa')}: {opcion(proyecto, 'stage') || '—'}
-            </span>
-            <span>
-              {t('p360.resumen.fase')}: {opcion(proyecto, 'exploration_phase') || '—'}
-            </span>
+            {/* sin dato, la línea no se dibuja (tercera pasada de UX, como A16 en el compromiso): un «—» no dice nada */}
+            {opcion(proyecto, 'stage') ? (
+              <span>
+                {t('p360.resumen.etapa')}: {opcion(proyecto, 'stage')}
+              </span>
+            ) : null}
+            {opcion(proyecto, 'exploration_phase') ? (
+              <span>
+                {t('p360.resumen.fase')}: {opcion(proyecto, 'exploration_phase')}
+              </span>
+            ) : null}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {escribeEnElProyecto && can('engagement', 'CREATE') ? (
-            <Button asChild size="sm">
-              <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
-            </Button>
-          ) : null}
-          {proyecto.state === 'draft' && editaProyecto ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
-            </Button>
-          ) : null}
-          <BotonesDeTransicion objeto="project" registro={proyecto} proyecto={proyecto.id} sinPrimaria={escribeEnElProyecto && can('engagement', 'CREATE')} />
-        </div>
+        <AccionesDelProyecto
+          proyecto={proyecto}
+          registra={escribeEnElProyecto && can('engagement', 'CREATE')}
+          completa={proyecto.state === 'draft' && editaProyecto}
+        />
       </header>
       {/* P-03: las cinco cifras, al inicio y en una sola superficie (U-34). todas salen del tablero del proyecto: si falla, cada
           una lo dice en una línea y el aviso con «Reintentar» va una sola vez, en el tablero (D4, revisión de UX, etapa 7) */}
@@ -406,15 +404,24 @@ function Cifra({ titulo, lectura, a, tono }: CifraDeFranja) {
   else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
   else {
     const pide = tono && indicador.value > 0 ? tono : undefined
+    // un porcentaje se lee como en KpiCard (A9): el signo junto a la cifra y debajo su base, «n de N»; otra unidad va debajo
+    const porcentaje = indicador.unit === '%'
+    const dicha = `${numeroPe(indicador.value)}${porcentaje ? ' %' : ''}`
+    const conBase = indicador.numerator !== undefined && indicador.numerator !== null && Boolean(indicador.denominator)
+    const debajo = porcentaje
+      ? conBase
+        ? t('comun.nDeN', { n: numeroPe(indicador.numerator as number), total: numeroPe(indicador.denominator as number) })
+        : ''
+      : (indicador.unit ?? '')
     cuerpo = (
       <>
         <p className="flex items-center gap-1.5 text-sg-kpi font-semibold tabular-nums">
           <Link
             to={a}
-            aria-label={`${titulo}: ${numeroPe(indicador.value)}`}
+            aria-label={`${titulo}: ${dicha}`}
             className={cn('no-underline hover:underline focus-visible:underline', pide ? COLOR[pide] : 'text-sg-text')}
           >
-            {numeroPe(indicador.value)}
+            {dicha}
           </Link>
           {pide ? (
             <>
@@ -423,12 +430,7 @@ function Cifra({ titulo, lectura, a, tono }: CifraDeFranja) {
             </>
           ) : null}
         </p>
-        <p className="text-sg-caption text-sg-text-muted">
-          {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
-            ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `
-            : ''}
-          {indicador.unit ?? ''}
-        </p>
+        {debajo ? <p className="text-sg-caption text-sg-text-muted">{debajo}</p> : null}
         <NotaDeConfidenciales oculta={indicador.confidentialHidden} />
       </>
     )
@@ -437,6 +439,43 @@ function Cifra({ titulo, lectura, a, tono }: CifraDeFranja) {
     <div role="group" aria-label={titulo} className="space-y-1 rounded-sg-md p-3">
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
       {cuerpo}
+    </div>
+  )
+}
+
+// una sola primaria (A13 de la segunda pasada de UX, recuperado en la tercera): con el proyecto activo, «Registrar interacción»;
+// mientras no lo está, su decisión (enviar a revisión, aprobar, reanudar: siguienteTransicion) y «Registrar interacción» como
+// secundaria. lo demás (devolver, suspender, cerrar) y lo destructivo (anular) van en «Más acciones», lejos de la primaria
+function AccionesDelProyecto({ proyecto, registra, completa }: { proyecto: Registro; registra: boolean; completa: boolean }) {
+  const { t } = useTranslation(NS)
+  const activo = proyecto.state === 'active'
+  const transiciones = useTransicionesOfrecidas({
+    objeto: 'project',
+    registro: proyecto,
+    proyecto: proyecto.id,
+    sinPrimaria: activo && registra,
+    primariaSoloDelCamino: true
+  })
+  const registrar = (variante: 'primary' | 'secondary') => (
+    <Button asChild size="sm" variant={variante}>
+      <Link to={`/projects/${encodeURIComponent(proyecto.id)}/engagements/new`}>{t('p360.resumen.registrarInteraccion')}</Link>
+    </Button>
+  )
+  const enMenu = [...transiciones.otras, ...transiciones.destructivas]
+  return (
+    <div className="space-y-2">
+      <div role="group" aria-label={t('transiciones.acciones')} className="flex flex-wrap items-center gap-2">
+        {completa ? (
+          <Button asChild size="sm" variant="secondary">
+            <Link to={`/projects/new?draft=${encodeURIComponent(proyecto.id)}`}>{t('p360.resumen.completar')}</Link>
+          </Button>
+        ) : null}
+        {registra && !activo ? registrar('secondary') : null}
+        {enMenu.length > 0 ? <MasAcciones>{enMenu.map((x) => x.nodo)}</MasAcciones> : null}
+        {registra && activo ? registrar('primary') : transiciones.primaria?.nodo}
+      </div>
+      {transiciones.confirmacion}
+      {transiciones.dialogo}
     </div>
   )
 }

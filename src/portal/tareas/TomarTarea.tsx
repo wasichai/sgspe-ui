@@ -1,0 +1,80 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@wasichai/core'
+import { Button } from '@wasichai/ui'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useMensajeDeError } from '../componentes/errores'
+import { useEscribeEnProyecto, useEscribeEnProyectos } from '../contexto/ProyectoLayout'
+import { atributo, texto, useActualizar, type Registro } from '../datos/registros'
+import { NS } from '../i18n'
+
+// «Tomar» una tarea sin abrirla (tercera pasada de UX, 3.2): el mismo cambio de assignee_user_id con If-Match que el cajón de la
+// tarea (TareaDrawer). se ofrece a quien escribe tareas en su proyecto y solo si sigue sin asignar; si otra persona la tomó
+// antes, el 412 se dice en la línea y la lista se relee
+export function TomarTarea({ tarea, alTomar }: { tarea: Registro; alTomar?: (tarea: Registro) => void }) {
+  const { t } = useTranslation(NS)
+  const { user, can } = useAuth()
+  const escribe = useEscribeEnProyecto(texto(tarea, 'project') || undefined)
+  const tomar = useActualizar('task')
+  const mensaje = useMensajeDeError()
+  const abierta = !['done', 'cancelled'].includes(tarea.state ?? '')
+  if (!user || !abierta || atributo(tarea, 'assignee_user_id') || !escribe || !can('task', 'UPDATE')) return null
+  return (
+    <div className="space-y-1 text-right">
+      <Button
+        size="sm"
+        variant="secondary"
+        aria-label={t('tareas.tomarEnLinea', { titulo: texto(tarea, 'title') })}
+        disabled={tomar.isPending}
+        aria-busy={tomar.isPending}
+        onClick={() =>
+          tomar.mutate({ registro: tarea, cambios: { assignee_user_id: user.id, assignee_user_email: user.email } }, { onSuccess: () => alTomar?.(tarea) })
+        }
+      >
+        {tomar.isPending ? t('tareas.ficha.tomando') : t('tareas.tomar')}
+      </Button>
+      {tomar.isError ? (
+        <p role="alert" className="text-sg-caption text-sg-danger">
+          {mensaje(tomar.error)}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+// tomar varias a la vez (tercera pasada de UX, 3.3): una por una, cada una con su If-Match; la que otra persona tomó antes (412) o
+// que el servidor rechaza no detiene a las demás, y el resultado dice cuántas se tomaron y cuántas no
+export function useTomarVarias() {
+  const { user, can } = useAuth()
+  const escribeEn = useEscribeEnProyectos()
+  const tomar = useActualizar('task')
+  const cliente = useQueryClient()
+  const [tomando, setTomando] = useState(false)
+  const [resultado, setResultado] = useState<{ tomadas: number; fallidas: number } | null>(null)
+  const puedeTomar = (tarea: Registro) =>
+    Boolean(user) &&
+    can('task', 'UPDATE') &&
+    !['done', 'cancelled'].includes(tarea.state ?? '') &&
+    !atributo(tarea, 'assignee_user_id') &&
+    escribeEn(texto(tarea, 'project') || undefined)
+  const tomarVarias = async (tareas: Registro[]) => {
+    if (!user) return
+    setTomando(true)
+    setResultado(null)
+    let tomadas = 0
+    let fallidas = 0
+    for (const tarea of tareas) {
+      try {
+        await tomar.mutateAsync({ registro: tarea, cambios: { assignee_user_id: user.id, assignee_user_email: user.email } })
+        tomadas++
+      } catch {
+        fallidas++
+      }
+    }
+    // la que falló se relee también: la lista dice quién la tiene ahora
+    if (fallidas > 0) await cliente.invalidateQueries({ queryKey: ['records', 'task'] })
+    setResultado({ tomadas, fallidas })
+    setTomando(false)
+  }
+  return { puedeTomar, tomar: tomarVarias, tomando, resultado }
+}

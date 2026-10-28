@@ -134,8 +134,8 @@ describe('S41 · lista de alertas', () => {
     const consultas = () => red!.a('GET', '/objects/early_warning/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
     await userEvent.click(within(tabla).getByRole('button', { name: 'Detectada' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'detected_at', dir: 'asc', page: '0' })))
-    // el orden no escribe parámetros nuevos en la URL
-    expect(ubicacion.actual).toBe('/projects/p1/risks/warnings?view=todas')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(ubicacion.actual).toBe('/projects/p1/risks/warnings?view=todas&sort=detectada&dir=asc')
     expect(within(screen.getByRole('table', { name: 'Alertas del proyecto' })).getByRole('columnheader', { name: 'Detectada' })).toHaveAttribute(
       'aria-sort',
       'ascending'
@@ -168,7 +168,7 @@ describe('S41 · lista de alertas', () => {
     })
     const tabla = await screen.findByRole('table', { name: 'Alertas del proyecto' })
     await userEvent.click(within(tabla).getByRole('button', { name: 'Detectada' }))
-    expect(ubicacion.actual).toBe('/projects/p1/risks/warnings?view=todas')
+    expect(ubicacion.actual).toBe('/projects/p1/risks/warnings?view=todas&sort=detectada&dir=asc')
   })
 
   it('mientras carga no dice que no hay alertas', async () => {

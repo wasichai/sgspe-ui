@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
-import { useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import { RegistrosSimples } from '../componentes/RegistrosSimples'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { atributo, texto, type Registro } from '../datos/registros'
@@ -19,6 +19,8 @@ export function SenalesPage() {
   const { t } = useTranslation(NS)
   const { projectId = '', signalId } = useParams()
   const navegar = useNavigate()
+  // abrir o cerrar una señal conserva la búsqueda de la lista
+  const { search } = useLocation()
   const base = `/projects/${encodeURIComponent(projectId)}/risks/signals`
   const columnas = [
     { id: 'descripcion', encabezado: t('registrosDeAlerta.senales.columnas.descripcion'), celda: (r: Registro) => resumen(texto(r, 'description')) || '—' },
@@ -55,10 +57,14 @@ export function SenalesPage() {
         campos={CAMPOS}
         proyecto={projectId}
         abierto={signalId ?? null}
-        alAbrir={(id) => navegar(id ? `${base}/${encodeURIComponent(id)}` : base)}
+        alAbrir={(id) => navegar({ pathname: id ? `${base}/${encodeURIComponent(id)}` : base, search })}
         textoNuevo={t('registrosDeAlerta.senales.nueva')}
         textoVacio={t('registrosDeAlerta.senales.vacio')}
         ayuda={<p className="text-sg-caption text-sg-text-muted">{t('registrosDeAlerta.senales.sinNombres')}</p>}
+        busqueda={{
+          etiqueta: t('registrosDeAlerta.senales.buscar'),
+          texto: (r) => [texto(r, 'description'), opcion(r, 'source_type'), texto(r, 'reported_via')].join(' ')
+        }}
       />
     </section>
   )

@@ -131,6 +131,7 @@ function Ficha({ queja }: { queja: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={[
           ...(edita
             ? [
@@ -176,12 +177,14 @@ function Ficha({ queja }: { queja: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="grievance"
+        proyecto={proyecto}
         estado={queja.state}
         desde={texto(queja, 'state_changed_at') || null}
         por={texto(queja, 'state_changed_by') || null}
         siguiente={siguiente}
         responsable={texto(queja, 'owner_user_email')}
-        vencimiento={plazo?.fecha ?? null}
+        vencimiento={plazo ? plazo.fecha : undefined}
+        vencimientoEnHabiles={plazo?.campo === 'ack_due_date'}
         situacion={atributo(queja, 'deadline_status')}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -193,7 +196,9 @@ function Ficha({ queja }: { queja: Registro }) {
               etiqueta: t('fichaQueja.pestanas.resumen'),
               render: () => (
                 <DatosDelCaso
+                  objeto="grievance"
                   qcs={queja}
+                  editables={EDITABLES}
                   planteamiento={[{ clave: 'severity', termino: t('fichaQueja.campos.severity'), valor: opcion(queja, 'severity') }]}
                   atencion={[
                     {

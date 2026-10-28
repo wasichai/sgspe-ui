@@ -3,18 +3,21 @@ import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { QUEJA } from '../../test/atencion'
-import { montar, pagina, registro } from '../../test/montar'
+import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { RELACIONISTA } from '../../test/portal'
+import { espiarRed, type Red } from '../../test/red'
 import { baseDeRiesgos, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, INCIDENTE, RIESGO } from '../../test/riesgos'
 import { FichaIncidentePage, IncidentesPage } from './IncidentesPage'
 
 // los incidentes (screens.md §9, WF-M): la lista con «Registrar incidente» para quien crea, y la ficha con la respuesta que exige el
 // cierre (transition-checks lo dice antes), lo que generó y el alta de un riesgo con el incidente de origen
 let fetch: FetchMock | null = null
+let red: Red | null = null
 beforeEach(() => localStorage.clear())
 afterEach(() => {
+  red?.restaurar()
   fetch?.restore()
-  fetch = null
+  red = fetch = null
 })
 
 const SENAL = registro('s3', { project: 'p1', received_at: '2026-10-04T16:00:00Z', description: 'Vecinos anuncian otro bloqueo', incident: 'n1' })
@@ -54,12 +57,44 @@ describe('incidentes', () => {
       permisos: EQUIPO_DE_RIESGOS
     })
     const tabla = await screen.findByRole('table', { name: 'Incidentes del proyecto' })
-    expect(within(tabla).getByRole('link', { name: 'I-001' })).toHaveAttribute('href', '/projects/p1/incidents/n1')
+    // un incidente no tiene título: el enlace lo nombra por su código y lo que pasó (tercera pasada de UX, 3.8)
+    expect(within(tabla).getByRole('link', { name: /^I-001 Un grupo de comuneros bloqueó la vía/ })).toHaveAttribute('href', '/projects/p1/incidents/n1')
     expect(within(tabla).getByText('Bloqueo de vía')).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Registrar incidente' }))
     const drawer = await screen.findByRole('dialog', { name: 'Registrar incidente' })
     expect(await within(drawer).findByLabelText(/^code/)).toBeInTheDocument()
     expect(within(drawer).queryByLabelText(/^immediate_response/)).not.toBeInTheDocument()
+  })
+
+  // tercera pasada de UX, 3.8: la lista con el patrón común; las vistas y la búsqueda van al servidor y a la URL, y un resultado
+  // vacío con filtros ofrece quitarlos en vez de decir que no hay incidentes
+  it('las vistas por estado y la búsqueda filtran en el servidor, cuentan cada vista y el vacío ofrece limpiar', async () => {
+    fetch = mockFetch([
+      ...baseDeRiesgos(),
+      { path: /^\/objects\/incident\/records\?.*q=canal/, body: pagina([]) },
+      { path: '/objects/incident/records', body: pagina([INCIDENTE]) }
+    ])
+    red = espiarRed()
+    montar(<IncidentesPage />, {
+      ruta: '/projects/p1/incidents',
+      camino: '/projects/:projectId/incidents',
+      usuario: GESTOR_DE_RIESGOS,
+      permisos: EQUIPO_DE_RIESGOS
+    })
+    await screen.findByRole('table', { name: 'Incidentes del proyecto' })
+    expect(screen.getByText('1 incidente')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /^Abiertos/ }))
+    expect(ubicacion.actual).toBe('/projects/p1/incidents?view=abiertos')
+    await waitFor(() =>
+      expect(red!.a('GET', '/objects/incident/records').some((l) => /state=reported%2Cunder_review%2Cresponding.*page=0/.test(l.ruta))).toBe(true)
+    )
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por código, lugar o lo que pasó' }), 'canal')
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    expect(ubicacion.actual).toBe('/projects/p1/incidents?view=abiertos&q=canal')
+    // el de la barra quita la búsqueda; el del vacío, también la vista
+    await userEvent.click(screen.getAllByRole('button', { name: 'Limpiar filtros' }).at(-1)!)
+    expect(ubicacion.actual).toBe('/projects/p1/incidents')
+    expect(await screen.findByRole('table', { name: 'Incidentes del proyecto' })).toBeInTheDocument()
   })
 
   it('sin CREATE no se ofrece registrar; mientras carga no dice que no hay incidentes', async () => {
@@ -72,18 +107,26 @@ describe('incidentes', () => {
     })
     expect(screen.queryByText('No hay incidentes registrados')).not.toBeInTheDocument()
     expect(await screen.findByText('No hay incidentes registrados')).toBeInTheDocument()
+    // el vacío inicial dice cómo se empieza (tercera pasada de UX, 3.12)
+    expect(screen.getByText(/«Registrar incidente» lo anota con cuándo y dónde pasó/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Registrar incidente' })).not.toBeInTheDocument()
   })
 
-  it('la ficha dice qué pasó, que cerrar exige la respuesta (el botón sale deshabilitado con su razón) y qué generó', async () => {
+  // tercera pasada de UX (1.2 y 1.5): la ficha con la anatomía común; el título dice qué pasó y cerrar pide en su diálogo la respuesta
+  // inmediata que falta, en vez de salir bloqueado
+  it('la ficha dice qué pasó, que cerrar pide la respuesta inmediata en su diálogo y qué generó', async () => {
     fetch = mockFetch(rutasDeFicha())
     abrirFicha()
-    expect(await screen.findByRole('heading', { name: 'I-001', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText('Un grupo de comuneros bloqueó la vía durante cuatro horas')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Un grupo de comuneros bloqueó la vía durante cuatro horas', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText(/^Incidente · I-001/)).toBeInTheDocument()
     expect(screen.getAllByText('Para cerrar el incidente hacen falta la respuesta inmediata y las consecuencias.').length).toBeGreaterThan(0)
+    expect(screen.getByRole('region', { name: 'Situación' })).toBeInTheDocument()
     const cerrar = await screen.findByRole('button', { name: 'Cerrar' })
-    await waitFor(() => expect(cerrar).toBeDisabled())
-    expect(cerrar).toHaveAccessibleDescription('Falta la respuesta inmediata del incidente')
+    expect(cerrar).toHaveAttribute('data-variant', 'primary')
+    await userEvent.click(cerrar)
+    const dialogo = await screen.findByRole('dialog', { name: 'Cerrar' })
+    expect(await within(dialogo).findByLabelText('immediate_response (obligatorio)')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
     const genero = screen.getByRole('complementary', { name: 'Qué generó' })
     expect(await within(genero).findByRole('link', { name: 'R-001 · Bloqueo de la vía de acceso por la comunidad' })).toHaveAttribute(
       'href',
@@ -101,7 +144,7 @@ describe('incidentes', () => {
     const sinRiesgos = { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, social_risk: ['READ', 'UPDATE', 'EXPORT'] } }
     fetch = mockFetch(rutasDeFicha())
     const { unmount } = abrirFicha(GESTOR_DE_RIESGOS, sinRiesgos)
-    expect(await screen.findByRole('heading', { name: 'I-001', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Un grupo de comuneros bloqueó la vía durante cuatro horas', level: 1 })).toBeInTheDocument()
     // «Editar» sale con la misma guarda de proyecto: con ella resuelta, la ausencia del enlace es por el permiso
     expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Identificar un riesgo desde este incidente' })).not.toBeInTheDocument()

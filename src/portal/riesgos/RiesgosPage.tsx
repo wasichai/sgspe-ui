@@ -2,20 +2,19 @@ import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, cn, Textarea } from '@wasichai/ui'
-import { useMemo, useState, type ReactNode } from 'react'
+import { Alert, Button, cn } from '@wasichai/ui'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { CLASE_DE_TONO } from '../componentes/apariencias'
-import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
@@ -33,10 +32,12 @@ import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { NIVELES, nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
 import { opcion } from '../datos/opciones'
-import { Dia } from '../componentes/Dia'
+import { FechaDePlazo } from '../componentes/CuandoVence'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { comparable } from '../componentes/FiltroDeGrupo'
 
 // S38 y S39 · registro y matriz de riesgos (screens.md §9): qué riesgos hay, de qué nivel y cuáles piden revisión. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076). la API genérica no filtra por estado ni por situación, así que,
@@ -122,9 +123,18 @@ export function RiesgosPage() {
   // ?level=alto: los de nivel alto o crítico, como «Riesgos altos» (KPI-RSK-01) del resumen y del tablero (revisión de UX, etapa 6)
   const soloAltos = lista.filtro('level') === 'alto'
   const enLaVista = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id) && (!soloAltos || NIVELES_ALTOS.includes(texto(r, 'risk_level'))))
-  // el orden es de esta visita, como en Alertas: no viaja en la URL. la lista no se pagina: no hay página a la que volver
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const filtrados = ordenarEnCliente(celda ? enLaVista.filter((r) => celdaDe(r) === celda) : enLaVista, orden, valorDeOrden)
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva
+  const [orden, setOrden] = ordenEnUrl(lista, ORDEN_INICIAL, ['riesgo', 'puntaje', 'nivel'])
+  // la búsqueda (?q=) por código o título, sin tildes ni mayúsculas (tercera pasada de UX, 3.7); como la celda, filtra la lista y
+  // no la matriz
+  const buscadoEnUrl = lista.filtro('q').trim()
+  const buscado = comparable(buscadoEnUrl)
+  const coincide = (r: Registro) => !buscado || comparable(`${texto(r, 'code')} ${texto(r, 'title')}`).includes(buscado)
+  const filtrados = ordenarEnCliente(
+    enLaVista.filter((r) => (!celda || celdaDe(r) === celda) && coincide(r)),
+    orden,
+    valorDeOrden
+  )
   const enLaVistaSinFiltros = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id)).length
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
   const crea = proyecto !== undefined && escribe && can('social_risk', 'CREATE')
@@ -143,7 +153,8 @@ export function RiesgosPage() {
   const [p, i] = celda.split('-')
   const chips = [
     ...(soloAltos ? [{ clave: 'level', etiqueta: t('riesgos.filtroAltos') }] : []),
-    ...(celda ? [{ clave: 'cell', etiqueta: t('riesgos.filtroCelda', { p, i }) }] : [])
+    ...(celda ? [{ clave: 'cell', etiqueta: t('riesgos.filtroCelda', { p, i }) }] : []),
+    ...(buscadoEnUrl ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: buscadoEnUrl }) }] : [])
   ]
   // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el riesgo, el proyecto, el nivel, el estado y la
   // revisión; secundarias, desde xl, la categoría, P × I y el responsable. una columna no esencial que dice lo mismo en todas las
@@ -186,7 +197,7 @@ export function RiesgosPage() {
         return (
           <>
             <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-            {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
+            {texto(r, 'next_review_date') ? <FechaDePlazo dia={texto(r, 'next_review_date')} situacion={atributo(r, 'review_status')} /> : null}
           </>
         )
       default:
@@ -245,8 +256,9 @@ export function RiesgosPage() {
             alElegir={(vista) => lista.cambiar({ view: vista, cell: null })}
           />
         }
+        busqueda={{ etiqueta: t('riesgos.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
         aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
-        alLimpiar={() => lista.cambiar({ level: null, cell: null })}
+        alLimpiar={() => lista.cambiar({ level: null, cell: null, q: null })}
       />
       {riesgos.isPending ? (
         <Cargando />
@@ -269,8 +281,8 @@ export function RiesgosPage() {
           </Seccion>
           {filtrados.length === 0 ? (
             // con la celda o el nivel puestos, el vacío los quita (rediseño de UX, 2026-10-20); sin ellos, la vista está vacía
-            celda || soloAltos ? (
-              <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ cell: null, level: null })} sinFiltros={enLaVistaSinFiltros || undefined} />
+            celda || soloAltos || buscado ? (
+              <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ cell: null, level: null, q: null })} sinFiltros={enLaVistaSinFiltros || undefined} />
             ) : (
               <Vacio titulo={t('riesgos.vacio')} />
             )
@@ -298,7 +310,7 @@ export function RiesgosPage() {
                 plazo: (
                   <>
                     <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-                    {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
+                    {texto(r, 'next_review_date') ? <FechaDePlazo dia={texto(r, 'next_review_date')} situacion={atributo(r, 'review_status')} /> : null}
                   </>
                 ),
                 proyecto: proyecto ? undefined : nombreDelProyecto(texto(r, 'project'))
@@ -403,25 +415,24 @@ function MapaDeCalor({
 // el alta de un riesgo con su motivo: el formulario de la metadata con el proyecto (y el incidente de origen) fijos
 function AltaDeRiesgo({ proyecto, incidente, abierto, alCerrar }: { proyecto: string; incidente: string | null; abierto: boolean; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const fijos = useMemo(() => (incidente ? { project: proyecto, origin_incident: incidente } : { project: proyecto }), [proyecto, incidente])
   const cerrar = () => {
-    setMotivo('')
+    motivo.limpiar()
     alCerrar()
   }
   return (
     <Drawer titulo={t('riesgos.identificar')} descripcion={t('riesgos.alta.descripcion')} abierto={abierto} alCerrar={cerrar}>
       {incidente ? <Alert tone="notice">{t('riesgos.alta.desdeIncidente')}</Alert> : null}
-      <Campo etiqueta={t('comun.motivoObligatorio')} ayuda={t('riesgos.alta.motivoAyuda')}>
-        {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-      </Campo>
+      <CampoDeMotivo motivo={motivo} etiqueta={t('comun.motivoObligatorio')} ayuda={t('riesgos.alta.motivoAyuda')} />
       <p className="text-sg-caption text-sg-text-muted">{t('riesgos.alta.cadencia')}</p>
       {abierto ? (
         <FormularioDeRegistro
           objeto="social_risk"
           fijos={fijos}
           campos={CAMPOS_DEL_ALTA}
-          motivo={motivo.trim() || undefined}
+          motivo={motivo.recortado}
+          antesDeEnviar={motivo.exigir}
           alGuardar={cerrar}
           alCancelar={cerrar}
         />

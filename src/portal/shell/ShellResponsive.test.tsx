@@ -61,7 +61,8 @@ describe('shell responsive', () => {
   })
 
   // revisión de UX, etapa 1: insignias con lo que pide acción, sin cambiar el nombre de cada destino
-  it('Tareas y Avisos llevan insignias con sus tareas vencidas o por vencer y sus avisos que piden acción', async () => {
+  // tercera pasada de UX: la insignia de Avisos cuenta lo mismo que la campana, los sin leer de todo tipo
+  it('Tareas y Avisos llevan insignias con sus tareas vencidas o por vencer y sus avisos sin leer', async () => {
     fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [
       { path: '/objects/task/records', body: pagina([], { totalElements: 2 }) },
       {
@@ -75,7 +76,7 @@ describe('shell responsive', () => {
     const barra = await screen.findByRole('navigation', { name: 'Accesos rápidos' })
     // las dos lecturas de tareas (vencidas y por vencer) responden 2 cada una
     await waitFor(() => expect(within(barra).getByRole('link', { name: 'Tareas' })).toHaveAccessibleDescription('4 tareas suyas vencidas o por vencer'))
-    expect(within(barra).getByRole('link', { name: 'Avisos' })).toHaveAccessibleDescription('3 avisos sin leer que piden acción')
+    expect(within(barra).getByRole('link', { name: 'Avisos' })).toHaveAccessibleDescription('4 avisos sin leer')
     expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Tareas' })).toHaveAccessibleDescription(
       '4 tareas suyas vencidas o por vencer'
     )

@@ -6,7 +6,7 @@ import { permisos, RELACIONISTA } from '../../test/portal'
 import { MisProyectos } from './MisProyectos'
 
 // S02 «Mi día» (revisión de UX, etapa 2; P-01 del rediseño): una tarjeta por proyecto asignado con su estado, su jefatura y lo
-// que pide acción, enlazado a su lista; los de más pendientes primero; lo que la cuenta no lee es «—», nunca cero
+// que pide acción, enlazado a su lista; los de más pendientes primero; lo que la cuenta no lee no se dibuja (DD-38), nunca cero
 let fetch: FetchMock | null = null
 afterEach(() => {
   fetch?.restore()
@@ -48,14 +48,14 @@ describe('Mis proyectos', () => {
     const p2 = tarjetas[0]
     expect(within(p2).getByRole('link', { name: '3 compromisos vencidos' })).toHaveAttribute('href', '/projects/p2/commitments?view=vencidos')
     expect(within(p2).getByRole('link', { name: '1 QCS vencida' })).toHaveAttribute('href', '/projects/p2/attention?view=atencion')
-    // no lee riesgos: «—», nunca cero
-    expect(within(p2).getByText('Riesgos altos o críticos: —')).toBeInTheDocument()
+    // no lee riesgos: la línea no se dibuja (DD-38), ni «—» ni cero
+    expect(within(p2).queryByText(/^Riesgos altos o críticos/)).not.toBeInTheDocument()
     expect(within(p2).getByText(/jefa/)).toBeInTheDocument()
     expect(within(tarjetas[1]).getByText('Jefatura: Sin jefatura asignada')).toBeInTheDocument()
-    // lo que pide acción: una cifra en cero no se dibuja (U-11) y, sin ninguna, se dice; lo que no lee sigue en «—»
+    // lo que pide acción: una cifra en cero no se dibuja (U-11) y, sin ninguna, se dice; lo que no lee no se dibuja
     expect(within(tarjetas[1]).queryByText(/^0 /)).not.toBeInTheDocument()
     expect(within(tarjetas[1]).getByText('Nada pide acción')).toBeInTheDocument()
-    expect(within(tarjetas[1]).getByText('Riesgos altos o críticos: —')).toBeInTheDocument()
+    expect(within(tarjetas[1]).queryByText(/^Riesgos altos o críticos/)).not.toBeInTheDocument()
     expect(within(p2).queryByText('Nada pide acción')).not.toBeInTheDocument()
     // las cifras y el nombre no van subrayados (U-05)
     expect(within(p2).getByRole('link', { name: '3 compromisos vencidos' })).not.toHaveClass('underline')

@@ -43,7 +43,11 @@ export function useAplicarTransicion(objeto: string) {
         ['records', objeto],
         ['transitions', objeto, registro.id],
         ['history', objeto, registro.id],
-        ['transition-check', objeto, registro.id]
+        ['transition-check', objeto, registro.id],
+        // una transición puede cerrar o abrir tareas y avisos (acusar recibo cierra la de acuse; aprobar resuelve el aviso de
+        // aprobación): el inicio, Mis tareas y las insignias se releen (tercera pasada de UX)
+        ['records', 'task'],
+        ['notifications']
       ])
         void cliente.invalidateQueries({ queryKey: clave })
     }

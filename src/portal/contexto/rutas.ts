@@ -54,6 +54,7 @@ const PROYECTO_A_GLOBAL: [RegExp, string][] = [
 
 const SECCIONES_DE_PROYECTO = [
   'overview',
+  'ai-review',
   'map',
   'settings',
   'reports',
@@ -93,6 +94,22 @@ export function rutaEquivalente(pathname: string, proyecto: string | null): stri
   }
   const destino = GLOBAL_A_PROYECTO.find(([patron]) => patron.test(pathname))?.[1] ?? 'overview'
   return `${base}/${destino}`
+}
+
+// lo que se conserva de la búsqueda al cambiar de proyecto (tercera pasada de UX, 3.10): la vista, el orden, la búsqueda y los
+// filtros que no nombran un registro, y solo si se llega a la misma pantalla del otro alcance. lo que nombra un registro (el grupo
+// de interés, la tarea abierta, la vista previa, la celda de la matriz) es del proyecto anterior, y la página vuelve a la primera
+const SE_CONSERVAN = ['view', 'sort', 'dir', 'q', 'state', 'kind', 'situacion', 'level', 'month']
+const pantallaDe = (ruta: string) => ruta.replace(/^\/projects\/[^/]+/, '').replace(/\/$/, '')
+export function conBusquedaQueSeConserva(desde: string, destino: string, busqueda: URLSearchParams): string {
+  if (pantallaDe(desde) !== pantallaDe(destino)) return destino
+  const conservada = new URLSearchParams()
+  for (const clave of SE_CONSERVAN) {
+    const valor = busqueda.get(clave)
+    if (valor) conservada.set(clave, valor)
+  }
+  const texto = conservada.toString()
+  return texto ? `${destino}?${texto}` : destino
 }
 
 // el objeto del modelo detrás de cada tipo de chip de territorio

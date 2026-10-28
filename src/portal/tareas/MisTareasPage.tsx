@@ -1,6 +1,7 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { cn } from '@wasichai/ui'
 import { ChipsDeFiltro } from '../componentes/Lista'
+import { BarraDeSeleccion } from '../componentes/BarraDeSeleccion'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useLeeTodosLosProyectos, useProyectos } from '../contexto/proyectos'
@@ -27,12 +28,14 @@ import {
   type Registro
 } from '../datos/registros'
 import type { UseQueryResult } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { OrigenDeTarea, TareaDrawer } from './TareaDrawer'
+import { OrigenDeTarea, origenDe, TareaDrawer } from './TareaDrawer'
+import { TomarTarea, useTomarVarias } from './TomarTarea'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { CuandoVence, FechaDePlazo } from '../componentes/CuandoVence'
 import { sinFiltroDeAsignados, soloAsignados } from './paraTomar'
 
 // S47 · mis tareas (screens.md §11, WF-N): ¿qué tengo que hacer hoy y qué se me venció? en /tasks, las asignadas a quien mira
@@ -95,6 +98,9 @@ export function MisTareasPage() {
   const pagina = lista.pagina ? String(lista.pagina) : null
   const abrir = (tarea: Registro) => lista.cambiar({ task: tarea.id, page: pagina })
   const chips = situacion ? [{ clave: 'situacion', etiqueta: t(`tareas.contadores.${situacion === 'VENCIDO' ? 'vencidas' : 'porVencer'}`) }] : []
+  // el tablero y el calendario aplican la situación elegida, como la lista: su chip no puede quedar a la vista sin filtrar
+  const conSituacion: Parametros = situacion ? { ...mias, deadline_status: situacion } : mias
+  const verLista = () => lista.cambiar({ view: null })
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
@@ -110,7 +116,8 @@ export function MisTareasPage() {
               ['abiertas', cifras.abiertas, null]
             ] as const
           ).map(([clave, n, valor]) => {
-            const activo = vista === 'lista' && (valor ? situacion === valor : !situacion)
+            // la cifra elegida queda marcada en toda vista: el tablero y el calendario también la aplican (tercera pasada de UX)
+            const activo = valor ? situacion === valor : !situacion
             return (
               <button
                 key={clave}
@@ -133,10 +140,11 @@ export function MisTareasPage() {
         alCambiar={(vista) => lista.cambiar({ view: vista })}
       />
       {vista === 'tablero' ? (
-        <Tablero consulta={mias} alAbrir={abrir} />
+        <Tablero consulta={conSituacion} alAbrir={abrir} alVerLista={verLista} />
       ) : vista === 'calendario' ? (
         <Calendario
-          consulta={mias}
+          consulta={conSituacion}
+          alVerLista={verLista}
           mes={lista.filtro('month') || hoyEnLima().slice(0, 7)}
           alCambiarMes={(mes) => lista.cambiar({ month: mes })}
           alAbrir={abrir}
@@ -157,6 +165,7 @@ export function MisTareasPage() {
                     alAbrir={abrir}
                     etiqueta={t('tareas.grupos.paraTomar')}
                     conProyecto={!proyecto}
+                    tomables
                   />
                 </>
               )}
@@ -204,23 +213,68 @@ function GrupoDeTareas({
   )
 }
 
+// tomables: las de «Para tomar» (tercera pasada de UX, 3.3), con «Tomar» en cada fila y la elección de varias para tomarlas juntas.
+// una columna sin ningún valor en la página (el origen, la prioridad) no se dibuja
 function TablaDeTareas({
   tareas,
   vacio,
   alAbrir,
   conProyecto = false,
-  etiqueta
+  etiqueta,
+  tomables = false
 }: {
   tareas: Registro[]
   vacio: string
   alAbrir: (tarea: Registro) => void
   conProyecto?: boolean
   etiqueta?: string
+  tomables?: boolean
 }) {
   const { t } = useTranslation(NS)
   const proyectos = useProyectos()
   const telefono = useEsTelefono()
+  const [elegidas, setElegidas] = useState<Set<string>>(new Set())
+  const varias = useTomarVarias()
   if (tareas.length === 0) return <Vacio titulo={vacio} />
+  // solo lo que sigue en la página y se puede tomar: una tarea tomada o que ya no está no viaja
+  const tomablesAqui = tomables ? tareas.filter((x) => varias.puedeTomar(x)) : []
+  const deLaSeleccion = tomablesAqui.filter((x) => elegidas.has(x.id))
+  const alternar = (id: string, si: boolean) => {
+    const siguiente = new Set(elegidas)
+    if (si) siguiente.add(id)
+    else siguiente.delete(id)
+    setElegidas(siguiente)
+  }
+  const conOrigen = tareas.some((x) => origenDe(x) !== null)
+  const conPrioridad = tareas.some((x) => Boolean(opcion(x, 'priority')))
+  // la barra común de una selección (BarraDeSeleccion, 3.9): cuántas van, «Tomar N», quitar la selección y el resultado del lote
+  const seleccion =
+    tomablesAqui.length > 0 ? (
+      <BarraDeSeleccion
+        n={deLaSeleccion.length}
+        texto={t('tareas.seleccion.elegidas', { count: deLaSeleccion.length })}
+        acciones={
+          <Button
+            size="sm"
+            disabled={varias.tomando}
+            aria-busy={varias.tomando}
+            onClick={() => void varias.tomar(deLaSeleccion).then(() => setElegidas(new Set()))}
+          >
+            {varias.tomando ? t('tareas.ficha.tomando') : t('tareas.seleccion.tomar', { count: deLaSeleccion.length })}
+          </Button>
+        }
+        alQuitar={() => setElegidas(new Set())}
+        resultado={
+          varias.resultado ? (
+            <p role="status" className={cn('text-sm', varias.resultado.fallidas > 0 ? 'text-sg-warning' : 'text-sg-success')}>
+              {varias.resultado.fallidas > 0
+                ? t('tareas.seleccion.algunas', { n: varias.resultado.tomadas, count: varias.resultado.fallidas })
+                : t('tareas.seleccion.tomadas', { count: varias.resultado.tomadas })}
+            </p>
+          ) : null
+        }
+      />
+    ) : null
   if (telefono)
     return (
       <ListaEnTarjetas
@@ -241,7 +295,7 @@ function TablaDeTareas({
           plazo: (
             <>
               <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
-              <Dia valor={texto(x, 'due_date')} />
+              <FechaDePlazo dia={texto(x, 'due_date')} situacion={atributo(x, 'deadline_status')} />
             </>
           ),
           proyecto: conProyecto ? <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} /> : undefined,
@@ -250,65 +304,111 @@ function TablaDeTareas({
       />
     )
   return (
-    <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-      <Table aria-label={etiqueta ?? t('tareas.titulo')}>
-        <thead>
-          <tr>
-            {(['tarea', ...(conProyecto ? (['proyecto'] as const) : []), 'origen', 'prioridad', 'vence', 'estado'] as const).map((c) => (
-              <Th key={c} scope="col">
-                {t(`tareas.columnas.${c}`)}
-              </Th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {tareas.map((x) => {
-            return (
-              <tr key={x.id}>
-                <Td className="text-sm">
-                  <button
-                    type="button"
-                    className="text-left text-sg-primary-text underline"
-                    aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
-                    onClick={() => alAbrir(x)}
-                  >
-                    {texto(x, 'title')}
-                  </button>
-                </Td>
-                {conProyecto ? (
+    <div className="space-y-2">
+      {seleccion}
+      <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+        <Table aria-label={etiqueta ?? t('tareas.titulo')}>
+          <thead>
+            <tr>
+              {tomablesAqui.length > 0 ? (
+                <Th scope="col">
+                  <input
+                    type="checkbox"
+                    aria-label={t('tareas.seleccion.todas')}
+                    checked={deLaSeleccion.length === tomablesAqui.length}
+                    onChange={(e) => setElegidas(e.target.checked ? new Set(tomablesAqui.map((x) => x.id)) : new Set())}
+                  />
+                </Th>
+              ) : null}
+              {(
+                [
+                  'tarea',
+                  ...(conProyecto ? (['proyecto'] as const) : []),
+                  ...(conOrigen ? (['origen'] as const) : []),
+                  ...(conPrioridad ? (['prioridad'] as const) : []),
+                  'vence',
+                  'estado'
+                ] as const
+              ).map((c) => (
+                <Th key={c} scope="col">
+                  {t(`tareas.columnas.${c}`)}
+                </Th>
+              ))}
+              {tomablesAqui.length > 0 ? (
+                <Th scope="col">
+                  <span className="sr-only">{t('tareas.columnas.accion')}</span>
+                </Th>
+              ) : null}
+            </tr>
+          </thead>
+          <tbody>
+            {tareas.map((x) => {
+              const tomable = tomablesAqui.includes(x)
+              return (
+                <tr key={x.id}>
+                  {tomablesAqui.length > 0 ? (
+                    <Td>
+                      {tomable ? (
+                        <input
+                          type="checkbox"
+                          aria-label={t('tareas.seleccion.elegir', { tarea: texto(x, 'title') })}
+                          checked={elegidas.has(x.id)}
+                          onChange={(e) => alternar(x.id, e.target.checked)}
+                        />
+                      ) : null}
+                    </Td>
+                  ) : null}
                   <Td className="text-sm">
-                    <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} />
+                    <button
+                      type="button"
+                      className="text-left text-sg-primary-text underline"
+                      aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
+                      onClick={() => alAbrir(x)}
+                    >
+                      {texto(x, 'title')}
+                    </button>
                   </Td>
-                ) : null}
-                <Td className="text-sm">
-                  <OrigenDeTarea tarea={x} />
-                </Td>
-                <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td>
-                <Td className="space-x-2 text-sm">
-                  <span>
-                    <Dia valor={texto(x, 'due_date')} />
-                  </span>
-                  <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
-                </Td>
-                <Td>
-                  <EstadoChip objeto="task" estado={x.state} />
-                </Td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </Table>
+                  {conProyecto ? (
+                    <Td className="text-sm">
+                      <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} />
+                    </Td>
+                  ) : null}
+                  {conOrigen ? (
+                    <Td className="text-sm">
+                      <OrigenDeTarea tarea={x} />
+                    </Td>
+                  ) : null}
+                  {conPrioridad ? <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td> : null}
+                  <Td className="space-x-2 text-sm">
+                    <span>
+                      <Dia valor={texto(x, 'due_date')} />
+                    </span>
+                    <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
+                    {texto(x, 'due_date') && atributo(x, 'deadline_status') ? (
+                      <CuandoVence dia={texto(x, 'due_date')} className="block text-sg-caption text-sg-text-muted" />
+                    ) : null}
+                  </Td>
+                  <Td>
+                    <EstadoChip objeto="task" estado={x.state} />
+                  </Td>
+                  {tomablesAqui.length > 0 ? <Td>{tomable ? <TomarTarea tarea={x} /> : null}</Td> : null}
+                </tr>
+              )
+            })}
+          </tbody>
+        </Table>
+      </div>
     </div>
   )
 }
 
 // el tablero por estado: una columna por estado de WF-N (las canceladas no se muestran), cada una con su consulta y su total; cada
 // tarjeta abre la tarea, donde están las transiciones con el teclado y con motivo, en lugar de arrastrar (screens.md S47)
-function Tablero({ consulta, alAbrir }: { consulta: Parametros; alAbrir: (tarea: Registro) => void }) {
+function Tablero({ consulta, alAbrir, alVerLista }: { consulta: Parametros; alAbrir: (tarea: Registro) => void; alVerLista: () => void }) {
   return (
     <div className="grid gap-3 md:grid-cols-4">
       {COLUMNAS.map((estado) => (
-        <ColumnaDelTablero key={estado} consulta={consulta} estado={estado} alAbrir={alAbrir} />
+        <ColumnaDelTablero key={estado} consulta={consulta} estado={estado} alAbrir={alAbrir} alVerLista={alVerLista} />
       ))}
     </div>
   )
@@ -316,7 +416,17 @@ function Tablero({ consulta, alAbrir }: { consulta: Parametros; alAbrir: (tarea:
 
 const POR_COLUMNA = 50
 
-function ColumnaDelTablero({ consulta, estado, alAbrir }: { consulta: Parametros; estado: string; alAbrir: (tarea: Registro) => void }) {
+function ColumnaDelTablero({
+  consulta,
+  estado,
+  alAbrir,
+  alVerLista
+}: {
+  consulta: Parametros
+  estado: string
+  alAbrir: (tarea: Registro) => void
+  alVerLista: () => void
+}) {
   const { t } = useTranslation(NS)
   const lectura = useRegistros('task', { ...consulta, state: estado, sort: 'due_date', dir: 'asc', size: POR_COLUMNA })
   const tareas = lectura.data?.content ?? []
@@ -349,8 +459,11 @@ function ColumnaDelTablero({ consulta, estado, alAbrir }: { consulta: Parametros
           ))}
         </ul>
       )}
+      {/* las que no caben en la columna se ven en la lista (tercera pasada de UX: «Y N más.» no llevaba a ninguna parte) */}
       {total !== null && total > tareas.length ? (
-        <p className="text-sg-caption text-sg-text-muted">{t('tareas.masEnLaColumna', { n: numeroPe(total - tareas.length) })}</p>
+        <button type="button" onClick={alVerLista} className="text-sg-caption font-medium text-sg-primary-text hover:underline focus-visible:underline">
+          {t('tareas.verRestoEnLaLista', { n: numeroPe(total - tareas.length) })}
+        </button>
       ) : null}
     </section>
   )
@@ -367,12 +480,14 @@ function Calendario({
   consulta,
   mes,
   alCambiarMes,
-  alAbrir
+  alAbrir,
+  alVerLista
 }: {
   consulta: Parametros
   mes: string
   alCambiarMes: (mes: string) => void
   alAbrir: (tarea: Registro) => void
+  alVerLista: () => void
 }) {
   const { t, i18n } = useTranslation(NS)
   const valido = /^\d{4}-\d{2}$/.test(mes) ? mes : hoyEnLima().slice(0, 7)
@@ -426,6 +541,15 @@ function Calendario({
         )}
       </div>
       {sinFecha > 0 ? <p className="text-sm text-sg-text-muted">{t('tareas.sinFecha', { n: sinFecha })}</p> : null}
+      {/* la lectura del mes tiene tope: si lo alcanza, el calendario no las muestra todas y lo dice (tercera pasada de UX) */}
+      {delMes.truncado ? (
+        <p className="text-sm text-sg-warning">
+          {t('tareas.calendarioCortado')}{' '}
+          <button type="button" onClick={alVerLista} className="font-medium text-sg-primary-text hover:underline focus-visible:underline">
+            {t('tareas.irALaLista')}
+          </button>
+        </p>
+      ) : null}
     </section>
   )
 }

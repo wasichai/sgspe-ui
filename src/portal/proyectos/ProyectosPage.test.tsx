@@ -70,8 +70,8 @@ describe('S06 · lista de proyectos', () => {
     fetch = abrirPortal('/projects', RELACIONISTA, LECTOR, rutas())
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(screen.getByText('2 proyectos')).toBeInTheDocument()
-    // revisión de UX, etapa 3: cada vista dice cuántos tiene
-    expect(screen.getByRole('tab', { name: 'Mis proyectos' })).toHaveAccessibleDescription('2 registros')
+    // revisión de UX, etapa 3: cada vista dice cuántos tiene; desde la tercera pasada (3.8), en el selector de vistas común
+    expect(screen.getByRole('radio', { name: 'Mis proyectos, 2' })).toHaveAttribute('aria-checked', 'true')
     const [p1, p3] = filas()
     expect(await within(p1).findByText('jefa@sgspe.test')).toBeInTheDocument()
     expect(await within(p1).findByText('Perforación 2026')).toBeInTheDocument()
@@ -83,21 +83,38 @@ describe('S06 · lista de proyectos', () => {
     const lectorDeTodo = permisos({ project: ['READ', 'READ_ALL_PROJECTS'], project_assignment: ['READ'], exploration_campaign: ['READ'] })
     fetch = abrirPortal('/projects', AUDITORA, lectorDeTodo, rutas(AUDITORA))
     await waitFor(() => expect(filas()).toHaveLength(3))
-    expect(screen.getByRole('tab', { name: 'Todos' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('radio', { name: /^Todos/ })).toHaveAttribute('aria-checked', 'true')
     // «Mis proyectos» sigue a un clic
-    await userEvent.click(screen.getByRole('tab', { name: 'Mis proyectos' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Mis proyectos/ }))
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(rutaActual()).toBe('/projects?view=mine')
   })
 
   it('las vistas y los filtros viven en la URL', async () => {
     fetch = abrirPortal('/projects', RELACIONISTA, LECTOR, rutas())
-    await userEvent.click(await screen.findByRole('tab', { name: 'Todos' }))
+    await userEvent.click(await screen.findByRole('radio', { name: /^Todos/ }))
     await waitFor(() => expect(filas()).toHaveLength(3))
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Etapa' }), 'FACTIBILIDAD')
     await waitFor(() => expect(filas()).toHaveLength(1))
     expect(rutaActual()).toBe('/projects?view=all&stage=FACTIBILIDAD')
-    await userEvent.click(screen.getByRole('button', { name: 'Quitar Etapa: Factibilidad' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Etapa: Factibilidad' }))
+    await waitFor(() => expect(filas()).toHaveLength(3))
+  })
+
+  // tercera pasada de UX, 3.8: la búsqueda por código o nombre y el orden de la tabla van en la URL, como en las demás listas
+  it('busca por código o nombre y ordena con el orden en la URL', async () => {
+    fetch = abrirPortal('/projects?view=all', RELACIONISTA, LECTOR, rutas())
+    await waitFor(() => expect(filas()).toHaveLength(3))
+    expect(filas().map((f) => within(f).getAllByRole('cell')[1].textContent)).toEqual(['Pukaqaqa', 'Qorihuasi', 'Sondor'])
+    await userEvent.click(within(screen.getByRole('table', { name: 'Proyectos' })).getByRole('button', { name: 'Código' }))
+    expect(rutaActual()).toBe('/projects?view=all&sort=codigo&dir=asc')
+    await userEvent.click(within(screen.getByRole('table', { name: 'Proyectos' })).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(filas().map((f) => within(f).getAllByRole('cell')[0].textContent)).toEqual(['PRJ-03', 'PRJ-02', 'PRJ-01']))
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por código o nombre' }), 'qori')
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(within(filas()[0]).getByText('Qorihuasi')).toBeInTheDocument()
+    expect(rutaActual()).toBe('/projects?view=all&sort=codigo&dir=desc&q=qori')
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Contiene «qori»' }))
     await waitFor(() => expect(filas()).toHaveLength(3))
   })
 
@@ -200,7 +217,7 @@ describe('S06 · lista de proyectos', () => {
     expect(screen.queryByText(/Aún no hay|Sin resultados|no hay proyectos/i)).not.toBeInTheDocument()
     expect(screen.queryByText('0 proyectos')).not.toBeInTheDocument()
     // «Todos» no necesita las asignaciones propias
-    await userEvent.click(screen.getByRole('tab', { name: 'Todos' }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Todos/ }))
     await waitFor(() => expect(filas()).toHaveLength(3))
   })
 

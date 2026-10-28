@@ -38,14 +38,15 @@ import {
   atributo,
   puedeEscribir,
   puedeLeer,
+  type Registro,
   texto,
   useActualizar,
   useDefinicion,
+  usePuedeEditar,
   useRegistro,
   useRelacionados,
   useTodos,
-  useTodosConTope,
-  type Registro
+  useTodosConTope
 } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { Barras } from '../tableros/comunes'
@@ -90,6 +91,9 @@ export function FichaInteraccionPage() {
 const CAMINO = ['planned', 'scheduled', 'held', 'minutes_drafted', 'minutes_in_review', 'minutes_approved', 'closed']
 const COMPROBAR = ['close', 'close_light']
 
+// lo que «Editar» corrige: los datos de texto de la interacción
+const EDITABLES = ['title', 'objective', 'engagement_type', 'place']
+
 function Ficha({ interaccion }: { interaccion: Registro }) {
   const { t } = useTranslation(NS)
   const proyecto = String(atributo(interaccion, 'project'))
@@ -102,6 +106,10 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
   const siguiente = useSiguienteAccion('engagement', interaccion, COMPROBAR)
   const { can } = useAuth()
   const evidencias = useEvidenciasDe('engagement', interaccion.id)
+  // la interacción se puede corregir (tercera pasada de UX, 2.9): sus datos de texto, no la fecha (la mueven sus transiciones) ni
+  // los vínculos (sus pestañas); va al final de las secundarias, porque lo que nace de ella es lo más usado
+  const edita = usePuedeEditar('engagement') && escribe
+  const [editando, setEditando] = useState(false)
   return (
     <article className="space-y-4">
       <CabeceraDeFicha
@@ -129,6 +137,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={[
           // lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5): acciones de la cabecera, no un menú
           // dentro de otro (en «Más acciones» no se podría abrir)
@@ -160,7 +169,19 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
                 }
               ]
             : []),
-          ...(rutaEnElMapa('engagement', interaccion) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="engagement" registro={interaccion} /> }] : [])
+          ...(rutaEnElMapa('engagement', interaccion) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="engagement" registro={interaccion} /> }] : []),
+          ...(edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                      {t('relacionamiento.ficha.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : [])
         ]}
       />
       <AccionesDeIa
@@ -173,12 +194,11 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="engagement"
+        proyecto={proyecto}
         estado={interaccion.state}
         desde={texto(interaccion, 'state_changed_at') || null}
         por={texto(interaccion, 'state_changed_by') || null}
         siguiente={siguiente}
-        responsable={null}
-        vencimiento={null}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <PestanasDeFicha
@@ -220,6 +240,17 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         />
         <Trazabilidad interaccion={interaccion} />
       </div>
+      <Drawer titulo={t('relacionamiento.ficha.editarTitulo')} abierto={editando} alCerrar={() => setEditando(false)}>
+        {editando ? (
+          <FormularioDeRegistro
+            objeto="engagement"
+            registro={interaccion}
+            campos={EDITABLES}
+            alGuardar={() => setEditando(false)}
+            alCancelar={() => setEditando(false)}
+          />
+        ) : null}
+      </Drawer>
     </article>
   )
 }

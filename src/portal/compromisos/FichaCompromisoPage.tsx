@@ -9,11 +9,11 @@ import { useSumasDeConteos } from '../datos/conteos'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Alert, Button, Textarea } from '@wasichai/ui'
-import { useState } from 'react'
+import { Alert, Button } from '@wasichai/ui'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
-import { Campo } from '../componentes/Campo'
+import { CamposPlegables, type CampoDeFicha } from '../componentes/CamposPlegables'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Restringido } from '../componentes/Estados'
@@ -37,6 +37,7 @@ import { Verificacion } from './Verificacion'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S29 · ficha de compromiso (screens.md §7, flujos 9 a 11): la anatomía de design-system.md §6.1 con las transiciones de WF-D del
 // rol (las de envío, aprobación, cumplimiento, verificación y cierre se comprueban antes con transition-checks), las pestañas
@@ -99,12 +100,12 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   const escribe = useEscribeEnProyecto(proyecto)
   const edita = usePuedeEditar('commitment') && escribe
   const [editando, setEditando] = useState<'todo' | 'riesgo' | null>(null)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const antesDeAprobar = ANTES_DE_APROBAR.includes(compromiso.state ?? '')
   const campos = editando === 'riesgo' ? ['delay_risk_reported', 'delay_risk_note'] : antesDeAprobar ? [...EDITABLES_SIEMPRE, 'due_date'] : EDITABLES_SIEMPRE
   const cerrar = () => {
     setEditando(null)
-    setMotivo('')
+    motivo.limpiar()
   }
   // dónde se está: el código en las migas del proyecto (en lugar del enlace suelto a la lista); el título del documento lo pone
   // el encabezado. la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): encabezado, camino del flujo, panel de
@@ -141,6 +142,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={[
           ...(rutaEnElMapa('commitment', compromiso) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="commitment" registro={compromiso} /> }] : []),
           ...(edita
@@ -170,6 +172,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="commitment"
+        proyecto={proyecto}
         estado={compromiso.state}
         desde={texto(compromiso, 'state_changed_at') || null}
         por={texto(compromiso, 'state_changed_by') || null}
@@ -233,16 +236,15 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         abierto={editando !== null}
         alCerrar={cerrar}
       >
-        <Campo etiqueta={t('fichaCompromiso.motivo')} ayuda={t('fichaCompromiso.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <CampoDeMotivo motivo={motivo} etiqueta={t('fichaCompromiso.motivo')} ayuda={t('fichaCompromiso.motivoAyuda')} />
         {editando ? (
           <FormularioDeRegistro
             key={editando}
             objeto="commitment"
             registro={compromiso}
             campos={campos}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={cerrar}
             alCancelar={cerrar}
           />
@@ -252,63 +254,50 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   )
 }
 
-function Dato({ termino, children }: { termino: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-sg-caption text-sg-text-muted">{termino}</dt>
-      <dd>{children}</dd>
-    </div>
-  )
-}
-
 function Resumen({ compromiso }: { compromiso: Registro }) {
   const { t } = useTranslation(NS)
   const solicitantes = useRelacionados('commitment', compromiso.id, 'commitment_stakeholder')
   const proyecto = texto(compromiso, 'project')
-  // un campo de opción se ve con su rótulo; el texto libre, como se escribió
-  const valor = (campo: string) => opcion(compromiso, campo) || '—'
-  const dia = (campo: string) => (texto(compromiso, campo) ? diaPe(texto(compromiso, campo)) : '—')
+  // un campo de opción se ve con su rótulo; el texto libre, como se escribió. lo que no tiene dato se pliega tras «Mostrar los N campos
+  // sin dato» (CamposPlegables, tercera pasada de UX, 1.8): la ficha no es un muro de guiones
+  const valor = (campo: string) => opcion(compromiso, campo) || null
+  const dia = (campo: string) => (texto(compromiso, campo) ? diaPe(texto(compromiso, campo)) : null)
   const n = (campo: string) =>
-    atributo(compromiso, campo) === null || atributo(compromiso, campo) === undefined ? '—' : numeroPe(Number(atributo(compromiso, campo)))
+    atributo(compromiso, campo) === null || atributo(compromiso, campo) === undefined ? null : numeroPe(Number(atributo(compromiso, campo)))
+  const persona = (campo: string) => (texto(compromiso, campo) ? <Persona correo={texto(compromiso, campo)} /> : null)
+  const beneficiarios = ['beneficiaries_count', 'beneficiaries_female_count', 'beneficiaries_male_count'].some((c) => n(c) !== null)
+    ? t('fichaCompromiso.beneficiariosConteo', {
+        total: n('beneficiaries_count') ?? '—',
+        mujeres: n('beneficiaries_female_count') ?? '—',
+        varones: n('beneficiaries_male_count') ?? '—'
+      })
+    : null
+  const campo = (clave: string, valor: ReactNode): CampoDeFicha => ({ clave, termino: t(`fichaCompromiso.campos.${clave}`), valor })
+  const campos: CampoDeFicha[] = [
+    campo('description', valor('description')),
+    campo('objective', valor('objective')),
+    campo('resource_type', valor('resource_type')),
+    campo('cantidad', n('quantity') === null ? null : `${n('quantity')} ${texto(compromiso, 'unit')}`.trim()),
+    campo('execution_time', valor('execution_time')),
+    campo('commitment_theme', valor('commitment_theme')),
+    campo('formality', valor('formality')),
+    campo('request_medium', valor('request_medium')),
+    campo('agreed_date', dia('agreed_date')),
+    campo('due_date', dia('due_date')),
+    campo('priority', valor('priority')),
+    campo('owner', persona('owner_user_email')),
+    campo('verifier', persona('verifier_user_email')),
+    campo('beneficiarios', beneficiarios),
+    // un dato restringido no es un vacío: el candado se ve siempre
+    campo('beneficiariosDetalle', 'beneficiaries_detail' in compromiso.attributes ? valor('beneficiaries_detail') : <Restringido />),
+    ...(texto(compromiso, 'origin_justification') ? [campo('origin_justification', valor('origin_justification'))] : []),
+    ...(texto(compromiso, 'fulfilled_date') ? [campo('fulfilled_date', dia('fulfilled_date'))] : []),
+    ...(texto(compromiso, 'closed_date') ? [campo('closed_date', dia('closed_date'))] : [])
+  ]
   return (
     <div className="space-y-4 pt-3 text-sm">
       <Ejecutado compromiso={compromiso} />
-      <dl className="grid gap-3 sm:grid-cols-2">
-        <Dato termino={t('fichaCompromiso.campos.description')}>{valor('description')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.objective')}>{valor('objective')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.resource_type')}>{valor('resource_type')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.cantidad')}>
-          {n('quantity')} {texto(compromiso, 'unit')}
-        </Dato>
-        <Dato termino={t('fichaCompromiso.campos.execution_time')}>{valor('execution_time')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.commitment_theme')}>{valor('commitment_theme')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.formality')}>{valor('formality')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.request_medium')}>{valor('request_medium')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.agreed_date')}>{dia('agreed_date')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.due_date')}>{dia('due_date')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.priority')}>{valor('priority')}</Dato>
-        <Dato termino={t('fichaCompromiso.campos.owner')}>
-          <Persona correo={texto(compromiso, 'owner_user_email')} />
-        </Dato>
-        <Dato termino={t('fichaCompromiso.campos.verifier')}>
-          <Persona correo={texto(compromiso, 'verifier_user_email')} />
-        </Dato>
-        <Dato termino={t('fichaCompromiso.campos.beneficiarios')}>
-          {t('fichaCompromiso.beneficiariosConteo', {
-            total: n('beneficiaries_count'),
-            mujeres: n('beneficiaries_female_count'),
-            varones: n('beneficiaries_male_count')
-          })}
-        </Dato>
-        <Dato termino={t('fichaCompromiso.campos.beneficiariosDetalle')}>
-          {'beneficiaries_detail' in compromiso.attributes ? valor('beneficiaries_detail') : <Restringido />}
-        </Dato>
-        {texto(compromiso, 'origin_justification') ? (
-          <Dato termino={t('fichaCompromiso.campos.origin_justification')}>{valor('origin_justification')}</Dato>
-        ) : null}
-        {texto(compromiso, 'fulfilled_date') ? <Dato termino={t('fichaCompromiso.campos.fulfilled_date')}>{dia('fulfilled_date')}</Dato> : null}
-        {texto(compromiso, 'closed_date') ? <Dato termino={t('fichaCompromiso.campos.closed_date')}>{dia('closed_date')}</Dato> : null}
-      </dl>
+      <CamposPlegables campos={campos} />
       <section aria-label={t('fichaCompromiso.solicitantes')} className="space-y-1">
         <h2 className="font-semibold">{t('fichaCompromiso.solicitantes')}</h2>
         {solicitantes.isPending ? (

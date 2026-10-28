@@ -7,6 +7,7 @@ import { ZONA_DE_LIMA } from '../datos/fechas'
 import { useActualizar, useCrear, useDefinicion, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
+import { useMarcarGuardado } from './Drawer'
 import { useErroresDeCampo } from './errores'
 import { Cargando, ErrorDeCarga } from './Estados'
 
@@ -26,6 +27,8 @@ export interface FormularioDeRegistroProps {
   // los campos que se muestran, en su orden; sin la lista, todos los legibles
   campos?: readonly string[]
   motivo?: string
+  // lo que se comprueba antes de enviar (el motivo que pide la pantalla, useMotivo().exigir): en falso no se envía
+  antesDeEnviar?: () => boolean
   alGuardar?: (registro: Registro) => void
   alCancelar?: () => void
 }
@@ -94,6 +97,7 @@ export function FormularioDeRegistro({
   iniciales = SIN_FIJOS,
   campos,
   motivo,
+  antesDeEnviar,
   alGuardar,
   alCancelar
 }: FormularioDeRegistroProps) {
@@ -105,6 +109,12 @@ export function FormularioDeRegistro({
   const actualizar = useActualizar(objeto)
   const erroresDeCampo = useErroresDeCampo()
   const releer = useReleer()
+  // dentro de un cajón, lo guardado ya no es «lo escrito» que se perdería al cerrarlo (Drawer, tercera pasada de UX)
+  const marcarGuardado = useMarcarGuardado()
+  const guardado = (r: Registro) => {
+    marcarGuardado?.()
+    alGuardar?.(r)
+  }
   // en un alta, el código que propone el backend (decisión 6 de la revisión de UX), editable; DynamicForm toma sus valores al
   // montarse, así que se espera la propuesta (o su falla) antes de dibujarlo
   const proyectoDelAlta = registro ? undefined : ((fijos.project ?? iniciales.project) as string | undefined)
@@ -129,10 +139,11 @@ export function FormularioDeRegistro({
   const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: { ...conCodigo, ...iniciales, ...fijos } }
   abierto.current ??= registro
   const enviar = ({ attributes }: RecordPayload) => {
+    if (antesDeEnviar && !antesDeEnviar()) return
     if (registro) {
       const cambios = { ...cambiosRespectoDe(preparada, abierto.current ?? registro, attributes), ...fijos }
-      actualizar.mutate({ registro, cambios, motivo }, { onSuccess: alGuardar })
-    } else crear.mutate({ atributos: { ...attributes, ...fijos }, motivo }, { onSuccess: alGuardar })
+      actualizar.mutate({ registro, cambios, motivo }, { onSuccess: guardado })
+    } else crear.mutate({ atributos: { ...attributes, ...fijos }, motivo }, { onSuccess: guardado })
   }
   // el error va en un aviso que se anuncia (role="alert"), no en el párrafo mudo de DynamicForm. un 412 ofrece «Recargar»:
   // relee el registro (la ficha lo lee con useRegistro, así que le llega al formulario con su updatedAt nuevo) y DynamicForm

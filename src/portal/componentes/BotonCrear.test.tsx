@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { ADMIN_PERMISOS, ADMINISTRACION, permisos, RELACIONISTA } from '../../test/portal'
 import { BotonCrear } from './BotonCrear'
@@ -10,6 +10,7 @@ import { BotonCrear } from './BotonCrear'
 // del proyecto; con el alcance global, pide el proyecto entre los que la cuenta puede escribir (useEscribeEnProyecto: ADMIN
 // en todos, los demás con una asignación vigente), con los suyos primero
 let fetch: FetchMock | null = null
+beforeEach(() => localStorage.clear())
 afterEach(() => {
   fetch?.restore()
   fetch = null
@@ -62,6 +63,22 @@ describe('BotonCrear', () => {
     await userEvent.selectOptions(proyecto, 'p2')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Continuar' }))
     expect(ubicacion.actual).toBe('/projects/p2/commitments/new')
+  })
+
+  // tercera pasada de UX, 2.6: el diálogo propone el último proyecto elegido, si la cuenta sigue escribiendo en él
+  it('propone el último proyecto elegido para crear', async () => {
+    fetch = mockFetch(rutas([asignacion('a1', 'p1'), asignacion('a2', 'p2')]))
+    const { unmount } = montar(boton(), { ruta: '/commitments', usuario: RELACIONISTA, permisos: CREA })
+    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo compromiso' }))
+    let dialogo = await screen.findByRole('dialog', { name: '¿En qué proyecto?' })
+    await userEvent.selectOptions(within(dialogo).getByRole('combobox', { name: 'Proyecto' }), 'p2')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Continuar' }))
+    unmount()
+    montar(boton(), { ruta: '/commitments', usuario: RELACIONISTA, permisos: CREA })
+    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo compromiso' }))
+    dialogo = await screen.findByRole('dialog', { name: '¿En qué proyecto?' })
+    expect(within(dialogo).getByRole('combobox', { name: 'Proyecto' })).toHaveValue('p2')
+    expect(within(dialogo).getByRole('button', { name: 'Continuar' })).toBeEnabled()
   })
 
   it('con un solo proyecto donde escribe, va directo a su alta', async () => {

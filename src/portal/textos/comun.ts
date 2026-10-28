@@ -78,7 +78,12 @@ export const ES_COMUN = {
   recargar: 'Recargar',
   recargaFallida: 'No se pudo recargar; lo escrito se conserva.',
   // la actividad de un registro (componentes/Historia)
-  actividad: { estado: 'Estado', operaciones: { CREATE: 'Creó', UPDATE: 'Cambió', DELETE: 'Borró', ISSUE: 'Emitió' } },
+  actividad: {
+    estado: 'Estado',
+    operaciones: { CREATE: 'Creó', UPDATE: 'Cambió', DELETE: 'Borró', ISSUE: 'Emitió' },
+    // un cambio de estado con las etiquetas del flujo (tercera pasada de UX, 1.9)
+    cambioDeEstado: 'el estado: «{{de}}» → «{{a}}»'
+  },
   limpiarFiltros: 'Limpiar filtros',
   registros_one: '{{count}} registro',
   registros_other: '{{count}} registros',
@@ -91,6 +96,9 @@ export const ES_COMUN = {
   nDeN: '{{n}} de {{total}}',
   listaNoDisponible: 'Esta información no está disponible en su organización.',
   seleccionar: 'Seleccionar…',
+  // el nombre accesible de la casilla que elige un registro de una lista
+  seleccionarA: 'Seleccionar {{nombre}}',
+  esteRegistro: 'este registro',
   todos: 'Todos',
   verTodos_one: 'Ver el {{count}}',
   verTodos_other: 'Ver los {{count}}',
@@ -108,9 +116,25 @@ export const ES_COMUN = {
   vistas: 'Vistas',
   seleccionados_one: '{{n}} seleccionado',
   seleccionados_other: '{{n}} seleccionados',
+  // la barra de una selección múltiple (BarraDeSeleccion)
+  seleccion: { todos_one: 'Elegir el {{count}} de esta página', todos_other: 'Elegir los {{count}} de esta página', quitar: 'Quitar la selección' },
   personaRegistrada: 'Persona registrada',
   // F3: la situación de plazo o de vigencia (derivada por JOB-01, nunca un estado) y la elección de una persona usuaria
   situacionDePlazo: 'Situación de plazo',
+  // un plazo dicho desde hoy (CuandoVence, tercera pasada de UX)
+  cuando: {
+    hoy: 'vence hoy',
+    manana: 'vence mañana',
+    ayer: 'venció ayer',
+    futuro_one: 'vence en {{count}} día',
+    futuro_other: 'vence en {{count}} días',
+    futuroHabiles_one: 'vence en {{count}} día hábil',
+    futuroHabiles_other: 'vence en {{count}} días hábiles',
+    pasado_one: 'venció hace {{count}} día',
+    pasado_other: 'venció hace {{count}} días',
+    pasadoHabiles_one: 'venció hace {{count}} día hábil',
+    pasadoHabiles_other: 'venció hace {{count}} días hábiles'
+  },
   situacionDeVigencia: 'Situación de vigencia',
   // F4: la situación de revisión de un riesgo (review_status), los nombres de las QCS, el vínculo a un registro que quien mira
   // no lee (ADR-0029, ASM-095) y la nota de una cifra que no cuenta las confidenciales (confidentialHidden)
@@ -141,7 +165,25 @@ export const ES_COMUN = {
     identificador: '{{etiqueta}} · identificador de usuario',
     aMano:
       'Su cuenta no lista los usuarios de la organización: escriba el correo y el identificador; el sistema comprueba que nombren a alguien de su organización.',
-    noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.'
+    noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.',
+    asignarme: 'Asignarme como {{etiqueta}}'
+  },
+  editarSeccion: {
+    boton: 'Editar',
+    titulo: 'Editar «{{seccion}}»'
+  },
+  borrador: {
+    recuperado: 'Se recuperó lo que escribió el {{cuando}}.',
+    recuperadoSinFecha: 'Se recuperó lo que escribió antes.',
+    descartar: 'Descartar el borrador'
+  },
+  // el chip de una búsqueda en una lista (?q=)
+  contiene: 'Contiene «{{texto}}»',
+  eleccionDeGrupos: {
+    buscar: 'Buscar un grupo de interés',
+    elegidos_one: '{{count}} elegido',
+    elegidos_other: '{{count}} elegidos',
+    ninguno: 'Ningún grupo de interés coincide con «{{q}}».'
   },
   // la ayuda de un campo en un formulario armado desde el modelo (FormularioDeRegistro): la descripción del modelo es
   // documentación y no se muestra; aquí, la de los campos que la necesitan, por objeto
@@ -253,7 +295,7 @@ export const ES_COMUN = {
     SEGREGATION_OF_DUTIES:
       'Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.',
     SENIOR_APPROVAL_REQUIRED:
-      'Este paso lo decide un nivel superior: el compromiso nace de una mesa de diálogo o de solicitantes que lo exigen, o la queja es ALTA o CRITICA y la resuelve quien aprueba.',
+      'Este paso lo decide un nivel superior: el compromiso nace de una mesa de diálogo o de solicitantes que lo exigen, o la queja es de severidad alta o crítica y la resuelve quien aprueba.',
     INTERNAL_APPROVAL_REQUIRED: 'El proyecto exige la aprobación interna: envíelo a aprobación en lugar de la vía directa.',
     SUPPORT_CAP_EXCEEDED: 'Aprobarlo supera el tope de apoyo social de la campaña (lo aprobado en compromisos y aportes).',
     CAP_OTHER_CURRENCY: 'La campaña tiene montos en otra moneda que no se suman a su tope.',
@@ -489,7 +531,11 @@ export const EN_COMUN: typeof ES_COMUN = {
   quitar: 'Remove',
   recargar: 'Reload',
   recargaFallida: 'Could not reload; what you typed is kept.',
-  actividad: { estado: 'Status', operaciones: { CREATE: 'Created', UPDATE: 'Changed', DELETE: 'Deleted', ISSUE: 'Issued' } },
+  actividad: {
+    estado: 'Status',
+    operaciones: { CREATE: 'Created', UPDATE: 'Changed', DELETE: 'Deleted', ISSUE: 'Issued' },
+    cambioDeEstado: 'the status: “{{de}}” → “{{a}}”'
+  },
   limpiarFiltros: 'Clear filters',
   registros_one: '{{count}} record',
   registros_other: '{{count}} records',
@@ -501,6 +547,8 @@ export const EN_COMUN: typeof ES_COMUN = {
   nDeN: '{{n}} of {{total}}',
   listaNoDisponible: 'This information is not available in your organization.',
   seleccionar: 'Select…',
+  seleccionarA: 'Select {{nombre}}',
+  esteRegistro: 'this record',
   todos: 'All',
   verTodos_one: 'Show {{count}}',
   verTodos_other: 'Show all {{count}}',
@@ -518,8 +566,22 @@ export const EN_COMUN: typeof ES_COMUN = {
   vistas: 'Views',
   seleccionados_one: '{{n}} selected',
   seleccionados_other: '{{n}} selected',
+  seleccion: { todos_one: 'Select the {{count}} on this page', todos_other: 'Select all {{count}} on this page', quitar: 'Clear the selection' },
   personaRegistrada: 'Registered person',
   situacionDePlazo: 'Deadline situation',
+  cuando: {
+    hoy: 'due today',
+    manana: 'due tomorrow',
+    ayer: 'was due yesterday',
+    futuro_one: 'due in {{count}} day',
+    futuro_other: 'due in {{count}} days',
+    futuroHabiles_one: 'due in {{count}} business day',
+    futuroHabiles_other: 'due in {{count}} business days',
+    pasado_one: '{{count}} day overdue',
+    pasado_other: '{{count}} days overdue',
+    pasadoHabiles_one: '{{count}} business day overdue',
+    pasadoHabiles_other: '{{count}} business days overdue'
+  },
   situacionDeVigencia: 'Validity situation',
   situacionDeRevision: 'Review situation',
   qcs: {
@@ -547,7 +609,24 @@ export const EN_COMUN: typeof ES_COMUN = {
     correo: '{{etiqueta}} · email',
     identificador: '{{etiqueta}} · user identifier',
     aMano: 'Your account does not list the organization’s users: type the email and the identifier; the system checks they name someone in your organization.',
-    noLeido: 'The user list could not be read; type the email and the identifier.'
+    noLeido: 'The user list could not be read; type the email and the identifier.',
+    asignarme: 'Assign to me as {{etiqueta}}'
+  },
+  editarSeccion: {
+    boton: 'Edit',
+    titulo: 'Edit “{{seccion}}”'
+  },
+  borrador: {
+    recuperado: 'What you typed on {{cuando}} was recovered.',
+    recuperadoSinFecha: 'What you typed earlier was recovered.',
+    descartar: 'Discard the draft'
+  },
+  contiene: 'Contains “{{texto}}”',
+  eleccionDeGrupos: {
+    buscar: 'Search for a stakeholder group',
+    elegidos_one: '{{count}} selected',
+    elegidos_other: '{{count}} selected',
+    ninguno: 'No stakeholder group matches “{{q}}”.'
   },
   ayudas: {
     social_risk: { review_every_days: 'From 1 to 365; empty = the project’s frequency.' },
@@ -652,7 +731,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     SEGREGATION_OF_DUTIES:
       'By segregation of duties, whoever recorded a commitment, a contribution or a program does not approve it, and the owner of a commitment does not verify it.',
     SENIOR_APPROVAL_REQUIRED:
-      'A higher level decides this step: the commitment comes from a dialogue table or from requesters that need it, or the grievance is ALTA or CRITICA and the approver resolves it.',
+      'A higher level decides this step: the commitment comes from a dialogue table or from requesters that need it, or the grievance has high or critical severity and the approver resolves it.',
     INTERNAL_APPROVAL_REQUIRED: 'The project requires internal approval: submit it for approval instead of the direct path.',
     SUPPORT_CAP_EXCEEDED: 'Approving it exceeds the campaign’s social support cap (what was approved in commitments and contributions).',
     CAP_OTHER_CURRENCY: 'The campaign has amounts in another currency that are not added to its cap.',

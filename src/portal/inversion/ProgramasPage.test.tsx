@@ -231,6 +231,19 @@ describe('S42 · programas e inversión', () => {
     expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
   })
 
+  // tercera pasada de UX, 3.7: la búsqueda va al servidor con ?q= en programas y en aportes, y es un chip
+  it('buscar pide los aportes al servidor con q y «Limpiar filtros» la quita', async () => {
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+    abrir({ ruta: '/projects/p1/programs?view=todos' })
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar por código o propósito' }), 'útiles')
+    await waitFor(() => expect(red!.a('GET', '/objects/social_contribution/records').some((l) => l.ruta.includes('q=%C3%BAtiles'))).toBe(true))
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByRole('button', { name: 'Quitar el filtro Contiene «útiles»' })).toBeInTheDocument()
+    await userEvent.click(within(barra).getByRole('button', { name: 'Limpiar filtros' }))
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
+  })
+
   // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
   it('Espacio en una fila de programas o de aportes abre su vista previa, y Enter su ficha', async () => {
     fetch = mockFetch(rutas())
@@ -303,7 +316,8 @@ describe('S42 · programas e inversión', () => {
     expect(within(tabla()).queryByRole('button', { name: /^Presupuesto/ })).not.toBeInTheDocument()
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Programa' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'name', dir: 'asc', page: '0' })))
-    expect(ubicacion.actual).toBe('/projects/p1/programs')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(ubicacion.actual).toBe('/projects/p1/programs?sort=programa&dir=asc')
     await waitFor(() => expect(within(tabla()).getByRole('columnheader', { name: 'Programa' })).toHaveAttribute('aria-sort', 'ascending'))
     expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).not.toHaveAttribute('aria-sort')
     await waitFor(() => expect(within(tabla()).getAllByRole('row')).toHaveLength(26))
@@ -336,7 +350,7 @@ describe('S42 · programas e inversión', () => {
     expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('AP-001')
     expect(within(tabla()).getAllByRole('row')[2]).toHaveTextContent('AP-002')
     expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
-    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos')
+    expect(ubicacion.actual).toBe('/projects/p1/programs?view=todos&sort=codigo&dir=asc')
   })
 
   it('«Nuevo aporte» pide el motivo, propone PEN, manda el proyecto y abre la ficha del aporte creado', async () => {
@@ -363,6 +377,17 @@ describe('S42 · programas e inversión', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Nuevo aporte' }))
     const drawer = await screen.findByRole('dialog', { name: 'Nuevo aporte' })
     expect(within(drawer).getByText('Los ítems se cargan después, en la ficha del aporte, antes de enviarlo a aprobar.')).toBeInTheDocument()
+    // tercera pasada de UX, 2.11: el alta dice qué pasará antes de guardar
+    const quePasara = within(drawer).getByRole('region', { name: 'Qué pasará' })
+    expect(
+      within(quePasara)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent)
+    ).toEqual([
+      'Se registra como «Solicitado» en este proyecto.',
+      'Después, en su ficha, se cargan los ítems: su suma es el total que se aprobará.',
+      'Antes de aprobarlo se revisan los lineamientos de la organización y el tope de la campaña.'
+    ])
     // la moneda es un ENUM: un Select de Radix (combobox) que dice la opción propuesta
     expect(await within(drawer).findByLabelText(/^currency/)).toHaveTextContent('PEN')
     await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'pedido de la asociación')
@@ -371,6 +396,8 @@ describe('S42 · programas e inversión', () => {
     await userEvent.type(within(drawer).getByLabelText(/^conditions/), 'Entrega con acta')
     await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/contributions/a9'))
+    // la ficha dice lo que se registró y qué sigue (2.12)
+    expect(ubicacion.estado).toMatchObject({ hecho: 'Se registró el aporte AP-009. Siga con sus ítems: su suma es el total que se aprobará.' })
     const [alta] = red.a('POST', '/objects/social_contribution/records')
     expect(alta.cuerpo).toMatchObject({ attributes: { code: 'AP-009', currency: 'PEN', project: 'p1' } })
     expect(alta.cabeceras.get('X-Change-Reason')).toBe("UTF-8''pedido%20de%20la%20asociaci%C3%B3n")

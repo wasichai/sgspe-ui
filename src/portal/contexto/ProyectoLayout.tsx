@@ -200,7 +200,7 @@ function MasPestanas({ base, pestanas, marcada }: { base: string; pestanas: read
           id={id}
           role="group"
           aria-label={t('contexto.masPestanas')}
-          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col rounded-sg-md border border-sg-border bg-sg-surface p-1 shadow-sg-md"
+          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col rounded-sg-md border border-sg-border bg-sg-surface-raised p-1 shadow-sg-md"
         >
           {pestanas.map((p) => (
             <Link
@@ -236,4 +236,13 @@ export function useEscribeEnProyecto(projectId: string | undefined): boolean {
   const { isAdmin } = useAuth()
   const asignado = useAsignadoAlProyecto(projectId)
   return isAdmin || asignado
+}
+
+// la misma guarda para una lista con registros de varios proyectos (tomar varias tareas a la vez): dice, por proyecto, si la cuenta
+// escribe en él
+export function useEscribeEnProyectos(): (projectId: string | undefined) => boolean {
+  const { isAdmin } = useAuth()
+  const asignaciones = useMisAsignaciones()
+  const vigentes = new Set((asignaciones.data ?? []).filter((a) => vigenciaDeAsignacion(a) === 'vigente').map((a) => String(a.attributes.project)))
+  return (projectId) => isAdmin || (projectId !== undefined && vigentes.has(projectId))
 }

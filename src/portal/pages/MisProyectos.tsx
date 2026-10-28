@@ -12,15 +12,16 @@ import { NS } from '../i18n'
 
 // «Mis proyectos» del inicio (S02, revisión de UX, etapa 2; P-01 del rediseño): una tarjeta por proyecto con asignación vigente,
 // con su estado, su jefatura (ASM-080) y lo que pide acción, que lleva a su lista: compromisos vencidos, QCS vencidas y riesgos
-// altos o críticos. una cifra en cero no se dibuja (U-11) y, sin ninguna, «Nada pide acción»; una que la cuenta no lee, o que no
-// llegó, es «—», nunca cero. con más de seis, los seis con más pendientes y «Ver todos». sin subrayados (U-05)
+// altos o críticos. una cifra en cero no se dibuja (U-11) y, sin ninguna, «Nada pide acción»; una que la cuenta no lee no se
+// dibuja (DD-38: no es un dato que falte) y una que no llegó es «—», nunca cero. con más de seis, los seis con más pendientes y
+// «Ver todos». sin subrayados (U-05). los riesgos llevan a su lista ya filtrada por nivel (tercera pasada de UX, 3.11)
 const MAXIMO = 6
 const QCS = ['grievance', 'inquiry', 'stakeholder_request']
 type Cifra = 'compromisos' | 'qcs' | 'riesgos'
 const CIFRAS: { cifra: Cifra; objetos: string[]; filtros: Record<string, string | string[]>; resto: string }[] = [
   { cifra: 'compromisos', objetos: ['commitment'], filtros: { deadline_status: 'VENCIDO' }, resto: 'commitments?view=vencidos' },
   { cifra: 'qcs', objetos: QCS, filtros: { deadline_status: 'VENCIDO' }, resto: 'attention?view=atencion' },
-  { cifra: 'riesgos', objetos: ['social_risk'], filtros: { risk_level: ['ALTO', 'CRITICO'] }, resto: 'risks/register' }
+  { cifra: 'riesgos', objetos: ['social_risk'], filtros: { risk_level: ['ALTO', 'CRITICO'] }, resto: 'risks/register?level=alto' }
 ]
 
 export function MisProyectos() {
@@ -37,6 +38,7 @@ export function MisProyectos() {
     )
   )
   const sumas = useSumasDeConteos(pedidos)
+  const legibles = CIFRAS.filter(({ objetos }) => objetos.some((o) => can(o, 'READ')))
   if (mios.length === 0) return null
   const cifra = (p: Registro, c: Cifra) => sumas[`${p.id}:${c}`] ?? null
   const pendientes = (p: Registro) => CIFRAS.reduce((total, { cifra: c }) => total + (cifra(p, c) ?? 0), 0)
@@ -78,7 +80,7 @@ export function MisProyectos() {
                   : t('miDia.proyectos.sinJefatura')}
               </p>
               <ul className="space-y-0.5">
-                {CIFRAS.map(({ cifra: c, resto }) => {
+                {legibles.map(({ cifra: c, resto }) => {
                   const n = cifra(p, c)
                   if (n === 0) return null
                   return (
@@ -93,7 +95,7 @@ export function MisProyectos() {
                     </li>
                   )
                 })}
-                {CIFRAS.some(({ cifra: c }) => (cifra(p, c) ?? 0) > 0) || CIFRAS.every(({ cifra: c }) => cifra(p, c) === null) ? null : (
+                {legibles.length === 0 || !legibles.every(({ cifra: c }) => cifra(p, c) === 0) ? null : (
                   <li className="text-sg-text-secondary">{t('miDia.proyectos.nadaPideAccion')}</li>
                 )}
               </ul>

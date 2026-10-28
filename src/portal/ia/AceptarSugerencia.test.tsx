@@ -104,6 +104,8 @@ describe('S52 · aceptar una sugerencia', () => {
     expect(llamada.cabeceras.get('X-Change-Reason')).toBe("UTF-8''La%20queja%20es%20de%20empleo")
     expect(llamada.cabeceras.get('Idempotency-Key')).toBeTruthy()
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Aceptar la propuesta' })).not.toBeInTheDocument())
+    // tercera pasada de UX, 4.4: la bandeja dice que se aceptó y lleva al registro donde quedó
+    expect(await screen.findByText('Propuesta aceptada. Quedó en:')).toBeInTheDocument()
   })
 
   it('Aceptar… solo con la transición accept permitida y una fila de la lista cerrada', async () => {

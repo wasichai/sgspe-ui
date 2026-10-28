@@ -42,6 +42,8 @@ import { nivelDePuntaje, umbralesDe } from './niveles'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { EditarSeccion } from '../componentes/EditarSeccion'
 
 // S40 · ficha de riesgo (screens.md §9, flujos 14 y 15): el nivel vigente, cómo llegó ahí y qué se hace para bajarlo. «Nueva
 // revisión» es el endpoint de revisiones (api.md §4.7): las revisiones son inmutables y una se corrige con otra; la primera aplica
@@ -114,12 +116,12 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
   const revisa = escribe && can('risk_assessment', 'CREATE') && can('social_risk', 'UPDATE') && riesgo.state !== 'closed'
   const [editando, setEditando] = useState(false)
   const [revisando, setRevisando] = useState(false)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const [hecha, setHecha] = useState<string | null>(null)
   const revisiones = useTodos('risk_assessment', { social_risk: riesgo.id, sort: 'assessment_date', dir: 'desc' })
   const cerrar = () => {
     setEditando(false)
-    setMotivo('')
+    motivo.limpiar()
   }
   const cadencia = texto(riesgo, 'review_every_days')
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
@@ -162,6 +164,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         // la siguiente acción del flujo es la primaria (DD-02 del rediseño de UX); sin una del camino, la nueva revisión
         primariaPropia={
           revisa ? (
@@ -215,6 +218,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="social_risk"
+        proyecto={proyecto}
         estado={riesgo.state}
         desde={texto(riesgo, 'state_changed_at') || null}
         por={texto(riesgo, 'state_changed_by') || null}
@@ -304,16 +308,15 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
         />
       ) : null}
       <Drawer titulo={t('fichaRiesgo.editar')} abierto={editando} alCerrar={cerrar}>
-        <Campo etiqueta={t('comun.motivoObligatorio')} ayuda={t('fichaRiesgo.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <CampoDeMotivo motivo={motivo} etiqueta={t('comun.motivoObligatorio')} ayuda={t('fichaRiesgo.motivoAyuda')} />
         <p className="text-sg-caption text-sg-text-muted">{t('fichaRiesgo.cadenciaAyuda')}</p>
         {editando ? (
           <FormularioDeRegistro
             objeto="social_risk"
             registro={riesgo}
             campos={EDITABLES}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={cerrar}
             alCancelar={cerrar}
           />
@@ -357,9 +360,20 @@ function Resumen({ riesgo }: { riesgo: Registro }) {
   const { t } = useTranslation(NS)
   const adecuados = atributo(riesgo, 'controls_adequate')
   const campo = (clave: string, valor: ReactNode, ancho = false): CampoDeFicha => ({ clave, termino: t(`fichaRiesgo.campos.${clave}`), valor, ancho })
+  // cada sección con su «Editar», con los campos que muestra (tercera pasada de UX, 2.10)
+  const editar = (seccion: string, campos: readonly string[]) => (
+    <EditarSeccion
+      objeto="social_risk"
+      registro={riesgo}
+      proyecto={texto(riesgo, 'project') || undefined}
+      seccion={t(`fichaRiesgo.secciones.${seccion}`)}
+      campos={campos}
+      permitidos={EDITABLES}
+    />
+  )
   return (
     <div className="space-y-4 pt-3">
-      <Seccion titulo={t('fichaRiesgo.secciones.origen')}>
+      <Seccion titulo={t('fichaRiesgo.secciones.origen')} acciones={editar('origen', ['risk_source', 'impact_type', 'impact_nature'])}>
         <CamposPlegables
           campos={[
             campo('fuente', texto(riesgo, 'risk_source'), true),
@@ -368,7 +382,10 @@ function Resumen({ riesgo }: { riesgo: Registro }) {
           ]}
         />
       </Seccion>
-      <Seccion titulo={t('fichaRiesgo.secciones.tratamiento')}>
+      <Seccion
+        titulo={t('fichaRiesgo.secciones.tratamiento')}
+        acciones={editar('tratamiento', ['treatment_decision', 'treatment_rationale', 'current_controls', 'controls_adequate', 'monitoring_sources'])}
+      >
         <CamposPlegables
           campos={[
             campo('tratamiento', opcion(riesgo, 'treatment_decision')),

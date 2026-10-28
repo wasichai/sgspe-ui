@@ -59,6 +59,38 @@ const base = [
 ]
 
 describe('S12 · mapa territorial', () => {
+  // tercera pasada de UX, 4.3: con más de cinco lugares a la vista, la lista se busca por el nombre, sin tildes ni mayúsculas
+  it('con muchos lugares a la vista, la lista se busca por el nombre', async () => {
+    fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
+      ...base,
+      {
+        path: '/sgspe/territory/layers/LYR-02',
+        body: coleccion([
+          ['l1', 'locality', 'Tunas'],
+          ['l2', 'locality', 'Rumichaca'],
+          ['l3', 'locality', 'Huancapampa'],
+          ['l4', 'locality', 'Pariamarca'],
+          ['l5', 'locality', 'Sexemayo'],
+          ['l6', 'locality', 'Chacarúr']
+        ])
+      },
+      { path: '/sgspe/territory/layers/LYR-05', body: coleccion([]) }
+    ])
+    const lugares = await screen.findByRole('navigation', { name: 'Lugares visibles' })
+    await within(lugares).findByRole('link', { name: 'Chacarúr' })
+    await userEvent.type(within(lugares).getByRole('searchbox', { name: 'Buscar un lugar visible' }), 'chacarur')
+    await waitFor(() =>
+      expect(
+        within(lugares)
+          .getAllByRole('link')
+          .map((a) => a.textContent)
+      ).toEqual(['Chacarúr'])
+    )
+    await userEvent.clear(within(lugares).getByRole('searchbox', { name: 'Buscar un lugar visible' }))
+    await userEvent.type(within(lugares).getByRole('searchbox', { name: 'Buscar un lugar visible' }), 'xyz')
+    expect(await within(lugares).findByText('Ningún lugar visible se llama «xyz».')).toBeInTheDocument()
+  })
+
   it('lista los lugares visibles; elegir uno en el mapa abre su ficha contextual y «Abrir la ficha» lleva a S13 con el rastro', async () => {
     fetch = abrirPortal('/territory', RELACIONISTA, LEE_TERRITORIO, [
       ...base,

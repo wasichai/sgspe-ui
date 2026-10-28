@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRegistry, resolveConfig, WasichaiProviders } from '@wasichai/core'
 import { QueryClient } from '@tanstack/react-query'
@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 import { client } from '../api'
 import { crearI18n, IDIOMAS } from '../i18n'
+import { Campo } from './Campo'
 import { FormularioPorPasos } from './FormularioPorPasos'
 
 // la revisión de UX, etapa 5 (design-system.md §6.3): la misma forma para toda alta larga, con los botones siempre en su lugar y
@@ -87,5 +88,44 @@ describe('FormularioPorPasos', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Ir a la lista' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Salir' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Lista' })).toBeInTheDocument()
+  })
+
+  // tercera pasada de UX (2.3): al cambiar de paso, el foco va a su título; si el intento deja errores, al primer control inválido
+  it('al avanzar, el foco va al título del paso nuevo', async () => {
+    montar(<Alta />)
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Qué se promete' })).toHaveFocus())
+  })
+
+  it('si el intento deja errores, el foco va al primer control inválido y el paso no cambia', async () => {
+    function ConFalta() {
+      const [actual, setActual] = useState(0)
+      const [titulo, setTitulo] = useState('')
+      const [intentado, setIntentado] = useState(false)
+      return (
+        <FormularioPorPasos
+          titulo="Nuevo compromiso"
+          pasos={['Origen', 'Qué se promete']}
+          actual={actual}
+          visitados={actual}
+          alEnviar={(e) => {
+            e.preventDefault()
+            setIntentado(true)
+            if (titulo.trim()) setActual(1)
+          }}
+          alAnterior={() => setActual(0)}
+        >
+          <Campo etiqueta="Nombre del grupo">{(p) => <input {...p} />}</Campo>
+          <Campo etiqueta="Título" error={intentado && !titulo.trim() ? 'Escriba el título' : undefined}>
+            {(p) => <input {...p} value={titulo} onChange={(e) => setTitulo(e.target.value)} />}
+          </Campo>
+        </FormularioPorPasos>
+      )
+    }
+    montar(<ConFalta />)
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByText('Escriba el título')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText('Título')).toHaveFocus())
+    expect(screen.getByRole('heading', { level: 2, name: 'Origen' })).toBeInTheDocument()
   })
 })

@@ -86,6 +86,19 @@ describe('S16 · lista de grupos de interés', () => {
     await waitFor(() => expect(filas()).toHaveLength(1))
   })
 
+  // tercera pasada de UX, 3.7: buscar por el nombre que ve quien mira, sin tildes ni mayúsculas, con su chip
+  it('busca por nombre sin tildes ni mayúsculas, y la búsqueda es un chip más', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por nombre' }), 'TÚNAS')
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(filas()[0]).toHaveTextContent('Ronda campesina Tunas')
+    await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders?q=T%C3%9ANAS'))
+    expect(within(screen.getByRole('list', { name: 'Filtros aplicados' })).getByRole('listitem')).toHaveTextContent('Contiene «TÚNAS»')
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+  })
+
   it('los filtros aplicados son chips: quitar uno quita su parámetro y «Limpiar filtros» deja la vista', async () => {
     fetch = abrirPortal(
       '/projects/p1/stakeholders?view=todos&stance=EN%20CONTRA&influence_group=ESTRATEGICO',
@@ -192,7 +205,8 @@ describe('S16 · lista de grupos de interés', () => {
     expect(tabla().queryByRole('button', { name: 'Grupo de interés' })).not.toBeInTheDocument()
     expect(tabla().queryByRole('button', { name: 'Grupo de influencia' })).not.toBeInTheDocument()
     await userEvent.click(tabla().getByRole('button', { name: 'Prioridad' }))
-    expect(rutaActual()).toBe('/projects/p1/stakeholders')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?sort=prioridad&dir=asc')
     await waitFor(() => expect(filas()).toHaveLength(25))
     expect(tabla().getByRole('columnheader', { name: 'Prioridad' })).toHaveAttribute('aria-sort', 'ascending')
     expect(filas()[0]).toHaveTextContent('Media')
@@ -286,6 +300,10 @@ describe('S16 · lista de grupos de interés', () => {
   it('seleccionar varios abre el registro de interacción con ellos', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
+    // la casilla se anuncia con el nombre del grupo, nunca con su id (tercera pasada de UX)
+    await waitFor(() => expect(within(filas()[0]).getByRole('checkbox')).not.toHaveAccessibleName(/…/))
+    expect(within(filas()[0]).getByRole('checkbox')).toHaveAccessibleName(/^Seleccionar \S/)
+    expect(within(filas()[0]).getByRole('checkbox')).not.toHaveAccessibleName(/s1/)
     await userEvent.click(within(filas()[0]).getByRole('checkbox'))
     await userEvent.click(within(filas()[1]).getByRole('checkbox'))
     await userEvent.click(screen.getByRole('button', { name: 'Registrar una interacción con ellos' }))
@@ -430,6 +448,22 @@ describe('S16 · lista de grupos de interés', () => {
     expect(rutaActual()).toBe('/projects/p1/engagements/new?stakeholders=s1')
   })
 
+  // tercera pasada de UX, 3.9: la barra común de la selección ofrece elegir todos los de la página y quitar la selección
+  it('la barra de la selección elige todos los de la página y quita la selección', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(within(filas()[0]).getByRole('checkbox'))
+    const barra = screen.getByRole('region', { name: '1 seleccionado' })
+    await userEvent.click(within(barra).getByRole('button', { name: 'Elegir los 2 de esta página' }))
+    expect(screen.getByText('2 seleccionados')).toBeInTheDocument()
+    expect(filas().map((f) => (within(f).getByRole('checkbox') as HTMLInputElement).checked)).toEqual([true, true])
+    // con todos elegidos ya no se ofrece elegirlos
+    expect(screen.queryByRole('button', { name: /^Elegir los/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar la selección' }))
+    expect(screen.queryByText(/seleccionados?$/)).not.toBeInTheDocument()
+    expect(filas().map((f) => (within(f).getByRole('checkbox') as HTMLInputElement).checked)).toEqual([false, false])
+  })
+
   it('la selección se reinicia al cambiar un filtro', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
     await waitFor(() => expect(filas()).toHaveLength(2))
@@ -468,7 +502,12 @@ describe('S16 · lista de grupos de interés', () => {
         ...base()
       ])
       await waitFor(() => expect(filas()).toHaveLength(1))
-      expect(within(filas()[0]).getByRole('checkbox', { name: /pasado$/ })).toBeInTheDocument()
+      // la fila es la del grupo «pasado»: su enlace lleva a su ficha (la casilla ya no se anuncia con el id)
+      expect(
+        within(filas()[0])
+          .getAllByRole('link')
+          .some((a) => a.getAttribute('href')?.endsWith('/pasado'))
+      ).toBe(true)
     } finally {
       vi.useRealTimers()
     }

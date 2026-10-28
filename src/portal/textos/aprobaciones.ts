@@ -64,6 +64,10 @@ export const ES_APROBACIONES = {
     confirmar: 'Confirmar la decisión',
     confirmando: 'Aplicando…',
     hecha: 'Decisión registrada.',
+    quedan_one: 'Queda {{count}} por decidir.',
+    quedan_other: 'Quedan {{count}} por decidir.',
+    ninguna: 'No queda nada por decidir.',
+    siguiente: 'Ir a la siguiente',
     soloLectura: 'No tiene una asignación vigente a este proyecto: puede leer, no decidir.'
   }
 }
@@ -131,6 +135,10 @@ export const EN_APROBACIONES: typeof ES_APROBACIONES = {
     confirmar: 'Confirm the decision',
     confirmando: 'Applying…',
     hecha: 'Decision recorded.',
+    quedan_one: '{{count}} left to decide.',
+    quedan_other: '{{count}} left to decide.',
+    ninguna: 'Nothing left to decide.',
+    siguiente: 'Go to the next one',
     soloLectura: 'You have no current assignment to this project: you can read, not decide.'
   }
 }

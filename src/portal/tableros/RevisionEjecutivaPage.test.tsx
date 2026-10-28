@@ -46,12 +46,15 @@ describe('S51 · revisión ejecutiva', () => {
       )
     ).toEqual([
       ['Alertas activas', 'Proyecto Ejemplo A', '2'],
-      ['Riesgos altos o críticos', 'Proyecto Ejemplo A', '1'],
+      ['Riesgos altos', 'Proyecto Ejemplo A', '1'],
       ['Compromisos vencidos', 'Proyecto Ejemplo A', '3'],
-      ['Quejas abiertas', 'Proyecto Ejemplo B', '3'],
-      ['Quejas abiertas', 'Proyecto Ejemplo A', '1']
+      ['QCS abiertas', 'Proyecto Ejemplo B', '3'],
+      ['QCS abiertas', 'Proyecto Ejemplo A', '1']
     ])
-    expect(within(filas[0]).getByRole('link', { name: 'Alertas activas · Proyecto Ejemplo A' })).toHaveAttribute('href', '/projects/p1/risks/warnings')
+    expect(within(filas[0]).getByRole('link', { name: 'Alertas activas · Proyecto Ejemplo A' })).toHaveAttribute(
+      'href',
+      '/projects/p1/risks/warnings?view=activas'
+    )
     const tiles = screen.getByRole('region', { name: 'Indicadores de la cartera' })
     expect(within(within(tiles).getByRole('region', { name: 'Proyectos activos' })).getByText('2')).toBeInTheDocument()
     expect(within(within(tiles).getByRole('region', { name: 'Alertas activas' })).getByText('2')).toBeInTheDocument()
@@ -136,11 +139,13 @@ describe('S51 · revisión ejecutiva', () => {
     const nombres = within(tiles)
       .getAllByRole('region')
       .map((r) => r.getAttribute('aria-label'))
+    // tercera pasada de UX, 3.11: cada tile se nombra con el diccionario de cifras, el mismo del resto del portal, y no con el
+    // rótulo que trae el servidor («Quejas abiertas» en el fixture)
     expect(nombres).toEqual([
       'Proyectos activos',
       'Compromisos vencidos',
-      'Quejas abiertas',
-      'Riesgos altos y críticos',
+      'QCS abiertas',
+      'Riesgos altos',
       'Interacciones realizadas',
       'Alertas activas',
       'Compromisos abiertos',
@@ -153,6 +158,25 @@ describe('S51 · revisión ejecutiva', () => {
     expect(zonas.indexOf('Tendencia de 12 meses')).toBeLessThan(zonas.indexOf('Inversión ejecutada frente a presupuesto y topes'))
   })
 
+  // tercera pasada de UX, 4.1: cada tile que tiene una lista que cuenta lo mismo la enlaza, ya filtrada; con varios proyectos
+  // elegidos, que la lista no aplica, no se enlaza
+  it('las tiles llevan a su lista filtrada, salvo con varios proyectos elegidos o sin una lista que cuente lo mismo', async () => {
+    abrir()
+    const tiles = await screen.findByRole('region', { name: 'Indicadores de la cartera' })
+    expect(within(tiles).getByRole('link', { name: 'Compromisos vencidos: 3' })).toHaveAttribute('href', '/commitments?view=vencidos')
+    expect(within(tiles).getByRole('link', { name: 'Riesgos altos: 1' })).toHaveAttribute('href', '/risks/register?level=alto')
+    expect(within(tiles).getByRole('link', { name: /^Proyectos activos: / })).toHaveAttribute('href', '/projects?view=active')
+    // la lista de interacciones no filtra por periodo ni por realizadas: la cifra no se enlaza
+    expect(within(within(tiles).getByRole('region', { name: 'Interacciones realizadas' })).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('con varios proyectos elegidos las tiles no se enlazan', async () => {
+    abrir(TABLERO_EJECUTIVO, '/?project=p1&project=p2')
+    const tiles = await screen.findByRole('region', { name: 'Indicadores de la cartera' })
+    await within(tiles).findByRole('region', { name: 'Compromisos vencidos' })
+    expect(within(tiles).queryAllByRole('link')).toHaveLength(0)
+  })
+
   // una cifra de QCS con confidenciales ocultas lo dice, sin contarlas
   it('la tile de quejas con confidenciales ocultas lleva su nota', async () => {
     abrir({
@@ -160,7 +184,7 @@ describe('S51 · revisión ejecutiva', () => {
       indicators: TABLERO_EJECUTIVO.indicators.map((i) => (i.code === 'KPI-GRV-02' ? { ...i, confidentialHidden: true } : i))
     })
     const tiles = await screen.findByRole('region', { name: 'Indicadores de la cartera' })
-    expect(within(within(tiles).getByRole('region', { name: 'Quejas abiertas' })).getByRole('note')).toBeInTheDocument()
+    expect(within(within(tiles).getByRole('region', { name: 'QCS abiertas' })).getByRole('note')).toBeInTheDocument()
     expect(within(within(tiles).getByRole('region', { name: 'Proyectos activos' })).queryByRole('note')).not.toBeInTheDocument()
   })
 
@@ -183,7 +207,17 @@ describe('S51 · revisión ejecutiva', () => {
       within(tabla)
         .getAllByRole('columnheader')
         .map((c) => c.textContent)
-    ).toEqual(['Proyecto', ...TABLERO_EJECUTIVO.byProject[0].indicators.map((i: { label: string }) => i.label)])
+    ).toEqual([
+      'Proyecto',
+      'Proyectos activos',
+      'Compromisos abiertos',
+      'Compromisos vencidos',
+      'QCS abiertas',
+      'Riesgos altos',
+      'Interacciones realizadas',
+      'Alertas activas',
+      'Inversión social ejecutada'
+    ])
   })
 
   it('la inversión se dice por moneda, sin sumar monedas, y la tendencia en tres gráficos', async () => {

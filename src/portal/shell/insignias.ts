@@ -1,10 +1,12 @@
 import { useAuth } from '@wasichai/core'
-import { useResumenDeAvisos } from '../datos/avisos'
+import { sinLeer, useResumenDeAvisos } from '../datos/avisos'
 import { useRegistros } from '../datos/registros'
 
 // las insignias del shell (revisión de UX, etapa 1; ux-architecture.md §7.1): lo que pide acción a la persona. Tareas, las suyas
 // vencidas y por vencer (deadline_status, que JOB-01 solo calcula en las abiertas), contadas con size=1 y totalElements;
-// Avisos, los ACTION sin leer del resumen de wasichai-notifications. lo que no se puede leer no cuenta: null
+// Avisos, los sin leer del resumen de wasichai-notifications, los mismos que la campana (tercera pasada de UX: en el teléfono se
+// ven las dos y no pueden decir números distintos; lo que pide acción sigue en el inicio hasta que se hace). lo que no se puede
+// leer no cuenta: null
 export function useInsignias(): { tareas: number | null; avisos: number | null } {
   const { user, can } = useAuth()
   const yo = user?.id
@@ -15,6 +17,6 @@ export function useInsignias(): { tareas: number | null; avisos: number | null }
   const total = (a?: number | null, b?: number | null) => (a == null && b == null ? null : (a ?? 0) + (b ?? 0))
   return {
     tareas: leeTareas ? total(vencidas.data?.totalElements, porVencer.data?.totalElements) : null,
-    avisos: resumen.data?.kinds?.ACTION?.unread ?? null
+    avisos: resumen.data ? sinLeer(resumen.data) : null
   }
 }

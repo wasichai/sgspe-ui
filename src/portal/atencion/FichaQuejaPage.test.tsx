@@ -196,6 +196,24 @@ describe('S36 · ficha de queja', () => {
     expect(cambio.cuerpo).toMatchObject({ attributes: { resolution: 'Se limpió el canal' } })
   })
 
+  // tercera pasada de UX (2.2, DD-36): el motivo se valida antes de enviar, en su campo, y sin él el foco va ahí; no se espera el
+  // REASON_REQUIRED del servidor
+  it('editar sin motivo no manda el cambio: lo dice en su campo y lleva el foco ahí', async () => {
+    const queja = { ...QUEJA, attributes: { ...QUEJA.attributes, resolution: null } }
+    fetch = mockFetch(
+      rutas(queja, [{ path: '/metadata/objects/grievance', body: definicion('grievance', [['resolution', { type: 'LONG_TEXT' }], 'response']) }])
+    )
+    red = espiarRed()
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Editar el caso' })
+    await userEvent.type(await within(drawer).findByLabelText(/^resolution/), 'Se limpió el canal')
+    await userEvent.click(await within(drawer).findByRole('button', { name: /guardar|save/i }))
+    expect(await within(drawer).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
+    expect(within(drawer).getByLabelText('Motivo del cambio (obligatorio)')).toHaveFocus()
+    expect(red.a('PUT', '/objects/grievance/records/g1')).toHaveLength(0)
+  })
+
   // plan 4.2a: reclassified_from_* lo escribe solo la reclasificación (403 COMMAND_ONLY al fijarlo, cambiarlo o vaciarlo, también con
   // un PUT que lo omite): la edición genérica lo devuelve tal como se leyó, con el vacío como vacío
   const RECLASIFICADA_DE = '7d3c6a52-1b2e-4f00-9a00-000000000001'

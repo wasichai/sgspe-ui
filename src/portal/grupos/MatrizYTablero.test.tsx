@@ -126,6 +126,8 @@ describe('S19 · matriz y tablero de grupos de interés', () => {
     )
     expect(within(mas).getByText('No disponible')).toBeInTheDocument()
     expect(within(mas).queryByText('Clasificación')).not.toBeInTheDocument()
+    // tercera pasada de UX, 4.7: el código técnico del indicador no va a la vista (vive en el catálogo)
+    expect(within(mas).queryByText(/^KPI-/)).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }))
     await waitFor(() => expect(red!.a('GET', '/sgspe/dashboards/stakeholders').length).toBeGreaterThan(0))
     expect(red.a('GET', '/sgspe/dashboards/stakeholders')[0].ruta).toBe('/sgspe/dashboards/stakeholders?project=p1&periodStart=2026-09-01')

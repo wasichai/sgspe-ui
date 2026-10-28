@@ -1,5 +1,5 @@
 import { useAuth } from '@wasichai/core'
-import { ChevronDown, LogOut } from 'lucide-react'
+import { ChevronDown, Keyboard, LogOut } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
@@ -7,6 +7,8 @@ import { useNombresDeRol } from '../proyectos/usuarios'
 import { useCuenta, useOrganizacion } from '../queries'
 import { LanguageMenu } from './LanguageMenu'
 import { ThemeMenu } from './ThemeMenu'
+import { abrirHojaDeAtajos } from './HojaDeAtajos'
+import { useCerrarSesion } from '../auth/cerrarSesion'
 
 // la cuenta de quien usa el portal (revisión de UX, etapa 2): pasó del inicio al menú del perfil de la barra superior. usuario,
 // organización y roles por su rótulo, que solo lee quien administra (/api/roles); sin él, cuántos son, nunca su código técnico.
@@ -46,7 +48,8 @@ export function DatosDeLaCuenta() {
 // cierra ese menú
 export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
   const { t } = useTranslation(NS)
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
+  const cerrarSesion = useCerrarSesion()
   const [abierto, setAbierto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
   const boton = useRef<HTMLButtonElement>(null)
@@ -90,7 +93,7 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
           id={id}
           role="group"
           aria-label={t('inicio.cuenta')}
-          className="absolute top-full right-0 z-30 mt-1 w-80 rounded-sg-md border border-sg-border bg-sg-surface p-4 text-left shadow-sg-md"
+          className="absolute top-full right-0 z-30 mt-1 w-80 rounded-sg-md border border-sg-border bg-sg-surface-raised p-4 text-left shadow-sg-md"
         >
           <DatosDeLaCuenta />
           {/* las preferencias: cada control ya tiene su nombre accesible, el rótulo visible es para la vista */}
@@ -110,7 +113,21 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
           </div>
           <button
             type="button"
-            onClick={signOut}
+            onClick={() => {
+              setAbierto(false)
+              abrirHojaDeAtajos()
+            }}
+            className="mt-3 flex h-9 w-full items-center gap-2 rounded-sg-md border-t border-sg-border px-2 pt-1 text-sm text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
+          >
+            <Keyboard aria-hidden className="size-4" />
+            <span className="flex-1 text-left">{t('atajos.abrir')}</span>
+            <kbd aria-hidden className="rounded-sg-xs border border-sg-border px-1 font-sg-mono text-sg-caption">
+              ?
+            </kbd>
+          </button>
+          <button
+            type="button"
+            onClick={cerrarSesion}
             className="mt-3 flex h-9 w-full items-center gap-2 rounded-sg-md border-t border-sg-border px-2 pt-1 text-sm text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
           >
             <LogOut aria-hidden className="size-4" />

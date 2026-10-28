@@ -14,8 +14,8 @@ import { porcentaje } from '../datos/inversion'
 import { texto } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { diaPe, fechaPe, mesPe, NS, numeroPe, periodoPe } from '../i18n'
-import { itemsDeAtencion } from './atencionEjecutiva'
-import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero } from './comunes'
+import { itemsDeAtencion, rutaDeCifra } from './atencionEjecutiva'
+import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
 import { CODIGOS_DE_LAS_TILES, mesesDeTendencia, TOPE_DE_PROYECTOS, type MesDeTendencia, type TableroEjecutivo } from './contratoF8'
 import { Seccion } from '../componentes/Seccion'
 
@@ -165,6 +165,14 @@ const disponiblesPrimero = <T,>(lista: T[], disponible: (x: T) => boolean): T[] 
 
 function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: TableroEjecutivo; pie: string; calculado: string; alElegirProyectos: () => void }) {
   const { t } = useTranslation(NS)
+  const rotulo = useRotuloDeCifra()
+  // cada tile lleva a la lista que cuenta lo mismo (tercera pasada de UX, 4.1), solo si la lista puede contarlo igual: con varios
+  // proyectos elegidos o un filtro de territorio o de ámbito, que la lista no aplica, la cifra no se enlaza
+  const filtros = useFiltrosEjecutivos()
+  const proyectosDeLasCifras = filtros.project ?? []
+  const comoLaLista =
+    proyectosDeLasCifras.length <= 1 && !filtros.locality && !filtros.community && !filtros.administrativeUnit && !filtros.areaOfInfluence && !filtros.scope
+  const enlaceDe = (code: string) => (comoLaLista ? rutaDeCifra(code, proyectosDeLasCifras[0] ?? null) : undefined)
   const proyectosDelPedido = datos.filters.project
   if (Array.isArray(proyectosDelPedido) && proyectosDelPedido.length === 0)
     return (
@@ -196,7 +204,7 @@ function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: Tablero
         <Pie>{pie}</Pie>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {tiles.map((i) => (
-            <KpiCard key={i.code} titulo={i.label} indicador={i} notas={<NotaDeConfidenciales oculta={i.confidentialHidden} />} />
+            <KpiCard key={i.code} titulo={rotulo(i)} indicador={i} a={enlaceDe(i.code)} notas={<NotaDeConfidenciales oculta={i.confidentialHidden} />} />
           ))}
           <Seccion etiqueta={t('tablerosF8.ejecutivo.postura')} className="space-y-1">
             <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('tablerosF8.ejecutivo.postura')}</h3>
@@ -235,7 +243,7 @@ function LoCritico({ datos, pie }: { datos: TableroEjecutivo; pie: string }) {
           </thead>
           <tbody>
             {items.map((i) => {
-              const asunto = t(`tablerosF8.ejecutivo.asuntos.${i.code}`)
+              const asunto = t(`tableros.cifras.${i.code}`)
               const proyecto = i.nombre ?? t('tablerosF8.ejecutivo.todaLaCartera')
               return (
                 <tr key={`${i.code}-${i.proyecto ?? 'cartera'}`}>
@@ -410,7 +418,8 @@ function PorProyecto({ datos, pie, alElegirProyectos }: { datos: TableroEjecutiv
   const { t } = useTranslation(NS)
   const titulo = t('tablerosF8.ejecutivo.porProyecto')
   const filas = datos.byProject ?? []
-  const columnas = filas[0]?.indicators.map((i) => ({ code: i.code, label: i.label })) ?? []
+  const rotulo = useRotuloDeCifra()
+  const columnas = filas[0]?.indicators.map((i) => ({ code: i.code, label: rotulo(i) })) ?? []
   return (
     <section aria-label={titulo} className="space-y-2">
       <h2 className="text-sg-h3 font-semibold">{titulo}</h2>

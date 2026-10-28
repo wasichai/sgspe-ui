@@ -366,7 +366,8 @@ describe('Mi trabajo', () => {
     // lo que le toca: lo vencido con su motivo, y lo que puede tomar de su proyecto sin elegirlo en el selector
     const hoy = within(pagina().getByRole('region', { name: 'Lo que me toca hoy' }))
     const vencida = (await hoy.findByRole('link', { name: 'Levantar fotos del tramo' })).closest('li')
-    expect(vencida).toHaveTextContent('Levantar fotos del tramoTarea · Vencido · venció el 19/10/2026')
+    // con su proyecto (tercera pasada de UX, 3.2)
+    await waitFor(() => expect(vencida).toHaveTextContent('Levantar fotos del tramoTarea · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19 oct. 2026'))
     expect(await hoy.findByRole('link', { name: 'Registrar la asistencia de la asamblea' })).toHaveAttribute('href', '/projects/p1/tasks?task=q1')
     expect(pagina().queryByRole('region', { name: 'Su trabajo' })).not.toBeInTheDocument()
   })

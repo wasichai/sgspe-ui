@@ -127,10 +127,28 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     // el puntaje como número: 2, 6, 9, 16 (no «16» antes de «2»)
     await userEvent.click(within(tabla()).getByRole('button', { name: 'P × I' }))
     expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
-    // el estado y la revisión no se ordenan; el orden no escribe la URL ni vuelve a pedir la lista
+    // el estado y la revisión no se ordenan; el orden viaja en la URL (DD-37) y no vuelve a pedir la lista
     expect(within(tabla()).queryByRole('button', { name: 'Estado' })).not.toBeInTheDocument()
-    expect(ubicacion.actual).toBe('/projects/p1/risks/register')
+    expect(ubicacion.actual).toBe('/projects/p1/risks/register?sort=puntaje&dir=asc')
     expect(red.a('GET', '/objects/social_risk/records').every((l) => l.ruta.includes('sort=code&dir=asc'))).toBe(true)
+  })
+
+  // tercera pasada de UX, 3.7: buscar por código o título, sin tildes ni mayúsculas
+  it('busca por código o título sin tildes, con su chip, y el vacío ofrece quitar la búsqueda', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const buscar = await screen.findByRole('searchbox', { name: 'Buscar por código o título' })
+    await userEvent.type(buscar, 'VIA')
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(3))
+    expect(within(screen.getByRole('list', { name: 'Filtros aplicados' })).getByRole('listitem')).toHaveTextContent('Contiene «VIA»')
+    await userEvent.clear(buscar)
+    await userEvent.type(buscar, 'r-003')
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(2))
+    await userEvent.clear(buscar)
+    await userEvent.type(buscar, 'nada de esto')
+    // la barra y el vacío ofrecen limpiar: los dos quitan la búsqueda
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Limpiar filtros' }))[0])
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Riesgos' })).getAllByRole('row')).toHaveLength(4))
   })
 
   it('elegir una celda filtra la tabla y «Quitar filtro de celda» la devuelve entera', async () => {

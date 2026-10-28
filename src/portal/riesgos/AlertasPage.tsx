@@ -7,11 +7,14 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
@@ -36,7 +39,7 @@ import {
   type Registro
 } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
 
@@ -75,13 +78,8 @@ export function AlertasPage() {
   // la barra de filtros (P-02; hallazgos U-18 y U-22): la búsqueda y la severidad van en la consulta de cada vista, y cada
   // filtro puesto es un chip con «Limpiar». ?view= sigue siendo el mismo
   const filtros: Parametros = { q: busqueda, severity: severidad }
-  // el orden es de esta visita: la lista no tiene parámetros de orden en la URL
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    // otro orden empieza en la primera página
-    lista.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL, ['detectada', 'titulo'])
   const alertas = useRegistros('early_warning', {
     ...consultaDe(projectId, vista),
     ...filtros,
@@ -218,6 +216,10 @@ export function FichaAlertaPage() {
   )
 }
 
+// la anatomía común de una ficha (tercera pasada de UX, 1.5): cabecera con una sola primaria (la siguiente acción del camino de
+// WF-J), panel de decisión con el camino; descartar va como secundaria y pide motivo
+const CAMINO = ['detected', 'in_triage', 'confirmed', 'responding', 'resolved', 'closed']
+
 function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
@@ -225,27 +227,45 @@ function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
   const escribe = useEscribeEnProyecto(proyecto)
   const decide = can('early_warning', CONFIRMAR_ALERTA)
   const enTriaje = alerta.state === 'in_triage'
+  useMigaDelRegistro(texto(alerta, 'title'))
+  // confirmar o descartar no se ofrecen a quien no tiene la acción: para esa persona, la siguiente acción no es suya
+  const siguiente = useSiguienteAccion('early_warning', alerta, DECISIONES)
+  const suya = decide || !enTriaje ? siguiente : null
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Link to={volver} className="text-sm text-sg-primary-text underline">
         {t('alertas.ficha.volver')}
       </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-sg-h1 font-semibold">{texto(alerta, 'title')}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <EstadoChip objeto="early_warning" estado={alerta.state} />
+      <CabeceraDeFicha
+        antetitulo={t('alertas.ficha.tipo')}
+        titulo={texto(alerta, 'title')}
+        chips={
+          <>
             <span>
               {t('alertas.ficha.severidad')}: {opcion(alerta, 'severity') || t('alertas.ficha.sinSeveridad')}
             </span>
             {texto(alerta, 'detected_at') ? <span>{t('alertas.ficha.detectada', { fecha: fechaYHoraPe(new Date(texto(alerta, 'detected_at'))) })}</span> : null}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <BotonesDeTransicion objeto="early_warning" registro={alerta} proyecto={proyecto} comprobarAntes={DECISIONES} ocultar={decide ? [] : DECISIONES} />
-          {enTriaje && !decide ? <p className="max-w-xs text-sg-caption text-sg-text-muted">{t('alertas.ficha.soloGestion')}</p> : null}
-        </div>
-      </header>
+          </>
+        }
+        objeto="early_warning"
+        registro={alerta}
+        proyecto={proyecto}
+        comprobarAntes={DECISIONES}
+        ocultar={decide ? [] : DECISIONES}
+        falta={suya?.falta}
+        faltaCampo={suya?.campo}
+      />
+      {enTriaje && !decide ? <p className="text-sg-caption text-sg-text-muted">{t('alertas.ficha.soloGestion')}</p> : null}
+      <PanelDeDecision
+        camino={CAMINO}
+        objeto="early_warning"
+        proyecto={proyecto}
+        estado={alerta.state}
+        desde={texto(alerta, 'state_changed_at') || null}
+        por={texto(alerta, 'state_changed_by') || null}
+        siguiente={suya}
+        responsable={texto(alerta, 'owner_user_email') || null}
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <section aria-label={t('alertas.ficha.disparo')} className="space-y-1">

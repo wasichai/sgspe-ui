@@ -73,8 +73,28 @@ function useProyectosParaCrear(): { proyectos: Registro[]; cargando: boolean; fa
   }
 }
 
+// el último proyecto elegido para crear, de quien mira (tercera pasada de UX, 2.6): el diálogo lo propone la próxima vez, si la
+// cuenta sigue escribiendo en él. es una comodidad de este navegador: sin almacenamiento, el diálogo empieza sin proyecto
+const claveDelUltimo = (usuario: string | undefined) => `sgspe.crear.ultimoProyecto.${usuario ?? ''}`
+function leerUltimo(clave: string): string {
+  try {
+    return localStorage.getItem(clave) ?? ''
+  } catch {
+    return ''
+  }
+}
+function guardarUltimo(clave: string, proyecto: string) {
+  try {
+    localStorage.setItem(clave, proyecto)
+  } catch {
+    // sin almacenamiento, no se recuerda
+  }
+}
+
 function CrearEligiendoProyecto({ etiqueta, destino }: { etiqueta: string; destino: DestinoDelAlta }) {
   const { t } = useTranslation(NS)
+  const { user } = useAuth()
+  const ultimo = claveDelUltimo(user?.id)
   const navegarA = useNavigate()
   const { proyectos, cargando, fallo, releer } = useProyectosParaCrear()
   const [abierto, setAbierto] = useState(false)
@@ -82,12 +102,14 @@ function CrearEligiendoProyecto({ etiqueta, destino }: { etiqueta: string; desti
   const id = useId()
   const ir = (proyecto: string) => {
     setAbierto(false)
+    guardarUltimo(ultimo, proyecto)
     if (destino.alElegir) destino.alElegir(proyecto)
     else navegarA(rutaDeAlta(proyecto, destino.resto))
   }
   const abrir = () => {
     if (!cargando && !fallo && proyectos.length === 1) return ir(proyectos[0].id)
-    setElegido('')
+    const anterior = leerUltimo(ultimo)
+    setElegido(proyectos.some((p) => p.id === anterior) ? anterior : '')
     setAbierto(true)
   }
   return (
@@ -130,7 +152,7 @@ function CrearEligiendoProyecto({ etiqueta, destino }: { etiqueta: string; desti
                   id={id}
                   value={elegido}
                   onChange={(e) => setElegido(e.target.value)}
-                  className="h-9 w-full rounded-sg-md border border-sg-border bg-sg-surface px-2 text-sm"
+                  className="h-9 w-full rounded-sg-md border border-sg-border-control bg-sg-surface px-2 text-sm"
                 >
                   <option value="">{t('paginas.crear.elegir')}</option>
                   {proyectos.map((p) => (

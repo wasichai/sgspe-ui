@@ -1,7 +1,7 @@
 import { Button } from '@wasichai/ui'
 import { type AvailableTransition } from '@wasichai/workflow'
 import { useAvailableTransitions } from '../datos/flujos'
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MasAcciones } from '../componentes/Pagina'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -10,8 +10,9 @@ import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useComprobacion } from './api'
 import { useTextoDeAviso } from './avisos'
+import { useBloqueosDelPaso } from './DatosDelPaso'
 import { DialogoDeTransicion } from './DialogoDeTransicion'
-import { esDeComando } from './reglas'
+import { esDeComando, esDestructiva } from './reglas'
 
 // las transiciones del estado actual para quien mira (GET …/transitions, de @wasichai/workflow). las que su rol no tiene
 // no aparecen (design-system.md §6.2); las de comando tampoco: tienen su propia pantalla. la primaria es la siguiente acción
@@ -19,15 +20,13 @@ import { esDeComando } from './reglas'
 // camino, la primera; salvo con sinPrimaria (la ficha ya tiene la suya: un solo botón primario por encabezado). las que anulan,
 // cancelan, retiran o terminan van al final, como secundarias con texto de peligro y nombrando el objeto («Anular el
 // proyecto»), para que no se confundan con «cerrar el diálogo»; con destructivasEnMenu, en «Más acciones», lejos de la primaria. las de comprobarAntes consultan transition-checks al dibujarse y, si una regla las
-// bloquea, salen deshabilitadas con la razón
-const DURACION_DE_LA_CONFIRMACION = 6000
-// rechazar y desistir también (regla 4 de CabeceraDeFicha, P-09 del rediseño de UX): son estados finales de cierre
-const DESTINOS_DESTRUCTIVOS = new Set(['cancelled', 'voided', 'retired', 'terminated', 'rejected', 'withdrawn'])
-export const esDestructiva = (tr: AvailableTransition): boolean => DESTINOS_DESTRUCTIVOS.has(tr.to)
+// bloquea, salen deshabilitadas con la razón dicha a la vista, bajo su nombre
 
 // una transición ofrecida, lista para dibujarse donde la pantalla la ponga (la cabecera de una ficha la reparte)
 export interface TransicionOfrecida {
   clave: string
+  // la etiqueta de la transición («Resolver»), para decir de qué paso son las reglas que se vuelven a comprobar
+  etiqueta: string
   nodo: ReactNode
 }
 
@@ -72,14 +71,11 @@ export function useTransicionesOfrecidas({
   const transiciones = useAvailableTransitions(objeto, registro.id)
   const escribeEnElProyecto = useEscribeEnProyecto(proyecto)
   const [abierta, setAbierta] = useState<AvailableTransition | null>(null)
-  // el estado al que llevó la última transición aplicada: se confirma aunque el estado nuevo ya no ofrezca botones
-  const [hecha, setHecha] = useState<string | null>(null)
-  // la confirmación se va sola a los pocos segundos, o al abrir otra transición (re-revisión, menor 3)
-  useEffect(() => {
-    if (!hecha) return
-    const plazo = setTimeout(() => setHecha(null), DURACION_DE_LA_CONFIRMACION)
-    return () => clearTimeout(plazo)
-  }, [hecha])
+  // el estado al que llevó la última transición aplicada y cuándo: se confirma aunque el estado nuevo ya no ofrezca botones y queda
+  // hasta la siguiente acción, abrir otra transición (DD-34 de la tercera pasada de UX: la que se iba sola a los 6 s no se leía)
+  const [hecha, setHecha] = useState<{ a: string; en: number } | null>(null)
+  // aplicado el paso, el foco va a la confirmación: el botón que abrió el diálogo puede irse con el estado nuevo
+  const confirmacion = useRef<HTMLParagraphElement>(null)
   const ofrece = proyecto === undefined || escribeEnElProyecto
   const permitidas = ofrece
     ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name) && (!solo || solo.includes(tr.name)))
@@ -88,12 +84,16 @@ export function useTransicionesOfrecidas({
   const destructivas = permitidas.filter(esDestructiva)
   const delCamino = siguienteTransicion(objeto, avanzan)
   const primaria = sinPrimaria ? null : (delCamino ?? (primariaSoloDelCamino ? null : (avanzan[0] ?? null)))
+  // lo que sigue, solo con las transiciones ya releídas tras el paso: las de antes dirían el paso que se acaba de dar
+  const releidas = hecha !== null && transiciones.dataUpdatedAt >= hecha.en && !transiciones.isFetching
+  const ahora = releidas ? delCamino?.label : undefined
   const abrir = (tr: AvailableTransition) => {
     setHecha(null)
     setAbierta(tr)
   }
   const ofrecida = (tr: AvailableTransition): TransicionOfrecida => ({
     clave: tr.name,
+    etiqueta: tr.label,
     nodo: (
       <BotonDeTransicion
         key={tr.name}
@@ -112,8 +112,9 @@ export function useTransicionesOfrecidas({
     otras: avanzan.filter((tr) => tr !== primaria).map(ofrecida),
     destructivas: destructivas.map(ofrecida),
     confirmacion: hecha ? (
-      <p role="status" className="text-sm text-sg-success">
-        {t('transiciones.hecho', { a: hecha })}
+      <p ref={confirmacion} role="status" tabIndex={-1} className="text-sm text-sg-success">
+        {t('transiciones.hecho', { a: hecha.a })}
+        {ahora ? ` ${t('transiciones.ahora', { accion: ahora })}` : null}
       </p>
     ) : null,
     dialogo: abierta ? (
@@ -123,9 +124,10 @@ export function useTransicionesOfrecidas({
         transicion={abierta}
         alCerrar={() => setAbierta(null)}
         alAplicar={() => {
-          setHecha(abierta.toLabel)
+          setHecha({ a: abierta.toLabel, en: Date.now() })
           alAplicar?.(abierta)
         }}
+        focoAlAplicar={() => confirmacion.current}
         anexo={anexos?.[abierta.name]}
       />
     ) : null
@@ -177,35 +179,43 @@ function BotonDeTransicion({
 }) {
   const id = useId()
   const comprobacion = useComprobacion(objeto, registro.id, comprobar ? transicion.name : null)
-  // un bloqueo deshabilita el botón aunque no traiga qué decir; la razón se dice solo si existe
-  const bloqueado = (comprobacion.data?.blocking.length ?? 0) > 0
+  // un bloqueo deshabilita el botón aunque no traiga qué decir; la razón se dice solo si existe. un dato que el diálogo pide
+  // (useBloqueosDelPaso) no bloquea: el botón abre el diálogo, que lo pide
+  const { otros } = useBloqueosDelPaso(objeto, comprobacion.data?.blocking ?? [])
+  const bloqueado = otros.length > 0
   // la razón con el texto de su regla, nunca el mensaje del servidor con los nombres de la API (humo F4, D3)
   const textoDe = useTextoDeAviso(objeto)
-  const razon = (comprobacion.data?.blocking ?? []).map((b) => textoDe(b, transicion).texto).find((x) => x) ?? undefined
+  const razon = otros.map((b) => textoDe(b, transicion).texto).find((x) => x) ?? undefined
   const { t } = useTranslation(NS)
   const destructiva = esDestructiva(transicion)
   const elObjeto = destructiva ? t(`transiciones.elObjeto.${objeto}`, { defaultValue: '' }) : ''
   // la razón propia y lo que falta, dicho en la pantalla, se combinan; si son el mismo texto, se dice una vez
   const propia = razon && razon !== falta?.texto ? id : null
   const describidoPor = [propia, falta?.id].filter(Boolean).join(' ') || undefined
+  const boton = (
+    <Button
+      variant={primaria ? 'primary' : 'secondary'}
+      size="sm"
+      className={destructiva ? 'text-sg-danger' : undefined}
+      onClick={alAbrir}
+      disabled={bloqueado || Boolean(falta)}
+      title={razon ?? falta?.texto}
+      aria-describedby={describidoPor}
+    >
+      {elObjeto ? `${transicion.label} ${elObjeto}` : transicion.label}
+    </Button>
+  )
+  // la razón a la vista, bajo el nombre (tercera pasada de UX): en «Más acciones» y en el teléfono, un title no lo ve nadie. el
+  // envoltorio es siempre el mismo (sin razón, display: contents, sin caja propia): cuando la comprobación llega, el botón no se
+  // vuelve a montar y no pierde el foco
   return (
-    <>
-      <Button
-        variant={primaria ? 'primary' : 'secondary'}
-        size="sm"
-        className={destructiva ? 'text-sg-danger' : undefined}
-        onClick={alAbrir}
-        disabled={bloqueado || Boolean(falta)}
-        title={razon ?? falta?.texto}
-        aria-describedby={describidoPor}
-      >
-        {elObjeto ? `${transicion.label} ${elObjeto}` : transicion.label}
-      </Button>
+    <span className={propia ? 'flex max-w-72 flex-col items-start gap-0.5' : 'contents'}>
+      {boton}
       {propia ? (
-        <span id={id} className="sr-only">
+        <span id={id} className="text-sg-caption text-sg-text-secondary">
           {razon}
         </span>
       ) : null}
-    </>
+    </span>
   )
 }

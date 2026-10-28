@@ -10,6 +10,7 @@ export const ES_ALERTAS = {
   buscar: 'Buscar por título',
   filtroBusqueda: 'Contiene «{{texto}}»',
   ficha: {
+    tipo: 'Alerta temprana',
     volver: 'Volver a las alertas',
     noExiste: 'Esta alerta no existe o no es de sus proyectos.',
     detectada: 'Detectada el {{fecha}}',
@@ -52,6 +53,7 @@ export const EN_ALERTAS: typeof ES_ALERTAS = {
   buscar: 'Search by title',
   filtroBusqueda: 'Contains “{{texto}}”',
   ficha: {
+    tipo: 'Early warning',
     volver: 'Back to the alerts',
     noExiste: 'This alert does not exist or is not in your projects.',
     detectada: 'Detected on {{fecha}}',

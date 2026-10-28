@@ -7,7 +7,8 @@ import { ADMIN_PERMISOS, ADMINISTRACION, permisos, RELACIONISTA } from '../../te
 import { useAvailableTransitions } from '../datos/flujos'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { useRegistro } from '../datos/registros'
+import { useDefinicion, useRegistro, useRegistros } from '../datos/registros'
+import { useResumenDeAvisos } from '../datos/avisos'
 import { useTextoDeAviso } from './avisos'
 import { BotonesDeTransicion } from './BotonesDeTransicion'
 
@@ -99,7 +100,7 @@ describe('transiciones', () => {
     await userEvent.tab()
     expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
     await userEvent.tab()
-    expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toHaveFocus()
+    expect(within(dialogo).getByRole('button', { name: 'Suspender' })).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(boton).toHaveFocus()
@@ -113,16 +114,54 @@ describe('transiciones', () => {
     const dialogo = await screen.findByRole('dialog')
     expect(within(dialogo).getByText('Activo → Suspendido')).toBeInTheDocument()
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     expect(await within(dialogo).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
     expect(red.a('POST', '/objects/project/records/p1/transitions/suspend')).toHaveLength(0)
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     await waitFor(() => expect(red!.a('POST', '/objects/project/records/p1/transitions/suspend')).toHaveLength(1))
     const [llamada] = red.a('POST', '/objects/project/records/p1/transitions/suspend')
     expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00.123456Z"')
     expect(llamada.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Paralizaci%C3%B3n%20por%20lluvias")
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  // tercera pasada de UX: una transición puede cerrar o abrir tareas y avisos (acusar recibo cierra la tarea de acuse): se releen,
+  // para que «Lo que me toca hoy» y las insignias no sigan mostrando lo que ya se hizo
+  it('aplicar una transición relee las tareas y los avisos, que pueden haber cambiado', async () => {
+    start([
+      { method: 'POST', path: '/objects/project/records/p1/transitions/suspend', body: { ...PROYECTO, state: 'suspended' } },
+      { path: '/objects/task/records', body: pagina([]) },
+      {
+        path: '/auth/me/notifications/summary',
+        body: {
+          kinds: { ACTION: { active: 0, unread: 0, overdue: 0 }, WARNING: { active: 0, unread: 0, overdue: 0 }, INFO: { active: 0, unread: 0, overdue: 0 } },
+          latest: null
+        }
+      }
+    ])
+    red = espiarRed()
+    function Lector() {
+      const tareas = useRegistros('task', { assignee_user_id: 'u-relacionista' })
+      const avisos = useResumenDeAvisos()
+      return <p>{tareas.data && avisos.data ? 'tareas y avisos leídos' : 'leyendo'}</p>
+    }
+    montar(
+      <>
+        <Lector />
+        <BotonesDeTransicion objeto="project" registro={PROYECTO} />
+      </>
+    )
+    await screen.findByText('tareas y avisos leídos')
+    const tareas = () => red!.a('GET', '/objects/task/records').length
+    const avisos = () => red!.a('GET', '/auth/me/notifications/summary').length
+    expect([tareas(), avisos()]).toEqual([1, 1])
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    const dialogo = await screen.findByRole('dialog')
+    await within(dialogo).findByText('Se cumplen las reglas para este paso.')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
+    await waitFor(() => expect([tareas(), avisos()]).toEqual([2, 2]))
   })
 
   it('una transición aplicada lo confirma, aunque ya no queden botones (revisión final, M6)', async () => {
@@ -147,27 +186,50 @@ describe('transiciones', () => {
     const dialogo = await screen.findByRole('dialog')
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
     expect(await screen.findByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Suspender' })).not.toBeInTheDocument())
     expect(screen.getByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
   })
 
-  it('la confirmación se va sola a los pocos segundos (re-revisión, menor 3)', async () => {
+  // tercera pasada de UX (1.4, DD-34): la confirmación ya no se va sola a los 6 s (no se alcanzaba a leer): queda hasta la siguiente
+  // acción, dice qué sigue con las transiciones releídas y recibe el foco, porque el botón que abrió el diálogo se va con el estado
+  it('la confirmación queda, dice qué sigue y recibe el foco; abrir otra transición la quita', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
     const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    start([{ method: 'POST', path: '/objects/project/records/p1/transitions/suspend', body: { ...PROYECTO, state: 'suspended' } }])
+    let aplicada = false
+    const REANUDAR = { name: 'resume', label: 'Reanudar', to: 'active', toLabel: 'Activo', allowed: true, reason: null }
+    fetch = mockFetch([
+      { path: '/objects/project/workflow', body: WF },
+      { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } }
+    ])
+    red = espiarRed([
+      { path: '/objects/project/records/p1/transitions', responder: () => jsonResponse(aplicada ? [REANUDAR] : transiciones) },
+      {
+        method: 'POST',
+        path: '/objects/project/records/p1/transitions/suspend',
+        responder: () => {
+          aplicada = true
+          return jsonResponse({ ...PROYECTO, state: 'suspended' })
+        }
+      }
+    ])
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await usuario.click(await screen.findByRole('button', { name: 'Suspender' }))
     const dialogo = await screen.findByRole('dialog')
     await within(dialogo).findByText('Se cumplen las reglas para este paso.')
     await usuario.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
-    await usuario.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
-    expect(await screen.findByText('Listo: el registro está en «Suspendido».')).toBeInTheDocument()
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Suspender' }))
+    const listo = await screen.findByRole('status')
+    await waitFor(() => expect(listo).toHaveTextContent('Listo: el registro está en «Suspendido». Ahora: «Reanudar».'))
+    await waitFor(() => expect(listo).toHaveFocus())
     await act(async () => {
       await vi.advanceTimersByTimeAsync(8000)
     })
-    expect(screen.queryByText('Listo: el registro está en «Suspendido».')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Listo: el registro está en «Suspendido».')
+    await usuario.click(screen.getByRole('button', { name: 'Reanudar' }))
+    await screen.findByRole('dialog')
+    expect(screen.queryByText(/^Listo: el registro está en «Suspendido»/)).not.toBeInTheDocument()
   })
 
   it('una regla que bloquea no deja confirmar y dice qué falta y en qué campo', async () => {
@@ -180,7 +242,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText('El proyecto no tiene CRS de trabajo')).toBeInTheDocument()
     expect(await screen.findByText('Campo: CRS de trabajo')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeDisabled()
   })
 
   it('una regla que nombra la transición o el campo por su nombre de la API dice la acción y la etiqueta (humo F4, D3)', async () => {
@@ -264,7 +326,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     await screen.findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
-    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText('Solo quien registró este dato puede cambiarlo: su cuenta no edita registros de otras personas.')).toBeInTheDocument()
     expect(screen.queryByText('NOT_OWN_RECORD')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Recargar' })).not.toBeInTheDocument()
@@ -283,7 +345,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     await screen.findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
-    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
     expect(screen.getByLabelText('Motivo (obligatorio)')).toHaveValue('Paralización')
     const lecturas = () => red!.a('GET', '/objects/project/records/p1').length
@@ -317,7 +379,7 @@ describe('transiciones', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     await screen.findByText('Se cumplen las reglas para este paso.')
     await userEvent.type(screen.getByLabelText('Motivo (obligatorio)'), 'Paralización')
-    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Recargar' }))
     await waitFor(() => expect(screen.queryByText(/Otra persona cambió este registro/)).not.toBeInTheDocument())
     expect(screen.queryByText(/No se pudo recargar/)).not.toBeInTheDocument()
@@ -340,10 +402,10 @@ describe('transiciones', () => {
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     const reintentar = await screen.findByRole('button', { name: 'Reintentar' })
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeDisabled()
     await userEvent.click(reintentar)
     expect(await screen.findByText('Se cumplen las reglas para este paso.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeEnabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(intentos).toBe(2)
   })
@@ -353,7 +415,7 @@ describe('transiciones', () => {
     montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
     expect(await screen.findByText(/Este paso no se puede dar ahora/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled()
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender' })).toBeDisabled()
     expect(screen.queryByText('Se cumplen las reglas para este paso.')).not.toBeInTheDocument()
   })
 
@@ -434,5 +496,151 @@ describe('transiciones', () => {
       montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} proyecto="p1" />, { usuario: ADMINISTRACION, permisos: ADMIN_PERMISOS })
       expect(await screen.findByRole('button', { name: 'Suspender' })).toBeInTheDocument()
     })
+  })
+})
+
+// tercera pasada de UX (1.2): los datos que el paso exige se piden en su diálogo, con un solo motivo: se guardan con If-Match y la
+// transición se aplica sobre la versión nueva. quien no puede escribirlos ve el paso bloqueado, con la regla
+describe('los datos que pide el paso', () => {
+  const QUEJA = registro('q1', { code: 'Q-001', resolution: null, response: null }, { state: 'in_action', updatedAt: '2026-10-05T15:00:00Z' })
+  const RESUELTA = {
+    ...QUEJA,
+    attributes: { ...QUEJA.attributes, resolution: 'Turno rotativo', response: 'Se publica la lista' },
+    updatedAt: '2026-10-06T10:00:00Z'
+  }
+  const FALTAN = {
+    allowed: false,
+    blocking: [
+      { code: 'FIELD_REQUIRED', message: 'La transición resolve exige resolution', field: 'resolution' },
+      { code: 'FIELD_REQUIRED', message: 'La transición resolve exige response', field: 'response' }
+    ],
+    warnings: []
+  }
+  const queja = (): MockRoute[] => [
+    {
+      path: '/metadata/objects/grievance',
+      body: {
+        ...definicion('grievance', [
+          ['code', { label: 'Código' }],
+          ['resolution', { label: 'Resolución', type: 'LONG_TEXT' }],
+          ['response', { label: 'Respuesta', type: 'LONG_TEXT' }]
+        ]),
+        requiresReason: true
+      }
+    },
+    {
+      path: '/objects/grievance/records/q1/transitions',
+      body: [{ name: 'resolve', label: 'Resolver', to: 'resolved', toLabel: 'Resuelta', allowed: true, reason: null }]
+    },
+    { method: 'POST', path: '/sgspe/transition-checks', body: FALTAN },
+    { method: 'PUT', path: '/objects/grievance/records/q1', body: RESUELTA },
+    { method: 'POST', path: '/objects/grievance/records/q1/transitions/resolve', body: { ...RESUELTA, state: 'resolved' } }
+  ]
+
+  // quien lee la definición: con ella leída, un FIELD_REQUIRED ya se sabe pedible y el botón no pasa por deshabilitado
+  function DefinicionLeida() {
+    const leida = useDefinicion('grievance')
+    return leida.data ? <p>definición leída</p> : null
+  }
+
+  it('«Resolver» no queda bloqueado por la resolución y la respuesta: el diálogo las pide, las guarda y resuelve con un solo motivo', async () => {
+    fetch = mockFetch(queja())
+    red = espiarRed()
+    montar(
+      <>
+        <BotonesDeTransicion objeto="grievance" registro={QUEJA} comprobarAntes={['resolve']} />
+        <DefinicionLeida />
+      </>
+    )
+    const resolver = await screen.findByRole('button', { name: 'Resolver' })
+    await screen.findByText('definición leída')
+    await userEvent.click(resolver)
+    const dialogo = await screen.findByRole('dialog')
+    expect(await within(dialogo).findByText('Se cumplen las demás reglas para este paso. Solo faltan los datos de abajo.')).toBeInTheDocument()
+    // con las reglas ya leídas, el botón sigue habilitado
+    expect(resolver).toBeEnabled()
+    expect(within(dialogo).getByText('Se guardan «Resolución» y «Respuesta» con el mismo motivo.')).toBeInTheDocument()
+    // la regla no se dice como un bloqueo: se pide el dato
+    expect(within(dialogo).queryByText(/falta «Resolución»/)).not.toBeInTheDocument()
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Acuerdo con la contratista')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Resolver' }))
+    expect(await within(dialogo).findAllByText('Complete este dato para dar el paso.')).toHaveLength(2)
+    expect(red.a('PUT', '/objects/grievance/records/q1')).toHaveLength(0)
+    await userEvent.type(within(dialogo).getByLabelText('Resolución (obligatorio)'), 'Turno rotativo')
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta (obligatorio)'), 'Se publica la lista')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Resolver' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/grievance/records/q1/transitions/resolve')).toHaveLength(1))
+    const [cambio] = red.a('PUT', '/objects/grievance/records/q1')
+    expect(cambio.cuerpo).toMatchObject({ attributes: { resolution: 'Turno rotativo', response: 'Se publica la lista' } })
+    expect(cambio.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00Z"')
+    expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Acuerdo%20con%20la%20contratista")
+    // la transición, sobre la versión que dejó el cambio y con el mismo motivo
+    const [paso] = red.a('POST', '/objects/grievance/records/q1/transitions/resolve')
+    expect(paso.cabeceras.get('If-Match')).toBe('"2026-10-06T10:00:00Z"')
+    expect(paso.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Acuerdo%20con%20la%20contratista")
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('quien no puede escribirlas ve el paso bloqueado, con lo que falta', async () => {
+    fetch = mockFetch(queja())
+    montar(<BotonesDeTransicion objeto="grievance" registro={QUEJA} comprobarAntes={['resolve']} />, { permisos: permisos({ grievance: ['READ'] }) })
+    const resolver = await screen.findByRole('button', { name: 'Resolver' })
+    await waitFor(() => expect(resolver).toBeDisabled())
+    expect(resolver).toHaveAccessibleDescription('Para «Resolver» falta «Resolución»: complételo y vuelva a intentar.')
+  })
+
+  it('un dato que el diálogo no pide (el tipo de un aporte, que decide sus lineamientos) sigue bloqueando', async () => {
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/social_contribution',
+        body: definicion('social_contribution', [['contribution_type', { label: 'Tipo', type: 'ENUM', enumOptions: ['DONACION'] }]])
+      },
+      {
+        path: '/objects/social_contribution/records/a1/transitions',
+        body: [{ name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }]
+      },
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        body: { allowed: false, blocking: [{ code: 'FIELD_REQUIRED', message: 'Falta el tipo de aporte.', field: 'contribution_type' }], warnings: [] }
+      }
+    ])
+    montar(<BotonesDeTransicion objeto="social_contribution" registro={registro('a1', { contribution_type: null })} comprobarAntes={['approve']} />)
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar' })
+    await waitFor(() => expect(aprobar).toBeDisabled())
+    expect(aprobar).toHaveAccessibleDescription('Falta el tipo de aporte.')
+  })
+})
+
+// tercera pasada de UX (1.3): el diálogo dice lo que hace. el botón repite el verbo de la transición («Aprobar», no «Confirmar»);
+// el que cierra el registro nombra el objeto y va con peligro, para que no se lea como cerrar el diálogo; «Qué pasará» suma lo que
+// el paso hace además del estado (la tarea que crea una automatización)
+describe('un diálogo que dice lo que hace', () => {
+  const COMPROMISO = registro('c1', { code: 'C-001' }, { state: 'pending_approval' })
+  const compromiso = (lista: unknown[]): MockRoute[] => [
+    { path: '/objects/commitment/records/c1/transitions', body: lista },
+    { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: true, blocking: [], warnings: [] } }
+  ]
+
+  it('«Aprobar» un compromiso dice que se crea la tarea de ejecutarlo, y el botón dice «Aprobar»', async () => {
+    fetch = mockFetch(compromiso([{ name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }]))
+    montar(<BotonesDeTransicion objeto="commitment" registro={COMPROMISO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Aprobar' })
+    expect(within(dialogo).getByText('Se crea la tarea de ejecutarlo, a cargo de su responsable y con su fecha límite.')).toBeInTheDocument()
+    expect(within(dialogo).getByRole('button', { name: 'Aprobar' })).toHaveAttribute('data-variant', 'primary')
+    expect(within(dialogo).queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument()
+    expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
+  })
+
+  it('el paso que cancela nombra el objeto y va con peligro; cerrar el diálogo sigue siendo «Cancelar»', async () => {
+    fetch = mockFetch(compromiso([{ name: 'cancel_pending_approval', label: 'Cancelar', to: 'cancelled', toLabel: 'Cancelado', allowed: true, reason: null }]))
+    montar(<BotonesDeTransicion objeto="commitment" registro={COMPROMISO} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar el compromiso' }))
+    const dialogo = await screen.findByRole('dialog')
+    expect(within(dialogo).getByRole('button', { name: 'Cancelar el compromiso' })).toHaveAttribute('data-variant', 'danger')
+    expect(within(dialogo).getAllByRole('button', { name: 'Cancelar' })).toHaveLength(1)
+    // sin efecto propio, solo el texto general
+    expect(within(dialogo).getByText('El registro pasa a «Cancelado». El cambio y su motivo quedan en el historial.')).toBeInTheDocument()
   })
 })

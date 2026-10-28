@@ -36,15 +36,9 @@ export const ES_TABLEROS_F8 = {
     irAProyectos: 'Ir a Proyectos',
     critico: 'Qué es crítico y dónde se atiende',
     criticoAyuda:
-      'Por una regla fija: alertas activas, riesgos altos o críticos, compromisos vencidos y quejas abiertas. Cada asunto lleva a la lista donde se atiende.',
+      'Por una regla fija: alertas activas, riesgos altos o críticos, compromisos vencidos y QCS abiertas. Cada asunto lleva a la lista donde se atiende.',
     sinAtencion: 'Nada pide atención con estos filtros.',
     columnas: { asunto: 'Asunto', proyecto: 'Proyecto', cifra: 'Cifra' },
-    asuntos: {
-      'KPI-EXE-02': 'Alertas activas',
-      'KPI-RSK-01': 'Riesgos altos o críticos',
-      'KPI-COM-03': 'Compromisos vencidos',
-      'KPI-GRV-02': 'Quejas abiertas'
-    },
     enlaceDeAsunto: '{{asunto}} · {{proyecto}}',
     todaLaCartera: 'Toda la cartera',
     tiles: 'Indicadores de la cartera',
@@ -93,6 +87,8 @@ export const ES_TABLEROS_F8 = {
     oficial: 'Oficial: {{valor}}',
     oficialCerrada: 'Cerrada el {{fecha}}',
     sinOficial: 'Sin cerrar',
+    // la diferencia con la meta, dicha con texto y sin juzgarla: el diseño no dice si cada meta es un mínimo (tercera pasada de UX, 4.2)
+    diferencia: { sobre: '{{n}} sobre la meta', bajo: '{{n}} bajo la meta', igual: 'Igual a la meta' },
     cerrar: 'Cerrar periodo…',
     sinCatalogo: 'El catálogo de indicadores no tiene este indicador o su cuenta no lo lee.'
   },
@@ -178,15 +174,9 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
     irAProyectos: 'Go to Projects',
     critico: 'What is critical and where it is handled',
     criticoAyuda:
-      'By a fixed rule: active alerts, high or critical risks, overdue commitments and open grievances. Each item leads to the list where it is handled.',
+      'By a fixed rule: active alerts, high or critical risks, overdue commitments and open grievances, inquiries and requests. Each item leads to the list where it is handled.',
     sinAtencion: 'Nothing needs attention with these filters.',
     columnas: { asunto: 'Item', proyecto: 'Project', cifra: 'Figure' },
-    asuntos: {
-      'KPI-EXE-02': 'Active alerts',
-      'KPI-RSK-01': 'High or critical risks',
-      'KPI-COM-03': 'Overdue commitments',
-      'KPI-GRV-02': 'Open grievances'
-    },
     enlaceDeAsunto: '{{asunto}} · {{proyecto}}',
     todaLaCartera: 'The whole portfolio',
     tiles: 'Portfolio indicators',
@@ -235,6 +225,7 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
     oficial: 'Official: {{valor}}',
     oficialCerrada: 'Closed on {{fecha}}',
     sinOficial: 'Not closed',
+    diferencia: { sobre: '{{n}} above the target', bajo: '{{n}} below the target', igual: 'Equal to the target' },
     cerrar: 'Close period…',
     sinCatalogo: 'The indicator catalog does not have this indicator or your account cannot read it.'
   },

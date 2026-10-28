@@ -144,7 +144,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
           <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.archivo')}</h2>
           <dl className="space-y-1">
             <Dato termino={t('documentos.ficha.archivo')} valor={nombreDeArchivo ?? '—'} />
-            <Dato termino={t('documentos.ficha.tipoDeArchivo')} valor={descriptor?.contentType ?? '—'} />
+            <Dato termino={t('documentos.ficha.tipoDeArchivo')} valor={descriptor?.contentType ? <TipoDeArchivo tipo={descriptor.contentType} /> : '—'} />
             <Dato termino={t('documentos.ficha.tamano')} valor={descriptor ? tamanoPe(descriptor.size) : '—'} />
             {/* sgspe#14: la huella deja confirmar si alguien tiene un archivo concreto; se reserva como el nombre (P59) a quien no lo
                 descarga. el servidor ya la oculta del descriptor a quien no descarga (UPS-24); el portal la reserva igual como defensa
@@ -199,6 +199,27 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
       </Drawer>
     </article>
   )
+}
+
+// el tipo de un archivo como se lee («PDF», «Imagen JPEG», «Documento de Word»), con el tipo MIME en title para quien lo necesite;
+// uno que no se conoce sale tal cual
+const TIPOS_DE_ARCHIVO: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/msword': 'word',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'word',
+  'application/vnd.ms-excel': 'excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'excel',
+  'text/csv': 'csv',
+  'text/plain': 'texto',
+  'application/zip': 'zip'
+}
+function TipoDeArchivo({ tipo }: { tipo: string }) {
+  const { t } = useTranslation(NS)
+  const [general, formato = ''] = tipo.toLowerCase().split(';')[0].trim().split('/')
+  const clave = TIPOS_DE_ARCHIVO[`${general}/${formato}`] ?? (['image', 'audio', 'video'].includes(general) ? general : null)
+  if (!clave) return <>{tipo}</>
+  if (clave === 'image') return <span title={tipo}>{t('documentos.ficha.tiposDeArchivo.imagen', { formato: formato.replace(/^x-/, '').toUpperCase() })}</span>
+  return <span title={tipo}>{t(`documentos.ficha.tiposDeArchivo.${clave}`)}</span>
 }
 
 function Dato({ termino, valor }: { termino: string; valor: React.ReactNode }) {

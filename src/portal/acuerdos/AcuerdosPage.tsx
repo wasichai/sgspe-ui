@@ -5,14 +5,13 @@ import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
-import { Button, Textarea } from '@wasichai/ui'
+import { Button } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
-import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
@@ -24,9 +23,12 @@ import { useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useRegistros, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { conHecho } from '../componentes/AvisoDeExito'
 
 // S33, la lista: los acuerdos del alcance (global con la columna Proyecto, o de un proyecto) con su tipo, su estado de WF-I y su
 // vigencia (validity_status, de JOB-01: vencer no concluye el acuerdo), paginados en el servidor (D10 de la revisión de UX). el alta va en un drawer con los campos de la ficha y
@@ -59,14 +61,13 @@ export function AcuerdosPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const escribe = useEscribeEnProyecto(proyecto)
   const parametros = useParametrosDeLista('todos')
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    parametros.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(parametros, ORDEN_INICIAL, ['acuerdo', 'vence'])
+  // la búsqueda (?q=) en el servidor, por los textos del acuerdo (tercera pasada de UX, 3.7); el conteo dice lo encontrado
+  const q = parametros.filtro('q').trim()
   const acuerdos = useRegistros('agreement', {
     project: proyecto,
+    q: q || undefined,
     sort: CAMPO_DE_ORDEN[orden.columna],
     dir: orden.dir,
     page: parametros.pagina,
@@ -78,7 +79,7 @@ export function AcuerdosPage() {
   // ?nuevo=1 abre el alta: así llega BotonCrear desde lo global, ya con el proyecto elegido
   const [busqueda] = useSearchParams()
   const [creando, setCreando] = useState(busqueda.get('nuevo') === '1')
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const fijos = proyecto ? { project: proyecto } : undefined
   // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
   const previa = useRutaDeVistaPrevia()
@@ -138,12 +139,21 @@ export function AcuerdosPage() {
           )
         }
       />
+      <BarraDeFiltros
+        busqueda={{ etiqueta: t('acuerdos.buscar'), valor: parametros.filtro('q'), alCambiar: (valor) => parametros.cambiar({ q: valor }) }}
+        aplicados={q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }), alQuitar: () => parametros.cambiar({ q: null }) }] : []}
+        alLimpiar={() => parametros.cambiar({ q: null })}
+      />
       {acuerdos.isPending ? (
         <Cargando />
       ) : acuerdos.isError && !acuerdos.data ? (
         <FalloDeLectura error={acuerdos.error} alReintentar={() => void acuerdos.refetch()} />
       ) : lista.length === 0 ? (
-        <Vacio titulo={t('acuerdos.vacio')}>{t('acuerdos.vacioAyuda')}</Vacio>
+        q ? (
+          <VacioDeLista conFiltros alLimpiar={() => parametros.cambiar({ q: null })} />
+        ) : (
+          <Vacio titulo={t('acuerdos.vacio')}>{t('acuerdos.vacioAyuda')}</Vacio>
+        )
       ) : telefono ? (
         // en el teléfono, tarjetas con el título, el estado, la vigencia y el proyecto (revisión de UX, etapa 8)
         <ListaEnTarjetas
@@ -180,18 +190,19 @@ export function AcuerdosPage() {
       <PaginacionDelServidor datos={acuerdos.data} alPagina={(p) => parametros.cambiar({ page: String(p) })} />
       {proyecto && fijos ? (
         <Drawer titulo={t('acuerdos.nuevoTitulo')} abierto={creando} alCerrar={() => setCreando(false)}>
-          <Campo etiqueta={t('acuerdos.motivo')} ayuda={t('acuerdos.motivoAyuda')}>
-            {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-          </Campo>
+          <CampoDeMotivo motivo={motivo} etiqueta={t('acuerdos.motivo')} ayuda={t('acuerdos.motivoAyuda')} />
           <FormularioDeRegistro
             objeto="agreement"
             fijos={fijos}
             campos={CAMPOS_DEL_ACUERDO}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={(a) => {
               setCreando(false)
-              setMotivo('')
-              navegar(`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`)
+              motivo.limpiar()
+              navegar(`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`, {
+                state: conHecho(null, t('acuerdos.hecho', { codigo: texto(a, 'code') || texto(a, 'title') }))
+              })
             }}
             alCancelar={() => setCreando(false)}
           />

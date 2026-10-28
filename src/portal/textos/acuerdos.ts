@@ -1,5 +1,7 @@
 // S33 · acuerdos y convenios (WF-I, RF-AGR-001 a RF-AGR-003)
 export const ES_ACUERDOS = {
+  // lo que la ficha dice al llegar del alta (AvisoDeExito, tercera pasada de UX)
+  hecho: 'Se registró el acuerdo {{codigo}}.',
   titulo: 'Acuerdos y convenios',
   nuevo: 'Nuevo acuerdo',
   nuevoTitulo: 'Registrar un acuerdo',
@@ -7,6 +9,7 @@ export const ES_ACUERDOS = {
   conteo_other: '{{count}} acuerdos',
   tabla: 'Acuerdos',
   vacio: 'Todavía no hay acuerdos.',
+  buscar: 'Buscar por código, título o resumen',
   vacioAyuda:
     'Un acuerdo o convenio formaliza lo pactado con una comunidad o una institución, con sus partes y su vigencia; se registra dentro de su proyecto.',
   columnas: {
@@ -76,6 +79,7 @@ export const ES_ACUERDOS = {
 }
 
 export const EN_ACUERDOS: typeof ES_ACUERDOS = {
+  hecho: 'Agreement {{codigo}} was recorded.',
   titulo: 'Agreements',
   nuevo: 'New agreement',
   nuevoTitulo: 'Record an agreement',
@@ -83,6 +87,7 @@ export const EN_ACUERDOS: typeof ES_ACUERDOS = {
   conteo_other: '{{count}} agreements',
   tabla: 'Agreements',
   vacio: 'There are no agreements yet.',
+  buscar: 'Search by code, title or summary',
   vacioAyuda: 'An agreement formalizes what was agreed with a community or an institution, with its parties and validity; it is recorded inside its project.',
   columnas: {
     acuerdo: 'Agreement',

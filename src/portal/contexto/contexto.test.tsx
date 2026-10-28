@@ -9,8 +9,8 @@ import { BarraDeContexto } from './BarraDeContexto'
 import { useLeeTodosLosProyectos, useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { filtroDeTerritorio, rutaEquivalente } from './rutas'
-import { SelectorDeProyecto } from './SelectorDeProyecto'
+import { conBusquedaQueSeConserva, filtroDeTerritorio, rutaEquivalente } from './rutas'
+import { ChipDeProyecto, SelectorDeProyecto } from './SelectorDeProyecto'
 
 let fetch: FetchMock | null = null
 beforeEach(() => localStorage.clear())
@@ -56,9 +56,24 @@ describe('rutaEquivalente', () => {
     ['/projects/p1/commitments/dashboard', 'p2', '/projects/p2/commitments/dashboard'],
     ['/projects/p1/agreements/ag1', null, '/agreements'],
     ['/projects/p1/documents/ev1', null, '/documents'],
-    ['/projects/p1/tasks', null, '/tasks']
+    ['/projects/p1/tasks', null, '/tasks'],
+    // tercera pasada de UX, 3.10: la bandeja de propuestas de IA va a la del otro proyecto
+    ['/projects/p1/ai-review', 'p2', '/projects/p2/ai-review']
   ])('%s con %s va a %s', (desde, proyecto, hacia) => {
     expect(rutaEquivalente(desde.split('?')[0], proyecto)).toBe(hacia)
+  })
+
+  // tercera pasada de UX, 3.10: cambiar de proyecto conserva la vista, el orden y la búsqueda si se llega a la misma pantalla;
+  // suelta lo que nombra un registro y la página
+  it('conserva la vista, el orden y la búsqueda en la misma pantalla del otro alcance', () => {
+    const busqueda = new URLSearchParams('view=vencidos&sort=vence&dir=desc&q=canal&stakeholder=s1&task=t1&page=2&peek=x')
+    expect(conBusquedaQueSeConserva('/projects/p1/commitments', '/projects/p2/commitments', busqueda)).toBe(
+      '/projects/p2/commitments?view=vencidos&sort=vence&dir=desc&q=canal'
+    )
+    expect(conBusquedaQueSeConserva('/projects/p1/commitments', '/commitments', busqueda)).toBe('/commitments?view=vencidos&sort=vence&dir=desc&q=canal')
+    expect(conBusquedaQueSeConserva('/projects/p1/commitments/c1', '/projects/p2/commitments', busqueda)).toBe('/projects/p2/commitments')
+    expect(conBusquedaQueSeConserva('/projects/p1/settings', '/projects/p2/overview', busqueda)).toBe('/projects/p2/overview')
+    expect(conBusquedaQueSeConserva('/commitments', '/projects/p2/commitments', new URLSearchParams('stakeholder=s1'))).toBe('/projects/p2/commitments')
   })
 })
 
@@ -201,6 +216,45 @@ describe('selector de proyecto', () => {
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
     expect(await screen.findByText('No tiene proyectos asignados. Pida una asignación al administrador de proyectos.')).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Proyecto' })).not.toBeInTheDocument()
+  })
+})
+
+// A24 de la segunda pasada, perdido al integrar el combobox y recuperado en la tercera: el territorio es del tenant y el
+// proyecto es su lente (ux-architecture.md §6.1). en /territory/** el selector lee y escribe ?project= sin salir de la pantalla
+describe('selector de proyecto en Territorio', () => {
+  it('es el lente del mapa: dice «Todo el territorio» y escribe ?project= sin salir de la pantalla', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/territory?periodStart=2026-07-01', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() => expect(selector).toHaveValue('Todo el territorio'))
+    await userEvent.click(selector)
+    await userEvent.click(await screen.findByRole('option', { name: 'PRJ-01 · Pukaqaqa' }))
+    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01&project=p1')
+    await waitFor(() => expect(selector).toHaveValue('PRJ-01 · Pukaqaqa'))
+    await userEvent.click(selector)
+    await userEvent.click(await screen.findByRole('option', { name: 'Todo el territorio' }))
+    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01')
+  })
+
+  it('en la ficha de una comunidad lee el proyecto del lente', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/territory/communities/c1?project=p2', permisos: LEE_PROYECTOS })
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto' })).toHaveValue('PRJ-02 · Qorihuasi'))
+  })
+
+  it('en el teléfono, el chip dice el lente', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<ChipDeProyecto alAbrir={() => {}} />, { ruta: '/territory', permisos: LEE_PROYECTOS })
+    expect(await screen.findByRole('button', { name: 'Proyecto: Todo el territorio. Cambiar de proyecto' })).toBeInTheDocument()
   })
 })
 

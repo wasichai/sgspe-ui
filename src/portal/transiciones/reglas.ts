@@ -49,6 +49,11 @@ export const DE_COMANDO: Readonly<Record<string, readonly string[]>> = {
   deliverable: ['issue']
 }
 
+// las que anulan, cancelan, retiran o terminan; rechazar y desistir también (regla 4 de CabeceraDeFicha, P-09 del rediseño de UX):
+// son estados finales de cierre. su botón nombra el objeto («Anular el proyecto») y va con texto de peligro
+const DESTINOS_DESTRUCTIVOS: ReadonlySet<string> = new Set(['cancelled', 'voided', 'retired', 'terminated', 'rejected', 'withdrawn'])
+export const esDestructiva = (tr: { to: string }): boolean => DESTINOS_DESTRUCTIVOS.has(tr.to)
+
 export const exigeMotivo = (objeto: string, transicion: string): boolean =>
   MOTIVO_EN_TODAS.includes(objeto) || (MOTIVO_OBLIGATORIO[objeto]?.includes(transicion) ?? false)
 export const esDeComando = (objeto: string, transicion: string): boolean => DE_COMANDO[objeto]?.includes(transicion) ?? false

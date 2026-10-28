@@ -104,7 +104,7 @@ describe('S30 · crear compromiso', () => {
     await siguiente()
     await escribir('Código', 'C-010')
     await escribir('Título', 'Canal de riego')
-    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toContain('Canal de riego'))
+    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.compromiso.p1.u-cmm')).toContain('Canal de riego'))
     unmount()
     abrir()
     expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
@@ -112,7 +112,25 @@ describe('S30 · crear compromiso', () => {
     expect(screen.getByLabelText('Título')).toHaveValue('Canal de riego')
     await userEvent.click(screen.getByRole('button', { name: 'Descartar el borrador' }))
     expect(screen.getByLabelText('Título')).toHaveValue('')
-    expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toBeNull()
+    expect(localStorage.getItem('sgspe.borrador.compromiso.p1.u-cmm')).toBeNull()
+  })
+
+  // tercera pasada de UX, 2.4: el borrador guarda también lo elegido fuera del formulario
+  it('los solicitantes elegidos también quedan en el borrador y vuelven al recuperarlo', async () => {
+    fetch = mockFetch(rutas())
+    const { unmount } = abrir()
+    await siguiente()
+    await escribir('Código', 'C-010')
+    await escribir('Título', 'Canal de riego')
+    await siguiente()
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Junta de regantes' }))
+    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.compromiso.p1.u-cmm')).toContain('"solicitantes":["s1"]'))
+    unmount()
+    abrir()
+    expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    await siguiente()
+    await siguiente()
+    expect(await screen.findByRole('checkbox', { name: 'Junta de regantes' })).toBeChecked()
   })
 
   it('«Guardar y salir» deja el borrador del navegador y vuelve a la lista; «Cancelar» también vuelve (revisión de UX, etapa 5)', async () => {
@@ -124,7 +142,7 @@ describe('S30 · crear compromiso', () => {
     await escribir('Título', 'Canal de riego')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar y salir' }))
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/commitments'))
-    expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toContain('Canal de riego')
+    expect(localStorage.getItem('sgspe.borrador.compromiso.p1.u-cmm')).toContain('Canal de riego')
     expect(red.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0)
     unmount()
     abrir()
@@ -139,9 +157,9 @@ describe('S30 · crear compromiso', () => {
     await siguiente()
     await waitFor(() => expect(screen.getByLabelText('Código')).toHaveValue('COM-2026-012'))
     await new Promise((r) => setTimeout(r, 700))
-    expect(localStorage.getItem('sgspe.borrador.compromiso.p1')).toBeNull()
+    expect(localStorage.getItem('sgspe.borrador.compromiso.p1.u-cmm')).toBeNull()
     unmount()
-    localStorage.setItem('sgspe.borrador.compromiso.p1', JSON.stringify({ valores: { code: 'C-MIO', title: 'Canal' }, guardado: '2026-10-19T15:00:00Z' }))
+    localStorage.setItem('sgspe.borrador.compromiso.p1.u-cmm', JSON.stringify({ valores: { code: 'C-MIO', title: 'Canal' }, guardado: '2026-10-19T15:00:00Z' }))
     abrir()
     await siguiente()
     expect(await screen.findByLabelText('Código')).toHaveValue('C-MIO')
@@ -240,6 +258,37 @@ describe('S30 · crear compromiso', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
     await waitFor(() => expect(red!.a('POST', '/objects/commitment/records')).toHaveLength(1))
     expect(red.a('POST', '/objects/commitment/records')[0].cuerpo).toMatchObject({ attributes: { project: 'p1', origin_grievance: 'g1' } })
+  })
+
+  // tercera pasada de UX, 2.6: lo que se sabe del origen se propone, editable
+  it('desde una interacción propone sus grupos de interés como solicitantes y su día como fecha del acuerdo', async () => {
+    const ASAMBLEA = registro(
+      'e8',
+      { project: 'p1', title: 'Asamblea comunal', engagement_type: 'ASAMBLEA', held_at: '2026-10-02T15:00:00Z' },
+      { state: 'held' }
+    )
+    fetch = mockFetch(
+      rutas([
+        { path: '/objects/engagement/records/e8', body: ASAMBLEA },
+        {
+          path: '/objects/engagement/records/e8/related/engagement_stakeholder',
+          body: pagina([registro('s1', { project: 'p1', organization: 'o1' }, { state: 'assessed' })])
+        }
+      ])
+    )
+    montar(<NuevoCompromisoPage />, {
+      ruta: '/projects/p1/commitments/new?origin_engagement=e8',
+      camino: '/projects/:projectId/commitments/new',
+      usuario: GESTORA,
+      permisos: EQUIPO_DE_COMPROMISOS
+    })
+    expect(await screen.findByText(/Asamblea comunal/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText('Fecha del acuerdo')).toHaveValue('02/10/2026'))
+    await siguiente()
+    await escribir('Código', 'C-013')
+    await escribir('Título', 'Canal')
+    await siguiente()
+    expect(await screen.findByRole('checkbox', { name: 'Junta de regantes' })).toBeChecked()
   })
 
   it('desde una interacción (?origin_engagement) la propone como origen y la manda en el alta (revisión de UX, etapa 5)', async () => {

@@ -41,7 +41,7 @@ export const ES_FICHA_QUEJA = {
     anonima: 'Anónima',
     confidencial: 'Confidencial',
     confidencialAyuda:
-      'Solo la leen la gestión de quejas, su responsable, quien la recibió y, si es una queja ALTA o CRITICA, quien aprueba. Las evidencias que se le vinculen deben ser confidenciales o de datos personales.',
+      'Solo la leen la gestión de quejas, su responsable, quien la recibió y, si es de severidad alta o crítica, quien aprueba. Las evidencias que se le vinculen deben ser confidenciales o de datos personales.',
     editar: 'Editar',
     editarTitulo: 'Editar el caso',
     motivo: 'Motivo del cambio (obligatorio)',
@@ -112,7 +112,7 @@ export const EN_FICHA_QUEJA: typeof ES_FICHA_QUEJA = {
     anonima: 'Anonymous',
     confidencial: 'Confidential',
     confidencialAyuda:
-      'Only grievance management, its owner, whoever received it and, for an ALTA or CRITICA grievance, the approver read it. Evidence linked to it must be confidential or personal data.',
+      'Only grievance management, its owner, whoever received it and, for a high or critical severity grievance, the approver read it. Evidence linked to it must be confidential or personal data.',
     editar: 'Edit',
     editarTitulo: 'Edit the case',
     motivo: 'Reason for the change (required)',

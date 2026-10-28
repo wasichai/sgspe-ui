@@ -301,8 +301,8 @@ describe('S35 · lista unificada de QCS', () => {
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0' })))
     await waitFor(() => expect(codigos()).toEqual(['Q-002', 'Q-010']))
     expect(within(tabla()).getByRole('columnheader', { name: 'QCS' })).toHaveAttribute('aria-sort', 'ascending')
-    // el orden no escribe parámetros nuevos en la URL
-    expect(ubicacion.actual).toBe('/projects/p1/attention')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(ubicacion.actual).toBe('/projects/p1/attention?sort=codigo&dir=asc')
     await userEvent.click(within(tabla()).getByRole('button', { name: 'QCS' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'desc' })))
     await waitFor(() => expect(codigos()).toEqual(['Q-010', 'Q-002']))
@@ -322,6 +322,6 @@ describe('S35 · lista unificada de QCS', () => {
     abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?page=1', { porTipo: { grievance: muchas } })
     const tabla = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Al día o sin plazo' })
     await userEvent.click(within(tabla).getByRole('button', { name: 'QCS' }))
-    expect(ubicacion.actual).toBe('/projects/p1/attention')
+    expect(ubicacion.actual).toBe('/projects/p1/attention?sort=codigo&dir=asc')
   })
 })

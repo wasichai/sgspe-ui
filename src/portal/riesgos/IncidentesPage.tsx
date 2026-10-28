@@ -2,24 +2,34 @@ import { EnlaceConRastro } from '../contexto/Rastro'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Table, Tabs, Td, Th } from '@wasichai/ui'
-import { useState } from 'react'
+import { Alert, Button } from '@wasichai/ui'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
+import { CabeceraDeFicha, tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { Historia } from '../componentes/Historia'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
+import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
+import { EncabezadoDePagina } from '../componentes/Pagina'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { useMigaDelRegistro } from '../componentes/Migas'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { useRotuloDeRegistro } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { rutaDeFicha, rutaParaAbrir } from '../datos/fichas'
-import { texto, usePuedeEditar, useRegistro, useRegistros, useTodos, type Registro } from '../datos/registros'
+import { texto, useConteo, useConteos, usePuedeEditar, useRegistro, useRegistros, useTodos, type Parametros, type Registro } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { opcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
 
@@ -31,63 +41,127 @@ import { Seccion } from '../componentes/Seccion'
 const POR_PAGINA = 25
 const CAMPOS_DEL_ALTA = ['code', 'incident_type', 'occurred_at', 'place', 'description', 'locality', 'community']
 const CAMPOS = ['code', 'incident_type', 'occurred_at', 'place', 'description', 'immediate_response', 'consequences', 'locality', 'community']
+// la lista con el patrón común de las listas (tercera pasada de UX, 3.8): las vistas por estado con su conteo, la búsqueda y el
+// orden en el servidor y en la URL, la tabla priorizada (o tarjetas en el teléfono) y la ficha con «Volver», «Anterior» y
+// «Siguiente». un incidente no tiene título: se nombra por su código y lo que pasó, como una QCS
+const VISTAS = ['todos', 'abiertos', 'cerrados'] as const
+const ESTADOS_DE_VISTA: Record<string, string | undefined> = { abiertos: 'reported,under_review,responding', cerrados: 'closed' }
+const CAMPO_DE_ORDEN: Record<string, string> = { incidente: 'code', ocurrio: 'occurred_at' }
+const ORDEN_INICIAL: OrdenDeTabla = { columna: 'ocurrio', dir: 'desc' }
 
 export function IncidentesPage() {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const { projectId = '' } = useParams()
   const navegar = useNavigate()
+  const telefono = useEsTelefono()
   const escribe = useEscribeEnProyecto(projectId)
   const lista = useParametrosDeLista('todos')
-  const incidentes = useRegistros('incident', { project: projectId, sort: 'occurred_at', dir: 'desc', page: lista.pagina, size: POR_PAGINA })
+  const vista = VISTAS.find((v) => v === lista.vista) ?? 'todos'
+  const q = lista.filtro('q').trim()
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL, ['incidente', 'ocurrio'])
+  const alcance: Parametros = { project: projectId }
+  const conVista = (v: string): Parametros => ({ ...alcance, ...(ESTADOS_DE_VISTA[v] ? { state: ESTADOS_DE_VISTA[v] } : {}), ...(q ? { q } : {}) })
+  const incidentes = useRegistros('incident', {
+    ...conVista(vista),
+    sort: CAMPO_DE_ORDEN[orden.columna],
+    dir: orden.dir,
+    page: lista.pagina,
+    size: POR_PAGINA
+  })
+  const conteos = useConteos('incident', Object.fromEntries(VISTAS.map((v) => [v, conVista(v)])))
+  const total = useConteo('incident', alcance)
   const filas = incidentes.data?.content ?? []
+  const conFiltros = vista !== 'todos' || Boolean(q)
   const [registrando, setRegistrando] = useState(false)
+  const nombre = (i: Registro) => tituloQueDiceQueEs(texto(i, 'description'), texto(i, 'code'))
+  const enlace = (i: Registro) => (
+    <EnlaceDeRegistro
+      codigo={texto(i, 'code')}
+      titulo={nombre(i)}
+      ruta={rutaDeFicha('incident', i) ?? rutaParaAbrir('incident', i.id)}
+      desde={t('incidentes.titulo')}
+      codigoEnElEnlace
+    />
+  )
+  const ocurrio = (i: Registro) => (texto(i, 'occurred_at') ? fechaPe(new Date(texto(i, 'occurred_at'))) : '—')
+  const columnas: ColumnaPriorizada[] = [
+    { id: 'incidente', encabezado: t('incidentes.columnas.incidente'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm', ordenable: true },
+    { id: 'ocurrio', encabezado: t('incidentes.columnas.ocurrio'), prioridad: 'esencial', claseDeCelda: 'text-sm', ordenable: true },
+    { id: 'tipo', encabezado: t('incidentes.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'lugar', encabezado: t('incidentes.columnas.lugar'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'estado', encabezado: t('incidentes.columnas.estado'), prioridad: 'esencial' }
+  ]
+  const celda = (i: Registro, columna: string): ReactNode => {
+    switch (columna) {
+      case 'incidente':
+        return enlace(i)
+      case 'ocurrio':
+        return ocurrio(i)
+      case 'tipo':
+        return opcion(i, 'incident_type') || '—'
+      case 'lugar':
+        return texto(i, 'place') || '—'
+      default:
+        return <EstadoChip objeto="incident" estado={i.state} />
+    }
+  }
+  const valorPlano = (i: Registro, columna: string): string => (columna === 'tipo' ? texto(i, 'incident_type') : columna === 'lugar' ? texto(i, 'place') : i.id)
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('incidentes.titulo')}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <PaginasDeRiesgos actual="incidents" />
-          {escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : null}
-        </div>
-      </div>
+      <EncabezadoDePagina
+        titulo={t('incidentes.titulo')}
+        conteo={total != null ? t('incidentes.conteo', { count: total }) : undefined}
+        primaria={escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : undefined}
+        vistas={<PaginasDeRiesgos actual="incidents" />}
+      />
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`incidentes.vistas.${v}`), n: conteos[v] }))}
+            actual={vista}
+            alElegir={(v) => lista.cambiar({ view: v === 'todos' ? null : v })}
+          />
+        }
+        busqueda={{ etiqueta: t('incidentes.buscar'), valor: lista.filtro('q'), alCambiar: (valor) => lista.cambiar({ q: valor }) }}
+        aplicados={q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }), alQuitar: () => lista.cambiar({ q: null }) }] : []}
+        alLimpiar={() => lista.cambiar({ q: null })}
+      />
       {incidentes.isPending ? (
         <Cargando />
       ) : incidentes.isError && !incidentes.data ? (
         <FalloDeLectura error={incidentes.error} alReintentar={() => void incidentes.refetch()} />
       ) : filas.length === 0 ? (
-        <Vacio titulo={t('incidentes.vacio')} />
+        conFiltros ? (
+          <VacioDeLista conFiltros alLimpiar={() => lista.cambiar({ view: null, q: null })} sinFiltros={total || undefined} />
+        ) : (
+          <Vacio titulo={t('incidentes.vacio')}>{t('incidentes.comoEmpezar')}</Vacio>
+        )
+      ) : telefono ? (
+        <ListaEnTarjetas
+          etiqueta={t('incidentes.tabla')}
+          total={incidentes.data?.totalElements}
+          tarjetas={filas.map((i) => ({
+            id: i.id,
+            titulo: enlace(i),
+            estado: <EstadoChip objeto="incident" estado={i.state} />,
+            detalle: [ocurrio(i), opcion(i, 'incident_type'), texto(i, 'place')].filter((v) => v && v !== '—').join(' · ')
+          }))}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-          <Table aria-label={t('incidentes.tabla')}>
-            <thead>
-              <tr>
-                {(['codigo', 'ocurrio', 'tipo', 'lugar', 'estado'] as const).map((c) => (
-                  <Th key={c} scope="col">
-                    {t(`incidentes.columnas.${c}`)}
-                  </Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((i) => (
-                <tr key={i.id}>
-                  <Td className="text-sm">
-                    <EnlaceConRastro to={rutaDeFicha('incident', i) ?? rutaParaAbrir('incident', i.id)} className="font-sg-mono text-sg-primary-text underline">
-                      {texto(i, 'code')}
-                    </EnlaceConRastro>
-                  </Td>
-                  <Td className="text-sm">{texto(i, 'occurred_at') ? fechaPe(new Date(texto(i, 'occurred_at'))) : '—'}</Td>
-                  <Td className="text-sm">{opcion(i, 'incident_type') || '—'}</Td>
-                  <Td className="text-sm">{texto(i, 'place') || '—'}</Td>
-                  <Td>
-                    <EstadoChip objeto="incident" estado={i.state} />
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
+        <TablaPriorizada<Registro>
+          etiqueta={t('incidentes.tabla')}
+          total={incidentes.data?.totalElements}
+          columnas={columnas}
+          filas={filas}
+          clave={(i) => i.id}
+          celda={celda}
+          valorPlano={valorPlano}
+          ocultarUniformes
+          orden={orden}
+          alOrdenar={ordenar}
+        />
       )}
       <PaginacionDelServidor datos={incidentes.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
       <Drawer titulo={t('incidentes.registrar')} abierto={registrando} alCerrar={() => setRegistrando(false)}>
@@ -134,6 +208,12 @@ export function FichaIncidentePage() {
   )
 }
 
+// la anatomía común de una ficha (tercera pasada de UX, 1.5): cabecera con una sola primaria (la siguiente acción, con lo que la
+// impide debajo), panel de decisión con el camino de WF-M y pestañas en la URL. el título dice qué pasó; cerrar pide en su diálogo
+// la respuesta inmediata y las consecuencias, si faltan
+const CAMINO = ['reported', 'under_review', 'responding', 'closed']
+const COMPROBAR = ['close']
+
 function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
@@ -143,47 +223,80 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
   const [editando, setEditando] = useState(false)
   const faltaRespuesta = !texto(incidente, 'immediate_response') || !texto(incidente, 'consequences')
   const nuevoRiesgo = `/projects/${encodeURIComponent(proyecto)}/risks/register?nuevo=1&origin_incident=${encodeURIComponent(incidente.id)}`
+  const codigo = texto(incidente, 'code')
+  useMigaDelRegistro(codigo)
+  const siguiente = useSiguienteAccion('incident', incidente, COMPROBAR)
   return (
     <article className="mx-auto max-w-[1440px] space-y-4">
       <Link to={volver} className="text-sm text-sg-primary-text underline">
         {t('incidentes.ficha.volver')}
       </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{opcion(incidente, 'incident_type') || '—'}</p>
-          <h1 className="text-sg-h1 font-semibold">{texto(incidente, 'code')}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <EstadoChip objeto="incident" estado={incidente.state} />
+      <CabeceraDeFicha
+        antetitulo={[t('incidentes.ficha.tipo'), codigo, opcion(incidente, 'incident_type')].filter(Boolean).join(' · ')}
+        titulo={tituloQueDiceQueEs(texto(incidente, 'description'), codigo)}
+        tituloDelDocumento={codigo}
+        chips={
+          <>
             {texto(incidente, 'occurred_at') ? (
               <span>{t('incidentes.ficha.ocurrio', { fecha: fechaYHoraPe(new Date(texto(incidente, 'occurred_at'))) })}</span>
             ) : null}
             {texto(incidente, 'place') ? <span>{texto(incidente, 'place')}</span> : null}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {edita ? (
-              <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-                {t('incidentes.ficha.editar')}
-              </Button>
-            ) : null}
-            {escribe && can('social_risk', 'CREATE') ? (
-              <Link to={nuevoRiesgo} className="text-sm text-sg-primary-text underline">
-                {t('incidentes.ficha.identificarRiesgo')}
-              </Link>
-            ) : null}
-          </div>
-          <BotonesDeTransicion objeto="incident" registro={incidente} proyecto={proyecto} comprobarAntes={['close']} />
-        </div>
-      </header>
+          </>
+        }
+        objeto="incident"
+        registro={incidente}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
+        secundarias={[
+          ...(edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                      {t('incidentes.ficha.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []),
+          ...(escribe && can('social_risk', 'CREATE')
+            ? [
+                {
+                  clave: 'riesgo',
+                  nodo: (
+                    <Button asChild size="sm" variant="secondary">
+                      <Link to={nuevoRiesgo}>{t('incidentes.ficha.identificarRiesgo')}</Link>
+                    </Button>
+                  )
+                }
+              ]
+            : [])
+        ]}
+      />
+      <PanelDeDecision
+        camino={CAMINO}
+        objeto="incident"
+        proyecto={proyecto}
+        estado={incidente.state}
+        desde={texto(incidente, 'state_changed_at') || null}
+        por={texto(incidente, 'state_changed_by') || null}
+        siguiente={siguiente}
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs
-          label={texto(incidente, 'code')}
-          tabs={[
-            { id: 'resumen', label: t('incidentes.ficha.pestanas.resumen'), render: () => <Resumen incidente={incidente} faltaRespuesta={faltaRespuesta} /> },
+        <PestanasDeFicha
+          etiqueta={codigo}
+          pestanas={[
+            {
+              id: 'resumen',
+              etiqueta: t('incidentes.ficha.pestanas.resumen'),
+              render: () => <Resumen incidente={incidente} faltaRespuesta={faltaRespuesta} />
+            },
             {
               id: 'evidencias',
-              label: t('incidentes.ficha.pestanas.evidencias'),
+              etiqueta: t('incidentes.ficha.pestanas.evidencias'),
               render: () => (
                 <div className="space-y-2">
                   <p className="pt-3 text-sg-caption text-sg-text-muted">{t('incidentes.ficha.evidenciasAyuda')}</p>
@@ -193,7 +306,7 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
             },
             {
               id: 'actividad',
-              label: t('incidentes.ficha.pestanas.actividad'),
+              etiqueta: t('incidentes.ficha.pestanas.actividad'),
               render: () => (
                 <div className="pt-3">
                   <Historia objeto="incident" id={incidente.id} vacio={t('incidentes.ficha.sinActividad')} />

@@ -91,7 +91,7 @@ function PanelDeAvisos({ id, alCerrar }: { id: string; alCerrar: () => void }) {
       id={id}
       role="region"
       aria-label={t('avisos.ultimos')}
-      className="absolute right-0 z-50 mt-2 w-80 space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-3 shadow-sg-md"
+      className="absolute right-0 z-50 mt-2 w-80 space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface-raised p-3 shadow-sg-md"
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{t('avisos.ultimos')}</h2>

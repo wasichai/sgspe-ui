@@ -1,7 +1,6 @@
 // la búsqueda global de la barra superior (ux-architecture.md §7.3)
 export const ES_BUSQUEDA = {
   boton: 'Buscar',
-  atajo: '⌘K',
   titulo: 'Buscar',
   placeholder: 'Proyectos, grupos de interés, compromisos, QCS, riesgos, documentos…',
   minimo: 'Escriba al menos dos letras.',
@@ -30,7 +29,6 @@ export const ES_BUSQUEDA = {
 
 export const EN_BUSQUEDA: typeof ES_BUSQUEDA = {
   boton: 'Search',
-  atajo: '⌘K',
   titulo: 'Search',
   placeholder: 'Projects, stakeholders, commitments, cases, risks, documents…',
   minimo: 'Type at least two letters.',

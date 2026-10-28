@@ -44,6 +44,13 @@ export function useFiltrosDeTablero(): FiltrosDeIndicador {
   }, [scope, territory, busqueda])
 }
 
+// el nombre de una cifra (tercera pasada de UX, 3.11): el del diccionario por su código, en el idioma de quien mira, o el que trae
+// el servidor si la cifra no está en el diccionario
+export function useRotuloDeCifra(): (indicador: { code: string; label: string }) => string {
+  const { t } = useTranslation(NS)
+  return (indicador) => t(`tableros.cifras.${indicador.code}`, { defaultValue: indicador.label })
+}
+
 // conCampana y conResponsable: los filtros del tablero de compromisos (dashboards.md §4.4). la campaña se elige entre las del
 // proyecto del contexto; el responsable es «solo los míos» (owner = quien mira)
 export function FiltrosDeTablero({

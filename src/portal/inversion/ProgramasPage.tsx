@@ -4,14 +4,13 @@ import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
-import { Button, Textarea } from '@wasichai/ui'
+import { Button } from '@wasichai/ui'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
-import { Campo } from '../componentes/Campo'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
@@ -21,7 +20,7 @@ import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, NoDisponible, Vacio } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { montoPe } from '../componentes/Monto'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -37,6 +36,8 @@ import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, presupuestoDelPr
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Seccion } from '../componentes/Seccion'
+import { conHecho } from '../componentes/AvisoDeExito'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S42 · programas e inversión (screens.md §10): ¿cuánto del tope de la campaña queda, cómo avanzan los programas y qué aportes están
 // en curso? la misma página con alcance global (columna Proyecto, sin altas) o de un proyecto (ASM-076). las cifras salen del
@@ -102,12 +103,10 @@ export function ProgramasPage() {
   const estado = enProgramas ? '' : lista.filtro('state')
   // los programas y los aportes se paginan en el servidor (D10 de la revisión de UX); la página de los programas va en ?pp=
   const paginaDeProgramas = Number(lista.filtro('pp')) || 0
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página
-  const [ordenDeProgramas, setOrdenDeProgramas] = useState(ORDEN_INICIAL_DE_PROGRAMAS)
-  const ordenarProgramas = (siguiente: OrdenDeTabla) => {
-    setOrdenDeProgramas(siguiente)
-    lista.cambiar({ pp: null })
-  }
+  // la búsqueda (?q=) en el servidor, por los textos de programas y aportes (tercera pasada de UX, 3.7)
+  const q = lista.filtro('q').trim()
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [ordenDeProgramas, ordenarProgramas] = ordenEnUrl(lista, ORDEN_INICIAL_DE_PROGRAMAS, Object.keys(ORDEN_DE_PROGRAMAS), 'pp')
   const programas = useRegistros(
     'social_program',
     {
@@ -115,18 +114,22 @@ export function ProgramasPage() {
       sort: ORDEN_DE_PROGRAMAS[ordenDeProgramas.columna],
       dir: ordenDeProgramas.dir,
       page: paginaDeProgramas,
-      size: POR_PAGINA
+      size: POR_PAGINA,
+      ...(q ? { q } : {})
     },
     leeProgramas
   )
   const conteos = useConteos(
     'social_contribution',
-    Object.fromEntries(VISTAS.map((v) => [v, consultaDeAportes(v, proyecto, lista.filtro('state'))])),
+    Object.fromEntries(VISTAS.map((v) => [v, consultaDeAportes(v, proyecto, lista.filtro('state'), q)])),
     leeAportes
   )
   const etiquetas = useEtiquetasDeEstado('social_contribution')
   const conteoDe = (v: string) => (v === PROGRAMAS ? (programas.data?.totalElements ?? null) : (conteos[v] ?? null))
-  const chips = estado ? [{ clave: 'state', etiqueta: `${t('inversion.aportes.estado')}: ${etiquetas[estado] ?? rotuloDeOpcion(estado)}` }] : []
+  const chips = [
+    ...(estado ? [{ clave: 'state', etiqueta: `${t('inversion.aportes.estado')}: ${etiquetas[estado] ?? rotuloDeOpcion(estado)}` }] : []),
+    ...(q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }) }] : [])
+  ]
   return (
     <section className="mx-auto max-w-[1440px] space-y-4">
       <EncabezadoDePagina
@@ -172,6 +175,11 @@ export function ProgramasPage() {
               alElegir={(v) => lista.cambiar({ view: v, pp: null })}
             />
           }
+          busqueda={{
+            etiqueta: t(enProgramas ? 'inversion.programas.buscar' : 'inversion.aportes.buscar'),
+            valor: lista.filtro('q'),
+            alCambiar: (valor) => lista.cambiar({ q: valor, pp: null })
+          }}
           frecuentes={
             enProgramas ? undefined : (
               <FiltroDeLista
@@ -183,7 +191,7 @@ export function ProgramasPage() {
             )
           }
           aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
-          alLimpiar={() => lista.cambiar({ state: null })}
+          alLimpiar={() => lista.cambiar({ state: null, q: null, pp: null })}
         />
       ) : null}
       {conTablero ? (
@@ -192,7 +200,7 @@ export function ProgramasPage() {
       {enProgramas ? (
         <Programas proyecto={proyecto} indicadores={indicadores} programas={programas} orden={ordenDeProgramas} alOrdenar={ordenarProgramas} />
       ) : vista ? (
-        <Aportes proyecto={proyecto} vista={vista} estado={estado} />
+        <Aportes proyecto={proyecto} vista={vista} estado={estado} q={q} />
       ) : null}
       {alta && proyecto ? <Alta objeto={alta} proyecto={proyecto} alCerrar={() => setAlta(null)} /> : null}
     </section>
@@ -388,21 +396,17 @@ function Programas({
 // estado no cabe en la vista
 const consultaDeVista = (vista: string): Parametros =>
   vista === 'todos' ? {} : vista === 'terminados' ? { state: estados(APORTE_TERMINADO) } : { state_not: estados(APORTE_TERMINADO) }
-const consultaDeAportes = (vista: string, proyecto: string | undefined, estado: string): Parametros | null => {
+const consultaDeAportes = (vista: string, proyecto: string | undefined, estado: string, q: string): Parametros | null => {
   const deLaVista = conEstado(consultaDeVista(vista), estado)
-  return deLaVista && { project: proyecto, ...deLaVista }
+  return deLaVista && { project: proyecto, ...deLaVista, ...(q ? { q } : {}) }
 }
 
-function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string; estado: string }) {
+function Aportes({ proyecto, vista, estado, q }: { proyecto?: string; vista: string; estado: string; q: string }) {
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista(vista)
-  const actual = consultaDeAportes(vista, proyecto, estado)
-  // el orden es de esta visita: no viaja en la URL, y otro orden vuelve a la primera página
-  const [orden, setOrden] = useState(ORDEN_INICIAL_DE_APORTES)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    lista.cambiar({ page: null })
-  }
+  const actual = consultaDeAportes(vista, proyecto, estado, q)
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL_DE_APORTES, Object.keys(ORDEN_DE_APORTES))
   const aportes = useRegistros(
     'social_contribution',
     { ...actual, sort: ORDEN_DE_APORTES[orden.columna], dir: orden.dir, page: lista.pagina, size: POR_PAGINA },
@@ -497,7 +501,7 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
 function Alta({ objeto, proyecto, alCerrar }: { objeto: 'social_contribution' | 'social_program'; proyecto: string; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const navegar = useNavigate()
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const fijos = useMemo(() => ({ project: proyecto }), [proyecto])
   const iniciales = useMemo(() => ({ currency: MONEDA_POR_DEFECTO }), [])
   const esAporte = objeto === 'social_contribution'
@@ -509,17 +513,27 @@ function Alta({ objeto, proyecto, alCerrar }: { objeto: 'social_contribution' | 
       alCerrar={alCerrar}
     >
       {esAporte ? (
-        <Campo etiqueta={t('inversion.motivo')} ayuda={t('inversion.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <Seccion anidada titulo={t('inversion.quePasaraAporte.titulo')} nivel={3}>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-sg-text-secondary">
+            <li>{t('inversion.quePasaraAporte.registro')}</li>
+            <li>{t('inversion.quePasaraAporte.items')}</li>
+            <li>{t('inversion.quePasaraAporte.aprobar')}</li>
+          </ol>
+        </Seccion>
       ) : null}
+      {esAporte ? <CampoDeMotivo motivo={motivo} etiqueta={t('inversion.motivo')} ayuda={t('inversion.motivoAyuda')} /> : null}
       <FormularioDeRegistro
         objeto={objeto}
         fijos={fijos}
         iniciales={iniciales}
         campos={esAporte ? CAMPOS_DEL_APORTE : CAMPOS_DEL_PROGRAMA}
-        motivo={esAporte ? motivo.trim() || undefined : undefined}
-        alGuardar={(r) => navegar(rutaDeFicha(objeto, r) ?? `/projects/${encodeURIComponent(proyecto)}/programs`)}
+        motivo={esAporte ? motivo.recortado : undefined}
+        antesDeEnviar={esAporte ? motivo.exigir : undefined}
+        alGuardar={(r) =>
+          navegar(rutaDeFicha(objeto, r) ?? `/projects/${encodeURIComponent(proyecto)}/programs`, {
+            state: conHecho(null, t(esAporte ? 'inversion.hechoAporte' : 'inversion.hechoPrograma', { codigo: texto(r, 'code') }))
+          })
+        }
         alCancelar={alCerrar}
       />
     </Drawer>

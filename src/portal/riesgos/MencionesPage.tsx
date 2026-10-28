@@ -1,7 +1,7 @@
 import { cn } from '@wasichai/ui'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import { CLASE_DE_TONO, type Tono } from '../componentes/apariencias'
 import { RegistrosSimples } from '../componentes/RegistrosSimples'
 import { texto, type Registro } from '../datos/registros'
@@ -52,6 +52,8 @@ export function MencionesPage() {
   const { t } = useTranslation(NS)
   const { projectId = '', mentionId } = useParams()
   const navegar = useNavigate()
+  // abrir o cerrar una mención conserva la búsqueda de la lista
+  const { search } = useLocation()
   const base = `/projects/${encodeURIComponent(projectId)}/risks/mentions`
   const columnas = [
     { id: 'titular', encabezado: t('registrosDeAlerta.menciones.columnas.titular'), celda: (r: Registro) => texto(r, 'headline') || '—' },
@@ -80,10 +82,11 @@ export function MencionesPage() {
         campos={CAMPOS}
         proyecto={projectId}
         abierto={mentionId ?? null}
-        alAbrir={(id) => navegar(id ? `${base}/${encodeURIComponent(id)}` : base)}
+        alAbrir={(id) => navegar({ pathname: id ? `${base}/${encodeURIComponent(id)}` : base, search })}
         textoNuevo={t('registrosDeAlerta.menciones.nueva')}
         textoVacio={t('registrosDeAlerta.menciones.vacio')}
         ayuda={<p className="text-sg-caption text-sg-text-muted">{t('registrosDeAlerta.menciones.enlaceAyuda')}</p>}
+        busqueda={{ etiqueta: t('registrosDeAlerta.menciones.buscar'), texto: (r) => `${texto(r, 'headline')} ${texto(r, 'outlet_name')}` }}
         delRegistro={(r) => (
           <AccionesDeIa objeto="media_mention" registro={r} proyecto={projectId} rotulo={texto(r, 'headline')} casos={['AI-08']} contextual={false} />
         )}

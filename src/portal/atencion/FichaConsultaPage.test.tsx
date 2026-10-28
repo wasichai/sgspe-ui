@@ -13,8 +13,8 @@ import { abrirCamino, estadosDeLaFicha } from '../../test/fichas'
 
 vi.mock('../documentos/exif', () => ({ leerExif: async () => ({}) }))
 
-// S57 (screens.md §8, WF-E2 y WF-E3): la consulta con su plazo de respuesta, «Escribir la respuesta» antes de «Responder» y la carta
-// firmada; la solicitud sin plazo, «Aceptar y crear el compromiso» solo en evaluación y con la transición del rol, con la respuesta,
+// S57 (screens.md §8, WF-E2 y WF-E3): la consulta con su plazo de respuesta, «Responder» que pide la respuesta en su diálogo y la
+// carta firmada; la solicitud sin plazo, «Aceptar y crear el compromiso» solo en evaluación y con la transición del rol, con la respuesta,
 // la hora de Lima, el compromiso que nace y el motivo; sus errores con su texto y un 412 con «Recargar»
 let fetch: FetchMock | null = null
 let red: Red | null = null
@@ -50,8 +50,22 @@ describe('S57 · ficha de consulta', () => {
       permisos: EQUIPO_DE_QUEJAS
     })
 
-  it('dice el plazo de respuesta, ofrece escribir la respuesta, «Responder», reclasificar y la carta firmada', async () => {
+  // tercera pasada de UX (1.2): «Responder» pide la respuesta y cuándo se comunicó en su diálogo, con un solo motivo; ya no hay
+  // «Escribir la respuesta» antes, con el suyo
+  it('dice el plazo de respuesta; «Responder» pide la respuesta en su diálogo; reclasificar y la carta firmada', async () => {
     fetch = mockFetch([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        body: {
+          allowed: false,
+          blocking: [
+            { code: 'FIELD_REQUIRED', message: 'La transición answer exige response', field: 'response' },
+            { code: 'FIELD_REQUIRED', message: 'La transición answer exige responded_at', field: 'responded_at' }
+          ],
+          warnings: []
+        }
+      },
       { path: '/objects/inquiry/records/i1', body: CONSULTA },
       transiciones('inquiry', 'i1', [
         ['answer', 'Responder'],
@@ -64,15 +78,18 @@ describe('S57 · ficha de consulta', () => {
     // el título dice lo que se planteó (U-27 del rediseño)
     expect(await screen.findByRole('heading', { name: '¿Cuándo empieza la perforación en el sector norte?', level: 1 })).toBeInTheDocument()
     expect(screen.getByText(/Respuesta hasta el 17 oct/)).toBeInTheDocument()
-    expect(screen.getByText(/Responder pide la respuesta y cuándo se comunicó/)).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Responder' })).toBeInTheDocument()
-    // con «Escribir la respuesta» y «Editar» a la vista, reclasificar y derivar van en «Más acciones» (CabeceraDeFicha)
+    expect(screen.queryByRole('button', { name: 'Escribir la respuesta' })).not.toBeInTheDocument()
+    // el panel dice lo que el paso pedirá, sin presentarlo como una falta
+    const siguiente = screen.getByRole('group', { name: 'Siguiente acción' })
+    expect(await within(siguiente).findByText('Al darla se le pedirán «response» y «responded_at».')).toBeInTheDocument()
+    // con «Editar» y «Reclasificar…» a la vista, derivar va en «Más acciones» (CabeceraDeFicha)
+    expect(await screen.findByRole('button', { name: 'Reclasificar…' })).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Más acciones' }))
-    const mas = screen.getByRole('group', { name: 'Más acciones' })
-    expect(within(mas).getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
-    expect(within(mas).getByRole('button', { name: 'Reclasificar…' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Escribir la respuesta' }))
-    expect(await screen.findByRole('dialog', { name: 'Responder la consulta' })).toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Responder' }))
+    const dialogo = await screen.findByRole('dialog', { name: 'Responder' })
+    expect(await within(dialogo).findByLabelText('response (obligatorio)')).toBeInTheDocument()
+    expect(within(dialogo).getByText('Se guardan «response» y «responded_at» con el mismo motivo.')).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
     await userEvent.click(screen.getByRole('tab', { name: 'Evidencias' }))
     expect(await screen.findByRole('button', { name: 'Subir carta firmada' })).toBeInTheDocument()
@@ -270,7 +287,7 @@ describe('S57 · ficha de solicitud', () => {
 // vez, en el panel de decisión; una sola primaria (la siguiente acción del flujo o, sin ella, la acción propia de la ficha), dos
 // secundarias a la vista y lo demás en «Más acciones»; los datos del caso por tema, con los vacíos plegados
 describe('S57 · cabecera y cuerpo de la ficha (P-09)', () => {
-  it('consulta: «Responder» es la única primaria, «Escribir la respuesta» la acompaña y «Derivar» va en «Más acciones»', async () => {
+  it('consulta: «Responder» es la única primaria y «Editar» y «Derivar» la acompañan como secundarias', async () => {
     fetch = mockFetch([
       { path: '/objects/inquiry/records/i1', body: CONSULTA },
       transiciones('inquiry', 'i1', [
@@ -289,11 +306,10 @@ describe('S57 · cabecera y cuerpo de la ficha (P-09)', () => {
     expect(within(titulo.parentElement!).getByText(/^Consulta · C-001/)).not.toHaveClass('font-sg-mono')
     const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
     expect(await within(acciones).findByRole('button', { name: 'Responder' })).toHaveAttribute('data-variant', 'primary')
-    expect(within(acciones).getByRole('button', { name: 'Escribir la respuesta' })).toHaveAttribute('data-variant', 'secondary')
+    expect(within(acciones).getByRole('button', { name: 'Editar' })).toHaveAttribute('data-variant', 'secondary')
+    // sin «Escribir la respuesta» (tercera pasada de UX, 1.2), «Derivar» cabe a la vista
+    expect(await within(acciones).findByRole('button', { name: 'Derivar' })).toHaveAttribute('data-variant', 'secondary')
     expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
-    expect(within(acciones).queryByRole('button', { name: 'Derivar' })).not.toBeInTheDocument()
-    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
-    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
     expect(await screen.findAllByText('Recibida', { selector: '[data-estado]' })).toHaveLength(1)
     const atencion = screen.getByRole('region', { name: 'Atención y respuesta' })
     expect(within(atencion).getByRole('button', { name: /^Mostrar (el campo|los \d+ campos) sin dato$/ })).toBeInTheDocument()

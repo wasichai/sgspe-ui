@@ -254,7 +254,7 @@ test('aprobar un aporte desde la bandeja manda el motivo y la versión leída si
   await detalle.getByRole('button', { name: 'Aprobar' }).click()
   const dialogo = page.getByRole('dialog', { name: 'Aprobar' })
   await dialogo.getByLabel('Motivo (obligatorio)').fill('Dentro del tope')
-  await dialogo.getByRole('button', { name: 'Confirmar' }).click()
+  await dialogo.getByRole('button', { name: 'Aprobar' }).click()
   await expect(detalle.getByText('Decisión registrada.')).toBeVisible()
   await expect(page).toHaveURL(/\/tasks\/approvals\?selected=social_contribution%3Aa9$/)
   const aprobacion = escrituras.find((r) => new URL(r.url()).pathname === '/api/objects/social_contribution/records/a9/transitions/approve')!

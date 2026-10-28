@@ -1,10 +1,13 @@
 // S47 · mis tareas: lista, tablero y calendario (WF-N, screens.md §11)
 export const ES_TAREAS = {
   titulo: 'Mis tareas',
-  delProyecto: 'Tareas del proyecto',
+  // dentro de un proyecto se ven las de quien mira, no las de todo el equipo (tercera pasada de UX)
+  delProyecto: 'Mis tareas en este proyecto',
   vistas: { lista: 'Lista', tablero: 'Tablero', calendario: 'Calendario' },
   grupos: { mias: 'Mis tareas', paraTomar: 'Para tomar' },
-  masEnLaColumna: 'Y {{n}} más.',
+  verRestoEnLaLista: 'Ver las {{n}} restantes en la lista',
+  calendarioCortado: 'Este mes tiene más tareas de las que el calendario puede mostrar: véalas todas en la lista.',
+  irALaLista: 'Ir a la lista',
   contadores: { vencidas: 'Vencidas', porVencer: 'Por vencer', abiertas: 'Abiertas' },
   conteo_one: '{{count}} abierta',
   conteo_other: '{{count}} abiertas',
@@ -14,7 +17,19 @@ export const ES_TAREAS = {
   paraTomarAyuda: 'Las tareas de escalamiento llegan sin asignar: las toma una de las personas avisadas.',
   // solo a quien lee todos los proyectos: su cola sería la de todo el tenant
   paraTomarGlobal: 'Como ve todos los proyectos, las tareas para tomar se ven dentro de cada uno: elija uno en el selector.',
-  columnas: { tarea: 'Tarea', proyecto: 'Proyecto', origen: 'Origen', prioridad: 'Prioridad', vence: 'Vence', estado: 'Estado' },
+  columnas: { tarea: 'Tarea', proyecto: 'Proyecto', origen: 'Origen', prioridad: 'Prioridad', vence: 'Vence', estado: 'Estado', accion: 'Acción' },
+  seleccion: {
+    todas: 'Elegir todas las que se pueden tomar',
+    elegir: 'Elegir «{{tarea}}»',
+    elegidas_one: '{{count}} elegida',
+    elegidas_other: '{{count}} elegidas',
+    tomar_one: 'Tomar la elegida',
+    tomar_other: 'Tomar las {{count}} elegidas',
+    tomadas_one: 'Tomó {{count}} tarea: ahora está a su cargo.',
+    tomadas_other: 'Tomó {{count}} tareas: ahora están a su cargo.',
+    algunas_one: 'Tomó {{n}}; {{count}} no se pudo tomar: otra persona la tomó antes o cambió. La lista ya se volvió a leer.',
+    algunas_other: 'Tomó {{n}}; {{count}} no se pudieron tomar: otra persona las tomó antes o cambiaron. La lista ya se volvió a leer.'
+  },
   origenes: {
     commitment: 'Compromiso',
     engagement: 'Interacción',
@@ -34,6 +49,8 @@ export const ES_TAREAS = {
   mesSiguiente: 'Mes siguiente',
   sinFecha: 'Sin fecha de vencimiento: {{n}}',
   diasDeLaSemana: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+  tomar: 'Tomar',
+  tomarEnLinea: 'Tomar «{{titulo}}»',
   ficha: {
     descripcion: 'Descripción',
     asignada: 'Asignada a',
@@ -48,10 +65,12 @@ export const ES_TAREAS = {
 
 export const EN_TAREAS: typeof ES_TAREAS = {
   titulo: 'My tasks',
-  delProyecto: 'Project tasks',
+  delProyecto: 'My tasks in this project',
   vistas: { lista: 'List', tablero: 'Board', calendario: 'Calendar' },
   grupos: { mias: 'My tasks', paraTomar: 'To take' },
-  masEnLaColumna: 'And {{n}} more.',
+  verRestoEnLaLista: 'See the other {{n}} in the list',
+  calendarioCortado: 'This month has more tasks than the calendar can show: see them all in the list.',
+  irALaLista: 'Go to the list',
   contadores: { vencidas: 'Overdue', porVencer: 'Due soon', abiertas: 'Open' },
   conteo_one: '{{count}} open',
   conteo_other: '{{count}} open',
@@ -60,7 +79,19 @@ export const EN_TAREAS: typeof ES_TAREAS = {
   vaciaParaTomarEnSusProyectos: 'There are no unassigned tasks in your projects.',
   paraTomarAyuda: 'Escalation tasks arrive unassigned: one of the notified people takes them.',
   paraTomarGlobal: 'Since you see every project, tasks to take are shown inside each one: pick one in the selector.',
-  columnas: { tarea: 'Task', proyecto: 'Project', origen: 'Origin', prioridad: 'Priority', vence: 'Due', estado: 'Status' },
+  columnas: { tarea: 'Task', proyecto: 'Project', origen: 'Origin', prioridad: 'Priority', vence: 'Due', estado: 'Status', accion: 'Action' },
+  seleccion: {
+    todas: 'Select all that can be taken',
+    elegir: 'Select “{{tarea}}”',
+    elegidas_one: '{{count}} selected',
+    elegidas_other: '{{count}} selected',
+    tomar_one: 'Take the selected one',
+    tomar_other: 'Take the {{count}} selected',
+    tomadas_one: 'You took {{count}} task: it is now yours.',
+    tomadas_other: 'You took {{count}} tasks: they are now yours.',
+    algunas_one: 'You took {{n}}; {{count}} could not be taken: someone else took it first or it changed. The list was read again.',
+    algunas_other: 'You took {{n}}; {{count}} could not be taken: someone else took them first or they changed. The list was read again.'
+  },
   origenes: {
     commitment: 'Commitment',
     engagement: 'Engagement',
@@ -80,6 +111,8 @@ export const EN_TAREAS: typeof ES_TAREAS = {
   mesSiguiente: 'Next month',
   sinFecha: 'Without due date: {{n}}',
   diasDeLaSemana: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  tomar: 'Take',
+  tomarEnLinea: 'Take “{{titulo}}”',
   ficha: {
     descripcion: 'Description',
     asignada: 'Assigned to',

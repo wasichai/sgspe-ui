@@ -9,9 +9,9 @@ const TABLERO = TABLERO_EJECUTIVO as unknown as TableroEjecutivo
 describe('lo que necesita atención hoy', () => {
   it('ordena por alertas, riesgos altos, vencidos y quejas, y de mayor a menor dentro de cada uno', () => {
     expect(itemsDeAtencion(TABLERO).map((i) => [i.code, i.proyecto, i.valor, i.ruta])).toEqual([
-      ['KPI-EXE-02', 'p1', 2, '/projects/p1/risks/warnings'],
-      ['KPI-RSK-01', 'p1', 1, '/projects/p1/risks/register'],
-      ['KPI-COM-03', 'p1', 3, '/projects/p1/commitments'],
+      ['KPI-EXE-02', 'p1', 2, '/projects/p1/risks/warnings?view=activas'],
+      ['KPI-RSK-01', 'p1', 1, '/projects/p1/risks/register?level=alto'],
+      ['KPI-COM-03', 'p1', 3, '/projects/p1/commitments?view=vencidos'],
       ['KPI-GRV-02', 'p2', 3, '/projects/p2/attention'],
       ['KPI-GRV-02', 'p1', 1, '/projects/p1/attention']
     ])
@@ -21,8 +21,8 @@ describe('lo que necesita atención hoy', () => {
     const sinTabla = { ...TABLERO, byProject: undefined, byProjectOmitted: true }
     expect(itemsDeAtencion(sinTabla).map((i) => [i.code, i.proyecto, i.valor, i.ruta])).toEqual([
       ['KPI-EXE-02', null, 2, '/risks/dashboard'],
-      ['KPI-RSK-01', null, 1, '/risks/register'],
-      ['KPI-COM-03', null, 3, '/commitments'],
+      ['KPI-RSK-01', null, 1, '/risks/register?level=alto'],
+      ['KPI-COM-03', null, 3, '/commitments?view=vencidos'],
       ['KPI-GRV-02', null, 4, '/attention']
     ])
   })

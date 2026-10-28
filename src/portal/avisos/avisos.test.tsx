@@ -128,6 +128,18 @@ describe('S04 · bandeja', () => {
     expect(screen.getByRole('radio', { name: 'Pospuestos' })).toBeInTheDocument()
   })
 
+  // tercera pasada de UX: sin el módulo de avisos no es «No tiene avisos.», que afirmaría que no hay nada: no está disponible
+  it('sin el módulo de avisos dice que no está disponible en su organización, no que no hay avisos', async () => {
+    fetch = mockFetch([
+      { path: '/auth/me/notifications/summary', status: 404, body: { title: 'no' } },
+      { path: '/auth/me/notifications/stream', status: 404, body: { title: 'no' } },
+      { path: '/auth/me/notifications', status: 404, body: { title: 'no' } }
+    ])
+    montar(<AvisosPage />, { ruta: '/notifications', camino: '/notifications' })
+    expect(await screen.findByText('Esta información no está disponible en su organización.')).toBeInTheDocument()
+    expect(screen.queryByText('No tiene avisos.')).not.toBeInTheDocument()
+  })
+
   // hallazgos U-18 y U-22 (DD-03, DD-04): las vistas en el selector de la barra de filtros, sin segunda fila de pestañas, y el
   // tipo como filtro de la barra, con su chip y «Limpiar filtros». ?view= y ?kind= no cambian
   it('las vistas van en el selector de la barra y el tipo es un filtro con su chip y «Limpiar filtros»', async () => {
@@ -155,7 +167,9 @@ describe('S04 · bandeja', () => {
     red = espiarRed()
     montar(<AvisosPage />, { ruta: '/notifications', camino: '/notifications' })
     const primero = (await screen.findByRole('heading', { name: 'Compromiso C-001 pendiente de aprobación' })).closest('li') as HTMLElement
-    expect(within(primero).getByText('Se va solo cuando el trabajo se hace')).toBeInTheDocument()
+    // la nota va una vez, sobre la lista, y no en cada aviso (tercera pasada de UX, 3.5)
+    expect(screen.getByText('Los avisos que piden hacer algo no se descartan: se van solos cuando el trabajo se hace.')).toBeInTheDocument()
+    expect(within(primero).queryByText('Se va solo cuando el trabajo se hace')).not.toBeInTheDocument()
     expect(within(primero).queryByRole('button', { name: 'Descartar' })).not.toBeInTheDocument()
     expect(within(primero).getByRole('link', { name: 'Abrir' })).toHaveAttribute('href', '/r/commitment/c1')
     const segundo = screen.getByRole('heading', { name: 'Minuta emitida' }).closest('li') as HTMLElement

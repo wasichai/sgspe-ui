@@ -1,5 +1,12 @@
 // S37 · registrar una queja, una consulta o una solicitud (F4)
 export const ES_NUEVA_QCS = {
+  // lo que la ficha dice al llegar del alta (AvisoDeExito, tercera pasada de UX)
+  hecho: {
+    grievance: 'Se registró la queja {{codigo}}.',
+    inquiry: 'Se registró la consulta {{codigo}}.',
+    stakeholder_request: 'Se registró la solicitud {{codigo}}.',
+    acuse: 'Se creó la tarea de acusar recibo.'
+  },
   titulo: 'Registrar queja, consulta o solicitud',
   ayuda: 'Registre lo que se planteó, por el canal que llegó, sin decidir todavía su tratamiento.',
   tipo: 'Tipo',
@@ -52,6 +59,7 @@ export const ES_NUEVA_QCS = {
   quitar: 'Quitar',
   recibidaPor: 'La recibe: {{correo}}',
   origen: 'Nace de la interacción de origen indicada en el enlace.',
+  recepcionDeOrigen: 'La fecha de recepción propuesta es la de esa interacción.',
   quePasara: {
     codigo: 'Se registra con el código {{codigo}} en estado «Recibida».',
     sinCodigo: 'Se registra en estado «Recibida» con el código que escriba.',
@@ -71,6 +79,12 @@ export const ES_NUEVA_QCS = {
 }
 
 export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
+  hecho: {
+    grievance: 'Grievance {{codigo}} was recorded.',
+    inquiry: 'Inquiry {{codigo}} was recorded.',
+    stakeholder_request: 'Request {{codigo}} was recorded.',
+    acuse: 'The task to acknowledge receipt was created.'
+  },
   titulo: 'Record a grievance, inquiry or request',
   ayuda: 'Record what was raised, through the channel it came, without deciding its handling yet.',
   tipo: 'Type',
@@ -123,6 +137,7 @@ export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
   quitar: 'Remove',
   recibidaPor: 'Received by: {{correo}}',
   origen: 'It comes from the origin engagement given in the link.',
+  recepcionDeOrigen: 'The proposed reception date is that engagement’s.',
   quePasara: {
     codigo: 'It is recorded with code {{codigo}} in state «Received».',
     sinCodigo: 'It is recorded in state «Received» with the code you type.',

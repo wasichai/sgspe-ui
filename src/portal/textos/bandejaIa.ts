@@ -8,7 +8,8 @@ export const ES_BANDEJA_IA = {
     revisados: 'Aceptar escribe los valores que usted revise, nunca los datos reservados.',
     motivo: 'Aceptar, rechazar y marcar como duplicada piden un motivo, que queda en la auditoría.'
   },
-  filtros: { tipo: 'Tipo', origen: 'Origen', todos: 'Todos', ia: 'IA', persona: 'Persona' },
+  filtros: { tipo: 'Tipo', origen: 'Origen', todos: 'Todos', ia: 'IA', persona: 'Persona', delRegistro: 'Solo las propuestas de', verTodas: 'Ver todas' },
+  aceptadaEn: 'Propuesta aceptada. Quedó en:',
   tipos: {
     candidato: 'Candidato a compromiso',
     EXTRACCION: 'Extracción',
@@ -119,7 +120,8 @@ export const EN_BANDEJA_IA: typeof ES_BANDEJA_IA = {
     revisados: 'Accepting writes the values you review, never withheld data.',
     motivo: 'Accepting, rejecting and marking as duplicate need a reason, which stays in the audit trail.'
   },
-  filtros: { tipo: 'Type', origen: 'Origin', todos: 'All', ia: 'AI', persona: 'Person' },
+  filtros: { tipo: 'Type', origen: 'Origin', todos: 'All', ia: 'AI', persona: 'Person', delRegistro: 'Only the proposals for', verTodas: 'See all' },
+  aceptadaEn: 'Proposal accepted. It went to:',
   tipos: {
     candidato: 'Commitment candidate',
     EXTRACCION: 'Extraction',

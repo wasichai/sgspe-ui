@@ -10,12 +10,14 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
-import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
-import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { BarraDeSeleccion } from '../componentes/BarraDeSeleccion'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { NombreDelGrupo, useNombreDelGrupo } from '../componentes/NombreDeActor'
+import { NombreDelGrupo, useNombreDelGrupo, useNombresDeGrupos } from '../componentes/NombreDeActor'
+import { comparable } from '../componentes/FiltroDeGrupo'
 import { BotonDeVistaPrevia, useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
@@ -91,14 +93,16 @@ export function GruposPage() {
         return g.state !== 'retired'
     }
   }
-  const conFiltros = (g: Registro) => filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f))
-  // el orden es de esta visita, como en Alertas: no viaja en la URL, y otro orden vuelve a la primera página. sin elegir uno, el
-  // de la lectura
-  const [orden, setOrden] = useState<OrdenDeTabla | undefined>(undefined)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    lista.cambiar({ page: null })
-  }
+  // la búsqueda (?q=) por el nombre que ve quien mira, sin tildes ni mayúsculas (tercera pasada de UX, 3.7): el nombre está en la
+  // persona u organización del grupo, así que se leen solo mientras se busca
+  const busqueda = lista.filtro('q').trim()
+  const buscado = comparable(busqueda)
+  const nombres = useNombresDeGrupos(buscado ? (grupos.data ?? []) : [])
+  const conFiltros = (g: Registro) =>
+    filtros.every((f) => !lista.filtro(f) || texto(g, f) === lista.filtro(f)) && (!buscado || comparable(nombres.get(g.id) ?? '').includes(buscado))
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página. sin
+  // elegir uno, el de la lectura
+  const [orden, ordenar] = ordenEnUrl(lista, undefined, ['prioridad'])
   const filtrados = ordenarEnCliente(
     (grupos.data ?? []).filter((g) => enVistaLa(lista.vista, g) && conFiltros(g)),
     orden,
@@ -109,7 +113,7 @@ export function GruposPage() {
   const conteoDe = (vista: string) => (grupos.data ? grupos.data.filter((g) => enVistaLa(vista, g) && conFiltros(g)).length : null)
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
   // la selección es de lo que se ve: al cambiar de vista, de filtro o de página se reinicia, y nunca viaja una fila oculta
-  const claveDeVista = [lista.vista, lista.pagina, ...FILTROS.map((f) => lista.filtro(f))].join('|')
+  const claveDeVista = [lista.vista, lista.pagina, busqueda, ...FILTROS.map((f) => lista.filtro(f))].join('|')
   const [claveVista, setClaveVista] = useState(claveDeVista)
   if (claveVista !== claveDeVista) {
     setClaveVista(claveDeVista)
@@ -122,9 +126,12 @@ export function GruposPage() {
     else siguiente.delete(id)
     setSeleccion(siguiente)
   }
-  const chips = filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` }))
+  const chips = [
+    ...filtros.filter((f) => lista.filtro(f)).map((f) => ({ clave: f, etiqueta: `${t(`grupos.filtros.${f}`)}: ${rotuloDeOpcion(lista.filtro(f))}` })),
+    ...(busqueda ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: busqueda }) }] : [])
+  ]
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
-  const limpiarFiltros = () => lista.cambiar(Object.fromEntries(FILTROS.map((f) => [f, null])))
+  const limpiarFiltros = () => lista.cambiar({ q: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })
   const filtroDe = (f: string) => (
     <FiltroDeLista
       key={f}
@@ -175,14 +182,7 @@ export function GruposPage() {
     const evaluado = g.state === 'assessed' || Boolean(atributo(g, 'influence_group'))
     switch (columna) {
       case 'seleccionar':
-        return (
-          <input
-            type="checkbox"
-            aria-label={`${t('comun.seleccionar')} ${g.id}`}
-            checked={seleccion.has(g.id)}
-            onChange={(e) => alternar(g.id, e.target.checked)}
-          />
-        )
+        return <CasillaDeGrupo grupo={g} seleccionado={seleccion.has(g.id)} alSeleccionar={(si) => alternar(g.id, si)} />
       case 'grupo':
         return <CeldaDelGrupo grupo={g} />
       case 'proyecto':
@@ -274,24 +274,26 @@ export function GruposPage() {
                 visibles={5}
               />
             }
+            busqueda={{ etiqueta: t('grupos.buscarEnLista'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
             frecuentes={<>{filtros.filter((f) => FRECUENTES.includes(f)).map(filtroDe)}</>}
             todos={<>{filtros.filter((f) => !FRECUENTES.includes(f)).map(filtroDe)}</>}
             aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
             alLimpiar={limpiarFiltros}
           />
-          {elegidos.length > 0 && proyecto ? (
-            <div
-              role="region"
-              aria-label={t('comun.seleccionados', { n: elegidos.length, count: elegidos.length })}
-              className="flex items-center gap-3 rounded-sg-md bg-sg-primary-soft px-3 py-2 text-sm"
-            >
-              <span aria-live="polite">{t('comun.seleccionados', { n: elegidos.length, count: elegidos.length })}</span>
-              {can('engagement', 'CREATE') && escribeEnElProyecto ? (
-                <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.map(encodeURIComponent).join(',')}`)}>
-                  {t('grupos.registrarConEllos')}
-                </Button>
-              ) : null}
-            </div>
+          {proyecto ? (
+            <BarraDeSeleccion
+              n={elegidos.length}
+              acciones={
+                can('engagement', 'CREATE') && escribeEnElProyecto ? (
+                  <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.map(encodeURIComponent).join(',')}`)}>
+                    {t('grupos.registrarConEllos')}
+                  </Button>
+                ) : null
+              }
+              todos={pagina.length}
+              alElegirTodos={() => setSeleccion(new Set(pagina.map((g) => g.id)))}
+              alQuitar={() => setSeleccion(new Set())}
+            />
           ) : null}
           {grupos.isPending ? (
             <Cargando />
@@ -305,7 +307,7 @@ export function GruposPage() {
             <VacioDeLista
               conFiltros={chips.length > 0 || lista.vista !== 'todos'}
               sinFiltros={(grupos.data ?? []).filter((g) => g.state !== 'retired').length}
-              alLimpiar={() => lista.cambiar({ view: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })}
+              alLimpiar={() => lista.cambiar({ view: null, q: null, ...Object.fromEntries(FILTROS.map((f) => [f, null])) })}
             >
               {t('grupos.vacio')}
             </VacioDeLista>
@@ -382,6 +384,14 @@ function LocalidadDelGrupo({ grupo }: { grupo: Registro }) {
   return <>{texto(localidad.data, 'name') || '—'}</>
 }
 
+// la casilla de un grupo en la tabla: se anuncia con su nombre, como la de la tarjeta del teléfono, nunca con su id (tercera pasada
+// de UX: un lector de pantalla leía «Seleccionar 3f2a…»)
+function CasillaDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro; seleccionado: boolean; alSeleccionar: (si: boolean) => void }) {
+  const { t } = useTranslation(NS)
+  const nombre = useNombreDelGrupo(grupo)
+  return <input type="checkbox" aria-label={t('comun.seleccionarA', { nombre })} checked={seleccionado} onChange={(e) => alSeleccionar(e.target.checked)} />
+}
+
 // el título de la tarjeta de un grupo en el teléfono: su casilla (en un proyecto), su nombre como enlace (con su paso en el
 // rastro) y su vista previa
 function TituloDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro; seleccionado: boolean; alSeleccionar?: (si: boolean) => void }) {
@@ -393,7 +403,7 @@ function TituloDeGrupo({ grupo, seleccionado, alSeleccionar }: { grupo: Registro
       {alSeleccionar ? (
         <input
           type="checkbox"
-          aria-label={`${t('comun.seleccionar')} ${nombre}`}
+          aria-label={t('comun.seleccionarA', { nombre })}
           checked={seleccionado}
           onChange={(e) => alSeleccionar(e.target.checked)}
           className="mr-1 size-5"

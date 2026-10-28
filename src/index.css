@@ -109,6 +109,23 @@ table th[scope='row'] {
 [data-slot='tabs-list'] {
     padding-inline: 0;
 }
+/* <main> y el título de una página reciben el foco por programa (saltar al contenido, avanzar a otra página; tercera pasada de UX,
+   3.6): no son controles, así que no dibujan el anillo del foco */
+#content:focus,
+#content h1[tabindex='-1']:focus {
+    outline: none;
+}
+/* las acciones de un formulario dentro de un cajón (DynamicForm de core las dibuja al final del formulario) quedan a la vista al
+   pie del área que se desplaza: un formulario largo no obliga a bajar hasta el final para guardar (tercera pasada de UX, 2.10) */
+[data-cajon] form > div:last-child:has(> button[type='submit']) {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-inline: -1.25rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--sg-border);
+    background: var(--sg-surface-raised);
+}
 @supports (animation-timeline: scroll()) {
     [data-slot='tabs-list'] {
         mask-image: linear-gradient(to right, transparent, #000 var(--sg-pestanas-antes), #000 calc(100% - var(--sg-pestanas-despues)), transparent);

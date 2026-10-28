@@ -25,6 +25,7 @@ export const ES_RELACIONAMIENTO = {
   nadaPendiente: 'Nada pendiente.',
   columnas: { titulo: 'Interacción', proyecto: 'Proyecto', tipo: 'Tipo', estado: 'Estado', fecha: 'Fecha', lugar: 'Lugar', asistentes: 'Asistentes' },
   vacio: 'Una interacción nace con «Registrar interacción», planificada o ya realizada.',
+  buscar: 'Buscar por título u objetivo',
   vista: 'Vista',
   truncado: 'Se leyeron solo {{n}} interacciones de estas fechas: pueden faltar otras. Acote por proyecto o territorio para ver el resto.',
   sinFecha: 'Interacciones sin fecha, que no aparecen en el calendario: {{n}}.',
@@ -33,6 +34,8 @@ export const ES_RELACIONAMIENTO = {
   festividadesFallo: 'No se pudieron leer las festividades: el calendario no las marca.',
   visitas: 'Visitas de campo',
   ficha: {
+    editar: 'Editar',
+    editarTitulo: 'Editar la interacción',
     pestanas: {
       resumen: 'Resumen',
       participantes: 'Participantes',
@@ -89,6 +92,8 @@ export const ES_RELACIONAMIENTO = {
     truncado: 'Se leyeron solo los primeros {{n}} registros; el resto no se muestra.'
   },
   registro: {
+    // lo que la ficha dice al llegar del alta (AvisoDeExito, tercera pasada de UX)
+    hecho: 'Se registró la interacción «{{titulo}}».',
     titulo: 'Registrar interacción',
     pasos: ['Tipo y fecha', 'Objetivo, lugar y grupos de interés', 'Participantes', 'Preguntas y temas', 'Revisión'],
     tipo: 'Tipo de interacción',
@@ -101,6 +106,7 @@ export const ES_RELACIONAMIENTO = {
     realizadaNoEfecto: 'Se registrará como planificada.',
     programada: 'Fecha y hora programadas',
     realizadaEl: 'Fecha y hora en que se realizó',
+    horaPropuesta: 'Se propuso la hora de ahora; si fue antes, corrija el día y la hora.',
     lugar: 'Lugar',
     localidad: 'Localidad',
     comunidad: 'Comunidad',
@@ -130,6 +136,7 @@ export const ES_RELACIONAMIENTO = {
     completarDespues: 'Guardar y completar después',
     guardando: 'Guardando…',
     faltaFecha: 'Indique la fecha',
+    faltaProgramada: 'Para programarla, indique la fecha y la hora',
     faltaTitulo: 'Indique el título y el tipo',
     sinConexion: 'Sin conexión no se guarda: por ahora el portal no trabaja sin conexión.',
     rapido: 'Modo rápido de campo',
@@ -265,6 +272,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
   nadaPendiente: 'Nothing pending.',
   columnas: { titulo: 'Engagement', proyecto: 'Project', tipo: 'Type', estado: 'Status', fecha: 'Date', lugar: 'Place', asistentes: 'Attendees' },
   vacio: 'An engagement starts with “Register engagement”, planned or already held.',
+  buscar: 'Search by title or objective',
   vista: 'View',
   truncado: 'Only {{n}} engagements of these dates were read: others may be missing. Narrow by project or territory to see the rest.',
   sinFecha: 'Engagements without a date, not shown on the calendar: {{n}}.',
@@ -273,6 +281,8 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
   festividadesFallo: 'The festivities could not be read: the calendar does not mark them.',
   visitas: 'Field visits',
   ficha: {
+    editar: 'Edit',
+    editarTitulo: 'Edit the engagement',
     pestanas: {
       resumen: 'Overview',
       participantes: 'Participants',
@@ -328,6 +338,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     truncado: 'Only the first {{n}} records were read; the rest is not shown.'
   },
   registro: {
+    hecho: 'Engagement «{{titulo}}» was recorded.',
     titulo: 'Register engagement',
     pasos: ['Type and date', 'Objective, place and stakeholders', 'Participants', 'Questions and topics', 'Review'],
     tipo: 'Engagement type',
@@ -340,6 +351,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     realizadaNoEfecto: 'It will be registered as planned.',
     programada: 'Scheduled date and time',
     realizadaEl: 'Date and time held',
+    horaPropuesta: 'The current time was proposed; if it was earlier, correct the day and time.',
     lugar: 'Place',
     localidad: 'Locality',
     comunidad: 'Community',
@@ -369,6 +381,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     completarDespues: 'Save and complete later',
     guardando: 'Saving…',
     faltaFecha: 'Set the date',
+    faltaProgramada: 'To schedule it, set the date and time',
     faltaTitulo: 'Set the title and the type',
     sinConexion: 'Without a connection nothing is saved: the portal does not work offline yet.',
     rapido: 'Quick field mode',

@@ -39,10 +39,16 @@ afterEach(() => {
 })
 
 const usuario = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-const abrir = (especiales: RutaEspecial[], entregable: Registro = ENTREGABLE, quien = GERENCIA_SOCIAL, permisos = EQUIPO_DE_ENTREGABLES) => {
+const abrir = (
+  especiales: RutaEspecial[],
+  entregable: Registro = ENTREGABLE,
+  quien = GERENCIA_SOCIAL,
+  permisos = EQUIPO_DE_ENTREGABLES,
+  alElegirSeccion?: (clave: string) => void
+) => {
   fetch = mockFetch(baseDeF8(quien))
   red = espiarRed(especiales)
-  montar(<PanelDelBorrador entregable={entregable} secciones={SECCIONES} />, { usuario: quien, permisos })
+  montar(<PanelDelBorrador entregable={entregable} secciones={SECCIONES} alElegirSeccion={alElegirSeccion} />, { usuario: quien, permisos })
 }
 const estado = (respuestas: (() => Response)[]): RutaEspecial => {
   let veces = 0
@@ -53,10 +59,13 @@ const llamadas = () => red!.a('GET', '/sgspe/deliverables/d1/draft').length
 describe('panel del borrador', () => {
   it('sondea mientras está en cola y para al quedar listo', async () => {
     abrir([estado([() => jsonResponse(BORRADOR_EN_COLA), () => jsonResponse(BORRADOR_EN_COLA), () => jsonResponse(BORRADOR_LISTO)])])
-    expect(await screen.findByText('Se prepara el borrador: el estado se consulta cada 5 segundos.')).toBeInTheDocument()
+    // la espera dice desde cuándo, sin el detalle técnico de la consulta (tercera pasada de UX, 4.6)
+    expect(await screen.findByText(/^Se prepara el borrador desde el .*: tarda más de lo habitual\./)).toBeInTheDocument()
     await vi.advanceTimersByTimeAsync(5000)
     await vi.advanceTimersByTimeAsync(5000)
     expect(await screen.findByText('Estado del borrador: Listo')).toBeInTheDocument()
+    // al terminar, el panel lo dice
+    expect(screen.getByRole('status')).toHaveTextContent('El borrador ya está listo.')
     expect(llamadas()).toBeGreaterThanOrEqual(3)
     const despuesDeListo = llamadas()
     await vi.advanceTimersByTimeAsync(15000)
@@ -65,7 +74,7 @@ describe('panel del borrador', () => {
 
   it('un error del estado deja de sondear y ofrece reintentar', async () => {
     abrir([estado([() => jsonResponse(BORRADOR_EN_COLA), () => problema(400, 'x'), () => jsonResponse(BORRADOR_LISTO)])])
-    await screen.findByText('Se prepara el borrador: el estado se consulta cada 5 segundos.')
+    await screen.findByText(/^Se prepara el borrador/)
     await vi.advanceTimersByTimeAsync(5000)
     expect(await screen.findByText('No se pudo actualizar el estado del borrador.')).toBeInTheDocument()
     const conError = llamadas()
@@ -134,9 +143,18 @@ describe('panel del borrador', () => {
     expect(within(panel).queryByRole('button', { name: 'Generar otro borrador' })).not.toBeInTheDocument()
   })
 
+  // tercera pasada de UX, 4.6: un aviso que nombra una sección lleva a ella
+  it('un aviso con su sección ofrece ir a ella', async () => {
+    const elegidas: string[] = []
+    abrir([estado([() => jsonResponse(BORRADOR_CON_MAPA_FALLIDO)])], entregableEn('in_review'), GERENCIA_SOCIAL, EQUIPO_DE_ENTREGABLES, (c) => elegidas.push(c))
+    const avisos = await screen.findByRole('list', { name: 'Avisos del borrador' })
+    await usuario().click(within(avisos).getByRole('button', { name: 'Ir a la sección Portada' }))
+    expect(elegidas).toEqual(['portada'])
+  })
+
   it('deja de sondear al desmontar', async () => {
     abrir([estado([() => jsonResponse(BORRADOR_EN_COLA)])])
-    await screen.findByText('Se prepara el borrador: el estado se consulta cada 5 segundos.')
+    await screen.findByText(/^Se prepara el borrador/)
     await vi.advanceTimersByTimeAsync(5000)
     expect(llamadas()).toBeGreaterThanOrEqual(2)
     cleanup()

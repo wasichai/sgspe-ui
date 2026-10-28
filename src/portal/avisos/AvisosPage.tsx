@@ -100,7 +100,8 @@ export function AvisosPage() {
         <Cargando />
       ) : avisos.isError && !avisos.data ? (
         sinBandeja(avisos.error) ? (
-          <Vacio titulo={t('avisos.vacio')} />
+          // sin el módulo (404) o para una cuenta de servicio (403) no se afirma que no hay avisos (tercera pasada de UX)
+          <p className="text-sm text-sg-text-muted">{t('comun.listaNoDisponible')}</p>
         ) : (
           <FalloDeLectura error={avisos.error} alReintentar={() => void avisos.refetch()} />
         )
@@ -114,6 +115,7 @@ export function AvisosPage() {
       ) : (
         <>
           {/* la bandeja es un resultado (flujo F-C): el registro de un aviso ofrece volver a ella y pasar al del siguiente */}
+          {avisos.data.content.some((a) => !a.dismissible) ? <p className="text-sg-caption text-sg-text-muted">{t('avisos.noDescartables')}</p> : null}
           <ResultadoDeLista total={avisos.data.totalElements ?? null}>
             <ul className="space-y-2">
               {avisos.data.content.map((a) => (
@@ -161,10 +163,13 @@ function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
         {aviso.snoozedUntil ? ` · ${t('avisos.pospuesto', { fecha: fechaYHoraPe(new Date(aviso.snoozedUntil)) })}` : ''}
       </p>
       <div className="flex flex-wrap items-center gap-2 pt-1">
+        {/* abrir es lo que se hace con un aviso (tercera pasada de UX, 3.5): la acción principal; lo demás, secundario */}
         {destino ? (
-          <EnlaceConRastro to={destino} onClick={() => !aviso.read && accion.mutate({ aviso, accion: 'read' })} className="text-sg-primary-text underline">
-            {t('avisos.abrir')}
-          </EnlaceConRastro>
+          <Button asChild size="sm">
+            <EnlaceConRastro to={destino} onClick={() => !aviso.read && accion.mutate({ aviso, accion: 'read' })}>
+              {t('avisos.abrir')}
+            </EnlaceConRastro>
+          </Button>
         ) : (
           <span className="text-sg-caption text-sg-text-muted">{t('avisos.sinEnlace')}</span>
         )}
@@ -178,13 +183,12 @@ function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
             {t('avisos.posponer')}
           </Button>
         ) : null}
+        {/* uno que no se descarta lo dice la nota de la lista, una vez: no en cada aviso */}
         {aviso.dismissible ? (
           <Button size="sm" variant="secondary" disabled={accion.isPending} onClick={() => accion.mutate({ aviso, accion: 'dismiss' })}>
             {t('avisos.descartar')}
           </Button>
-        ) : (
-          <span className="text-sg-caption text-sg-text-muted">{t('avisos.noDescartable')}</span>
-        )}
+        ) : null}
       </div>
       {accion.isError ? <Alert tone="danger">{mensaje(accion.error)}</Alert> : null}
     </li>

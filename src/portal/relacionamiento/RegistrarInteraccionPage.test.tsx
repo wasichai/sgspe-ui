@@ -10,6 +10,7 @@ import { espiarRed, problema, type Red } from '../../test/red'
 import { UBICADOS } from '../../test/sig'
 import { EQUIPO, base } from '../../test/relacionamiento'
 import { useGuardarInteraccion } from './guardarInteraccion'
+import { ahoraEnLima, textoDeDia } from '../datos/fechas'
 
 // lo que se teclea es la hora del reloj del navegador: el huso se fija para que el instante UTC sea el mismo en cualquier máquina
 process.env.TZ = 'America/Lima'
@@ -34,6 +35,15 @@ vi.mock('./FichaInteraccionPage', async (original) => {
 
 let fetch: FetchMock | null = null
 let red: Red | null = null
+// «Sí, ya se realizó» propone la hora de ahora (tercera pasada de UX, 2.6): la prueba la reemplaza por su día y su hora
+const escribirRealizada = async (dia: string, hora: string) => {
+  const fecha = screen.getByLabelText('Fecha y hora en que se realizó')
+  const campoDeHora = screen.getByLabelText('Fecha y hora en que se realizó (hora)')
+  await userEvent.clear(fecha)
+  await userEvent.type(fecha, dia)
+  await userEvent.clear(campoDeHora)
+  await userEvent.type(campoDeHora, hora)
+}
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
@@ -164,10 +174,14 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
+    // se propone la hora de ahora (tercera pasada de UX, 2.6); sin fecha, el paso no avanza
+    expect(screen.getByLabelText('Fecha y hora en que se realizó')).toHaveValue(textoDeDia(ahoraEnLima().slice(0, 10)))
+    expect(screen.getByText('Se propuso la hora de ahora; si fue antes, corrija el día y la hora.')).toBeInTheDocument()
+    await userEvent.clear(screen.getByLabelText('Fecha y hora en que se realizó'))
+    await userEvent.clear(screen.getByLabelText('Fecha y hora en que se realizó (hora)'))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByText('Indique la fecha')).toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
+    await escribirRealizada('06/10/2026', '10:30')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     expect(await screen.findByRole('checkbox', { name: 'Ronda campesina' })).toBeChecked()
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
@@ -192,6 +206,22 @@ describe('S24 · registrar interacción', () => {
       attributes: { engagement: 'e9', question_text: '¿Cuándo empieza la perforación?', answered_on_site: false }
     })
     expect(red.a('POST', '/objects/engagement/records/e9/transitions/register_held_unplanned')[0].cabeceras.get('If-Match')).toBe('"2026-10-07T10:00:00Z"')
+  })
+
+  // tercera pasada de UX (2.8): «Programar» no se deshabilita en silencio; sin fecha, lleva al paso de la fecha y lo dice ahí
+  it('«Programar» sin fecha lleva al primer paso y dice que falta la fecha, sin guardar nada', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?stakeholders=s1', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    const programar = await screen.findByRole('button', { name: 'Programar' })
+    expect(programar).toBeEnabled()
+    await userEvent.click(programar)
+    expect(await screen.findByText('Para programarla, indique la fecha y la hora')).toBeInTheDocument()
+    expect(screen.getByLabelText('Fecha y hora programadas')).toBeInTheDocument()
+    expect(red.a('POST', '/objects/engagement/records')).toHaveLength(0)
   })
 
   // hallazgo U-07 (DD-07): la fecha y la hora programadas se escriben como dd/mm/aaaa y HH:mm y viajan como el instante de Lima
@@ -325,9 +355,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
+    await escribirRealizada('06/10/2026', '10:30')
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pulsar en el mapa' }))
     await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
@@ -412,7 +440,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
     expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).toMatchObject({
-      attributes: { title: 'ASAMBLEA · 2026-10-06', held_at: '2026-10-07T04:30:00.000Z' }
+      attributes: { title: 'Asamblea · 6 oct. 2026', held_at: '2026-10-07T04:30:00.000Z' }
     })
   })
 
@@ -423,8 +451,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea tardía')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '23:30')
+    await escribirRealizada('06/10/2026', '23:30')
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
@@ -537,8 +564,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
     await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
     await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó'), '06/10/2026')
-    await userEvent.type(screen.getByLabelText('Fecha y hora en que se realizó (hora)'), '10:30')
+    await escribirRealizada('06/10/2026', '10:30')
     for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
     expect(await screen.findByText('Para guardar como realizada, agregue al menos un participante que asistió.')).toBeInTheDocument()
@@ -641,6 +667,74 @@ describe('S24 · registrar interacción', () => {
       mode: 'full'
     })
     expect(await screen.findByRole('textbox', { name: 'Título' })).toBeInTheDocument()
+  })
+
+  // tercera pasada de UX, 2.4: el borrador de este navegador, como el del alta de compromiso
+  it('lo escrito en el asistente queda como borrador: al volver se recupera con su aviso y se puede descartar', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.interaccion.p1.u-relacionista')).toContain('Asamblea de octubre'))
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Descartar el borrador' }))
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('')
+    expect(screen.queryByText(/Se recuperó lo que escribió/)).not.toBeInTheDocument()
+    expect(localStorage.getItem('sgspe.borrador.interaccion.p1.u-relacionista')).toBeNull()
+  })
+
+  it('lo cargado en el modo rápido también queda como borrador y vuelve al abrirlo otra vez', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nota' }), 'Llovió')
+    await userEvent.click(await screen.findByRole('button', { name: 'Más Femenino · AIDS' }))
+    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.interaccionRapida.p1.u-relacionista')).toContain('Llovió'))
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick', RELACIONISTA, EQUIPO, rutas())
+    expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Nota' })).toHaveValue('Llovió')
+    expect(screen.getByLabelText('Femenino · AIDS')).toHaveTextContent('1')
+  })
+
+  // tercera pasada de UX, 2.5: cambiar de modo no borra lo cargado
+  it('el conmutador lleva el tipo, los grupos y los asistentes de un modo al otro, y cada modo conserva lo suyo', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'APAFA' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Modo rápido de campo' }))
+
+    const rapido = await screen.findByRole('region', { name: 'Modo rápido de campo' })
+    expect(within(rapido).getByRole('combobox', { name: 'Tipo de interacción' })).toHaveValue('ASAMBLEA')
+    expect(await within(rapido).findByRole('checkbox', { name: 'APAFA' })).toBeChecked()
+    // lo traído es lo que se tenía, no un borrador recuperado
+    expect(screen.queryByText(/Se recuperó lo que escribió/)).not.toBeInTheDocument()
+    await userEvent.click(await within(rapido).findByRole('button', { name: 'Más Femenino · AIDS' }))
+    await userEvent.click(within(rapido).getByRole('button', { name: 'Más Femenino · AIDS' }))
+    await userEvent.type(within(rapido).getByRole('textbox', { name: 'Nota' }), 'Llovió')
+    await userEvent.click(within(rapido).getByRole('switch', { name: 'Modo rápido de campo' }))
+
+    // el título vuelve del borrador del asistente; los asistentes contados llegan como un grupo sin nombres
+    expect(await screen.findByRole('textbox', { name: 'Título' })).toHaveValue('Asamblea de octubre')
+    expect(screen.getByRole('combobox', { name: 'Tipo de interacción' })).toHaveValue('ASAMBLEA')
+    expect(screen.queryByText(/Se recuperó lo que escribió/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('checkbox', { name: 'APAFA' })).toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('spinbutton', { name: 'Personas' })).toHaveValue(2)
+    expect(screen.getByRole('combobox', { name: 'Sexo' })).toHaveValue('FEMENINO')
+
+    // de vuelta al modo rápido, su nota sigue ahí
+    await userEvent.click(screen.getByRole('switch', { name: 'Modo rápido de campo' }))
+    const otraVez = await screen.findByRole('region', { name: 'Modo rápido de campo' })
+    expect(within(otraVez).getByRole('textbox', { name: 'Nota' })).toHaveValue('Llovió')
+    expect(within(otraVez).getByLabelText('Femenino · AIDS')).toHaveTextContent('2')
   })
 
   // F-D: el paso 1 es solo tipo, título, fecha y hora y «¿Ya se realizó?», un selector de dos opciones con su efecto explicado;

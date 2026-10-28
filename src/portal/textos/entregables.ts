@@ -8,6 +8,8 @@ export const ES_ENTREGABLES = {
     plantillas: 'Plantillas',
     sinAsignacion: 'Para crear un entregable en este proyecto hace falta una asignación vigente a él.',
     vacio: 'Todavía no hay entregables.',
+    comoEmpezar:
+      '«Nuevo entregable» arma el borrador con las secciones de su tipo (un informe de campo, un diagnóstico social) a partir de los datos del proyecto.',
     columnas: {
       entregable: 'Entregable',
       tipo: 'Tipo',
@@ -59,7 +61,10 @@ export const ES_ENTREGABLES = {
   secciones: {
     titulo: 'Secciones',
     conIa: 'Con IA',
-    cambiada: 'Cambió después del borrador'
+    cambiada: 'Cambió después del borrador',
+    // cuántas lleva revisadas el entregable (tercera pasada de UX, 4.6)
+    revisadas: 'Revisadas: {{n}} de {{m}}',
+    revisada: 'Revisada'
   },
   seccion: {
     texto: 'Texto de la sección',
@@ -121,7 +126,13 @@ export const ES_ENTREGABLES = {
     estado: 'Estado del borrador: {{estado}}',
     letra: 'Revisión del borrador: {{letra}}',
     congelado: 'Datos congelados el {{fecha}}',
-    consultando: 'Se prepara el borrador: el estado se consulta cada 5 segundos.',
+    // la espera dice cuánto lleva, sin el detalle técnico de la consulta, y al terminar se avisa (tercera pasada de UX, 4.6)
+    consultandoRecien: 'Se prepara el borrador, recién pedido: suele tardar unos minutos. Puede seguir trabajando; aquí se avisa al terminar.',
+    consultando: 'Se prepara el borrador, pedido hace {{n}} min: suele tardar unos minutos. Puede seguir trabajando; aquí se avisa al terminar.',
+    consultandoDesde: 'Se prepara el borrador desde el {{fecha}}: tarda más de lo habitual. Puede seguir trabajando; aquí se avisa al terminar.',
+    listo: 'El borrador ya está listo.',
+    fallido: 'El borrador no se pudo preparar: vea los avisos.',
+    irASeccion: 'Ir a la sección {{seccion}}',
     sinActualizar: 'No se pudo actualizar el estado del borrador.',
     avisosDelBorrador: 'Avisos del borrador',
     avisos: {
@@ -201,6 +212,7 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     plantillas: 'Templates',
     sinAsignacion: 'Creating a deliverable in this project needs a current assignment to it.',
     vacio: 'There are no deliverables yet.',
+    comoEmpezar: '“New deliverable” builds the draft with the sections of its type (a field report, a social diagnosis) from the project data.',
     columnas: { entregable: 'Deliverable', tipo: 'Type', corte: 'Cutoff', estado: 'State', borrador: 'Draft', revision: 'Revision', niveles: 'Levels' }
   },
   nuevo: {
@@ -244,7 +256,9 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
   secciones: {
     titulo: 'Sections',
     conIa: 'With AI',
-    cambiada: 'Changed after the draft'
+    cambiada: 'Changed after the draft',
+    revisadas: 'Reviewed: {{n}} of {{m}}',
+    revisada: 'Reviewed'
   },
   seccion: {
     texto: 'Section text',
@@ -306,7 +320,15 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     estado: 'Draft status: {{estado}}',
     letra: 'Draft revision: {{letra}}',
     congelado: 'Data frozen on {{fecha}}',
-    consultando: 'The draft is being prepared: the status is checked every 5 seconds.',
+    consultandoRecien:
+      'The draft is being prepared, just requested: it usually takes a few minutes. You can keep working; you will be told here when it is done.',
+    consultando:
+      'The draft is being prepared, requested {{n}} min ago: it usually takes a few minutes. You can keep working; you will be told here when it is done.',
+    consultandoDesde:
+      'The draft has been in preparation since {{fecha}}: it is taking longer than usual. You can keep working; you will be told here when it is done.',
+    listo: 'The draft is ready.',
+    fallido: 'The draft could not be prepared: see the warnings.',
+    irASeccion: 'Go to the section {{seccion}}',
     sinActualizar: 'The draft status could not be updated.',
     avisosDelBorrador: 'Draft warnings',
     avisos: {

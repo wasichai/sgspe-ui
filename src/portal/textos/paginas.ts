@@ -25,11 +25,23 @@ export const ES_PAGINAS = {
     por: 'Por',
     siguiente: 'Siguiente acción',
     sinSiguiente: 'Nada pendiente',
+    leToca: 'Le toca a usted.',
+    noAsignado: 'Usted no está asignado a este proyecto: la da quien lo esté.',
+    deOtraPersona: 'El siguiente paso lo da otra persona.',
+    pide_one: 'Al darla se le pedirá {{campos}}.',
+    pide_other: 'Al darla se le pedirán {{campos}}.',
     responsable: 'Responsable',
     sinResponsable: 'Sin responsable',
     vencimiento: 'Vencimiento',
     sinVencimiento: 'Sin fecha límite',
     verCamino: 'Ver el camino'
+  },
+  // cerrar un cajón con algo escrito (Drawer, tercera pasada de UX)
+  cajon: {
+    descartarTitulo: '¿Descartar lo escrito?',
+    descartarTexto: 'Lo que escribió en este panel todavía no se guardó y se perderá si lo cierra.',
+    descartar: 'Descartar',
+    seguir: 'Seguir editando'
   },
   flujo: {
     titulo: 'Camino del flujo',
@@ -50,6 +62,7 @@ export const ES_PAGINAS = {
     guardarYSalir: 'Guardar y salir',
     salirTitulo: '¿Salir sin terminar?',
     salirTexto: 'Lo que escribió en este formulario se perderá si sale ahora.',
+    salirTextoConBorrador: 'Lo que escribió queda como borrador en este navegador: lo recupera al volver a esta alta.',
     salir: 'Salir',
     quedarse: 'Seguir aquí'
   },
@@ -87,11 +100,22 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     por: 'By',
     siguiente: 'Next action',
     sinSiguiente: 'Nothing pending',
+    leToca: 'It is your turn.',
+    noAsignado: 'You are not assigned to this project: someone who is takes it.',
+    deOtraPersona: 'Someone else takes the next step.',
+    pide_one: 'It will ask you for {{campos}}.',
+    pide_other: 'It will ask you for {{campos}}.',
     responsable: 'Owner',
     sinResponsable: 'No owner',
     vencimiento: 'Due date',
     sinVencimiento: 'No due date',
     verCamino: 'Show the path'
+  },
+  cajon: {
+    descartarTitulo: 'Discard what you wrote?',
+    descartarTexto: 'What you wrote in this panel has not been saved yet and will be lost if you close it.',
+    descartar: 'Discard',
+    seguir: 'Keep editing'
   },
   flujo: {
     titulo: 'Path of steps',
@@ -112,6 +136,7 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     guardarYSalir: 'Save and exit',
     salirTitulo: 'Leave without finishing?',
     salirTexto: 'What you wrote in this form will be lost if you leave now.',
+    salirTextoConBorrador: 'What you wrote stays as a draft in this browser: you get it back when you return to this form.',
     salir: 'Leave',
     quedarse: 'Stay here'
   },

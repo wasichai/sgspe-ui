@@ -64,6 +64,7 @@ import { ES_ENTREGABLES } from './entregables'
 import { ES_PLANTILLAS } from './plantillas'
 import { ES_PRESENTACIONES } from './presentaciones'
 import { ES_ADMINISTRACION } from './administracion'
+import { ES_ATAJOS } from './atajos'
 
 // los textos del portal en español, el idioma por defecto (RNF-I18N-001). en.ts tiene las mismas claves. cada módulo de
 // F2 trae los suyos en su archivo (comun.ts, proyectos.ts…) con su par en inglés
@@ -142,6 +143,7 @@ export const ES = {
   presentaciones: ES_PRESENTACIONES,
   // el rediseño de UX: S53, la sección Administración
   administracion: ES_ADMINISTRACION,
+  atajos: ES_ATAJOS,
   app: { lema: 'Gestión social de proyectos extractivos' },
   login: {
     correo: 'Correo',
@@ -157,11 +159,12 @@ export const ES = {
     incorrecta: 'La contraseña no es correcta.'
   },
   shell: {
+    saltar: 'Saltar al contenido',
     insignias: {
       tareas_one: '{{count}} tarea suya vencida o por vencer',
       tareas_other: '{{count}} tareas suyas vencidas o por vencer',
-      avisos_one: '{{count}} aviso sin leer que pide acción',
-      avisos_other: '{{count}} avisos sin leer que piden acción'
+      avisos_one: '{{count}} aviso sin leer',
+      avisos_other: '{{count}} avisos sin leer'
     },
     salir: 'Cerrar sesión',
     menu: 'Menú',

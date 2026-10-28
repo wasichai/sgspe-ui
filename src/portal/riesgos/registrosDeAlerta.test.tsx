@@ -66,6 +66,45 @@ describe('S58 · menciones en medios', () => {
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/risks/mentions/m1'))
     expect(await screen.findByRole('dialog', { name: 'Menciones' })).toBeInTheDocument()
   })
+
+  // tercera pasada de UX, 3.7 y 3.8: la lista de la página busca por titular o medio, con ?q= en la URL, y abrir una mención la
+  // conserva; sin coincidencias, ofrece limpiar la búsqueda
+  it('busca por titular o medio, abrir una mención conserva la búsqueda y sin coincidencias ofrece limpiarla', async () => {
+    fetch = mockFetch(rutas())
+    montarEn(<MencionesPage />, '/projects/p1/risks/mentions', '/projects/:projectId/risks/mentions/:mentionId?')
+    const caja = await screen.findByRole('searchbox', { name: 'Buscar por titular o medio' })
+    await userEvent.type(caja, 'radio andina')
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Menciones' })).getAllByRole('row')).toHaveLength(2))
+    expect(ubicacion.actual).toBe('/projects/p1/risks/mentions?q=radio+andina')
+    await userEvent.click(screen.getByRole('button', { name: 'Comuneros denuncian polvo en la vía' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/risks/mentions/m1?q=radio+andina'))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/risks/mentions?q=radio+andina'))
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Buscar por titular o medio' }))
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por titular o medio' }), 'xyz')
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Menciones' })).getAllByRole('row')).toHaveLength(3))
+    expect(ubicacion.actual).toBe('/projects/p1/risks/mentions')
+  })
+})
+
+// tercera pasada de UX, 3.12: una lista de página cortada por el tope dice que la búsqueda mira solo lo leído
+describe('una lista cortada con búsqueda', () => {
+  it('dice que la búsqueda mira solo los registros leídos', async () => {
+    // cinco páginas de 200, cada una con el cursor de la siguiente y la última con otra más: el tope de 1000 corta la lectura
+    const paginas: MockRoute[] = Array.from({ length: 5 }, (_, i) => ({
+      path: i === 0 ? /^\/objects\/media_mention\/records\?(?!.*after=)/ : new RegExp(`^/objects/media_mention/records\\?.*after=c${i}(&|$)`),
+      body: pagina(
+        Array.from({ length: 200 }, (_, j) => registro(`m${i}-${j}`, { project: 'p1', headline: `Nota ${i}-${j}`, tone: 'NEUTRO' })),
+        { nextCursor: `c${i + 1}` }
+      )
+    }))
+    fetch = mockFetch([...paginas, ...baseDeRiesgos()])
+    montarEn(<MencionesPage />, '/projects/p1/risks/mentions', '/projects/:projectId/risks/mentions/:mentionId?')
+    // el número va con el formato es-PE
+    expect(await screen.findByText(/^Se muestran los primeros 1\D?000 registros y la búsqueda mira solo esos: hay más\.$/)).toBeInTheDocument()
+  })
 })
 
 describe('S59 · señales de alerta', () => {

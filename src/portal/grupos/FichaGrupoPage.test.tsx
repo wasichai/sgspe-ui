@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -612,6 +612,26 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     await waitFor(() => expect(red!.a('POST', '/sgspe/stakeholders/s1/assessments')).toHaveLength(2))
     const [primera, segunda] = red.a('POST', '/sgspe/stakeholders/s1/assessments')
     expect(segunda.cabeceras.get('Idempotency-Key')).not.toBe(primera.cabeceras.get('Idempotency-Key'))
+  })
+
+  // tercera pasada de UX, 2.1 y 2.4: las escalas son botones, y aun así cuentan como cambios; lo calificado queda como borrador
+  it('lo calificado pide confirmar antes de cerrar y vuelve como borrador al abrir otra vez la evaluación', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    let drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    await calificar(drawer, '3')
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByRole('dialog', { name: '¿Descartar lo escrito?' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Seguir editando' }))
+    const clave = `sgspe.borrador.evaluacion.s1.${GERENCIA_SOCIAL.id}`
+    await waitFor(() => expect(localStorage.getItem(clave)).toContain('"affect_environment":3'))
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/stakeholders/s1?drawer=assessment', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    drawer = await screen.findByRole('dialog', { name: 'Nueva evaluación' })
+    expect(await within(drawer).findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    expect(within(drawer).getByText('5 de 5 temas calificados')).toBeInTheDocument()
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(localStorage.getItem(clave)).toBeNull())
   })
 
   it('una interacción sin fecha no deja un separador suelto', async () => {

@@ -229,6 +229,8 @@ describe('S48 · aprobaciones', () => {
     const fila = within(tabla).getByText('Registro reservado').closest('li')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
     expect(within(fila).queryByText(/^Queja/)).not.toBeInTheDocument()
+    // la única pendiente no se elige sola si no se lee (tercera pasada de UX, 3.4)
+    expect(ubicacion.actual).toBe('/tasks/approvals')
   })
 
   // con el alcance por proyecto (ADR-0029) un compromiso de un proyecto que la cuenta dejó de leer también responde 404
@@ -540,17 +542,20 @@ describe('P-05 · decidir desde la bandeja', () => {
     const avisosAntes = red.a('GET', '/auth/me/notifications').length
     await userEvent.click(within(decidir).getByRole('button', { name: 'Aprobar' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Aprobar' })
-    await waitFor(() => expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toBeEnabled())
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await waitFor(() => expect(within(dialogo).getByRole('button', { name: 'Aprobar' })).toBeEnabled())
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aprobar' }))
     expect(await within(dialogo).findByText('Escriba el motivo del cambio')).toBeInTheDocument()
     expect(red.a('POST', '/objects/social_contribution/records/a1/transitions/approve')).toHaveLength(0)
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Dentro del tope')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aprobar' }))
     await waitFor(() => expect(red!.a('POST', '/objects/social_contribution/records/a1/transitions/approve')).toHaveLength(1))
     const [llamada] = red.a('POST', '/objects/social_contribution/records/a1/transitions/approve')
     expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00.123456Z"')
     expect(llamada.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Dentro%20del%20tope")
     expect(await screen.findByText('Decisión registrada.')).toBeInTheDocument()
+    // tercera pasada de UX, 3.4: dice cuántas quedan; con ninguna, no ofrece una siguiente
+    expect(screen.getByText('No queda nada por decidir.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Ir a la siguiente' })).not.toBeInTheDocument()
     expect(ubicacion.actual).toBe('/tasks/approvals?selected=social_contribution%3Aa1')
     // la bandeja se relee: el aviso resuelto sale de la lista
     await waitFor(() => expect(red!.a('GET', '/auth/me/notifications').length).toBeGreaterThan(avisosAntes))
@@ -565,8 +570,8 @@ describe('P-05 · decidir desde la bandeja', () => {
     await userEvent.click(within(detalle).getByRole('button', { name: 'Aprobar' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Aprobar' })
     await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Conforme')
-    await waitFor(() => expect(within(dialogo).getByRole('button', { name: 'Confirmar' })).toBeEnabled())
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await waitFor(() => expect(within(dialogo).getByRole('button', { name: 'Aprobar' })).toBeEnabled())
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Aprobar' }))
     expect(await within(dialogo).findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
     expect(within(dialogo).getByRole('button', { name: 'Recargar' })).toBeInTheDocument()
     expect(within(dialogo).getByLabelText('Motivo (obligatorio)')).toHaveValue('Conforme')
@@ -580,6 +585,16 @@ describe('P-05 · decidir desde la bandeja', () => {
     const detalle = screen.getByRole('region', { name: 'Detalle' })
     expect(await within(detalle).findByText('Su rol no tiene decisiones sobre este registro en su estado actual.')).toBeInTheDocument()
     expect(within(detalle).queryByRole('button', { name: /Aprobar|Rechazar/ })).not.toBeInTheDocument()
+  })
+
+  // tercera pasada de UX, 3.4: con una sola pendiente no hay nada que elegir: se abre sola, sin una entrada más en el historial
+  it('con una sola aprobación pendiente la elige sola y su pestaña dice cuántas hay', async () => {
+    fetch = mockFetch(deAporte())
+    red = enSeco()
+    abrirBandeja()
+    await waitFor(() => expect(ubicacion.actual).toBe('/tasks/approvals?selected=social_contribution%3Aa1'))
+    expect(await within(screen.getByRole('region', { name: 'Detalle' })).findByRole('heading', { name: 'Aporte AP-001' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Por aprobar' })).toHaveAccessibleDescription('1 registro')
   })
 
   it('«Volver» deja la lista sola (en el teléfono, el detalle ocupa la pantalla)', async () => {

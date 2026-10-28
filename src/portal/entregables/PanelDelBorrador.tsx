@@ -17,6 +17,7 @@ import { EDITABLE_EN } from './tipos'
 import { Huella } from '../componentes/Huella'
 import { rotuloDeOpcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
+import { minutosDesde, useAhora } from '../componentes/ahora'
 
 // el panel del borrador de S50 (deliverables.md §8.2, api.md §4.12): el estado, la letra, los avisos con su sección y la huella de
 // cada candidata (que nunca se descarga). mientras está pendiente se consulta cada 5 s (useEstadoDelBorrador) y, al terminar, se
@@ -25,7 +26,16 @@ import { Seccion } from '../componentes/Seccion'
 // pedir un borrador es de draft u observed, con GENERATE y UPDATE y la asignación vigente, y lleva motivo
 type Nivel = 'INTERNO' | 'EXTERNO'
 
-export function PanelDelBorrador({ entregable, secciones }: { entregable: Registro; secciones: Registro[] }) {
+// alElegirSeccion: un aviso del borrador que nombra una sección lleva a ella (tercera pasada de UX, 4.6)
+export function PanelDelBorrador({
+  entregable,
+  secciones,
+  alElegirSeccion
+}: {
+  entregable: Registro
+  secciones: Registro[]
+  alElegirSeccion?: (clave: string) => void
+}) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const pedir = usePedir()
@@ -38,17 +48,25 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
   const [falloDeDescarga, setFalloDeDescarga] = useState<unknown>(null)
   const pendienteAntes = useRef<boolean | undefined>(undefined)
   const pendiente = estado.data?.pending
+  // al terminar de prepararse, se dice en el panel: listo o fallido (tercera pasada de UX, 4.6)
+  const [termino, setTermino] = useState<'listo' | 'fallido' | null>(null)
+  const ahora = useAhora()
   useEffect(() => {
     if (pendienteAntes.current === true && pendiente === false) {
       void cliente.invalidateQueries({ queryKey: ['record', 'deliverable', entregable.id] })
       void cliente.invalidateQueries({ queryKey: ['records', 'deliverable_section'] })
+      setTermino(estado.data?.status === 'FALLIDO' ? 'fallido' : 'listo')
     }
+    if (pendiente) setTermino(null)
     pendienteAntes.current = pendiente
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendiente, cliente, entregable.id])
+  const pedidoHace = estado.data?.requestedAt ? minutosDesde(Date.parse(estado.data.requestedAt), ahora) : 0
   const descarga = can('deliverable', 'DOWNLOAD_RESTRICTED')
   const pide = EDITABLE_EN.includes(entregable.state ?? '') && can('deliverable', 'GENERATE') && can('deliverable', 'UPDATE') && escribe
+  const seccionDe = (clave: string | null) => secciones.find((s) => texto(s, 'section_key') === clave)
   const tituloDe = (clave: string | null): string => {
-    const seccion = secciones.find((s) => texto(s, 'section_key') === clave)
+    const seccion = seccionDe(clave)
     return seccion ? texto(seccion, 'title') : (clave ?? '')
   }
   const titulo = t('entregables.borrador.titulo')
@@ -76,7 +94,15 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
           ) : null}
           {estado.data.pending ? (
             <p role="status" className="text-sg-text-secondary">
-              {t('entregables.borrador.consultando')}
+              {pedidoHace >= 60 && estado.data.requestedAt
+                ? t('entregables.borrador.consultandoDesde', { fecha: fechaYHoraPe(new Date(estado.data.requestedAt)) })
+                : pedidoHace > 0
+                  ? t('entregables.borrador.consultando', { n: pedidoHace })
+                  : t('entregables.borrador.consultandoRecien')}
+            </p>
+          ) : termino ? (
+            <p role="status" className={termino === 'fallido' ? 'text-sg-danger' : 'text-sg-success'}>
+              {t(`entregables.borrador.${termino}`)}
             </p>
           ) : null}
           {estado.isError ? (
@@ -92,6 +118,14 @@ export function PanelDelBorrador({ entregable, secciones }: { entregable: Regist
               {estado.data.warnings.map((a, i) => (
                 <li key={`${a.code}-${a.section ?? ''}-${i}`} className={a.code === 'MAP_FAILED' ? 'text-sg-danger' : 'text-sg-warning'}>
                   {t(`entregables.borrador.avisos.${a.code}`, { seccion: tituloDe(a.section), defaultValue: t('entregables.borrador.avisos.otro') })}
+                  {alElegirSeccion && a.section && seccionDe(a.section) ? (
+                    <>
+                      {' '}
+                      <button type="button" className="text-sg-primary-text underline" onClick={() => alElegirSeccion(a.section!)}>
+                        {t('entregables.borrador.irASeccion', { seccion: tituloDe(a.section) })}
+                      </button>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>

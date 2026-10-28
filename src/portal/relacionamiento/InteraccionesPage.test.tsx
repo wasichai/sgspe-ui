@@ -71,6 +71,18 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     expect(within(tabla).getByText('40')).toBeInTheDocument()
   })
 
+  // tercera pasada de UX, 3.7: la búsqueda va al servidor con ?q=, vuelve a la primera página y es un chip
+  it('buscar pide al servidor con q, vuelve a la primera página y se quita con su chip', async () => {
+    fetch = abrirPortal('/projects/p1/engagements?page=2', RELACIONISTA, EQUIPO, [...base(), { path: '/objects/engagement/records', body: pagina([E1, E2]) }])
+    red = espiarRed()
+    await screen.findByRole('table', { name: 'Relacionamiento' })
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por título u objetivo' }), 'asamblea')
+    await waitFor(() => expect(red!.a('GET', '/objects/engagement/records').some((l) => l.ruta.includes('q=asamblea'))).toBe(true))
+    expect(rutaActual()).toBe('/projects/p1/engagements?q=asamblea')
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro Contiene «asamblea»' }))
+    expect(rutaActual()).toBe('/projects/p1/engagements')
+  })
+
   it('el límite de la medianoche: 04:59Z sigue en el día de Lima y 05:00Z ya es el siguiente', async () => {
     const antes = registro('b1', { project: 'p1', title: 'Antes de medianoche', engagement_type: 'VISITA', held_at: '2026-10-05T04:59:00Z' }, { state: 'held' })
     const despues = registro(
@@ -266,7 +278,8 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
     const consultas = () => red!.a('GET', '/objects/engagement/records').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Fecha' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'scheduled_at', dir: 'asc', page: '0' })))
-    expect(rutaActual()).toBe('/projects/p1/engagements?view=lista')
+    // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
+    expect(rutaActual()).toBe('/projects/p1/engagements?view=lista&sort=fecha&dir=asc')
     expect(within(tabla()).getByRole('columnheader', { name: 'Fecha' })).toHaveAttribute('aria-sort', 'ascending')
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Interacción' }))
     await waitFor(() => expect(consultas()).toContainEqual(expect.objectContaining({ sort: 'title', dir: 'asc', page: '0' })))

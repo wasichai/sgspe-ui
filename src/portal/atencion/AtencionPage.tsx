@@ -1,9 +1,10 @@
+import { CuandoVence } from '../componentes/CuandoVence'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
@@ -18,7 +19,7 @@ import { KpiCard } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
@@ -98,13 +99,8 @@ export function AtencionPage() {
   const grupo = lista.filtro('stakeholder')
   const chipDeGrupo = useChipDeGrupo(grupo)
   const vista = (VISTAS as readonly string[]).includes(lista.vista) ? (lista.vista as (typeof VISTAS)[number]) : 'atencion'
-  // el orden es de esta visita: la cola no tiene parámetros de orden en la URL
-  const [orden, setOrden] = useState(ORDEN_INICIAL)
-  const ordenar = (siguiente: OrdenDeTabla) => {
-    setOrden(siguiente)
-    // otro orden empieza en la primera página
-    lista.cambiar({ page: null })
-  }
+  // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
+  const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL, ['codigo', 'plazo'])
   const cola = useColaDeAtencion(
     {
       project: proyecto,
@@ -399,6 +395,9 @@ function PlazoDeQcs({ fila: { objeto, registro } }: { fila: Fila }) {
     <span className="flex flex-wrap items-center gap-1">
       <SituacionDePlazo valor={atributo(registro, 'deadline_status')} />
       {plazo.fecha ? diaPe(plazo.fecha) : t('atencion.plazoPorCalcular')}
+      {plazo.fecha && atributo(registro, 'deadline_status') ? (
+        <CuandoVence dia={plazo.fecha} habiles={plazo.campo === 'ack_due_date'} className="basis-full text-sg-caption text-sg-text-muted" />
+      ) : null}
     </span>
   ) : (
     <span className="text-sg-text-muted">{t('atencion.sinPlazo')}</span>

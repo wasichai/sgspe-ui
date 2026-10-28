@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
@@ -11,6 +11,9 @@ import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
+import { EleccionDeGrupos } from '../componentes/EleccionDeGrupos'
+import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
+import { descartarBorrador, leerBorrador, useBorradorLocal } from '../datos/borrador'
 import { Cargando, NoDisponible } from '../componentes/Estados'
 import { ConDefiniciones, DeLista, FalloDeLectura } from '../componentes/LecturaConEstados'
 import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
@@ -18,15 +21,17 @@ import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { nuevaClave } from '../datos/http'
 import { puedeLeer, texto, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
-import { instanteDeLima } from '../datos/fechas'
+import { ahoraEnLima, instanteDeLima } from '../datos/fechas'
 import { fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { ConmutadorDeModo } from './ConmutadorDeModo'
 import { GuardadoParcial, useGuardarInteraccion, type NuevaInteraccion } from './guardarInteraccion'
 import { RegistroRapido } from './RegistroRapido'
+import { useClavesDelBorrador, conteosDe, filasDe, useTraspaso } from './traspaso'
 import { Mapa } from '../mapa/Mapa'
 import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
+import { conHecho } from '../componentes/AvisoDeExito'
 
 // S24 · registrar interacción (screens.md §6, flujos 4 y 5): cinco pasos con participantes sin pedir datos personales que
 // no hacen falta (filas de persona o de grupo sin nombres, con personas ≥ 1) y totales en vivo; al final "Guardar como
@@ -122,34 +127,62 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   const leeNombres = puedeLeer(definicionDeParticipante, 'participant_name')
   const opciones = (c: string) => definicion.fields.find((f) => f.name === c)?.enumOptions ?? []
   const opcionesDe = (c: string) => definicionDeParticipante.fields.find((f) => f.name === c)?.enumOptions ?? []
+  // el borrador de este navegador (tercera pasada de UX, 2.4) y lo que trae el conmutador desde el modo rápido (2.5): el
+  // borrador se recupera con su aviso; el traspaso se pone encima, como un cambio por guardar, y no avisa (es lo que se tenía)
+  const visita = busqueda.get('field_visit')
+  const claves = useClavesDelBorrador(projectId, visita)
+  const traspaso = useTraspaso()
+  const [recuperado] = useState(() => leerBorrador<Valores>(claves.asistente))
+  const [avisoDeBorrador, setAvisoDeBorrador] = useState(recuperado !== null && traspaso === null)
+  const [iniciales] = useState<Valores>(() => ({
+    engagement_type: '',
+    title: '',
+    objective: '',
+    realizada: false,
+    held_at: '',
+    scheduled_at: '',
+    place: '',
+    locality: territory?.kind === 'locality' ? territory.id : '',
+    community: territory?.kind === 'community' ? territory.id : '',
+    grupos: busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? [],
+    convener: '',
+    participantes: [],
+    preguntas: [],
+    temas: []
+  }))
   const formulario = useForm<Valores>({
     resolver: zodResolver(esquema),
-    defaultValues: {
-      engagement_type: '',
-      title: '',
-      objective: '',
-      realizada: false,
-      held_at: '',
-      scheduled_at: '',
-      place: '',
-      locality: territory?.kind === 'locality' ? territory.id : '',
-      community: territory?.kind === 'community' ? territory.id : '',
-      grupos: busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? [],
-      convener: '',
-      participantes: [],
-      preguntas: [],
-      temas: []
-    }
+    // los grupos con los que se abrió (?stakeholders=) se suman a los del borrador
+    defaultValues: recuperado
+      ? { ...iniciales, ...recuperado.valores, grupos: [...new Set([...(recuperado.valores.grupos ?? []), ...iniciales.grupos])] }
+      : iniciales
   })
-  const { register, control, handleSubmit, formState, trigger, setValue, reset } = formulario
+  const { register, control, handleSubmit, formState, trigger, setValue, getValues, reset } = formulario
+  useEffect(() => {
+    if (!traspaso) return
+    const actuales = getValues()
+    reset(
+      {
+        ...actuales,
+        engagement_type: traspaso.tipo || actuales.engagement_type,
+        grupos: traspaso.grupos.length > 0 ? traspaso.grupos : actuales.grupos,
+        // las filas del asistente no se pisan: los conteos del modo rápido entran solo si no había ninguna
+        participantes: actuales.participantes.length === 0 ? filasDe(traspaso.conteos) : actuales.participantes
+      },
+      { keepDefaultValues: true }
+    )
+    // solo al montar: el traspaso se leyó una vez
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const participantes = useFieldArray({ control, name: 'participantes' })
   const preguntas = useFieldArray({ control, name: 'preguntas' })
   const v = useWatch({ control }) as Valores
+  const borrador = useBorradorLocal(claves.asistente, { valores: v }, formState.isDirty)
   const localidad = useRegistro('locality', v.locality || undefined)
   const comunidad = useRegistro('community', v.community || undefined)
   // el punto de la interacción marcado en el mapa del paso «Lugar» (decisión 20 del plan 6.3): propone sus lugares y viaja como
   // location (si la cuenta la escribe; geometriasDeEscritura lo decide)
-  const [punto, setPunto] = useState<[number, number] | null>(null)
+  const [punto, setPunto] = useState<[number, number] | null>(traspaso?.punto ?? null)
   const salida = useSalidaPermitida()
   const capaDelPunto = useMemo(
     () =>
@@ -189,6 +222,10 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   }
 
   const [faltaAsistente, setFaltaAsistente] = useState(false)
+  // la hora que se propuso al elegir «Sí, ya se realizó»: mientras siga esa, se dice que es una propuesta
+  const [horaPropuesta, setHoraPropuesta] = useState<string | null>(null)
+  // «Programar» sin fecha no se deshabilita en silencio: lleva al paso de la fecha y lo dice ahí (tercera pasada de UX, 2.8)
+  const [faltaProgramada, setFaltaProgramada] = useState(false)
   const [conErrores, setConErrores] = useState<number | null>(null)
   const irA = (destino: number) => {
     setPaso(destino)
@@ -245,31 +282,47 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
           // React Router navega en una transición: si se vuelve atrás antes de que se confirme la ficha, el asistente sigue
           // montado; sin limpiar, lo escrito quedaría con una clave nueva y otro «Guardar» duplicaría la interacción
           setClave(nuevaClave())
-          reset()
+          // registrada, ni este borrador ni el del modo rápido tienen ya nada que recuperar
+          borrador.descartar()
+          descartarBorrador(claves.rapido)
+          reset(iniciales)
           setPunto(null)
           setPaso(0)
           setVisitados(0)
           salida.current = true
-          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
+          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`, {
+            state: conHecho(null, t('relacionamiento.registro.hecho', { titulo: texto(i, 'title') }))
+          })
         }
       })
     }, alFallar)
 
   // lo ya creado queda: guardar otra vez dejaría una interacción duplicada, así que lo que falta se completa desde su ficha
   const parcial = guardar.error instanceof GuardadoParcial
+  const descartar = () => {
+    borrador.descartar()
+    reset(iniciales)
+    setPunto(null)
+    setAvisoDeBorrador(false)
+  }
   const errorDeFecha = formState.errors.held_at ? t('relacionamiento.registro.faltaFecha') : undefined
 
   // la forma común de las altas largas (FormularioPorPasos, revisión de UX, etapa 5): «Cancelar» vuelve a donde se abrió (la
   // visita de campo o la lista) y, con cambios, salir pide confirmar. «Completar después» guarda en el servidor y hace de
   // «Guardar y salir», así que no hay otro
-  const visita = busqueda.get('field_visit')
   const volverA = visita
     ? `/projects/${encodeURIComponent(projectId)}/field-visits/${encodeURIComponent(visita)}`
     : `/projects/${encodeURIComponent(projectId)}/engagements`
   return (
     <FormularioPorPasos
       titulo={t('relacionamiento.registro.titulo')}
-      accionesDeCabecera={<ConmutadorDeModo rapido={false} />}
+      accionesDeCabecera={
+        <ConmutadorDeModo
+          rapido={false}
+          traspaso={{ tipo: v.engagement_type ?? '', grupos: v.grupos ?? [], conteos: conteosDe(v.participantes ?? []), punto }}
+        />
+      }
+      avisos={avisoDeBorrador && recuperado ? <AvisoDeBorrador guardado={recuperado.guardado} alDescartar={descartar} /> : null}
       pasos={pasos}
       actual={paso}
       visitados={visitados}
@@ -283,6 +336,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       alCancelar={() => navegar(volverA)}
       ocupado={guardar.isPending}
       conCambios={formState.isDirty || punto !== null}
+      conBorrador
       salidaPermitida={salida}
       acciones={
         paso < 4 ? undefined : (
@@ -295,7 +349,15 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                 {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.guardarRealizada')}
               </Button>
             ) : (
-              <Button type="button" disabled={guardar.isPending || parcial || !v.scheduled_at} onClick={() => void enviar('schedule')()}>
+              <Button
+                type="button"
+                disabled={guardar.isPending || parcial}
+                onClick={() => {
+                  setFaltaProgramada(!v.scheduled_at)
+                  if (!v.scheduled_at) return irA(0)
+                  void enviar('schedule')()
+                }}
+              >
                 {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.programar')}
               </Button>
             )}
@@ -315,7 +377,21 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
             <Controller
               control={control}
               name="realizada"
-              render={({ field }) => <SelectorDeRealizada valor={field.value} alCambiar={field.onChange} alSalir={field.onBlur} />}
+              render={({ field }) => (
+                <SelectorDeRealizada
+                  valor={field.value}
+                  alCambiar={(realizada) => {
+                    field.onChange(realizada)
+                    // «Sí, ya se realizó» propone la hora de ahora (tercera pasada de UX, 2.6): casi siempre se registra al terminar
+                    if (realizada && !getValues('held_at')) {
+                      const ahora = ahoraEnLima()
+                      setHoraPropuesta(ahora)
+                      setValue('held_at', ahora, { shouldDirty: true })
+                    }
+                  }}
+                  alSalir={field.onBlur}
+                />
+              )}
             />
           </div>
           {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
@@ -330,6 +406,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                   conHora
                   requerido
                   error={errorDeFecha}
+                  ayuda={field.value && field.value === horaPropuesta ? t('relacionamiento.registro.horaPropuesta') : undefined}
                   valor={field.value || null}
                   alCambiar={(x) => field.onChange(x ?? '')}
                 />
@@ -344,6 +421,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                 <CampoFecha
                   etiqueta={t('relacionamiento.registro.programada')}
                   conHora
+                  error={faltaProgramada && !field.value ? t('relacionamiento.registro.faltaProgramada') : undefined}
                   valor={field.value || null}
                   alCambiar={(x) => field.onChange(x ?? '')}
                 />
@@ -394,25 +472,17 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
               }}
             />
           </div>
-          <fieldset className="space-y-1">
-            <legend className="text-sg-label font-medium">{t('relacionamiento.registro.grupos')}</legend>
-            <DeLista consulta={grupos}>
-              {(todos) => (
-                <ul className="max-h-60 overflow-y-auto rounded-sg-md border border-sg-border p-2 text-sm">
-                  {todos
-                    .filter((g) => g.state !== 'retired')
-                    .map((g) => (
-                      <li key={g.id}>
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" value={g.id} {...register('grupos')} />
-                          <NombreDelGrupo grupo={g} />
-                        </label>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </DeLista>
-          </fieldset>
+          <DeLista consulta={grupos}>
+            {(todos) => (
+              <Controller
+                control={control}
+                name="grupos"
+                render={({ field }) => (
+                  <EleccionDeGrupos etiqueta={t('relacionamiento.registro.grupos')} grupos={todos} elegidos={field.value ?? []} alCambiar={field.onChange} />
+                )}
+              />
+            )}
+          </DeLista>
           <Campo etiqueta={t('relacionamiento.registro.convocante')}>
             {(p) => (
               <select {...p} {...register('convener')} className="h-9 w-full rounded-sg-md border border-sg-border-strong bg-sg-surface px-2.5 text-sm">

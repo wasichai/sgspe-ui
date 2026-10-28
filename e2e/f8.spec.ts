@@ -205,7 +205,8 @@ test('la revisión ejecutiva y el cierre de un periodo con su razón', async ({ 
   await expect(page.getByRole('region', { name: 'Visión ejecutiva' })).toBeVisible()
   await page.getByRole('link', { name: 'Ver la revisión ejecutiva' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Compromisos vencidos · Proyecto Ejemplo A' })).toHaveAttribute('href', '/projects/p1/commitments')
+  // tercera pasada de UX, 4.1: lo crítico lleva a la lista con la vista que cuenta lo mismo
+  await expect(page.getByRole('link', { name: 'Compromisos vencidos · Proyecto Ejemplo A' })).toHaveAttribute('href', '/projects/p1/commitments?view=vencidos')
   // P-07 y U-11: el periodo y la fecha de cálculo bajo el título; los filtros, plegados hasta pedirlos, con fechas dd/mm/aaaa
   await expect(page.getByText(/ · todos sus proyectos · calculado /)).toBeVisible()
   await expect(page.getByLabel('Desde', { exact: true })).toHaveCount(0)
@@ -268,10 +269,12 @@ test('el borrador se sondea y se ve en el navegador sin violar la CSP', async ({
   await page.goto('/reports/deliverables/d1?seccion=antecedentes')
   // el editor con injectCSS: false monta sin el <style> de tiptap que style-src 'self' bloquearía
   await expect(page.getByRole('textbox', { name: 'Texto de la sección' })).toBeVisible()
-  await expect(page.getByText('Se prepara el borrador: el estado se consulta cada 5 segundos.')).toBeVisible()
+  // tercera pasada de UX, 4.6: la espera dice cuánto lleva (pedido a las 14:59, son las 15:00) y al terminar se avisa
+  await expect(page.getByText(/^Se prepara el borrador, pedido hace 1 min: suele tardar unos minutos\./)).toBeVisible()
   terminarBorrador()
   await page.clock.runFor(5000)
   await expect(page.getByText('Estado del borrador: Listo')).toBeVisible()
+  await expect(page.getByText('El borrador ya está listo.')).toBeVisible()
   await page.getByRole('button', { name: 'Ver el PDF «Interno»' }).click()
   const dialogo = page.getByRole('dialog', { name: 'Borrador «Interno» (con la marca BORRADOR)' })
   await expect(dialogo.locator('iframe')).toBeVisible()

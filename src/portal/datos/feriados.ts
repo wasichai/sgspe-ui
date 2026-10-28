@@ -15,14 +15,14 @@ export function feriadosDe(respuesta: unknown, año: number): ReadonlySet<string
   return new Set(dias.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && d.startsWith(`${año}-`)))
 }
 
-// una lectura por año y por sesión: la lista cambia solo con un despliegue
-export function useFeriados(año: number): ReadonlySet<string> {
+// una lectura por año y por sesión: la lista cambia solo con un despliegue. activo en falso no la pide (un plazo de calendario)
+export function useFeriados(año: number, activo = true): ReadonlySet<string> {
   const { user } = useAuth()
   const pedir = usePedir()
   const consulta = useQuery({
     queryKey: ['calendar-holidays', año],
     queryFn: async () => feriadosDe(await pedir<unknown>(`/sgspe/calendar/holidays?year=${año}`), año),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && activo,
     staleTime: Infinity,
     retry: false
   })

@@ -100,6 +100,9 @@ describe('S32 · entregas', () => {
     await userEvent.type(within(evidencia).getByLabelText('Título'), 'Acta firmada')
     await userEvent.click(within(evidencia).getByRole('button', { name: 'Subir evidencia' }))
     expect(await within(panel).findByText('Acta firmada · Acta de entrega')).toBeInTheDocument()
+    // tercera pasada de UX (1.6): con el acta subida, dice lo que falta para el cumplimiento y propone la foto
+    expect(within(panel).getByText('Para el cumplimiento faltan: «Foto».')).toBeInTheDocument()
+    expect(within(within(panel).getByRole('group', { name: 'Subir una evidencia' })).getByLabelText('Tipo de evidencia')).toHaveValue('FOTO')
     // la subida de la evidencia no envió la entrega
     expect(red.a('POST', '/sgspe/commitments/c1/deliveries')).toHaveLength(0)
     await userEvent.type(within(panel).getByLabelText('Monto entregado'), '1e5')
@@ -122,6 +125,28 @@ describe('S32 · entregas', () => {
     expect(alta.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Entrega%20en%20obra")
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(screen.getByRole('status')).toHaveTextContent('Entrega guardada.')
+  })
+
+  // tercera pasada de UX (1.6): guardada la entrega, el siguiente paso (registrar el cumplimiento) se ofrece en el mismo lugar
+  it('antes de subir nada dice las dos evidencias que faltan; guardada la entrega, ofrece registrar el cumplimiento ahí mismo', async () => {
+    const conCumplimiento = {
+      path: '/objects/commitment/records/c1/transitions',
+      body: [{ name: 'register_fulfillment', label: 'Registrar cumplimiento', to: 'fulfilled', toLabel: 'Cumplido', allowed: true, reason: null }]
+    }
+    fetch = mockFetch(rutas([conCumplimiento]))
+    red = espiarRed([
+      { method: 'POST', path: '/sgspe/commitments/c1/deliveries', responder: () => jsonResponse({ delivery: registro('dl2', {}), commitment: C1 }, 201) }
+    ])
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar entrega' }))
+    const panel = await screen.findByRole('dialog')
+    expect(await within(panel).findByText('Para el cumplimiento faltan: «Acta de entrega» y «Foto».')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar cumplimiento' })).not.toBeInTheDocument()
+    await userEvent.type(within(panel).getByLabelText('Motivo (obligatorio)'), 'Entrega en obra')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Guardar entrega' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('status')).toHaveTextContent('Entrega guardada.')
+    expect(await screen.findByRole('button', { name: 'Registrar cumplimiento' })).toHaveAttribute('data-variant', 'secondary')
   })
 
   it('sin la definición de la entrega no ofrece guardar ni campos: dice el fallo y, al releerla, el formulario', async () => {

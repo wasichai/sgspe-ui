@@ -40,6 +40,10 @@ export const ES_ENTREGAS = {
   guardar: 'Guardar entrega',
   guardando: 'Guardando…',
   guardada: 'Entrega guardada.',
+  // lo que le falta a la entrega para el cumplimiento (tercera pasada de UX, 1.6)
+  faltan: 'Para el cumplimiento faltan: {{tipos}}.',
+  faltaUnaDe: 'Para el cumplimiento falta un «Acta», una «Carta» u «Otro».',
+  completas: 'Con estas evidencias y la conformidad, la entrega basta para registrar el cumplimiento.',
   errores: {
     fecha: 'Elija la fecha de la entrega',
     monto: 'Escriba un monto de hasta 15 dígitos enteros y 4 decimales',
@@ -96,6 +100,9 @@ export const EN_ENTREGAS: typeof ES_ENTREGAS = {
   guardar: 'Save delivery',
   guardando: 'Saving…',
   guardada: 'Delivery saved.',
+  faltan: 'For fulfillment, still missing: {{tipos}}.',
+  faltaUnaDe: 'For fulfillment, an “Acta”, a “Carta” or an “Otro” is missing.',
+  completas: 'With this evidence and the conformity, the delivery is enough to record fulfillment.',
   errores: {
     fecha: 'Pick the delivery date',
     monto: 'Type an amount of up to 15 integer digits and 4 decimals',

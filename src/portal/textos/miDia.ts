@@ -6,13 +6,20 @@ export const ES_MI_DIA = {
     descripcion: 'Lo vencido primero, con su motivo y su fecha.',
     aCargo: 'A su cargo',
     nada: 'Nada pendiente a su cargo.',
+    noSeLeyo: 'No se pudieron leer {{que}}: lo que está a su cargo puede estar incompleto.',
     verTareas: 'Ver mis tareas',
+    actualizadoAhora: 'Actualizado hace un momento',
+    actualizadoMinutos: 'Actualizado hace {{n}} min',
+    actualizadoHoras_one: 'Actualizado hace {{count}} hora',
+    actualizadoHoras_other: 'Actualizado hace {{count}} horas',
+    actualizar: 'Actualizar',
     vencio: 'venció el {{fecha}}',
     vence: 'vence el {{fecha}}',
     paraTomar: 'Para tomar en {{proyecto}}',
     paraTomarSinNombre: 'Para tomar en uno de sus proyectos',
     paraTomarEnSusProyectos: 'Para tomar en sus proyectos',
     sinAsignar: 'Sin asignar',
+    tomada: 'Tomó «{{titulo}}»: ahora está a su cargo.',
     otrosProyectos_one: 'Lo que puede tomar en su otro proyecto está en su lista de tareas',
     otrosProyectos_other: 'Lo que puede tomar en sus otros {{count}} proyectos está en la lista de tareas de cada uno'
   },
@@ -45,6 +52,12 @@ export const ES_MI_DIA = {
     compromiso: 'Nuevo compromiso',
     proyecto: 'Nuevo proyecto'
   },
+  consultas: { titulo: 'Consultar' },
+  sinAsignacion: {
+    titulo: 'Todavía no tiene un proyecto asignado',
+    texto:
+      'Para registrar en un proyecto necesita una asignación vigente: pídala a la administración del proyecto. Mientras tanto, puede leer lo que su rol permite.'
+  },
   proyectos: {
     titulo: 'Mis proyectos',
     jefatura: 'Jefatura',
@@ -66,6 +79,14 @@ export const ES_MI_DIA = {
     grievance: 'Queja',
     inquiry: 'Consulta',
     stakeholder_request: 'Solicitud'
+  },
+  // lo que no se pudo leer, en «No se pudieron leer {{que}}»
+  fuentes: {
+    task: 'sus tareas',
+    commitment: 'sus compromisos',
+    grievance: 'sus quejas',
+    inquiry: 'sus consultas',
+    stakeholder_request: 'sus solicitudes'
   }
 }
 
@@ -75,13 +96,20 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     descripcion: 'Overdue first, with its reason and date.',
     aCargo: 'In your charge',
     nada: 'Nothing pending in your charge.',
+    noSeLeyo: 'Your {{que}} could not be read: what is in your charge may be incomplete.',
     verTareas: 'See my tasks',
+    actualizadoAhora: 'Updated a moment ago',
+    actualizadoMinutos: 'Updated {{n}} min ago',
+    actualizadoHoras_one: 'Updated {{count}} hour ago',
+    actualizadoHoras_other: 'Updated {{count}} hours ago',
+    actualizar: 'Refresh',
     vencio: 'was due {{fecha}}',
     vence: 'due {{fecha}}',
     paraTomar: 'Up for grabs in {{proyecto}}',
     paraTomarSinNombre: 'Up for grabs in one of your projects',
     paraTomarEnSusProyectos: 'Up for grabs in your projects',
     sinAsignar: 'Unassigned',
+    tomada: 'You took “{{titulo}}”: it is now yours.',
     otrosProyectos_one: 'What you can take in your other project is in its task list',
     otrosProyectos_other: 'What you can take in your other {{count}} projects is in the task list of each one'
   },
@@ -114,6 +142,11 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     compromiso: 'New commitment',
     proyecto: 'New project'
   },
+  consultas: { titulo: 'Look up' },
+  sinAsignacion: {
+    titulo: 'You have no project assigned yet',
+    texto: 'To record in a project you need a current assignment: ask the project administration for it. Meanwhile, you can read what your role allows.'
+  },
   proyectos: {
     titulo: 'My projects',
     jefatura: 'Project lead',
@@ -135,5 +168,12 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     grievance: 'Grievance',
     inquiry: 'Inquiry',
     stakeholder_request: 'Request'
+  },
+  fuentes: {
+    task: 'tasks',
+    commitment: 'commitments',
+    grievance: 'grievances',
+    inquiry: 'inquiries',
+    stakeholder_request: 'requests'
   }
 }

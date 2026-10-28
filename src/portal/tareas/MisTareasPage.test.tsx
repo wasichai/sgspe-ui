@@ -197,6 +197,33 @@ describe('S47 · mis tareas', () => {
     await waitFor(() => expect(within(drawer).queryByRole('button', { name: 'Tomar la tarea' })).not.toBeInTheDocument())
   })
 
+  // tercera pasada de UX, 3.3: «Tomar» en la fila y varias a la vez, cada una con su If-Match; la que otra persona tomó antes no
+  // detiene a las demás
+  it('en «Para tomar» se toma desde la fila o se eligen varias y se toman juntas', async () => {
+    const OTRA = registro(
+      't5',
+      { project: 'p1', title: 'Escalamiento C-003 nivel 1', commitment: 'c3', assignee_user_id: null, assignee_user_email: null },
+      { state: 'open' }
+    )
+    fetch = mockFetch(rutas())
+    red = servidor(
+      [T1, T2, T3, ESCALAMIENTO, OTRA],
+      [
+        { method: 'PUT', path: '/objects/task/records/t4', responder: () => jsonResponse(ESCALAMIENTO) },
+        { method: 'PUT', path: '/objects/task/records/t5', responder: () => problema(412, 'otra persona la tomó') }
+      ]
+    )
+    montar(<MisTareasPage />, { ruta: '/projects/p1/tasks', camino: '/projects/:projectId/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const paraTomar = await screen.findByRole('region', { name: 'Para tomar' })
+    expect(await within(paraTomar).findByRole('button', { name: 'Tomar «Escalamiento C-002 nivel 1»' })).toBeInTheDocument()
+    await userEvent.click(within(paraTomar).getByRole('checkbox', { name: 'Elegir todas las que se pueden tomar' }))
+    expect(within(paraTomar).getByRole('checkbox', { name: 'Elegir «Escalamiento C-003 nivel 1»' })).toBeChecked()
+    await userEvent.click(within(paraTomar).getByRole('button', { name: 'Tomar las 2 elegidas' }))
+    expect(await within(paraTomar).findByRole('status')).toHaveTextContent('Tomó 1; 1 no se pudo tomar')
+    expect(red.a('PUT', '/objects/task/records/t4')[0].cuerpo).toMatchObject({ attributes: { assignee_user_id: 'u-cmm' } })
+    expect(red.a('PUT', '/objects/task/records/t5')).toHaveLength(1)
+  })
+
   it('una tarea de una QCS, un riesgo o una alerta (F4) lleva a la ficha de su origen, con su tipo y su nombre', async () => {
     const acuse = registro('t5', { project: 'p1', title: 'Acusar recibo de la queja Q-001', grievance: 'g1', assignee_user_id: 'u-cmm' }, { state: 'open' })
     const revision = registro('t6', { project: 'p1', title: 'Revisar el riesgo R-001', social_risk: 'k1', assignee_user_id: 'u-cmm' }, { state: 'open' })
@@ -217,8 +244,8 @@ describe('S47 · mis tareas', () => {
     expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
   })
 
-  // plan 4.2a: el escalamiento de nivel 2 de una QCS confidencial no lleva vínculo a la QCS, sino un título genérico: la lista dice
-  // «—» en el origen, la ficha no ofrece «Ver origen» y tomarla devuelve su clave tal como se leyó
+  // plan 4.2a: el escalamiento de nivel 2 de una QCS confidencial no lleva vínculo a la QCS, sino un título genérico: la lista no
+  // dice un origen, la ficha no ofrece «Ver origen» y tomarla devuelve su clave tal como se leyó
   it('el escalamiento de nivel 2 de una QCS confidencial, sin origen, se lista, se abre y se toma sin enlace roto', async () => {
     const NIVEL_2 = registro(
       't7',
@@ -243,7 +270,8 @@ describe('S47 · mis tareas', () => {
     const tabla = await screen.findByRole('table')
     const fila = within(tabla).getByRole('button', { name: 'Abrir QCS confidencial vencida en Proyecto Norte' }).closest('tr')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
-    expect(fila.querySelectorAll('td')[1]).toHaveTextContent('—')
+    // sin origen en ninguna tarea de la página, la columna no se dibuja (tercera pasada de UX, 3.3): no hay un «—» por fila
+    expect(within(tabla).queryByRole('columnheader', { name: 'Origen' })).not.toBeInTheDocument()
     await userEvent.click(within(fila).getByRole('button', { name: 'Abrir QCS confidencial vencida en Proyecto Norte' }))
     const drawer = await screen.findByRole('dialog')
     expect(within(drawer).queryByRole('link')).not.toBeInTheDocument()
@@ -273,6 +301,49 @@ describe('S47 · mis tareas', () => {
     expect(await within(screen.getByRole('region', { name: 'Para tomar' })).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByText('No tiene tareas abiertas.')).not.toBeInTheDocument()
     expect(screen.queryByText('Vencidas')).not.toBeInTheDocument()
+  })
+
+  // tercera pasada de UX: el tablero no ignora la situación elegida, que sigue marcada en su cifra
+  it('el tablero aplica la situación elegida y su cifra queda marcada', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/tasks?view=tablero&situacion=VENCIDO', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    await waitFor(() => expect(red!.a('GET', '/objects/task/records').some((l) => /[?&]state=done(&|$)/.test(l.ruta))).toBe(true))
+    const columnas = red.a('GET', '/objects/task/records').filter((l) => /[?&]state=(open|in_progress|blocked|done)(&|$)/.test(l.ruta))
+    expect(columnas.length).toBeGreaterThanOrEqual(4)
+    expect(columnas.every((l) => l.ruta.includes('deadline_status=VENCIDO'))).toBe(true)
+    // las cifras llegan con su propia lectura
+    const cifras = await screen.findByRole('group', { name: 'Mis tareas' })
+    expect(await within(cifras).findByRole('button', { name: 'Vencidas 1' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('una columna con más de las que muestra lleva a la lista, y el calendario dice cuando no le caben todas', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-09T15:00:00Z'))
+    const muchas = Array.from({ length: 52 }, (_, i) =>
+      registro(`x${i}`, { project: 'p1', title: `Tarea ${i}`, assignee_user_id: 'u-cmm', due_date: '2026-10-20' }, { state: 'open' })
+    )
+    // el mes se lee por cursor de 200 en 200: un servidor que siempre tiene más corta la lectura en el tope
+    const pagina = Array.from({ length: 200 }, (_, i) => registro(`m${i}`, { project: 'p1', title: `Del mes ${i}`, due_date: '2026-10-20' }, { state: 'open' }))
+    const delMes: RutaEspecial = {
+      path: /\/objects\/task\/records\?.*range_field=due_date/,
+      responder: () => jsonResponse({ content: pagina, page: 0, size: 200, nextCursor: 'mas' })
+    }
+    fetch = mockFetch(rutas())
+    red = servidor(muchas, [delMes])
+    montar(<MisTareasPage />, { ruta: '/tasks?view=tablero', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const abiertas = await screen.findByRole('region', { name: 'Abiertas' })
+    await userEvent.click(await within(abiertas).findByRole('button', { name: 'Ver las 2 restantes en la lista' }))
+    expect(ubicacion.actual).toBe('/tasks')
+    await userEvent.click(screen.getByRole('tab', { name: 'Calendario' }))
+    expect(await screen.findByText('Este mes tiene más tareas de las que el calendario puede mostrar: véalas todas en la lista.')).toBeInTheDocument()
+  })
+
+  it('dentro de un proyecto, el título dice que son las tareas de quien mira', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/projects/p1/tasks', camino: '/projects/:projectId/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mis tareas en este proyecto' })).toBeInTheDocument()
   })
 
   it('en el proyecto, la lista agrupa «Mis tareas» y «Para tomar», cada grupo con su consulta y su total', async () => {

@@ -106,7 +106,8 @@ export function BarraDeFiltros({
   )
 }
 
-function CajaDeBusqueda({ etiqueta, valor, alCambiar }: { etiqueta: string; valor: string; alCambiar: (valor: string) => void }) {
+// también la usa una lista con sus propios filtros (la Biblioteca): la espera es la misma
+export function CajaDeBusqueda({ etiqueta, valor, alCambiar }: { etiqueta: string; valor: string; alCambiar: (valor: string) => void }) {
   const [texto, setTexto] = useState(valor)
   // si la búsqueda cambia desde fuera (su chip, «Limpiar filtros», volver atrás), la caja lo dice
   const [recibido, setRecibido] = useState(valor)

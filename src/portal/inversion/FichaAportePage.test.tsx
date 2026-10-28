@@ -134,6 +134,11 @@ describe('S44 · ficha del aporte', () => {
     await waitFor(() => expect(red!.a('POST', '/objects/contribution_item/records')).toHaveLength(1))
     expect(red.a('POST', '/objects/contribution_item/records')[0].cuerpo).toMatchObject({ attributes: { description: 'Libros', social_contribution: 'a1' } })
     await waitFor(() => expect(red!.a('GET', '/objects/social_contribution/records/a1').length).toBeGreaterThan(lecturas))
+    // tercera pasada de UX, 2.11: el cajón queda abierto con el formulario vacío para el siguiente ítem, y «Listo» lo cierra
+    expect(await within(drawer).findByText('Se agregó. Puede agregar otro aquí mismo o cerrar.')).toBeInTheDocument()
+    expect(within(drawer).getByLabelText(/^description/)).toHaveValue('')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Listo' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuevo ítem' })).not.toBeInTheDocument())
   })
 
   it('fuera de Solicitado los ítems no cambian y lo dice; «Editar» no ofrece los términos aprobados', async () => {
@@ -173,10 +178,45 @@ describe('S44 · ficha del aporte', () => {
     await waitFor(() => expect(aprobar).toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
     const drawer = await screen.findByRole('dialog', { name: 'Editar el aporte' })
+    // el aporte es requiresReason: sin motivo, el cambio no sale (tercera pasada de UX, 2.2)
+    await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'Lo pidió la junta')
     await userEvent.selectOptions(selectNativo(await within(drawer).findByLabelText(/^contribution_type/)), 'DONACION')
     await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
     await waitFor(() => expect(red!.a('PUT', '/objects/social_contribution/records/a1')).toHaveLength(1))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar sin revisión interna' })).toBeEnabled())
+  })
+
+  // tercera pasada de UX (1.1): el bloqueo por un campo se resuelve donde se informa, sin abrir «Editar» con todos los campos
+  it('el bloqueo por un campo ofrece completarlo ahí mismo: solo ese campo, y «Aprobar» se habilita sin recargar', async () => {
+    const sinTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: null } }
+    const conTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: 'DONACION' }, updatedAt: '2026-10-05T16:00:00Z' }
+    fetch = mockFetch(rutas(sinTipo, [{ method: 'PUT', path: '/objects/social_contribution/records/a1', body: conTipo }]))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        responder: () =>
+          jsonResponse(
+            red!.a('PUT', '/objects/social_contribution/records/a1').length > 0
+              ? { allowed: true, blocking: [], warnings: [] }
+              : { allowed: false, blocking: [{ code: 'FIELD_REQUIRED', message: 'Falta el tipo de aporte.', field: 'contribution_type' }], warnings: [] }
+          )
+      }
+    ])
+    abrir()
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar sin revisión interna' })
+    await waitFor(() => expect(aprobar).toBeDisabled())
+    await userEvent.click(await screen.findByRole('button', { name: /^Completar «contribution_type»/ }))
+    const drawer = await screen.findByRole('dialog', { name: /^Completar «contribution_type»/ })
+    const tipo = await within(drawer).findByLabelText(/^contribution_type/)
+    expect(within(drawer).queryByLabelText(/^occasion/)).not.toBeInTheDocument()
+    await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'Lo pidió la junta')
+    await userEvent.selectOptions(selectNativo(tipo), 'DONACION')
+    await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/social_contribution/records/a1')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/social_contribution/records/a1')[0].cabeceras.get('X-Change-Reason')).toBe("UTF-8''Lo%20pidi%C3%B3%20la%20junta")
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar sin revisión interna' })).toBeEnabled())
+    expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
   })
 
   it('un ITEMS_FROZEN al borrar (otra persona aprobó mientras tanto) dice su texto', async () => {
