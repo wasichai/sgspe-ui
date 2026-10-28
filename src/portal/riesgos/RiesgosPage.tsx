@@ -33,7 +33,7 @@ import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { NIVELES, nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
 import { opcion } from '../datos/opciones'
-import { Dia } from '../componentes/Dia'
+import { FechaDePlazo } from '../componentes/CuandoVence'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
@@ -186,7 +186,7 @@ export function RiesgosPage() {
         return (
           <>
             <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-            {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
+            {texto(r, 'next_review_date') ? <FechaDePlazo dia={texto(r, 'next_review_date')} situacion={atributo(r, 'review_status')} /> : null}
           </>
         )
       default:
@@ -298,7 +298,7 @@ export function RiesgosPage() {
                 plazo: (
                   <>
                     <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-                    {texto(r, 'next_review_date') ? <Dia valor={texto(r, 'next_review_date')} /> : null}
+                    {texto(r, 'next_review_date') ? <FechaDePlazo dia={texto(r, 'next_review_date')} situacion={atributo(r, 'review_status')} /> : null}
                   </>
                 ),
                 proyecto: proyecto ? undefined : nombreDelProyecto(texto(r, 'project'))

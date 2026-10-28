@@ -7,6 +7,7 @@ import { useMisAsignaciones } from '../contexto/proyectos'
 import { useWorkflow } from '../datos/flujos'
 import { NS } from '../i18n'
 import { CaminoDelFlujo } from './CaminoDelFlujo'
+import { CuandoVence } from './CuandoVence'
 import { Dia } from './Dia'
 import { EstadoChip } from './EstadoChip'
 import { Persona } from './Persona'
@@ -39,6 +40,7 @@ export function PanelDeDecision({
   vencimiento,
   situacion,
   tipoDeSituacion = 'plazo',
+  vencimientoEnHabiles = false,
   proyecto
 }: {
   objeto: string
@@ -53,6 +55,8 @@ export function PanelDeDecision({
   // deadline_status del registro (JOB-01), o review_status de un riesgo y validity_status de un acuerdo
   situacion?: unknown
   tipoDeSituacion?: 'plazo' | 'revision' | 'vigencia'
+  // el vencimiento se cuenta en días hábiles (el acuse de una queja): el relativo también
+  vencimientoEnHabiles?: boolean
   // el proyecto del registro: con él se dice si la siguiente acción le toca a quien mira
   proyecto?: string
 }) {
@@ -103,10 +107,17 @@ export function PanelDeDecision({
       </Tarjeta>
       <Tarjeta titulo={t('paginas.decision.vencimiento')}>
         {vencimiento ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Dia valor={vencimiento} />
-            <SituacionDePlazo valor={situacion} revision={tipoDeSituacion === 'revision'} vigencia={tipoDeSituacion === 'vigencia'} />
-          </div>
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <Dia valor={vencimiento} />
+              <SituacionDePlazo valor={situacion} revision={tipoDeSituacion === 'revision'} vigencia={tipoDeSituacion === 'vigencia'} />
+            </div>
+            {/* el relativo, solo mientras el plazo corre: JOB-01 deja la situación vacía fuera de esos estados (un compromiso cumplido
+                no «venció hace 40 días») */}
+            {typeof situacion === 'string' && situacion !== '' ? (
+              <CuandoVence dia={vencimiento} habiles={vencimientoEnHabiles} className="block text-sg-caption text-sg-text-muted" />
+            ) : null}
+          </>
         ) : (
           <p className="text-sg-text-muted">{t('paginas.decision.sinVencimiento')}</p>
         )}

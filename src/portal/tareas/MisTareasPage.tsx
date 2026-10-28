@@ -33,6 +33,7 @@ import { useContextFilters } from '../shell/context'
 import { OrigenDeTarea, TareaDrawer } from './TareaDrawer'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
+import { CuandoVence, FechaDePlazo } from '../componentes/CuandoVence'
 import { sinFiltroDeAsignados, soloAsignados } from './paraTomar'
 
 // S47 · mis tareas (screens.md §11, WF-N): ¿qué tengo que hacer hoy y qué se me venció? en /tasks, las asignadas a quien mira
@@ -246,7 +247,7 @@ function TablaDeTareas({
           plazo: (
             <>
               <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
-              <Dia valor={texto(x, 'due_date')} />
+              <FechaDePlazo dia={texto(x, 'due_date')} situacion={atributo(x, 'deadline_status')} />
             </>
           ),
           proyecto: conProyecto ? <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} /> : undefined,
@@ -294,6 +295,9 @@ function TablaDeTareas({
                     <Dia valor={texto(x, 'due_date')} />
                   </span>
                   <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
+                  {texto(x, 'due_date') && atributo(x, 'deadline_status') ? (
+                    <CuandoVence dia={texto(x, 'due_date')} className="block text-sg-caption text-sg-text-muted" />
+                  ) : null}
                 </Td>
                 <Td>
                   <EstadoChip objeto="task" estado={x.state} />

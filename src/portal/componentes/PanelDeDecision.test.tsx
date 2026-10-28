@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { montar, pagina, workflow } from '../../test/montar'
 import { PanelDeDecision } from './PanelDeDecision'
 
@@ -9,6 +9,7 @@ import { PanelDeDecision } from './PanelDeDecision'
 // siguiente acción (con lo que falta para darla), el responsable y el vencimiento con su situación de plazo
 let fetch: FetchMock | null = null
 afterEach(() => {
+  vi.useRealTimers()
   fetch?.restore()
   fetch = null
 })
@@ -71,6 +72,38 @@ describe('PanelDeDecision', () => {
     expect(within(tarjeta('Siguiente acción')).getByText('El siguiente paso lo da otra persona.')).toBeInTheDocument()
     expect(within(tarjeta('Siguiente acción')).queryByText('Nada pendiente')).not.toBeInTheDocument()
     expect(within(tarjeta('Vencimiento')).getByText('Sin fecha límite')).toBeInTheDocument()
+  })
+
+  // tercera pasada de UX (1.7, DD-35): el vencimiento también en relativo, con la fecha exacta en <time>, mientras el plazo corre
+  it('dice cuándo vence desde hoy mientras el plazo corre; sin situación (un plazo que ya no corre), solo la fecha', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-28T15:00:00Z') })
+    fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
+    const { unmount } = montar(
+      <PanelDeDecision objeto="commitment" estado="approved" siguiente={null} responsable={null} vencimiento="2026-11-02" situacion="POR VENCER" />
+    )
+    const tarjetaDeVencimiento = tarjeta('Vencimiento')
+    expect(within(tarjetaDeVencimiento).getByText('2 nov. 2026').closest('time')).toHaveAttribute('dateTime', '2026-11-02')
+    expect(within(tarjetaDeVencimiento).getByText('vence en 5 días')).toBeInTheDocument()
+    unmount()
+    montar(<PanelDeDecision objeto="commitment" estado="approved" siguiente={null} responsable={null} vencimiento="2026-10-01" />)
+    expect(within(tarjeta('Vencimiento')).queryByText(/venció/)).not.toBeInTheDocument()
+  })
+
+  it('en días hábiles, el que el backend cuenta así', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-28T15:00:00Z') })
+    fetch = mockFetch([{ path: '/objects/grievance/workflow', body: WF }])
+    montar(
+      <PanelDeDecision
+        objeto="grievance"
+        estado="received"
+        siguiente={null}
+        responsable={null}
+        vencimiento="2026-10-23"
+        situacion="VENCIDO"
+        vencimientoEnHabiles
+      />
+    )
+    expect(within(tarjeta('Vencimiento')).getByText('venció hace 3 días hábiles')).toBeInTheDocument()
   })
 
   it('«Nada pendiente» solo en un estado final', async () => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { diaPe, fechaPe, fechaYHoraPe } from '../i18n'
-import { ahoraEnLima, diaDeTexto, diasEntre, horaDeTexto, hoyEnLima, instanteDeLima, textoDeDia } from './fechas'
+import { ahoraEnLima, cuandoRelativo, diaDeTexto, diasEntre, horaDeTexto, hoyEnLima, instanteDeLima, textoDeDia } from './fechas'
 
 describe('ahoraEnLima', () => {
   it('la hora por defecto es la de Lima, no la del navegador', () => {
@@ -92,5 +92,32 @@ describe('diaDeTexto, textoDeDia y horaDeTexto', () => {
     expect(horaDeTexto('10:60')).toBeNull()
     expect(horaDeTexto('10:15 pm')).toBeNull()
     expect(horaDeTexto('')).toBeNull()
+  })
+})
+
+// tercera pasada de UX (1.7, DD-35): un plazo dicho desde hoy, en días de calendario o, con feriados, hábiles
+describe('cuandoRelativo', () => {
+  // el miércoles 28 de octubre de 2026
+  const HOY = '2026-10-28'
+  it('hoy, mañana y ayer, y los días que faltan o que pasaron, de calendario', () => {
+    expect(cuandoRelativo('2026-10-28', HOY)).toEqual({ sentido: 'hoy', dias: 0, habiles: false })
+    expect(cuandoRelativo('2026-10-29', HOY)).toEqual({ sentido: 'manana', dias: 1, habiles: false })
+    expect(cuandoRelativo('2026-10-27', HOY)).toEqual({ sentido: 'ayer', dias: 1, habiles: false })
+    expect(cuandoRelativo('2026-11-02', HOY)).toEqual({ sentido: 'futuro', dias: 5, habiles: false })
+    expect(cuandoRelativo('2026-10-23T15:00:00Z', HOY)).toEqual({ sentido: 'pasado', dias: 5, habiles: false })
+  })
+
+  it('con feriados cuenta de lunes a viernes y salta los feriados', () => {
+    // del miércoles 28 al lunes 2 de noviembre: jueves 29, viernes 30 y lunes 2; el domingo 1 no cuenta
+    expect(cuandoRelativo('2026-11-02', HOY, new Set())).toEqual({ sentido: 'futuro', dias: 3, habiles: true })
+    // con el viernes 30 feriado, dos
+    expect(cuandoRelativo('2026-11-02', HOY, new Set(['2026-10-30']))).toEqual({ sentido: 'futuro', dias: 2, habiles: true })
+    // venció el viernes 23: lunes 26, martes 27 y miércoles 28
+    expect(cuandoRelativo('2026-10-23', HOY, new Set())).toEqual({ sentido: 'pasado', dias: 3, habiles: true })
+  })
+
+  it('lo que no es una fecha no se dice', () => {
+    expect(cuandoRelativo(null, HOY)).toBeNull()
+    expect(cuandoRelativo('pronto', HOY)).toBeNull()
   })
 })

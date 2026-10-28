@@ -72,3 +72,33 @@ export function horaDeTexto(texto: string): string | null {
   const [h, min] = partes.slice(1).map(Number)
   return h < 24 && min < 60 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` : null
 }
+
+// cuándo vence un plazo dicho desde hoy (tercera pasada de UX, 1.7; DD-35): «hoy», «mañana», «ayer» o los días que faltan o que
+// pasaron. con feriados, en días hábiles (de lunes a viernes, sin feriados), como el backend cuenta el acuse de una queja
+// (BusinessDays); sin ellos, en días de calendario. el día y hoy son AAAA-MM-DD (o el día de una marca de tiempo); null si no es
+// una fecha
+export interface Relativo {
+  sentido: 'hoy' | 'manana' | 'ayer' | 'futuro' | 'pasado'
+  dias: number
+  habiles: boolean
+}
+
+const esHabil = (dia: Date, feriados: ReadonlySet<string>): boolean => {
+  const semana = dia.getUTCDay()
+  return semana !== 0 && semana !== 6 && !feriados.has(dia.toISOString().slice(0, 10))
+}
+
+export function cuandoRelativo(dia: unknown, hoy: string, feriados?: ReadonlySet<string>): Relativo | null {
+  const diferencia = diasEntre(hoy, typeof dia === 'string' ? dia.slice(0, 10) : '')
+  if (diferencia === null || typeof dia !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(dia)) return null
+  const habiles = feriados !== undefined
+  if (diferencia === 0) return { sentido: 'hoy', dias: 0, habiles }
+  if (diferencia === 1) return { sentido: 'manana', dias: 1, habiles }
+  if (diferencia === -1) return { sentido: 'ayer', dias: 1, habiles }
+  if (!feriados) return { sentido: diferencia > 0 ? 'futuro' : 'pasado', dias: Math.abs(diferencia), habiles }
+  // los días hábiles entre los dos, sin contar el de partida: de hoy al vencimiento o del vencimiento a hoy
+  const desde = Date.parse(`${(diferencia > 0 ? hoy : dia).slice(0, 10)}T00:00:00Z`)
+  let cuenta = 0
+  for (let i = 1; i <= Math.abs(diferencia); i++) if (esHabil(new Date(desde + i * 86_400_000), feriados)) cuenta++
+  return { sentido: diferencia > 0 ? 'futuro' : 'pasado', dias: cuenta, habiles }
+}

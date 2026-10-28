@@ -184,6 +184,7 @@ function Ficha({ queja }: { queja: Registro }) {
         siguiente={siguiente}
         responsable={texto(queja, 'owner_user_email')}
         vencimiento={plazo?.fecha ?? null}
+        vencimientoEnHabiles={plazo?.campo === 'ack_due_date'}
         situacion={atributo(queja, 'deadline_status')}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">

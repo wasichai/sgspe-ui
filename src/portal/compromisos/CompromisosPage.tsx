@@ -31,7 +31,7 @@ import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { Candidatos } from './Candidatos'
-import { Dia } from '../componentes/Dia'
+import { FechaDePlazo } from '../componentes/CuandoVence'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 
@@ -209,7 +209,7 @@ export function CompromisosPage() {
       case 'situacion':
         return <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
       case 'vence':
-        return <Dia valor={texto(c, 'due_date')} />
+        return <FechaDePlazo dia={texto(c, 'due_date')} situacion={atributo(c, 'deadline_status')} />
       case 'responsable':
         return <Persona correo={texto(c, 'owner_user_email')} />
       default:
@@ -311,7 +311,7 @@ export function CompromisosPage() {
                     plazo: (
                       <>
                         <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
-                        <Dia valor={texto(c, 'due_date')} />
+                        <FechaDePlazo dia={texto(c, 'due_date')} situacion={atributo(c, 'deadline_status')} />
                       </>
                     ),
                     proyecto: proyecto ? undefined : nombreDelProyecto(texto(c, 'project'))

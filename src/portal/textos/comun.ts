@@ -114,6 +114,20 @@ export const ES_COMUN = {
   personaRegistrada: 'Persona registrada',
   // F3: la situación de plazo o de vigencia (derivada por JOB-01, nunca un estado) y la elección de una persona usuaria
   situacionDePlazo: 'Situación de plazo',
+  // un plazo dicho desde hoy (CuandoVence, tercera pasada de UX)
+  cuando: {
+    hoy: 'vence hoy',
+    manana: 'vence mañana',
+    ayer: 'venció ayer',
+    futuro_one: 'vence en {{count}} día',
+    futuro_other: 'vence en {{count}} días',
+    futuroHabiles_one: 'vence en {{count}} día hábil',
+    futuroHabiles_other: 'vence en {{count}} días hábiles',
+    pasado_one: 'venció hace {{count}} día',
+    pasado_other: 'venció hace {{count}} días',
+    pasadoHabiles_one: 'venció hace {{count}} día hábil',
+    pasadoHabiles_other: 'venció hace {{count}} días hábiles'
+  },
   situacionDeVigencia: 'Situación de vigencia',
   // F4: la situación de revisión de un riesgo (review_status), los nombres de las QCS, el vínculo a un registro que quien mira
   // no lee (ADR-0029, ASM-095) y la nota de una cifra que no cuenta las confidenciales (confidentialHidden)
@@ -525,6 +539,19 @@ export const EN_COMUN: typeof ES_COMUN = {
   seleccionados_other: '{{n}} selected',
   personaRegistrada: 'Registered person',
   situacionDePlazo: 'Deadline situation',
+  cuando: {
+    hoy: 'due today',
+    manana: 'due tomorrow',
+    ayer: 'was due yesterday',
+    futuro_one: 'due in {{count}} day',
+    futuro_other: 'due in {{count}} days',
+    futuroHabiles_one: 'due in {{count}} business day',
+    futuroHabiles_other: 'due in {{count}} business days',
+    pasado_one: '{{count}} day overdue',
+    pasado_other: '{{count}} days overdue',
+    pasadoHabiles_one: '{{count}} business day overdue',
+    pasadoHabiles_other: '{{count}} business days overdue'
+  },
   situacionDeVigencia: 'Validity situation',
   situacionDeRevision: 'Review situation',
   qcs: {

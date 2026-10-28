@@ -1,3 +1,4 @@
+import { CuandoVence } from '../componentes/CuandoVence'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
@@ -399,6 +400,9 @@ function PlazoDeQcs({ fila: { objeto, registro } }: { fila: Fila }) {
     <span className="flex flex-wrap items-center gap-1">
       <SituacionDePlazo valor={atributo(registro, 'deadline_status')} />
       {plazo.fecha ? diaPe(plazo.fecha) : t('atencion.plazoPorCalcular')}
+      {plazo.fecha && atributo(registro, 'deadline_status') ? (
+        <CuandoVence dia={plazo.fecha} habiles={plazo.campo === 'ack_due_date'} className="basis-full text-sg-caption text-sg-text-muted" />
+      ) : null}
     </span>
   ) : (
     <span className="text-sg-text-muted">{t('atencion.sinPlazo')}</span>
