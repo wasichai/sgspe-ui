@@ -18,7 +18,7 @@ import {
   SUG_RESUMEN,
   TRANSICIONES_DE_SUGERENCIA
 } from '../../test/ia'
-import { montar, pagina, registro } from '../../test/montar'
+import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
 import { BandejaDeIaPage } from './BandejaDeIaPage'
 
@@ -55,7 +55,7 @@ const HUMANO = registro(
   { state: 'proposed', createdAt: '2026-10-11T15:00:00Z' }
 )
 
-const montarBandeja = (estado: unknown = ESTADO_ACTIVO, extra: MockRoute[] = []) => {
+const montarBandeja = (estado: unknown = ESTADO_ACTIVO, extra: MockRoute[] = [], ruta = '/projects/p1/ai-review') => {
   fetch = mockFetch([
     ...extra,
     {
@@ -69,7 +69,7 @@ const montarBandeja = (estado: unknown = ESTADO_ACTIVO, extra: MockRoute[] = [])
     { path: '/metadata/objects/commitment', body: DEF_COMPROMISO },
     ...baseDeIa(estado)
   ])
-  montar(<BandejaDeIaPage />, { ruta: '/projects/p1/ai-review', camino: '/projects/:projectId/ai-review', usuario: GERENCIA_IA, permisos: EQUIPO_IA })
+  montar(<BandejaDeIaPage />, { ruta, camino: '/projects/:projectId/ai-review', usuario: GERENCIA_IA, permisos: EQUIPO_IA })
 }
 const TIPO = /^(Candidato a compromiso|Posible duplicado|Clasificación|Borrador de acta|Extracción|Resumen ejecutivo)$/
 const lista = () => screen.findByRole('list', { name: 'Propuestas por revisar' })
@@ -149,6 +149,21 @@ describe('S52 · bandeja de revisión de IA', () => {
     await userEvent.selectOptions(screen.getByLabelText('Origen'), 'persona')
     expect(within(await lista()).getByText('Pintar la escuela')).toBeInTheDocument()
     expect(within(await lista()).getAllByText(TIPO)).toHaveLength(1)
+  })
+
+  // tercera pasada de UX, 4.4: los filtros viven en la URL, y ?target= deja solo las propuestas sobre un registro, como llega desde su
+  // ficha, con «Ver todas»
+  it('los filtros van en la URL y ?target= deja solo las propuestas de un registro', async () => {
+    montarBandeja(ESTADO_ACTIVO, [], '/projects/p1/ai-review?target=grievance:g1')
+    const propuestas = within(await lista()).getAllByRole('listitem')
+    expect(propuestas).toHaveLength(1)
+    expect(within(propuestas[0]).getByText('Clasificación')).toBeInTheDocument()
+    expect(screen.getByText(/^Solo las propuestas de/)).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByLabelText('Origen'), 'ia')
+    expect(ubicacion.actual).toBe('/projects/p1/ai-review?target=grievance%3Ag1&origin=ia')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver todas' }))
+    expect(ubicacion.actual).toBe('/projects/p1/ai-review?origin=ia')
+    await waitFor(async () => expect(within(await lista()).getAllByRole('listitem').length).toBeGreaterThan(1))
   })
 
   // rediseño de UX (2026-10-20): sin coincidencias, el vacío dice cuántas hay sin los filtros y los limpia

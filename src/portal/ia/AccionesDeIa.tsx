@@ -152,7 +152,8 @@ export function AccionesDeIa({
       ) : null}
       {nPendientes > 0 ? (
         <p className="text-sg-caption">
-          <Link to={`${base}/ai-review`} className="text-sg-primary-text underline">
+          {/* la bandeja con solo las propuestas sobre este registro (tercera pasada de UX, 4.4) */}
+          <Link to={`${base}/ai-review?target=${encodeURIComponent(`${objeto}:${registro.id}`)}`} className="text-sg-primary-text underline">
             {t('accionesIa.pendientes', { n: nPendientes })}
           </Link>
         </p>

@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { Cargando, Vacio } from '../componentes/Estados'
-import { VacioDeLista } from '../componentes/Lista'
+import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { RevisionDeCandidato } from '../compromisos/Candidatos'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -63,8 +64,15 @@ export function BandejaDeIaPage() {
   // solo lo propuesto: el servidor filtra por estado (api.md §3.4) y el tope ya no cuenta lo decidido (D10 de la revisión de UX)
   const sugerencias = useTodosConTope('ai_suggestion', { project: projectId, state: 'proposed', sort: 'created_at', dir: 'desc' }, leeSugerencias)
   const candidatos = useTodosConTope('commitment_candidate', { project: projectId, state: 'proposed', sort: 'created_at', dir: 'desc' }, leeCandidatos)
-  const [tipo, setTipo] = useState<FiltroDeTipo>('todos')
-  const [origen, setOrigen] = useState<FiltroDeOrigen>('todos')
+  // los filtros viven en la URL (tercera pasada de UX, 4.4): ?kind= y ?origin=, y ?target=<objeto>:<id> deja solo las propuestas
+  // sobre un registro, como llega desde su ficha. volver de un registro o compartir el enlace los conserva
+  const lista = useParametrosDeLista('todos')
+  const tipo = TIPOS.find((x) => x === lista.filtro('kind')) ?? 'todos'
+  const origen = ORIGENES.find((x) => x === lista.filtro('origin')) ?? 'todos'
+  const [objetoDestino = '', idDestino = ''] = lista.filtro('target').split(':')
+  const delDestino = (p: Propuesta) =>
+    !idDestino || (p.clase === 'sugerencia' && texto(p.registro, 'target_object') === objetoDestino && texto(p.registro, 'target_record_id') === idDestino)
+  const limpiar = () => lista.cambiar({ kind: null, origin: null, target: null })
   const [revisando, setRevisando] = useState<string | null>(null)
   const [aceptando, setAceptando] = useState<string | null>(null)
   const propuestas = ordenarPropuestas([
@@ -73,7 +81,7 @@ export function BandejaDeIaPage() {
   ])
   const destinos = useDestinosLegibles(propuestas)
   const visibles = propuestas.filter((p) => destinos.legible(p))
-  const filtradas = visibles.filter((p) => coincide(p, tipo, origen))
+  const filtradas = visibles.filter((p) => coincide(p, tipo, origen) && delDestino(p))
   // una consulta apagada (sin permiso) queda pending para siempre: solo cuentan las que corren
   const cargando = (leeSugerencias && sugerencias.isPending) || (leeCandidatos && candidatos.isPending) || destinos.pendiente
   const fallida = [leeSugerencias ? sugerencias : null, leeCandidatos ? candidatos : null].find((c) => c?.isError && !c.data)
@@ -96,7 +104,7 @@ export function BandejaDeIaPage() {
                   {...p}
                   vacio={false}
                   value={tipo}
-                  onChange={(e) => setTipo(e.target.value as FiltroDeTipo)}
+                  onChange={(e) => lista.cambiar({ kind: e.target.value === 'todos' ? null : e.target.value })}
                   opciones={TIPOS.map((x) => ({ valor: x, etiqueta: x === 'todos' ? t('bandejaIa.filtros.todos') : t(`bandejaIa.tipos.${x}`) }))}
                 />
               )}
@@ -107,12 +115,20 @@ export function BandejaDeIaPage() {
                   {...p}
                   vacio={false}
                   value={origen}
-                  onChange={(e) => setOrigen(e.target.value as FiltroDeOrigen)}
+                  onChange={(e) => lista.cambiar({ origin: e.target.value === 'todos' ? null : e.target.value })}
                   opciones={ORIGENES.map((x) => ({ valor: x, etiqueta: t(`bandejaIa.filtros.${x}`) }))}
                 />
               )}
             </Campo>
           </div>
+          {idDestino ? (
+            <p className="flex flex-wrap items-center gap-2 text-sm">
+              {t('bandejaIa.filtros.delRegistro')} <RegistroVinculado objeto={objetoDestino} id={idDestino} />
+              <button type="button" className="text-sg-primary-text underline" onClick={() => lista.cambiar({ target: null })}>
+                {t('bandejaIa.filtros.verTodas')}
+              </button>
+            </p>
+          ) : null}
           {cargando ? (
             <Cargando />
           ) : fallida ? (
@@ -121,14 +137,7 @@ export function BandejaDeIaPage() {
             <Vacio titulo={t('bandejaIa.vacio')} />
           ) : filtradas.length === 0 ? (
             // el vacío por filtros dice cuántas hay sin ellos y los limpia (rediseño de UX, 2026-10-20)
-            <VacioDeLista
-              conFiltros
-              sinFiltros={visibles.length}
-              alLimpiar={() => {
-                setTipo('todos')
-                setOrigen('todos')
-              }}
-            />
+            <VacioDeLista conFiltros sinFiltros={visibles.length} alLimpiar={limpiar} />
           ) : (
             <ul aria-label={t('bandejaIa.lista')} className="space-y-3">
               {filtradas.map((p) =>

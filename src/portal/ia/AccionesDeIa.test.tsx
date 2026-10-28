@@ -131,7 +131,10 @@ describe('acciones de IA en las fichas', () => {
     montarEn(<AccionesDeIa objeto="grievance" registro={QUEJA} proyecto="p1" rotulo="Q-001" casos={['AI-08']} />, ESTADO_ACTIVO, [
       { path: '/objects/ai_suggestion/records', body: pagina([SUG_CLASIFICACION]) }
     ])()
-    expect(await screen.findByRole('link', { name: 'Propuestas pendientes sobre este registro: 1' })).toHaveAttribute('href', '/projects/p1/ai-review')
+    expect(await screen.findByRole('link', { name: 'Propuestas pendientes sobre este registro: 1' })).toHaveAttribute(
+      'href',
+      '/projects/p1/ai-review?target=grievance%3Ag1'
+    )
     expect(screen.getByRole('button', { name: 'Sugerir categoría, prioridad y tema' })).toBeInTheDocument()
   })
 
