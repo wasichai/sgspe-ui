@@ -78,7 +78,12 @@ export const ES_COMUN = {
   recargar: 'Recargar',
   recargaFallida: 'No se pudo recargar; lo escrito se conserva.',
   // la actividad de un registro (componentes/Historia)
-  actividad: { estado: 'Estado', operaciones: { CREATE: 'Creó', UPDATE: 'Cambió', DELETE: 'Borró', ISSUE: 'Emitió' } },
+  actividad: {
+    estado: 'Estado',
+    operaciones: { CREATE: 'Creó', UPDATE: 'Cambió', DELETE: 'Borró', ISSUE: 'Emitió' },
+    // un cambio de estado con las etiquetas del flujo (tercera pasada de UX, 1.9)
+    cambioDeEstado: 'el estado: «{{de}}» → «{{a}}»'
+  },
   limpiarFiltros: 'Limpiar filtros',
   registros_one: '{{count}} registro',
   registros_other: '{{count}} registros',
@@ -506,7 +511,11 @@ export const EN_COMUN: typeof ES_COMUN = {
   quitar: 'Remove',
   recargar: 'Reload',
   recargaFallida: 'Could not reload; what you typed is kept.',
-  actividad: { estado: 'Status', operaciones: { CREATE: 'Created', UPDATE: 'Changed', DELETE: 'Deleted', ISSUE: 'Issued' } },
+  actividad: {
+    estado: 'Status',
+    operaciones: { CREATE: 'Created', UPDATE: 'Changed', DELETE: 'Deleted', ISSUE: 'Issued' },
+    cambioDeEstado: 'the status: “{{de}}” → “{{a}}”'
+  },
   limpiarFiltros: 'Clear filters',
   registros_one: '{{count}} record',
   registros_other: '{{count}} records',
