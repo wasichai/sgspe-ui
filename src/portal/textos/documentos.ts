@@ -28,6 +28,18 @@ export const ES_DOCUMENTOS = {
     huellaReservada: 'Reservada',
     tamano: 'Tamaño',
     tipoDeArchivo: 'Tipo de archivo',
+    // el tipo del archivo como se lee, no su tipo MIME (tercera pasada de UX); uno desconocido sale tal cual
+    tiposDeArchivo: {
+      pdf: 'PDF',
+      imagen: 'Imagen {{formato}}',
+      word: 'Documento de Word',
+      excel: 'Hoja de cálculo de Excel',
+      csv: 'Tabla CSV',
+      texto: 'Texto',
+      zip: 'Archivo comprimido ZIP',
+      audio: 'Audio',
+      video: 'Video'
+    },
     capturada: 'Tomada el',
     ubicacion: 'Ubicación de la captura',
     datos: 'Datos descriptivos',
@@ -101,6 +113,17 @@ export const EN_DOCUMENTOS: typeof ES_DOCUMENTOS = {
     huellaReservada: 'Reserved',
     tamano: 'Size',
     tipoDeArchivo: 'File type',
+    tiposDeArchivo: {
+      pdf: 'PDF',
+      imagen: '{{formato}} image',
+      word: 'Word document',
+      excel: 'Excel spreadsheet',
+      csv: 'CSV table',
+      texto: 'Text',
+      zip: 'ZIP archive',
+      audio: 'Audio',
+      video: 'Video'
+    },
     capturada: 'Taken on',
     ubicacion: 'Capture location',
     datos: 'Descriptive data',

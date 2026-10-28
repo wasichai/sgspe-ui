@@ -253,7 +253,7 @@ export const ES_COMUN = {
     SEGREGATION_OF_DUTIES:
       'Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.',
     SENIOR_APPROVAL_REQUIRED:
-      'Este paso lo decide un nivel superior: el compromiso nace de una mesa de diálogo o de solicitantes que lo exigen, o la queja es ALTA o CRITICA y la resuelve quien aprueba.',
+      'Este paso lo decide un nivel superior: el compromiso nace de una mesa de diálogo o de solicitantes que lo exigen, o la queja es de severidad alta o crítica y la resuelve quien aprueba.',
     INTERNAL_APPROVAL_REQUIRED: 'El proyecto exige la aprobación interna: envíelo a aprobación en lugar de la vía directa.',
     SUPPORT_CAP_EXCEEDED: 'Aprobarlo supera el tope de apoyo social de la campaña (lo aprobado en compromisos y aportes).',
     CAP_OTHER_CURRENCY: 'La campaña tiene montos en otra moneda que no se suman a su tope.',
@@ -652,7 +652,7 @@ export const EN_COMUN: typeof ES_COMUN = {
     SEGREGATION_OF_DUTIES:
       'By segregation of duties, whoever recorded a commitment, a contribution or a program does not approve it, and the owner of a commitment does not verify it.',
     SENIOR_APPROVAL_REQUIRED:
-      'A higher level decides this step: the commitment comes from a dialogue table or from requesters that need it, or the grievance is ALTA or CRITICA and the approver resolves it.',
+      'A higher level decides this step: the commitment comes from a dialogue table or from requesters that need it, or the grievance has high or critical severity and the approver resolves it.',
     INTERNAL_APPROVAL_REQUIRED: 'The project requires internal approval: submit it for approval instead of the direct path.',
     SUPPORT_CAP_EXCEEDED: 'Approving it exceeds the campaign’s social support cap (what was approved in commitments and contributions).',
     CAP_OTHER_CURRENCY: 'The campaign has amounts in another currency that are not added to its cap.',

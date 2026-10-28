@@ -412,7 +412,7 @@ describe('S24 · registrar interacción', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar como realizada' }))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))
     expect(red.a('POST', '/objects/engagement/records')[0].cuerpo).toMatchObject({
-      attributes: { title: 'ASAMBLEA · 2026-10-06', held_at: '2026-10-07T04:30:00.000Z' }
+      attributes: { title: 'Asamblea · 6 oct. 2026', held_at: '2026-10-07T04:30:00.000Z' }
     })
   })
 

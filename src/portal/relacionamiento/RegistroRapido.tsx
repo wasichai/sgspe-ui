@@ -9,14 +9,15 @@ import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { hoyEnLima } from '../datos/fechas'
 import { nuevaClave } from '../datos/http'
 import { useTodos } from '../datos/registros'
-import { NS, numeroPe } from '../i18n'
+import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { GuardadoParcial, useGuardarInteraccion, type Participante } from './guardarInteraccion'
 import { ConmutadorDeModo } from './ConmutadorDeModo'
 import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
-import { rotuloDeOpcion } from '../datos/opciones'
+import { rotuloDeOpcion, rotuloEnIdioma } from '../datos/opciones'
+import { EN_OPCIONES } from '../datos/opcionesEnIngles'
 
 // el modo rápido de campo de S24 (screens.md §6, S55): una sola pantalla con el tipo, la ubicación del teléfono, los
 // grupos presentes, contadores por sexo y ámbito (objetivos de 44 px) y una nota; guarda la interacción como realizada
@@ -62,7 +63,9 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
         proyecto: projectId,
         atributos: {
           engagement_type: tipo,
-          title: `${tipo} · ${hoyEnLima(ahora)}`,
+          // el título se lee como lo escribiría una persona: «Asamblea · 6 oct. 2026», no el valor de la opción y la fecha ISO, que
+          // quedaban así en la ficha y en las listas (tercera pasada de UX). va en español, como el resto de lo que se guarda
+          title: `${rotuloEnIdioma(tipo, 'es', EN_OPCIONES)} · ${diaPe(hoyEnLima(ahora))}`,
           description: nota,
           held_at: ahora.toISOString(),
           locality: lugares.locality ?? (territory?.kind === 'locality' ? territory.id : ''),
