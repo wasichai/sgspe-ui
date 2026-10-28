@@ -16,6 +16,7 @@ import { usePedir } from '../datos/http'
 import { consulta, texto, type Pagina, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { useTeclaDeBusqueda } from '../shell/HojaDeAtajos'
 
 // la búsqueda global (ux-architecture.md §7.3): se abre con ⌘K o Ctrl K desde cualquier pantalla, o con su botón de la barra
 // superior. busca con ?q= de la API genérica en cada objeto que la cuenta puede leer (nunca en lo que no), cinco por categoría,
@@ -85,6 +86,8 @@ function useTerminoConEspera(termino: string): string {
 
 export function BotonBuscar() {
   const { t } = useTranslation(NS)
+  // ⌘K en Mac y Ctrl K en los demás (tercera pasada de UX, 4.7)
+  const tecla = useTeclaDeBusqueda()
   const [abierta, setAbierta] = useState(false)
   useEffect(() => {
     const alPulsar = (e: globalThis.KeyboardEvent) => {
@@ -106,7 +109,7 @@ export function BotonBuscar() {
       >
         <Search aria-hidden className="size-4" />
         <span className="hidden md:inline">{t('busqueda.boton')}</span>
-        <kbd className="hidden rounded-sg-xs border border-sg-border px-1 font-sg-mono text-sg-caption lg:inline">{t('busqueda.atajo')}</kbd>
+        <kbd className="hidden rounded-sg-xs border border-sg-border px-1 font-sg-mono text-sg-caption lg:inline">{tecla}</kbd>
       </button>
       {abierta ? <DialogoDeBusqueda alCerrar={() => setAbierta(false)} /> : null}
     </>

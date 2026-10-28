@@ -64,6 +64,7 @@ import { EN_ENTREGABLES } from './entregables'
 import { EN_PLANTILLAS } from './plantillas'
 import { EN_PRESENTACIONES } from './presentaciones'
 import { EN_ADMINISTRACION } from './administracion'
+import { EN_ATAJOS } from './atajos'
 import type { Textos } from './es'
 
 // los mismos textos en inglés. Textos obliga a tener cada clave de es.ts (typecheck) y I18n.test.tsx lo comprueba al correr
@@ -142,6 +143,7 @@ export const EN: Textos = {
   presentaciones: EN_PRESENTACIONES,
   // el rediseño de UX: S53, la sección Administración
   administracion: EN_ADMINISTRACION,
+  atajos: EN_ATAJOS,
   app: { lema: 'Social management for extractive projects' },
   login: {
     correo: 'Email',

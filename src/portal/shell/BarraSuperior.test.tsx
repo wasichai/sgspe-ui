@@ -69,13 +69,17 @@ describe('barra superior', () => {
     expect(lema).toHaveClass('hidden', 'min-[96rem]:inline')
   })
 
-  it('el menú de la cuenta trae el idioma, el tema y la salida', async () => {
+  it('el menú de la cuenta trae el idioma, el tema, los atajos y la salida', async () => {
     fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [])
     await userEvent.click(await within(await screen.findByRole('banner')).findByRole('button', { name: 'Su cuenta' }))
     const menu = screen.getByRole('group', { name: 'Su cuenta' })
     expect(within(menu).getByRole('combobox', { name: 'Idioma' })).toHaveValue('es')
     expect(within(menu).getByRole('button', { name: /^Tema: Sistema/ })).toBeInTheDocument()
     expect(within(menu).getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
+    // tercera pasada de UX, 4.7: la hoja de atajos también se ofrece aquí, y el menú se cierra al abrirla
+    await userEvent.click(within(menu).getByRole('button', { name: 'Atajos de teclado' }))
+    expect(await screen.findByRole('dialog', { name: 'Atajos de teclado' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Su cuenta' })).not.toBeInTheDocument()
   })
 
   it('Escape en el menú de tema lo cierra sin cerrar el de la cuenta', async () => {

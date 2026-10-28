@@ -9,7 +9,7 @@ import { NS, numeroPe } from '../i18n'
 
 // lo que un elemento enfocado hace con una letra: escribirla (un campo, un editor) o atenderla él mismo (un diálogo, un menú,
 // una lista de opciones). ahí J y K no navegan
-const ATIENDE_LAS_TECLAS =
+export const ATIENDE_LAS_TECLAS =
   'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="dialog"], [role="alertdialog"], dialog'
 
 function teclaParaLaFicha(e: KeyboardEvent): 'siguiente' | 'anterior' | null {
