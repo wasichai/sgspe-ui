@@ -160,8 +160,8 @@ export const EN: Textos = {
     insignias: {
       tareas_one: '{{count}} of your tasks is overdue or due soon',
       tareas_other: '{{count}} of your tasks are overdue or due soon',
-      avisos_one: '{{count}} unread notification needs action',
-      avisos_other: '{{count}} unread notifications need action'
+      avisos_one: '{{count}} unread notification',
+      avisos_other: '{{count}} unread notifications'
     },
     salir: 'Sign out',
     menu: 'Menu',

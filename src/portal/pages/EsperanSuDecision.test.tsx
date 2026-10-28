@@ -60,7 +60,7 @@ describe('Esperan su decisión', () => {
       within(region())
         .getAllByRole('region')
         .map((r) => within(r).getByRole('heading').textContent)
-    ).toEqual(['Aprobaciones1', 'Alertas por triar2', 'Avisos que piden acción1'])
+    ).toEqual(['Aprobaciones1', 'Alertas por triar2', 'Avisos que piden acción2'])
     expect(enlaces(/^Aprobaciones/)).toEqual(['Aprobar el aporte de apoyo en especie → /r/social_contribution/ap1'])
     expect(within(grupo(/^Aprobaciones/)).getByText('Campaña de perforación')).toBeInTheDocument()
     expect(enlaces(/^Alertas por triar/)).toEqual([
@@ -68,8 +68,11 @@ describe('Esperan su decisión', () => {
       'Reclamo por polvo → /projects/p1/risks/warnings/w2'
     ])
     expect(within(grupo(/^Alertas por triar/)).getByText('Severidad: Alta')).toBeInTheDocument()
-    expect(enlaces(/^Avisos que piden acción/)).toEqual(['La queja vence hoy → /r/grievance/g1'])
-    expect(within(region()).queryByText('Ya leído')).not.toBeInTheDocument()
+    // tercera pasada de UX: abrir un aviso que pide acción no lo saca de aquí; se va cuando el trabajo se hace. «Sin leer» es una
+    // marca, no un filtro
+    expect(enlaces(/^Avisos que piden acción/)).toEqual(['La queja vence hoy → /r/grievance/g1', 'Ya leído → /r/grievance/g2'])
+    expect(within(grupo(/^Avisos que piden acción/)).getByText('Pide acción · Sin leer')).toBeInTheDocument()
+    expect(within(grupo(/^Avisos que piden acción/)).getByText('Pide acción')).toBeInTheDocument()
     expect(within(region()).queryByText('Solo informa')).not.toBeInTheDocument()
   })
 

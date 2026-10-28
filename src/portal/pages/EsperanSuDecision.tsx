@@ -12,8 +12,9 @@ import { rutaDeDecision, useAprobacionesPendientes } from '../tareas/Aprobacione
 
 // «Esperan su decisión», lo segundo del inicio (P-01 del rediseño de UX, DD-01): las aprobaciones que le llegaron (los avisos de
 // aprobación, como S48), las alertas por triar a quien puede confirmarlas o descartarlas (la acción declarada de WF-J, como S41) y
-// los demás avisos ACTION sin leer, cada grupo con lo más urgente, su motivo y su enlace. sin nada que decidir, o sin la bandeja de
-// avisos ni la acción, el bloque no se dibuja
+// los demás avisos ACTION activos, cada grupo con lo más urgente, su motivo y su enlace. un aviso que pide acción sigue aquí aunque
+// se haya abierto: se va cuando el trabajo se hace, y «Sin leer» es una marca, no un filtro (tercera pasada de UX). sin nada que
+// decidir, o sin la bandeja de avisos ni la acción, el bloque no se dibuja
 const CONFIRMAR_ALERTA = 'CONFIRM_ALERT'
 const POR_TRIAR = ['detected', 'in_triage']
 
@@ -54,12 +55,12 @@ export function EsperanSuDecision() {
     }
   })
   const otros: EntradaPriorizada[] = (avisos.data?.content ?? [])
-    .filter((a) => a.kind === 'ACTION' && !a.read && a.source !== FUENTE_DE_APROBACIONES)
+    .filter((a) => a.kind === 'ACTION' && a.source !== FUENTE_DE_APROBACIONES)
     .map((a) => ({
       clave: a.id,
       titulo: a.title,
       a: destinoDeAviso(a.link) ?? '/notifications',
-      motivo: a.body || t('miDia.decision.pideAccion'),
+      motivo: [a.body || t('miDia.decision.pideAccion'), a.read ? '' : t('avisos.sinLeer')].filter(Boolean).join(' · '),
       cuando: desde(a),
       tono: a.overdue ? 'peligro' : 'aviso'
     }))

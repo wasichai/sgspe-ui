@@ -160,8 +160,8 @@ export const ES = {
     insignias: {
       tareas_one: '{{count}} tarea suya vencida o por vencer',
       tareas_other: '{{count}} tareas suyas vencidas o por vencer',
-      avisos_one: '{{count}} aviso sin leer que pide acción',
-      avisos_other: '{{count}} avisos sin leer que piden acción'
+      avisos_one: '{{count}} aviso sin leer',
+      avisos_other: '{{count}} avisos sin leer'
     },
     salir: 'Cerrar sesión',
     menu: 'Menú',
