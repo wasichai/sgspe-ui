@@ -179,6 +179,39 @@ describe('S44 · ficha del aporte', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar sin revisión interna' })).toBeEnabled())
   })
 
+  // tercera pasada de UX (1.1): el bloqueo por un campo se resuelve donde se informa, sin abrir «Editar» con todos los campos
+  it('el bloqueo por un campo ofrece completarlo ahí mismo: solo ese campo, y «Aprobar» se habilita sin recargar', async () => {
+    const sinTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: null } }
+    const conTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: 'DONACION' }, updatedAt: '2026-10-05T16:00:00Z' }
+    fetch = mockFetch(rutas(sinTipo, [{ method: 'PUT', path: '/objects/social_contribution/records/a1', body: conTipo }]))
+    red = espiarRed([
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        responder: () =>
+          jsonResponse(
+            red!.a('PUT', '/objects/social_contribution/records/a1').length > 0
+              ? { allowed: true, blocking: [], warnings: [] }
+              : { allowed: false, blocking: [{ code: 'FIELD_REQUIRED', message: 'Falta el tipo de aporte.', field: 'contribution_type' }], warnings: [] }
+          )
+      }
+    ])
+    abrir()
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar sin revisión interna' })
+    await waitFor(() => expect(aprobar).toBeDisabled())
+    await userEvent.click(await screen.findByRole('button', { name: /^Completar «contribution_type»/ }))
+    const drawer = await screen.findByRole('dialog', { name: /^Completar «contribution_type»/ })
+    const tipo = await within(drawer).findByLabelText(/^contribution_type/)
+    expect(within(drawer).queryByLabelText(/^occasion/)).not.toBeInTheDocument()
+    await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'Lo pidió la junta')
+    await userEvent.selectOptions(selectNativo(tipo), 'DONACION')
+    await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/social_contribution/records/a1')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/social_contribution/records/a1')[0].cabeceras.get('X-Change-Reason')).toBe("UTF-8''Lo%20pidi%C3%B3%20la%20junta")
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar sin revisión interna' })).toBeEnabled())
+    expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
+  })
+
   it('un ITEMS_FROZEN al borrar (otra persona aprobó mientras tanto) dice su texto', async () => {
     fetch = mockFetch(rutas())
     red = espiarRed([

@@ -1,0 +1,78 @@
+import { useAuth, type ObjectDefinition } from '@wasichai/core'
+import { Button, Textarea } from '@wasichai/ui'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
+import { esDeComando, esDerivado } from '../datos/derivados'
+import { campoDe, useDefinicion, type Registro } from '../datos/registros'
+import { NS } from '../i18n'
+import { MOTIVO_EN_TODAS } from '../transiciones/reglas'
+import { Campo } from './Campo'
+import { Drawer } from './Drawer'
+import { FormularioDeRegistro } from './FormularioDeRegistro'
+
+// tercera pasada de UX (1.1): lo que bloquea la siguiente acción se resuelve donde se informa. si una regla de transition-checks la
+// bloquea por un campo del registro que quien mira puede escribir, «Completar ‹campo›» abre un cajón con solo ese campo (y el motivo,
+// si el objeto lo exige); al guardar, useActualizar invalida la consulta en seco y el bloqueo se vuelve a comprobar sin recargar
+const NO_COMPLETABLES: ReadonlySet<string> = new Set(['GEOMETRY', 'RELATION', 'FILE'])
+
+// un campo que el formulario completa solo: legible y escribible por quien mira, ni derivado ni de comando, y que no sea una
+// geometría (se edita en el mapa), una relación (el formulario de wasichai pide su UUID) ni un archivo (va como evidencia)
+export function esCompletable(objeto: string, definicion: ObjectDefinition | undefined, campo: string): boolean {
+  const f = campoDe(definicion, campo)
+  return Boolean(f?.editable && f.visible !== false && !NO_COMPLETABLES.has(f.type)) && !esDerivado(objeto, campo) && !esDeComando(objeto, campo)
+}
+
+export function CompletarCampo({
+  objeto,
+  registro,
+  proyecto,
+  campo,
+  accion
+}: {
+  objeto: string
+  registro: Registro
+  proyecto?: string
+  // el nombre del campo en la API (el field de la regla que bloquea)
+  campo: string
+  // la etiqueta de la acción bloqueada («Resolver»)
+  accion: string
+}) {
+  const { t } = useTranslation(NS)
+  const { can } = useAuth()
+  const definicion = useDefinicion(objeto)
+  const escribe = useEscribeEnProyecto(proyecto)
+  const [abierto, setAbierto] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  if (!can(objeto, 'UPDATE') || (proyecto !== undefined && !escribe) || !esCompletable(objeto, definicion.data, campo)) return null
+  const titulo = t('transiciones.completar', { campo: campoDe(definicion.data, campo)?.label || campo })
+  const pideMotivo = definicion.data?.requiresReason === true || MOTIVO_EN_TODAS.includes(objeto)
+  const cerrar = () => {
+    setMotivo('')
+    setAbierto(false)
+  }
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setAbierto(true)}>
+        {titulo}
+      </Button>
+      <Drawer titulo={titulo} descripcion={t('transiciones.completarAyuda', { accion })} abierto={abierto} alCerrar={cerrar}>
+        {pideMotivo ? (
+          <Campo etiqueta={t('comun.motivoObligatorio')}>
+            {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
+          </Campo>
+        ) : null}
+        {abierto ? (
+          <FormularioDeRegistro
+            objeto={objeto}
+            registro={registro}
+            campos={[campo]}
+            motivo={motivo.trim() || undefined}
+            alGuardar={cerrar}
+            alCancelar={cerrar}
+          />
+        ) : null}
+      </Drawer>
+    </>
+  )
+}

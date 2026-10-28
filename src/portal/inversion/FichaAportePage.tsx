@@ -137,6 +137,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={
           edita
             ? [

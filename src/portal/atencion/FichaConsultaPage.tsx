@@ -274,6 +274,7 @@ function Ficha({
         proyecto={proyecto}
         comprobarAntes={comprobar}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         primariaPropia={acciones ?? undefined}
         secundarias={[
           ...(edita

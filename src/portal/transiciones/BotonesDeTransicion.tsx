@@ -28,6 +28,8 @@ export const esDestructiva = (tr: AvailableTransition): boolean => DESTINOS_DEST
 // una transición ofrecida, lista para dibujarse donde la pantalla la ponga (la cabecera de una ficha la reparte)
 export interface TransicionOfrecida {
   clave: string
+  // la etiqueta de la transición («Resolver»), para decir de qué paso son las reglas que se vuelven a comprobar
+  etiqueta: string
   nodo: ReactNode
 }
 
@@ -94,6 +96,7 @@ export function useTransicionesOfrecidas({
   }
   const ofrecida = (tr: AvailableTransition): TransicionOfrecida => ({
     clave: tr.name,
+    etiqueta: tr.label,
     nodo: (
       <BotonDeTransicion
         key={tr.name}

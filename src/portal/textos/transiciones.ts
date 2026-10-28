@@ -25,6 +25,9 @@ export const ES_TRANSICIONES = {
   faltaCampo: 'Para «{{accion}}» falta «{{campo}}»: complételo y vuelva a intentar.',
   faltaCampoSinAccion: 'Falta «{{campo}}» para este paso: complételo y vuelva a intentar.',
   reglaSinTexto: 'Una regla del sistema no permite este paso todavía.',
+  // lo que falta se completa junto al bloqueo (tercera pasada de UX, 1.1)
+  completar: 'Completar «{{campo}}»',
+  completarAyuda: 'Al guardar se vuelven a comprobar las reglas de «{{accion}}».',
   // field de un aviso que no es un campo del registro (api.md §4.1): un objeto que la regla revisa, el motivo o el estado
   campos: {
     reason: 'Motivo',
@@ -70,6 +73,8 @@ export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
   faltaCampo: 'To «{{accion}}», «{{campo}}» is missing: fill it in and try again.',
   faltaCampoSinAccion: '«{{campo}}» is missing for this step: fill it in and try again.',
   reglaSinTexto: 'A system rule does not allow this step yet.',
+  completar: 'Fill in «{{campo}}»',
+  completarAyuda: 'Saving checks the rules for «{{accion}}» again.',
   campos: {
     reason: 'Reason',
     state: 'State',

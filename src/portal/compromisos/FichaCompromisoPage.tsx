@@ -141,6 +141,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={[
           ...(rutaEnElMapa('commitment', compromiso) ? [{ clave: 'mapa', nodo: <VerEnElMapa objeto="commitment" registro={compromiso} /> }] : []),
           ...(edita

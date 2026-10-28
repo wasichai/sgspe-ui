@@ -16,6 +16,8 @@ export interface SiguienteAccion {
   etiqueta: string
   // lo que falta para darla, en el texto de la regla que la bloquea («Falta una entrega con conformidad»)
   falta?: string
+  // el campo del registro que la bloquea y que quien mira puede completar (CompletarCampo, en la cabecera de la ficha)
+  campo?: string
 }
 
 export function PanelDeDecision({

@@ -129,6 +129,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={[
           // lo que nace de la interacción, con ella como origen (revisión de UX, etapa 5): acciones de la cabecera, no un menú
           // dentro de otro (en «Más acciones» no se podría abrir)

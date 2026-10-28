@@ -162,6 +162,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         // la siguiente acción del flujo es la primaria (DD-02 del rediseño de UX); sin una del camino, la nueva revisión
         primariaPropia={
           revisa ? (

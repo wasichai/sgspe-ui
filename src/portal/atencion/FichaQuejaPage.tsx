@@ -131,6 +131,7 @@ function Ficha({ queja }: { queja: Registro }) {
         proyecto={proyecto}
         comprobarAntes={COMPROBAR}
         falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={[
           ...(edita
             ? [
