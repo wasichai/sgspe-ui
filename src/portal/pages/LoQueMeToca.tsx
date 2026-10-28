@@ -1,7 +1,10 @@
 import { useQueries } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
+import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { ListaPriorizada, type EntradaPriorizada, type TonoDeEntrada } from '../componentes/ListaPriorizada'
@@ -15,6 +18,7 @@ import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, consulta, estados, texto, useRegistros, type Pagina, type Parametros, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { sinFiltroDeAsignados, soloAsignados } from '../tareas/paraTomar'
+import { TomarTarea } from '../tareas/TomarTarea'
 import { useSuTrabajo } from './aSuCargo'
 
 // «Lo que me toca hoy», lo primero del inicio (P-01 del rediseño de UX; hallazgos U-05 y U-13): lo abierto a su cargo (tareas,
@@ -56,7 +60,8 @@ const porUrgencia = (a: DeSuCargo, b: DeSuCargo): number => {
 const nombreDe = ({ objeto, registro }: DeSuCargo): string => {
   if (objeto === 'task') return texto(registro, 'title') || registro.id
   if (objeto === 'commitment') return [texto(registro, 'code'), texto(registro, 'title')].filter(Boolean).join(' · ') || registro.id
-  return texto(registro, 'code') || registro.id
+  // una QCS dice también lo que plantea (tercera pasada de UX, 3.2): el código solo no dice de qué se trata
+  return [texto(registro, 'code'), tituloQueDiceQueEs(texto(registro, 'description'), '')].filter(Boolean).join(' · ') || registro.id
 }
 
 export function LoQueMeToca() {
@@ -79,6 +84,16 @@ export function LoQueMeToca() {
     : []
   const consultados = vigentes.slice(0, TOPE_DE_PROYECTOS)
   const pedir = usePedir()
+  // el estado de cada entrada con el rótulo de su flujo; sin el flujo legible, la entrada no lo dice
+  const etiquetas: Record<string, Record<string, string>> = {
+    task: useEtiquetasDeEstado('task'),
+    commitment: useEtiquetasDeEstado('commitment'),
+    grievance: useEtiquetasDeEstado('grievance'),
+    inquiry: useEtiquetasDeEstado('inquiry'),
+    stakeholder_request: useEtiquetasDeEstado('stakeholder_request')
+  }
+  // lo que se acaba de tomar en la línea: la tarea pasa a «A su cargo» y aquí se dice
+  const [tomada, setTomada] = useState<string | null>(null)
   const colas = useQueries({
     queries: consultados.map((proyecto) => {
       const busqueda = consulta({
@@ -97,18 +112,20 @@ export function LoQueMeToca() {
     const registro = (proyectos.data ?? []).find((p) => p.id === id)
     return registro ? nombreDeProyecto(registro) : null
   }
-  // el motivo de una entrada: qué es, de qué proyecto (en la cola de sus proyectos) y en qué situación de plazo está; y cuándo
-  // vence o venció
-  const entrada = (item: DeSuCargo, tipo: string, proyecto?: string | null): EntradaPriorizada => {
+  // el motivo de una entrada: qué es, de qué proyecto, en qué estado (tercera pasada de UX, 3.2) y en qué situación de plazo está;
+  // y cuándo vence o venció. una tarea para tomar lleva «Tomar» en la línea
+  const entrada = (item: DeSuCargo, tipo: string, proyecto?: string | null, paraTomar = false): EntradaPriorizada => {
     const situacion = texto(item.registro, 'deadline_status')
     const fecha = fechaDe(item)
+    const estado = paraTomar ? '' : (etiquetas[item.objeto]?.[item.registro.state ?? ''] ?? '')
     return {
       clave: `${item.objeto}-${item.registro.id}`,
       titulo: nombreDe(item),
       a: rutaDeFicha(item.objeto, item.registro) ?? '/tasks',
-      motivo: [tipo, proyecto ?? '', situacion ? rotuloDeOpcion(situacion) : ''].filter(Boolean).join(' · '),
+      motivo: [tipo, proyecto ?? '', estado, situacion ? rotuloDeOpcion(situacion) : ''].filter(Boolean).join(' · '),
       cuando: fecha ? t(situacion === 'VENCIDO' ? 'miDia.hoy.vencio' : 'miDia.hoy.vence', { fecha: diaLegible(fecha) }) : undefined,
-      tono: TONO[situacion] ?? 'neutro'
+      tono: TONO[situacion] ?? 'neutro',
+      accion: paraTomar ? <TomarTarea tarea={item.registro} alTomar={(r) => setTomada(texto(r, 'title'))} /> : undefined
     }
   }
 
@@ -132,7 +149,7 @@ export function LoQueMeToca() {
               pagina,
               limite: POR_PROYECTO,
               a: `/projects/${encodeURIComponent(proyecto)}/tasks`,
-              entradas: pagina.content.map((registro) => entrada({ objeto: 'task', registro }, sinAsignar))
+              entradas: pagina.content.map((registro) => entrada({ objeto: 'task', registro }, sinAsignar, null, true))
             }
           ]
         })
@@ -145,7 +162,7 @@ export function LoQueMeToca() {
               limite: PARA_TOMAR,
               a: '/tasks',
               entradas: enSusProyectos.data.content.map((registro) =>
-                entrada({ objeto: 'task', registro }, sinAsignar, nombreDelProyecto(texto(registro, 'project')))
+                entrada({ objeto: 'task', registro }, sinAsignar, nombreDelProyecto(texto(registro, 'project')), true)
               )
             }
           ]
@@ -181,10 +198,15 @@ export function LoQueMeToca() {
               total={aCargo.length}
               limite={A_LA_VISTA}
               vacio={trabajo.fallidas.length > 0 ? undefined : t('miDia.hoy.nada')}
-              entradas={aCargo.map((item) => entrada(item, t(`miDia.tipos.${item.objeto}`)))}
+              entradas={aCargo.map((item) => entrada(item, t(`miDia.tipos.${item.objeto}`), nombreDelProyecto(texto(item.registro, 'project'))))}
             />
           </>
         )
+      ) : null}
+      {tomada ? (
+        <p role="status" className="text-sm text-sg-success">
+          {t('miDia.hoy.tomada', { titulo: tomada })}
+        </p>
       ) : null}
       {paraTomar.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">

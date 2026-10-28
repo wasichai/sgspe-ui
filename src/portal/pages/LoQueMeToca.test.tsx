@@ -2,16 +2,19 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, describe, expect, it } from 'vitest'
-import { montar, pagina, registro } from '../../test/montar'
+import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { permisos, RELACIONISTA } from '../../test/portal'
+import { espiarRed, type Red } from '../../test/red'
 import { LoQueMeToca } from './LoQueMeToca'
 
 // P-01 «Lo que me toca hoy» (rediseño de UX, U-05 y U-13): lo que la persona tiene a su cargo, lo vencido primero y cada entrada
 // con su motivo y su fecha, sin muros de enlaces; y las tareas para tomar de sus proyectos, sin elegir un proyecto en el selector
 let fetch: FetchMock | null = null
+let red: Red | null = null
 afterEach(() => {
+  red?.restaurar()
   fetch?.restore()
-  fetch = null
+  red = fetch = null
 })
 
 const P1 = registro('p1', { code: 'PRJ-01', name: 'Proyecto Ejemplo A' }, { state: 'active' })
@@ -78,6 +81,44 @@ describe('Lo que me toca hoy', () => {
     // el título no se subraya (U-05) y «Ver mis tareas» lleva a la lista completa
     expect(within(grupo(/^A su cargo/)).getByRole('link', { name: 'Visitar Tunas Pampa' })).toHaveClass('no-underline')
     expect(within(region()).getByRole('link', { name: 'Ver mis tareas' })).toHaveAttribute('href', '/tasks')
+  })
+
+  // tercera pasada de UX, 3.2: cada entrada dice su proyecto y su estado, una QCS lo que plantea, y una tarea para tomar se toma
+  // en la línea
+  it('cada entrada dice su proyecto y su estado, una QCS lo que plantea, y «Tomar» toma la tarea sin abrirla', async () => {
+    const PARA_TOMAR = registro(
+      'q1',
+      { title: 'Registrar la asistencia', project: 'p1', due_date: '2026-10-19' },
+      { state: 'open', updatedAt: '2026-10-01T10:00:00Z' }
+    )
+    fetch = mockFetch([
+      { path: /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/, body: pagina([]) },
+      {
+        path: /^\/objects\/grievance\/records\?.*owner_user_id=u-relacionista/,
+        body: pagina([registro('g5', { code: 'Q-005', project: 'p1', description: 'Polvo en la vía de acceso' }, { state: 'in_attention' })])
+      },
+      { path: '/objects/grievance/workflow', body: workflow('grievance', [['in_attention', 'En atención']]) },
+      { path: /^\/objects\/project_assignment\/records/, body: pagina([asignacion('a1', 'p1')]) },
+      { path: /^\/objects\/project\/records/, body: pagina([P1]) },
+      { path: /^\/objects\/task\/records\?.*empty=assignee_user_id/, body: pagina([PARA_TOMAR]) },
+      {
+        path: '/metadata/objects/task',
+        body: definicion('task', ['title', 'project', 'due_date', ['assignee_user_id', { type: 'UUID' }], 'assignee_user_email'])
+      },
+      { method: 'PUT', path: '/objects/task/records/q1', body: { ...PARA_TOMAR, attributes: { ...PARA_TOMAR.attributes, assignee_user_id: RELACIONISTA.id } } }
+    ])
+    red = espiarRed()
+    montar(<LoQueMeToca />, {
+      usuario: RELACIONISTA,
+      permisos: permisos({ task: ['READ', 'UPDATE'], grievance: ['READ'], project: ['READ'], project_assignment: ['READ'] })
+    })
+    await waitFor(() => expect(entradas(/^A su cargo/)).toEqual(['Q-005 · Polvo en la vía de accesoQueja · PRJ-01 · Proyecto Ejemplo A · En atención']))
+    const cola = await screen.findByRole('region', { name: /^Para tomar en sus proyectos/ })
+    await userEvent.click(await within(cola).findByRole('button', { name: 'Tomar «Registrar la asistencia»' }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/task/records/q1')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/task/records/q1')[0].cabeceras.get('If-Match')).toBe('"2026-10-01T10:00:00Z"')
+    expect(red.a('PUT', '/objects/task/records/q1')[0].cuerpo).toMatchObject({ attributes: { assignee_user_id: RELACIONISTA.id } })
+    expect(await within(region()).findByRole('status')).toHaveTextContent('Tomó «Registrar la asistencia»: ahora está a su cargo.')
   })
 
   // B-04: el servidor acota la lectura de task a los proyectos de la cuenta (ADR-0029): la cola es una sola lectura, sin project

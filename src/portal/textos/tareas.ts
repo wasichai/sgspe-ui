@@ -37,6 +37,8 @@ export const ES_TAREAS = {
   mesSiguiente: 'Mes siguiente',
   sinFecha: 'Sin fecha de vencimiento: {{n}}',
   diasDeLaSemana: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+  tomar: 'Tomar',
+  tomarEnLinea: 'Tomar «{{titulo}}»',
   ficha: {
     descripcion: 'Descripción',
     asignada: 'Asignada a',
@@ -85,6 +87,8 @@ export const EN_TAREAS: typeof ES_TAREAS = {
   mesSiguiente: 'Next month',
   sinFecha: 'Without due date: {{n}}',
   diasDeLaSemana: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  tomar: 'Take',
+  tomarEnLinea: 'Take “{{titulo}}”',
   ficha: {
     descripcion: 'Description',
     asignada: 'Assigned to',

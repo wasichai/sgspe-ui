@@ -20,6 +20,8 @@ export interface EntradaPriorizada {
   motivo: string
   cuando?: ReactNode
   tono: TonoDeEntrada
+  // lo que se hace en la misma línea, sin abrir el registro («Tomar» una tarea; tercera pasada de UX, 3.2)
+  accion?: ReactNode
 }
 
 export interface PropsDeListaPriorizada {
@@ -79,19 +81,22 @@ export function ListaPriorizada({ titulo, total, entradas, limite = 3, verTodos,
         <ResultadoDeLista>
           <ul className="space-y-2">
             {visibles.map((e) => (
-              <li key={e.clave} className={cn('border-l-2 pl-3', BORDE[e.tono])}>
-                <EnlaceConRastro to={e.a} className="text-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
-                  {e.titulo}
-                </EnlaceConRastro>
-                <p className="text-sg-caption text-sg-text-secondary">
-                  <span>{e.motivo}</span>
-                  {e.cuando ? (
-                    <>
-                      <span aria-hidden> · </span>
-                      <span>{e.cuando}</span>
-                    </>
-                  ) : null}
-                </p>
+              <li key={e.clave} className={cn('flex items-start justify-between gap-3 border-l-2 pl-3', BORDE[e.tono])}>
+                <div className="min-w-0">
+                  <EnlaceConRastro to={e.a} className="text-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
+                    {e.titulo}
+                  </EnlaceConRastro>
+                  <p className="text-sg-caption text-sg-text-secondary">
+                    <span>{e.motivo}</span>
+                    {e.cuando ? (
+                      <>
+                        <span aria-hidden> · </span>
+                        <span>{e.cuando}</span>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+                {e.accion ? <div className="shrink-0">{e.accion}</div> : null}
               </li>
             ))}
           </ul>
