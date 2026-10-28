@@ -60,7 +60,7 @@ export function IncidentesPage() {
       ) : incidentes.isError && !incidentes.data ? (
         <FalloDeLectura error={incidentes.error} alReintentar={() => void incidentes.refetch()} />
       ) : filas.length === 0 ? (
-        <Vacio titulo={t('incidentes.vacio')} />
+        <Vacio titulo={t('incidentes.vacio')}>{t('incidentes.comoEmpezar')}</Vacio>
       ) : (
         <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
           <Table aria-label={t('incidentes.tabla')}>

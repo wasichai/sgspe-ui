@@ -58,7 +58,7 @@ export function EntregablesDeReportes() {
       <DeLista consulta={entregables}>
         {(pagina) =>
           pagina.content.length === 0 ? (
-            <Vacio titulo={t('entregables.lista.vacio')} />
+            <Vacio titulo={t('entregables.lista.vacio')}>{t('entregables.lista.comoEmpezar')}</Vacio>
           ) : (
             <div className="overflow-x-auto">
               <Table aria-label={titulo}>

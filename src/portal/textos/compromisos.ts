@@ -40,6 +40,8 @@ export const ES_COMPROMISOS = {
     monto: 'Monto'
   },
   vacio: 'No hay compromisos en esta vista.',
+  comoEmpezar:
+    'Un compromiso nace de lo que se acuerda con un grupo de interés, en una interacción, una solicitud o un acuerdo: «Nuevo compromiso» lo registra.',
   candidatos: {
     titulo: 'Candidatos a compromiso',
     ayuda: 'Posibles compromisos de las actas: solo son compromisos si una persona los acepta.',
@@ -133,6 +135,7 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
     monto: 'Amount'
   },
   vacio: 'There are no commitments in this view.',
+  comoEmpezar: 'A commitment comes from what is agreed with a stakeholder, in an engagement, a request or an agreement: “New commitment” records it.',
   candidatos: {
     titulo: 'Commitment candidates',
     ayuda: 'Possible commitments from the minutes: they are commitments only if a person accepts them.',

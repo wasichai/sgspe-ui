@@ -292,7 +292,8 @@ export function CompromisosPage() {
             chips.length > 0 ? (
               <VacioDeLista conFiltros alLimpiar={limpiar} sinFiltros={sinFiltros} />
             ) : (
-              <Vacio titulo={t('compromisos.vacio')} />
+              // cómo se empieza, sin otro botón: «Nuevo compromiso» ya está en la cabecera (tercera pasada de UX, 3.12)
+              <Vacio titulo={t('compromisos.vacio')}>{t('compromisos.comoEmpezar')}</Vacio>
             )
           ) : (
             // el resultado de la vista con sus filtros (flujo F-C): la ficha abierta desde aquí dice «Volver a Compromisos (N)»

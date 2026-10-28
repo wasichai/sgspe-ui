@@ -3,6 +3,7 @@ export const ES_INCIDENTES = {
   titulo: 'Incidentes',
   tabla: 'Incidentes del proyecto',
   vacio: 'No hay incidentes registrados',
+  comoEmpezar: 'Un incidente es un hecho que ya ocurrió y afecta la relación con la comunidad: «Registrar incidente» lo anota con cuándo y dónde pasó.',
   registrar: 'Registrar incidente',
   columnas: { codigo: 'Código', ocurrio: 'Ocurrió', tipo: 'Tipo', lugar: 'Lugar', estado: 'Estado' },
   ficha: {
@@ -33,6 +34,8 @@ export const EN_INCIDENTES: typeof ES_INCIDENTES = {
   titulo: 'Incidents',
   tabla: 'Project incidents',
   vacio: 'There are no recorded incidents',
+  comoEmpezar:
+    'An incident is something that already happened and affects the relationship with the community: “Record incident” notes when and where it happened.',
   registrar: 'Record incident',
   columnas: { codigo: 'Code', ocurrio: 'Occurred', tipo: 'Type', lugar: 'Place', estado: 'State' },
   ficha: {

@@ -72,6 +72,8 @@ describe('incidentes', () => {
     })
     expect(screen.queryByText('No hay incidentes registrados')).not.toBeInTheDocument()
     expect(await screen.findByText('No hay incidentes registrados')).toBeInTheDocument()
+    // el vacío inicial dice cómo se empieza (tercera pasada de UX, 3.12)
+    expect(screen.getByText(/«Registrar incidente» lo anota con cuándo y dónde pasó/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Registrar incidente' })).not.toBeInTheDocument()
   })
 

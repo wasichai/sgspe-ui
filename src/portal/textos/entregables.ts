@@ -8,6 +8,8 @@ export const ES_ENTREGABLES = {
     plantillas: 'Plantillas',
     sinAsignacion: 'Para crear un entregable en este proyecto hace falta una asignación vigente a él.',
     vacio: 'Todavía no hay entregables.',
+    comoEmpezar:
+      '«Nuevo entregable» arma el borrador con las secciones de su tipo (un informe de campo, un diagnóstico social) a partir de los datos del proyecto.',
     columnas: {
       entregable: 'Entregable',
       tipo: 'Tipo',
@@ -201,6 +203,7 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     plantillas: 'Templates',
     sinAsignacion: 'Creating a deliverable in this project needs a current assignment to it.',
     vacio: 'There are no deliverables yet.',
+    comoEmpezar: '“New deliverable” builds the draft with the sections of its type (a field report, a social diagnosis) from the project data.',
     columnas: { entregable: 'Deliverable', tipo: 'Type', corte: 'Cutoff', estado: 'State', borrador: 'Draft', revision: 'Revision', niveles: 'Levels' }
   },
   nuevo: {
