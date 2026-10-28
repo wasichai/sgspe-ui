@@ -1,5 +1,8 @@
 # Rediseño de UX del portal: orientación y jerarquía (2026-10-20)
 
+> La tercera pasada (2026-10-28), que revisa lo que esta dejó y recupera A13, A24 y la razón a la vista de A3, que se perdieron al
+> integrar #76, está en [tercera-pasada.md](tercera-pasada.md).
+
 Segunda pasada de UX sobre `sgspe-ui`, después de la revisión del 2026-10-19 (etapas 0 a 8, PR #51 a #73, plan en
 `sgspe/docs/ux-revision/plan.md`). Esa revisión ya había puesto las piezas comunes: encabezado de página, migas, rastro,
 panel de decisión, camino del flujo, pestañas con conteo, trazabilidad en tres grupos, «Mi día», `BotonCrear`, listas
