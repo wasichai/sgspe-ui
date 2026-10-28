@@ -154,6 +154,23 @@ describe('S33 · acuerdos', () => {
     expect(red.a('GET', '/objects/agreement/records').map((l) => l.ruta)).toContain('/objects/agreement/records?sort=code&dir=asc&page=1&size=25')
   })
 
+  // tercera pasada de UX, 3.7: la búsqueda va al servidor con ?q= y vuelve a la primera página; sin resultados, ofrece limpiarla
+  it('busca en el servidor y, sin resultados, ofrece limpiar la búsqueda', async () => {
+    const muchos = Array.from({ length: 27 }, (_, i) => registro(`ag${i + 10}`, { ...SERVIDUMBRE.attributes, code: `A-${100 + i}`, title: `Acuerdo ${i}` }))
+    fetch = mockFetch(rutas())
+    red = espiarRed([listaDelServidor('agreement', muchos)])
+    montar(<AcuerdosPage />, { ruta: '/agreements?page=1', camino: '/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
+    await screen.findByRole('table', { name: 'Acuerdos' })
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por código, título o resumen' }), 'A-107')
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Acuerdos' })).getAllByRole('row')).toHaveLength(2))
+    expect(red!.a('GET', '/objects/agreement/records').map((l) => l.ruta)).toContain('/objects/agreement/records?q=A-107&sort=code&dir=asc&page=0&size=25')
+    expect(screen.getByText('1 acuerdo')).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por código, título o resumen' }), 'x')
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('button', { name: 'Limpiar filtros' }).at(-1)!)
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Acuerdos' })).getAllByRole('row')).toHaveLength(26))
+  })
+
   // 05-especificacion §1.6 y DD-05: el código y el vencimiento se ordenan en el servidor; el orden dura la visita
   it('el acuerdo (por su código) y el vencimiento ordenan en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
     const muchos = Array.from({ length: 27 }, (_, i) =>

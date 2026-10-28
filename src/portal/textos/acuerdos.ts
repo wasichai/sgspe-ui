@@ -9,6 +9,7 @@ export const ES_ACUERDOS = {
   conteo_other: '{{count}} acuerdos',
   tabla: 'Acuerdos',
   vacio: 'Todavía no hay acuerdos.',
+  buscar: 'Buscar por código, título o resumen',
   vacioAyuda:
     'Un acuerdo o convenio formaliza lo pactado con una comunidad o una institución, con sus partes y su vigencia; se registra dentro de su proyecto.',
   columnas: {
@@ -86,6 +87,7 @@ export const EN_ACUERDOS: typeof ES_ACUERDOS = {
   conteo_other: '{{count}} agreements',
   tabla: 'Agreements',
   vacio: 'There are no agreements yet.',
+  buscar: 'Search by code, title or summary',
   vacioAyuda: 'An agreement formalizes what was agreed with a community or an institution, with its parties and validity; it is recorded inside its project.',
   columnas: {
     acuerdo: 'Agreement',

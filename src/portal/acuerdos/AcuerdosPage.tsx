@@ -23,7 +23,8 @@ import { useProyectos } from '../contexto/proyectos'
 import { atributo, texto, useRegistros, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
@@ -62,8 +63,11 @@ export function AcuerdosPage() {
   const parametros = useParametrosDeLista('todos')
   // el orden viaja en la URL (ordenEnUrl, DD-37): volver de una ficha lo conserva, y otro orden vuelve a la primera página
   const [orden, ordenar] = ordenEnUrl(parametros, ORDEN_INICIAL, ['acuerdo', 'vence'])
+  // la búsqueda (?q=) en el servidor, por los textos del acuerdo (tercera pasada de UX, 3.7); el conteo dice lo encontrado
+  const q = parametros.filtro('q').trim()
   const acuerdos = useRegistros('agreement', {
     project: proyecto,
+    q: q || undefined,
     sort: CAMPO_DE_ORDEN[orden.columna],
     dir: orden.dir,
     page: parametros.pagina,
@@ -135,12 +139,21 @@ export function AcuerdosPage() {
           )
         }
       />
+      <BarraDeFiltros
+        busqueda={{ etiqueta: t('acuerdos.buscar'), valor: parametros.filtro('q'), alCambiar: (valor) => parametros.cambiar({ q: valor }) }}
+        aplicados={q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }), alQuitar: () => parametros.cambiar({ q: null }) }] : []}
+        alLimpiar={() => parametros.cambiar({ q: null })}
+      />
       {acuerdos.isPending ? (
         <Cargando />
       ) : acuerdos.isError && !acuerdos.data ? (
         <FalloDeLectura error={acuerdos.error} alReintentar={() => void acuerdos.refetch()} />
       ) : lista.length === 0 ? (
-        <Vacio titulo={t('acuerdos.vacio')}>{t('acuerdos.vacioAyuda')}</Vacio>
+        q ? (
+          <VacioDeLista conFiltros alLimpiar={() => parametros.cambiar({ q: null })} />
+        ) : (
+          <Vacio titulo={t('acuerdos.vacio')}>{t('acuerdos.vacioAyuda')}</Vacio>
+        )
       ) : telefono ? (
         // en el teléfono, tarjetas con el título, el estado, la vigencia y el proyecto (revisión de UX, etapa 8)
         <ListaEnTarjetas
