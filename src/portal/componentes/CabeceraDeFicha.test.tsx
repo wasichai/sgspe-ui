@@ -143,6 +143,40 @@ describe('CabeceraDeFicha', () => {
     await waitFor(() => expect(cumplimiento).toHaveAccessibleDescription('Falta una entrega con conformidad'))
   })
 
+  // tercera pasada de UX (A3 de la segunda, perdido al integrar): en «Más acciones», una transición bloqueada dice por qué a la
+  // vista, bajo su nombre; en un title o solo para lectores de pantalla no la ve nadie, y en el teléfono no hay title
+  it('una transición bloqueada en «Más acciones» dice su razón a la vista, bajo su nombre', async () => {
+    fetch = mockFetch(
+      rutas(
+        [CUMPLIMIENTO, BLOQUEAR],
+        [
+          {
+            method: 'POST',
+            path: '/sgspe/transition-checks',
+            body: { allowed: false, blocking: [{ code: 'OPEN_DEPENDENCY', message: 'Hay una dependencia abierta', field: null }], warnings: [] }
+          }
+        ]
+      )
+    )
+    montar(
+      <CabeceraDeFicha
+        antetitulo="Compromiso · C-001"
+        titulo="Reservorio de agua"
+        objeto="commitment"
+        registro={C1}
+        comprobarAntes={['block']}
+        secundarias={[accion('a', 'Uno'), accion('b', 'Dos')]}
+      />
+    )
+    await screen.findByRole('button', { name: 'Registrar cumplimiento' })
+    const mas = await abrirMas()
+    const bloquear = within(mas).getByRole('button', { name: 'Bloquear' })
+    await waitFor(() => expect(bloquear).toBeDisabled())
+    const razon = within(mas).getByText('Hay una dependencia abierta')
+    expect(razon).not.toHaveClass('sr-only')
+    expect(bloquear).toHaveAccessibleDescription('Hay una dependencia abierta')
+  })
+
   it('CA-1.2.3: la que cancela solo está en «Más acciones», y elegirla abre el diálogo de transición', async () => {
     fetch = mockFetch(rutas([CUMPLIMIENTO, BLOQUEAR, CANCELAR]))
     montar(<CabeceraDeFicha antetitulo="Compromiso · C-001" titulo="Reservorio de agua" objeto="commitment" registro={C1} />)

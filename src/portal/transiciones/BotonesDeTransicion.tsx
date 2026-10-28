@@ -19,7 +19,7 @@ import { esDeComando } from './reglas'
 // camino, la primera; salvo con sinPrimaria (la ficha ya tiene la suya: un solo botón primario por encabezado). las que anulan,
 // cancelan, retiran o terminan van al final, como secundarias con texto de peligro y nombrando el objeto («Anular el
 // proyecto»), para que no se confundan con «cerrar el diálogo»; con destructivasEnMenu, en «Más acciones», lejos de la primaria. las de comprobarAntes consultan transition-checks al dibujarse y, si una regla las
-// bloquea, salen deshabilitadas con la razón
+// bloquea, salen deshabilitadas con la razón dicha a la vista, bajo su nombre
 const DURACION_DE_LA_CONFIRMACION = 6000
 // rechazar y desistir también (regla 4 de CabeceraDeFicha, P-09 del rediseño de UX): son estados finales de cierre
 const DESTINOS_DESTRUCTIVOS = new Set(['cancelled', 'voided', 'retired', 'terminated', 'rejected', 'withdrawn'])
@@ -188,24 +188,27 @@ function BotonDeTransicion({
   // la razón propia y lo que falta, dicho en la pantalla, se combinan; si son el mismo texto, se dice una vez
   const propia = razon && razon !== falta?.texto ? id : null
   const describidoPor = [propia, falta?.id].filter(Boolean).join(' ') || undefined
+  const boton = (
+    <Button
+      variant={primaria ? 'primary' : 'secondary'}
+      size="sm"
+      className={destructiva ? 'text-sg-danger' : undefined}
+      onClick={alAbrir}
+      disabled={bloqueado || Boolean(falta)}
+      title={razon ?? falta?.texto}
+      aria-describedby={describidoPor}
+    >
+      {elObjeto ? `${transicion.label} ${elObjeto}` : transicion.label}
+    </Button>
+  )
+  if (!propia) return boton
+  // la razón a la vista, bajo el nombre (tercera pasada de UX): en «Más acciones» y en el teléfono, un title no lo ve nadie
   return (
-    <>
-      <Button
-        variant={primaria ? 'primary' : 'secondary'}
-        size="sm"
-        className={destructiva ? 'text-sg-danger' : undefined}
-        onClick={alAbrir}
-        disabled={bloqueado || Boolean(falta)}
-        title={razon ?? falta?.texto}
-        aria-describedby={describidoPor}
-      >
-        {elObjeto ? `${transicion.label} ${elObjeto}` : transicion.label}
-      </Button>
-      {propia ? (
-        <span id={id} className="sr-only">
-          {razon}
-        </span>
-      ) : null}
-    </>
+    <span className="flex max-w-72 flex-col items-start gap-0.5">
+      {boton}
+      <span id={id} className="text-sg-caption text-sg-text-secondary">
+        {razon}
+      </span>
+    </span>
   )
 }
