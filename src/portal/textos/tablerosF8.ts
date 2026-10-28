@@ -87,6 +87,8 @@ export const ES_TABLEROS_F8 = {
     oficial: 'Oficial: {{valor}}',
     oficialCerrada: 'Cerrada el {{fecha}}',
     sinOficial: 'Sin cerrar',
+    // la diferencia con la meta, dicha con texto y sin juzgarla: el diseño no dice si cada meta es un mínimo (tercera pasada de UX, 4.2)
+    diferencia: { sobre: '{{n}} sobre la meta', bajo: '{{n}} bajo la meta', igual: 'Igual a la meta' },
     cerrar: 'Cerrar periodo…',
     sinCatalogo: 'El catálogo de indicadores no tiene este indicador o su cuenta no lo lee.'
   },
@@ -223,6 +225,7 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
     oficial: 'Official: {{valor}}',
     oficialCerrada: 'Closed on {{fecha}}',
     sinOficial: 'Not closed',
+    diferencia: { sobre: '{{n}} above the target', bajo: '{{n}} below the target', igual: 'Equal to the target' },
     cerrar: 'Close period…',
     sinCatalogo: 'The indicator catalog does not have this indicator or your account cannot read it.'
   },

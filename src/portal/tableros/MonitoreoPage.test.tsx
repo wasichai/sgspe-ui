@@ -52,6 +52,10 @@ describe('Monitoreo del plan de relaciones comunitarias', () => {
     const quinta = await fila('5')
     expect(within(quinta).getByText('Del proyecto')).toBeInTheDocument()
     expect(within(quinta).getByText('Sin cerrar')).toBeInTheDocument()
+    // tercera pasada de UX, 4.2: la diferencia con la meta, con texto (3 frente a una meta de 2)
+    expect(within(quinta).getByText('1 sobre la meta')).toBeInTheDocument()
+    // sin meta, ninguna diferencia
+    expect(within(primera).queryByText(/la meta$/)).not.toBeInTheDocument()
     expect(within(primera).getByRole('link', { name: 'Grupos de interés contactados, por sexo, ámbito e institución' })).toHaveAttribute(
       'href',
       '/dashboards/indicators/KPI-STK-04?periodStart=2026-09-01&periodEnd=2026-09-30&month=2026-09'

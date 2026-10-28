@@ -21,6 +21,8 @@ import { esMes, mesAnterior, periodoDelMes, type FilaDeMonitoreo, type TableroDe
 // postura. «Cerrar periodo…» se ofrece a quien tiene CREATE sobre indicator_measurement, con el indicatorId de la fila
 // (decisión 4 del plan; null: no se cierra)
 const valorDe = (valor: number | null) => (valor === null ? '—' : numeroPe(valor))
+// la diferencia entre la cifra y la meta, redondeada a dos decimales para no arrastrar el error de la coma flotante
+const diferenciaDe = (valor: number, meta: number) => Math.round((valor - meta) * 100) / 100
 
 export function MonitoreoPage() {
   const { t } = useTranslation(NS)
@@ -108,7 +110,18 @@ export function MonitoreoPage() {
                           </Link>
                         </Td>
                         <Td className="text-sm tabular-nums">{f.available ? valorDe(f.value) : <NoDisponible enLista />}</Td>
-                        <Td className="text-sm tabular-nums">{valorDe(f.target)}</Td>
+                        <Td className="text-sm tabular-nums">
+                          {valorDe(f.target)}
+                          {f.available && f.value !== null && f.target !== null ? (
+                            <span className="block text-sg-caption text-sg-text-secondary">
+                              {diferenciaDe(f.value, f.target) === 0
+                                ? t('tablerosF8.monitoreo.diferencia.igual')
+                                : t(`tablerosF8.monitoreo.diferencia.${diferenciaDe(f.value, f.target) > 0 ? 'sobre' : 'bajo'}`, {
+                                    n: numeroPe(Math.abs(diferenciaDe(f.value, f.target)))
+                                  })}
+                            </span>
+                          ) : null}
+                        </Td>
                         <Td className="text-sm">{t(`tablerosF8.monitoreo.origenes.${f.targetSource}`)}</Td>
                         <Td className="text-sm">
                           {f.official ? (
