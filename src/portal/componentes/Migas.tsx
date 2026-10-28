@@ -1,15 +1,18 @@
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useEffect, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'react-router'
 import { useRegistro } from '../datos/registros'
 import { nombreDeProyecto } from '../contexto/proyectos'
 import { NS } from '../i18n'
+import { EstadoChip } from './EstadoChip'
 
 // las migas de ux-architecture.md §8.1: dónde vive el registro (Proyectos / PRJ-01 · Pukaqaqa / Compromisos / COM-2026-031),
 // derivadas de la ruta. no cambian con el recorrido: eso es el rastro (contexto/Rastro.tsx). el último paso es la página actual
 export interface Miga {
   etiqueta: string
   ruta?: string
+  // lo que va al lado del paso, fuera de su enlace: el estado del proyecto en el paso del proyecto
+  adorno?: ReactNode
 }
 
 export function Migas({ pasos }: { pasos: Miga[] }) {
@@ -24,14 +27,15 @@ export function Migas({ pasos }: { pasos: Miga[] }) {
             <li key={`${paso.etiqueta}-${i}`} className="flex min-w-0 items-center gap-1">
               {i > 0 ? <span aria-hidden>/</span> : null}
               {ultimo || !paso.ruta ? (
-                <span aria-current={ultimo ? 'page' : undefined} className={ultimo ? 'truncate font-medium text-sg-text-secondary' : 'truncate'}>
+                <span data-miga aria-current={ultimo ? 'page' : undefined} className={ultimo ? 'truncate font-medium text-sg-text-secondary' : 'truncate'}>
                   {paso.etiqueta}
                 </span>
               ) : (
-                <Link to={paso.ruta} className="truncate hover:text-sg-text hover:underline">
+                <Link data-miga to={paso.ruta} className="truncate hover:text-sg-text hover:underline">
                   {paso.etiqueta}
                 </Link>
               )}
+              {paso.adorno}
             </li>
           )
         })}
@@ -79,9 +83,16 @@ export function MigasDelProyecto({ pestana, registro }: { pestana?: string; regi
   const segmento = pathname.split('/')[3] ?? 'overview'
   const p = pestana ?? pestanaDeSegmento(segmento)
   const base = `/projects/${encodeURIComponent(projectId)}`
+  // el estado va en el paso del proyecto (tercera pasada de UX): tras el último paso se leía como el estado del registro abierto
+  const estado = proyecto.data?.state ? (
+    <span className="inline-flex items-center gap-1">
+      <span className="sr-only">{t('contexto.estadoDelProyecto')}</span>
+      <EstadoChip objeto="project" estado={proyecto.data.state} />
+    </span>
+  ) : undefined
   const pasos: Miga[] = [
     { etiqueta: t('secciones.projects'), ruta: '/projects' },
-    { etiqueta: proyecto.data ? nombreDeProyecto(proyecto.data) : projectId, ruta: `${base}/overview` }
+    { etiqueta: proyecto.data ? nombreDeProyecto(proyecto.data) : projectId, ruta: `${base}/overview`, adorno: estado }
   ]
   // el resumen es el proyecto mismo: las migas terminan en él
   if (p !== 'overview' || registro) pasos.push({ etiqueta: t(`contexto.pestanas.${p}`, { defaultValue: '' }) || p, ruta: `${base}/${p}` })
