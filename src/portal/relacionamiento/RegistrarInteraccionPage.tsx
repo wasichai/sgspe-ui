@@ -189,6 +189,8 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
   }
 
   const [faltaAsistente, setFaltaAsistente] = useState(false)
+  // «Programar» sin fecha no se deshabilita en silencio: lleva al paso de la fecha y lo dice ahí (tercera pasada de UX, 2.8)
+  const [faltaProgramada, setFaltaProgramada] = useState(false)
   const [conErrores, setConErrores] = useState<number | null>(null)
   const irA = (destino: number) => {
     setPaso(destino)
@@ -295,7 +297,15 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                 {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.guardarRealizada')}
               </Button>
             ) : (
-              <Button type="button" disabled={guardar.isPending || parcial || !v.scheduled_at} onClick={() => void enviar('schedule')()}>
+              <Button
+                type="button"
+                disabled={guardar.isPending || parcial}
+                onClick={() => {
+                  setFaltaProgramada(!v.scheduled_at)
+                  if (!v.scheduled_at) return irA(0)
+                  void enviar('schedule')()
+                }}
+              >
                 {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.programar')}
               </Button>
             )}
@@ -344,6 +354,7 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
                 <CampoFecha
                   etiqueta={t('relacionamiento.registro.programada')}
                   conHora
+                  error={faltaProgramada && !field.value ? t('relacionamiento.registro.faltaProgramada') : undefined}
                   valor={field.value || null}
                   alCambiar={(x) => field.onChange(x ?? '')}
                 />

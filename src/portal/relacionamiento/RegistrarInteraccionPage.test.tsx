@@ -194,6 +194,22 @@ describe('S24 · registrar interacción', () => {
     expect(red.a('POST', '/objects/engagement/records/e9/transitions/register_held_unplanned')[0].cabeceras.get('If-Match')).toBe('"2026-10-07T10:00:00Z"')
   })
 
+  // tercera pasada de UX (2.8): «Programar» no se deshabilita en silencio; sin fecha, lleva al paso de la fecha y lo dice ahí
+  it('«Programar» sin fecha lleva al primer paso y dice que falta la fecha, sin guardar nada', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?stakeholders=s1', RELACIONISTA, EQUIPO, rutas())
+    red = espiarRed()
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    for (let i = 0; i < 4; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    const programar = await screen.findByRole('button', { name: 'Programar' })
+    expect(programar).toBeEnabled()
+    await userEvent.click(programar)
+    expect(await screen.findByText('Para programarla, indique la fecha y la hora')).toBeInTheDocument()
+    expect(screen.getByLabelText('Fecha y hora programadas')).toBeInTheDocument()
+    expect(red.a('POST', '/objects/engagement/records')).toHaveLength(0)
+  })
+
   // hallazgo U-07 (DD-07): la fecha y la hora programadas se escriben como dd/mm/aaaa y HH:mm y viajan como el instante de Lima
   it('programa con la fecha escrita como 20/10/2026 y la hora 10:15: scheduled_at es el instante de esa hora de Lima', async () => {
     fetch = abrirPortal('/projects/p1/engagements/new?stakeholders=s1', RELACIONISTA, EQUIPO, rutas())
