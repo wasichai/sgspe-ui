@@ -24,10 +24,12 @@ import { useAsignadoAlProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
 import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
-import { fechaYHoraPe, NS } from '../i18n'
+import { NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
 import { opcion } from '../datos/opciones'
 import { conHecho } from '../componentes/AvisoDeExito'
+import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
+import { leerBorrador, useBorradorLocal, useClaveDelBorrador } from '../datos/borrador'
 
 // S30 · crear compromiso (screens.md §7, flujo 8): los siete pasos de la matriz de DOC-01 (qué, origen, solicitantes,
 // beneficiarios, monto y campaña, plazo y responsable, revisión). el alta exige monto (RN-COM-004) y, como commitment es
@@ -158,38 +160,9 @@ export function NuevoCompromisoPage() {
   return <ConDefiniciones definiciones={[definicion]}>{() => <Asistente key={projectId} />}</ConDefiniciones>
 }
 
-// el borrador del alta en este navegador (design-system.md §6.3: guardado automático): lo escrito en el formulario se guarda
-// por proyecto mientras se completan los pasos, se recupera al volver y se borra al registrar el compromiso. solo los campos del
-// formulario: el origen, los solicitantes y las personas se vuelven a elegir. si el navegador no guarda, no pasa nada
-const claveDelBorrador = (proyecto: string) => `sgspe.borrador.compromiso.${proyecto}`
-interface Borrador {
-  valores: Valores
-  guardado: string
-}
-function leerBorrador(proyecto: string): Borrador | null {
-  try {
-    const crudo = localStorage.getItem(claveDelBorrador(proyecto))
-    return crudo ? (JSON.parse(crudo) as Borrador) : null
-  } catch {
-    return null
-  }
-}
-function guardarBorrador(proyecto: string, valores: Valores) {
-  try {
-    if (Object.values(valores).every((v) => v === '' || v === undefined || v === null)) localStorage.removeItem(claveDelBorrador(proyecto))
-    else localStorage.setItem(claveDelBorrador(proyecto), JSON.stringify({ valores, guardado: new Date().toISOString() } satisfies Borrador))
-  } catch {
-    // sin almacenamiento, el formulario sigue sin borrador
-  }
-}
-function borrarBorrador(proyecto: string) {
-  try {
-    localStorage.removeItem(claveDelBorrador(proyecto))
-  } catch {
-    // nada que borrar
-  }
-}
-
+// el borrador del alta en este navegador (design-system.md §6.3: guardado automático; useBorradorLocal): lo escrito y los
+// solicitantes elegidos se guardan por proyecto mientras se completan los pasos, se recuperan al volver y se borran al registrar
+// el compromiso. el origen y las personas se vuelven a elegir
 function Asistente() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
@@ -221,7 +194,9 @@ function Asistente() {
     yaPropuesta.current = true
     setOrigen(propuesta.data)
   }, [propuesta.data])
-  const [solicitantes, setSolicitantes] = useState<Set<string>>(new Set())
+  const claveDelBorrador = useClaveDelBorrador('compromiso', projectId)
+  const [recuperado] = useState(() => leerBorrador<Valores>(claveDelBorrador))
+  const [solicitantes, setSolicitantes] = useState<Set<string>>(() => new Set(recuperado?.elegidos?.solicitantes ?? []))
   const [responsable, setResponsable] = useState<Usuaria | null>(null)
   const [verificador, setVerificador] = useState<Usuaria | null>(null)
   const [errorDePersona, setErrorDePersona] = useState<string | undefined>(undefined)
@@ -235,7 +210,6 @@ function Asistente() {
   const [enviando, setEnviando] = useState(false)
   const salida = useSalidaPermitida()
   const [fallo, setFallo] = useState<unknown>(null)
-  const [recuperado] = useState(() => leerBorrador(projectId))
   const [avisoDeBorrador, setAvisoDeBorrador] = useState(recuperado !== null)
   const { register, handleSubmit, control, formState, trigger, setError, getValues, reset } = useForm<Valores>({
     resolver: zodResolver(esquema),
@@ -253,14 +227,15 @@ function Asistente() {
   }, [codigoPropuesto.codigo])
   // lo escrito se guarda medio segundo después de dejar de escribir; tras el alta ya no hay borrador que guardar, y sin cambios
   // (solo el código propuesto) tampoco
-  useEffect(() => {
-    if (creado || !formState.isDirty) return
-    const plazo = setTimeout(() => guardarBorrador(projectId, { ...VACIO, ...valores } as Valores), 500)
-    return () => clearTimeout(plazo)
-  }, [valores, projectId, creado, formState.isDirty])
+  const borrador = useBorradorLocal(
+    claveDelBorrador,
+    { valores: { ...VACIO, ...valores } as Valores, elegidos: { solicitantes: [...solicitantes] } },
+    !creado && (formState.isDirty || solicitantes.size > 0)
+  )
   const descartarBorrador = () => {
-    borrarBorrador(projectId)
+    borrador.descartar()
     reset(VACIO)
+    setSolicitantes(new Set())
     setAvisoDeBorrador(false)
   }
   const opciones = (campo: string) => campoDe(definicion.data, campo)?.enumOptions ?? []
@@ -389,7 +364,7 @@ function Asistente() {
             }
           }
           void cliente.invalidateQueries({ queryKey: ['records', 'commitment'] })
-          borrarBorrador(projectId)
+          borrador.descartar()
           salida.current = true
           navegar(`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(compromiso.id)}`, {
             state: conHecho(null, t('nuevoCompromiso.hecho', { codigo: texto(compromiso, 'code') }))
@@ -447,7 +422,7 @@ function Asistente() {
   const lista = `/projects/${encodeURIComponent(projectId)}/commitments`
   const conCambios = !creado && (formState.isDirty || origen !== null || solicitantes.size > 0)
   const guardarYSalir = () => {
-    guardarBorrador(projectId, { ...VACIO, ...getValues() })
+    borrador.guardarYa()
     salida.current = true
     navegar(lista)
   }
@@ -459,16 +434,7 @@ function Asistente() {
       actual={actual}
       visitados={visitados}
       alIr={(i) => void ir(i)}
-      avisos={
-        avisoDeBorrador && recuperado ? (
-          <Alert tone="notice">
-            <span>{t('nuevoCompromiso.borrador.recuperado', { cuando: fechaYHoraPe(new Date(recuperado.guardado)) })}</span>{' '}
-            <Button variant="ghost" size="sm" onClick={descartarBorrador}>
-              {t('nuevoCompromiso.borrador.descartar')}
-            </Button>
-          </Alert>
-        ) : null
-      }
+      avisos={avisoDeBorrador && recuperado ? <AvisoDeBorrador guardado={recuperado.guardado} alDescartar={descartarBorrador} /> : null}
       alEnviar={(e) => {
         e.preventDefault()
         if (paso !== 'revision') void ir(actual + 1)
@@ -479,6 +445,7 @@ function Asistente() {
       alGuardarYSalir={creado ? undefined : guardarYSalir}
       ocupado={enviando}
       conCambios={conCambios}
+      conBorrador
       salidaPermitida={salida}
       acciones={
         paso === 'revision' ? (

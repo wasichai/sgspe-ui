@@ -166,6 +166,11 @@ export const ES_COMUN = {
     noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.',
     asignarme: 'Asignarme como {{etiqueta}}'
   },
+  borrador: {
+    recuperado: 'Se recuperó lo que escribió el {{cuando}}.',
+    recuperadoSinFecha: 'Se recuperó lo que escribió antes.',
+    descartar: 'Descartar el borrador'
+  },
   eleccionDeGrupos: {
     buscar: 'Buscar un grupo de interés',
     elegidos_one: '{{count}} elegido',
@@ -597,6 +602,11 @@ export const EN_COMUN: typeof ES_COMUN = {
     aMano: 'Your account does not list the organization’s users: type the email and the identifier; the system checks they name someone in your organization.',
     noLeido: 'The user list could not be read; type the email and the identifier.',
     asignarme: 'Assign to me as {{etiqueta}}'
+  },
+  borrador: {
+    recuperado: 'What you typed on {{cuando}} was recovered.',
+    recuperadoSinFecha: 'What you typed earlier was recovered.',
+    descartar: 'Discard the draft'
   },
   eleccionDeGrupos: {
     buscar: 'Search for a stakeholder group',

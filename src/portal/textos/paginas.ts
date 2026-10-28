@@ -62,6 +62,7 @@ export const ES_PAGINAS = {
     guardarYSalir: 'Guardar y salir',
     salirTitulo: '¿Salir sin terminar?',
     salirTexto: 'Lo que escribió en este formulario se perderá si sale ahora.',
+    salirTextoConBorrador: 'Lo que escribió queda como borrador en este navegador: lo recupera al volver a esta alta.',
     salir: 'Salir',
     quedarse: 'Seguir aquí'
   },
@@ -135,6 +136,7 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     guardarYSalir: 'Save and exit',
     salirTitulo: 'Leave without finishing?',
     salirTexto: 'What you wrote in this form will be lost if you leave now.',
+    salirTextoConBorrador: 'What you wrote stays as a draft in this browser: you get it back when you return to this form.',
     salir: 'Leave',
     quedarse: 'Stay here'
   },

@@ -88,10 +88,15 @@ describe('barra superior', () => {
     expect(screen.getByRole('group', { name: 'Su cuenta' })).toBeInTheDocument()
   })
 
-  it('«Cerrar sesión» del menú de la cuenta cierra la sesión', async () => {
+  // tercera pasada de UX, 2.4: los borradores de altas no quedan en el navegador para quien lo use después
+  it('«Cerrar sesión» del menú de la cuenta cierra la sesión y borra los borradores de este navegador', async () => {
+    localStorage.setItem('sgspe.borrador.compromiso.p1.u-otra', JSON.stringify({ valores: { title: 'x' }, guardado: '2026-10-19T15:00:00Z' }))
+    localStorage.setItem('sgspe.navegacion', 'abierta')
     fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [])
     await userEvent.click(await within(await screen.findByRole('banner')).findByRole('button', { name: 'Su cuenta' }))
     await userEvent.click(within(screen.getByRole('group', { name: 'Su cuenta' })).getByRole('button', { name: 'Cerrar sesión' }))
     await waitFor(() => expect(rutaActual()).toMatch(/^\/login/))
+    expect(localStorage.getItem('sgspe.borrador.compromiso.p1.u-otra')).toBeNull()
+    expect(localStorage.getItem('sgspe.navegacion')).toBe('abierta')
   })
 })

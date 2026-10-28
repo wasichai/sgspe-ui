@@ -21,6 +21,7 @@ import { useTituloDeDocumento } from '../componentes/Pagina'
 import { ThemeMenu } from './ThemeMenu'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
+import { useCerrarSesion } from '../auth/cerrarSesion'
 
 // text-sm es el cuerpo de 14/20 de tokens.css: dentro de cn(), text-sg-body se confundiría con un color
 const ENLACE = 'flex h-9 items-center gap-2.5 rounded-sg-md px-2.5 text-sm'
@@ -82,7 +83,8 @@ function useContraida(): [boolean, () => void] {
 export function AppShell() {
   const { t } = useTranslation(NS)
   const { appName } = useWasichaiConfig()
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
+  const cerrarSesion = useCerrarSesion()
   // el rol con su rótulo (GET /api/roles, solo para quien administra); su código crudo («COMMUNITY_RELATIONS_OFFICER») no se muestra
   const nombresDeRol = useNombresDeRol()
   const rotulosDeRol = (user?.roles ?? [])
@@ -176,7 +178,7 @@ export function AppShell() {
           <div className="flex items-center gap-3 border-t border-sg-border pt-3">
             <LanguageMenu />
             <ThemeMenu />
-            <button type="button" onClick={signOut} className="ml-auto flex items-center gap-1 text-sm text-sg-text-secondary">
+            <button type="button" onClick={cerrarSesion} className="ml-auto flex items-center gap-1 text-sm text-sg-text-secondary">
               <LogOut aria-hidden className="size-4" />
               {t('shell.salir')}
             </button>

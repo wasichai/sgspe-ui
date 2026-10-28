@@ -7,6 +7,7 @@ import { useNombresDeRol } from '../proyectos/usuarios'
 import { useCuenta, useOrganizacion } from '../queries'
 import { LanguageMenu } from './LanguageMenu'
 import { ThemeMenu } from './ThemeMenu'
+import { useCerrarSesion } from '../auth/cerrarSesion'
 
 // la cuenta de quien usa el portal (revisión de UX, etapa 2): pasó del inicio al menú del perfil de la barra superior. usuario,
 // organización y roles por su rótulo, que solo lee quien administra (/api/roles); sin él, cuántos son, nunca su código técnico.
@@ -46,7 +47,8 @@ export function DatosDeLaCuenta() {
 // cierra ese menú
 export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
   const { t } = useTranslation(NS)
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
+  const cerrarSesion = useCerrarSesion()
   const [abierto, setAbierto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
   const boton = useRef<HTMLButtonElement>(null)
@@ -110,7 +112,7 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
           </div>
           <button
             type="button"
-            onClick={signOut}
+            onClick={cerrarSesion}
             className="mt-3 flex h-9 w-full items-center gap-2 rounded-sg-md border-t border-sg-border px-2 pt-1 text-sm text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
           >
             <LogOut aria-hidden className="size-4" />

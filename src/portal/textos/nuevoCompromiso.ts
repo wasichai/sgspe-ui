@@ -4,10 +4,6 @@ export const ES_NUEVO_COMPROMISO = {
   hecho: 'Se registró el compromiso {{codigo}}.',
   titulo: 'Nuevo compromiso',
   ayuda: 'Lo que escribe se guarda en este navegador mientras completa los pasos; el compromiso se registra en el último paso, con su monto y un motivo.',
-  borrador: {
-    recuperado: 'Se recuperó lo que escribió el {{cuando}}.',
-    descartar: 'Descartar el borrador'
-  },
   pasos: {
     que: 'Qué se compromete',
     origen: 'Origen',
@@ -95,10 +91,6 @@ export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
   hecho: 'Commitment {{codigo}} was recorded.',
   titulo: 'New commitment',
   ayuda: 'What you type is kept in this browser while you complete the steps; the commitment is recorded in the last step, with its amount and a reason.',
-  borrador: {
-    recuperado: 'What you typed on {{cuando}} was recovered.',
-    descartar: 'Discard the draft'
-  },
   pasos: {
     que: 'What is committed',
     origen: 'Origin',

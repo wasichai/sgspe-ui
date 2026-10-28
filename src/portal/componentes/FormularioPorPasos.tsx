@@ -37,6 +37,8 @@ export interface PropsDeFormularioPorPasos {
   acciones?: ReactNode
   ocupado?: boolean
   conCambios?: boolean
+  // lo escrito queda como borrador en este navegador (useBorradorLocal): el aviso de salida lo dice en vez de «se perderá»
+  conBorrador?: boolean
   // la pantalla la pone en true justo antes de navegar al terminar el alta o al «Guardar y salir»: esa salida no avisa
   salidaPermitida?: MutableRefObject<boolean>
   children: ReactNode
@@ -66,6 +68,7 @@ export function FormularioPorPasos({
   acciones,
   ocupado = false,
   conCambios = false,
+  conBorrador = false,
   salidaPermitida,
   children
 }: PropsDeFormularioPorPasos) {
@@ -140,15 +143,24 @@ export function FormularioPorPasos({
           </div>
         )}
       </div>
-      <AvisoAlSalir conCambios={conCambios} salidaPermitida={salidaPermitida} />
+      <AvisoAlSalir conCambios={conCambios} conBorrador={conBorrador} salidaPermitida={salidaPermitida} />
     </section>
   )
 }
 
 // salir con cambios sin guardar pide confirmar: por un enlace del portal (solo bajo un router de datos, que es el del portal) y
 // al cerrar o recargar la pestaña (el navegador dice su propio texto). «Guardar y salir» y el alta terminada ponen
-// salidaPermitida antes de navegar, así que no lo disparan. también la usa un alta de una sola página (la QCS)
-export function AvisoAlSalir({ conCambios, salidaPermitida }: { conCambios: boolean; salidaPermitida?: MutableRefObject<boolean> }) {
+// salidaPermitida antes de navegar, así que no lo disparan. también la usa un alta de una sola página (la QCS). con un borrador
+// en el navegador, el aviso dice que lo escrito queda (tercera pasada de UX, 2.4)
+export function AvisoAlSalir({
+  conCambios,
+  conBorrador = false,
+  salidaPermitida
+}: {
+  conCambios: boolean
+  conBorrador?: boolean
+  salidaPermitida?: MutableRefObject<boolean>
+}) {
   const conRouterDeDatos = useContext(UNSAFE_DataRouterContext) !== null
   useEffect(() => {
     if (!conCambios) return
@@ -158,10 +170,18 @@ export function AvisoAlSalir({ conCambios, salidaPermitida }: { conCambios: bool
     window.addEventListener('beforeunload', avisar)
     return () => window.removeEventListener('beforeunload', avisar)
   }, [conCambios, salidaPermitida])
-  return conRouterDeDatos ? <ConfirmarSalida conCambios={conCambios} salidaPermitida={salidaPermitida} /> : null
+  return conRouterDeDatos ? <ConfirmarSalida conCambios={conCambios} conBorrador={conBorrador} salidaPermitida={salidaPermitida} /> : null
 }
 
-function ConfirmarSalida({ conCambios, salidaPermitida }: { conCambios: boolean; salidaPermitida?: MutableRefObject<boolean> }) {
+function ConfirmarSalida({
+  conCambios,
+  conBorrador,
+  salidaPermitida
+}: {
+  conCambios: boolean
+  conBorrador: boolean
+  salidaPermitida?: MutableRefObject<boolean>
+}) {
   const { t } = useTranslation(NS)
   // la condición se lee al navegar: la marca de salidaPermitida ya está puesta aunque el estado no se haya vuelto a dibujar. solo
   // salir de la página avisa: cambiar la búsqueda (el ?draft= del asistente de proyecto) sigue en ella
@@ -172,10 +192,10 @@ function ConfirmarSalida({ conCambios, salidaPermitida }: { conCambios: boolean;
   return (
     <ConfirmDialog
       title={t('paginas.formulario.salirTitulo')}
-      description={t('paginas.formulario.salirTexto')}
+      description={t(conBorrador ? 'paginas.formulario.salirTextoConBorrador' : 'paginas.formulario.salirTexto')}
       confirmLabel={t('paginas.formulario.salir')}
       cancelLabel={t('paginas.formulario.quedarse')}
-      variant="danger"
+      variant={conBorrador ? 'primary' : 'danger'}
       onConfirm={() => bloqueo.proceed()}
       onCancel={() => bloqueo.reset()}
     />
