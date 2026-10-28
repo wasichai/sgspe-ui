@@ -2,7 +2,7 @@ import { EnlaceConRastro } from '../contexto/Rastro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAvailableTransitions } from '../datos/flujos'
 import { Alert, Button, cn } from '@wasichai/ui'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { BarraDelTope } from '../compromisos/BarraDelTope'
@@ -103,16 +103,38 @@ function useSeleccion() {
     siguiente.delete(SELECCION)
     fijar(siguiente)
   }
-  return { elegida, enlace, soltar }
+  // elegir sin dejar una entrada en el historial (la única pendiente, que se elige sola)
+  const elegirSola = (o: string, i: string) => {
+    const siguiente = new URLSearchParams(busqueda)
+    siguiente.set(SELECCION, `${o}:${i}`)
+    fijar(siguiente, { replace: true })
+  }
+  return { elegida, enlace, soltar, elegirSola }
 }
+
+// la más antigua primero (tercera pasada de UX, 3.4): lo que más espera se decide antes
+const porAntiguedad = (a: Aviso, b: Aviso) => a.publishAt.localeCompare(b.publishAt)
 
 export function AprobacionesPage() {
   const { t } = useTranslation(NS)
   const lista = useParametrosDeLista('porAprobar')
   // S31 vuelve aquí tras decidir: se confirma la decisión
   const hecha = (useLocation().state as { hecha?: boolean } | null)?.hecha === true
-  const { avisos, pendientes, truncado } = useAprobacionesPendientes()
-  const { elegida, enlace, soltar } = useSeleccion()
+  const { avisos, pendientes: llegadas, truncado } = useAprobacionesPendientes()
+  const pendientes = [...llegadas].sort(porAntiguedad)
+  const { elegida, enlace, soltar, elegirSola } = useSeleccion()
+  // con una sola pendiente se elige sola, una vez al abrir la bandeja: «Volver a la lista» la deja sin elegir
+  const yaSeEligio = useRef(false)
+  const unica = avisos.isSuccess && pendientes.length === 1 ? pendientes[0] : null
+  useEffect(() => {
+    if (yaSeEligio.current || !avisos.isSuccess) return
+    yaSeEligio.current = true
+    if (!elegida && lista.vista !== 'escalamientos' && unica?.link?.object && unica.link.recordId) elegirSola(unica.link.object, unica.link.recordId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avisos.isSuccess])
+  // la siguiente por decidir tras la elegida, para pasar a ella sin volver a la lista
+  const despues = elegida ? pendientes.filter((a) => !(a.link?.object === elegida.objeto && a.link?.recordId === elegida.id)) : []
+  const siguiente = despues[0]?.link?.object && despues[0].link.recordId ? enlace(despues[0].link.object, despues[0].link.recordId) : null
   const plazos = useAvisos({ size: TOPE }, lista.vista === 'escalamientos')
   const escalamientos = (plazos.data?.content ?? []).filter((a) => DE_ESCALAMIENTO.includes(a.source) && a.kind !== 'INFO')
   // los escalamientos se filtran de los primeros 200 avisos de cualquier fuente: si hay más, se dice
@@ -138,7 +160,11 @@ export function AprobacionesPage() {
       ) : null}
       <div className={cn(elegida && lista.vista !== 'escalamientos' && 'hidden xl:block')}>
         <VistasGuardadas
-          vistas={(['porAprobar', 'escalamientos'] as const).map((v) => ({ id: v, etiqueta: t(`aprobaciones.vistas.${v}`) }))}
+          vistas={(['porAprobar', 'escalamientos'] as const).map((v) => ({
+            id: v,
+            etiqueta: t(`aprobaciones.vistas.${v}`),
+            conteo: v === 'porAprobar' && avisos.data ? pendientes.length : null
+          }))}
           actual={lista.vista}
           alCambiar={(vista) => lista.cambiar({ view: vista })}
         />
@@ -208,7 +234,7 @@ export function AprobacionesPage() {
                 <Button variant="ghost" size="sm" className="xl:hidden" onClick={soltar}>
                   <span aria-hidden="true">←</span> {t('aprobaciones.detalle.volver')}
                 </Button>
-                <DetalleElegido key={`${elegida.objeto}:${elegida.id}`} objeto={elegida.objeto} id={elegida.id} />
+                <DetalleElegido key={`${elegida.objeto}:${elegida.id}`} objeto={elegida.objeto} id={elegida.id} siguiente={siguiente} quedan={despues.length} />
               </div>
             ) : (
               <p className="rounded-sg-lg border border-dashed border-sg-border p-6 text-sg-body-sm text-sg-text-muted">{t('aprobaciones.detalle.elegir')}</p>
@@ -277,11 +303,11 @@ function TarjetaDeAprobacion({ aviso, enlace, actual }: { aviso: Aviso; enlace: 
 }
 
 // el detalle de lo elegido: un 404 no dice si no existe o no es de sus proyectos
-function DetalleElegido({ objeto, id }: { objeto: string; id: string }) {
+function DetalleElegido({ objeto, id, siguiente, quedan }: { objeto: string; id: string; siguiente: string | null; quedan: number }) {
   const registro = useRegistro(objeto, id)
   return (
     <Consulta consulta={registro} noExiste={<NoEsDeSusProyectos />}>
-      {(r) => <Detalle objeto={objeto} registro={r} />}
+      {(r) => <Detalle objeto={objeto} registro={r} siguiente={siguiente} quedan={quedan} />}
     </Consulta>
   )
 }
@@ -295,7 +321,8 @@ function Dato({ termino, children }: { termino: string; children: ReactNode }) {
   )
 }
 
-function Detalle({ objeto, registro }: { objeto: string; registro: Registro }) {
+// tras decidir, el detalle dice cuántas quedan y lleva a la siguiente (tercera pasada de UX, 3.4)
+function Detalle({ objeto, registro, siguiente, quedan }: { objeto: string; registro: Registro; siguiente: string | null; quedan: number }) {
   const { t } = useTranslation(NS)
   const cliente = useQueryClient()
   const proyecto = texto(registro, 'project')
@@ -345,9 +372,17 @@ function Detalle({ objeto, registro }: { objeto: string; registro: Registro }) {
       <section aria-label={t('aprobaciones.detalle.decidir')} className="space-y-2 border-t border-sg-border pt-4">
         <h3 className="text-sg-h3 font-semibold">{t('aprobaciones.detalle.decidir')}</h3>
         {hecha ? (
-          <p role="status" className="text-sm text-sg-success">
-            {t('aprobaciones.decision.hecha')}
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p role="status" className="text-sm text-sg-success">
+              <span>{t('aprobaciones.decision.hecha')}</span>{' '}
+              <span>{quedan > 0 ? t('aprobaciones.decision.quedan', { count: quedan }) : t('aprobaciones.decision.ninguna')}</span>
+            </p>
+            {siguiente ? (
+              <Button asChild size="sm">
+                <Link to={siguiente}>{t('aprobaciones.decision.siguiente')}</Link>
+              </Button>
+            ) : null}
+          </div>
         ) : null}
         {!decisiones ? (
           <>
