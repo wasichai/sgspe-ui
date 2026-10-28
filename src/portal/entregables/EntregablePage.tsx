@@ -6,7 +6,7 @@ import { Link, useBlocker, useParams, useSearchParams } from 'react-router'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
 import { DeLista } from '../componentes/LecturaConEstados'
-import { texto, useRegistro, useTodos, type Registro } from '../datos/registros'
+import { atributo, texto, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { seccionDelTipo, useTiposDeEntregable } from './contrato'
 import { AccionesDelEntregable } from './Emitir'
@@ -119,36 +119,45 @@ function Entregable({ entregable }: { entregable: Registro }) {
       <AccionesDelEntregable entregable={entregable} />
       <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="space-y-3">
-          <PanelDelBorrador entregable={entregable} secciones={lista} />
+          <PanelDelBorrador entregable={entregable} secciones={lista} alElegirSeccion={elegir} />
           {tipos.isError ? <p className="text-sg-caption text-sg-warning">{t('entregables.seccion.tiposConError')}</p> : null}
           <nav aria-label={t('entregables.secciones.titulo')} className="space-y-1">
             <DeLista consulta={secciones}>
               {(filas) => (
-                <ul className="space-y-1">
-                  {filas.map((s) => {
-                    const clave = texto(s, 'section_key')
-                    const asistida = texto(s, 'content_origin') === ORIGEN_IA
-                    return (
-                      <li key={s.id}>
-                        <button
-                          type="button"
-                          aria-current={s.id === actual?.id ? 'true' : undefined}
-                          onClick={() => elegir(clave)}
-                          className={`w-full space-y-1 rounded-sg-md px-2.5 py-2 text-left text-sm ${s.id === actual?.id ? 'bg-sg-primary-soft' : 'hover:bg-sg-surface-hover'}`}
-                        >
-                          <span className="block font-medium">{texto(s, 'title')}</span>
-                          <span className="flex flex-wrap gap-1 text-sg-caption">
-                            <span className={asistida ? 'text-sg-ai' : 'text-sg-text-muted'}>{opcion(s, 'content_origin')}</span>
-                            {seccionDelTipo(tipos.data, tipo, clave)?.assisted ? (
-                              <span className="text-sg-ai">· {t('entregables.secciones.conIa')}</span>
-                            ) : null}
-                            {cambioDespuesDelBorrador(s, generadoEl) ? <span className="text-sg-warning">· {t('entregables.secciones.cambiada')}</span> : null}
-                          </span>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
+                <>
+                  {/* cuántas van revisadas (tercera pasada de UX, 4.6) */}
+                  <p className="px-2.5 text-sg-caption text-sg-text-secondary">
+                    {t('entregables.secciones.revisadas', { n: filas.filter((s) => atributo(s, 'reviewed') === true).length, m: filas.length })}
+                  </p>
+                  <ul className="space-y-1">
+                    {filas.map((s) => {
+                      const clave = texto(s, 'section_key')
+                      const asistida = texto(s, 'content_origin') === ORIGEN_IA
+                      return (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            aria-current={s.id === actual?.id ? 'true' : undefined}
+                            onClick={() => elegir(clave)}
+                            className={`w-full space-y-1 rounded-sg-md px-2.5 py-2 text-left text-sm ${s.id === actual?.id ? 'bg-sg-primary-soft' : 'hover:bg-sg-surface-hover'}`}
+                          >
+                            <span className="block font-medium">{texto(s, 'title')}</span>
+                            <span className="flex flex-wrap gap-1 text-sg-caption">
+                              <span className={asistida ? 'text-sg-ai' : 'text-sg-text-muted'}>{opcion(s, 'content_origin')}</span>
+                              {seccionDelTipo(tipos.data, tipo, clave)?.assisted ? (
+                                <span className="text-sg-ai">· {t('entregables.secciones.conIa')}</span>
+                              ) : null}
+                              {atributo(s, 'reviewed') === true ? <span className="text-sg-success">· {t('entregables.secciones.revisada')}</span> : null}
+                              {cambioDespuesDelBorrador(s, generadoEl) ? (
+                                <span className="text-sg-warning">· {t('entregables.secciones.cambiada')}</span>
+                              ) : null}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </>
               )}
             </DeLista>
           </nav>

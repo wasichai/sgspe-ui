@@ -20,7 +20,8 @@ import { diaPe, NS } from '../i18n'
 import { sinFiltroDeAsignados, soloAsignados } from '../tareas/paraTomar'
 import { TomarTarea } from '../tareas/TomarTarea'
 import { useSuTrabajo } from './aSuCargo'
-import { minutosDesde, useAhora, useReleerAlVolver } from './alDia'
+import { useReleerAlVolver } from './alDia'
+import { minutosDesde, useAhora } from '../componentes/ahora'
 
 // «Lo que me toca hoy», lo primero del inicio (P-01 del rediseño de UX; hallazgos U-05 y U-13): lo abierto a su cargo (tareas,
 // compromisos y QCS de useSuTrabajo), lo vencido primero, luego lo por vencer y lo demás por fecha, cinco a la vista con su motivo

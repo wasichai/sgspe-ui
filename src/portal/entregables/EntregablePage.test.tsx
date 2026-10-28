@@ -64,6 +64,10 @@ describe('S50 · entregable por secciones', () => {
     expect(conclusiones).toHaveTextContent('Con IA')
     expect(conclusiones).toHaveTextContent('Cambió después del borrador')
     expect(within(lista).getByRole('button', { name: /Antecedentes/ })).not.toHaveTextContent('Cambió después del borrador')
+    // tercera pasada de UX, 4.6: cuántas van revisadas y cuáles
+    expect(await within(lista).findByText('Revisadas: 1 de 4')).toBeInTheDocument()
+    expect(conclusiones).toHaveTextContent('Revisada')
+    expect(within(lista).getByRole('button', { name: /Antecedentes/ })).not.toHaveTextContent('Revisada')
   })
 
   it('muestra la guía de redacción del backend, edita una sección humana y la guarda con su versión, sin motivo', async () => {
