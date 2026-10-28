@@ -9,7 +9,7 @@ import { BarraDeContexto } from './BarraDeContexto'
 import { useLeeTodosLosProyectos, useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { filtroDeTerritorio, rutaEquivalente } from './rutas'
+import { conBusquedaQueSeConserva, filtroDeTerritorio, rutaEquivalente } from './rutas'
 import { ChipDeProyecto, SelectorDeProyecto } from './SelectorDeProyecto'
 
 let fetch: FetchMock | null = null
@@ -56,9 +56,24 @@ describe('rutaEquivalente', () => {
     ['/projects/p1/commitments/dashboard', 'p2', '/projects/p2/commitments/dashboard'],
     ['/projects/p1/agreements/ag1', null, '/agreements'],
     ['/projects/p1/documents/ev1', null, '/documents'],
-    ['/projects/p1/tasks', null, '/tasks']
+    ['/projects/p1/tasks', null, '/tasks'],
+    // tercera pasada de UX, 3.10: la bandeja de propuestas de IA va a la del otro proyecto
+    ['/projects/p1/ai-review', 'p2', '/projects/p2/ai-review']
   ])('%s con %s va a %s', (desde, proyecto, hacia) => {
     expect(rutaEquivalente(desde.split('?')[0], proyecto)).toBe(hacia)
+  })
+
+  // tercera pasada de UX, 3.10: cambiar de proyecto conserva la vista, el orden y la búsqueda si se llega a la misma pantalla;
+  // suelta lo que nombra un registro y la página
+  it('conserva la vista, el orden y la búsqueda en la misma pantalla del otro alcance', () => {
+    const busqueda = new URLSearchParams('view=vencidos&sort=vence&dir=desc&q=canal&stakeholder=s1&task=t1&page=2&peek=x')
+    expect(conBusquedaQueSeConserva('/projects/p1/commitments', '/projects/p2/commitments', busqueda)).toBe(
+      '/projects/p2/commitments?view=vencidos&sort=vence&dir=desc&q=canal'
+    )
+    expect(conBusquedaQueSeConserva('/projects/p1/commitments', '/commitments', busqueda)).toBe('/commitments?view=vencidos&sort=vence&dir=desc&q=canal')
+    expect(conBusquedaQueSeConserva('/projects/p1/commitments/c1', '/projects/p2/commitments', busqueda)).toBe('/projects/p2/commitments')
+    expect(conBusquedaQueSeConserva('/projects/p1/settings', '/projects/p2/overview', busqueda)).toBe('/projects/p2/overview')
+    expect(conBusquedaQueSeConserva('/commitments', '/projects/p2/commitments', new URLSearchParams('stakeholder=s1'))).toBe('/projects/p2/commitments')
   })
 })
 

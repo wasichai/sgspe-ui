@@ -8,7 +8,7 @@ import { atributo } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useLeeTodosLosProyectos, useMisProyectos, useProyectos } from './proyectos'
-import { rutaEquivalente } from './rutas'
+import { conBusquedaQueSeConserva, rutaEquivalente } from './rutas'
 
 // el selector de proyecto de la barra superior (ux-architecture.md §7.1): el alcance global o un proyecto. lista los proyectos
 // que la cuenta lee, ya acotados por el servidor a sus asignaciones vigentes (alcance por proyecto, ADR-0029); los de la persona
@@ -129,7 +129,7 @@ function Selector({ siempre }: { siempre: boolean }) {
   const elegir = (elegido: string) => {
     cerrar()
     if (elegido === actual) return
-    if (!territorio) return navegar(rutaEquivalente(pathname, elegido || null))
+    if (!territorio) return navegar(conBusquedaQueSeConserva(pathname, rutaEquivalente(pathname, elegido || null), busqueda))
     const siguiente = new URLSearchParams(busqueda)
     if (elegido) siguiente.set('project', elegido)
     else siguiente.delete('project')
