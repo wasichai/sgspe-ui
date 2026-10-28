@@ -6,7 +6,7 @@ import { useIndicador, type Desglose, type Indicador } from '../datos/indicadore
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { esMes } from './contratoF8'
-import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, FiltrosIgnorados, SerieConMeta, useFiltrosDeTablero } from './comunes'
+import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, FiltrosIgnorados, SerieConMeta, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
 import { Seccion } from '../componentes/Seccion'
 
 // los desgloses de cada indicador que son categorías y se dibujan en barras (api.md §4.11). los demás no lo son: los
@@ -38,6 +38,7 @@ export const desglosesEnBarras = (i: Indicador): Desglose[] =>
 // pide acotar los filtros
 export function DetalleDeIndicadorPage() {
   const { t } = useTranslation(NS)
+  const rotulo = useRotuloDeCifra()
   const { code = '' } = useParams()
   const { pathname, search } = useLocation()
   const [busqueda] = useSearchParams()
@@ -69,13 +70,13 @@ export function DetalleDeIndicadorPage() {
       <Link to={volver()} className="text-sm text-sg-primary-text underline">
         {t('tableros.volverAlTablero')}
       </Link>
-      <h1 className="text-sg-h1 font-semibold">{indicador.data?.label ?? t('tableros.indicador')}</h1>
+      <h1 className="text-sg-h1 font-semibold">{indicador.data ? rotulo(indicador.data) : t('tableros.indicador')}</h1>
       <p className="font-sg-mono text-sg-caption text-sg-text-muted">{code}</p>
       <FiltrosDeTablero alActualizar={() => void indicador.refetch()} />
       <ConsultaDeTablero consulta={indicador}>
         {(i) => (
           <div className="space-y-4">
-            <KpiCard titulo={i.label} indicador={i} />
+            <KpiCard titulo={rotulo(i)} indicador={i} />
             {i.available ? (
               <>
                 <FiltrosIgnorados indicador={i} />

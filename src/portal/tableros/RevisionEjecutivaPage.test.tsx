@@ -46,10 +46,10 @@ describe('S51 · revisión ejecutiva', () => {
       )
     ).toEqual([
       ['Alertas activas', 'Proyecto Ejemplo A', '2'],
-      ['Riesgos altos o críticos', 'Proyecto Ejemplo A', '1'],
+      ['Riesgos altos', 'Proyecto Ejemplo A', '1'],
       ['Compromisos vencidos', 'Proyecto Ejemplo A', '3'],
-      ['Quejas abiertas', 'Proyecto Ejemplo B', '3'],
-      ['Quejas abiertas', 'Proyecto Ejemplo A', '1']
+      ['QCS abiertas', 'Proyecto Ejemplo B', '3'],
+      ['QCS abiertas', 'Proyecto Ejemplo A', '1']
     ])
     expect(within(filas[0]).getByRole('link', { name: 'Alertas activas · Proyecto Ejemplo A' })).toHaveAttribute('href', '/projects/p1/risks/warnings')
     const tiles = screen.getByRole('region', { name: 'Indicadores de la cartera' })
@@ -136,11 +136,13 @@ describe('S51 · revisión ejecutiva', () => {
     const nombres = within(tiles)
       .getAllByRole('region')
       .map((r) => r.getAttribute('aria-label'))
+    // tercera pasada de UX, 3.11: cada tile se nombra con el diccionario de cifras, el mismo del resto del portal, y no con el
+    // rótulo que trae el servidor («Quejas abiertas» en el fixture)
     expect(nombres).toEqual([
       'Proyectos activos',
       'Compromisos vencidos',
-      'Quejas abiertas',
-      'Riesgos altos y críticos',
+      'QCS abiertas',
+      'Riesgos altos',
       'Interacciones realizadas',
       'Alertas activas',
       'Compromisos abiertos',
@@ -160,7 +162,7 @@ describe('S51 · revisión ejecutiva', () => {
       indicators: TABLERO_EJECUTIVO.indicators.map((i) => (i.code === 'KPI-GRV-02' ? { ...i, confidentialHidden: true } : i))
     })
     const tiles = await screen.findByRole('region', { name: 'Indicadores de la cartera' })
-    expect(within(within(tiles).getByRole('region', { name: 'Quejas abiertas' })).getByRole('note')).toBeInTheDocument()
+    expect(within(within(tiles).getByRole('region', { name: 'QCS abiertas' })).getByRole('note')).toBeInTheDocument()
     expect(within(within(tiles).getByRole('region', { name: 'Proyectos activos' })).queryByRole('note')).not.toBeInTheDocument()
   })
 
@@ -183,7 +185,17 @@ describe('S51 · revisión ejecutiva', () => {
       within(tabla)
         .getAllByRole('columnheader')
         .map((c) => c.textContent)
-    ).toEqual(['Proyecto', ...TABLERO_EJECUTIVO.byProject[0].indicators.map((i: { label: string }) => i.label)])
+    ).toEqual([
+      'Proyecto',
+      'Proyectos activos',
+      'Compromisos abiertos',
+      'Compromisos vencidos',
+      'QCS abiertas',
+      'Riesgos altos',
+      'Interacciones realizadas',
+      'Alertas activas',
+      'Inversión social ejecutada'
+    ])
   })
 
   it('la inversión se dice por moneda, sin sumar monedas, y la tendencia en tres gráficos', async () => {

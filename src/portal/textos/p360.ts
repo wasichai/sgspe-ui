@@ -1,3 +1,5 @@
+import { EN_CIFRAS, ES_CIFRAS } from './tableros'
+
 // Project 360: equipo y parámetros (S11), resumen (S08) y lo que comparten con el asistente de proyecto (S07)
 export const ES_P360 = {
   resumen: {
@@ -30,9 +32,9 @@ export const ES_P360 = {
     kpis: {
       gruposVigentes: 'Grupos de interés vigentes',
       interacciones: 'Interacciones realizadas este mes',
-      compromisos: 'Compromisos vencidos',
-      qcs: 'QCS abiertas',
-      riesgos: 'Riesgos altos'
+      compromisos: ES_CIFRAS['KPI-COM-03'],
+      qcs: ES_CIFRAS['KPI-GRV-02'],
+      riesgos: ES_CIFRAS['KPI-RSK-01']
     },
     paisaje: 'Paisaje de grupos de interés',
     posturas: 'Posturas',
@@ -213,9 +215,9 @@ export const EN_P360: typeof ES_P360 = {
     kpis: {
       gruposVigentes: 'Current stakeholders',
       interacciones: 'Engagements held this month',
-      compromisos: 'Overdue commitments',
-      qcs: 'Open grievances',
-      riesgos: 'High risks'
+      compromisos: EN_CIFRAS['KPI-COM-03'],
+      qcs: EN_CIFRAS['KPI-GRV-02'],
+      riesgos: EN_CIFRAS['KPI-RSK-01']
     },
     paisaje: 'Stakeholder landscape',
     posturas: 'Stances',

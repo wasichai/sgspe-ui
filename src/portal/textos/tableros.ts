@@ -1,5 +1,32 @@
+// el nombre de cada cifra por su código (tercera pasada de UX, 3.11), el de dashboards.md §2: el mismo en la revisión ejecutiva,
+// el resumen del proyecto y la ficha del lugar, y en los dos idiomas. una cifra que no está aquí se dice con el rótulo del servidor
+export const ES_CIFRAS = {
+  'KPI-EXE-01': 'Proyectos activos',
+  'KPI-EXE-02': 'Alertas activas',
+  'KPI-STK-02': 'Distribución de posturas',
+  'KPI-ENG-01': 'Interacciones realizadas',
+  'KPI-COM-02': 'Compromisos abiertos',
+  'KPI-COM-03': 'Compromisos vencidos',
+  'KPI-GRV-02': 'QCS abiertas',
+  'KPI-RSK-01': 'Riesgos altos',
+  'KPI-INV-03': 'Inversión social ejecutada'
+}
+
+export const EN_CIFRAS: typeof ES_CIFRAS = {
+  'KPI-EXE-01': 'Active projects',
+  'KPI-EXE-02': 'Active alerts',
+  'KPI-STK-02': 'Stance distribution',
+  'KPI-ENG-01': 'Engagements held',
+  'KPI-COM-02': 'Open commitments',
+  'KPI-COM-03': 'Overdue commitments',
+  'KPI-GRV-02': 'Open grievances, inquiries and requests',
+  'KPI-RSK-01': 'High risks',
+  'KPI-INV-03': 'Social investment executed'
+}
+
 // lo común de los tableros de módulo de F2 (dashboards.md §3.1, §5 y §9)
 export const ES_TABLEROS = {
+  cifras: ES_CIFRAS,
   filtros: 'Filtros del tablero',
   desde: 'Desde',
   hasta: 'Hasta',
@@ -64,6 +91,7 @@ export const ES_TABLEROS = {
 }
 
 export const EN_TABLEROS: typeof ES_TABLEROS = {
+  cifras: EN_CIFRAS,
   filtros: 'Dashboard filters',
   desde: 'From',
   hasta: 'To',

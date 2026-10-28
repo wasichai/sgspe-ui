@@ -1,3 +1,5 @@
+import { EN_CIFRAS, ES_CIFRAS } from './tableros'
+
 // la ficha contextual de S12 y los registros de la zona (spec §3.7, dashboards.md §4.8)
 export const ES_FICHA_TERRITORIAL = {
   titulo: 'Ficha del lugar',
@@ -18,12 +20,12 @@ export const ES_FICHA_TERRITORIAL = {
   cifras: {
     'KPI-STK-02': 'Grupos de interés por postura',
     'KPI-ENG-01': 'Interacciones de los últimos 90 días',
-    'KPI-COM-02': 'Compromisos abiertos',
-    'KPI-COM-03': 'Compromisos vencidos',
-    'KPI-GRV-02': 'QCS abiertas',
-    'KPI-RSK-01': 'Riesgos altos',
+    'KPI-COM-02': ES_CIFRAS['KPI-COM-02'],
+    'KPI-COM-03': ES_CIFRAS['KPI-COM-03'],
+    'KPI-GRV-02': ES_CIFRAS['KPI-GRV-02'],
+    'KPI-RSK-01': ES_CIFRAS['KPI-RSK-01'],
     programs: 'Programas',
-    'KPI-INV-03': 'Inversión ejecutada',
+    'KPI-INV-03': ES_CIFRAS['KPI-INV-03'],
     lastActivity: 'Última actividad'
   },
   posturas: 'Posturas',
@@ -78,12 +80,12 @@ export const EN_FICHA_TERRITORIAL: typeof ES_FICHA_TERRITORIAL = {
   cifras: {
     'KPI-STK-02': 'Stakeholders by stance',
     'KPI-ENG-01': 'Engagements in the last 90 days',
-    'KPI-COM-02': 'Open commitments',
-    'KPI-COM-03': 'Overdue commitments',
-    'KPI-GRV-02': 'Open grievances and requests',
-    'KPI-RSK-01': 'High risks',
+    'KPI-COM-02': EN_CIFRAS['KPI-COM-02'],
+    'KPI-COM-03': EN_CIFRAS['KPI-COM-03'],
+    'KPI-GRV-02': EN_CIFRAS['KPI-GRV-02'],
+    'KPI-RSK-01': EN_CIFRAS['KPI-RSK-01'],
     programs: 'Programs',
-    'KPI-INV-03': 'Investment executed',
+    'KPI-INV-03': EN_CIFRAS['KPI-INV-03'],
     lastActivity: 'Last activity'
   },
   posturas: 'Stances',

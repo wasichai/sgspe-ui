@@ -57,7 +57,7 @@ describe('ficha contextual', () => {
     expect(posturas).toHaveTextContent('A favor3')
     expect(within(posturas).getAllByRole('listitem')).toHaveLength(5)
     // los montos por moneda, nunca sumados entre monedas (ASM-063), y los avisos del servidor
-    const inversion = within(panel).getByRole('region', { name: 'Inversión ejecutada' })
+    const inversion = within(panel).getByRole('region', { name: 'Inversión social ejecutada' })
     expect(
       within(within(inversion).getByRole('list', { name: 'Montos por moneda' }))
         .getAllByRole('listitem')
