@@ -448,6 +448,22 @@ describe('S16 · lista de grupos de interés', () => {
     expect(rutaActual()).toBe('/projects/p1/engagements/new?stakeholders=s1')
   })
 
+  // tercera pasada de UX, 3.9: la barra común de la selección ofrece elegir todos los de la página y quitar la selección
+  it('la barra de la selección elige todos los de la página y quita la selección', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(within(filas()[0]).getByRole('checkbox'))
+    const barra = screen.getByRole('region', { name: '1 seleccionado' })
+    await userEvent.click(within(barra).getByRole('button', { name: 'Elegir los 2 de esta página' }))
+    expect(screen.getByText('2 seleccionados')).toBeInTheDocument()
+    expect(filas().map((f) => (within(f).getByRole('checkbox') as HTMLInputElement).checked)).toEqual([true, true])
+    // con todos elegidos ya no se ofrece elegirlos
+    expect(screen.queryByRole('button', { name: /^Elegir los/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar la selección' }))
+    expect(screen.queryByText(/seleccionados?$/)).not.toBeInTheDocument()
+    expect(filas().map((f) => (within(f).getByRole('checkbox') as HTMLInputElement).checked)).toEqual([false, false])
+  })
+
   it('la selección se reinicia al cambiar un filtro', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
     await waitFor(() => expect(filas()).toHaveLength(2))

@@ -116,6 +116,8 @@ export const ES_COMUN = {
   vistas: 'Vistas',
   seleccionados_one: '{{n}} seleccionado',
   seleccionados_other: '{{n}} seleccionados',
+  // la barra de una selección múltiple (BarraDeSeleccion)
+  seleccion: { todos_one: 'Elegir el {{count}} de esta página', todos_other: 'Elegir los {{count}} de esta página', quitar: 'Quitar la selección' },
   personaRegistrada: 'Persona registrada',
   // F3: la situación de plazo o de vigencia (derivada por JOB-01, nunca un estado) y la elección de una persona usuaria
   situacionDePlazo: 'Situación de plazo',
@@ -564,6 +566,7 @@ export const EN_COMUN: typeof ES_COMUN = {
   vistas: 'Views',
   seleccionados_one: '{{n}} selected',
   seleccionados_other: '{{n}} selected',
+  seleccion: { todos_one: 'Select the {{count}} on this page', todos_other: 'Select all {{count}} on this page', quitar: 'Clear the selection' },
   personaRegistrada: 'Registered person',
   situacionDePlazo: 'Deadline situation',
   cuando: {

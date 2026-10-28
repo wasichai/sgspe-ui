@@ -14,6 +14,7 @@ import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPri
 import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
 import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { BarraDeSeleccion } from '../componentes/BarraDeSeleccion'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { NombreDelGrupo, useNombreDelGrupo, useNombresDeGrupos } from '../componentes/NombreDeActor'
 import { comparable } from '../componentes/FiltroDeGrupo'
@@ -279,19 +280,20 @@ export function GruposPage() {
             aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
             alLimpiar={limpiarFiltros}
           />
-          {elegidos.length > 0 && proyecto ? (
-            <div
-              role="region"
-              aria-label={t('comun.seleccionados', { n: elegidos.length, count: elegidos.length })}
-              className="flex items-center gap-3 rounded-sg-md bg-sg-primary-soft px-3 py-2 text-sm"
-            >
-              <span aria-live="polite">{t('comun.seleccionados', { n: elegidos.length, count: elegidos.length })}</span>
-              {can('engagement', 'CREATE') && escribeEnElProyecto ? (
-                <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.map(encodeURIComponent).join(',')}`)}>
-                  {t('grupos.registrarConEllos')}
-                </Button>
-              ) : null}
-            </div>
+          {proyecto ? (
+            <BarraDeSeleccion
+              n={elegidos.length}
+              acciones={
+                can('engagement', 'CREATE') && escribeEnElProyecto ? (
+                  <Button size="sm" onClick={() => navegar(`${base}/engagements/new?stakeholders=${elegidos.map(encodeURIComponent).join(',')}`)}>
+                    {t('grupos.registrarConEllos')}
+                  </Button>
+                ) : null
+              }
+              todos={pagina.length}
+              alElegirTodos={() => setSeleccion(new Set(pagina.map((g) => g.id)))}
+              alQuitar={() => setSeleccion(new Set())}
+            />
           ) : null}
           {grupos.isPending ? (
             <Cargando />

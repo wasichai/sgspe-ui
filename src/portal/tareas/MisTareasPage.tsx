@@ -1,6 +1,7 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { cn } from '@wasichai/ui'
 import { ChipsDeFiltro } from '../componentes/Lista'
+import { BarraDeSeleccion } from '../componentes/BarraDeSeleccion'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useLeeTodosLosProyectos, useProyectos } from '../contexto/proyectos'
@@ -246,30 +247,33 @@ function TablaDeTareas({
   }
   const conOrigen = tareas.some((x) => origenDe(x) !== null)
   const conPrioridad = tareas.some((x) => Boolean(opcion(x, 'priority')))
+  // la barra común de una selección (BarraDeSeleccion, 3.9): cuántas van, «Tomar N», quitar la selección y el resultado del lote
   const seleccion =
     tomablesAqui.length > 0 ? (
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        {deLaSeleccion.length > 0 ? (
-          <>
-            <span aria-live="polite">{t('tareas.seleccion.elegidas', { count: deLaSeleccion.length })}</span>
-            <Button
-              size="sm"
-              disabled={varias.tomando}
-              aria-busy={varias.tomando}
-              onClick={() => void varias.tomar(deLaSeleccion).then(() => setElegidas(new Set()))}
-            >
-              {varias.tomando ? t('tareas.ficha.tomando') : t('tareas.seleccion.tomar', { count: deLaSeleccion.length })}
-            </Button>
-          </>
-        ) : null}
-        {varias.resultado ? (
-          <p role="status" className={varias.resultado.fallidas > 0 ? 'text-sg-warning' : 'text-sg-success'}>
-            {varias.resultado.fallidas > 0
-              ? t('tareas.seleccion.algunas', { n: varias.resultado.tomadas, count: varias.resultado.fallidas })
-              : t('tareas.seleccion.tomadas', { count: varias.resultado.tomadas })}
-          </p>
-        ) : null}
-      </div>
+      <BarraDeSeleccion
+        n={deLaSeleccion.length}
+        texto={t('tareas.seleccion.elegidas', { count: deLaSeleccion.length })}
+        acciones={
+          <Button
+            size="sm"
+            disabled={varias.tomando}
+            aria-busy={varias.tomando}
+            onClick={() => void varias.tomar(deLaSeleccion).then(() => setElegidas(new Set()))}
+          >
+            {varias.tomando ? t('tareas.ficha.tomando') : t('tareas.seleccion.tomar', { count: deLaSeleccion.length })}
+          </Button>
+        }
+        alQuitar={() => setElegidas(new Set())}
+        resultado={
+          varias.resultado ? (
+            <p role="status" className={cn('text-sm', varias.resultado.fallidas > 0 ? 'text-sg-warning' : 'text-sg-success')}>
+              {varias.resultado.fallidas > 0
+                ? t('tareas.seleccion.algunas', { n: varias.resultado.tomadas, count: varias.resultado.fallidas })
+                : t('tareas.seleccion.tomadas', { count: varias.resultado.tomadas })}
+            </p>
+          ) : null
+        }
+      />
     ) : null
   if (telefono)
     return (
