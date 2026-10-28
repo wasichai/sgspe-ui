@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { montar } from '../../test/montar'
-import { Drawer } from './Drawer'
+import { Drawer, useMarcarGuardado } from './Drawer'
 
 // la revisión de UX, etapa 8: el drawer atrapa el foco, entra por su primer control y, al cerrarse, lo devuelve al botón que lo
 // abrió (no se abre con un DialogTrigger, así que Radix no sabría a quién volver)
@@ -53,18 +53,30 @@ describe('Drawer', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
-  it('enviar el formulario da lo escrito por guardado; mientras se guarda, no se cierra', async () => {
+  it('un guardado que salió bien da lo escrito por guardado; mientras se guarda, no se cierra', async () => {
+    // lo que guarda dentro del cajón y lo deja abierto (un ítem más): al terminar bien, lo marca
+    function Guardable() {
+      const guardado = useMarcarGuardado()
+      return (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            guardado?.()
+          }}
+        >
+          <label>
+            Título
+            <input />
+          </label>
+          <button type="submit">Guardar</button>
+        </form>
+      )
+    }
     function ConFormulario({ ocupado = false }: { ocupado?: boolean }) {
       const [abierto, setAbierto] = useState(true)
       return (
         <Drawer titulo="Datos del registro" abierto={abierto} alCerrar={() => setAbierto(false)} ocupado={ocupado}>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <label>
-              Título
-              <input />
-            </label>
-            <button type="submit">Guardar</button>
-          </form>
+          <Guardable />
         </Drawer>
       )
     }

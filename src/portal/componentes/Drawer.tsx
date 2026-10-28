@@ -1,14 +1,20 @@
 import { useFocoDeRegreso } from './foco'
 import { ConfirmDialog, Dialog, DialogContent, DialogDescription, DialogTitle } from '@wasichai/ui'
-import { useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
 
 // el drawer de design-system.md §5: 560 px para formularios, desde la derecha, reemplazable y no apilable; foco atrapado
 // y vuelta al origen al cerrar (Radix). en tableta ocupa la pantalla (screens.md, S20). con algo escrito, cerrarlo por Esc, la X o un
 // clic fuera pide confirmar (tercera pasada de UX, 2.1; DD-36): lo escrito se marca solo (todo control que cambia dispara input o
-// change, que burbujean) y enviar un formulario lo da por guardado; conCambios de la pantalla manda sobre lo detectado. lo que la
-// pantalla cierra por su cuenta (Cancelar, Guardar) no pregunta, y mientras guarda (ocupado) no se cierra
+// change, que burbujean) y un guardado que salió bien lo limpia (useMarcarGuardado: FormularioDeRegistro lo llama solo; enviar no
+// basta, porque el envío puede no pasar la validación); conCambios de la pantalla manda sobre lo detectado. lo que la pantalla
+// cierra por su cuenta (Cancelar, Guardar) no pregunta, y mientras guarda (ocupado) no se cierra
+const ContextoDelCajon = createContext<(() => void) | null>(null)
+
+// para lo que guarda dentro de un cajón que sigue abierto (un ítem más): lo guardado ya no se pierde al cerrarlo
+export const useMarcarGuardado = (): (() => void) | null => useContext(ContextoDelCajon)
+
 export function Drawer({
   titulo,
   descripcion,
@@ -53,14 +59,15 @@ export function Drawer({
           {...(descripcion ? {} : { 'aria-describedby': undefined })}
           onInput={() => setTocado(true)}
           onChange={() => setTocado(true)}
-          onSubmitCapture={() => setTocado(false)}
           className="left-auto right-0 top-0 flex h-full max-w-[560px] translate-x-0 translate-y-0 flex-col rounded-none rounded-l-sg-xl p-0 lg:max-w-[560px]"
         >
           <div className="border-b border-sg-border px-5 py-4 pr-12">
             <DialogTitle className="text-sg-h3 font-semibold text-sg-text">{titulo}</DialogTitle>
             {descripcion ? <DialogDescription className="text-sm text-sg-text-secondary">{descripcion}</DialogDescription> : null}
           </div>
-          <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">{children}</div>
+          <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            <ContextoDelCajon.Provider value={() => setTocado(false)}>{children}</ContextoDelCajon.Provider>
+          </div>
           {pie ? <div className="flex justify-end gap-2 border-t border-sg-border px-5 py-3">{pie}</div> : null}
         </DialogContent>
       </Dialog>
