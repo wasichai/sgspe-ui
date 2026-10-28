@@ -75,15 +75,21 @@ describe('incidentes', () => {
     expect(screen.queryByRole('button', { name: 'Registrar incidente' })).not.toBeInTheDocument()
   })
 
-  it('la ficha dice qué pasó, que cerrar exige la respuesta (el botón sale deshabilitado con su razón) y qué generó', async () => {
+  // tercera pasada de UX (1.2 y 1.5): la ficha con la anatomía común; el título dice qué pasó y cerrar pide en su diálogo la respuesta
+  // inmediata que falta, en vez de salir bloqueado
+  it('la ficha dice qué pasó, que cerrar pide la respuesta inmediata en su diálogo y qué generó', async () => {
     fetch = mockFetch(rutasDeFicha())
     abrirFicha()
-    expect(await screen.findByRole('heading', { name: 'I-001', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText('Un grupo de comuneros bloqueó la vía durante cuatro horas')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Un grupo de comuneros bloqueó la vía durante cuatro horas', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText(/^Incidente · I-001/)).toBeInTheDocument()
     expect(screen.getAllByText('Para cerrar el incidente hacen falta la respuesta inmediata y las consecuencias.').length).toBeGreaterThan(0)
+    expect(screen.getByRole('region', { name: 'Situación' })).toBeInTheDocument()
     const cerrar = await screen.findByRole('button', { name: 'Cerrar' })
-    await waitFor(() => expect(cerrar).toBeDisabled())
-    expect(cerrar).toHaveAccessibleDescription('Falta la respuesta inmediata del incidente')
+    expect(cerrar).toHaveAttribute('data-variant', 'primary')
+    await userEvent.click(cerrar)
+    const dialogo = await screen.findByRole('dialog', { name: 'Cerrar' })
+    expect(await within(dialogo).findByLabelText('immediate_response (obligatorio)')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
     const genero = screen.getByRole('complementary', { name: 'Qué generó' })
     expect(await within(genero).findByRole('link', { name: 'R-001 · Bloqueo de la vía de acceso por la comunidad' })).toHaveAttribute(
       'href',
@@ -101,7 +107,7 @@ describe('incidentes', () => {
     const sinRiesgos = { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, social_risk: ['READ', 'UPDATE', 'EXPORT'] } }
     fetch = mockFetch(rutasDeFicha())
     const { unmount } = abrirFicha(GESTOR_DE_RIESGOS, sinRiesgos)
-    expect(await screen.findByRole('heading', { name: 'I-001', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Un grupo de comuneros bloqueó la vía durante cuatro horas', level: 1 })).toBeInTheDocument()
     // «Editar» sale con la misma guarda de proyecto: con ella resuelta, la ausencia del enlace es por el permiso
     expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Identificar un riesgo desde este incidente' })).not.toBeInTheDocument()

@@ -1,7 +1,7 @@
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha, type PestanaDeFicha } from '../componentes/PestanasDeFicha'
@@ -25,7 +25,6 @@ import { useProyecto } from '../contexto/proyectos'
 import { atributo, texto, usePuedeEditar, useRegistro, useTodos, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { diaPe, NS } from '../i18n'
-import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { Beneficiarios, IniciativasEHitos } from './HijosDelPrograma'
 import { Indicadores } from './Indicadores'
 import { Presupuestos } from './Presupuestos'
@@ -103,17 +102,30 @@ function Ficha({ programa }: { programa: Registro }) {
   ]
   return (
     <article className="space-y-4">
-      <EncabezadoDePagina
-        ficha
+      {/* tercera pasada de UX (1.5): la cabecera común, con una sola primaria (la siguiente acción) y lo que la impide debajo; cancelar
+          va en «Más acciones» */}
+      <CabeceraDeFicha
         antetitulo={[t('fichaPrograma.tipo'), texto(programa, 'code')].filter(Boolean).join(' · ')}
         titulo={texto(programa, 'name')}
-        primaria={<BotonesDeTransicion objeto="social_program" registro={programa} proyecto={proyecto} comprobarAntes={COMPROBAR} />}
+        objeto="social_program"
+        registro={programa}
+        proyecto={proyecto}
+        comprobarAntes={COMPROBAR}
+        falta={siguiente?.falta}
+        faltaCampo={siguiente?.campo}
         secundarias={
-          edita ? (
-            <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
-              {t('fichaPrograma.editar')}
-            </Button>
-          ) : undefined
+          edita
+            ? [
+                {
+                  clave: 'editar',
+                  nodo: (
+                    <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
+                      {t('fichaPrograma.editar')}
+                    </Button>
+                  )
+                }
+              ]
+            : []
         }
       />
       <PanelDeDecision

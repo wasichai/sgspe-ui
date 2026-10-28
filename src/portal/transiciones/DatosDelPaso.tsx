@@ -17,7 +17,7 @@ import type { Aviso } from './api'
 //
 // los datos del propio paso: la clasificación al atender una queja, la resolución y la respuesta, cuándo se comunicó, la decisión de
 // tratamiento y el motivo de cierre de un riesgo, la fecha de una interacción y el motivo de su cancelación, las fechas de firma y de
-// vigencia de un acuerdo. no van los que cambian qué reglas se evalúan (el tipo de un aporte decide sus lineamientos, que «Antes de
+// vigencia de un acuerdo, la respuesta inmediata y las consecuencias de un incidente al cerrarlo. no van los que cambian qué reglas se evalúan (el tipo de un aporte decide sus lineamientos, que «Antes de
 // aprobar» muestra) ni los de la matriz de un compromiso, que se completan uno a uno en su ficha
 export const PEDIDOS_EN_EL_DIALOGO: Readonly<Record<string, readonly string[]>> = {
   grievance: ['category', 'severity', 'resolution', 'response', 'responded_at'],
@@ -25,7 +25,8 @@ export const PEDIDOS_EN_EL_DIALOGO: Readonly<Record<string, readonly string[]>> 
   stakeholder_request: ['response', 'responded_at'],
   social_risk: ['treatment_decision', 'close_reason'],
   engagement: ['scheduled_at', 'held_at', 'cancel_reason'],
-  agreement: ['signed_date', 'effective_date']
+  agreement: ['signed_date', 'effective_date'],
+  incident: ['immediate_response', 'consequences']
 }
 
 // los controles simples que el diálogo dibuja

@@ -6,6 +6,7 @@ export const ES_INCIDENTES = {
   registrar: 'Registrar incidente',
   columnas: { codigo: 'Código', ocurrio: 'Ocurrió', tipo: 'Tipo', lugar: 'Lugar', estado: 'Estado' },
   ficha: {
+    tipo: 'Incidente',
     volver: 'Volver a los incidentes',
     noExiste: 'Este incidente no existe o no es de sus proyectos.',
     ocurrio: 'Ocurrió el {{fecha}}',
@@ -35,6 +36,7 @@ export const EN_INCIDENTES: typeof ES_INCIDENTES = {
   registrar: 'Record incident',
   columnas: { codigo: 'Code', ocurrio: 'Occurred', tipo: 'Type', lugar: 'Place', estado: 'State' },
   ficha: {
+    tipo: 'Incident',
     volver: 'Back to the incidents',
     noExiste: 'This incident does not exist or is not in your projects.',
     ocurrio: 'Occurred on {{fecha}}',

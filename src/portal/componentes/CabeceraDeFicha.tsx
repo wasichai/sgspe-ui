@@ -45,6 +45,7 @@ export function CabeceraDeFicha({
   registro,
   proyecto,
   comprobarAntes,
+  ocultar,
   secundarias = [],
   primariaPropia,
   falta,
@@ -60,6 +61,8 @@ export function CabeceraDeFicha({
   registro: Registro
   proyecto?: string
   comprobarAntes?: readonly string[]
+  // las transiciones que la ficha no ofrece a quien mira (confirmar una alerta sin la acción que lo permite)
+  ocultar?: readonly string[]
   secundarias?: readonly AccionDeFicha[]
   // una acción de la ficha que no es una transición («Nueva revisión» de un riesgo): primaria solo sin transición del camino
   primariaPropia?: ReactNode
@@ -75,6 +78,7 @@ export function CabeceraDeFicha({
     registro,
     proyecto,
     comprobarAntes,
+    ocultar,
     primariaSoloDelCamino: primariaPropia != null,
     faltaDeLaPrimaria: falta ? { id: idDeFalta, texto: falta } : undefined
   })
