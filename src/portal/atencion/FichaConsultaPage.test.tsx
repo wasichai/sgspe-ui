@@ -287,7 +287,7 @@ describe('S57 · ficha de solicitud', () => {
 // vez, en el panel de decisión; una sola primaria (la siguiente acción del flujo o, sin ella, la acción propia de la ficha), dos
 // secundarias a la vista y lo demás en «Más acciones»; los datos del caso por tema, con los vacíos plegados
 describe('S57 · cabecera y cuerpo de la ficha (P-09)', () => {
-  it('consulta: «Responder» es la única primaria, «Editar» y «Reclasificar…» la acompañan y «Derivar» va en «Más acciones»', async () => {
+  it('consulta: «Responder» es la única primaria y «Editar» y «Derivar» la acompañan como secundarias', async () => {
     fetch = mockFetch([
       { path: '/objects/inquiry/records/i1', body: CONSULTA },
       transiciones('inquiry', 'i1', [
@@ -307,11 +307,9 @@ describe('S57 · cabecera y cuerpo de la ficha (P-09)', () => {
     const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
     expect(await within(acciones).findByRole('button', { name: 'Responder' })).toHaveAttribute('data-variant', 'primary')
     expect(within(acciones).getByRole('button', { name: 'Editar' })).toHaveAttribute('data-variant', 'secondary')
-    expect(within(acciones).getByRole('button', { name: 'Reclasificar…' })).toHaveAttribute('data-variant', 'secondary')
+    // sin «Escribir la respuesta» (tercera pasada de UX, 1.2), «Derivar» cabe a la vista
+    expect(await within(acciones).findByRole('button', { name: 'Derivar' })).toHaveAttribute('data-variant', 'secondary')
     expect(document.querySelectorAll('[data-variant="primary"]')).toHaveLength(1)
-    expect(within(acciones).queryByRole('button', { name: 'Derivar' })).not.toBeInTheDocument()
-    await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
-    expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Derivar' })).toBeInTheDocument()
     expect(await screen.findAllByText('Recibida', { selector: '[data-estado]' })).toHaveLength(1)
     const atencion = screen.getByRole('region', { name: 'Atención y respuesta' })
     expect(within(atencion).getByRole('button', { name: /^Mostrar (el campo|los \d+ campos) sin dato$/ })).toBeInTheDocument()
