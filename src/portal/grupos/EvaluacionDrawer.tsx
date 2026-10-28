@@ -203,6 +203,7 @@ export function EvaluacionDrawer({
       descripcion={t('grupos.evaluacion.descripcion')}
       abierto={abierto}
       alCerrar={cerrar}
+      ocupado={guardar.isPending}
       pie={
         <>
           <Button variant="secondary" onClick={cerrar} disabled={guardar.isPending}>

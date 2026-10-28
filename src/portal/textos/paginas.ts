@@ -36,6 +36,13 @@ export const ES_PAGINAS = {
     sinVencimiento: 'Sin fecha límite',
     verCamino: 'Ver el camino'
   },
+  // cerrar un cajón con algo escrito (Drawer, tercera pasada de UX)
+  cajon: {
+    descartarTitulo: '¿Descartar lo escrito?',
+    descartarTexto: 'Lo que escribió en este panel todavía no se guardó y se perderá si lo cierra.',
+    descartar: 'Descartar',
+    seguir: 'Seguir editando'
+  },
   flujo: {
     titulo: 'Camino del flujo',
     actual: 'Estado actual',
@@ -102,6 +109,12 @@ export const EN_PAGINAS: typeof ES_PAGINAS = {
     vencimiento: 'Due date',
     sinVencimiento: 'No due date',
     verCamino: 'Show the path'
+  },
+  cajon: {
+    descartarTitulo: 'Discard what you wrote?',
+    descartarTexto: 'What you wrote in this panel has not been saved yet and will be lost if you close it.',
+    descartar: 'Discard',
+    seguir: 'Keep editing'
   },
   flujo: {
     titulo: 'Path of steps',
