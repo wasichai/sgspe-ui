@@ -36,6 +36,7 @@ import { atributo, texto, useRegistro, useRelacionados, useTodos, usePuedeEditar
 import { diaPe, NS } from '../i18n'
 import { CAMPOS_DEL_ACUERDO } from './AcuerdosPage'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S33 · acuerdo o convenio (screens.md §7, WF-I): tipo, estado y vigencia (validity_status como insignia derivada; vencer no
 // concluye el acuerdo), sus cláusulas con los compromisos que originan, las partes con su firma, la comunidad titular, la
@@ -129,7 +130,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
   const escribe = useEscribeEnProyecto(proyecto)
   const edita = usePuedeEditar('agreement') && escribe
   const [editando, setEditando] = useState(false)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const tipo = texto(acuerdo, 'agreement_type')
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
   // decisión con el vencimiento y la vigencia, y trazabilidad en tres grupos; las cláusulas, las partes y los predios siguen
@@ -230,17 +231,16 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
         </aside>
       </div>
       <Drawer titulo={t('acuerdos.ficha.editarTitulo')} abierto={editando} alCerrar={() => setEditando(false)}>
-        <Campo etiqueta={t('acuerdos.motivo')} ayuda={t('acuerdos.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <CampoDeMotivo motivo={motivo} etiqueta={t('acuerdos.motivo')} ayuda={t('acuerdos.motivoAyuda')} />
         <FormularioDeRegistro
           objeto="agreement"
           registro={acuerdo}
           campos={CAMPOS_DEL_ACUERDO}
-          motivo={motivo.trim() || undefined}
+          motivo={motivo.recortado}
+          antesDeEnviar={motivo.exigir}
           alGuardar={() => {
             setEditando(false)
-            setMotivo('')
+            motivo.limpiar()
           }}
           alCancelar={() => setEditando(false)}
         />

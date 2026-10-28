@@ -1,5 +1,5 @@
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
-import { Button, Textarea } from '@wasichai/ui'
+import { Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
@@ -7,9 +7,9 @@ import { esDeComando, esDerivado } from '../datos/derivados'
 import { campoDe, useDefinicion, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { MOTIVO_EN_TODAS } from '../transiciones/reglas'
-import { Campo } from './Campo'
 import { Drawer } from './Drawer'
 import { FormularioDeRegistro } from './FormularioDeRegistro'
+import { CampoDeMotivo, useMotivo } from './Motivo'
 
 // tercera pasada de UX (1.1): lo que bloquea la siguiente acción se resuelve donde se informa. si una regla de transition-checks la
 // bloquea por un campo del registro que quien mira puede escribir, «Completar ‹campo›» abre un cajón con solo ese campo (y el motivo,
@@ -44,12 +44,12 @@ export function CompletarCampo({
   const definicion = useDefinicion(objeto)
   const escribe = useEscribeEnProyecto(proyecto)
   const [abierto, setAbierto] = useState(false)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   if (!can(objeto, 'UPDATE') || (proyecto !== undefined && !escribe) || !esCompletable(objeto, definicion.data, campo)) return null
   const titulo = t('transiciones.completar', { campo: campoDe(definicion.data, campo)?.label || campo })
   const pideMotivo = definicion.data?.requiresReason === true || MOTIVO_EN_TODAS.includes(objeto)
   const cerrar = () => {
-    setMotivo('')
+    motivo.limpiar()
     setAbierto(false)
   }
   return (
@@ -58,17 +58,14 @@ export function CompletarCampo({
         {titulo}
       </Button>
       <Drawer titulo={titulo} descripcion={t('transiciones.completarAyuda', { accion })} abierto={abierto} alCerrar={cerrar}>
-        {pideMotivo ? (
-          <Campo etiqueta={t('comun.motivoObligatorio')}>
-            {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-          </Campo>
-        ) : null}
+        {pideMotivo ? <CampoDeMotivo motivo={motivo} etiqueta={t('comun.motivoObligatorio')} /> : null}
         {abierto ? (
           <FormularioDeRegistro
             objeto={objeto}
             registro={registro}
             campos={[campo]}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={cerrar}
             alCancelar={cerrar}
           />

@@ -4,14 +4,13 @@ import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
-import { Button, Textarea } from '@wasichai/ui'
+import { Button } from '@wasichai/ui'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
-import { Campo } from '../componentes/Campo'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
@@ -37,6 +36,7 @@ import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, presupuestoDelPr
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Seccion } from '../componentes/Seccion'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S42 · programas e inversión (screens.md §10): ¿cuánto del tope de la campaña queda, cómo avanzan los programas y qué aportes están
 // en curso? la misma página con alcance global (columna Proyecto, sin altas) o de un proyecto (ASM-076). las cifras salen del
@@ -497,7 +497,7 @@ function Aportes({ proyecto, vista, estado }: { proyecto?: string; vista: string
 function Alta({ objeto, proyecto, alCerrar }: { objeto: 'social_contribution' | 'social_program'; proyecto: string; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
   const navegar = useNavigate()
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const fijos = useMemo(() => ({ project: proyecto }), [proyecto])
   const iniciales = useMemo(() => ({ currency: MONEDA_POR_DEFECTO }), [])
   const esAporte = objeto === 'social_contribution'
@@ -508,17 +508,14 @@ function Alta({ objeto, proyecto, alCerrar }: { objeto: 'social_contribution' | 
       abierto
       alCerrar={alCerrar}
     >
-      {esAporte ? (
-        <Campo etiqueta={t('inversion.motivo')} ayuda={t('inversion.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
-      ) : null}
+      {esAporte ? <CampoDeMotivo motivo={motivo} etiqueta={t('inversion.motivo')} ayuda={t('inversion.motivoAyuda')} /> : null}
       <FormularioDeRegistro
         objeto={objeto}
         fijos={fijos}
         iniciales={iniciales}
         campos={esAporte ? CAMPOS_DEL_APORTE : CAMPOS_DEL_PROGRAMA}
-        motivo={esAporte ? motivo.trim() || undefined : undefined}
+        motivo={esAporte ? motivo.recortado : undefined}
+        antesDeEnviar={esAporte ? motivo.exigir : undefined}
         alGuardar={(r) => navegar(rutaDeFicha(objeto, r) ?? `/projects/${encodeURIComponent(proyecto)}/programs`)}
         alCancelar={alCerrar}
       />

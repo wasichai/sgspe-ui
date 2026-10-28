@@ -173,6 +173,8 @@ describe('S44 · ficha del aporte', () => {
     await waitFor(() => expect(aprobar).toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
     const drawer = await screen.findByRole('dialog', { name: 'Editar el aporte' })
+    // el aporte es requiresReason: sin motivo, el cambio no sale (tercera pasada de UX, 2.2)
+    await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'Lo pidió la junta')
     await userEvent.selectOptions(selectNativo(await within(drawer).findByLabelText(/^contribution_type/)), 'DONACION')
     await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
     await waitFor(() => expect(red!.a('PUT', '/objects/social_contribution/records/a1')).toHaveLength(1))

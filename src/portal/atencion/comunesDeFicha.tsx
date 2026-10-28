@@ -22,6 +22,7 @@ import { diaPe, fechaYHoraPe, NS } from '../i18n'
 import { Dia } from '../componentes/Dia'
 import { opcion } from '../datos/opciones'
 import { Persona as PersonaDelEquipo } from '../componentes/Persona'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // lo que comparten la ficha de queja (S36) y las de consulta y solicitud (S57): las marcas de anonimato y confidencialidad, el plazo
 // que corre en el estado, los datos del caso (la persona solo para quien la lee, security.md §7.9), la edición con motivo (las QCS
@@ -177,20 +178,26 @@ export function EditarQcs({
   marcaConfidencial?: boolean
 }) {
   const { t } = useTranslation(NS)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const cerrar = () => {
-    setMotivo('')
+    motivo.limpiar()
     alCerrar()
   }
   return (
     <Drawer titulo={titulo ?? t('fichaQueja.comun.editarTitulo')} abierto={abierto} alCerrar={cerrar}>
-      <Campo etiqueta={t('fichaQueja.comun.motivo')} ayuda={t('fichaQueja.comun.motivoAyuda')}>
-        {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-      </Campo>
+      <CampoDeMotivo motivo={motivo} etiqueta={t('fichaQueja.comun.motivo')} ayuda={t('fichaQueja.comun.motivoAyuda')} />
       {abierto ? (
         <>
           {marcaConfidencial ? <MarcarConfidencial objeto={objeto} qcs={qcs} alMarcar={cerrar} /> : null}
-          <FormularioDeRegistro objeto={objeto} registro={qcs} campos={campos} motivo={motivo.trim() || undefined} alGuardar={cerrar} alCancelar={cerrar} />
+          <FormularioDeRegistro
+            objeto={objeto}
+            registro={qcs}
+            campos={campos}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
+            alGuardar={cerrar}
+            alCancelar={cerrar}
+          />
         </>
       ) : null}
     </Drawer>

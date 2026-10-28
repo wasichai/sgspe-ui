@@ -42,6 +42,7 @@ import { nivelDePuntaje, umbralesDe } from './niveles'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S40 · ficha de riesgo (screens.md §9, flujos 14 y 15): el nivel vigente, cómo llegó ahí y qué se hace para bajarlo. «Nueva
 // revisión» es el endpoint de revisiones (api.md §4.7): las revisiones son inmutables y una se corrige con otra; la primera aplica
@@ -114,12 +115,12 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
   const revisa = escribe && can('risk_assessment', 'CREATE') && can('social_risk', 'UPDATE') && riesgo.state !== 'closed'
   const [editando, setEditando] = useState(false)
   const [revisando, setRevisando] = useState(false)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const [hecha, setHecha] = useState<string | null>(null)
   const revisiones = useTodos('risk_assessment', { social_risk: riesgo.id, sort: 'assessment_date', dir: 'desc' })
   const cerrar = () => {
     setEditando(false)
-    setMotivo('')
+    motivo.limpiar()
   }
   const cadencia = texto(riesgo, 'review_every_days')
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
@@ -306,16 +307,15 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
         />
       ) : null}
       <Drawer titulo={t('fichaRiesgo.editar')} abierto={editando} alCerrar={cerrar}>
-        <Campo etiqueta={t('comun.motivoObligatorio')} ayuda={t('fichaRiesgo.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <CampoDeMotivo motivo={motivo} etiqueta={t('comun.motivoObligatorio')} ayuda={t('fichaRiesgo.motivoAyuda')} />
         <p className="text-sg-caption text-sg-text-muted">{t('fichaRiesgo.cadenciaAyuda')}</p>
         {editando ? (
           <FormularioDeRegistro
             objeto="social_risk"
             registro={riesgo}
             campos={EDITABLES}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={cerrar}
             alCancelar={cerrar}
           />

@@ -12,12 +12,11 @@ import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Textarea } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { BarraDelTope } from '../compromisos/BarraDelTope'
-import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { Cargando, Consulta, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
@@ -35,6 +34,7 @@ import { NS, numeroPe } from '../i18n'
 import { AntesDeAprobar } from './AntesDeAprobar'
 import { EntregaDelAporte } from './EntregaDelAporte'
 import { opcion } from '../datos/opciones'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S44 · aporte social (screens.md §10, WF-P, spec F5 §3.3): la anatomía de design-system.md §6.1 con las transiciones del rol (toda
 // transición lleva motivo: requiresReason; aprobar, adquirir, entregar y cerrar se comprueban antes con transition-checks), «Para qué
@@ -95,10 +95,10 @@ function Ficha({ aporte }: { aporte: Registro }) {
   const solicitud = enSolicitud(aporte)
   const campos = solicitud ? EDITABLES : EDITABLES.filter((c) => !TERMINOS_APROBADOS.includes(c))
   const [editando, setEditando] = useState(false)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const cerrar = () => {
     setEditando(false)
-    setMotivo('')
+    motivo.limpiar()
   }
   const titulo = t('fichaAporte.titulo', { codigo: texto(aporte, 'code') })
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
@@ -176,15 +176,14 @@ function Ficha({ aporte }: { aporte: Registro }) {
         abierto={editando}
         alCerrar={cerrar}
       >
-        <Campo etiqueta={t('fichaAporte.motivo')} ayuda={t('fichaAporte.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <CampoDeMotivo motivo={motivo} etiqueta={t('fichaAporte.motivo')} ayuda={t('fichaAporte.motivoAyuda')} />
         {editando ? (
           <FormularioDeRegistro
             objeto="social_contribution"
             registro={aporte}
             campos={campos}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={cerrar}
             alCancelar={cerrar}
           />

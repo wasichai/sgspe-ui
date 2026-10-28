@@ -2,14 +2,13 @@ import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, cn, Textarea } from '@wasichai/ui'
+import { Alert, Button, cn } from '@wasichai/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { CLASE_DE_TONO } from '../componentes/apariencias'
-import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
@@ -37,6 +36,7 @@ import { FechaDePlazo } from '../componentes/CuandoVence'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S38 y S39 · registro y matriz de riesgos (screens.md §9): qué riesgos hay, de qué nivel y cuáles piden revisión. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076). la API genérica no filtra por estado ni por situación, así que,
@@ -403,25 +403,24 @@ function MapaDeCalor({
 // el alta de un riesgo con su motivo: el formulario de la metadata con el proyecto (y el incidente de origen) fijos
 function AltaDeRiesgo({ proyecto, incidente, abierto, alCerrar }: { proyecto: string; incidente: string | null; abierto: boolean; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const fijos = useMemo(() => (incidente ? { project: proyecto, origin_incident: incidente } : { project: proyecto }), [proyecto, incidente])
   const cerrar = () => {
-    setMotivo('')
+    motivo.limpiar()
     alCerrar()
   }
   return (
     <Drawer titulo={t('riesgos.identificar')} descripcion={t('riesgos.alta.descripcion')} abierto={abierto} alCerrar={cerrar}>
       {incidente ? <Alert tone="notice">{t('riesgos.alta.desdeIncidente')}</Alert> : null}
-      <Campo etiqueta={t('comun.motivoObligatorio')} ayuda={t('riesgos.alta.motivoAyuda')}>
-        {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-      </Campo>
+      <CampoDeMotivo motivo={motivo} etiqueta={t('comun.motivoObligatorio')} ayuda={t('riesgos.alta.motivoAyuda')} />
       <p className="text-sg-caption text-sg-text-muted">{t('riesgos.alta.cadencia')}</p>
       {abierto ? (
         <FormularioDeRegistro
           objeto="social_risk"
           fijos={fijos}
           campos={CAMPOS_DEL_ALTA}
-          motivo={motivo.trim() || undefined}
+          motivo={motivo.recortado}
+          antesDeEnviar={motivo.exigir}
           alGuardar={cerrar}
           alCancelar={cerrar}
         />

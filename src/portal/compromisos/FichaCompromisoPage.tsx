@@ -9,11 +9,10 @@ import { useSumasDeConteos } from '../datos/conteos'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Alert, Button, Textarea } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
-import { Campo } from '../componentes/Campo'
 import { CamposPlegables, type CampoDeFicha } from '../componentes/CamposPlegables'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -38,6 +37,7 @@ import { Verificacion } from './Verificacion'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S29 · ficha de compromiso (screens.md §7, flujos 9 a 11): la anatomía de design-system.md §6.1 con las transiciones de WF-D del
 // rol (las de envío, aprobación, cumplimiento, verificación y cierre se comprueban antes con transition-checks), las pestañas
@@ -100,12 +100,12 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   const escribe = useEscribeEnProyecto(proyecto)
   const edita = usePuedeEditar('commitment') && escribe
   const [editando, setEditando] = useState<'todo' | 'riesgo' | null>(null)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const antesDeAprobar = ANTES_DE_APROBAR.includes(compromiso.state ?? '')
   const campos = editando === 'riesgo' ? ['delay_risk_reported', 'delay_risk_note'] : antesDeAprobar ? [...EDITABLES_SIEMPRE, 'due_date'] : EDITABLES_SIEMPRE
   const cerrar = () => {
     setEditando(null)
-    setMotivo('')
+    motivo.limpiar()
   }
   // dónde se está: el código en las migas del proyecto (en lugar del enlace suelto a la lista); el título del documento lo pone
   // el encabezado. la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): encabezado, camino del flujo, panel de
@@ -236,16 +236,15 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         abierto={editando !== null}
         alCerrar={cerrar}
       >
-        <Campo etiqueta={t('fichaCompromiso.motivo')} ayuda={t('fichaCompromiso.motivoAyuda')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <CampoDeMotivo motivo={motivo} etiqueta={t('fichaCompromiso.motivo')} ayuda={t('fichaCompromiso.motivoAyuda')} />
         {editando ? (
           <FormularioDeRegistro
             key={editando}
             objeto="commitment"
             registro={compromiso}
             campos={campos}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={cerrar}
             alCancelar={cerrar}
           />

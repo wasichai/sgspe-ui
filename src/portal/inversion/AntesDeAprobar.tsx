@@ -1,9 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Button, Textarea } from '@wasichai/ui'
+import { Button } from '@wasichai/ui'
 import { useAvailableTransitions } from '../datos/flujos'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Campo } from '../componentes/Campo'
 import { Drawer } from '../componentes/Drawer'
 import { Cargando } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
@@ -15,6 +14,7 @@ import { useComprobacion, type Aviso } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { leerLineamientos, type Situacion } from './lineamientos'
 import { Seccion } from '../componentes/Seccion'
+import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // «Antes de aprobar» de S44 (screens.md S44, spec F5 §3.3 y §3.4): la consulta en seco (transition-checks) de la aprobación que
 // el rol tiene, approve o approve_direct (si no tiene ninguna, approve: la consulta no juzga roles, api.md §4.1, y dice a quien
@@ -110,10 +110,10 @@ function Justificacion({ aporte, escribe, pide }: { aporte: Registro; escribe: b
     escribe && puedeEditar && puedeEscribir(definicion.data, 'guideline_deviation_justification') && 'guideline_deviation_justification' in aporte.attributes
   const actual = texto(aporte, 'guideline_deviation_justification')
   const [abierto, setAbierto] = useState(false)
-  const [motivo, setMotivo] = useState('')
+  const motivo = useMotivo()
   const cerrar = () => {
     setAbierto(false)
-    setMotivo('')
+    motivo.limpiar()
   }
   if (!pide && !actual) return null
   return (
@@ -127,15 +127,14 @@ function Justificacion({ aporte, escribe, pide }: { aporte: Registro; escribe: b
         </Button>
       ) : null}
       <Drawer titulo={t('fichaAporte.antes.justificacion.titulo')} descripcion={t('fichaAporte.antes.justificacion.ayuda')} abierto={abierto} alCerrar={cerrar}>
-        <Campo etiqueta={t('fichaAporte.motivo')}>
-          {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
+        <CampoDeMotivo motivo={motivo} etiqueta={t('fichaAporte.motivo')} />
         {abierto ? (
           <FormularioDeRegistro
             objeto="social_contribution"
             registro={aporte}
             campos={JUSTIFICACION}
-            motivo={motivo.trim() || undefined}
+            motivo={motivo.recortado}
+            antesDeEnviar={motivo.exigir}
             alGuardar={() => {
               void cliente.invalidateQueries({ queryKey: ['transition-check', 'social_contribution', aporte.id] })
               cerrar()
