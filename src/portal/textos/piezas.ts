@@ -19,7 +19,9 @@ export const ES_PIEZAS = {
     truncado: 'Se muestran los primeros {{n}} registros: hay más.',
     borrar: 'Borrar',
     borrando: 'Borrando…',
-    borrarConfirmar: '¿Borrar este registro? No se puede deshacer.'
+    borrarConfirmar: '¿Borrar este registro? No se puede deshacer.',
+    agregado: 'Se agregó. Puede agregar otro aquí mismo o cerrar.',
+    listo: 'Listo'
   }
 }
 
@@ -43,6 +45,8 @@ export const EN_PIEZAS: typeof ES_PIEZAS = {
     truncado: 'The first {{n}} records are shown: there are more.',
     borrar: 'Delete',
     borrando: 'Deleting…',
-    borrarConfirmar: 'Delete this record? It cannot be undone.'
+    borrarConfirmar: 'Delete this record? It cannot be undone.',
+    agregado: 'Added. You can add another one right here or close.',
+    listo: 'Done'
   }
 }

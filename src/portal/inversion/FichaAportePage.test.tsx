@@ -134,6 +134,11 @@ describe('S44 · ficha del aporte', () => {
     await waitFor(() => expect(red!.a('POST', '/objects/contribution_item/records')).toHaveLength(1))
     expect(red.a('POST', '/objects/contribution_item/records')[0].cuerpo).toMatchObject({ attributes: { description: 'Libros', social_contribution: 'a1' } })
     await waitFor(() => expect(red!.a('GET', '/objects/social_contribution/records/a1').length).toBeGreaterThan(lecturas))
+    // tercera pasada de UX, 2.11: el cajón queda abierto con el formulario vacío para el siguiente ítem, y «Listo» lo cierra
+    expect(await within(drawer).findByText('Se agregó. Puede agregar otro aquí mismo o cerrar.')).toBeInTheDocument()
+    expect(within(drawer).getByLabelText(/^description/)).toHaveValue('')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Listo' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuevo ítem' })).not.toBeInTheDocument())
   })
 
   it('fuera de Solicitado los ítems no cambian y lo dice; «Editar» no ofrece los términos aprobados', async () => {

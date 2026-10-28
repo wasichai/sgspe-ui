@@ -36,6 +36,7 @@ import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, presupuestoDelPr
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Seccion } from '../componentes/Seccion'
+import { conHecho } from '../componentes/AvisoDeExito'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 
 // S42 · programas e inversión (screens.md §10): ¿cuánto del tope de la campaña queda, cómo avanzan los programas y qué aportes están
@@ -508,6 +509,15 @@ function Alta({ objeto, proyecto, alCerrar }: { objeto: 'social_contribution' | 
       abierto
       alCerrar={alCerrar}
     >
+      {esAporte ? (
+        <Seccion anidada titulo={t('inversion.quePasaraAporte.titulo')} nivel={3}>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-sg-text-secondary">
+            <li>{t('inversion.quePasaraAporte.registro')}</li>
+            <li>{t('inversion.quePasaraAporte.items')}</li>
+            <li>{t('inversion.quePasaraAporte.aprobar')}</li>
+          </ol>
+        </Seccion>
+      ) : null}
       {esAporte ? <CampoDeMotivo motivo={motivo} etiqueta={t('inversion.motivo')} ayuda={t('inversion.motivoAyuda')} /> : null}
       <FormularioDeRegistro
         objeto={objeto}
@@ -516,7 +526,11 @@ function Alta({ objeto, proyecto, alCerrar }: { objeto: 'social_contribution' | 
         campos={esAporte ? CAMPOS_DEL_APORTE : CAMPOS_DEL_PROGRAMA}
         motivo={esAporte ? motivo.recortado : undefined}
         antesDeEnviar={esAporte ? motivo.exigir : undefined}
-        alGuardar={(r) => navegar(rutaDeFicha(objeto, r) ?? `/projects/${encodeURIComponent(proyecto)}/programs`)}
+        alGuardar={(r) =>
+          navegar(rutaDeFicha(objeto, r) ?? `/projects/${encodeURIComponent(proyecto)}/programs`, {
+            state: conHecho(null, t(esAporte ? 'inversion.hechoAporte' : 'inversion.hechoPrograma', { codigo: texto(r, 'code') }))
+          })
+        }
         alCancelar={alCerrar}
       />
     </Drawer>

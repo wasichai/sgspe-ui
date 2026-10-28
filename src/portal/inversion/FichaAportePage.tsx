@@ -293,6 +293,7 @@ function ItemsDelAporte({ aporte }: { aporte: Registro }) {
         congelado={solicitud ? undefined : t('fichaAporte.items.congelados')}
         mensajesAlBorrar={{ ITEMS_FROZEN: t('fichaAporte.items.congeladosAlBorrar') }}
         alCambiar={alCambiar}
+        conOtro
       />
       {items.data && total !== null ? (
         <p className="font-medium tabular-nums">

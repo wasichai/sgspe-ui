@@ -6,6 +6,15 @@ export const ES_INVERSION = {
   motivo: 'Motivo (obligatorio)',
   motivoAyuda: 'Un aporte guarda el motivo de cada cambio.',
   altaAporteAyuda: 'Los ítems se cargan después, en la ficha del aporte, antes de enviarlo a aprobar.',
+  // lo que el alta de un aporte dice antes de guardar y lo que la ficha dice al llegar (tercera pasada de UX, 2.11 y 2.12)
+  quePasaraAporte: {
+    titulo: 'Qué pasará',
+    registro: 'Se registra como «Solicitado» en este proyecto.',
+    items: 'Después, en su ficha, se cargan los ítems: su suma es el total que se aprobará.',
+    aprobar: 'Antes de aprobarlo se revisan los lineamientos de la organización y el tope de la campaña.'
+  },
+  hechoAporte: 'Se registró el aporte {{codigo}}. Siga con sus ítems: su suma es el total que se aprobará.',
+  hechoPrograma: 'Se registró el programa {{codigo}}.',
   altaProgramaAyuda: 'El presupuesto, los indicadores, las iniciativas, los hitos y los beneficiarios se cargan en la ficha del programa.',
   programas: {
     titulo: 'Programas',
@@ -74,6 +83,14 @@ export const EN_INVERSION: typeof ES_INVERSION = {
   motivo: 'Reason (required)',
   motivoAyuda: 'A contribution keeps the reason for each change.',
   altaAporteAyuda: 'Items are added later, in the contribution record, before submitting it for approval.',
+  quePasaraAporte: {
+    titulo: 'What will happen',
+    registro: 'It is recorded as “Requested” in this project.',
+    items: 'Then, in its record, the items are added: their sum is the total to be approved.',
+    aprobar: 'Before approving it, the organization’s guidelines and the campaign cap are checked.'
+  },
+  hechoAporte: 'Contribution {{codigo}} was recorded. Continue with its items: their sum is the total to be approved.',
+  hechoPrograma: 'Program {{codigo}} was recorded.',
   altaProgramaAyuda: 'Budget, indicators, initiatives, milestones and beneficiaries are added in the program record.',
   programas: {
     titulo: 'Programs',

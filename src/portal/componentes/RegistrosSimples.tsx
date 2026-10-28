@@ -8,6 +8,7 @@ import { usePedir } from '../datos/http'
 import { campoDe, texto, useDefinicion, usePuedeEditar, useTodosConTope, type Parametros, type Registro } from '../datos/registros'
 import { diaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
+import { CLASE_DE_TONO } from './apariencias'
 import { Drawer } from './Drawer'
 import type { MensajesPropios } from './errores'
 import { Cargando, Vacio } from './Estados'
@@ -58,6 +59,9 @@ export interface RegistrosSimplesProps {
   alCambiar?: () => void
   // lo que el drawer de un registro suma debajo de sus datos (las acciones de IA de una mención, F7)
   delRegistro?: (registro: Registro) => ReactNode
+  // tras crear uno, el drawer queda abierto con el formulario vacío para el siguiente (los ítems de un aporte; tercera pasada de
+  // UX, 2.11): dice que se agregó y ofrece «Listo» para cerrar
+  conOtro?: boolean
 }
 
 const NUEVO = '__nuevo__'
@@ -73,6 +77,12 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
   const abrir = props.alAbrir ?? setPropio
   const crea = escribe && can(objeto, 'CREATE') && !props.congelado
   const registro = abierto && abierto !== NUEVO ? lista.data?.find((r) => r.id === abierto) : undefined
+  // con conOtro, cuántos se agregaron en esta apertura del drawer: cada uno vuelve a montar el formulario vacío
+  const [agregados, setAgregados] = useState(0)
+  const cerrarAlta = () => {
+    setAgregados(0)
+    abrir(null)
+  }
   return (
     <section aria-label={titulo} className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -126,20 +136,32 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
         </div>
       )}
       {/* el alta pedida por la ruta (abierto='__nuevo__') solo se abre para quien crea: una lista congelada no la ofrece */}
-      <Drawer titulo={abierto === NUEVO ? textoNuevo : titulo} abierto={(abierto === NUEVO && crea) || registro !== undefined} alCerrar={() => abrir(null)}>
+      <Drawer titulo={abierto === NUEVO ? textoNuevo : titulo} abierto={(abierto === NUEVO && crea) || registro !== undefined} alCerrar={cerrarAlta}>
         {props.ayuda}
         {abierto === NUEVO && crea ? (
-          <FormularioDeRegistro
-            objeto={objeto}
-            fijos={props.fijos}
-            iniciales={props.iniciales}
-            campos={props.campos}
-            alGuardar={() => {
-              props.alCambiar?.()
-              abrir(null)
-            }}
-            alCancelar={() => abrir(null)}
-          />
+          <>
+            {agregados > 0 ? (
+              <div className={`flex flex-wrap items-center justify-between gap-2 rounded-sg-md px-3 py-2 text-sm ${CLASE_DE_TONO.success}`}>
+                <p role="status">{t('piezas.registros.agregado')}</p>
+                <Button size="sm" variant="secondary" onClick={cerrarAlta}>
+                  {t('piezas.registros.listo')}
+                </Button>
+              </div>
+            ) : null}
+            <FormularioDeRegistro
+              key={agregados}
+              objeto={objeto}
+              fijos={props.fijos}
+              iniciales={props.iniciales}
+              campos={props.campos}
+              alGuardar={() => {
+                props.alCambiar?.()
+                if (props.conOtro) setAgregados((n) => n + 1)
+                else cerrarAlta()
+              }}
+              alCancelar={cerrarAlta}
+            />
+          </>
         ) : registro ? (
           <DelRegistro key={registro.id} {...props} registro={registro} escribe={escribe} alCerrar={() => abrir(null)} />
         ) : null}

@@ -20,10 +20,12 @@ export interface OpcionesDeMontaje {
 }
 
 // la ubicación actual, para ver a dónde navegó un componente
-export const ubicacion = { actual: '' }
+// la ruta actual y el estado del historial con que se llegó (el «hecho» de un alta, AvisoDeExito)
+export const ubicacion: { actual: string; estado: unknown } = { actual: '', estado: null }
 function Ubicacion() {
-  const { pathname, search } = useLocation()
+  const { pathname, search, state } = useLocation()
   ubicacion.actual = pathname + search
+  ubicacion.estado = state
   return null
 }
 

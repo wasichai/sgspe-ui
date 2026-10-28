@@ -363,6 +363,17 @@ describe('S42 · programas e inversión', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Nuevo aporte' }))
     const drawer = await screen.findByRole('dialog', { name: 'Nuevo aporte' })
     expect(within(drawer).getByText('Los ítems se cargan después, en la ficha del aporte, antes de enviarlo a aprobar.')).toBeInTheDocument()
+    // tercera pasada de UX, 2.11: el alta dice qué pasará antes de guardar
+    const quePasara = within(drawer).getByRole('region', { name: 'Qué pasará' })
+    expect(
+      within(quePasara)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent)
+    ).toEqual([
+      'Se registra como «Solicitado» en este proyecto.',
+      'Después, en su ficha, se cargan los ítems: su suma es el total que se aprobará.',
+      'Antes de aprobarlo se revisan los lineamientos de la organización y el tope de la campaña.'
+    ])
     // la moneda es un ENUM: un Select de Radix (combobox) que dice la opción propuesta
     expect(await within(drawer).findByLabelText(/^currency/)).toHaveTextContent('PEN')
     await userEvent.type(within(drawer).getByLabelText('Motivo (obligatorio)'), 'pedido de la asociación')
@@ -371,6 +382,8 @@ describe('S42 · programas e inversión', () => {
     await userEvent.type(within(drawer).getByLabelText(/^conditions/), 'Entrega con acta')
     await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/contributions/a9'))
+    // la ficha dice lo que se registró y qué sigue (2.12)
+    expect(ubicacion.estado).toMatchObject({ hecho: 'Se registró el aporte AP-009. Siga con sus ítems: su suma es el total que se aprobará.' })
     const [alta] = red.a('POST', '/objects/social_contribution/records')
     expect(alta.cuerpo).toMatchObject({ attributes: { code: 'AP-009', currency: 'PEN', project: 'p1' } })
     expect(alta.cabeceras.get('X-Change-Reason')).toBe("UTF-8''pedido%20de%20la%20asociaci%C3%B3n")
