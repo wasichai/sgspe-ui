@@ -90,6 +90,8 @@ describe('S49 · exportación del registro de grupos de interés', () => {
       checklistConfirmed: true
     })
     expect(URL.createObjectURL).toHaveBeenCalled()
+    // tercera pasada de UX, 4.5: la página dice qué se descargó y con qué nivel
+    expect(await screen.findByText(/^Se descargó «.+» con el nivel Externo\. Queda anotado en el historial de exportaciones\.$/)).toBeInTheDocument()
     // quien lee export_log (la gerencia social, la auditoría) ve el registro del proyecto, con quién exportó, en su vista
     await userEvent.click(screen.getByRole('tab', { name: 'Historial' }))
     expect(await screen.findByRole('cell', { name: '42' })).toBeInTheDocument()

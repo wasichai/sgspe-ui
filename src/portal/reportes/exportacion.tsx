@@ -50,6 +50,8 @@ export function useExportacion({
   const [nivel, setNivel] = useState('INTERNO')
   const [checklist, setChecklist] = useState(false)
   const [intentado, setIntentado] = useState(false)
+  // lo último que se descargó, con su nivel: la descarga del navegador no lo dice en la página (tercera pasada de UX, 4.5)
+  const [descargado, setDescargado] = useState<{ archivo: string; nivel: string } | null>(null)
   const externo = nivel !== 'INTERNO'
   const exportar = useMutation({
     // una clave por exportación pedida: una segunda de la misma sesión no se confunde con un reintento de la primera (§3.5)
@@ -60,7 +62,9 @@ export function useExportacion({
         aceptar
       }),
     onSuccess: (archivo) => {
-      guardarArchivo(archivo, typeof nombre === 'function' ? nombre() : nombre)
+      const elNombre = typeof nombre === 'function' ? nombre() : nombre
+      guardarArchivo(archivo, elNombre)
+      setDescargado({ archivo: archivo.nombre ?? elNombre, nivel })
       void cliente.invalidateQueries({ queryKey: ['records', 'export_log'] })
     }
   })
@@ -71,8 +75,10 @@ export function useExportacion({
     setChecklist,
     intentado,
     exportar,
+    descargado,
     pedirExportacion: () => {
       setIntentado(true)
+      setDescargado(null)
       if (externo && !checklist) return
       exportar.mutate()
     },
@@ -81,10 +87,14 @@ export function useExportacion({
       setNivel(valor)
       setChecklist(false)
       setIntentado(false)
+      setDescargado(null)
       exportar.reset()
     },
-    // un filtro nuevo no arrastra el error del pedido anterior
-    reiniciar: () => exportar.reset()
+    // un filtro nuevo no arrastra el error del pedido anterior ni la confirmación de la descarga anterior
+    reiniciar: () => {
+      setDescargado(null)
+      exportar.reset()
+    }
   }
 }
 
@@ -172,10 +182,15 @@ export function ErrorYBotonDeExportar({
 }) {
   const { t } = useTranslation(NS)
   const mensaje = useMensajeDeError()
-  const { exportar, pedirExportacion } = exportacion
+  const { exportar, pedirExportacion, descargado } = exportacion
   const correlacion = correlacionDe(exportar.error)
   return (
     <>
+      {descargado ? (
+        <p role="status" className="text-sm text-sg-success">
+          {t('reportes.descargado', { archivo: descargado.archivo, nivel: rotuloDeOpcion(descargado.nivel) })}
+        </p>
+      ) : null}
       {exportar.isError ? (
         <Alert tone="danger">
           <p>{mensaje(exportar.error, propios(exportar.error))}</p>
