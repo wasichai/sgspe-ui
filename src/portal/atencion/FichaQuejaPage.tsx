@@ -183,7 +183,7 @@ function Ficha({ queja }: { queja: Registro }) {
         por={texto(queja, 'state_changed_by') || null}
         siguiente={siguiente}
         responsable={texto(queja, 'owner_user_email')}
-        vencimiento={plazo?.fecha ?? null}
+        vencimiento={plazo ? plazo.fecha : undefined}
         vencimientoEnHabiles={plazo?.campo === 'ack_due_date'}
         situacion={atributo(queja, 'deadline_status')}
       />

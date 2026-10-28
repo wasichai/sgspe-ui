@@ -249,6 +249,8 @@ describe('S29 · ficha de compromiso', () => {
   it('el detalle de beneficiarios que se lee y viene vacío es «—»; el que no se lee, «Restringido»', async () => {
     fetch = mockFetch(rutas({ ...C1, attributes: { ...C1.attributes, beneficiaries_detail: null } }))
     const vista = abrir()
+    // tercera pasada de UX (1.8): un campo sin dato se pliega; desplegado, dice «—»
+    await userEvent.click(await screen.findByRole('button', { name: /^Mostrar (el campo|los \d+ campos) sin dato$/ }))
     const vacio = await screen.findByText('Detalle de beneficiarios')
     expect(vacio.nextElementSibling).toHaveTextContent(/^—$/)
     expect(screen.queryByText('Restringido')).not.toBeInTheDocument()

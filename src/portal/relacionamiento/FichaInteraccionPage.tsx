@@ -179,8 +179,6 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
         desde={texto(interaccion, 'state_changed_at') || null}
         por={texto(interaccion, 'state_changed_by') || null}
         siguiente={siguiente}
-        responsable={null}
-        vencimiento={null}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <PestanasDeFicha

@@ -9,9 +9,10 @@ import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
+import { CamposPlegables } from '../componentes/CamposPlegables'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
@@ -136,7 +137,6 @@ function Ficha({ programa }: { programa: Registro }) {
         desde={texto(programa, 'state_changed_at') || null}
         por={texto(programa, 'state_changed_by') || null}
         siguiente={siguiente}
-        responsable={texto(programa, 'owner_user_email') || null}
         vencimiento={texto(programa, 'end_date') || null}
       />
       {avisaSinergia ? <Alert tone="notice">{t('fichaPrograma.sinergia')}</Alert> : null}
@@ -159,19 +159,10 @@ function Ficha({ programa }: { programa: Registro }) {
   )
 }
 
-function Dato({ termino, children }: { termino: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-sg-caption text-sg-text-muted">{termino}</dt>
-      <dd className="whitespace-pre-line">{children}</dd>
-    </div>
-  )
-}
-
 function Resumen({ programa }: { programa: Registro }) {
   const { t } = useTranslation(NS)
   const moneda = texto(programa, 'currency')
-  const dia = (campo: string) => (texto(programa, campo) ? diaPe(texto(programa, campo)) : '—')
+  const dia = (campo: string) => (texto(programa, campo) ? diaPe(texto(programa, campo)) : null)
   return (
     <div className="space-y-3 pt-3 text-sm">
       <p className="font-medium tabular-nums">
@@ -179,17 +170,25 @@ function Resumen({ programa }: { programa: Registro }) {
           ? t('fichaPrograma.presupuesto.totalDelPrograma', { monto: montoPe(atributo(programa, 'total_budget'), moneda) })
           : t('fichaPrograma.presupuesto.sinMoneda')}
       </p>
-      <dl className="grid gap-3 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Dato termino={t('fichaPrograma.campos.descripcion')}>{texto(programa, 'description') || '—'}</Dato>
-        </div>
-        <Dato termino={t('fichaPrograma.campos.inicio')}>{dia('start_date')}</Dato>
-        <Dato termino={t('fichaPrograma.campos.fin')}>{dia('end_date')}</Dato>
-        <Dato termino={t('fichaPrograma.campos.tema')}>
-          {texto(programa, 'topic') ? <RegistroVinculado objeto="topic" id={texto(programa, 'topic')} /> : '—'}
-        </Dato>
-        <Dato termino={t('fichaPrograma.campos.moneda')}>{moneda || '—'}</Dato>
-      </dl>
+      {/* lo que no tiene dato se pliega (CamposPlegables, tercera pasada de UX, 1.8) */}
+      <CamposPlegables
+        campos={[
+          {
+            clave: 'descripcion',
+            termino: t('fichaPrograma.campos.descripcion'),
+            valor: texto(programa, 'description') ? <span className="whitespace-pre-line">{texto(programa, 'description')}</span> : null,
+            ancho: true
+          },
+          { clave: 'inicio', termino: t('fichaPrograma.campos.inicio'), valor: dia('start_date') },
+          { clave: 'fin', termino: t('fichaPrograma.campos.fin'), valor: dia('end_date') },
+          {
+            clave: 'tema',
+            termino: t('fichaPrograma.campos.tema'),
+            valor: texto(programa, 'topic') ? <RegistroVinculado objeto="topic" id={texto(programa, 'topic')} /> : null
+          },
+          { clave: 'moneda', termino: t('fichaPrograma.campos.moneda'), valor: moneda || null }
+        ]}
+      />
     </div>
   )
 }

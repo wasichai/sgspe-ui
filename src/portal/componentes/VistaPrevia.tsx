@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { rutaDeFicha } from '../datos/fichas'
 import { opcion } from '../datos/opciones'
-import { campoDe, texto, useDefinicion, useRegistro, type Registro } from '../datos/registros'
+import { campoDe, puedeLeer, texto, useDefinicion, useRegistro, type Registro } from '../datos/registros'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { NS } from '../i18n'
 import { Drawer } from './Drawer'
@@ -152,8 +152,8 @@ function Resumen({ objeto, registro }: { objeto: string; registro: Registro }) {
           desde={texto(registro, 'state_changed_at') || null}
           por={texto(registro, 'state_changed_by') || null}
           siguiente={siguiente}
-          responsable={texto(registro, 'owner_user_email') || null}
-          vencimiento={texto(registro, 'due_date') || null}
+          responsable={puedeLeer(definicion.data, 'owner_user_email') ? texto(registro, 'owner_user_email') || null : undefined}
+          vencimiento={puedeLeer(definicion.data, 'due_date') ? texto(registro, 'due_date') || null : undefined}
           situacion={texto(registro, 'deadline_status') || undefined}
         />
       ) : null}

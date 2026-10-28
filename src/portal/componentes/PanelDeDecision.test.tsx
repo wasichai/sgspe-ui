@@ -106,6 +106,17 @@ describe('PanelDeDecision', () => {
     expect(within(tarjeta('Vencimiento')).getByText('venció hace 3 días hábiles')).toBeInTheDocument()
   })
 
+  // tercera pasada de UX (1.8): un objeto sin responsable ni plazo (un aporte, un incidente) no dibuja esas tarjetas vacías; un dato
+  // que existe y está vacío sí se dice («Sin responsable» importa en un compromiso)
+  it('sin responsable ni vencimiento en el objeto, no dibuja esas tarjetas', async () => {
+    fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
+    montar(<PanelDeDecision objeto="commitment" estado="draft" siguiente={null} />)
+    await within(tarjeta('Estado actual')).findByText('Borrador')
+    expect(screen.queryByRole('group', { name: 'Responsable' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Vencimiento' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Sin responsable')).not.toBeInTheDocument()
+  })
+
   it('«Nada pendiente» solo en un estado final', async () => {
     const final = { ...WF, definition: { ...WF.definition, states: [...WF.definition.states, { name: 'closed', label: 'Cerrado', type: 'FINAL' }] } }
     fetch = mockFetch([{ path: '/objects/commitment/workflow', body: final }])

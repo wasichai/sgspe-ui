@@ -214,8 +214,6 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
         desde={texto(incidente, 'state_changed_at') || null}
         por={texto(incidente, 'state_changed_by') || null}
         siguiente={siguiente}
-        responsable={texto(incidente, 'owner_user_email') || null}
-        vencimiento={null}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <PestanasDeFicha

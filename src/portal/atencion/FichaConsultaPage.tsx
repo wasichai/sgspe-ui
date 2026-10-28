@@ -295,7 +295,7 @@ function Ficha({
         por={texto(qcs, 'state_changed_by') || null}
         siguiente={siguiente}
         responsable={texto(qcs, 'owner_user_email')}
-        vencimiento={plazo?.fecha ?? null}
+        vencimiento={plazo ? plazo.fecha : undefined}
         situacion={atributo(qcs, 'deadline_status')}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">

@@ -161,8 +161,6 @@ function Ficha({ aporte }: { aporte: Registro }) {
         desde={texto(aporte, 'state_changed_at') || null}
         por={texto(aporte, 'state_changed_by') || null}
         siguiente={siguiente}
-        responsable={texto(aporte, 'owner_user_email') || null}
-        vencimiento={null}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <PestanasDeFicha etiqueta={titulo} pestanas={pestanas} />

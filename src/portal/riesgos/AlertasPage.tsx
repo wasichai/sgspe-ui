@@ -270,7 +270,6 @@ function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
         por={texto(alerta, 'state_changed_by') || null}
         siguiente={suya}
         responsable={texto(alerta, 'owner_user_email') || null}
-        vencimiento={null}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">

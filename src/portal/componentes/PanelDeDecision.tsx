@@ -1,4 +1,5 @@
 import { useAuth } from '@wasichai/core'
+import { cn } from '@wasichai/ui'
 import { ChevronDown } from 'lucide-react'
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -29,6 +30,9 @@ export interface SiguienteAccion {
   pide?: string[]
 }
 
+// las columnas en pantalla ancha: una por tarjeta dibujada (clases enteras, para que Tailwind las vea)
+const COLUMNAS: Record<number, string> = { 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4' }
+
 export function PanelDeDecision({
   objeto,
   estado,
@@ -50,8 +54,10 @@ export function PanelDeDecision({
   desde?: string | null
   por?: string | null
   siguiente: SiguienteAccion | null
-  responsable: string | null | undefined
-  vencimiento: string | null | undefined
+  // el responsable y el vencimiento: null es un dato vacío («Sin responsable», que importa); sin la prop (el objeto no tiene
+  // responsable ni plazo: un aporte, un incidente) la tarjeta no se dibuja (tercera pasada de UX, 1.8)
+  responsable?: string | null
+  vencimiento?: string | null
   // deadline_status del registro (JOB-01), o review_status de un riesgo y validity_status de un acuerdo
   situacion?: unknown
   tipoDeSituacion?: 'plazo' | 'revision' | 'vigencia'
@@ -70,7 +76,10 @@ export function PanelDeDecision({
   const aQuien = proyecto === undefined || (!isAdmin && !asignaciones.isSuccess) ? null : isAdmin || asignado ? 'leToca' : 'noAsignado'
   const tipoDelEstado = workflow.data?.definition.states.find((s) => s.name === estado)?.type
   return (
-    <section aria-label={t('paginas.decision.titulo')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section
+      aria-label={t('paginas.decision.titulo')}
+      className={cn('grid gap-3 sm:grid-cols-2', COLUMNAS[2 + Number(responsable !== undefined) + Number(vencimiento !== undefined)])}
+    >
       <Tarjeta titulo={t('paginas.decision.estado')}>
         <EstadoChip objeto={objeto} estado={estado} />
         {/* sin la fecha (un registro anterior a state_changed_at) no se dibuja: «Desde —» no decía nada (rediseño de UX, 2026-10-20) */}
@@ -102,26 +111,30 @@ export function PanelDeDecision({
           <p className="text-sg-text-muted">{t(tipoDelEstado === 'FINAL' ? 'paginas.decision.sinSiguiente' : 'paginas.decision.deOtraPersona')}</p>
         ) : null}
       </Tarjeta>
-      <Tarjeta titulo={t('paginas.decision.responsable')}>
-        {responsable ? <Persona correo={responsable} /> : <p className="text-sg-text-muted">{t('paginas.decision.sinResponsable')}</p>}
-      </Tarjeta>
-      <Tarjeta titulo={t('paginas.decision.vencimiento')}>
-        {vencimiento ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <Dia valor={vencimiento} />
-              <SituacionDePlazo valor={situacion} revision={tipoDeSituacion === 'revision'} vigencia={tipoDeSituacion === 'vigencia'} />
-            </div>
-            {/* el relativo, solo mientras el plazo corre: JOB-01 deja la situación vacía fuera de esos estados (un compromiso cumplido
+      {responsable !== undefined ? (
+        <Tarjeta titulo={t('paginas.decision.responsable')}>
+          {responsable ? <Persona correo={responsable} /> : <p className="text-sg-text-muted">{t('paginas.decision.sinResponsable')}</p>}
+        </Tarjeta>
+      ) : null}
+      {vencimiento !== undefined ? (
+        <Tarjeta titulo={t('paginas.decision.vencimiento')}>
+          {vencimiento ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Dia valor={vencimiento} />
+                <SituacionDePlazo valor={situacion} revision={tipoDeSituacion === 'revision'} vigencia={tipoDeSituacion === 'vigencia'} />
+              </div>
+              {/* el relativo, solo mientras el plazo corre: JOB-01 deja la situación vacía fuera de esos estados (un compromiso cumplido
                 no «venció hace 40 días») */}
-            {typeof situacion === 'string' && situacion !== '' ? (
-              <CuandoVence dia={vencimiento} habiles={vencimientoEnHabiles} className="block text-sg-caption text-sg-text-muted" />
-            ) : null}
-          </>
-        ) : (
-          <p className="text-sg-text-muted">{t('paginas.decision.sinVencimiento')}</p>
-        )}
-      </Tarjeta>
+              {typeof situacion === 'string' && situacion !== '' ? (
+                <CuandoVence dia={vencimiento} habiles={vencimientoEnHabiles} className="block text-sg-caption text-sg-text-muted" />
+              ) : null}
+            </>
+          ) : (
+            <p className="text-sg-text-muted">{t('paginas.decision.sinVencimiento')}</p>
+          )}
+        </Tarjeta>
+      ) : null}
     </section>
   )
 }
