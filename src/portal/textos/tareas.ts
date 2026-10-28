@@ -17,7 +17,19 @@ export const ES_TAREAS = {
   paraTomarAyuda: 'Las tareas de escalamiento llegan sin asignar: las toma una de las personas avisadas.',
   // solo a quien lee todos los proyectos: su cola sería la de todo el tenant
   paraTomarGlobal: 'Como ve todos los proyectos, las tareas para tomar se ven dentro de cada uno: elija uno en el selector.',
-  columnas: { tarea: 'Tarea', proyecto: 'Proyecto', origen: 'Origen', prioridad: 'Prioridad', vence: 'Vence', estado: 'Estado' },
+  columnas: { tarea: 'Tarea', proyecto: 'Proyecto', origen: 'Origen', prioridad: 'Prioridad', vence: 'Vence', estado: 'Estado', accion: 'Acción' },
+  seleccion: {
+    todas: 'Elegir todas las que se pueden tomar',
+    elegir: 'Elegir «{{tarea}}»',
+    elegidas_one: '{{count}} elegida',
+    elegidas_other: '{{count}} elegidas',
+    tomar_one: 'Tomar la elegida',
+    tomar_other: 'Tomar las {{count}} elegidas',
+    tomadas_one: 'Tomó {{count}} tarea: ahora está a su cargo.',
+    tomadas_other: 'Tomó {{count}} tareas: ahora están a su cargo.',
+    algunas_one: 'Tomó {{n}}; {{count}} no se pudo tomar: otra persona la tomó antes o cambió. La lista ya se volvió a leer.',
+    algunas_other: 'Tomó {{n}}; {{count}} no se pudieron tomar: otra persona las tomó antes o cambiaron. La lista ya se volvió a leer.'
+  },
   origenes: {
     commitment: 'Compromiso',
     engagement: 'Interacción',
@@ -67,7 +79,19 @@ export const EN_TAREAS: typeof ES_TAREAS = {
   vaciaParaTomarEnSusProyectos: 'There are no unassigned tasks in your projects.',
   paraTomarAyuda: 'Escalation tasks arrive unassigned: one of the notified people takes them.',
   paraTomarGlobal: 'Since you see every project, tasks to take are shown inside each one: pick one in the selector.',
-  columnas: { tarea: 'Task', proyecto: 'Project', origen: 'Origin', prioridad: 'Priority', vence: 'Due', estado: 'Status' },
+  columnas: { tarea: 'Task', proyecto: 'Project', origen: 'Origin', prioridad: 'Priority', vence: 'Due', estado: 'Status', accion: 'Action' },
+  seleccion: {
+    todas: 'Select all that can be taken',
+    elegir: 'Select “{{tarea}}”',
+    elegidas_one: '{{count}} selected',
+    elegidas_other: '{{count}} selected',
+    tomar_one: 'Take the selected one',
+    tomar_other: 'Take the {{count}} selected',
+    tomadas_one: 'You took {{count}} task: it is now yours.',
+    tomadas_other: 'You took {{count}} tasks: they are now yours.',
+    algunas_one: 'You took {{n}}; {{count}} could not be taken: someone else took it first or it changed. The list was read again.',
+    algunas_other: 'You took {{n}}; {{count}} could not be taken: someone else took them first or they changed. The list was read again.'
+  },
   origenes: {
     commitment: 'Commitment',
     engagement: 'Engagement',

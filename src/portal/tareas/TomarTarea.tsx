@@ -1,8 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMensajeDeError } from '../componentes/errores'
-import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
+import { useEscribeEnProyecto, useEscribeEnProyectos } from '../contexto/ProyectoLayout'
 import { atributo, texto, useActualizar, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 
@@ -38,4 +40,41 @@ export function TomarTarea({ tarea, alTomar }: { tarea: Registro; alTomar?: (tar
       ) : null}
     </div>
   )
+}
+
+// tomar varias a la vez (tercera pasada de UX, 3.3): una por una, cada una con su If-Match; la que otra persona tomó antes (412) o
+// que el servidor rechaza no detiene a las demás, y el resultado dice cuántas se tomaron y cuántas no
+export function useTomarVarias() {
+  const { user, can } = useAuth()
+  const escribeEn = useEscribeEnProyectos()
+  const tomar = useActualizar('task')
+  const cliente = useQueryClient()
+  const [tomando, setTomando] = useState(false)
+  const [resultado, setResultado] = useState<{ tomadas: number; fallidas: number } | null>(null)
+  const puedeTomar = (tarea: Registro) =>
+    Boolean(user) &&
+    can('task', 'UPDATE') &&
+    !['done', 'cancelled'].includes(tarea.state ?? '') &&
+    !atributo(tarea, 'assignee_user_id') &&
+    escribeEn(texto(tarea, 'project') || undefined)
+  const tomarVarias = async (tareas: Registro[]) => {
+    if (!user) return
+    setTomando(true)
+    setResultado(null)
+    let tomadas = 0
+    let fallidas = 0
+    for (const tarea of tareas) {
+      try {
+        await tomar.mutateAsync({ registro: tarea, cambios: { assignee_user_id: user.id, assignee_user_email: user.email } })
+        tomadas++
+      } catch {
+        fallidas++
+      }
+    }
+    // la que falló se relee también: la lista dice quién la tiene ahora
+    if (fallidas > 0) await cliente.invalidateQueries({ queryKey: ['records', 'task'] })
+    setResultado({ tomadas, fallidas })
+    setTomando(false)
+  }
+  return { puedeTomar, tomar: tomarVarias, tomando, resultado }
 }

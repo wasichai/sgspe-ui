@@ -197,6 +197,33 @@ describe('S47 · mis tareas', () => {
     await waitFor(() => expect(within(drawer).queryByRole('button', { name: 'Tomar la tarea' })).not.toBeInTheDocument())
   })
 
+  // tercera pasada de UX, 3.3: «Tomar» en la fila y varias a la vez, cada una con su If-Match; la que otra persona tomó antes no
+  // detiene a las demás
+  it('en «Para tomar» se toma desde la fila o se eligen varias y se toman juntas', async () => {
+    const OTRA = registro(
+      't5',
+      { project: 'p1', title: 'Escalamiento C-003 nivel 1', commitment: 'c3', assignee_user_id: null, assignee_user_email: null },
+      { state: 'open' }
+    )
+    fetch = mockFetch(rutas())
+    red = servidor(
+      [T1, T2, T3, ESCALAMIENTO, OTRA],
+      [
+        { method: 'PUT', path: '/objects/task/records/t4', responder: () => jsonResponse(ESCALAMIENTO) },
+        { method: 'PUT', path: '/objects/task/records/t5', responder: () => problema(412, 'otra persona la tomó') }
+      ]
+    )
+    montar(<MisTareasPage />, { ruta: '/projects/p1/tasks', camino: '/projects/:projectId/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const paraTomar = await screen.findByRole('region', { name: 'Para tomar' })
+    expect(await within(paraTomar).findByRole('button', { name: 'Tomar «Escalamiento C-002 nivel 1»' })).toBeInTheDocument()
+    await userEvent.click(within(paraTomar).getByRole('checkbox', { name: 'Elegir todas las que se pueden tomar' }))
+    expect(within(paraTomar).getByRole('checkbox', { name: 'Elegir «Escalamiento C-003 nivel 1»' })).toBeChecked()
+    await userEvent.click(within(paraTomar).getByRole('button', { name: 'Tomar las 2 elegidas' }))
+    expect(await within(paraTomar).findByRole('status')).toHaveTextContent('Tomó 1; 1 no se pudo tomar')
+    expect(red.a('PUT', '/objects/task/records/t4')[0].cuerpo).toMatchObject({ attributes: { assignee_user_id: 'u-cmm' } })
+    expect(red.a('PUT', '/objects/task/records/t5')).toHaveLength(1)
+  })
+
   it('una tarea de una QCS, un riesgo o una alerta (F4) lleva a la ficha de su origen, con su tipo y su nombre', async () => {
     const acuse = registro('t5', { project: 'p1', title: 'Acusar recibo de la queja Q-001', grievance: 'g1', assignee_user_id: 'u-cmm' }, { state: 'open' })
     const revision = registro('t6', { project: 'p1', title: 'Revisar el riesgo R-001', social_risk: 'k1', assignee_user_id: 'u-cmm' }, { state: 'open' })

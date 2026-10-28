@@ -27,10 +27,11 @@ import {
   type Registro
 } from '../datos/registros'
 import type { UseQueryResult } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { OrigenDeTarea, TareaDrawer } from './TareaDrawer'
+import { OrigenDeTarea, origenDe, TareaDrawer } from './TareaDrawer'
+import { TomarTarea, useTomarVarias } from './TomarTarea'
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { CuandoVence, FechaDePlazo } from '../componentes/CuandoVence'
@@ -163,6 +164,7 @@ export function MisTareasPage() {
                     alAbrir={abrir}
                     etiqueta={t('tareas.grupos.paraTomar')}
                     conProyecto={!proyecto}
+                    tomables
                   />
                 </>
               )}
@@ -210,23 +212,65 @@ function GrupoDeTareas({
   )
 }
 
+// tomables: las de «Para tomar» (tercera pasada de UX, 3.3), con «Tomar» en cada fila y la elección de varias para tomarlas juntas.
+// una columna sin ningún valor en la página (el origen, la prioridad) no se dibuja
 function TablaDeTareas({
   tareas,
   vacio,
   alAbrir,
   conProyecto = false,
-  etiqueta
+  etiqueta,
+  tomables = false
 }: {
   tareas: Registro[]
   vacio: string
   alAbrir: (tarea: Registro) => void
   conProyecto?: boolean
   etiqueta?: string
+  tomables?: boolean
 }) {
   const { t } = useTranslation(NS)
   const proyectos = useProyectos()
   const telefono = useEsTelefono()
+  const [elegidas, setElegidas] = useState<Set<string>>(new Set())
+  const varias = useTomarVarias()
   if (tareas.length === 0) return <Vacio titulo={vacio} />
+  // solo lo que sigue en la página y se puede tomar: una tarea tomada o que ya no está no viaja
+  const tomablesAqui = tomables ? tareas.filter((x) => varias.puedeTomar(x)) : []
+  const deLaSeleccion = tomablesAqui.filter((x) => elegidas.has(x.id))
+  const alternar = (id: string, si: boolean) => {
+    const siguiente = new Set(elegidas)
+    if (si) siguiente.add(id)
+    else siguiente.delete(id)
+    setElegidas(siguiente)
+  }
+  const conOrigen = tareas.some((x) => origenDe(x) !== null)
+  const conPrioridad = tareas.some((x) => Boolean(opcion(x, 'priority')))
+  const seleccion =
+    tomablesAqui.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {deLaSeleccion.length > 0 ? (
+          <>
+            <span aria-live="polite">{t('tareas.seleccion.elegidas', { count: deLaSeleccion.length })}</span>
+            <Button
+              size="sm"
+              disabled={varias.tomando}
+              aria-busy={varias.tomando}
+              onClick={() => void varias.tomar(deLaSeleccion).then(() => setElegidas(new Set()))}
+            >
+              {varias.tomando ? t('tareas.ficha.tomando') : t('tareas.seleccion.tomar', { count: deLaSeleccion.length })}
+            </Button>
+          </>
+        ) : null}
+        {varias.resultado ? (
+          <p role="status" className={varias.resultado.fallidas > 0 ? 'text-sg-warning' : 'text-sg-success'}>
+            {varias.resultado.fallidas > 0
+              ? t('tareas.seleccion.algunas', { n: varias.resultado.tomadas, count: varias.resultado.fallidas })
+              : t('tareas.seleccion.tomadas', { count: varias.resultado.tomadas })}
+          </p>
+        ) : null}
+      </div>
+    ) : null
   if (telefono)
     return (
       <ListaEnTarjetas
@@ -256,57 +300,100 @@ function TablaDeTareas({
       />
     )
   return (
-    <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-      <Table aria-label={etiqueta ?? t('tareas.titulo')}>
-        <thead>
-          <tr>
-            {(['tarea', ...(conProyecto ? (['proyecto'] as const) : []), 'origen', 'prioridad', 'vence', 'estado'] as const).map((c) => (
-              <Th key={c} scope="col">
-                {t(`tareas.columnas.${c}`)}
-              </Th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {tareas.map((x) => {
-            return (
-              <tr key={x.id}>
-                <Td className="text-sm">
-                  <button
-                    type="button"
-                    className="text-left text-sg-primary-text underline"
-                    aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
-                    onClick={() => alAbrir(x)}
-                  >
-                    {texto(x, 'title')}
-                  </button>
-                </Td>
-                {conProyecto ? (
-                  <Td className="text-sm">
-                    <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} />
-                  </Td>
-                ) : null}
-                <Td className="text-sm">
-                  <OrigenDeTarea tarea={x} />
-                </Td>
-                <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td>
-                <Td className="space-x-2 text-sm">
-                  <span>
-                    <Dia valor={texto(x, 'due_date')} />
-                  </span>
-                  <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
-                  {texto(x, 'due_date') && atributo(x, 'deadline_status') ? (
-                    <CuandoVence dia={texto(x, 'due_date')} className="block text-sg-caption text-sg-text-muted" />
+    <div className="space-y-2">
+      {seleccion}
+      <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+        <Table aria-label={etiqueta ?? t('tareas.titulo')}>
+          <thead>
+            <tr>
+              {tomablesAqui.length > 0 ? (
+                <Th scope="col">
+                  <input
+                    type="checkbox"
+                    aria-label={t('tareas.seleccion.todas')}
+                    checked={deLaSeleccion.length === tomablesAqui.length}
+                    onChange={(e) => setElegidas(e.target.checked ? new Set(tomablesAqui.map((x) => x.id)) : new Set())}
+                  />
+                </Th>
+              ) : null}
+              {(
+                [
+                  'tarea',
+                  ...(conProyecto ? (['proyecto'] as const) : []),
+                  ...(conOrigen ? (['origen'] as const) : []),
+                  ...(conPrioridad ? (['prioridad'] as const) : []),
+                  'vence',
+                  'estado'
+                ] as const
+              ).map((c) => (
+                <Th key={c} scope="col">
+                  {t(`tareas.columnas.${c}`)}
+                </Th>
+              ))}
+              {tomablesAqui.length > 0 ? (
+                <Th scope="col">
+                  <span className="sr-only">{t('tareas.columnas.accion')}</span>
+                </Th>
+              ) : null}
+            </tr>
+          </thead>
+          <tbody>
+            {tareas.map((x) => {
+              const tomable = tomablesAqui.includes(x)
+              return (
+                <tr key={x.id}>
+                  {tomablesAqui.length > 0 ? (
+                    <Td>
+                      {tomable ? (
+                        <input
+                          type="checkbox"
+                          aria-label={t('tareas.seleccion.elegir', { tarea: texto(x, 'title') })}
+                          checked={elegidas.has(x.id)}
+                          onChange={(e) => alternar(x.id, e.target.checked)}
+                        />
+                      ) : null}
+                    </Td>
                   ) : null}
-                </Td>
-                <Td>
-                  <EstadoChip objeto="task" estado={x.state} />
-                </Td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </Table>
+                  <Td className="text-sm">
+                    <button
+                      type="button"
+                      className="text-left text-sg-primary-text underline"
+                      aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
+                      onClick={() => alAbrir(x)}
+                    >
+                      {texto(x, 'title')}
+                    </button>
+                  </Td>
+                  {conProyecto ? (
+                    <Td className="text-sm">
+                      <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} />
+                    </Td>
+                  ) : null}
+                  {conOrigen ? (
+                    <Td className="text-sm">
+                      <OrigenDeTarea tarea={x} />
+                    </Td>
+                  ) : null}
+                  {conPrioridad ? <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td> : null}
+                  <Td className="space-x-2 text-sm">
+                    <span>
+                      <Dia valor={texto(x, 'due_date')} />
+                    </span>
+                    <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
+                    {texto(x, 'due_date') && atributo(x, 'deadline_status') ? (
+                      <CuandoVence dia={texto(x, 'due_date')} className="block text-sg-caption text-sg-text-muted" />
+                    ) : null}
+                  </Td>
+                  <Td>
+                    <EstadoChip objeto="task" estado={x.state} />
+                  </Td>
+                  {tomablesAqui.length > 0 ? <Td>{tomable ? <TomarTarea tarea={x} /> : null}</Td> : null}
+                </tr>
+              )
+            })}
+          </tbody>
+        </Table>
+      </div>
     </div>
   )
 }

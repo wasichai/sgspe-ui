@@ -237,3 +237,12 @@ export function useEscribeEnProyecto(projectId: string | undefined): boolean {
   const asignado = useAsignadoAlProyecto(projectId)
   return isAdmin || asignado
 }
+
+// la misma guarda para una lista con registros de varios proyectos (tomar varias tareas a la vez): dice, por proyecto, si la cuenta
+// escribe en él
+export function useEscribeEnProyectos(): (projectId: string | undefined) => boolean {
+  const { isAdmin } = useAuth()
+  const asignaciones = useMisAsignaciones()
+  const vigentes = new Set((asignaciones.data ?? []).filter((a) => vigenciaDeAsignacion(a) === 'vigente').map((a) => String(a.attributes.project)))
+  return (projectId) => isAdmin || (projectId !== undefined && vigentes.has(projectId))
+}
