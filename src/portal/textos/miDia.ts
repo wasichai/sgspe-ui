@@ -6,6 +6,7 @@ export const ES_MI_DIA = {
     descripcion: 'Lo vencido primero, con su motivo y su fecha.',
     aCargo: 'A su cargo',
     nada: 'Nada pendiente a su cargo.',
+    noSeLeyo: 'No se pudieron leer {{que}}: lo que está a su cargo puede estar incompleto.',
     verTareas: 'Ver mis tareas',
     vencio: 'venció el {{fecha}}',
     vence: 'vence el {{fecha}}',
@@ -66,6 +67,14 @@ export const ES_MI_DIA = {
     grievance: 'Queja',
     inquiry: 'Consulta',
     stakeholder_request: 'Solicitud'
+  },
+  // lo que no se pudo leer, en «No se pudieron leer {{que}}»
+  fuentes: {
+    task: 'sus tareas',
+    commitment: 'sus compromisos',
+    grievance: 'sus quejas',
+    inquiry: 'sus consultas',
+    stakeholder_request: 'sus solicitudes'
   }
 }
 
@@ -75,6 +84,7 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     descripcion: 'Overdue first, with its reason and date.',
     aCargo: 'In your charge',
     nada: 'Nothing pending in your charge.',
+    noSeLeyo: 'Your {{que}} could not be read: what is in your charge may be incomplete.',
     verTareas: 'See my tasks',
     vencio: 'was due {{fecha}}',
     vence: 'due {{fecha}}',
@@ -135,5 +145,12 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     grievance: 'Grievance',
     inquiry: 'Inquiry',
     stakeholder_request: 'Request'
+  },
+  fuentes: {
+    task: 'tasks',
+    commitment: 'commitments',
+    grievance: 'grievances',
+    inquiry: 'inquiries',
+    stakeholder_request: 'requests'
   }
 }

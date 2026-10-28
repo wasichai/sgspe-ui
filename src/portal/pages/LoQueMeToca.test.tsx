@@ -273,6 +273,20 @@ describe('Lo que me toca hoy', () => {
     expect(fetch.calls.some((c) => c.path.startsWith('/objects/task/'))).toBe(false)
   })
 
+  // tercera pasada de UX: una lectura que falla no es «nada pendiente»; decirlo es contestar lo contrario de lo que pasa
+  it('una lectura que falla no se lee como «Nada pendiente»: dice qué no se pudo leer y ofrece reintentar', async () => {
+    fetch = mockFetch([
+      { path: /^\/objects\/task\/records\?.*empty=assignee_user_id/, body: pagina([]) },
+      { path: /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/, status: 400, body: { title: 'Falló' } },
+      { path: /^\/objects\/commitment\/records\?.*owner_user_id=u-relacionista/, body: pagina([]) },
+      ...sinAsignaciones
+    ])
+    montar(<LoQueMeToca />, { usuario: RELACIONISTA, permisos: permisos({ task: ['READ'], commitment: ['READ'] }) })
+    expect(await screen.findByText('No se pudieron leer sus tareas: lo que está a su cargo puede estar incompleto.')).toBeInTheDocument()
+    expect(within(region()).getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(screen.queryByText('Nada pendiente a su cargo.')).not.toBeInTheDocument()
+  })
+
   it('sin lectura de lo que se tiene a cargo, el bloque no se dibuja', async () => {
     fetch = mockFetch(sinAsignaciones)
     const { container } = montar(<LoQueMeToca />, { usuario: RELACIONISTA, permisos: permisos({}) })

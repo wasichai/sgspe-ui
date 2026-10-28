@@ -9,7 +9,7 @@ const vencidosPrimero = (a: Registro, b: Registro) => Number(texto(b, 'deadline_
 // lo que la persona tiene a su cargo, decidido por sus permisos y nunca por el nombre de su rol (RQ-SEC-005): sus tareas abiertas
 // (assignee_user_id), los compromisos de los que es responsable y las QCS que atiende (owner_user_id), cada lectura solo si la
 // cuenta lee su objeto; abierto y con los vencidos primero. lo leen «Lo que me toca hoy» y la bienvenida (mismas consultas, misma
-// caché). lee: si la cuenta lee alguno de los objetos
+// caché). lee: si la cuenta lee alguno de los objetos; fallidas: las lecturas que no se pudieron hacer, con su reintento
 export function useSuTrabajo() {
   const { user, can } = useAuth()
   const yo = user?.id ?? ''
@@ -25,11 +25,19 @@ export function useSuTrabajo() {
     .filter((q) => q.lee)
   const lee = leeTareas || leeCompromisos || deQcs.length > 0
   const cargando = (leeTareas && tareas.isPending) || (leeCompromisos && compromisos.isPending) || deQcs.some((q) => q.consulta.isPending)
+  // las lecturas que fallaron (tercera pasada de UX): sin ellas, una lista vacía no es «nada pendiente»
+  const fallidas = [
+    { objeto: 'task', consulta: tareas, lee: leeTareas },
+    { objeto: 'commitment', consulta: compromisos, lee: leeCompromisos },
+    ...deQcs.map((q) => ({ objeto: q.objeto as string, consulta: q.consulta, lee: q.lee }))
+  ]
+    .filter((f) => f.lee && f.consulta.isError && !f.consulta.data)
+    .map((f) => ({ objeto: f.objeto, error: f.consulta.error, reintentar: () => void f.consulta.refetch() }))
   const abiertas = (tareas.data ?? []).filter((x) => TAREA_ABIERTA.includes(x.state ?? '')).sort(vencidosPrimero)
   const aCargo = (compromisos.data ?? []).filter((c) => !COMPROMISO_CERRADO.includes(c.state ?? '')).sort(vencidosPrimero)
   const qcs = deQcs.flatMap((q) =>
     (q.consulta.data ?? []).filter((r) => estaAbierta(q.objeto, r)).map((registro) => ({ objeto: q.objeto as string, registro }))
   )
   qcs.sort((a, b) => vencidosPrimero(a.registro, b.registro))
-  return { lee, cargando, abiertas, aCargo, qcs }
+  return { lee, cargando, fallidas, abiertas, aCargo, qcs }
 }

@@ -3,6 +3,7 @@ import { useAuth } from '@wasichai/core'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Cargando } from '../componentes/Estados'
+import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { ListaPriorizada, type EntradaPriorizada, type TonoDeEntrada } from '../componentes/ListaPriorizada'
 import { Seccion } from '../componentes/Seccion'
 import { nombreDeProyecto, useLeeTodosLosProyectos, useMisAsignaciones, useProyectos, vigenciaDeAsignacion } from '../contexto/proyectos'
@@ -164,13 +165,22 @@ export function LoQueMeToca() {
         trabajo.cargando ? (
           <Cargando compacto />
         ) : (
-          <ListaPriorizada
-            titulo={t('miDia.hoy.aCargo')}
-            total={aCargo.length}
-            limite={A_LA_VISTA}
-            vacio={t('miDia.hoy.nada')}
-            entradas={aCargo.map((item) => entrada(item, t(`miDia.tipos.${item.objeto}`)))}
-          />
+          <>
+            {/* una lectura que falló se dice con su reintento; con alguna fallida, la lista vacía no dice «nada pendiente» */}
+            {trabajo.fallidas.map((f) => (
+              <div key={f.objeto} className="space-y-2">
+                <p className="text-sm text-sg-text-secondary">{t('miDia.hoy.noSeLeyo', { que: t(`miDia.fuentes.${f.objeto}`) })}</p>
+                <FalloDeLectura error={f.error} alReintentar={f.reintentar} />
+              </div>
+            ))}
+            <ListaPriorizada
+              titulo={t('miDia.hoy.aCargo')}
+              total={aCargo.length}
+              limite={A_LA_VISTA}
+              vacio={trabajo.fallidas.length > 0 ? undefined : t('miDia.hoy.nada')}
+              entradas={aCargo.map((item) => entrada(item, t(`miDia.tipos.${item.objeto}`)))}
+            />
+          </>
         )
       ) : null}
       {paraTomar.length > 0 ? (
