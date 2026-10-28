@@ -25,8 +25,8 @@ export function ChipDeEstado({ objeto, estado, etiqueta }: { objeto: string; est
   )
 }
 
-// las etiquetas de los estados de un workflow, para filtros y pasos
-export function useEtiquetasDeEstado(objeto: string): Record<string, string> {
+// las etiquetas de los estados de un workflow, para filtros y pasos; sin objeto (la cuenta no lo lee) no se pide nada
+export function useEtiquetasDeEstado(objeto: string | undefined): Record<string, string> {
   const workflow = useWorkflow(objeto)
   return Object.fromEntries((workflow.data?.definition.states ?? []).map((s) => [s.name, s.label]))
 }

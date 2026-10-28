@@ -84,13 +84,15 @@ export function LoQueMeToca() {
     : []
   const consultados = vigentes.slice(0, TOPE_DE_PROYECTOS)
   const pedir = usePedir()
-  // el estado de cada entrada con el rótulo de su flujo; sin el flujo legible, la entrada no lo dice
+  // el estado de cada entrada con el rótulo de su flujo, pedido solo de lo que la cuenta lee; sin el flujo legible, la entrada no
+  // lo dice
+  const leido = (objeto: string) => (can(objeto, 'READ') ? objeto : undefined)
   const etiquetas: Record<string, Record<string, string>> = {
-    task: useEtiquetasDeEstado('task'),
-    commitment: useEtiquetasDeEstado('commitment'),
-    grievance: useEtiquetasDeEstado('grievance'),
-    inquiry: useEtiquetasDeEstado('inquiry'),
-    stakeholder_request: useEtiquetasDeEstado('stakeholder_request')
+    task: useEtiquetasDeEstado(leido('task')),
+    commitment: useEtiquetasDeEstado(leido('commitment')),
+    grievance: useEtiquetasDeEstado(leido('grievance')),
+    inquiry: useEtiquetasDeEstado(leido('inquiry')),
+    stakeholder_request: useEtiquetasDeEstado(leido('stakeholder_request'))
   }
   // lo que se acaba de tomar en la línea: la tarea pasa a «A su cargo» y aquí se dice
   const [tomada, setTomada] = useState<string | null>(null)

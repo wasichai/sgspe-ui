@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { BotonCrear } from '../componentes/BotonCrear'
+import { Seccion } from '../componentes/Seccion'
 import { useMisAsignaciones, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { NS } from '../i18n'
 
@@ -87,12 +88,5 @@ export function SinAsignacion() {
   const { t } = useTranslation(NS)
   const { sinDonde } = useAtajos()
   if (!sinDonde) return null
-  return (
-    <section aria-labelledby="sin-asignacion" className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
-      <h2 id="sin-asignacion" className="text-sg-h3 font-semibold">
-        {t('miDia.sinAsignacion.titulo')}
-      </h2>
-      <p className="text-sm text-sg-text-secondary">{t('miDia.sinAsignacion.texto')}</p>
-    </section>
-  )
+  return <Seccion titulo={t('miDia.sinAsignacion.titulo')} descripcion={t('miDia.sinAsignacion.texto')} />
 }

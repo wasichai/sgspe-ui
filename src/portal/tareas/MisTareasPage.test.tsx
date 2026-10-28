@@ -244,8 +244,8 @@ describe('S47 · mis tareas', () => {
     expect(await within(tabla).findByText('Registro reservado')).toBeInTheDocument()
   })
 
-  // plan 4.2a: el escalamiento de nivel 2 de una QCS confidencial no lleva vínculo a la QCS, sino un título genérico: la lista dice
-  // «—» en el origen, la ficha no ofrece «Ver origen» y tomarla devuelve su clave tal como se leyó
+  // plan 4.2a: el escalamiento de nivel 2 de una QCS confidencial no lleva vínculo a la QCS, sino un título genérico: la lista no
+  // dice un origen, la ficha no ofrece «Ver origen» y tomarla devuelve su clave tal como se leyó
   it('el escalamiento de nivel 2 de una QCS confidencial, sin origen, se lista, se abre y se toma sin enlace roto', async () => {
     const NIVEL_2 = registro(
       't7',
@@ -270,7 +270,8 @@ describe('S47 · mis tareas', () => {
     const tabla = await screen.findByRole('table')
     const fila = within(tabla).getByRole('button', { name: 'Abrir QCS confidencial vencida en Proyecto Norte' }).closest('tr')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
-    expect(fila.querySelectorAll('td')[1]).toHaveTextContent('—')
+    // sin origen en ninguna tarea de la página, la columna no se dibuja (tercera pasada de UX, 3.3): no hay un «—» por fila
+    expect(within(tabla).queryByRole('columnheader', { name: 'Origen' })).not.toBeInTheDocument()
     await userEvent.click(within(fila).getByRole('button', { name: 'Abrir QCS confidencial vencida en Proyecto Norte' }))
     const drawer = await screen.findByRole('dialog')
     expect(within(drawer).queryByRole('link')).not.toBeInTheDocument()

@@ -86,9 +86,10 @@ describe('Lo que me toca hoy', () => {
   // tercera pasada de UX, 3.2: cada entrada dice su proyecto y su estado, una QCS lo que plantea, y una tarea para tomar se toma
   // en la línea
   it('cada entrada dice su proyecto y su estado, una QCS lo que plantea, y «Tomar» toma la tarea sin abrirla', async () => {
+    // el GET trae como clave cada campo legible, también los vacíos: la escritura sale de esa forma
     const PARA_TOMAR = registro(
       'q1',
-      { title: 'Registrar la asistencia', project: 'p1', due_date: '2026-10-19' },
+      { title: 'Registrar la asistencia', project: 'p1', due_date: '2026-10-19', assignee_user_id: null, assignee_user_email: null },
       { state: 'open', updatedAt: '2026-10-01T10:00:00Z' }
     )
     fetch = mockFetch([
