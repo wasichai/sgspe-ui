@@ -62,12 +62,13 @@ describe('Lo que me toca hoy', () => {
     await waitFor(() => expect(grupo(/^A su cargo/)).toBeInTheDocument())
     // el total del grupo es lo abierto que la API devolvió a quien mira; lo hecho no cuenta
     expect(within(grupo(/^A su cargo/)).getByRole('heading')).toHaveTextContent('6')
+    // las fechas se leen como en el resto del portal, no en el formato de escritura del campo (tercera pasada de UX)
     expect(entradas(/^A su cargo/)).toEqual([
-      'C-001 · Mejora del canalCompromiso · Vencido · venció el 10/10/2026',
-      'Visitar Tunas PampaTarea · Vencido · venció el 17/10/2026',
-      'Preparar el tallerTarea · Por vencer · vence el 23/10/2026',
-      'Redactar el actaTarea · Al día · vence el 30/10/2026',
-      'Llamar a la juntaTarea · Al día · vence el 04/11/2026'
+      'C-001 · Mejora del canalCompromiso · Vencido · venció el 10 oct. 2026',
+      'Visitar Tunas PampaTarea · Vencido · venció el 17 oct. 2026',
+      'Preparar el tallerTarea · Por vencer · vence el 23 oct. 2026',
+      'Redactar el actaTarea · Al día · vence el 30 oct. 2026',
+      'Llamar a la juntaTarea · Al día · vence el 4 nov. 2026'
     ])
     expect(within(grupo(/^A su cargo/)).getByRole('link', { name: 'Visitar Tunas Pampa' })).toHaveAttribute('href', '/projects/p1/tasks?task=t2')
     // ninguna entrada queda sin forma de verse: el resto se despliega en el lugar
@@ -106,8 +107,8 @@ describe('Lo que me toca hoy', () => {
           .getAllByRole('listitem')
           .map((li) => li.textContent)
       ).toEqual([
-        'Registrar la asistenciaSin asignar · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19/10/2026',
-        'Georreferenciar la captaciónSin asignar · PRJ-02 · Proyecto Ejemplo B · Al día · vence el 28/10/2026',
+        'Registrar la asistenciaSin asignar · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19 oct. 2026',
+        'Georreferenciar la captaciónSin asignar · PRJ-02 · Proyecto Ejemplo B · Al día · vence el 28 oct. 2026',
         'Fotografiar el tramoSin asignar · PRJ-01 · Proyecto Ejemplo A'
       ])
     )
@@ -169,7 +170,7 @@ describe('Lo que me toca hoy', () => {
           .getAllByRole('listitem')
           .map((li) => li.textContent)
       ).toEqual([
-        'Registrar la asistenciaSin asignar · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19/10/2026',
+        'Registrar la asistenciaSin asignar · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19 oct. 2026',
         'Georreferenciar la captaciónSin asignar · PRJ-02 · Proyecto Ejemplo B'
       ])
     )
@@ -225,8 +226,8 @@ describe('Lo que me toca hoy', () => {
         .getAllByRole('listitem')
         .map((li) => li.textContent)
     ).toEqual([
-      'Registrar la asistenciaSin asignar · Vencido · venció el 19/10/2026',
-      'Georreferenciar la captaciónSin asignar · Al día · vence el 28/10/2026',
+      'Registrar la asistenciaSin asignar · Vencido · venció el 19 oct. 2026',
+      'Georreferenciar la captaciónSin asignar · Al día · vence el 28 oct. 2026',
       'Fotografiar el tramoSin asignar'
     ])
     expect(within(cola).getByRole('link', { name: 'Registrar la asistencia' })).toHaveAttribute('href', '/projects/p1/tasks?task=q1')

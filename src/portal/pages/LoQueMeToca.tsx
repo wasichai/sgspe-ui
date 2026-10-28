@@ -8,12 +8,12 @@ import { ListaPriorizada, type EntradaPriorizada, type TonoDeEntrada } from '../
 import { Seccion } from '../componentes/Seccion'
 import { nombreDeProyecto, useLeeTodosLosProyectos, useMisAsignaciones, useProyectos, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { esQcs, plazoQueCorre } from '../datos/atencion'
-import { textoDeDia } from '../datos/fechas'
+import { hoyEnLima } from '../datos/fechas'
 import { rutaDeFicha } from '../datos/fichas'
 import { usePedir } from '../datos/http'
 import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, consulta, estados, texto, useRegistros, type Pagina, type Parametros, type Registro } from '../datos/registros'
-import { NS } from '../i18n'
+import { diaPe, NS } from '../i18n'
 import { sinFiltroDeAsignados, soloAsignados } from '../tareas/paraTomar'
 import { useSuTrabajo } from './aSuCargo'
 
@@ -40,6 +40,9 @@ interface DeSuCargo {
 
 // la fecha que vence: la de una tarea o un compromiso, o el plazo que corre en el estado de una QCS
 const fechaDe = ({ objeto, registro }: DeSuCargo): string => (esQcs(objeto) ? (plazoQueCorre(objeto, registro)?.fecha ?? '') : texto(registro, 'due_date'))
+// se lee como el resto del portal («17 oct. 2026», diaPe), no en el formato de escritura de CampoFecha: un instante, por su día de
+// Lima (tercera pasada de UX: el inicio decía «17/10/2026» al lado de «desde el 23 oct. 2026»)
+const diaLegible = (fecha: string): string => diaPe(/^\d{4}-\d{2}-\d{2}T/.test(fecha) ? hoyEnLima(new Date(fecha)) : fecha.slice(0, 10))
 
 const porUrgencia = (a: DeSuCargo, b: DeSuCargo): number => {
   const urgencia = (x: DeSuCargo) => URGENCIA[texto(x.registro, 'deadline_status')] ?? 2
@@ -104,7 +107,7 @@ export function LoQueMeToca() {
       titulo: nombreDe(item),
       a: rutaDeFicha(item.objeto, item.registro) ?? '/tasks',
       motivo: [tipo, proyecto ?? '', situacion ? rotuloDeOpcion(situacion) : ''].filter(Boolean).join(' · '),
-      cuando: fecha ? t(situacion === 'VENCIDO' ? 'miDia.hoy.vencio' : 'miDia.hoy.vence', { fecha: textoDeDia(fecha) }) : undefined,
+      cuando: fecha ? t(situacion === 'VENCIDO' ? 'miDia.hoy.vencio' : 'miDia.hoy.vence', { fecha: diaLegible(fecha) }) : undefined,
       tono: TONO[situacion] ?? 'neutro'
     }
   }
