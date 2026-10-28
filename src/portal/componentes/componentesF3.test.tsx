@@ -93,6 +93,15 @@ describe('piezas comunes de F3', () => {
     expect(screen.getByText('elegida: u-1|ana@sgspe.test')).toBeInTheDocument()
   })
 
+  // tercera pasada de UX (2.6): quien registra suele ser el responsable: «Asignarme» lo propone, y se puede cambiar
+  it('«Asignarme» elige a quien mira; ya elegida, no se ofrece', async () => {
+    fetch = mockFetch([])
+    montar(<Elegir />, { permisos: permisosConCapacidades({}, []) })
+    await userEvent.click(await screen.findByRole('button', { name: 'Asignarme como Responsable' }))
+    expect(screen.getByText('elegida: u-relacionista|relacionista@sgspe.test')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Asignarme como Responsable' })).not.toBeInTheDocument()
+  })
+
   it('sin MANAGE_ORGANIZATION no pide el directorio y se escribe el correo y el identificador', async () => {
     fetch = mockFetch([])
     red = espiarRed()

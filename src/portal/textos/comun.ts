@@ -163,7 +163,8 @@ export const ES_COMUN = {
     identificador: '{{etiqueta}} · identificador de usuario',
     aMano:
       'Su cuenta no lista los usuarios de la organización: escriba el correo y el identificador; el sistema comprueba que nombren a alguien de su organización.',
-    noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.'
+    noLeido: 'No se pudo leer la lista de usuarios; escriba el correo y el identificador.',
+    asignarme: 'Asignarme como {{etiqueta}}'
   },
   // la ayuda de un campo en un formulario armado desde el modelo (FormularioDeRegistro): la descripción del modelo es
   // documentación y no se muestra; aquí, la de los campos que la necesitan, por objeto
@@ -588,7 +589,8 @@ export const EN_COMUN: typeof ES_COMUN = {
     correo: '{{etiqueta}} · email',
     identificador: '{{etiqueta}} · user identifier',
     aMano: 'Your account does not list the organization’s users: type the email and the identifier; the system checks they name someone in your organization.',
-    noLeido: 'The user list could not be read; type the email and the identifier.'
+    noLeido: 'The user list could not be read; type the email and the identifier.',
+    asignarme: 'Assign to me as {{etiqueta}}'
   },
   ayudas: {
     social_risk: { review_every_days: 'From 1 to 365; empty = the project’s frequency.' },
