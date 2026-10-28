@@ -18,6 +18,8 @@ export interface SiguienteAccion {
   falta?: string
   // el campo del registro que la bloquea y que quien mira puede completar (CompletarCampo, en la cabecera de la ficha)
   campo?: string
+  // las etiquetas de los datos que su diálogo pedirá (no la bloquean: se piden al darla)
+  pide?: string[]
 }
 
 export function PanelDeDecision({
@@ -45,7 +47,8 @@ export function PanelDeDecision({
   situacion?: unknown
   tipoDeSituacion?: 'plazo' | 'revision' | 'vigencia'
 }) {
-  const { t } = useTranslation(NS)
+  const { t, i18n } = useTranslation(NS)
+  const lista = new Intl.ListFormat(i18n.language, { type: 'conjunction' })
   return (
     <section aria-label={t('paginas.decision.titulo')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Tarjeta titulo={t('paginas.decision.estado')}>
@@ -68,6 +71,11 @@ export function PanelDeDecision({
           <>
             <p className="font-medium">{siguiente.etiqueta}</p>
             {siguiente.falta ? <p className="text-sg-caption text-sg-warning">{siguiente.falta}</p> : null}
+            {siguiente.pide ? (
+              <p className="text-sg-caption text-sg-text-muted">
+                {t('paginas.decision.pide', { count: siguiente.pide.length, campos: lista.format(siguiente.pide.map((c) => `«${c}»`)) })}
+              </p>
+            ) : null}
           </>
         ) : (
           <p className="text-sg-text-muted">{t('paginas.decision.sinSiguiente')}</p>

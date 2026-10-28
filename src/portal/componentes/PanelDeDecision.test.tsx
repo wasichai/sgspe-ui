@@ -19,6 +19,24 @@ const WF = workflow('commitment', [
 const tarjeta = (nombre: string) => screen.getByRole('group', { name: nombre })
 
 describe('PanelDeDecision', () => {
+  // tercera pasada de UX (1.2): lo que el diálogo del paso pedirá no es una falta: se dice en tono neutro, sin bloquear
+  it('dice los datos que el paso pedirá, en tono neutro', async () => {
+    fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
+    montar(
+      <PanelDeDecision
+        objeto="commitment"
+        estado="approved"
+        siguiente={{ etiqueta: 'Resolver', pide: ['Resolución', 'Respuesta'] }}
+        responsable={null}
+        vencimiento={null}
+      />
+    )
+    const pide = within(tarjeta('Siguiente acción')).getByText('Al darla se le pedirán «Resolución» y «Respuesta».')
+    expect(pide).toHaveClass('text-sg-text-muted')
+    expect(pide).not.toHaveClass('text-sg-warning')
+    await within(tarjeta('Estado actual')).findByText('Aprobado')
+  })
+
   it('dibuja las cuatro tarjetas con lo que llega', async () => {
     fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
     montar(

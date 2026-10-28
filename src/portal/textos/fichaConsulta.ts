@@ -3,11 +3,7 @@
 export const ES_FICHA_CONSULTA = {
   consulta: {
     titulo: 'Consulta {{codigo}}',
-    noExiste: 'Esta consulta no existe, no es de sus proyectos o es confidencial y su cuenta no la lee.',
-    responder: 'Escribir la respuesta',
-    responderTitulo: 'Responder la consulta',
-    responderAyuda:
-      'Responder pide la respuesta y cuándo se comunicó: guárdelas aquí y después aplique «Responder». Derivar pide lo mismo, con la entidad a la que se derivó en la respuesta.'
+    noExiste: 'Esta consulta no existe, no es de sus proyectos o es confidencial y su cuenta no la lee.'
   },
   solicitud: {
     titulo: 'Solicitud {{codigo}}',
@@ -61,11 +57,7 @@ export const ES_FICHA_CONSULTA = {
 export const EN_FICHA_CONSULTA: typeof ES_FICHA_CONSULTA = {
   consulta: {
     titulo: 'Inquiry {{codigo}}',
-    noExiste: 'This inquiry does not exist, is not in your projects, or is confidential and your account cannot read it.',
-    responder: 'Write the answer',
-    responderTitulo: 'Answer the inquiry',
-    responderAyuda:
-      'Answering needs the response and when it was communicated: save them here and then apply «Answer». Referring needs the same, with the entity it was referred to in the response.'
+    noExiste: 'This inquiry does not exist, is not in your projects, or is confidential and your account cannot read it.'
   },
   solicitud: {
     titulo: 'Request {{codigo}}',

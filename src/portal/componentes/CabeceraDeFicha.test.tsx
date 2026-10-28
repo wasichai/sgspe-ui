@@ -271,87 +271,92 @@ describe('CabeceraDeFicha', () => {
 })
 
 // tercera pasada de UX (1.1): lo que falta se resuelve donde se informa. si una regla bloquea la siguiente acción por un campo del
-// registro que quien mira puede escribir, junto al bloqueo va «Completar ‹campo›»: abre un cajón con solo ese campo (y el motivo, si el
-// objeto lo exige) y, al guardar, las reglas se vuelven a comprobar sin recargar
+// registro que quien mira puede escribir (y que el diálogo del paso no pide: un dato de la matriz de un compromiso), junto al bloqueo
+// va «Completar ‹campo›»: abre un cajón con solo ese campo (y el motivo, si el objeto lo exige) y, al guardar, las reglas se vuelven
+// a comprobar sin recargar
 describe('CabeceraDeFicha: completar lo que falta', () => {
-  const Q1 = registro('q1', { project: 'p1', code: 'Q-001', resolution: null, response: null }, { state: 'in_action' }) as Registro
-  const RESOLVER = tr('resolve', 'Resolver', 'resolved', 'Resuelta')
-  const FALTA = { code: 'FIELD_REQUIRED', message: 'La transición resolve exige resolution', field: 'resolution' }
+  const C2 = registro('c2', { project: 'p1', code: 'C-002', objective: null, description: 'Reservorio' }, { state: 'draft' }) as Registro
+  const ENVIAR = tr('submit_for_review', 'Enviar a revisión', 'in_review', 'En revisión')
+  const FALTA = {
+    code: 'FIELD_REQUIRED',
+    message: 'Falta objective: la matriz de compromisos lo exige antes de enviar y de aprobar (D1, D2)',
+    field: 'objective'
+  }
   const CAMPOS: [string, Record<string, unknown>][] = [
     ['code', { label: 'Código' }],
-    ['resolution', { label: 'Resolución' }],
-    ['response', { label: 'Respuesta' }]
+    ['objective', { label: 'Objetivo', type: 'LONG_TEXT' }],
+    ['description', { label: 'Descripción', type: 'LONG_TEXT' }]
   ]
-  const rutasDeQueja = (campos = CAMPOS): MockRoute[] => [
-    { path: '/metadata/objects/grievance', body: { ...definicion('grievance', campos), requiresReason: true } },
-    { path: '/objects/grievance/records/q1/transitions', body: [RESOLVER] },
+  const rutasDelCompromiso = (campos = CAMPOS): MockRoute[] => [
+    { path: '/metadata/objects/commitment', body: { ...definicion('commitment', campos), requiresReason: true } },
+    { path: '/objects/commitment/records/c2/transitions', body: [ENVIAR] },
     { method: 'POST', path: '/sgspe/transition-checks', body: { allowed: false, blocking: [FALTA], warnings: [] } },
     {
       method: 'PUT',
-      path: '/objects/grievance/records/q1',
-      body: registro('q1', { project: 'p1', code: 'Q-001', resolution: 'Turno rotativo', response: null }, { state: 'in_action' })
+      path: '/objects/commitment/records/c2',
+      body: registro('c2', { project: 'p1', code: 'C-002', objective: 'Agua para riego', description: 'Reservorio' }, { state: 'draft' })
     }
   ]
-  const cabecera = (faltaCampo: string | undefined = 'resolution') => (
+  // sinCampo: lo que falta no es un campo (un parámetro con valor por defecto no sirve: undefined lo toma)
+  const cabecera = (sinCampo = false) => (
     <CabeceraDeFicha
-      antetitulo="Queja · Q-001"
-      titulo="Turno de la mano de obra"
-      objeto="grievance"
-      registro={Q1}
+      antetitulo="Compromiso · C-002"
+      titulo="Reservorio"
+      objeto="commitment"
+      registro={C2}
       proyecto="p1"
-      comprobarAntes={['resolve']}
-      falta="Para «Resolver» falta «Resolución»."
-      faltaCampo={faltaCampo}
+      comprobarAntes={['submit_for_review']}
+      falta="Falta el objetivo."
+      faltaCampo={sinCampo ? undefined : 'objective'}
     />
   )
+  const transicionesDelCompromiso = () => waitFor(() => expect(fetch!.calls.some((c) => c.path.endsWith('/records/c2/transitions'))).toBe(true))
 
   it('ofrece completar el campo junto al bloqueo y lo guarda solo, con su motivo; después vuelve a comprobar las reglas', async () => {
-    fetch = mockFetch(rutasDeQueja())
+    fetch = mockFetch(rutasDelCompromiso())
     red = espiarRed()
     montar(cabecera())
-    const resolver = await screen.findByRole('button', { name: 'Resolver' })
-    await waitFor(() => expect(resolver).toBeDisabled())
-    await userEvent.click(await screen.findByRole('button', { name: 'Completar «Resolución»' }))
-    const cajon = await screen.findByRole('dialog', { name: 'Completar «Resolución»' })
-    expect(within(cajon).getByText('Al guardar se vuelven a comprobar las reglas de «Resolver».')).toBeInTheDocument()
-    // solo el campo que falta: ni la respuesta ni el código
-    const campo = await within(cajon).findByLabelText(/^Resolución/)
-    expect(within(cajon).queryByLabelText(/^Respuesta/)).not.toBeInTheDocument()
+    const enviar = await screen.findByRole('button', { name: 'Enviar a revisión' })
+    await waitFor(() => expect(enviar).toBeDisabled())
+    await userEvent.click(await screen.findByRole('button', { name: 'Completar «Objetivo»' }))
+    const cajon = await screen.findByRole('dialog', { name: 'Completar «Objetivo»' })
+    expect(cajon).toHaveAccessibleDescription('Al guardar se vuelven a comprobar las reglas de «Enviar a revisión».')
+    // solo el campo que falta: ni la descripción ni el código
+    const campo = await within(cajon).findByLabelText(/^Objetivo/)
+    expect(within(cajon).queryByLabelText(/^Descripción/)).not.toBeInTheDocument()
     expect(within(cajon).queryByLabelText(/^Código/)).not.toBeInTheDocument()
-    await userEvent.type(campo, 'Turno rotativo')
+    await userEvent.type(campo, 'Agua para riego')
     await userEvent.type(within(cajon).getByLabelText('Motivo (obligatorio)'), 'acuerdo de la asamblea')
     const antes = red.a('POST', '/sgspe/transition-checks').length
     await userEvent.click(within(cajon).getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    const [cambio] = red.a('PUT', '/objects/grievance/records/q1')
-    expect(cambio.cuerpo).toMatchObject({ attributes: { resolution: 'Turno rotativo' } })
+    const [cambio] = red.a('PUT', '/objects/commitment/records/c2')
+    expect(cambio.cuerpo).toMatchObject({ attributes: { objective: 'Agua para riego' } })
     expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''acuerdo%20de%20la%20asamblea")
     await waitFor(() => expect(red!.a('POST', '/sgspe/transition-checks').length).toBeGreaterThan(antes))
   })
 
   it('no lo ofrece si quien mira no puede escribir ese campo', async () => {
-    fetch = mockFetch(rutasDeQueja([CAMPOS[0], ['resolution', { label: 'Resolución', editable: false }], CAMPOS[2]]))
+    fetch = mockFetch(rutasDelCompromiso([CAMPOS[0], ['objective', { label: 'Objetivo', type: 'LONG_TEXT', editable: false }], CAMPOS[2]]))
     montar(cabecera())
-    const resolver = await screen.findByRole('button', { name: 'Resolver' })
-    await waitFor(() => expect(resolver).toBeDisabled())
-    expect(screen.getByText('Para «Resolver» falta «Resolución».')).toBeInTheDocument()
+    const enviar = await screen.findByRole('button', { name: 'Enviar a revisión' })
+    await waitFor(() => expect(enviar).toBeDisabled())
+    expect(screen.getByText('Falta el objetivo.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
   })
 
   it('no lo ofrece a quien no puede cambiar el objeto', async () => {
-    fetch = mockFetch(rutasDeQueja())
-    montar(cabecera(), { permisos: { admin: false, objects: { grievance: ['READ'] } } })
-    await transicionesDeLaQueja()
+    fetch = mockFetch(rutasDelCompromiso())
+    montar(cabecera(), { permisos: { admin: false, objects: { commitment: ['READ'] } } })
+    await transicionesDelCompromiso()
     expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
   })
 
   it('sin un campo que falte, no hay nada que completar', async () => {
-    fetch = mockFetch(rutasDeQueja())
-    montar(cabecera(undefined))
-    const resolver = await screen.findByRole('button', { name: 'Resolver' })
-    await waitFor(() => expect(resolver).toBeDisabled())
+    fetch = mockFetch(rutasDelCompromiso())
+    montar(cabecera(true))
+    const enviar = await screen.findByRole('button', { name: 'Enviar a revisión' })
+    await waitFor(() => expect(enviar).toBeDisabled())
     expect(screen.queryByRole('button', { name: /^Completar/ })).not.toBeInTheDocument()
   })
-
-  const transicionesDeLaQueja = () => waitFor(() => expect(fetch!.calls.some((c) => c.path.endsWith('/records/q1/transitions'))).toBe(true))
 })

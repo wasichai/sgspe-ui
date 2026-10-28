@@ -28,6 +28,16 @@ export const ES_TRANSICIONES = {
   // lo que falta se completa junto al bloqueo (tercera pasada de UX, 1.1)
   completar: 'Completar «{{campo}}»',
   completarAyuda: 'Al guardar se vuelven a comprobar las reglas de «{{accion}}».',
+  // los datos que el paso exige, pedidos en el diálogo (tercera pasada de UX, 1.2)
+  datosDelPaso: 'Datos que pide este paso',
+  datoObligatorio: '{{campo}} (obligatorio)',
+  datoFalta: 'Complete este dato para dar el paso.',
+  soloFaltanDatos: 'Se cumplen las demás reglas para este paso. Solo faltan los datos de abajo.',
+  seGuardan: 'Se guardan {{campos}} con el mismo motivo.',
+  // la ayuda de un dato en un paso: ayudasDelPaso.<objeto>.<transición>.<campo>
+  ayudasDelPaso: {
+    inquiry: { refer: { response: 'Diga a qué entidad se derivó la consulta.' } }
+  },
   // field de un aviso que no es un campo del registro (api.md §4.1): un objeto que la regla revisa, el motivo o el estado
   campos: {
     reason: 'Motivo',
@@ -75,6 +85,14 @@ export const EN_TRANSICIONES: typeof ES_TRANSICIONES = {
   reglaSinTexto: 'A system rule does not allow this step yet.',
   completar: 'Fill in «{{campo}}»',
   completarAyuda: 'Saving checks the rules for «{{accion}}» again.',
+  datosDelPaso: 'Data this step asks for',
+  datoObligatorio: '{{campo}} (required)',
+  datoFalta: 'Fill in this field to take the step.',
+  soloFaltanDatos: 'The other rules for this step are met. Only the data below is missing.',
+  seGuardan: '{{campos}} are saved with the same reason.',
+  ayudasDelPaso: {
+    inquiry: { refer: { response: 'Say which entity the inquiry was referred to.' } }
+  },
   campos: {
     reason: 'Reason',
     state: 'State',

@@ -14,10 +14,11 @@ import { FormularioDeRegistro } from './FormularioDeRegistro'
 // tercera pasada de UX (1.1): lo que bloquea la siguiente acción se resuelve donde se informa. si una regla de transition-checks la
 // bloquea por un campo del registro que quien mira puede escribir, «Completar ‹campo›» abre un cajón con solo ese campo (y el motivo,
 // si el objeto lo exige); al guardar, useActualizar invalida la consulta en seco y el bloqueo se vuelve a comprobar sin recargar
-const NO_COMPLETABLES: ReadonlySet<string> = new Set(['GEOMETRY', 'RELATION', 'FILE'])
+const NO_COMPLETABLES: ReadonlySet<string> = new Set(['GEOMETRY', 'RELATION', 'MANY_TO_MANY', 'UUID', 'FILE'])
 
 // un campo que el formulario completa solo: legible y escribible por quien mira, ni derivado ni de comando, y que no sea una
-// geometría (se edita en el mapa), una relación (el formulario de wasichai pide su UUID) ni un archivo (va como evidencia)
+// geometría (se edita en el mapa), una relación o un UUID (el formulario de wasichai pide el identificador; el responsable se elige
+// en «Editar») ni un archivo (va como evidencia)
 export function esCompletable(objeto: string, definicion: ObjectDefinition | undefined, campo: string): boolean {
   const f = campoDe(definicion, campo)
   return Boolean(f?.editable && f.visible !== false && !NO_COMPLETABLES.has(f.type)) && !esDerivado(objeto, campo) && !esDeComando(objeto, campo)

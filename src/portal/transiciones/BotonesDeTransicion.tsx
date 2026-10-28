@@ -10,6 +10,7 @@ import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useComprobacion } from './api'
 import { useTextoDeAviso } from './avisos'
+import { useBloqueosDelPaso } from './DatosDelPaso'
 import { DialogoDeTransicion } from './DialogoDeTransicion'
 import { esDeComando } from './reglas'
 
@@ -180,11 +181,13 @@ function BotonDeTransicion({
 }) {
   const id = useId()
   const comprobacion = useComprobacion(objeto, registro.id, comprobar ? transicion.name : null)
-  // un bloqueo deshabilita el botón aunque no traiga qué decir; la razón se dice solo si existe
-  const bloqueado = (comprobacion.data?.blocking.length ?? 0) > 0
+  // un bloqueo deshabilita el botón aunque no traiga qué decir; la razón se dice solo si existe. un dato que el diálogo pide
+  // (useBloqueosDelPaso) no bloquea: el botón abre el diálogo, que lo pide
+  const { otros } = useBloqueosDelPaso(objeto, comprobacion.data?.blocking ?? [])
+  const bloqueado = otros.length > 0
   // la razón con el texto de su regla, nunca el mensaje del servidor con los nombres de la API (humo F4, D3)
   const textoDe = useTextoDeAviso(objeto)
-  const razon = (comprobacion.data?.blocking ?? []).map((b) => textoDe(b, transicion).texto).find((x) => x) ?? undefined
+  const razon = otros.map((b) => textoDe(b, transicion).texto).find((x) => x) ?? undefined
   const { t } = useTranslation(NS)
   const destructiva = esDestructiva(transicion)
   const elObjeto = destructiva ? t(`transiciones.elObjeto.${objeto}`, { defaultValue: '' }) : ''

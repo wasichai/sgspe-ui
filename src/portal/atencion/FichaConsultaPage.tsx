@@ -39,8 +39,8 @@ import { DialogoDeReclasificacion, useOfreceReclasificar } from './DialogoDeRecl
 import { opcion } from '../datos/opciones'
 
 // S57 · fichas de consulta y de solicitud (screens.md §8, WF-E2 y WF-E3): la misma anatomía que la queja (S36) con su propio
-// ciclo. una consulta se responde o se deriva (las dos transiciones piden la respuesta y cuándo se comunicó, que se escriben antes
-// con «Escribir la respuesta»); una solicitud se evalúa y se acepta creando el compromiso o, desde F5, el aporte en un solo
+// ciclo. una consulta se responde o se deriva (las dos transiciones piden la respuesta y cuándo se comunicó, que su diálogo pide);
+// una solicitud se evalúa y se acepta creando el compromiso o, desde F5, el aporte en un solo
 // comando (aceptar es responderla, api.md §4.6) o se declina con respuesta. las dos se reclasifican y suben su carta
 // firmada como evidencia CARTA (ASM-098). un 404 puede ser una QCS confidencial que la cuenta no lee: el texto no dice cuál
 const EDITABLES_COMUNES = [
@@ -88,35 +88,16 @@ function FichaPorId({ objeto, id, noExiste }: { objeto: 'inquiry' | 'stakeholder
 
 function FichaDeConsulta({ consulta }: { consulta: Registro }) {
   const { t } = useTranslation(NS)
-  const escribe = useEscribeEnProyecto(texto(consulta, 'project'))
-  const edita = usePuedeEditar('inquiry') && escribe
-  const [respondiendo, setRespondiendo] = useState(false)
+  // «Responder» y «Derivar» piden la respuesta y cuándo se comunicó en su diálogo, con el motivo del paso (tercera pasada de UX,
+  // 1.2): ya no hay «Escribir la respuesta» antes, con su propio motivo
   return (
-    <>
-      <Ficha
-        objeto="inquiry"
-        qcs={consulta}
-        titulo={t('fichaConsulta.consulta.titulo', { codigo: texto(consulta, 'code') })}
-        editables={EDITABLES_COMUNES}
-        comprobar={['answer', 'refer', 'close', 'close_referred']}
-        acciones={
-          edita && consulta.state === 'received' ? (
-            <Button size="sm" onClick={() => setRespondiendo(true)}>
-              {t('fichaConsulta.consulta.responder')}
-            </Button>
-          ) : null
-        }
-        ayuda={consulta.state === 'received' ? <p className="text-sg-caption text-sg-text-muted">{t('fichaConsulta.consulta.responderAyuda')}</p> : null}
-      />
-      <EditarQcs
-        objeto="inquiry"
-        qcs={consulta}
-        campos={['response', 'responded_at']}
-        titulo={t('fichaConsulta.consulta.responderTitulo')}
-        abierto={respondiendo}
-        alCerrar={() => setRespondiendo(false)}
-      />
-    </>
+    <Ficha
+      objeto="inquiry"
+      qcs={consulta}
+      titulo={t('fichaConsulta.consulta.titulo', { codigo: texto(consulta, 'code') })}
+      editables={EDITABLES_COMUNES}
+      comprobar={['answer', 'refer', 'close', 'close_referred']}
+    />
   )
 }
 
@@ -232,7 +213,7 @@ function Ficha({
   titulo: string
   editables: readonly string[]
   comprobar: readonly string[]
-  // la acción propia de la ficha («Escribir la respuesta», «Aceptar y crear…»): primaria si no hay una transición del camino
+  // la acción propia de la ficha («Aceptar y crear…»): primaria si no hay una transición del camino
   acciones?: ReactNode
   ayuda?: ReactNode
   // los datos del planteamiento propios del tipo (qué se pide en una solicitud)

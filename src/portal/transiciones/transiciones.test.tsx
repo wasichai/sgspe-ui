@@ -7,7 +7,7 @@ import { ADMIN_PERMISOS, ADMINISTRACION, permisos, RELACIONISTA } from '../../te
 import { useAvailableTransitions } from '../datos/flujos'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { useRegistro, useRegistros } from '../datos/registros'
+import { useDefinicion, useRegistro, useRegistros } from '../datos/registros'
 import { useResumenDeAvisos } from '../datos/avisos'
 import { useTextoDeAviso } from './avisos'
 import { BotonesDeTransicion } from './BotonesDeTransicion'
@@ -473,5 +473,118 @@ describe('transiciones', () => {
       montar(<BotonesDeTransicion objeto="project" registro={PROYECTO} proyecto="p1" />, { usuario: ADMINISTRACION, permisos: ADMIN_PERMISOS })
       expect(await screen.findByRole('button', { name: 'Suspender' })).toBeInTheDocument()
     })
+  })
+})
+
+// tercera pasada de UX (1.2): los datos que el paso exige se piden en su diálogo, con un solo motivo: se guardan con If-Match y la
+// transición se aplica sobre la versión nueva. quien no puede escribirlos ve el paso bloqueado, con la regla
+describe('los datos que pide el paso', () => {
+  const QUEJA = registro('q1', { code: 'Q-001', resolution: null, response: null }, { state: 'in_action', updatedAt: '2026-10-05T15:00:00Z' })
+  const RESUELTA = {
+    ...QUEJA,
+    attributes: { ...QUEJA.attributes, resolution: 'Turno rotativo', response: 'Se publica la lista' },
+    updatedAt: '2026-10-06T10:00:00Z'
+  }
+  const FALTAN = {
+    allowed: false,
+    blocking: [
+      { code: 'FIELD_REQUIRED', message: 'La transición resolve exige resolution', field: 'resolution' },
+      { code: 'FIELD_REQUIRED', message: 'La transición resolve exige response', field: 'response' }
+    ],
+    warnings: []
+  }
+  const queja = (): MockRoute[] => [
+    {
+      path: '/metadata/objects/grievance',
+      body: {
+        ...definicion('grievance', [
+          ['code', { label: 'Código' }],
+          ['resolution', { label: 'Resolución', type: 'LONG_TEXT' }],
+          ['response', { label: 'Respuesta', type: 'LONG_TEXT' }]
+        ]),
+        requiresReason: true
+      }
+    },
+    {
+      path: '/objects/grievance/records/q1/transitions',
+      body: [{ name: 'resolve', label: 'Resolver', to: 'resolved', toLabel: 'Resuelta', allowed: true, reason: null }]
+    },
+    { method: 'POST', path: '/sgspe/transition-checks', body: FALTAN },
+    { method: 'PUT', path: '/objects/grievance/records/q1', body: RESUELTA },
+    { method: 'POST', path: '/objects/grievance/records/q1/transitions/resolve', body: { ...RESUELTA, state: 'resolved' } }
+  ]
+
+  // quien lee la definición: con ella leída, un FIELD_REQUIRED ya se sabe pedible y el botón no pasa por deshabilitado
+  function DefinicionLeida() {
+    const leida = useDefinicion('grievance')
+    return leida.data ? <p>definición leída</p> : null
+  }
+
+  it('«Resolver» no queda bloqueado por la resolución y la respuesta: el diálogo las pide, las guarda y resuelve con un solo motivo', async () => {
+    fetch = mockFetch(queja())
+    red = espiarRed()
+    montar(
+      <>
+        <BotonesDeTransicion objeto="grievance" registro={QUEJA} comprobarAntes={['resolve']} />
+        <DefinicionLeida />
+      </>
+    )
+    const resolver = await screen.findByRole('button', { name: 'Resolver' })
+    await screen.findByText('definición leída')
+    await userEvent.click(resolver)
+    const dialogo = await screen.findByRole('dialog')
+    expect(await within(dialogo).findByText('Se cumplen las demás reglas para este paso. Solo faltan los datos de abajo.')).toBeInTheDocument()
+    // con las reglas ya leídas, el botón sigue habilitado
+    expect(resolver).toBeEnabled()
+    expect(within(dialogo).getByText('Se guardan «Resolución» y «Respuesta» con el mismo motivo.')).toBeInTheDocument()
+    // la regla no se dice como un bloqueo: se pide el dato
+    expect(within(dialogo).queryByText(/falta «Resolución»/)).not.toBeInTheDocument()
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Acuerdo con la contratista')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    expect(await within(dialogo).findAllByText('Complete este dato para dar el paso.')).toHaveLength(2)
+    expect(red.a('PUT', '/objects/grievance/records/q1')).toHaveLength(0)
+    await userEvent.type(within(dialogo).getByLabelText('Resolución (obligatorio)'), 'Turno rotativo')
+    await userEvent.type(within(dialogo).getByLabelText('Respuesta (obligatorio)'), 'Se publica la lista')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await waitFor(() => expect(red!.a('POST', '/objects/grievance/records/q1/transitions/resolve')).toHaveLength(1))
+    const [cambio] = red.a('PUT', '/objects/grievance/records/q1')
+    expect(cambio.cuerpo).toMatchObject({ attributes: { resolution: 'Turno rotativo', response: 'Se publica la lista' } })
+    expect(cambio.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00Z"')
+    expect(cambio.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Acuerdo%20con%20la%20contratista")
+    // la transición, sobre la versión que dejó el cambio y con el mismo motivo
+    const [paso] = red.a('POST', '/objects/grievance/records/q1/transitions/resolve')
+    expect(paso.cabeceras.get('If-Match')).toBe('"2026-10-06T10:00:00Z"')
+    expect(paso.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Acuerdo%20con%20la%20contratista")
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('quien no puede escribirlas ve el paso bloqueado, con lo que falta', async () => {
+    fetch = mockFetch(queja())
+    montar(<BotonesDeTransicion objeto="grievance" registro={QUEJA} comprobarAntes={['resolve']} />, { permisos: permisos({ grievance: ['READ'] }) })
+    const resolver = await screen.findByRole('button', { name: 'Resolver' })
+    await waitFor(() => expect(resolver).toBeDisabled())
+    expect(resolver).toHaveAccessibleDescription('Para «Resolver» falta «Resolución»: complételo y vuelva a intentar.')
+  })
+
+  it('un dato que el diálogo no pide (el tipo de un aporte, que decide sus lineamientos) sigue bloqueando', async () => {
+    fetch = mockFetch([
+      {
+        path: '/metadata/objects/social_contribution',
+        body: definicion('social_contribution', [['contribution_type', { label: 'Tipo', type: 'ENUM', enumOptions: ['DONACION'] }]])
+      },
+      {
+        path: '/objects/social_contribution/records/a1/transitions',
+        body: [{ name: 'approve', label: 'Aprobar', to: 'approved', toLabel: 'Aprobado', allowed: true, reason: null }]
+      },
+      {
+        method: 'POST',
+        path: '/sgspe/transition-checks',
+        body: { allowed: false, blocking: [{ code: 'FIELD_REQUIRED', message: 'Falta el tipo de aporte.', field: 'contribution_type' }], warnings: [] }
+      }
+    ])
+    montar(<BotonesDeTransicion objeto="social_contribution" registro={registro('a1', { contribution_type: null })} comprobarAntes={['approve']} />)
+    const aprobar = await screen.findByRole('button', { name: 'Aprobar' })
+    await waitFor(() => expect(aprobar).toBeDisabled())
+    expect(aprobar).toHaveAccessibleDescription('Falta el tipo de aporte.')
   })
 })
