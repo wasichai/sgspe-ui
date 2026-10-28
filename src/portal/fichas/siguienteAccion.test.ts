@@ -38,5 +38,8 @@ describe('siguienteTransicion', () => {
     // siguiente, ni suspender o cerrar un proyecto activo
     expect(siguienteTransicion('project', [tr('return_to_draft', 'draft'), tr('approve', 'active'), tr('cancel_in_review', 'cancelled')])?.name).toBe('approve')
     expect(siguienteTransicion('project', [tr('suspend', 'suspended'), tr('close', 'closed')])).toBeNull()
+    // un aporte solicitado avanza también aprobándolo sin revisión interna; rechazarlo no es lo siguiente
+    expect(siguienteTransicion('social_contribution', [tr('reject', 'rejected'), tr('approve_direct', 'approved')])?.name).toBe('approve_direct')
+    expect(siguienteTransicion('social_contribution', [tr('approve_direct', 'approved'), tr('approve', 'approved')])?.name).toBe('approve')
   })
 })

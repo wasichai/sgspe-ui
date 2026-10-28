@@ -23,7 +23,9 @@ export const CAMINO_DE: Readonly<Record<string, readonly string[]>> = {
   stakeholder: ['profile', 'assess'],
   social_risk: ['assess', 'decide_mitigation', 'decide_monitoring', 'start_monitoring'],
   agreement: ['start_negotiation', 'activate', 'activate_from_draft', 'resume', 'conclude'],
-  social_contribution: ['approve', 'register_procurement', 'register_delivery', 'close'],
+  // aprobar sin revisión interna también avanza el aporte (P4 y P5 no la piden): sin ella, a quien solo la tiene el panel le decía
+  // «Nada pendiente» en un aporte solicitado (tercera pasada de UX)
+  social_contribution: ['approve', 'approve_direct', 'register_procurement', 'register_delivery', 'close'],
   social_program: ['submit', 'approve', 'start_execution', 'start_monitoring', 'start_evaluation', 'close', 'resume'],
   field_visit: ['start', 'complete'],
   area_of_influence: ['approve'],
