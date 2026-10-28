@@ -19,11 +19,23 @@ import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 import { rotuloDeOpcion, rotuloEnIdioma } from '../datos/opciones'
 import { EN_OPCIONES } from '../datos/opcionesEnIngles'
 import { conHecho } from '../componentes/AvisoDeExito'
+import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
+import { AvisoAlSalir, useSalidaPermitida } from '../componentes/FormularioPorPasos'
+import { descartarBorrador, leerBorrador, useBorradorLocal } from '../datos/borrador'
+import { useClavesDelBorrador, useTraspaso, type ClaveDeConteo } from './traspaso'
 
 // el modo rápido de campo de S24 (screens.md §6, S55): una sola pantalla con el tipo, la ubicación del teléfono, los
 // grupos presentes, contadores por sexo y ámbito (objetivos de 44 px) y una nota; guarda la interacción como realizada
 // ahora. cada contador es una fila de grupo sin nombres (represented_people_count ≥ 1), nunca datos personales
-type Clave = `${string}|${string}`
+type Clave = ClaveDeConteo
+// lo que el borrador del modo rápido guarda además de los grupos presentes (tercera pasada de UX, 2.4)
+interface ValoresRapidos {
+  tipo: string
+  nota: string
+  conteos: Record<Clave, number>
+  ubicacion: Punto | null
+  lugares: { locality?: string; community?: string }
+}
 
 export function RegistroRapido({ definicion, definicionDeParticipante }: { definicion: ObjectDefinition; definicionDeParticipante: ObjectDefinition }) {
   const { t } = useTranslation(NS)
@@ -35,20 +47,49 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
   const grupos = useTodos('stakeholder', { project: projectId })
   // una clave de idempotencia por registro: al guardarlo se renueva, para que el siguiente sea otra acción
   const [clave, setClave] = useState(nuevaClave)
-  const [tipo, setTipo] = useState('')
-  const [nota, setNota] = useState('')
+  // el borrador de este navegador (tercera pasada de UX, 2.4) y lo que trae el conmutador desde el asistente (2.5): el traspaso
+  // gana en lo que trae; el borrador, en lo demás (la nota). en el campo es donde más fácil se pierde lo cargado
+  const claves = useClavesDelBorrador(projectId, busqueda.get('field_visit'))
+  const traspaso = useTraspaso()
+  const [recuperado] = useState(() => leerBorrador<ValoresRapidos>(claves.rapido))
+  const [avisoDeBorrador, setAvisoDeBorrador] = useState(recuperado !== null && traspaso === null)
+  const previo = recuperado?.valores
+  const [tipo, setTipo] = useState(() => traspaso?.tipo || previo?.tipo || '')
+  const [nota, setNota] = useState(() => previo?.nota ?? '')
   // abierto desde un grupo de interés (S16) o una visita de campo (S26): trae sus grupos y la visita
   const presentesDeInicio = () => busqueda.get('stakeholders')?.split(',').filter(Boolean) ?? []
-  const [presentes, setPresentes] = useState<string[]>(presentesDeInicio)
-  const [conteos, setConteos] = useState<Record<Clave, number>>({})
-  const [ubicacion, setUbicacion] = useState<Punto | null>(null)
+  const [presentes, setPresentes] = useState<string[]>(() =>
+    traspaso && traspaso.grupos.length > 0 ? traspaso.grupos : [...new Set([...(recuperado?.elegidos?.presentes ?? []), ...presentesDeInicio()])]
+  )
+  const [conteos, setConteos] = useState<Record<Clave, number>>(() =>
+    traspaso && Object.keys(traspaso.conteos).length > 0 ? traspaso.conteos : (previo?.conteos ?? {})
+  )
+  const [ubicacion, setUbicacion] = useState<Punto | null>(() => traspaso?.punto ?? previo?.ubicacion ?? null)
   // lo que «Usar estos lugares» reemplaza: solo lo que locate propone; lo demás conserva el chip de territorio
-  const [lugares, setLugares] = useState<{ locality?: string; community?: string }>({})
+  const [lugares, setLugares] = useState<{ locality?: string; community?: string }>(() => previo?.lugares ?? {})
+  const salida = useSalidaPermitida()
   const telefono = useUbicacionDelTelefono()
   const sexos = definicionDeParticipante.fields.find((f) => f.name === 'sex')?.enumOptions ?? []
   const ambitos = definicionDeParticipante.fields.find((f) => f.name === 'participant_scope')?.enumOptions ?? []
   const total = Object.values(conteos).reduce((s, n) => s + n, 0)
   const sumar = (clave: Clave, n: number) => setConteos({ ...conteos, [clave]: Math.max(0, (conteos[clave] ?? 0) + n) })
+  // algo cargado que no estaba al abrir: es lo que se guarda como borrador y lo que pide confirmar al salir
+  const deInicio = presentesDeInicio()
+  const conCambios =
+    tipo !== '' || nota.trim() !== '' || total > 0 || ubicacion !== null || presentes.length !== deInicio.length || presentes.some((g) => !deInicio.includes(g))
+  const borrador = useBorradorLocal<ValoresRapidos>(
+    claves.rapido,
+    { valores: { tipo, nota, conteos, ubicacion, lugares }, elegidos: { presentes } },
+    conCambios
+  )
+  const limpiar = () => {
+    setTipo('')
+    setNota('')
+    setPresentes(presentesDeInicio())
+    setConteos({})
+    setUbicacion(null)
+    setLugares({})
+  }
 
   const enviar = () => {
     // el día es el de Lima y el instante, UTC: a las 23:30 de Lima ya es el día siguiente en UTC
@@ -86,12 +127,11 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
           // React Router navega en una transición: si se vuelve atrás antes de que se confirme la ficha, esta pantalla sigue
           // montada; sin limpiar, lo escrito quedaría con una clave nueva y otro «Guardar» duplicaría la interacción
           setClave(nuevaClave())
-          setTipo('')
-          setNota('')
-          setPresentes(presentesDeInicio())
-          setConteos({})
-          setUbicacion(null)
-          setLugares({})
+          // registrada, ni este borrador ni el del asistente tienen ya nada que recuperar
+          borrador.descartar()
+          descartarBorrador(claves.asistente)
+          limpiar()
+          salida.current = true
           navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`, {
             state: conHecho(null, t('relacionamiento.registro.hecho', { titulo: texto(i, 'title') }))
           })
@@ -104,8 +144,18 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
     <section className="mx-auto max-w-md space-y-4" aria-label={t('relacionamiento.registro.rapido')}>
       <div className="flex items-center justify-between">
         <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.registro.rapido')}</h1>
-        <ConmutadorDeModo rapido />
+        <ConmutadorDeModo rapido traspaso={{ tipo, grupos: presentes, conteos, punto: ubicacion }} />
       </div>
+      {avisoDeBorrador && recuperado ? (
+        <AvisoDeBorrador
+          guardado={recuperado.guardado}
+          alDescartar={() => {
+            borrador.descartar()
+            limpiar()
+            setAvisoDeBorrador(false)
+          }}
+        />
+      ) : null}
       <Campo etiqueta={t('relacionamiento.registro.tipo')}>
         {(p) => (
           <SelectNativo
@@ -205,6 +255,7 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
       >
         {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.guardarRealizada')}
       </Button>
+      <AvisoAlSalir conCambios={conCambios} conBorrador salidaPermitida={salida} />
     </section>
   )
 }

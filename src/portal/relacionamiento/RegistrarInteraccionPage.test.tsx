@@ -659,6 +659,74 @@ describe('S24 · registrar interacción', () => {
     expect(await screen.findByRole('textbox', { name: 'Título' })).toBeInTheDocument()
   })
 
+  // tercera pasada de UX, 2.4: el borrador de este navegador, como el del alta de compromiso
+  it('lo escrito en el asistente queda como borrador: al volver se recupera con su aviso y se puede descartar', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.interaccion.p1.u-relacionista')).toContain('Asamblea de octubre'))
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Descartar el borrador' }))
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('')
+    expect(screen.queryByText(/Se recuperó lo que escribió/)).not.toBeInTheDocument()
+    expect(localStorage.getItem('sgspe.borrador.interaccion.p1.u-relacionista')).toBeNull()
+  })
+
+  it('lo cargado en el modo rápido también queda como borrador y vuelve al abrirlo otra vez', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nota' }), 'Llovió')
+    await userEvent.click(await screen.findByRole('button', { name: 'Más Femenino · AIDS' }))
+    await waitFor(() => expect(localStorage.getItem('sgspe.borrador.interaccionRapida.p1.u-relacionista')).toContain('Llovió'))
+    cleanup()
+    fetch.restore()
+    fetch = abrirPortal('/projects/p1/engagements/new?mode=quick', RELACIONISTA, EQUIPO, rutas())
+    expect(await screen.findByText(/Se recuperó lo que escribió/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Nota' })).toHaveValue('Llovió')
+    expect(screen.getByLabelText('Femenino · AIDS')).toHaveTextContent('1')
+  })
+
+  // tercera pasada de UX, 2.5: cambiar de modo no borra lo cargado
+  it('el conmutador lleva el tipo, los grupos y los asistentes de un modo al otro, y cada modo conserva lo suyo', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de octubre')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'APAFA' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Modo rápido de campo' }))
+
+    const rapido = await screen.findByRole('region', { name: 'Modo rápido de campo' })
+    expect(within(rapido).getByRole('combobox', { name: 'Tipo de interacción' })).toHaveValue('ASAMBLEA')
+    expect(await within(rapido).findByRole('checkbox', { name: 'APAFA' })).toBeChecked()
+    // lo traído es lo que se tenía, no un borrador recuperado
+    expect(screen.queryByText(/Se recuperó lo que escribió/)).not.toBeInTheDocument()
+    await userEvent.click(await within(rapido).findByRole('button', { name: 'Más Femenino · AIDS' }))
+    await userEvent.click(within(rapido).getByRole('button', { name: 'Más Femenino · AIDS' }))
+    await userEvent.type(within(rapido).getByRole('textbox', { name: 'Nota' }), 'Llovió')
+    await userEvent.click(within(rapido).getByRole('switch', { name: 'Modo rápido de campo' }))
+
+    // el título vuelve del borrador del asistente; los asistentes contados llegan como un grupo sin nombres
+    expect(await screen.findByRole('textbox', { name: 'Título' })).toHaveValue('Asamblea de octubre')
+    expect(screen.getByRole('combobox', { name: 'Tipo de interacción' })).toHaveValue('ASAMBLEA')
+    expect(screen.queryByText(/Se recuperó lo que escribió/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('checkbox', { name: 'APAFA' })).toBeChecked()
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('spinbutton', { name: 'Personas' })).toHaveValue(2)
+    expect(screen.getByRole('combobox', { name: 'Sexo' })).toHaveValue('FEMENINO')
+
+    // de vuelta al modo rápido, su nota sigue ahí
+    await userEvent.click(screen.getByRole('switch', { name: 'Modo rápido de campo' }))
+    const otraVez = await screen.findByRole('region', { name: 'Modo rápido de campo' })
+    expect(within(otraVez).getByRole('textbox', { name: 'Nota' })).toHaveValue('Llovió')
+    expect(within(otraVez).getByLabelText('Femenino · AIDS')).toHaveTextContent('2')
+  })
+
   // F-D: el paso 1 es solo tipo, título, fecha y hora y «¿Ya se realizó?», un selector de dos opciones con su efecto explicado;
   // el objetivo pasa al paso 2
   it('el paso 1 pide tipo, título, si ya se realizó y la fecha; el objetivo está en el paso 2', async () => {
