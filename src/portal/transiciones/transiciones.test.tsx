@@ -7,7 +7,8 @@ import { ADMIN_PERMISOS, ADMINISTRACION, permisos, RELACIONISTA } from '../../te
 import { useAvailableTransitions } from '../datos/flujos'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { useRegistro } from '../datos/registros'
+import { useRegistro, useRegistros } from '../datos/registros'
+import { useResumenDeAvisos } from '../datos/avisos'
 import { useTextoDeAviso } from './avisos'
 import { BotonesDeTransicion } from './BotonesDeTransicion'
 
@@ -123,6 +124,44 @@ describe('transiciones', () => {
     expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-05T15:00:00.123456Z"')
     expect(llamada.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Paralizaci%C3%B3n%20por%20lluvias")
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  // tercera pasada de UX: una transición puede cerrar o abrir tareas y avisos (acusar recibo cierra la tarea de acuse): se releen,
+  // para que «Lo que me toca hoy» y las insignias no sigan mostrando lo que ya se hizo
+  it('aplicar una transición relee las tareas y los avisos, que pueden haber cambiado', async () => {
+    start([
+      { method: 'POST', path: '/objects/project/records/p1/transitions/suspend', body: { ...PROYECTO, state: 'suspended' } },
+      { path: '/objects/task/records', body: pagina([]) },
+      {
+        path: '/auth/me/notifications/summary',
+        body: {
+          kinds: { ACTION: { active: 0, unread: 0, overdue: 0 }, WARNING: { active: 0, unread: 0, overdue: 0 }, INFO: { active: 0, unread: 0, overdue: 0 } },
+          latest: null
+        }
+      }
+    ])
+    red = espiarRed()
+    function Lector() {
+      const tareas = useRegistros('task', { assignee_user_id: 'u-relacionista' })
+      const avisos = useResumenDeAvisos()
+      return <p>{tareas.data && avisos.data ? 'tareas y avisos leídos' : 'leyendo'}</p>
+    }
+    montar(
+      <>
+        <Lector />
+        <BotonesDeTransicion objeto="project" registro={PROYECTO} />
+      </>
+    )
+    await screen.findByText('tareas y avisos leídos')
+    const tareas = () => red!.a('GET', '/objects/task/records').length
+    const avisos = () => red!.a('GET', '/auth/me/notifications/summary').length
+    expect([tareas(), avisos()]).toEqual([1, 1])
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }))
+    const dialogo = await screen.findByRole('dialog')
+    await within(dialogo).findByText('Se cumplen las reglas para este paso.')
+    await userEvent.type(within(dialogo).getByLabelText('Motivo (obligatorio)'), 'Paralización por lluvias')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar' }))
+    await waitFor(() => expect([tareas(), avisos()]).toEqual([2, 2]))
   })
 
   it('una transición aplicada lo confirma, aunque ya no queden botones (revisión final, M6)', async () => {
