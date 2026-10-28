@@ -1,5 +1,4 @@
 import { useAuth } from '@wasichai/core'
-import { Button } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { NS } from '../i18n'
@@ -9,7 +8,7 @@ import { EncabezadoDePagina } from '../componentes/Pagina'
 import { useMisAsignaciones, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { Agenda } from './Agenda'
 import { useSuTrabajo } from './aSuCargo'
-import { Atajos, useAtajos } from './Atajos'
+import { Atajos, Consultas, SinAsignacion, useAtajos } from './Atajos'
 import { EsperanSuDecision } from './EsperanSuDecision'
 import { LoQueMeToca } from './LoQueMeToca'
 import { MisProyectos } from './MisProyectos'
@@ -32,48 +31,31 @@ export function InicioPage() {
 // siempre (Atajos), cómo van sus proyectos (MisProyectos) y, al final, la visión ejecutiva con las cifras que lee. la grilla de
 // secciones, que repite la barra lateral, solo queda cuando no hay nada de eso: la bienvenida de F1, sin indicadores
 // (dashboards.md §11). la cuenta vive en el menú del perfil (shell/Perfil.tsx). el monitoreo de la Tabla 9.5 y el catálogo de
-// indicadores se ofrecen aquí también: a quien lee indicator o indicator_measurement, el monitoreo; a quien lee indicator, el catálogo
+// indicadores van al final, en «Consultar» (Consultas, tercera pasada de UX, 3.1), y sin asignación vigente se dice a quién pedirla
 function Bienvenida() {
   const { t } = useTranslation(NS)
-  const { user, permissions, permissionsError, can } = useAuth()
+  const { user, permissions, permissionsError } = useAuth()
   const oferta = useOferta()
   const trabajo = useSuTrabajo()
   const atajos = useAtajos()
   const asignaciones = useMisAsignaciones()
   const asignado = (asignaciones.data ?? []).some((a) => vigenciaDeAsignacion(a) === 'vigente')
-  const conMiDia = trabajo.lee || atajos.ofrecidos.length > 0 || atajos.proyecto || asignado
+  const conMiDia = trabajo.lee || atajos.ofrecidos.length > 0 || atajos.sinDonde || atajos.proyecto || asignado
   const estados = NAV_TREE.map((seccion) => ({ seccion, estado: estadoDe(seccion, oferta) }))
   const disponibles = estados.filter(({ estado }) => estado === 'disponible').length
   // mientras los permisos se leen, o si no se pudieron leer, can e isAdmin son falsos sin serlo: ningún estado sale de ellos
   const permisosNoListos = permissions ? null : permissionsError ? 'error' : 'cargando'
-  const conCatalogo = can('indicator', 'READ')
-  const conMonitoreo = conCatalogo || can('indicator_measurement', 'READ')
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <EncabezadoDePagina
-        titulo={t('inicio.titulo')}
-        descripcion={t('inicio.bienvenida', { nombre: user?.displayName ?? '' })}
-        secundarias={
-          conMonitoreo ? (
-            <>
-              <Button asChild size="sm" variant="secondary">
-                <Link to="/dashboards/monitoring">{t('tablerosF8.monitoreo.titulo')}</Link>
-              </Button>
-              {conCatalogo ? (
-                <Button asChild size="sm" variant="secondary">
-                  <Link to="/dashboards/indicators">{t('tablerosF8.catalogo.titulo')}</Link>
-                </Button>
-              ) : null}
-            </>
-          ) : undefined
-        }
-      />
+      <EncabezadoDePagina titulo={t('inicio.titulo')} descripcion={t('inicio.bienvenida', { nombre: user?.displayName ?? '' })} />
+      <SinAsignacion />
       <LoQueMeToca />
       <EsperanSuDecision />
       <Agenda />
       <Atajos />
       <MisProyectos />
       <VisionEjecutiva />
+      <Consultas />
       {conMiDia ? null : (
         <section aria-labelledby="inicio-modulos" className="space-y-3">
           <div className="space-y-1">

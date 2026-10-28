@@ -46,6 +46,12 @@ export const ES_MI_DIA = {
     compromiso: 'Nuevo compromiso',
     proyecto: 'Nuevo proyecto'
   },
+  consultas: { titulo: 'Consultar' },
+  sinAsignacion: {
+    titulo: 'Todavía no tiene un proyecto asignado',
+    texto:
+      'Para registrar en un proyecto necesita una asignación vigente: pídala a la administración del proyecto. Mientras tanto, puede leer lo que su rol permite.'
+  },
   proyectos: {
     titulo: 'Mis proyectos',
     jefatura: 'Jefatura',
@@ -123,6 +129,11 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     qcs: 'Record grievance, inquiry or request',
     compromiso: 'New commitment',
     proyecto: 'New project'
+  },
+  consultas: { titulo: 'Look up' },
+  sinAsignacion: {
+    titulo: 'You have no project assigned yet',
+    texto: 'To record in a project you need a current assignment: ask the project administration for it. Meanwhile, you can read what your role allows.'
   },
   proyectos: {
     titulo: 'My projects',
