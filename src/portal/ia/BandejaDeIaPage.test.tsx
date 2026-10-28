@@ -155,15 +155,19 @@ describe('S52 · bandeja de revisión de IA', () => {
   // ficha, con «Ver todas»
   it('los filtros van en la URL y ?target= deja solo las propuestas de un registro', async () => {
     montarBandeja(ESTADO_ACTIVO, [], '/projects/p1/ai-review?target=grievance:g1')
-    const propuestas = within(await lista()).getAllByRole('listitem')
-    expect(propuestas).toHaveLength(1)
-    expect(within(propuestas[0]).getByText('Clasificación')).toBeInTheDocument()
+    // las dos propuestas sobre la queja g1 (la clasificación y el posible duplicado), contadas por su tipo: una tarjeta lleva
+    // sus propias listas, así que sus elementos no cuentan tarjetas
+    const tipos = async () =>
+      within(await lista())
+        .getAllByText(TIPO)
+        .map((e) => e.textContent)
+    await waitFor(async () => expect((await tipos()).sort()).toEqual(['Clasificación', 'Posible duplicado']))
     expect(screen.getByText(/^Solo las propuestas de/)).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByLabelText('Origen'), 'ia')
     expect(ubicacion.actual).toBe('/projects/p1/ai-review?target=grievance%3Ag1&origin=ia')
     await userEvent.click(screen.getByRole('button', { name: 'Ver todas' }))
     expect(ubicacion.actual).toBe('/projects/p1/ai-review?origin=ia')
-    await waitFor(async () => expect(within(await lista()).getAllByRole('listitem').length).toBeGreaterThan(1))
+    await waitFor(async () => expect((await tipos()).length).toBeGreaterThan(2))
   })
 
   // rediseño de UX (2026-10-20): sin coincidencias, el vacío dice cuántas hay sin los filtros y los limpia

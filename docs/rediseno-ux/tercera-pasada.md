@@ -228,8 +228,11 @@ Van en un PR a `wasichai/sgspe` (`docs/ux/` y `docs/ux/redesign/07-decisiones-y-
   - Una prueba de aprobaciones que fallaba según el orden de las respuestas destapó un defecto propio: la bandeja elegía sola
     la única aprobación aunque su registro respondiera 404, y el detalle volvía a pedirlo. Ahora se elige cuando el registro
     se leyó (4119159).
-- **Ola 4:** dos rojos en Web.
+- **Ola 4:** tres rojos en Web.
   - En e2e, dos expectativas viejas: lo crítico de la revisión ejecutiva lleva ahora a `?view=vencidos` (T-50), y la espera
     del borrador ya no dice que el estado se consulta cada 5 segundos (T-55). Se corrigieron en ea9e205.
   - En `typecheck`, una clave de texto repetida en la bandeja de IA («aceptada»), que además tapaba a la nueva en
     ejecución. Pasó a «aceptadaEn» (5d0acb3).
+  - En Web, la prueba de `?target=` en la bandeja de IA suponía una sola propuesta sobre la queja g1; el fixture tiene dos
+    (la clasificación y el posible duplicado) y la prueba contaba los `<li>` anidados de las tarjetas. Ahora las cuenta
+    por su tipo; el filtro estaba bien.
