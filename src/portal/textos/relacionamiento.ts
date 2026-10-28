@@ -33,6 +33,8 @@ export const ES_RELACIONAMIENTO = {
   festividadesFallo: 'No se pudieron leer las festividades: el calendario no las marca.',
   visitas: 'Visitas de campo',
   ficha: {
+    editar: 'Editar',
+    editarTitulo: 'Editar la interacción',
     pestanas: {
       resumen: 'Resumen',
       participantes: 'Participantes',
@@ -130,6 +132,7 @@ export const ES_RELACIONAMIENTO = {
     completarDespues: 'Guardar y completar después',
     guardando: 'Guardando…',
     faltaFecha: 'Indique la fecha',
+    faltaProgramada: 'Para programarla, indique la fecha y la hora',
     faltaTitulo: 'Indique el título y el tipo',
     sinConexion: 'Sin conexión no se guarda: por ahora el portal no trabaja sin conexión.',
     rapido: 'Modo rápido de campo',
@@ -273,6 +276,8 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
   festividadesFallo: 'The festivities could not be read: the calendar does not mark them.',
   visitas: 'Field visits',
   ficha: {
+    editar: 'Edit',
+    editarTitulo: 'Edit the engagement',
     pestanas: {
       resumen: 'Overview',
       participantes: 'Participants',
@@ -369,6 +374,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     completarDespues: 'Save and complete later',
     guardando: 'Saving…',
     faltaFecha: 'Set the date',
+    faltaProgramada: 'To schedule it, set the date and time',
     faltaTitulo: 'Set the title and the type',
     sinConexion: 'Without a connection nothing is saved: the portal does not work offline yet.',
     rapido: 'Quick field mode',

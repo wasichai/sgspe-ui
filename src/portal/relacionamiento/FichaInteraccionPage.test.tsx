@@ -110,6 +110,29 @@ describe('S23 · ficha de interacción', () => {
     )
   })
 
+  // tercera pasada de UX (2.9): la interacción se corrige desde su ficha (engagement no es requiresReason: sin motivo)
+  it('«Editar» corrige el título y lo manda con la versión leída', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, [
+      { path: '/metadata/objects/engagement', body: definicion('engagement', [['title', { label: 'Título' }], 'objective']) },
+      { method: 'PUT', path: '/objects/engagement/records/e1', body: { ...E1, attributes: { ...E1.attributes, title: 'Asamblea comunal de octubre' } } },
+      ...rutas()
+    ])
+    red = espiarRed()
+    const acciones = await screen.findByRole('group', { name: 'Acciones del registro' })
+    await within(acciones).findByRole('button', { name: 'Redactar acta' })
+    // a la vista o en «Más acciones», según cuántas secundarias haya
+    if (!within(acciones).queryByRole('button', { name: 'Editar' })) await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Editar la interacción' })
+    const titulo = await within(drawer).findByLabelText(/^Título/)
+    await userEvent.clear(titulo)
+    await userEvent.type(titulo, 'Asamblea comunal de octubre')
+    await userEvent.click(within(drawer).getByRole('button', { name: /guardar|save/i }))
+    await waitFor(() => expect(red!.a('PUT', '/objects/engagement/records/e1')).toHaveLength(1))
+    expect(red.a('PUT', '/objects/engagement/records/e1')[0].cabeceras.get('If-Match')).toBe(`"${E1.updatedAt}"`)
+    expect(red.a('PUT', '/objects/engagement/records/e1')[0].cuerpo).toMatchObject({ attributes: { title: 'Asamblea comunal de octubre' } })
+  })
+
   // P-09 del rediseño de UX (DD-02 y DD-06; U-03, U-25, U-26, U-27 y U-28): el antetítulo en sans; una sola primaria, la
   // siguiente acción; cancelar en «Más acciones»; el estado una sola vez (en el panel de decisión); qué pasó en su sección con
   // los campos sin dato plegados; las siglas de ámbito explicadas
