@@ -91,6 +91,8 @@ export const ES_RELACIONAMIENTO = {
     truncado: 'Se leyeron solo los primeros {{n}} registros; el resto no se muestra.'
   },
   registro: {
+    // lo que la ficha dice al llegar del alta (AvisoDeExito, tercera pasada de UX)
+    hecho: 'Se registró la interacción «{{titulo}}».',
     titulo: 'Registrar interacción',
     pasos: ['Tipo y fecha', 'Objetivo, lugar y grupos de interés', 'Participantes', 'Preguntas y temas', 'Revisión'],
     tipo: 'Tipo de interacción',
@@ -333,6 +335,7 @@ export const EN_RELACIONAMIENTO: typeof ES_RELACIONAMIENTO = {
     truncado: 'Only the first {{n}} records were read; the rest is not shown.'
   },
   registro: {
+    hecho: 'Engagement «{{titulo}}» was recorded.',
     titulo: 'Register engagement',
     pasos: ['Type and date', 'Objective, place and stakeholders', 'Participants', 'Questions and topics', 'Review'],
     tipo: 'Engagement type',

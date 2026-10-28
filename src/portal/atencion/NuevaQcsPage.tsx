@@ -21,6 +21,7 @@ import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { Seccion } from '../componentes/Seccion'
+import { conHecho } from '../componentes/AvisoDeExito'
 
 // los campos que, escritos, son cambios por perder al salir (la fecha de recepción ya viene propuesta)
 const CON_CAMBIOS = ['code', 'channel', 'category', 'description', 'priority', 'severity', 'request_medium', 'requested_resource'] as const
@@ -214,7 +215,10 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
       {
         onSuccess: (r) => {
           salida.current = true
-          navegar(rutaDeQcs(projectId, tipo, r.id))
+          // la ficha dice lo que se hizo y lo que el modelo hizo con ello: el acuse de una queja no confidencial (AUT-02)
+          const codigo = texto(r, 'code') || valores.code.trim()
+          const hecho = [t(`nuevaQcs.hecho.${tipo}`, { codigo }), tipo === 'grievance' && !confidencial ? t('nuevaQcs.hecho.acuse') : '']
+          navegar(rutaDeQcs(projectId, tipo, r.id), { state: conHecho(null, hecho.filter(Boolean).join(' ')) })
         },
         // un error de un campo vuelve al paso donde se escribe, con su texto junto al control; si alguno no tiene paso (o no hay
         // errores de campo), el aviso queda en la revisión: nada se pierde en silencio

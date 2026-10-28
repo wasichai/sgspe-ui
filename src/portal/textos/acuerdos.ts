@@ -1,5 +1,7 @@
 // S33 · acuerdos y convenios (WF-I, RF-AGR-001 a RF-AGR-003)
 export const ES_ACUERDOS = {
+  // lo que la ficha dice al llegar del alta (AvisoDeExito, tercera pasada de UX)
+  hecho: 'Se registró el acuerdo {{codigo}}.',
   titulo: 'Acuerdos y convenios',
   nuevo: 'Nuevo acuerdo',
   nuevoTitulo: 'Registrar un acuerdo',
@@ -76,6 +78,7 @@ export const ES_ACUERDOS = {
 }
 
 export const EN_ACUERDOS: typeof ES_ACUERDOS = {
+  hecho: 'Agreement {{codigo}} was recorded.',
   titulo: 'Agreements',
   nuevo: 'New agreement',
   nuevoTitulo: 'Record an agreement',

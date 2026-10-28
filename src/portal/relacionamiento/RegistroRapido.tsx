@@ -8,7 +8,7 @@ import { DeLista } from '../componentes/LecturaConEstados'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { hoyEnLima } from '../datos/fechas'
 import { nuevaClave } from '../datos/http'
-import { useTodos } from '../datos/registros'
+import { texto, useTodos } from '../datos/registros'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
@@ -18,6 +18,7 @@ import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 import { rotuloDeOpcion, rotuloEnIdioma } from '../datos/opciones'
 import { EN_OPCIONES } from '../datos/opcionesEnIngles'
+import { conHecho } from '../componentes/AvisoDeExito'
 
 // el modo rápido de campo de S24 (screens.md §6, S55): una sola pantalla con el tipo, la ubicación del teléfono, los
 // grupos presentes, contadores por sexo y ámbito (objetivos de 44 px) y una nota; guarda la interacción como realizada
@@ -91,7 +92,9 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
           setConteos({})
           setUbicacion(null)
           setLugares({})
-          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
+          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`, {
+            state: conHecho(null, t('relacionamiento.registro.hecho', { titulo: texto(i, 'title') }))
+          })
         }
       }
     )

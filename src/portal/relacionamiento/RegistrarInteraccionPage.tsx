@@ -27,6 +27,7 @@ import { GuardadoParcial, useGuardarInteraccion, type NuevaInteraccion } from '.
 import { RegistroRapido } from './RegistroRapido'
 import { Mapa } from '../mapa/Mapa'
 import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
+import { conHecho } from '../componentes/AvisoDeExito'
 
 // S24 · registrar interacción (screens.md §6, flujos 4 y 5): cinco pasos con participantes sin pedir datos personales que
 // no hacen falta (filas de persona o de grupo sin nombres, con personas ≥ 1) y totales en vivo; al final "Guardar como
@@ -252,7 +253,9 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
           setPaso(0)
           setVisitados(0)
           salida.current = true
-          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`)
+          navegar(`/projects/${encodeURIComponent(projectId)}/engagements/${encodeURIComponent(i.id)}`, {
+            state: conHecho(null, t('relacionamiento.registro.hecho', { titulo: texto(i, 'title') }))
+          })
         }
       })
     }, alFallar)

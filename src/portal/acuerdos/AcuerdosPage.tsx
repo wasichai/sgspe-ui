@@ -27,6 +27,7 @@ import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/List
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { conHecho } from '../componentes/AvisoDeExito'
 
 // S33, la lista: los acuerdos del alcance (global con la columna Proyecto, o de un proyecto) con su tipo, su estado de WF-I y su
 // vigencia (validity_status, de JOB-01: vencer no concluye el acuerdo), paginados en el servidor (D10 de la revisión de UX). el alta va en un drawer con los campos de la ficha y
@@ -190,7 +191,9 @@ export function AcuerdosPage() {
             alGuardar={(a) => {
               setCreando(false)
               motivo.limpiar()
-              navegar(`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`)
+              navegar(`/projects/${encodeURIComponent(proyecto)}/agreements/${encodeURIComponent(a.id)}`, {
+                state: conHecho(null, t('acuerdos.hecho', { codigo: texto(a, 'code') || texto(a, 'title') }))
+              })
             }}
             alCancelar={() => setCreando(false)}
           />

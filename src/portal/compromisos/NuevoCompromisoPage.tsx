@@ -27,6 +27,7 @@ import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useRegistro, us
 import { fechaYHoraPe, NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
 import { opcion } from '../datos/opciones'
+import { conHecho } from '../componentes/AvisoDeExito'
 
 // S30 · crear compromiso (screens.md §7, flujo 8): los siete pasos de la matriz de DOC-01 (qué, origen, solicitantes,
 // beneficiarios, monto y campaña, plazo y responsable, revisión). el alta exige monto (RN-COM-004) y, como commitment es
@@ -390,7 +391,9 @@ function Asistente() {
           void cliente.invalidateQueries({ queryKey: ['records', 'commitment'] })
           borrarBorrador(projectId)
           salida.current = true
-          navegar(`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(compromiso.id)}`)
+          navegar(`/projects/${encodeURIComponent(projectId)}/commitments/${encodeURIComponent(compromiso.id)}`, {
+            state: conHecho(null, t('nuevoCompromiso.hecho', { codigo: texto(compromiso, 'code') }))
+          })
         } catch (e) {
           setFallo(e)
         } finally {

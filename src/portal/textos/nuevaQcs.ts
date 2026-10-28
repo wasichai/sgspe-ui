@@ -1,5 +1,12 @@
 // S37 · registrar una queja, una consulta o una solicitud (F4)
 export const ES_NUEVA_QCS = {
+  // lo que la ficha dice al llegar del alta (AvisoDeExito, tercera pasada de UX)
+  hecho: {
+    grievance: 'Se registró la queja {{codigo}}.',
+    inquiry: 'Se registró la consulta {{codigo}}.',
+    stakeholder_request: 'Se registró la solicitud {{codigo}}.',
+    acuse: 'Se creó la tarea de acusar recibo.'
+  },
   titulo: 'Registrar queja, consulta o solicitud',
   ayuda: 'Registre lo que se planteó, por el canal que llegó, sin decidir todavía su tratamiento.',
   tipo: 'Tipo',
@@ -71,6 +78,12 @@ export const ES_NUEVA_QCS = {
 }
 
 export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
+  hecho: {
+    grievance: 'Grievance {{codigo}} was recorded.',
+    inquiry: 'Inquiry {{codigo}} was recorded.',
+    stakeholder_request: 'Request {{codigo}} was recorded.',
+    acuse: 'The task to acknowledge receipt was created.'
+  },
   titulo: 'Record a grievance, inquiry or request',
   ayuda: 'Record what was raised, through the channel it came, without deciding its handling yet.',
   tipo: 'Type',

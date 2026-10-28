@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useTransicionesOfrecidas } from '../transiciones/BotonesDeTransicion'
+import { AvisoDeExito } from './AvisoDeExito'
 import { CompletarCampo } from './CompletarCampo'
 import { EncabezadoDePagina } from './Pagina'
 
@@ -110,18 +111,22 @@ export function CabeceraDeFicha({
       </>
     ) : null
   return (
-    <EncabezadoDePagina
-      ficha
-      antetitulo={antetitulo}
-      antetituloEnSans
-      titulo={titulo}
-      tituloDelDocumento={tituloDelDocumento}
-      chips={chips}
-      etiquetaDeAcciones={t('transiciones.acciones')}
-      secundarias={aLaVista.length > 0 ? lista(aLaVista) : undefined}
-      mas={enMenu.length > 0 ? lista(enMenu) : undefined}
-      primaria={primaria ?? undefined}
-      pieDeAcciones={pie}
-    />
+    <>
+      <EncabezadoDePagina
+        ficha
+        antetitulo={antetitulo}
+        antetituloEnSans
+        titulo={titulo}
+        tituloDelDocumento={tituloDelDocumento}
+        chips={chips}
+        etiquetaDeAcciones={t('transiciones.acciones')}
+        secundarias={aLaVista.length > 0 ? lista(aLaVista) : undefined}
+        mas={enMenu.length > 0 ? lista(enMenu) : undefined}
+        primaria={primaria ?? undefined}
+        pieDeAcciones={pie}
+      />
+      {/* lo que hizo el alta que trajo aquí (tercera pasada de UX, 2.12) */}
+      <AvisoDeExito />
+    </>
   )
 }
