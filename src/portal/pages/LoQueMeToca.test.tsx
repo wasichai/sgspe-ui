@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, type Red } from '../../test/red'
@@ -12,6 +12,7 @@ import { LoQueMeToca } from './LoQueMeToca'
 let fetch: FetchMock | null = null
 let red: Red | null = null
 afterEach(() => {
+  vi.restoreAllMocks()
   red?.restaurar()
   fetch?.restore()
   red = fetch = null
@@ -35,6 +36,32 @@ const entradas = (nombre: RegExp) =>
     .map((li) => li.textContent)
 
 describe('Lo que me toca hoy', () => {
+  // tercera pasada de UX, 4.8: la sección dice cuánto hace que se leyó, se relee al volver a la pestaña tras un minuto y ofrece
+  // «Actualizar»
+  it('dice cuándo se actualizó, se relee al volver a la pestaña y ofrece «Actualizar»', async () => {
+    fetch = mockFetch([
+      {
+        path: /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/,
+        body: pagina([registro('t1', { title: 'Redactar el acta', project: 'p1', due_date: '2026-10-30', deadline_status: 'AL DIA' }, { state: 'open' })])
+      },
+      ...sinAsignaciones
+    ])
+    red = espiarRed()
+    montar(<LoQueMeToca />, { usuario: RELACIONISTA, permisos: permisos({ task: ['READ'] }) })
+    expect(await within(await screen.findByRole('region', { name: 'Lo que me toca hoy' })).findByText('Actualizado hace un momento')).toBeInTheDocument()
+    const deSuCargo = () => red!.a('GET', /^\/objects\/task\/records\?.*assignee_user_id=u-relacionista/).length
+    const antes = deSuCargo()
+    // al volver a la pestaña antes de un minuto no se relee
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(deSuCargo()).toBe(antes)
+    const real = Date.now()
+    vi.spyOn(Date, 'now').mockReturnValue(real + 2 * 60_000)
+    document.dispatchEvent(new Event('visibilitychange'))
+    await waitFor(() => expect(deSuCargo()).toBe(antes + 1))
+    await userEvent.click(within(region()).getByRole('button', { name: 'Actualizar' }))
+    await waitFor(() => expect(deSuCargo()).toBe(antes + 2))
+  })
+
   it('lo vencido primero, luego lo por vencer y lo demás, cada uno con su motivo y su fecha, cinco a la vista', async () => {
     fetch = mockFetch([
       {

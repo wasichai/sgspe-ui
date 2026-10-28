@@ -39,5 +39,12 @@ export function useSuTrabajo() {
     (q.consulta.data ?? []).filter((r) => estaAbierta(q.objeto, r)).map((registro) => ({ objeto: q.objeto as string, registro }))
   )
   qcs.sort((a, b) => vencidosPrimero(a.registro, b.registro))
-  return { lee, cargando, fallidas, abiertas, aCargo, qcs }
+  // cuándo se leyó lo más viejo de lo que se muestra y cómo releerlo todo (tercera pasada de UX, 4.8)
+  const leidas = [{ consulta: tareas, lee: leeTareas }, { consulta: compromisos, lee: leeCompromisos }, ...deQcs].filter((l) => l.lee)
+  const conDatos = leidas.filter((l) => l.consulta.data)
+  const actualizado = conDatos.length > 0 ? Math.min(...conDatos.map((l) => l.consulta.dataUpdatedAt)) : null
+  const releer = () => {
+    for (const l of leidas) void l.consulta.refetch()
+  }
+  return { lee, cargando, fallidas, abiertas, aCargo, qcs, actualizado, releer }
 }

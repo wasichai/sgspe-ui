@@ -20,6 +20,7 @@ import { diaPe, NS } from '../i18n'
 import { sinFiltroDeAsignados, soloAsignados } from '../tareas/paraTomar'
 import { TomarTarea } from '../tareas/TomarTarea'
 import { useSuTrabajo } from './aSuCargo'
+import { minutosDesde, useAhora, useReleerAlVolver } from './alDia'
 
 // «Lo que me toca hoy», lo primero del inicio (P-01 del rediseño de UX; hallazgos U-05 y U-13): lo abierto a su cargo (tareas,
 // compromisos y QCS de useSuTrabajo), lo vencido primero, luego lo por vencer y lo demás por fecha, cinco a la vista con su motivo
@@ -110,6 +111,24 @@ export function LoQueMeToca() {
     })
   })
 
+  // al día (tercera pasada de UX, 4.8): lo a su cargo y lo para tomar se releen al volver a la pestaña, y la sección dice cuánto
+  // hace que se leyó lo más viejo, con «Actualizar»
+  const ahora = useAhora()
+  const releer = () => {
+    trabajo.releer()
+    if (leeTareas) void enSusProyectos.refetch()
+    for (const cola of colas) void cola.refetch()
+  }
+  useReleerAlVolver(releer, trabajo.actualizado)
+  const minutos = trabajo.actualizado !== null ? minutosDesde(trabajo.actualizado, ahora) : null
+  const actualizado =
+    minutos === null
+      ? null
+      : minutos === 0
+        ? t('miDia.hoy.actualizadoAhora')
+        : minutos < 60
+          ? t('miDia.hoy.actualizadoMinutos', { n: minutos })
+          : t('miDia.hoy.actualizadoHoras', { count: Math.floor(minutos / 60) })
   const nombreDelProyecto = (id: string): string | null => {
     const registro = (proyectos.data ?? []).find((p) => p.id === id)
     return registro ? nombreDeProyecto(registro) : null
@@ -176,11 +195,21 @@ export function LoQueMeToca() {
       titulo={t('miDia.hoy.titulo')}
       descripcion={t('miDia.hoy.descripcion')}
       acciones={
-        leeTareas ? (
-          <Link to="/tasks" className="text-sg-body-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
-            {t('miDia.hoy.verTareas')}
-          </Link>
-        ) : undefined
+        <>
+          {actualizado ? (
+            <span className="flex items-center gap-2 text-sg-caption text-sg-text-muted">
+              {actualizado}
+              <button type="button" className="text-sg-primary-text underline" onClick={releer}>
+                {t('miDia.hoy.actualizar')}
+              </button>
+            </span>
+          ) : null}
+          {leeTareas ? (
+            <Link to="/tasks" className="text-sg-body-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
+              {t('miDia.hoy.verTareas')}
+            </Link>
+          ) : null}
+        </>
       }
     >
       {trabajo.lee ? (
