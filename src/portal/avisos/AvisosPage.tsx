@@ -100,7 +100,8 @@ export function AvisosPage() {
         <Cargando />
       ) : avisos.isError && !avisos.data ? (
         sinBandeja(avisos.error) ? (
-          <Vacio titulo={t('avisos.vacio')} />
+          // sin el módulo (404) o para una cuenta de servicio (403) no se afirma que no hay avisos (tercera pasada de UX)
+          <p className="text-sm text-sg-text-muted">{t('comun.listaNoDisponible')}</p>
         ) : (
           <FalloDeLectura error={avisos.error} alReintentar={() => void avisos.refetch()} />
         )
