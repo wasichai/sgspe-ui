@@ -110,12 +110,17 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
                 <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>
               )}
             </span>
-            <span>
-              {t('p360.resumen.etapa')}: {opcion(proyecto, 'stage') || '—'}
-            </span>
-            <span>
-              {t('p360.resumen.fase')}: {opcion(proyecto, 'exploration_phase') || '—'}
-            </span>
+            {/* sin dato, la línea no se dibuja (tercera pasada de UX, como A16 en el compromiso): un «—» no dice nada */}
+            {opcion(proyecto, 'stage') ? (
+              <span>
+                {t('p360.resumen.etapa')}: {opcion(proyecto, 'stage')}
+              </span>
+            ) : null}
+            {opcion(proyecto, 'exploration_phase') ? (
+              <span>
+                {t('p360.resumen.fase')}: {opcion(proyecto, 'exploration_phase')}
+              </span>
+            ) : null}
           </div>
         </div>
         <AccionesDelProyecto
@@ -399,15 +404,24 @@ function Cifra({ titulo, lectura, a, tono }: CifraDeFranja) {
   else if (indicador.value === null || indicador.value === undefined) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.sinDatosEnElPeriodo')}</p>
   else {
     const pide = tono && indicador.value > 0 ? tono : undefined
+    // un porcentaje se lee como en KpiCard (A9): el signo junto a la cifra y debajo su base, «n de N»; otra unidad va debajo
+    const porcentaje = indicador.unit === '%'
+    const dicha = `${numeroPe(indicador.value)}${porcentaje ? ' %' : ''}`
+    const conBase = indicador.numerator !== undefined && indicador.numerator !== null && Boolean(indicador.denominator)
+    const debajo = porcentaje
+      ? conBase
+        ? t('comun.nDeN', { n: numeroPe(indicador.numerator as number), total: numeroPe(indicador.denominator as number) })
+        : ''
+      : (indicador.unit ?? '')
     cuerpo = (
       <>
         <p className="flex items-center gap-1.5 text-sg-kpi font-semibold tabular-nums">
           <Link
             to={a}
-            aria-label={`${titulo}: ${numeroPe(indicador.value)}`}
+            aria-label={`${titulo}: ${dicha}`}
             className={cn('no-underline hover:underline focus-visible:underline', pide ? COLOR[pide] : 'text-sg-text')}
           >
-            {numeroPe(indicador.value)}
+            {dicha}
           </Link>
           {pide ? (
             <>
@@ -416,12 +430,7 @@ function Cifra({ titulo, lectura, a, tono }: CifraDeFranja) {
             </>
           ) : null}
         </p>
-        <p className="text-sg-caption text-sg-text-muted">
-          {indicador.numerator !== undefined && indicador.numerator !== null && indicador.denominator
-            ? `${numeroPe(indicador.numerator)} / ${numeroPe(indicador.denominator)} · `
-            : ''}
-          {indicador.unit ?? ''}
-        </p>
+        {debajo ? <p className="text-sg-caption text-sg-text-muted">{debajo}</p> : null}
         <NotaDeConfidenciales oculta={indicador.confidentialHidden} />
       </>
     )

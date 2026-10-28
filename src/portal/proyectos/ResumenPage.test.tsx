@@ -511,6 +511,23 @@ describe('S08 · Project 360, resumen', () => {
 
   // P-03 (rediseño de UX, área 4.2): las cinco cifras van en una franja al inicio, en una sola superficie (sin tarjetas dentro de
   // tarjetas, U-34), y solo se colorean las que piden acción, con un ícono y un texto además del color
+  // tercera pasada de UX: la franja lee un porcentaje como KpiCard (A9), «30 %» y debajo «3 de 10», no «3 / 10 · %»; y la cabecera
+  // no dibuja «Etapa: —» ni «Fase de exploración: —» sin dato
+  it('un porcentaje de la franja dice su signo y su base, y la cabecera omite lo que no tiene dato', async () => {
+    const sinEtapa = registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa', inactivity_days: 90 }, { state: 'active' })
+    abrir([
+      { path: '/objects/project/records/p1', body: sinEtapa },
+      ...rutas(SIN_STANCE, { 'KPI-ENG-01': { label: 'x', available: true, value: 30, unit: '%', numerator: 3, denominator: 10 } })
+    ])
+    const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
+    const interacciones = within(salud).getByRole('group', { name: 'Interacciones realizadas este mes' })
+    expect(await within(interacciones).findByRole('link', { name: 'Interacciones realizadas este mes: 30 %' })).toHaveTextContent('30 %')
+    expect(within(interacciones).getByText('3 de 10')).toBeInTheDocument()
+    expect(interacciones).not.toHaveTextContent('/')
+    expect(screen.queryByText(/^Etapa:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Fase de exploración:/)).not.toBeInTheDocument()
+  })
+
   it('la franja del inicio lleva las cinco cifras en una sola superficie y tiñe solo las que piden acción', async () => {
     abrir(rutas(SIN_STANCE))
     const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
