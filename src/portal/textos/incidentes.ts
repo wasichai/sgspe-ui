@@ -5,7 +5,11 @@ export const ES_INCIDENTES = {
   vacio: 'No hay incidentes registrados',
   comoEmpezar: 'Un incidente es un hecho que ya ocurrió y afecta la relación con la comunidad: «Registrar incidente» lo anota con cuándo y dónde pasó.',
   registrar: 'Registrar incidente',
-  columnas: { codigo: 'Código', ocurrio: 'Ocurrió', tipo: 'Tipo', lugar: 'Lugar', estado: 'Estado' },
+  conteo_one: '{{count}} incidente',
+  conteo_other: '{{count}} incidentes',
+  buscar: 'Buscar por código, lugar o lo que pasó',
+  vistas: { todos: 'Todos', abiertos: 'Abiertos', cerrados: 'Cerrados' },
+  columnas: { incidente: 'Incidente', ocurrio: 'Ocurrió', tipo: 'Tipo', lugar: 'Lugar', estado: 'Estado' },
   ficha: {
     tipo: 'Incidente',
     volver: 'Volver a los incidentes',
@@ -37,7 +41,11 @@ export const EN_INCIDENTES: typeof ES_INCIDENTES = {
   comoEmpezar:
     'An incident is something that already happened and affects the relationship with the community: “Record incident” notes when and where it happened.',
   registrar: 'Record incident',
-  columnas: { codigo: 'Code', ocurrio: 'Occurred', tipo: 'Type', lugar: 'Place', estado: 'State' },
+  conteo_one: '{{count}} incident',
+  conteo_other: '{{count}} incidents',
+  buscar: 'Search by code, place or what happened',
+  vistas: { todos: 'All', abiertos: 'Open', cerrados: 'Closed' },
+  columnas: { incidente: 'Incident', ocurrio: 'Occurred', tipo: 'Type', lugar: 'Place', estado: 'State' },
   ficha: {
     tipo: 'Incident',
     volver: 'Back to the incidents',
