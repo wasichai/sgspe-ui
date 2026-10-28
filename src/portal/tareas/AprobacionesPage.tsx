@@ -123,15 +123,25 @@ export function AprobacionesPage() {
   const { avisos, pendientes: llegadas, truncado } = useAprobacionesPendientes()
   const pendientes = [...llegadas].sort(porAntiguedad)
   const { elegida, enlace, soltar, elegirSola } = useSeleccion()
-  // con una sola pendiente se elige sola, una vez al abrir la bandeja: «Volver a la lista» la deja sin elegir
+  // con una sola pendiente se elige sola, una vez al abrir la bandeja: «Volver a la lista» la deja sin elegir. se elige cuando su
+  // registro se leyó (la misma lectura que su tarjeta): uno que responde 404 queda «Registro reservado», sin un detalle que solo
+  // repetiría eso
   const yaSeEligio = useRef(false)
   const unica = avisos.isSuccess && pendientes.length === 1 ? pendientes[0] : null
+  const registroDeLaUnica = useRegistro(unica?.link?.object ?? '', unica?.link?.recordId ?? undefined)
   useEffect(() => {
     if (yaSeEligio.current || !avisos.isSuccess) return
+    const objetoUnico = unica?.link?.object
+    const idUnico = unica?.link?.recordId
+    if (elegida || lista.vista === 'escalamientos' || !objetoUnico || !idUnico) {
+      yaSeEligio.current = true
+      return
+    }
+    if (registroDeLaUnica.isPending) return
     yaSeEligio.current = true
-    if (!elegida && lista.vista !== 'escalamientos' && unica?.link?.object && unica.link.recordId) elegirSola(unica.link.object, unica.link.recordId)
+    if (registroDeLaUnica.isSuccess) elegirSola(objetoUnico, idUnico)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avisos.isSuccess])
+  }, [avisos.isSuccess, registroDeLaUnica.isPending])
   // la siguiente por decidir tras la elegida, para pasar a ella sin volver a la lista
   const despues = elegida ? pendientes.filter((a) => !(a.link?.object === elegida.objeto && a.link?.recordId === elegida.id)) : []
   const siguiente = despues[0]?.link?.object && despues[0].link.recordId ? enlace(despues[0].link.object, despues[0].link.recordId) : null

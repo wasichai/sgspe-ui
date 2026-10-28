@@ -229,6 +229,8 @@ describe('S48 · aprobaciones', () => {
     const fila = within(tabla).getByText('Registro reservado').closest('li')!
     expect(within(fila).queryByRole('link')).not.toBeInTheDocument()
     expect(within(fila).queryByText(/^Queja/)).not.toBeInTheDocument()
+    // la única pendiente no se elige sola si no se lee (tercera pasada de UX, 3.4)
+    expect(ubicacion.actual).toBe('/tasks/approvals')
   })
 
   // con el alcance por proyecto (ADR-0029) un compromiso de un proyecto que la cuenta dejó de leer también responde 404
