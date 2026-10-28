@@ -6,6 +6,7 @@ export const ES_REGISTROS_DE_ALERTA = {
     lista: 'Menciones',
     nueva: 'Registrar mención',
     vacio: 'Aún no hay menciones registradas.',
+    buscar: 'Buscar por titular o medio',
     tono: 'Tono',
     otraPestana: '(se abre en otra pestaña)',
     enlaceAyuda: 'El enlace se guarda como texto y se abre en otra pestaña: el sistema nunca lo descarga.',
@@ -17,6 +18,7 @@ export const ES_REGISTROS_DE_ALERTA = {
     lista: 'Señales',
     nueva: 'Registrar señal',
     vacio: 'Aún no hay señales registradas.',
+    buscar: 'Buscar en la señal',
     sinAlerta: 'Sin alerta',
     sinNombres: 'Describa lo que pasó sin nombres de personas.',
     columnas: { descripcion: 'Señal', recibida: 'Recibida', fuente: 'Fuente', alerta: 'Alerta' }
@@ -27,6 +29,7 @@ export const ES_REGISTROS_DE_ALERTA = {
     lista: 'Impactos',
     nuevo: '+ Impacto potencial',
     vacio: 'Aún no hay impactos potenciales.',
+    buscar: 'Buscar por impacto o actividad',
     sinRiesgo: 'Sin riesgo vinculado',
     columnas: { descripcion: 'Impacto', actividad: 'Actividad', tipo: 'Tipo', naturaleza: 'Naturaleza', signo: 'Signo', riesgo: 'Riesgo' }
   }
@@ -39,6 +42,7 @@ export const EN_REGISTROS_DE_ALERTA: typeof ES_REGISTROS_DE_ALERTA = {
     lista: 'Mentions',
     nueva: 'Record mention',
     vacio: 'No mentions recorded yet.',
+    buscar: 'Search by headline or outlet',
     tono: 'Tone',
     otraPestana: '(opens in another tab)',
     enlaceAyuda: 'The link is stored as text and opened in another tab: the system never downloads it.',
@@ -50,6 +54,7 @@ export const EN_REGISTROS_DE_ALERTA: typeof ES_REGISTROS_DE_ALERTA = {
     lista: 'Signals',
     nueva: 'Record signal',
     vacio: 'No signals recorded yet.',
+    buscar: 'Search in the signal',
     sinAlerta: 'No alert',
     sinNombres: 'Describe what happened without names of people.',
     columnas: { descripcion: 'Signal', recibida: 'Received', fuente: 'Source', alerta: 'Alert' }
@@ -60,6 +65,7 @@ export const EN_REGISTROS_DE_ALERTA: typeof ES_REGISTROS_DE_ALERTA = {
     lista: 'Impacts',
     nuevo: '+ Potential impact',
     vacio: 'No potential impacts yet.',
+    buscar: 'Search by impact or activity',
     sinRiesgo: 'No linked risk',
     columnas: { descripcion: 'Impact', actividad: 'Activity', tipo: 'Type', naturaleza: 'Nature', signo: 'Sign', riesgo: 'Risk' }
   }

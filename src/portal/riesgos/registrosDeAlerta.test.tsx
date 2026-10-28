@@ -66,6 +66,27 @@ describe('S58 · menciones en medios', () => {
     await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/risks/mentions/m1'))
     expect(await screen.findByRole('dialog', { name: 'Menciones' })).toBeInTheDocument()
   })
+
+  // tercera pasada de UX, 3.7 y 3.8: la lista de la página busca por titular o medio, con ?q= en la URL, y abrir una mención la
+  // conserva; sin coincidencias, ofrece limpiar la búsqueda
+  it('busca por titular o medio, abrir una mención conserva la búsqueda y sin coincidencias ofrece limpiarla', async () => {
+    fetch = mockFetch(rutas())
+    montarEn(<MencionesPage />, '/projects/p1/risks/mentions', '/projects/:projectId/risks/mentions/:mentionId?')
+    const caja = await screen.findByRole('searchbox', { name: 'Buscar por titular o medio' })
+    await userEvent.type(caja, 'radio andina')
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Menciones' })).getAllByRole('row')).toHaveLength(2))
+    expect(ubicacion.actual).toBe('/projects/p1/risks/mentions?q=radio+andina')
+    await userEvent.click(screen.getByRole('button', { name: 'Comuneros denuncian polvo en la vía' }))
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/risks/mentions/m1?q=radio+andina'))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(ubicacion.actual).toBe('/projects/p1/risks/mentions?q=radio+andina'))
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Buscar por titular o medio' }))
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por titular o medio' }), 'xyz')
+    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Menciones' })).getAllByRole('row')).toHaveLength(3))
+    expect(ubicacion.actual).toBe('/projects/p1/risks/mentions')
+  })
 })
 
 describe('S59 · señales de alerta', () => {

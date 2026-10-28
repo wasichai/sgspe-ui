@@ -48,6 +48,10 @@ export function Impactos({ proyecto, riesgo }: { proyecto: string; riesgo?: stri
       proyecto={proyecto}
       textoNuevo={t('registrosDeAlerta.impactos.nuevo')}
       textoVacio={t('registrosDeAlerta.impactos.vacio')}
+      // la búsqueda es de la página de impactos; en la ficha de un riesgo la lista es corta
+      busqueda={
+        riesgo ? undefined : { etiqueta: t('registrosDeAlerta.impactos.buscar'), texto: (r) => `${texto(r, 'description')} ${texto(r, 'activity_type')}` }
+      }
     />
   )
 }

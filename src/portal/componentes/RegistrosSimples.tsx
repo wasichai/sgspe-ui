@@ -3,17 +3,21 @@ import { useAuth, type FieldMeta } from '@wasichai/core'
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { usePedir } from '../datos/http'
 import { campoDe, texto, useDefinicion, usePuedeEditar, useTodosConTope, type Parametros, type Registro } from '../datos/registros'
 import { diaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
+import { CajaDeBusqueda } from './BarraDeFiltros'
 import { CLASE_DE_TONO } from './apariencias'
 import { Drawer } from './Drawer'
 import type { MensajesPropios } from './errores'
 import { Cargando, Vacio } from './Estados'
 import { FormularioDeRegistro } from './FormularioDeRegistro'
+import { comparable } from './FiltroDeGrupo'
 import { FalloDeLectura } from './LecturaConEstados'
+import { VacioDeLista } from './Lista'
 import { RegistroVinculado } from './RegistroVinculado'
 import { opcion } from '../datos/opciones'
 
@@ -62,6 +66,9 @@ export interface RegistrosSimplesProps {
   // tras crear uno, el drawer queda abierto con el formulario vacío para el siguiente (los ítems de un aporte; tercera pasada de
   // UX, 2.11): dice que se agregó y ofrece «Listo» para cerrar
   conOtro?: boolean
+  // una lista de página (señales, menciones, impactos) busca en lo leído por el texto de cada registro, con ?q= en la URL
+  // (tercera pasada de UX, 3.7 y 3.8): volver de un registro conserva la búsqueda. una lista dentro de una ficha no la lleva
+  busqueda?: { etiqueta: string; texto: (registro: Registro) => string }
 }
 
 const NUEVO = '__nuevo__'
@@ -72,6 +79,16 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
   const { can } = useAuth()
   const escribe = useEscribeEnProyecto(proyecto)
   const lista = useTodosConTope(objeto, filtros)
+  const [parametros, fijarParametros] = useSearchParams()
+  const q = props.busqueda ? (parametros.get('q') ?? '') : ''
+  const buscado = comparable(q.trim())
+  const filas = (lista.data ?? []).filter((r) => !buscado || !props.busqueda || comparable(props.busqueda.texto(r)).includes(buscado))
+  const buscar = (valor: string) => {
+    const siguiente = new URLSearchParams(parametros)
+    if (valor.trim()) siguiente.set('q', valor)
+    else siguiente.delete('q')
+    fijarParametros(siguiente, { replace: true })
+  }
   const [propio, setPropio] = useState<string | null>(null)
   const abierto = props.alAbrir ? (props.abierto ?? null) : propio
   const abrir = props.alAbrir ?? setPropio
@@ -104,36 +121,43 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
       ) : (lista.data ?? []).length === 0 ? (
         <Vacio titulo={textoVacio} />
       ) : (
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-          <Table aria-label={titulo}>
-            <thead>
-              <tr>
-                {columnas.map((c) => (
-                  <Th key={c.id} scope="col">
-                    {c.encabezado}
-                  </Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(lista.data ?? []).map((r) => (
-                <tr key={r.id}>
-                  {columnas.map((c, i) => (
-                    <Td key={c.id} className="text-sm">
-                      {i === 0 ? (
-                        <button type="button" className="text-left text-sg-primary-text underline" onClick={() => abrir(r.id)}>
-                          {c.celda(r)}
-                        </button>
-                      ) : (
-                        c.celda(r)
-                      )}
-                    </Td>
+        <>
+          {props.busqueda ? <CajaDeBusqueda etiqueta={props.busqueda.etiqueta} valor={q} alCambiar={buscar} /> : null}
+          {filas.length === 0 ? (
+            <VacioDeLista conFiltros alLimpiar={() => buscar('')} sinFiltros={lista.data?.length} />
+          ) : (
+            <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+              <Table aria-label={titulo}>
+                <thead>
+                  <tr>
+                    {columnas.map((c) => (
+                      <Th key={c.id} scope="col">
+                        {c.encabezado}
+                      </Th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filas.map((r) => (
+                    <tr key={r.id}>
+                      {columnas.map((c, i) => (
+                        <Td key={c.id} className="text-sm">
+                          {i === 0 ? (
+                            <button type="button" className="text-left text-sg-primary-text underline" onClick={() => abrir(r.id)}>
+                              {c.celda(r)}
+                            </button>
+                          ) : (
+                            c.celda(r)
+                          )}
+                        </Td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
+                </tbody>
+              </Table>
+            </div>
+          )}
+        </>
       )}
       {/* el alta pedida por la ruta (abierto='__nuevo__') solo se abre para quien crea: una lista congelada no la ofrece */}
       <Drawer titulo={abierto === NUEVO ? textoNuevo : titulo} abierto={(abierto === NUEVO && crea) || registro !== undefined} alCerrar={cerrarAlta}>
