@@ -258,8 +258,11 @@ describe('S12 · filtros, leyenda y captura', () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas())
     red = espiarRed()
     const filtros = await screen.findByRole('group', { name: 'Filtros del mapa' })
-    await within(filtros).findByRole('option', { name: 'PRJ-01 · Proyecto Ejemplo A' })
-    await userEvent.selectOptions(within(filtros).getByLabelText('Proyecto del mapa'), 'p1')
+    // un solo control de proyecto (A24): el de la barra es el lente del mapa, y la pantalla no tiene uno propio
+    expect(within(filtros).queryByLabelText('Proyecto del mapa')).not.toBeInTheDocument()
+    const barra = within(screen.getByRole('banner'))
+    await userEvent.click(await barra.findByRole('combobox', { name: 'Proyecto' }))
+    await userEvent.click(await barra.findByRole('option', { name: 'PRJ-01 · Proyecto Ejemplo A' }))
     await waitFor(() => expect(rutaActual()).toBe('/territory?project=p1'))
     await waitFor(() => expect(red!.a('GET', '/sgspe/territory/layers/LYR-05').some((l) => l.ruta.includes('project=p1'))).toBe(true))
     await userEvent.type(within(filtros).getByLabelText('Desde'), '01/07/2026')

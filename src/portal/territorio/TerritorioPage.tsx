@@ -4,7 +4,6 @@ import { Layers, List, PanelRightOpen } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { CONTROL } from '../componentes/Campo'
 import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
@@ -14,7 +13,6 @@ import { useProyecto, useProyectos } from '../contexto/proyectos'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { hoyEnLima } from '../datos/fechas'
 import { rutaParaAbrir } from '../datos/fichas'
-import { texto } from '../datos/registros'
 import { NS } from '../i18n'
 import { useTableroDisponible } from '../tableros/comunes'
 import { destinoDe, encuadreDeGeometrias, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
@@ -402,14 +400,13 @@ export function problemaDelPeriodo(desde: string, hasta: string, hoy: string = h
   return fin < masAnos(inicio, MAXIMO_DE_ANOS) ? null : 'periodoLargo'
 }
 
-// el proyecto y el periodo del mapa, en la URL (screens.md S12, «MapFilters»): el proyecto acota las capas de proyecto y marca
-// las concesiones del proyecto; el periodo lo leen las capas de gestión, el calor, la ficha y los registros de la zona (las de
-// referencia no tienen fecha: enmienda 5.2 del plan 6.3). un periodo que el servidor rechazaría (OUT_OF_RANGE) se dice aquí y
-// no llega a la URL (enmienda 5.3)
+// el periodo del mapa, en la URL (screens.md S12, «MapFilters»): lo leen las capas de gestión, el calor, la ficha y los registros
+// de la zona (las de referencia no tienen fecha: enmienda 5.2 del plan 6.3). un periodo que el servidor rechazaría (OUT_OF_RANGE)
+// se dice aquí y no llega a la URL (enmienda 5.3). el proyecto del mapa (?project=, que acota las capas de proyecto y marca sus
+// concesiones) lo elige el selector de la barra, que en Territorio es el lente (A24): la pantalla no tiene uno propio
 export function FiltrosDelMapa() {
   const { t } = useTranslation(NS)
   const [busqueda, fijar] = useSearchParams()
-  const proyectos = useProyectos()
   // las fechas tecleadas que no forman un periodo válido: se muestran y se dicen, sin escribirlas en la URL. valen mientras el
   // periodo de la URL sea el mismo que cuando se teclearon: si cambia por otro camino (atrás, un enlace), mandan las de la URL
   const enLaUrl = `${busqueda.get('periodStart') ?? ''}|${busqueda.get('periodEnd') ?? ''}`
@@ -438,17 +435,6 @@ export function FiltrosDelMapa() {
   return (
     <div role="group" aria-label={t('sig.filtros')} className="space-y-1 text-sm">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('sig.proyecto')}</span>
-          <select className={CONTROL} value={busqueda.get('project') ?? ''} onChange={(e) => escribir({ project: e.target.value })}>
-            <option value="">{t('sig.todosLosLugares')}</option>
-            {(proyectos.data ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {texto(p, 'code')} · {texto(p, 'name')}
-              </option>
-            ))}
-          </select>
-        </label>
         <CampoFecha
           etiqueta={t('sig.desde')}
           valor={fecha('periodStart') || null}

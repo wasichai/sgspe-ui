@@ -3,7 +3,7 @@ import { cn } from '@wasichai/ui'
 import { Check, ChevronDown } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate } from 'react-router'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { atributo } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
@@ -16,7 +16,21 @@ import { rutaEquivalente } from './rutas'
 // proyectos», y los demás como «Todos mis proyectos»; es el valor por defecto. sin proyectos que leer ni la acción, dice que no
 // tiene asignaciones en lugar de un selector que solo lleva a listas vacías (spec 4.4 §3.12). elegir otro alcance monta la misma
 // página con ese alcance (ASM-076). sin READ sobre project no se dibuja. en la barra superior se ve desde md; «siempre» es el del
-// panel del menú, que en el teléfono es el único (D2 de la revisión de UX)
+// panel del menú, que en el teléfono es el único (D2 de la revisión de UX).
+// en Territorio el selector es el lente del mapa (A24 de la segunda pasada de UX, recuperado en la tercera; ux-architecture.md
+// §6.1: el territorio es del tenant y el proyecto es el lente con que se mira): lee y escribe ?project= sin salir de la pantalla,
+// y sin proyecto dice «Todo el territorio». la pantalla no tiene su propio «Proyecto del mapa»: hay un solo control de proyecto
+export const esTerritorio = (pathname: string) => /^\/territory(\/|$)/.test(pathname)
+
+// el proyecto que la barra muestra: el del alcance o, en Territorio, el del lente
+function useProyectoDeLaBarra(): string {
+  const { scope } = useContextFilters()
+  const { pathname } = useLocation()
+  const [busqueda] = useSearchParams()
+  if (esTerritorio(pathname)) return busqueda.get('project') ?? ''
+  return scope.kind === 'project' ? scope.projectId : ''
+}
+
 export function SelectorDeProyecto({ siempre = false }: { siempre?: boolean }) {
   const { can } = useAuth()
   return can('project', 'READ') ? <Selector siempre={siempre} /> : null
@@ -30,12 +44,13 @@ export function ChipDeProyecto({ alAbrir }: { alAbrir: () => void }) {
 
 function Chip({ alAbrir }: { alAbrir: () => void }) {
   const { t } = useTranslation(NS)
-  const { scope } = useContextFilters()
+  const { pathname } = useLocation()
+  const elegido = useProyectoDeLaBarra()
   // la lista que ya lee el selector: el chip no pide nada más
   const proyectos = useProyectos()
-  const proyecto = scope.kind === 'project' ? proyectos.data?.find((p) => p.id === scope.projectId) : undefined
+  const proyecto = elegido ? proyectos.data?.find((p) => p.id === elegido) : undefined
   const codigo = proyecto ? String(atributo(proyecto, 'code') ?? '') : ''
-  const actual = scope.kind === 'project' ? codigo || scope.projectId : t('contexto.todos')
+  const actual = elegido ? codigo || elegido : esTerritorio(pathname) ? t('sig.todosLosLugares') : t('contexto.todos')
   return (
     <button
       type="button"
@@ -58,12 +73,13 @@ const normalizar = (texto: string) =>
 // un combobox con búsqueda (DD-09, APG «combobox with listbox popup»): el campo dice el alcance actual; al abrirlo (clic, flechas o
 // al escribir) muestra «Todos mis proyectos» y los proyectos que coinciden con lo escrito, por código o nombre. las flechas mueven
 // la opción activa (aria-activedescendant), Home y End van a los extremos, Enter elige, Escape y Tab cierran sin cambiar. elegir
-// es lo mismo que el select de antes: la misma página con el otro alcance (ASM-076)
+// es lo mismo que el select de antes: la misma página con el otro alcance (ASM-076), salvo en Territorio, donde es el lente
 function Selector({ siempre }: { siempre: boolean }) {
   const { t } = useTranslation(NS)
-  const { scope } = useContextFilters()
   const { pathname } = useLocation()
+  const [busqueda, fijar] = useSearchParams()
   const navegar = useNavigate()
+  const territorio = esTerritorio(pathname)
   const proyectos = useProyectos()
   const mios = useMisProyectos()
   const leeTodo = useLeeTodosLosProyectos()
@@ -72,10 +88,10 @@ function Selector({ siempre }: { siempre: boolean }) {
   const [abierto, setAbierto] = useState(false)
   const [consulta, setConsulta] = useState('')
   const [activa, setActiva] = useState(0)
-  const actual = scope.kind === 'project' ? scope.projectId : ''
+  const actual = useProyectoDeLaBarra()
   const lista = [...(proyectos.data ?? [])].sort((a, b) => Number(mios.has(b.id)) - Number(mios.has(a.id)))
   const opciones = [
-    { id: '', etiqueta: leeTodo ? t('contexto.todosLosProyectos') : t('contexto.todos') },
+    { id: '', etiqueta: territorio ? t('sig.todosLosLugares') : leeTodo ? t('contexto.todosLosProyectos') : t('contexto.todos') },
     ...lista.map((p) => ({ id: p.id, etiqueta: `${String(atributo(p, 'code') ?? '')} · ${String(atributo(p, 'name') ?? '')}` }))
   ]
   // «Todos» queda siempre a mano; los proyectos, si coinciden con lo escrito
@@ -112,7 +128,12 @@ function Selector({ siempre }: { siempre: boolean }) {
   }
   const elegir = (elegido: string) => {
     cerrar()
-    if (elegido !== actual) navegar(rutaEquivalente(pathname, elegido || null))
+    if (elegido === actual) return
+    if (!territorio) return navegar(rutaEquivalente(pathname, elegido || null))
+    const siguiente = new URLSearchParams(busqueda)
+    if (elegido) siguiente.set('project', elegido)
+    else siguiente.delete('project')
+    fijar(siguiente)
   }
   const alTeclear = (e: KeyboardEvent<HTMLInputElement>) => {
     const ultimo = filtradas.length - 1

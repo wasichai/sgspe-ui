@@ -10,7 +10,7 @@ import { useLeeTodosLosProyectos, useMisAsignaciones, useProyecto } from './proy
 import { ProyectoLayout } from './ProyectoLayout'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { filtroDeTerritorio, rutaEquivalente } from './rutas'
-import { SelectorDeProyecto } from './SelectorDeProyecto'
+import { ChipDeProyecto, SelectorDeProyecto } from './SelectorDeProyecto'
 
 let fetch: FetchMock | null = null
 beforeEach(() => localStorage.clear())
@@ -201,6 +201,45 @@ describe('selector de proyecto', () => {
     montar(<SelectorDeProyecto />, { ruta: '/stakeholders', permisos: LEE_PROYECTOS })
     expect(await screen.findByText('No tiene proyectos asignados. Pida una asignación al administrador de proyectos.')).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Proyecto' })).not.toBeInTheDocument()
+  })
+})
+
+// A24 de la segunda pasada, perdido al integrar el combobox y recuperado en la tercera: el territorio es del tenant y el
+// proyecto es su lente (ux-architecture.md §6.1). en /territory/** el selector lee y escribe ?project= sin salir de la pantalla
+describe('selector de proyecto en Territorio', () => {
+  it('es el lente del mapa: dice «Todo el territorio» y escribe ?project= sin salir de la pantalla', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/territory?periodStart=2026-07-01', permisos: LEE_PROYECTOS })
+    const selector = await screen.findByRole('combobox', { name: 'Proyecto' })
+    await waitFor(() => expect(selector).toHaveValue('Todo el territorio'))
+    await userEvent.click(selector)
+    await userEvent.click(await screen.findByRole('option', { name: 'PRJ-01 · Pukaqaqa' }))
+    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01&project=p1')
+    await waitFor(() => expect(selector).toHaveValue('PRJ-01 · Pukaqaqa'))
+    await userEvent.click(selector)
+    await userEvent.click(await screen.findByRole('option', { name: 'Todo el territorio' }))
+    expect(ubicacion.actual).toBe('/territory?periodStart=2026-07-01')
+  })
+
+  it('en la ficha de una comunidad lee el proyecto del lente', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<SelectorDeProyecto />, { ruta: '/territory/communities/c1?project=p2', permisos: LEE_PROYECTOS })
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto' })).toHaveValue('PRJ-02 · Qorihuasi'))
+  })
+
+  it('en el teléfono, el chip dice el lente', async () => {
+    fetch = mockFetch([
+      { path: '/objects/project/records', body: pagina([P1, P2]) },
+      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
+    ])
+    montar(<ChipDeProyecto alAbrir={() => {}} />, { ruta: '/territory', permisos: LEE_PROYECTOS })
+    expect(await screen.findByRole('button', { name: 'Proyecto: Todo el territorio. Cambiar de proyecto' })).toBeInTheDocument()
   })
 })
 
