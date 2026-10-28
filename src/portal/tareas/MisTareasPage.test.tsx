@@ -284,7 +284,9 @@ describe('S47 · mis tareas', () => {
     const columnas = red.a('GET', '/objects/task/records').filter((l) => /[?&]state=(open|in_progress|blocked|done)(&|$)/.test(l.ruta))
     expect(columnas.length).toBeGreaterThanOrEqual(4)
     expect(columnas.every((l) => l.ruta.includes('deadline_status=VENCIDO'))).toBe(true)
-    expect(within(screen.getByRole('group', { name: 'Mis tareas' })).getByRole('button', { name: 'Vencidas 1' })).toHaveAttribute('aria-pressed', 'true')
+    // las cifras llegan con su propia lectura
+    const cifras = await screen.findByRole('group', { name: 'Mis tareas' })
+    expect(await within(cifras).findByRole('button', { name: 'Vencidas 1' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('una columna con más de las que muestra lleva a la lista, y el calendario dice cuando no le caben todas', async () => {

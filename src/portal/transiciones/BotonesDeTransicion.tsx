@@ -201,14 +201,17 @@ function BotonDeTransicion({
       {elObjeto ? `${transicion.label} ${elObjeto}` : transicion.label}
     </Button>
   )
-  if (!propia) return boton
-  // la razón a la vista, bajo el nombre (tercera pasada de UX): en «Más acciones» y en el teléfono, un title no lo ve nadie
+  // la razón a la vista, bajo el nombre (tercera pasada de UX): en «Más acciones» y en el teléfono, un title no lo ve nadie. el
+  // envoltorio es siempre el mismo (sin razón, display: contents, sin caja propia): cuando la comprobación llega, el botón no se
+  // vuelve a montar y no pierde el foco
   return (
-    <span className="flex max-w-72 flex-col items-start gap-0.5">
+    <span className={propia ? 'flex max-w-72 flex-col items-start gap-0.5' : 'contents'}>
       {boton}
-      <span id={id} className="text-sg-caption text-sg-text-secondary">
-        {razon}
-      </span>
+      {propia ? (
+        <span id={id} className="text-sg-caption text-sg-text-secondary">
+          {razon}
+        </span>
+      ) : null}
     </span>
   )
 }

@@ -472,7 +472,8 @@ describe('S16 · lista de grupos de interés', () => {
         ...base()
       ])
       await waitFor(() => expect(filas()).toHaveLength(1))
-      expect(within(filas()[0]).getByRole('checkbox', { name: /pasado$/ })).toBeInTheDocument()
+      // la fila es la del grupo «pasado»: su enlace lleva a su ficha (la casilla ya no se anuncia con el id)
+      expect(within(filas()[0]).getAllByRole('link').some((a) => a.getAttribute('href')?.endsWith('/pasado'))).toBe(true)
     } finally {
       vi.useRealTimers()
     }
