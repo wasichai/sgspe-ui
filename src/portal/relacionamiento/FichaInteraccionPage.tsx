@@ -174,6 +174,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="engagement"
+        proyecto={proyecto}
         estado={interaccion.state}
         desde={texto(interaccion, 'state_changed_at') || null}
         por={texto(interaccion, 'state_changed_by') || null}

@@ -267,6 +267,7 @@ function Visita({ visita }: { visita: Registro }) {
       <PanelDeDecision
         camino={[...CAMINO]}
         objeto="field_visit"
+        proyecto={proyecto}
         estado={visita.state}
         desde={texto(visita, 'state_changed_at') || null}
         por={texto(visita, 'state_changed_by') || null}

@@ -166,6 +166,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="agreement"
+        proyecto={proyecto}
         estado={acuerdo.state}
         desde={texto(acuerdo, 'state_changed_at') || null}
         por={texto(acuerdo, 'state_changed_by') || null}

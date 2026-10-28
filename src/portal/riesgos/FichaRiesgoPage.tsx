@@ -216,6 +216,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="social_risk"
+        proyecto={proyecto}
         estado={riesgo.state}
         desde={texto(riesgo, 'state_changed_at') || null}
         por={texto(riesgo, 'state_changed_by') || null}

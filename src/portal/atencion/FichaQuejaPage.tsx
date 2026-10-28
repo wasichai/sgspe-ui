@@ -177,6 +177,7 @@ function Ficha({ queja }: { queja: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="grievance"
+        proyecto={proyecto}
         estado={queja.state}
         desde={texto(queja, 'state_changed_at') || null}
         por={texto(queja, 'state_changed_by') || null}

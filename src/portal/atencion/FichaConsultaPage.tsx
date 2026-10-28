@@ -289,6 +289,7 @@ function Ficha({
       <PanelDeDecision
         camino={CAMINO_DE_QCS[objeto]}
         objeto={objeto}
+        proyecto={proyecto}
         estado={qcs.state}
         desde={texto(qcs, 'state_changed_at') || null}
         por={texto(qcs, 'state_changed_by') || null}

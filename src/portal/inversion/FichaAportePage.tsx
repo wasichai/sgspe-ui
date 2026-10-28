@@ -156,6 +156,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="social_contribution"
+        proyecto={proyecto}
         estado={aporte.state}
         desde={texto(aporte, 'state_changed_at') || null}
         por={texto(aporte, 'state_changed_by') || null}

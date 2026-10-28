@@ -119,6 +119,7 @@ function Ficha({ programa }: { programa: Registro }) {
       <PanelDeDecision
         camino={CAMINO}
         objeto="social_program"
+        proyecto={proyecto}
         estado={programa.state}
         desde={texto(programa, 'state_changed_at') || null}
         por={texto(programa, 'state_changed_by') || null}
