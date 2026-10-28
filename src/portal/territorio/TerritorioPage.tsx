@@ -5,6 +5,8 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
+import { CajaDeBusqueda } from '../componentes/BarraDeFiltros'
+import { comparable } from '../componentes/FiltroDeGrupo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
@@ -162,6 +164,10 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
 
   const capasAbiertas = !plegados.has('layers')
   const lugaresAbiertos = !plegados.has('places')
+  // con más de cinco lugares a la vista, la lista se busca por el nombre, sin tildes ni mayúsculas (tercera pasada de UX, 4.3)
+  const [buscado, setBuscado] = useState('')
+  const conBusqueda = lugares.size > 5
+  const enLaLista = [...lugares.values()].filter((l) => !conBusqueda || !buscado.trim() || comparable(l.nombre).includes(comparable(buscado.trim())))
   const idDeCapas = 'panel-de-capas'
   const idDeLugares = 'panel-de-lugares'
   // los paneles flotan sobre el mapa desde md; en el teléfono van debajo, a todo el ancho (02 §7)
@@ -321,8 +327,12 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
               {lugares.size === 0 && !cargando && !conError && !bloqueadas && (aviso === null || aviso === 'vistaVacia') ? (
                 <p className="text-sg-caption text-sg-text-muted">{t('mapa.sinLugares')}</p>
               ) : null}
+              {conBusqueda ? <CajaDeBusqueda etiqueta={t('mapa.buscarLugar')} valor={buscado} alCambiar={setBuscado} /> : null}
+              {conBusqueda && buscado.trim() && enLaLista.length === 0 ? (
+                <p className="text-sg-caption text-sg-text-muted">{t('mapa.ningunLugar', { texto: buscado.trim() })}</p>
+              ) : null}
               <ul className="space-y-1">
-                {[...lugares.values()].map((l) => (
+                {enLaLista.map((l) => (
                   <li key={`${l.objeto}-${l.id}`}>
                     <Link to={rutaDe(l.objeto, l.id)!} state={paso(t('mapa.mapaTerritorial'))} className="text-sg-primary-text underline">
                       {l.nombre || t('territorio.sinNombre')}

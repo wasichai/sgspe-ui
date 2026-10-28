@@ -81,6 +81,8 @@ export const ES_MAPA = {
     'LYR-24': 'Evidencias geolocalizadas'
   },
   lugares: 'Lugares visibles',
+  buscarLugar: 'Buscar un lugar visible',
+  ningunLugar: 'Ningún lugar visible se llama «{{texto}}».',
   sinLugares: 'Acerque el mapa a una zona con comunidades o localidades.',
   elegirLugar: 'Elija un lugar en el mapa o en la lista para abrir su ficha.',
   nuevaComunidad: 'Nueva comunidad',
@@ -176,6 +178,8 @@ export const EN_MAPA: typeof ES_MAPA = {
     'LYR-24': 'Geolocated evidence'
   },
   lugares: 'Visible places',
+  buscarLugar: 'Search a visible place',
+  ningunLugar: 'No visible place is called “{{texto}}”.',
   sinLugares: 'Zoom the map to an area with communities or localities.',
   elegirLugar: 'Pick a place on the map or in the list to open its card.',
   nuevaComunidad: 'New community',
