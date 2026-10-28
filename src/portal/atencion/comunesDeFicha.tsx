@@ -23,6 +23,7 @@ import { Dia } from '../componentes/Dia'
 import { opcion } from '../datos/opciones'
 import { Persona as PersonaDelEquipo } from '../componentes/Persona'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { EditarSeccion } from '../componentes/EditarSeccion'
 
 // lo que comparten la ficha de queja (S36) y las de consulta y solicitud (S57): las marcas de anonimato y confidencialidad, el plazo
 // que corre en el estado, los datos del caso (la persona solo para quien la lee, security.md §7.9), la edición con motivo (las QCS
@@ -103,11 +104,16 @@ export const tituloDeQcs = (qcs: Registro, porCodigo: string): string => tituloQ
 // los datos del caso comunes a las tres QCS, por tema (DD-06 y U-26 del rediseño de UX): qué se plantea, cómo llegó y quién, y la
 // atención con su respuesta; cada sección pliega sus campos sin dato. planteamiento y atencion suman los propios del tipo
 export function DatosDelCaso({
+  objeto,
   qcs,
+  editables,
   planteamiento = [],
   atencion = []
 }: {
+  objeto: ObjetoDeQcs
   qcs: Registro
+  // los campos que la ficha deja editar: cada sección ofrece «Editar» con los suyos (tercera pasada de UX, 2.10)
+  editables: readonly string[]
   planteamiento?: readonly CampoDeFicha[]
   atencion?: readonly CampoDeFicha[]
 }) {
@@ -116,18 +122,33 @@ export function DatosDelCaso({
   const delEquipo = (campo: string) => (texto(qcs, campo) ? <PersonaDelEquipo correo={texto(qcs, campo)} /> : null)
   const anonima = atributo(qcs, 'anonymous') === true
   const campo = (clave: string, valor: ReactNode, ancho = false): CampoDeFicha => ({ clave, termino: t(`fichaQueja.campos.${clave}`), valor, ancho })
+  const proyecto = String(atributo(qcs, 'project') ?? '')
+  // la sección con su «Editar»: los campos que muestra, si la ficha los deja editar
+  const seccion = (clave: string, campos: readonly CampoDeFicha[]) => (
+    <Seccion
+      titulo={t(`fichaQueja.comun.secciones.${clave}`)}
+      acciones={
+        <EditarSeccion
+          objeto={objeto}
+          registro={qcs}
+          proyecto={proyecto || undefined}
+          seccion={t(`fichaQueja.comun.secciones.${clave}`)}
+          campos={campos.map((c) => c.clave)}
+          permitidos={editables}
+        />
+      }
+    >
+      <CamposPlegables campos={campos} />
+    </Seccion>
+  )
   return (
     <div className="space-y-4 pt-3">
-      <Seccion titulo={t('fichaQueja.comun.secciones.planteamiento')}>
-        <CamposPlegables
-          campos={[
-            campo('description', texto(qcs, 'description') ? <span className="whitespace-pre-line">{texto(qcs, 'description')}</span> : null, true),
-            campo('category', opcion(qcs, 'category')),
-            campo('priority', opcion(qcs, 'priority')),
-            ...planteamiento
-          ]}
-        />
-      </Seccion>
+      {seccion('planteamiento', [
+        campo('description', texto(qcs, 'description') ? <span className="whitespace-pre-line">{texto(qcs, 'description')}</span> : null, true),
+        campo('category', opcion(qcs, 'category')),
+        campo('priority', opcion(qcs, 'priority')),
+        ...planteamiento
+      ])}
       <Seccion titulo={t('fichaQueja.comun.secciones.llegada')}>
         <CamposPlegables
           campos={[
@@ -142,17 +163,13 @@ export function DatosDelCaso({
           ]}
         />
       </Seccion>
-      <Seccion titulo={t('fichaQueja.comun.secciones.atencion')}>
-        <CamposPlegables
-          campos={[
-            campo('owner', delEquipo('owner_user_email')),
-            ...atencion,
-            campo('response', texto(qcs, 'response') ? <span className="whitespace-pre-line">{texto(qcs, 'response')}</span> : null, true),
-            campo('responded_at', momento('responded_at')),
-            campo('closed_date', texto(qcs, 'closed_date') ? <Dia valor={texto(qcs, 'closed_date')} /> : null)
-          ]}
-        />
-      </Seccion>
+      {seccion('atencion', [
+        campo('owner', delEquipo('owner_user_email')),
+        ...atencion,
+        campo('response', texto(qcs, 'response') ? <span className="whitespace-pre-line">{texto(qcs, 'response')}</span> : null, true),
+        campo('responded_at', momento('responded_at')),
+        campo('closed_date', texto(qcs, 'closed_date') ? <Dia valor={texto(qcs, 'closed_date')} /> : null)
+      ])}
     </div>
   )
 }

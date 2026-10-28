@@ -302,7 +302,11 @@ function Ficha({
         <PestanasDeFicha
           etiqueta={titulo}
           pestanas={[
-            { id: 'resumen', etiqueta: t('fichaQueja.pestanas.resumen'), render: () => <DatosDelCaso qcs={qcs} planteamiento={planteamiento} /> },
+            {
+              id: 'resumen',
+              etiqueta: t('fichaQueja.pestanas.resumen'),
+              render: () => <DatosDelCaso objeto={objeto} qcs={qcs} editables={editables} planteamiento={planteamiento} />
+            },
             {
               id: 'evidencias',
               etiqueta: t('fichaQueja.pestanas.evidencias'),

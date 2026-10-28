@@ -196,7 +196,9 @@ function Ficha({ queja }: { queja: Registro }) {
               etiqueta: t('fichaQueja.pestanas.resumen'),
               render: () => (
                 <DatosDelCaso
+                  objeto="grievance"
                   qcs={queja}
+                  editables={EDITABLES}
                   planteamiento={[{ clave: 'severity', termino: t('fichaQueja.campos.severity'), valor: opcion(queja, 'severity') }]}
                   atencion={[
                     {

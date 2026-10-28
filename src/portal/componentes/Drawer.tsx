@@ -65,7 +65,8 @@ export function Drawer({
             <DialogTitle className="text-sg-h3 font-semibold text-sg-text">{titulo}</DialogTitle>
             {descripcion ? <DialogDescription className="text-sm text-sg-text-secondary">{descripcion}</DialogDescription> : null}
           </div>
-          <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          {/* data-cajon: las acciones de un formulario largo quedan fijas al pie del área que se desplaza (index.css) */}
+          <div data-cajon className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
             <ContextoDelCajon.Provider value={() => setTocado(false)}>{children}</ContextoDelCajon.Provider>
           </div>
           {pie ? <div className="flex justify-end gap-2 border-t border-sg-border px-5 py-3">{pie}</div> : null}

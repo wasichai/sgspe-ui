@@ -43,6 +43,7 @@ import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { Persona } from '../componentes/Persona'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { EditarSeccion } from '../componentes/EditarSeccion'
 
 // S40 · ficha de riesgo (screens.md §9, flujos 14 y 15): el nivel vigente, cómo llegó ahí y qué se hace para bajarlo. «Nueva
 // revisión» es el endpoint de revisiones (api.md §4.7): las revisiones son inmutables y una se corrige con otra; la primera aplica
@@ -359,9 +360,20 @@ function Resumen({ riesgo }: { riesgo: Registro }) {
   const { t } = useTranslation(NS)
   const adecuados = atributo(riesgo, 'controls_adequate')
   const campo = (clave: string, valor: ReactNode, ancho = false): CampoDeFicha => ({ clave, termino: t(`fichaRiesgo.campos.${clave}`), valor, ancho })
+  // cada sección con su «Editar», con los campos que muestra (tercera pasada de UX, 2.10)
+  const editar = (seccion: string, campos: readonly string[]) => (
+    <EditarSeccion
+      objeto="social_risk"
+      registro={riesgo}
+      proyecto={texto(riesgo, 'project') || undefined}
+      seccion={t(`fichaRiesgo.secciones.${seccion}`)}
+      campos={campos}
+      permitidos={EDITABLES}
+    />
+  )
   return (
     <div className="space-y-4 pt-3">
-      <Seccion titulo={t('fichaRiesgo.secciones.origen')}>
+      <Seccion titulo={t('fichaRiesgo.secciones.origen')} acciones={editar('origen', ['risk_source', 'impact_type', 'impact_nature'])}>
         <CamposPlegables
           campos={[
             campo('fuente', texto(riesgo, 'risk_source'), true),
@@ -370,7 +382,10 @@ function Resumen({ riesgo }: { riesgo: Registro }) {
           ]}
         />
       </Seccion>
-      <Seccion titulo={t('fichaRiesgo.secciones.tratamiento')}>
+      <Seccion
+        titulo={t('fichaRiesgo.secciones.tratamiento')}
+        acciones={editar('tratamiento', ['treatment_decision', 'treatment_rationale', 'current_controls', 'controls_adequate', 'monitoring_sources'])}
+      >
         <CamposPlegables
           campos={[
             campo('tratamiento', opcion(riesgo, 'treatment_decision')),
