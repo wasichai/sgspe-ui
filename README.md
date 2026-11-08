@@ -120,8 +120,14 @@ yarn typecheck
 yarn lint            # prettier --check (yarn format lo corrige)
 yarn build           # dist/, luego yarn preview
 yarn e2e             # Playwright sobre vite preview (npx playwright install chromium la primera vez)
+yarn capturas        # fotos de las pantallas del rediseño en capturas/ (o SGSPE_CAPTURAS); no corre con yarn e2e
 yarn -s csp          # la Content-Security-Policy para el proxy
 ```
+
+`yarn e2e` y `yarn capturas` levantan `vite preview` en el puerto 5182, o en `SGSPE_E2E_PORT` si se define: con un `yarn dev`
+vivo en 5182, `SGSPE_E2E_PORT=5192 yarn e2e` no lo reutiliza. Las capturas (`e2e/capturas/`, API simulada de `e2e/api.ts`)
+se nombran `<pantalla>-<ancho>-<tema>-<idioma>.png`; en GitHub, el workflow `Capturas` (a mano o con la etiqueta `capturas`
+en un PR) las deja como artefacto.
 
 ## Releases
 

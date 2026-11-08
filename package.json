@@ -14,7 +14,8 @@
         "format": "prettier --write src e2e index.html package.json tsconfig.json tsconfig.build.json vite.config.ts playwright.config.ts csp.ts commitlint.config.mjs .github",
         "csp": "node --input-type=module -e \"import { readFileSync } from 'node:fs'; import { contentSecurityPolicy } from './csp.ts'; console.log(contentSecurityPolicy(readFileSync('index.html', 'utf8'), process.env.SGSPE_MAPA_BASE ?? ''))\"",
         "test": "vitest run",
-        "e2e": "playwright test",
+        "e2e": "playwright test --project=chromium",
+        "capturas": "playwright test --project=capturas",
         "build": "tsc -p tsconfig.build.json && vite build",
         "typecheck": "tsc -p tsconfig.json",
         "prepare": "husky"

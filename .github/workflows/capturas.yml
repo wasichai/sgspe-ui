@@ -1,0 +1,46 @@
+name: Capturas
+
+# las capturas del rediseño (wasichai/sgspe-ui#88): yarn capturas sobre la build de producción con la API simulada, y la carpeta
+# como artefacto. no va en CI (alarga el job y no prueba nada): se corre a mano o en un PR con la etiqueta «capturas»
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  capturas:
+    name: Capturas
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'capturas')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # como en ci.yml: @wasichai/* se leen con el PAT de read:packages (PACKAGES_TOKEN), a nivel de job por setup-node
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+          cache: yarn
+          registry-url: https://npm.pkg.github.com
+          scope: '@wasichai'
+      - run: yarn install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
+      - run: yarn capturas
+        env:
+          CI: 'true'
+          SGSPE_CAPTURAS: capturas
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: capturas
+          path: capturas/
+          if-no-files-found: error
+          retention-days: 30

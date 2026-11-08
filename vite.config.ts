@@ -33,7 +33,7 @@ export default defineConfig({
   // remotion sí, junto con el Player: así el paquete y el Player usan la misma copia (dos copias no comparten el fotograma)
   optimizeDeps: { exclude: ['@wasichai/sgspe-slides'], include: ['remotion', '@remotion/player'] },
   server: { port: 5182, strictPort: true, proxy: { '/api': api }, headers: csp },
-  preview: { port: 5182, strictPort: true, proxy: { '/api': api }, headers: csp },
+  preview: { port: Number(process.env.SGSPE_E2E_PORT ?? 5182), strictPort: true, proxy: { '/api': api }, headers: csp },
   build: {
     rollupOptions: {
       output: {
