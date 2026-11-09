@@ -1,5 +1,5 @@
-import { useAuth, useWasichaiConfig } from '@wasichai/core'
-import { Menu, Mountain } from 'lucide-react'
+import { useAuth, useAppTitle } from '@wasichai/core'
+import { Menu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Campana } from '../avisos/Campana'
@@ -10,6 +10,7 @@ import { NS } from '../i18n'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { useOrganizacion } from '../queries'
 import { HojaDeAtajos } from './HojaDeAtajos'
+import { MarcaDeSgspe } from './Marca'
 import { MenuDePerfil } from './Perfil'
 
 // la cabecera institucional de Civic Modern (ux-architecture.md §7.1, design-system.md §5.2): 64 px (52 en la densidad compacta)
@@ -19,7 +20,7 @@ import { MenuDePerfil } from './Perfil'
 // densidad y la salida van en el menú de la cuenta (DD-09): nada de eso va suelto
 export function Cabecera({ alMenu }: { alMenu: () => void }) {
   const { t } = useTranslation(NS)
-  const { appName } = useWasichaiConfig()
+  const { appName } = useAppTitle()
   const { user } = useAuth()
   const organizacion = useOrganizacion()
   // el rol con su rótulo (GET /api/roles, solo para quien administra); su código crudo no se muestra
@@ -41,9 +42,7 @@ export function Cabecera({ alMenu }: { alMenu: () => void }) {
       </button>
       <div className="flex min-w-0 shrink-0 flex-col justify-center">
         <Link to="/" className="flex items-center gap-2.5 rounded-sg-md">
-          <span aria-hidden className="hidden size-9 shrink-0 items-center justify-center rounded-sg-md border-2 border-sg-header-text md:flex">
-            <Mountain className="size-5" />
-          </span>
+          <MarcaDeSgspe className="hidden md:flex" />
           <span className="text-sg-h2 font-extrabold tracking-wide">{appName}</span>
         </Link>
         {/* el lema solo desde 1536 px (DD-24; el 2xl de SGSPE es 1440 px) */}

@@ -8,17 +8,21 @@ import { viewsModule } from '@wasichai/views'
 import { workflowModule } from '@wasichai/workflow'
 import { idiomaHtmlModule } from '../idiomaHtml'
 import { mapaBaseModule } from '../portal/mapa/mapaBase'
+import { MarcaDeSgspe } from '../portal/shell/Marca'
 import { ZONA_DE_LIMA } from '../portal/datos/fechas'
 
 // la configuración de /admin. storagePrefix 'sgspe' es el del portal: un solo login, el mismo tema y el mismo idioma, y
 // <html lang> sigue al idioma (idiomaHtmlModule: core lo escribe como `es`). timeZone: los DATETIME de los formularios de
 // registro (DynamicForm) se leen y se escriben en la hora de Lima, sea cual sea el huso del navegador (core 0.6.0). el
 // administrador sembrado se propone solo en desarrollo. modelInRepository: el modelo, los workflows y los roles viven en
-// model/ de sgspe (GAP-030) y core avisa en sus pantallas que un cambio hecho aquí se pierde en la próxima subida de fase
+// model/ de sgspe (GAP-030) y core avisa en sus pantallas que un cambio hecho aquí se pierde en la próxima subida de fase.
+// appLogo: la marca de la cabecera del portal en la barra, en la cabecera angosta y en el ingreso de /admin (core 1.7.0 y
+// 1.8.0); la barra y la cabecera ya llevan el azul institucional por el puente (--shell, theme/wasichai.css)
 export const configDeAdministracion: WasichaiConfig = {
   apiBaseUrl: '/api',
   appName: 'SGSPE',
   appTagline: 'Administración',
+  appLogo: <MarcaDeSgspe />,
   storagePrefix: 'sgspe',
   basename: '/admin',
   languages: ['es', 'en'],

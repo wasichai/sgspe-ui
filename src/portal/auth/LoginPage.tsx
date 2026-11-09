@@ -1,4 +1,4 @@
-import { ApiError, useAuth, useWasichaiConfig } from '@wasichai/core'
+import { ApiError, useAuth, useAppTitle } from '@wasichai/core'
 import { Alert, Button, Input, Label } from '@wasichai/ui'
 import { ArrowRight, Eye, EyeOff, Mountain } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -20,7 +20,7 @@ import { esRutaDeAdmin, safeNext } from './RequireSession'
 export function LoginPage() {
   const { t } = useTranslation(NS)
   const { user, signIn } = useAuth()
-  const { appName } = useWasichaiConfig()
+  const { appName } = useAppTitle()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = safeNext(params.get('next'))

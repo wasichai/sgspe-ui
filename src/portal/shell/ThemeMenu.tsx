@@ -1,5 +1,5 @@
 // copiado de caja-ui@a45b224 (src/portal/shell/ThemeMenu.tsx), que lo copió de srtm-ui@a1df33a; el texto del botón y del menú sale del i18n de core
-import { SYSTEM_THEME, useTheme } from '@wasichai/core'
+import { SYSTEM_THEME, themeLabel, useTheme } from '@wasichai/core'
 import { cn } from '@wasichai/ui'
 import { Check, Monitor, Moon, Palette, Sun, type LucideIcon } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
@@ -12,7 +12,7 @@ const ICONS: Record<string, LucideIcon> = { [SYSTEM_THEME]: Monitor, light: Sun,
 // core's ThemeProvider applies the pick and stores it for the user, so the admin follows. `className` styles the
 // button for the header it sits in
 export function ThemeMenu({ className }: { className?: string }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { preference, themes, setPreference } = useTheme()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +21,10 @@ export function ThemeMenu({ className }: { className?: string }) {
   const menu = useRef<HTMLDivElement>(null)
   const menuId = useId()
 
-  const options = [{ id: SYSTEM_THEME, label: t('theme.system') }, ...themes.map((theme) => ({ id: theme.id, label: t(theme.label) }))]
+  const options = [
+    { id: SYSTEM_THEME, label: t('theme.system') },
+    ...themes.map((theme) => ({ id: theme.id, label: themeLabel(theme.label, t, i18n.language) }))
+  ]
   // an id core does not know (an old build, another app's theme) falls to the os setting: shown as system, as core does
   const current = options.find((option) => option.id === preference) ?? options[0]
   const Icon = ICONS[current.id] ?? Palette
