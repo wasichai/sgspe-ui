@@ -1,17 +1,16 @@
-import { CuandoVence } from '../componentes/CuandoVence'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type GrupoDeFilas, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, Vacio } from '../componentes/Estados'
 import { KpiCard, RejillaDeKpi } from '../componentes/KpiCard'
@@ -21,16 +20,18 @@ import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
-import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useProyectos } from '../contexto/proyectos'
-import { OBJETOS_DE_QCS, plazoQueCorre, rutaDeQcs, useColaDeAtencion, type GrupoDePlazo, type ObjetoDeQcs, type VistaDeLaCola } from '../datos/atencion'
+import { OBJETOS_DE_QCS, rutaDeQcs, useColaDeAtencion, type GrupoDePlazo, type ObjetoDeQcs, type VistaDeLaCola } from '../datos/atencion'
 import { useIndicador, type FiltrosDeIndicador, type Indicador } from '../datos/indicadores'
-import { atributo, campoDe, texto, useDefinicion, type Registro } from '../datos/registros'
-import { diaPe, NS, numeroPe } from '../i18n'
+import { campoDe, puedeLeer, texto, useDefinicion, type Registro } from '../datos/registros'
+import { NS, numeroPe } from '../i18n'
+import { hoyEnLima } from '../datos/fechas'
+import { CicloDeQcs, PlanteaDeQcs, PlazoDeQcs } from './FilaDeQcs'
 import { useContextFilters } from '../shell/context'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
+import { ChevronDown } from 'lucide-react'
 import { Nivel } from '../componentes/Nivel'
 
 // S35 · lista unificada de QCS (screens.md §8): ¿qué QCS vence primero y quién la tiene? tres objetos con ciclos distintos (WF-E1,
@@ -61,7 +62,7 @@ const ORDEN_INICIAL: OrdenDeTabla | undefined = undefined
 // el asunto de una QCS, que no tiene título: el comienzo de su descripción
 const asuntoDe = (registro: Registro) => {
   const d = texto(registro, 'description').trim()
-  return d.length > 70 ? `${d.slice(0, 70).trimEnd()}…` : d
+  return d.length > 120 ? `${d.slice(0, 120).trimEnd()}…` : d
 }
 
 export interface Fila {
@@ -85,11 +86,25 @@ export function AtencionPage() {
   // las quejas
   const definicion = useDefinicion(legibles[0])
   const conSeveridad = can('grievance', 'READ')
+  // quién la plantea: la persona es un campo restringido; se lee según la definición de cada tipo, como la ficha
+  const definiciones = {
+    grievance: useDefinicion(legibles.includes('grievance') ? 'grievance' : undefined),
+    inquiry: useDefinicion(legibles.includes('inquiry') ? 'inquiry' : undefined),
+    stakeholder_request: useDefinicion(legibles.includes('stakeholder_request') ? 'stakeholder_request' : undefined)
+  }
+  const leePersona = (objeto: ObjetoDeQcs) => definiciones[objeto].isSuccess && puedeLeer(definiciones[objeto].data, 'person')
+  // la fila abierta (S11), una a la vez: su clave «objeto:id»
+  const [abierta, setAbierta] = useState<string | null>(null)
+  const claveDe = (f: Fila) => `${f.objeto}:${f.registro.id}`
+  const alternar = (f: Fila) => setAbierta((a) => (a === claveDe(f) ? null : claveDe(f)))
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const filtrosDeIndicador: FiltrosDeIndicador = proyecto ? { project: [proyecto] } : {}
   const abiertas = useIndicador('KPI-GRV-02', filtrosDeIndicador)
   const vencidas = useIndicador('KPI-GRV-06', filtrosDeIndicador)
-  const absueltas = useIndicador('KPI-GRV-07', filtrosDeIndicador)
+  // «Absueltas en 90 días» (S11): KPI-GRV-07 en los últimos 90 días de Lima; la cifra es cuántas de las recibidas en ese lapso
+  // tienen respuesta, y el detalle, el porcentaje y su base
+  const hoy = hoyEnLima()
+  const absueltas = useIndicador('KPI-GRV-07', { ...filtrosDeIndicador, periodStart: haceDias(hoy, 89), periodEnd: hoy })
   const busqueda = lista.filtro('q').trim()
   const canal = lista.filtro('channel')
   const categoria = lista.filtro('category')
@@ -154,29 +169,29 @@ export function AtencionPage() {
     />
   )
   const respondidas = {
-    cifra: (i: Indicador & { value: number }) => (i.unit === '%' ? `${numeroPe(i.value)} %` : numeroPe(i.value)),
-    detalle: (i: Indicador) =>
+    cifra: (i: Indicador & { value: number }) => (i.numerator != null ? numeroPe(i.numerator) : i.unit === '%' ? `${numeroPe(i.value)} %` : numeroPe(i.value)),
+    detalle: (i: Indicador & { value: number }) =>
       i.numerator != null && i.denominator
-        ? t('atencion.tarjetas.respondidasDetalle', { n: numeroPe(i.numerator), total: numeroPe(i.denominator) })
-        : t('atencion.tarjetas.respondidasSinBase')
+        ? t('atencion.tarjetas.absueltasDetalle', { porcentaje: numeroPe(i.value), total: numeroPe(i.denominator) })
+        : t('atencion.tarjetas.absueltasSinBase')
   }
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
-  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px cabe sin desplazar. esenciales la QCS (con su tipo
-  // encima), el proyecto, el estado y el plazo; secundarias, desde xl, el canal, la categoría, la severidad y el responsable;
-  // opcional, quien la plantea. una columna no esencial que dice lo mismo en todo el grupo sale a una nota encima, y en «Mis
-  // QCS» el responsable es siempre quien mira: no se dibuja
+  // la tabla compacta de S11 con prioridad de columnas (hallazgo U-06, DD-05): el asunto, que toma el ancho, con su código encima
+  // y el canal y la categoría debajo; el tipo; el proyecto en el alcance global; quién la plantea; la severidad con barras (solo
+  // de las quejas); el estado y el plazo que corre con sus días. el responsable, opcional (lo dice la fila abierta); al final, el
+  // botón que abre la fila con su ciclo de vida
   const columnas: ColumnaPriorizada[] = [
     { id: 'codigo', encabezado: t('atencion.columnas.codigo'), prioridad: 'esencial', titulo: true, ordenable: true },
+    { id: 'tipo', encabezado: t('atencion.columnas.tipo'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('atencion.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'canal', encabezado: t('atencion.columnas.canal'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    { id: 'categoria', encabezado: t('atencion.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    ...(conSeveridad ? [{ id: 'severidad', encabezado: t('atencion.columnas.severidad'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }] : []),
+    { id: 'plantea', encabezado: t('atencion.columnas.planteaQuien'), prioridad: 'esencial', claseDeCelda: 'min-w-36 text-sm' },
+    ...(conSeveridad ? [{ id: 'severidad', encabezado: t('atencion.columnas.severidad'), prioridad: 'esencial' as const }] : []),
     { id: 'estado', encabezado: t('atencion.columnas.estado'), prioridad: 'esencial' },
-    { id: 'plazo', encabezado: t('atencion.columnas.plazo'), prioridad: 'esencial', claseDeCelda: 'text-sm', ordenable: true },
+    { id: 'plazo', encabezado: t('atencion.columnas.plazo'), prioridad: 'esencial', ordenable: true },
     ...(vista === 'mias'
       ? []
-      : [{ id: 'responsable', encabezado: t('atencion.columnas.responsable'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'plantea', encabezado: t('atencion.columnas.planteaQuien'), prioridad: 'opcional', claseDeCelda: 'text-sm' }
+      : [{ id: 'responsable', encabezado: t('atencion.columnas.responsable'), prioridad: 'opcional' as const, claseDeCelda: 'text-sm' }]),
+    { id: 'ciclo', encabezado: t('atencion.fila.columna'), prioridad: 'esencial', encabezadoOculto: true }
   ]
   const celdaDe = (f: Fila, columna: string): ReactNode => {
     const { objeto, registro } = f
@@ -184,52 +199,62 @@ export function AtencionPage() {
       case 'codigo':
         return (
           <span className="block" title={texto(registro, 'description') || undefined}>
-            <span className="block text-sg-caption text-sg-text-muted">{t(`comun.qcs.${objeto}`)}</span>
             <EnlaceDeRegistro
               codigo={texto(registro, 'code')}
               titulo={asuntoDe(registro)}
               ruta={rutaDeQcs(texto(registro, 'project'), objeto, registro.id)}
               desde={t('atencion.titulo')}
-              previa={{ objeto, id: registro.id }}
               codigoEnElEnlace
             />
+            {opcion(registro, 'channel') || opcion(registro, 'category') ? (
+              <span className="block text-sg-caption text-sg-text-secondary">
+                {[opcion(registro, 'channel'), opcion(registro, 'category')].filter(Boolean).join(' · ')}
+              </span>
+            ) : null}
           </span>
         )
+      case 'tipo':
+        return t(`comun.qcs.${objeto}`)
       case 'proyecto':
         return nombreDelProyecto(texto(registro, 'project'))
-      case 'canal':
-        return opcion(registro, 'channel') || '—'
-      case 'categoria':
-        return opcion(registro, 'category') || '—'
+      case 'plantea':
+        return <PlanteaDeQcs qcs={registro} leePersona={leePersona(objeto)} />
       case 'severidad':
-        return <Nivel valor={texto(registro, 'severity')} nombre={t('atencion.columnas.severidad')} />
+        return objeto === 'grievance' ? <Nivel valor={texto(registro, 'severity')} nombre={t('atencion.columnas.severidad')} /> : null
       case 'estado':
         return <EstadoChip objeto={objeto} estado={registro.state} />
       case 'plazo':
-        return <PlazoDeQcs fila={f} />
+        return <PlazoDeQcs objeto={objeto} qcs={registro} />
       case 'responsable':
         return <Persona correo={texto(registro, 'owner_user_email')} />
-      default:
-        return atributo(registro, 'anonymous') === true ? t('atencion.anonima') : t('atencion.identificada')
+      default: {
+        const abiertaEsta = abierta === claveDe(f)
+        return (
+          <button
+            type="button"
+            aria-expanded={abiertaEsta}
+            aria-controls={abiertaEsta ? idDeFila(f) : undefined}
+            aria-label={t(abiertaEsta ? 'atencion.fila.cerrar' : 'atencion.fila.abrir', { codigo: texto(registro, 'code') })}
+            onClick={() => alternar(f)}
+            className="inline-flex size-8 items-center justify-center rounded-sg-md text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
+          >
+            <ChevronDown aria-hidden className={abiertaEsta ? 'size-5 rotate-180' : 'size-5'} />
+          </button>
+        )
+      }
     }
   }
-  // lo que decide si una columna no esencial dice lo mismo en todo el grupo: el dato guardado, no su rótulo
-  const valorPlano = ({ objeto, registro }: Fila, columna: string): string => {
-    switch (columna) {
-      case 'canal':
-        return String(atributo(registro, 'channel') ?? '')
-      case 'categoria':
-        return String(atributo(registro, 'category') ?? '')
-      case 'severidad':
-        return String(atributo(registro, 'severity') ?? '')
-      case 'responsable':
-        return texto(registro, 'owner_user_email').toLowerCase()
-      case 'plantea':
-        return String(atributo(registro, 'anonymous') === true)
-      default:
-        return `${objeto}:${registro.id}`
-    }
-  }
+  // lo que decide si una columna no esencial dice lo mismo en toda la página: el dato guardado, no su rótulo
+  const valorPlano = ({ objeto, registro }: Fila, columna: string): string =>
+    columna === 'responsable' ? texto(registro, 'owner_user_email').toLowerCase() : `${objeto}:${registro.id}`
+  const idDeFila = (f: Fila) => `ciclo-${f.objeto}-${f.registro.id}`
+  // los grupos por plazo de S11 sobre la página que dio el servidor (en su orden), con el total de cada grupo que él cuenta
+  const grupos: GrupoDeFilas<Fila>[] = GRUPOS.map((g) => ({
+    clave: g,
+    titulo: t(`atencion.grupos.${g}`),
+    filas: visibles.filter((f) => f.grupo === DEL_GRUPO[g]),
+    conteo: cola.data?.groups[DEL_GRUPO[g]]
+  })).filter((g) => g.filas.length > 0)
   return (
     <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
@@ -247,7 +272,7 @@ export function AtencionPage() {
       />
       <section aria-label={t('atencion.indicadores')} className="space-y-2">
         {fallanTodos ? <ErrorDeCarga error={abiertas.error} alReintentar={reintentarTodos} /> : null}
-        <RejillaDeKpi>
+        <RejillaDeKpi columnas={4}>
           {tarjeta(t('atencion.tarjetas.abiertas'), abiertas, { detalle: () => t('atencion.tarjetas.abiertasDetalle') })}
           {/* la cifra en danger o warning: el rótulo ya dice que es lo vencido o lo por vencer (design-system.md §5.3) */}
           {tarjeta(t('atencion.tarjetas.vencidas'), vencidas, { detalle: () => t('atencion.tarjetas.vencidasDetalle'), tono: 'danger' })}
@@ -324,63 +349,65 @@ export function AtencionPage() {
         )
       ) : (
         <>
-          {GRUPOS.map((grupo) => {
-            // la página llega ordenada por el servidor (por plazo o por la columna elegida); el total del grupo es el de todas sus
-            // páginas
-            const delGrupo = visibles.filter((f) => f.grupo === DEL_GRUPO[grupo])
-            if (delGrupo.length === 0) return null
-            return (
-              <section key={grupo} aria-label={t(`atencion.grupos.${grupo}`)} className="space-y-2">
+          {telefono ? (
+            // en el teléfono, una lista de tarjetas por grupo, con su título y el total que cuenta el servidor
+            grupos.map((grupo) => (
+              <section key={grupo.clave} aria-label={grupo.titulo} className="space-y-2">
                 <h2 className="text-sg-h3 font-semibold">
-                  {t(`atencion.grupos.${grupo}`)}{' '}
-                  <span className="text-sg-text-muted">({numeroPe(cola.data?.groups[DEL_GRUPO[grupo]] ?? delGrupo.length)})</span>
+                  {grupo.titulo} <span className="text-sg-text-muted">({numeroPe(grupo.conteo ?? grupo.filas.length)})</span>
                 </h2>
-                {telefono ? (
-                  <ListaEnTarjetas
-                    etiqueta={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}
-                    tarjetas={delGrupo.map((f) => ({
-                      id: `${f.objeto}:${f.registro.id}`,
-                      titulo: (
-                        <>
-                          <span className="text-sg-caption text-sg-text-muted">{t(`comun.qcs.${f.objeto}`)} · </span>
-                          <EnlaceDeRegistro
-                            codigo={texto(f.registro, 'code')}
-                            titulo={asuntoDe(f.registro)}
-                            ruta={rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)}
-                            desde={t('atencion.titulo')}
-                            previa={{ objeto: f.objeto, id: f.registro.id }}
-                            codigoEnElEnlace
-                          />
-                        </>
-                      ),
-                      estado: <EstadoChip objeto={f.objeto} estado={f.registro.state} />,
-                      plazo: <PlazoDeQcs fila={f} />,
-                      proyecto: proyecto ? undefined : nombreDelProyecto(texto(f.registro, 'project'))
-                    }))}
-                  />
-                ) : (
-                  <TablaPriorizada<Fila>
-                    etiqueta={t('atencion.tabla', { grupo: t(`atencion.grupos.${grupo}`) })}
-                    // los grupos de la cola comparten la elección de «Columnas»
-                    idDeTabla="atencion"
-                    columnas={columnas}
-                    filas={delGrupo}
-                    clave={(f) => `${f.objeto}:${f.registro.id}`}
-                    celda={celdaDe}
-                    valorPlano={valorPlano}
-                    ocultarUniformes
-                    orden={orden}
-                    alOrdenar={ordenar}
-                    alAbrir={(f) => {
-                      const ruta = rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)
-                      navegar(ruta, { state: paso(t('atencion.titulo'), ruta) })
-                    }}
-                    previaDe={(f) => ({ objeto: f.objeto, id: f.registro.id })}
-                  />
-                )}
+                <ListaEnTarjetas
+                  etiqueta={t('atencion.tablaDelGrupo', { grupo: grupo.titulo })}
+                  tarjetas={grupo.filas.map((f) => ({
+                    id: claveDe(f),
+                    titulo: (
+                      <>
+                        <span className="text-sg-caption text-sg-text-muted">{t(`comun.qcs.${f.objeto}`)} · </span>
+                        <EnlaceDeRegistro
+                          codigo={texto(f.registro, 'code')}
+                          titulo={asuntoDe(f.registro)}
+                          ruta={rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)}
+                          desde={t('atencion.titulo')}
+                          previa={{ objeto: f.objeto, id: f.registro.id }}
+                          codigoEnElEnlace
+                        />
+                      </>
+                    ),
+                    estado: <EstadoChip objeto={f.objeto} estado={f.registro.state} />,
+                    plazo: <PlazoDeQcs objeto={f.objeto} qcs={f.registro} />,
+                    proyecto: proyecto ? undefined : nombreDelProyecto(texto(f.registro, 'project'))
+                  }))}
+                />
               </section>
-            )
-          })}
+            ))
+          ) : (
+            // una sola tabla agrupada por plazo (S11): Vencidas, Por vencer y Al día o sin plazo. Espacio en una fila la abre con su
+            // ciclo de vida y Enter abre su ficha
+            <TablaPriorizada<Fila>
+              etiqueta={t('atencion.tabla')}
+              idDeTabla="atencion"
+              columnas={columnas}
+              grupos={grupos}
+              clave={claveDe}
+              celda={celdaDe}
+              valorPlano={valorPlano}
+              ocultarUniformes
+              orden={orden}
+              alOrdenar={ordenar}
+              total={cola.data?.totalElements}
+              alAbrir={(f) => {
+                const ruta = rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)
+                navegar(ruta, { state: paso(t('atencion.titulo'), ruta) })
+              }}
+              alPrevisualizar={alternar}
+              detalleDe={(f) =>
+                abierta === claveDe(f)
+                  ? { id: idDeFila(f), contenido: <CicloDeQcs objeto={f.objeto} qcs={f.registro} alAplicar={() => void cola.refetch()} /> }
+                  : null
+              }
+              notaAlPie={t('atencion.notaDePlazos')}
+            />
+          )}
           <PaginacionDelServidor datos={cola.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
         </>
       )}
@@ -388,19 +415,5 @@ export function AtencionPage() {
   )
 }
 
-// el plazo que corre en su estado, con su situación; fuera de esos estados, «sin plazo»
-function PlazoDeQcs({ fila: { objeto, registro } }: { fila: Fila }) {
-  const { t } = useTranslation(NS)
-  const plazo = plazoQueCorre(objeto, registro)
-  return plazo ? (
-    <span className="flex flex-wrap items-center gap-1">
-      <SituacionDePlazo valor={atributo(registro, 'deadline_status')} />
-      {plazo.fecha ? diaPe(plazo.fecha) : t('atencion.plazoPorCalcular')}
-      {plazo.fecha && atributo(registro, 'deadline_status') ? (
-        <CuandoVence dia={plazo.fecha} habiles={plazo.campo === 'ack_due_date'} className="basis-full text-sg-caption text-sg-text-muted" />
-      ) : null}
-    </span>
-  ) : (
-    <span className="text-sg-text-muted">{t('atencion.sinPlazo')}</span>
-  )
-}
+// el primer día de los últimos n + 1 días que terminan hoy (AAAA-MM-DD, de calendario)
+const haceDias = (dia: string, n: number): string => new Date(Date.parse(`${dia}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10)

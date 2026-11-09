@@ -43,7 +43,7 @@ import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
 import { Nivel } from '../componentes/Nivel'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 
 // S41 · centro de alerta temprana (screens.md §9, flujo 14): las alertas del proyecto por vista (por triar, confirmadas, todas,
 // cerradas, cada una una consulta del servidor con su página y su conteo, D10 de la revisión de UX), creadas por JOB-04 o a mano, y la ficha de una alerta: qué la disparó, la regla que la creó (nunca su clave de origen,
@@ -70,6 +70,7 @@ const DECISIONES = ['confirm', 'dismiss']
 
 export function AlertasPage() {
   const { t } = useTranslation(NS)
+  const { can } = useAuth()
   const { projectId = '' } = useParams()
   const lista = useParametrosDeLista('triaje')
   const telefono = useEsTelefono()
@@ -136,10 +137,18 @@ export function AlertasPage() {
   }
   return (
     <ContenedorDePagina elemento="section">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('alertas.titulo')}</h1>
-        <PaginasDeRiesgos actual="warnings" />
-      </div>
+      <EncabezadoDePagina
+        titulo={t('alertas.titulo')}
+        conteo={alertas.data ? t('alertas.conteo', { count: alertas.data.totalElements }) : undefined}
+        secundarias={
+          can('early_warning_rule', 'READ') ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/projects/${encodeURIComponent(projectId)}/risks/rules`}>{t('riesgos.verReglas')}</Link>
+            </Button>
+          ) : undefined
+        }
+      />
+      <PaginasDeRiesgos actual="warnings" />
       <BarraDeFiltros
         vista={
           <SelectorDeVista

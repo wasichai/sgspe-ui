@@ -2,7 +2,19 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { baseDeAtencion, CANALES, CONSULTA, EQUIPO_DE_QUEJAS, GESTORA_DE_QUEJAS, QUEJA, SOLICITUD } from '../../test/atencion'
+import {
+  baseDeAtencion,
+  CANALES,
+  CONSULTA,
+  DEF_CONSULTA,
+  DEF_QUEJA,
+  DEF_SOLICITUD,
+  EQUIPO_DE_QUEJAS,
+  GESTORA_DE_QUEJAS,
+  QUEJA,
+  SOLICITUD,
+  sinPersona
+} from '../../test/atencion'
 import { P1 } from '../../test/compromisos'
 import { montar, pagina, registro, ubicacion } from '../../test/montar'
 import { permisos } from '../../test/portal'
@@ -65,36 +77,59 @@ const abrir = (
   return montar(<AtencionPage />, { ruta, camino: '/projects/:projectId/attention', usuario: GESTORA_DE_QUEJAS, permisos: p })
 }
 
+// la cola es una sola tabla agrupada por plazo (S11): las filas de un grupo son las que siguen a su fila de grupo
+const TABLA = 'Quejas, consultas y solicitudes'
+const filasDelGrupo = (nombre: RegExp) => {
+  const encabezado = within(screen.getByRole('table', { name: TABLA })).getByRole('rowheader', { name: nombre })
+  return within(encabezado.closest('tbody')!)
+    .getAllByRole('row')
+    .filter((f) => !f.contains(encabezado) && !f.hasAttribute('data-detalle'))
+}
+const grupo = (nombre: RegExp) => {
+  const tbody = within(screen.getByRole('table', { name: TABLA }))
+    .getByRole('rowheader', { name: nombre })
+    .closest('tbody')!
+  return within(tbody)
+}
+
 describe('S35 · lista unificada de QCS', () => {
-  // 05-especificacion §1.6: en una fila enfocada, Espacio abre su vista previa y Enter su ficha
-  it('Espacio en una fila de la cola abre la vista previa de la QCS, y Enter su ficha', async () => {
+  // 05-especificacion §1.6 y S11: en una fila enfocada, Espacio la abre con su ciclo de vida (la fila expandida reemplaza la vista
+  // previa en la cola: dice el camino real del workflow de cada tipo) y Enter abre su ficha
+  it('Espacio en una fila de la cola la abre con su ciclo de vida, y Enter su ficha', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
-    within(vencidas).getAllByRole('row')[1].focus()
+    await screen.findByRole('table', { name: TABLA })
+    const [fila] = filasDelGrupo(/^Vencidas/)
+    fila.focus()
     await userEvent.keyboard(' ')
-    expect(ubicacion.actual).toBe('/projects/p1/attention?peek=grievance%3Ag2')
-    within(screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas', hidden: true }))
-      .getAllByRole('row', { hidden: true })[1]
-      .focus()
+    const boton = within(fila).getByRole('button', { name: 'Ocultar el ciclo de vida de Q-002' })
+    expect(boton).toHaveAttribute('aria-expanded', 'true')
+    const detalle = document.getElementById(boton.getAttribute('aria-controls')!)!
+    expect(within(detalle).getByText('Siguiente acción · Responsable')).toBeInTheDocument()
+    expect(within(detalle).getByRole('link', { name: 'Abrir ficha' })).toHaveAttribute('href', '/projects/p1/grievances/g2')
+    expect(ubicacion.actual).toBe('/projects/p1/attention')
+    filasDelGrupo(/^Vencidas/)[0].focus()
     await userEvent.keyboard('{Enter}')
     expect(ubicacion.actual).toBe('/projects/p1/grievances/g2')
   })
 
-  it('agrupa las abiertas por su situación de plazo, con el plazo que corre en su estado y el registro para quien escribe', async () => {
+  it('agrupa las abiertas por su situación de plazo en una sola tabla, con el total de cada grupo que cuenta el servidor', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
-    expect(within(vencidas).getByRole('link', { name: /^Q-002\b/ })).toHaveAttribute('href', '/projects/p1/grievances/g2')
-    expect(within(vencidas).getByText('Anónima')).toBeInTheDocument()
-    expect(within(vencidas).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
-    const porVencer = screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Por vencer' })
-    expect(within(porVencer).getByRole('link', { name: /^C-002\b/ })).toHaveAttribute('href', '/projects/p1/inquiries/i2')
-    const alDia = screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Al día o sin plazo' })
-    expect(within(alDia).getByRole('link', { name: /^S-001\b/ })).toHaveAttribute('href', '/projects/p1/requests/r1')
-    expect(within(alDia).getByText('Sin plazo')).toBeInTheDocument()
+    await screen.findByRole('table', { name: TABLA })
+    const vencidas = grupo(/^Vencidas \(1\)/)
+    expect(vencidas.getByRole('link', { name: /^Q-002\b/ })).toHaveAttribute('href', '/projects/p1/grievances/g2')
+    expect(vencidas.getByText('Anónima')).toBeInTheDocument()
+    expect(vencidas.getByLabelText(/^Situación de plazo: Vencido · \d+ días hábiles$/)).toBeInTheDocument()
+    expect(vencidas.getByLabelText('Severidad: Media')).toBeInTheDocument()
+    expect(grupo(/^Por vencer/).getByRole('link', { name: /^C-002\b/ })).toHaveAttribute('href', '/projects/p1/inquiries/i2')
+    const alDia = grupo(/^Al día o sin plazo/)
+    expect(alDia.getByRole('link', { name: /^S-001\b/ })).toHaveAttribute('href', '/projects/p1/requests/r1')
+    expect(alDia.getByText('Sin plazo')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /^Q-003\b/ })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Registrar QCS' })).toHaveAttribute('href', '/projects/p1/attention/new')
+    // los días hábiles del acuse se dicen al pie de la tabla
+    expect(screen.getByText(/se cuenta en días hábiles con el calendario de feriados de Perú/)).toBeInTheDocument()
   })
 
   it('las cifras salen de los indicadores y «por vencer» de la lista; con confidencialidad excluida lo dice', async () => {
@@ -245,37 +280,53 @@ describe('S35 · lista unificada de QCS', () => {
     expect(ubicacion.actual).toBe('/projects/p1/attention?view=todas')
   })
 
-  // U-24: las cifras de la cabecera se entienden sin conocer el modelo: nunca «0 / 4 · %»
-  it('la cifra de respondidas dice de qué es el porcentaje y su base, sin «n / N · %»', async () => {
-    fetch = mockFetch(rutas([indicador('KPI-GRV-07', 0, { label: '#6 QCS absueltas', unit: '%', numerator: 0, denominator: 4 })]))
+  // U-24 y S11: las cifras de la cabecera se entienden sin conocer el modelo: nunca «0 / 4 · %». «Absueltas en 90 días» es
+  // KPI-GRV-07 en los últimos 90 días de Lima: cuántas de las recibidas tienen respuesta, y el porcentaje con su base
+  it('«Absueltas en 90 días» cuenta las respondidas de los últimos 90 días, con el porcentaje y su base, sin «n / N · %»', async () => {
+    fetch = mockFetch(rutas([indicador('KPI-GRV-07', 50, { label: '#6 QCS absueltas', unit: '%', numerator: 2, denominator: 4 })]))
     abrir()
     const cifras = await screen.findByRole('region', { name: 'Indicadores' })
-    const respondidas = await within(cifras).findByRole('region', { name: 'Respondidas' })
-    expect(respondidas).toHaveTextContent('0 %')
-    expect(respondidas).toHaveTextContent('0 de 4 recibidas en el periodo tienen respuesta')
-    expect(respondidas).not.toHaveTextContent('/ 4')
-    expect(respondidas).not.toHaveTextContent('#6')
+    const absueltas = await within(cifras).findByRole('region', { name: 'Absueltas en 90 días' })
+    expect(absueltas).toHaveTextContent('2')
+    expect(absueltas).toHaveTextContent('50 % de las 4 recibidas en los últimos 90 días tienen respuesta')
+    expect(absueltas).not.toHaveTextContent('/ 4')
+    expect(absueltas).not.toHaveTextContent('#6')
+    const pedido = red!.a('GET', '/sgspe/dashboards/indicators/KPI-GRV-07')[0].ruta
+    expect(new URLSearchParams(pedido.split('?')[1]).get('periodEnd')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(await within(cifras).findByRole('region', { name: 'Abiertas' })).toHaveTextContent('siguen en atención')
     expect(within(cifras).getByRole('region', { name: 'Vencidas' })).toHaveTextContent('abiertas con el plazo vencido')
   })
 
-  it('la columna de quien la plantea dice si dio su nombre, no «Identificada»', async () => {
+  // S11: quien la plantea es «anónima» o, sin permiso sobre la persona (un campo restringido), «Restringido»; nunca un vacío
+  it('la columna de quien la plantea dice «Anónima», o «Restringido» a quien no lee la persona', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Al día o sin plazo' })
-    // las tres del grupo dieron su nombre: la columna dice lo mismo en todas y sale a la nota de encima (DD-05)
-    const alDia = screen.getByRole('region', { name: 'Al día o sin plazo' })
-    expect(within(alDia).getByRole('list', { name: 'Igual en todas las filas' })).toHaveTextContent('Quien la plantea: Dio su nombre')
-    expect(within(alDia).queryByRole('columnheader', { name: 'Quien la plantea' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Identificada')).not.toBeInTheDocument()
+    await screen.findByRole('table', { name: TABLA })
+    expect(grupo(/^Vencidas/).getByText('Anónima')).toBeInTheDocument()
+    // quien lee la persona y la QCS no la tiene: «—»
+    expect(grupo(/^Al día o sin plazo/).queryByText('Restringido')).not.toBeInTheDocument()
+  })
+
+  it('a quien no lee la persona, quien la plantea le dice «Restringido»', async () => {
+    fetch = mockFetch(
+      rutas([
+        { path: '/metadata/objects/grievance', body: sinPersona(DEF_QUEJA) },
+        { path: '/metadata/objects/inquiry', body: sinPersona(DEF_CONSULTA) },
+        { path: '/metadata/objects/stakeholder_request', body: sinPersona(DEF_SOLICITUD) }
+      ])
+    )
+    abrir()
+    await screen.findByRole('table', { name: TABLA })
+    expect(grupo(/^Al día o sin plazo/).getAllByText('Restringido').length).toBeGreaterThan(0)
+    expect(grupo(/^Vencidas/).getByText('Anónima')).toBeInTheDocument()
   })
 
   it('la tabla de cada grupo muestra primero la que vence antes', async () => {
     const antes = registro('g9', { ...VENCIDA.attributes, code: 'Q-010', ack_due_date: '2026-10-01' }, { state: 'received' })
     fetch = mockFetch(rutas())
     abrir(EQUIPO_DE_QUEJAS, undefined, { porTipo: { grievance: [VENCIDA, antes] } })
-    const vencidas = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
-    const codigos = within(vencidas)
+    await screen.findByRole('table', { name: TABLA })
+    const codigos = grupo(/^Vencidas/)
       .getAllByRole('link', { name: /^Q-/ })
       .map((a) => a.textContent?.split(' ')[0])
     expect(codigos).toEqual(['Q-010', 'Q-002'])
@@ -287,8 +338,8 @@ describe('S35 · lista unificada de QCS', () => {
     const antes = registro('g9', { ...VENCIDA.attributes, code: 'Q-010', ack_due_date: '2026-10-01' }, { state: 'received' })
     fetch = mockFetch(rutas())
     abrir(EQUIPO_DE_QUEJAS, undefined, { porTipo: { grievance: [VENCIDA, antes] } })
-    const tabla = () => screen.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
-    await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })
+    const tabla = () => screen.getByRole('table', { name: TABLA })
+    await screen.findByRole('table', { name: TABLA })
     const consultas = () => red!.a('GET', '/sgspe/attention/queue').map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1])))
     const codigos = () =>
       within(tabla())
@@ -320,7 +371,7 @@ describe('S35 · lista unificada de QCS', () => {
     )
     fetch = mockFetch(rutas())
     abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention?page=1', { porTipo: { grievance: muchas } })
-    const tabla = await screen.findByRole('table', { name: 'Quejas, consultas y solicitudes: Al día o sin plazo' })
+    const tabla = await screen.findByRole('table', { name: TABLA })
     await userEvent.click(within(tabla).getByRole('button', { name: 'QCS' }))
     expect(ubicacion.actual).toBe('/projects/p1/attention?sort=codigo&dir=asc')
   })

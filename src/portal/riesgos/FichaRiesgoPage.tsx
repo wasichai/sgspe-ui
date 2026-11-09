@@ -13,8 +13,8 @@ import { rutaDeFicha } from '../datos/fichas'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { ApiError, useAuth } from '@wasichai/core'
-import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
-import { useState, type ReactNode } from 'react'
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Textarea } from '@wasichai/ui'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
@@ -40,7 +40,8 @@ import { Impactos } from './ImpactosPage'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
 import { nivelDePuntaje, umbralesDe } from './niveles'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
-import { Dia } from '../componentes/Dia'
+import { Grafico } from '../graficos/Grafico'
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { Persona } from '../componentes/Persona'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
 import { EditarSeccion } from '../componentes/EditarSeccion'
@@ -131,7 +132,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
   const medidas = useTodos('mitigation_measure', { social_risk: riesgo.id })
   const evidencias = useEvidenciasDe('social_risk', riesgo.id)
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t('fichaRiesgo.tipo'), texto(riesgo, 'code'), opcion(riesgo, 'category')].filter(Boolean).join(' · ')}
         titulo={texto(riesgo, 'title')}
@@ -322,7 +323,7 @@ function Ficha({ riesgo }: { riesgo: Registro }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 
@@ -417,50 +418,66 @@ function Resumen({ riesgo }: { riesgo: Registro }) {
   )
 }
 
-// las revisiones, inmutables (risk_assessment es appendOnly y apiOnly): una se corrige con otra, así que no hay editar
+// las revisiones, inmutables (risk_assessment es appendOnly y apiOnly): una se corrige con otra, así que no hay editar. el historial
+// es un gráfico del puntaje P × I en el tiempo (vigente y, si las hay, residual), con la anotación directa de Grafico y «Ver datos»
+// con la tabla entera: fecha, P × I, nivel, tendencia, tipo, notas y quién (el tooltip nunca es la única forma de leer un valor)
 function Revisiones({ consulta }: { consulta: ReturnType<typeof useTodos> }) {
   const { t } = useTranslation(NS)
+  const filas = useMemo(() => [...(consulta.data ?? [])].reverse(), [consulta.data])
+  const opciones = useMemo(() => {
+    const fechas = filas.map((r) => diaPe(texto(r, 'assessment_date')))
+    const serie = (residual: boolean) =>
+      filas.map((r) => ((atributo(r, 'residual') === true) === residual && texto(r, 'score') ? Number(texto(r, 'score')) : null))
+    const conResidual = filas.some((r) => atributo(r, 'residual') === true)
+    return {
+      grid: { left: 40, right: 24, top: 32, bottom: 32 },
+      legend: {},
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: fechas },
+      yAxis: { type: 'value', min: 0, max: 25, name: t('fichaRiesgo.revisiones.columnas.pi') },
+      series: [
+        { type: 'line', name: t('fichaRiesgo.revisiones.vigente'), data: serie(false), connectNulls: true },
+        ...(conResidual
+          ? [
+              {
+                type: 'line',
+                name: t('fichaRiesgo.revisiones.residual'),
+                data: serie(true),
+                connectNulls: true,
+                lineStyle: { type: 'dashed' }
+              }
+            ]
+          : [])
+      ]
+    }
+  }, [filas, t])
   if (consulta.isPending) return <Cargando compacto />
   if (consulta.isError && !consulta.data) return <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
-  const filas = consulta.data ?? []
   if (filas.length === 0) return <p className="text-sm text-sg-text-muted">{t('fichaRiesgo.revisiones.vacio')}</p>
+  const nivel = (r: Registro) => {
+    const valor = atributo(r, 'risk_level')
+    return typeof valor === 'string' && valor ? t(`tableroRiesgos.niveles.${valor}`, { defaultValue: rotuloDeOpcion(valor) }) : '—'
+  }
   return (
     <div className="space-y-2">
       <p className="text-sg-caption text-sg-text-muted">{t('fichaRiesgo.revisiones.inmutables')}</p>
-      <div className="overflow-x-auto">
-        <Table aria-label={t('fichaRiesgo.pestanas.revisiones')}>
-          <thead>
-            <tr>
-              {(['fecha', 'pi', 'nivel', 'tendencia', 'tipo', 'notas', 'quien'] as const).map((c) => (
-                <Th key={c} scope="col">
-                  {t(`fichaRiesgo.revisiones.columnas.${c}`)}
-                </Th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((r) => (
-              <tr key={r.id}>
-                <Td className="text-sm">
-                  <Dia valor={texto(r, 'assessment_date')} />
-                </Td>
-                <Td className="text-sm tabular-nums">
-                  {t('fichaRiesgo.puntaje', { p: texto(r, 'probability'), i: texto(r, 'impact'), s: texto(r, 'score') })}
-                </Td>
-                <Td>
-                  <NivelDeRiesgo valor={atributo(r, 'risk_level')} residual={atributo(r, 'residual') === true} />
-                </Td>
-                <Td className="text-sm">{opcion(r, 'trend') || '—'}</Td>
-                <Td className="text-sm">{atributo(r, 'residual') === true ? t('fichaRiesgo.revisiones.residual') : t('fichaRiesgo.revisiones.vigente')}</Td>
-                <Td className="whitespace-pre-line text-sm">{texto(r, 'notes') || '—'}</Td>
-                <Td className="text-sm">
-                  <Persona correo={texto(r, 'assessor_user_email')} />
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
+      <Grafico
+        etiqueta={t('fichaRiesgo.pestanas.revisiones')}
+        opciones={opciones}
+        alto={240}
+        datos={{
+          columnas: (['fecha', 'pi', 'nivel', 'tendencia', 'tipo', 'notas', 'quien'] as const).map((c) => t(`fichaRiesgo.revisiones.columnas.${c}`)),
+          filas: filas.map((r) => [
+            diaPe(texto(r, 'assessment_date')),
+            t('fichaRiesgo.puntaje', { p: texto(r, 'probability'), i: texto(r, 'impact'), s: texto(r, 'score') }),
+            nivel(r),
+            opcion(r, 'trend') || '—',
+            atributo(r, 'residual') === true ? t('fichaRiesgo.revisiones.residual') : t('fichaRiesgo.revisiones.vigente'),
+            texto(r, 'notes') || '—',
+            texto(r, 'assessor_user_email') || '—'
+          ])
+        }}
+      />
     </div>
   )
 }

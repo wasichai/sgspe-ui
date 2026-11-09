@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
-import { Alert, Pagination, Table, Td, Th } from '@wasichai/ui'
+import { Alert, Button, Pagination, Table, Td, Th } from '@wasichai/ui'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
@@ -18,7 +18,9 @@ import { campoDe, consulta, useDefinicion } from '../datos/registros'
 import { rotuloDeOpcion } from '../datos/opciones'
 import { diaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { Nivel } from '../componentes/Nivel'
+import { CAJA_DE_TABLA, CELDA, ENCABEZADO } from '../componentes/TablaPriorizada'
 
 // el reporte unificado de QCS (api.md §4.6, plan 4.2a): GET /api/sgspe/attention/report con el proyecto del contexto (sin él, los
 // proyectos de quien mira), el periodo de recepción, el tipo, el canal y la categoría, paginado. lee como quien llama: los conteos
@@ -107,13 +109,15 @@ export function ReporteQcsPage() {
   const codigo = codigoDelError(reporte.error)
   return (
     <ContenedorDePagina elemento="section">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('reporteQcs.titulo')}</h1>
-        <Link to={`${base}/attention`} className="text-sm text-sg-primary-text underline">
-          {t('reporteQcs.verLista')}
-        </Link>
-      </div>
-      <p className="text-sm text-sg-text-secondary">{t('reporteQcs.ayuda')}</p>
+      <EncabezadoDePagina
+        titulo={t('reporteQcs.titulo')}
+        descripcion={t('reporteQcs.ayuda')}
+        secundarias={
+          <Button asChild size="sm" variant="secondary">
+            <Link to={`${base}/attention`}>{t('reporteQcs.verLista')}</Link>
+          </Button>
+        }
+      />
       <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
         <CampoFecha etiqueta={t('reporteQcs.filtros.desde')} valor={filtro('periodStart') || null} alCambiar={(v) => cambiar('periodStart', v ?? '')} />
         <CampoFecha etiqueta={t('reporteQcs.filtros.hasta')} valor={filtro('periodEnd') || null} alCambiar={(v) => cambiar('periodEnd', v ?? '')} />
@@ -174,13 +178,15 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
       <NotaDeConfidenciales oculta={reporte.confidentialHidden} />
       <section aria-label={t('reporteQcs.porTipo')} className="space-y-2">
         <h2 className="text-sg-h3 font-semibold">{t('reporteQcs.porTipo')}</h2>
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+        <div className={CAJA_DE_TABLA}>
           <Table aria-label={t('reporteQcs.porTipo')}>
             <thead>
               <tr>
-                <Th scope="col">{t('reporteQcs.tipo')}</Th>
+                <Th scope="col" className={ENCABEZADO}>
+                  {t('reporteQcs.tipo')}
+                </Th>
                 {CONTEOS.map((c) => (
-                  <Th key={c} scope="col">
+                  <Th key={c} scope="col" className={ENCABEZADO}>
                     {t(`reporteQcs.conteos.${c}`)}
                   </Th>
                 ))}
@@ -194,7 +200,7 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
                   </Th>
                   {d.available ? (
                     CONTEOS.map((c) => (
-                      <Td key={c} className="text-sm tabular-nums">
+                      <Td key={c} className={`${CELDA} tabular-nums`}>
                         {cifra(d[c])}
                       </Td>
                     ))
@@ -210,7 +216,7 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
                   {t('reporteQcs.totales')}
                 </Th>
                 {CONTEOS.map((c) => (
-                  <Td key={c} className="text-sm font-semibold tabular-nums">
+                  <Td key={c} className={`${CELDA} font-semibold tabular-nums`}>
                     {cifra(reporte.totals[c])}
                   </Td>
                 ))}
@@ -232,7 +238,7 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
           <Vacio titulo={t('reporteQcs.vacio')} />
         ) : (
           <>
-            <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+            <div className={CAJA_DE_TABLA}>
               <Table aria-label={t('reporteQcs.lista')}>
                 <thead>
                   <tr>
@@ -252,7 +258,7 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
                         'anonima'
                       ] as const
                     ).map((c) => (
-                      <Th key={c} scope="col">
+                      <Th key={c} scope="col" className={ENCABEZADO}>
                         {t(`reporteQcs.columnas.${c}`)}
                       </Th>
                     ))}
@@ -261,7 +267,7 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
                 <tbody>
                   {items.map((x) => (
                     <tr key={`${x.type}:${x.id}`}>
-                      <Td className="text-sm">{t(`comun.qcs.${x.type}`, { defaultValue: x.type })}</Td>
+                      <Td className={CELDA}>{t(`comun.qcs.${x.type}`, { defaultValue: x.type })}</Td>
                       <Td className="font-sg-mono text-sm">
                         {proyecto && esQcs(x.type) ? (
                           <Link to={rutaDeQcs(proyecto, x.type, x.id)} className="text-sg-primary-text underline">
@@ -272,17 +278,19 @@ function Contenido({ reporte, proyecto, alPagina }: { reporte: ReporteDeQcs; pro
                         )}
                       </Td>
                       <Td>{esQcs(x.type) ? <EstadoChip objeto={x.type} estado={x.state} /> : x.state}</Td>
-                      <Td className="text-sm">{x.channel ?? '—'}</Td>
-                      <Td className="text-sm">{x.category ?? '—'}</Td>
-                      <Td className="text-sm">{x.severity ?? '—'}</Td>
-                      <Td className="text-sm">{x.receivedAt ? fechaYHoraPe(new Date(x.receivedAt)) : '—'}</Td>
+                      <Td className={CELDA}>{x.channel ?? '—'}</Td>
+                      <Td className={CELDA}>{x.category ?? '—'}</Td>
+                      <Td className={CELDA}>
+                        <Nivel valor={x.severity ?? ''} nombre={t('atencion.columnas.severidad')} />
+                      </Td>
+                      <Td className={CELDA}>{x.receivedAt ? fechaYHoraPe(new Date(x.receivedAt)) : '—'}</Td>
                       <Td>
                         <SituacionDePlazo valor={x.deadlineStatus} />
                       </Td>
-                      <Td className="text-sm">{x.dueDate ? diaPe(x.dueDate) : '—'}</Td>
-                      <Td className="text-sm">{x.ownerEmail ?? '—'}</Td>
-                      <Td className="text-sm">{x.respondedAt ? fechaYHoraPe(new Date(x.respondedAt)) : '—'}</Td>
-                      <Td className="text-sm">{x.anonymous === null || x.anonymous === undefined ? '—' : x.anonymous ? t('comun.si') : t('comun.no')}</Td>
+                      <Td className={CELDA}>{x.dueDate ? diaPe(x.dueDate) : '—'}</Td>
+                      <Td className={CELDA}>{x.ownerEmail ?? '—'}</Td>
+                      <Td className={CELDA}>{x.respondedAt ? fechaYHoraPe(new Date(x.respondedAt)) : '—'}</Td>
+                      <Td className={CELDA}>{x.anonymous === null || x.anonymous === undefined ? '—' : x.anonymous ? t('comun.si') : t('comun.no')}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -308,15 +316,19 @@ function Desglose({ tipo, desglose, filas }: { tipo: ObjetoDeQcs; desglose: (typ
       <caption className="text-left text-sm font-medium">{titulo}</caption>
       <thead>
         <tr>
-          <Th scope="col">{t('reporteQcs.clave')}</Th>
-          <Th scope="col">{t('reporteQcs.cantidad')}</Th>
+          <Th scope="col" className={ENCABEZADO}>
+            {t('reporteQcs.clave')}
+          </Th>
+          <Th scope="col" className={ENCABEZADO}>
+            {t('reporteQcs.cantidad')}
+          </Th>
         </tr>
       </thead>
       <tbody>
         {filas.map((f) => (
           <tr key={f.key}>
-            <Td className="text-sm">{desglose === 'byState' ? (etiquetas[f.key] ?? f.key) : rotuloDeOpcion(f.key)}</Td>
-            <Td className="text-sm tabular-nums">{numeroPe(f.value)}</Td>
+            <Td className={CELDA}>{desglose === 'byState' ? (etiquetas[f.key] ?? f.key) : rotuloDeOpcion(f.key)}</Td>
+            <Td className={`${CELDA} tabular-nums`}>{numeroPe(f.value)}</Td>
           </tr>
         ))}
       </tbody>

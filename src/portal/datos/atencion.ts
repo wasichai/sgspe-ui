@@ -36,6 +36,34 @@ export const ESTADOS_FINALES: Readonly<Record<ObjetoDeQcs, readonly string[]>> =
 
 export const estaAbierta = (objeto: ObjetoDeQcs, registro: Registro): boolean => !ESTADOS_FINALES[objeto].includes(registro.state ?? '')
 
+// el camino de cada workflow (WF-E1, WF-E2 y WF-E3) sin sus excepciones (investigar, derivar una consulta, declinar una solicitud,
+// rechazar, desistir): un estado de excepción se agrega al dibujarlo (CaminoDelFlujo). lo usan la ficha y la fila abierta de la cola
+export const CAMINO_DE_QCS: Readonly<Record<ObjetoDeQcs, string[]>> = {
+  grievance: ['received', 'acknowledged', 'in_assessment', 'in_action', 'resolved', 'verified', 'closed'],
+  inquiry: ['received', 'answered', 'closed'],
+  stakeholder_request: ['received', 'under_evaluation', 'accepted', 'closed']
+}
+
+// las transiciones que la guarda del servidor comprueba antes (transition-checks): la ficha y la fila abierta las consultan al
+// dibujarse y, si una regla las bloquea, salen deshabilitadas con la razón
+export const COMPROBAR_DE_QCS: Readonly<Record<ObjetoDeQcs, readonly string[]>> = {
+  grievance: [
+    'investigate',
+    'start_action',
+    'start_action_after_investigation',
+    'resolve',
+    'resolve_high_severity',
+    'reopen',
+    'close_resolved',
+    'close',
+    'reject_received',
+    'reject_acknowledged',
+    'reject_in_assessment'
+  ],
+  inquiry: ['answer', 'refer', 'close', 'close_referred'],
+  stakeholder_request: ['start_evaluation', 'decline', 'close_declined', 'close_unfulfilled']
+}
+
 // el plazo que corre en el estado (workflows.md, «Plazos y escalamiento»; ASM-100): el acuse en una queja recibida, la resolución
 // mientras se atiende, la respuesta en una consulta recibida; la solicitud no tiene plazo en el MVP. fuera de esos estados, null
 const PLAZOS: Readonly<Record<ObjetoDeQcs, Readonly<Record<string, string>>>> = {

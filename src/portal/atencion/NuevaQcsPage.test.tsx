@@ -74,12 +74,14 @@ describe('S37 · registrar QCS', () => {
     await revisar()
     expect(within(quePasara()).getByText(/El acuse vence 5 días hábiles/)).toBeInTheDocument()
     expect(within(quePasara()).getByText('Se crea la tarea de acusar recibo.')).toBeInTheDocument()
-    // la revisión resume lo escrito antes de registrar
-    const resumen = screen.getByRole('region', { name: 'Resumen' })
+    // «Revise sus respuestas» (S37) resume lo escrito antes de registrar, con «Cambiar» que vuelve a su paso sin perder nada
+    const resumen = screen.getByRole('region', { name: 'Revise sus respuestas' })
     expect(within(resumen).getByText('Queja')).toBeInTheDocument()
     expect(within(resumen).getByText('Q-020')).toBeInTheDocument()
     expect(within(resumen).getByText('Polvo en la vía')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Registrar queja' })).toBeInTheDocument()
+    await userEvent.click(within(resumen).getAllByRole('button', { name: /^Cambiar/ })[1])
+    expect(await screen.findByDisplayValue('Q-020')).toBeInTheDocument()
   })
 
   it('«Anterior» vuelve sin perder lo escrito y sin escribir nada', async () => {

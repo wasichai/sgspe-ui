@@ -211,83 +211,227 @@ const QUEJA = registro(
     code: 'Q-001',
     channel: 'PRESENCIAL',
     category: 'AGUA Y MEDIO AMBIENTE',
-    severity: 'MEDIA',
-    description: 'El canal de riego quedó turbio después de las obras de la plataforma en la quebrada alta',
+    severity: 'ALTA',
+    description: 'El comité de regantes informa que el canal principal bajó de caudal tras la perforación',
     deadline_status: 'VENCIDO',
     ack_due_date: '2026-10-02',
     owner_user_email: 'gvm@sgspe.test',
-    anonymous: true
-  },
-  'received'
-)
-const CONSULTA = registro(
-  'i1',
-  {
-    project: 'p1',
-    code: 'C-001',
-    channel: 'TELEFONO',
-    category: 'EMPLEO LOCAL',
-    description: '¿Cuándo abre la convocatoria de empleo local para la comunidad?',
-    deadline_status: 'AL DIA',
-    response_due_date: '2026-10-20',
-    owner_user_email: 'rel@sgspe.test',
     anonymous: false
   },
   'received'
 )
+// la cola de S11: dos vencidas, una por vencer y tres al día, de los tres tipos
+const qcs = (id: string, campos: Record<string, unknown>, estado: string) =>
+  registro(id, { project: 'p1', owner_user_email: 'gvm@sgspe.test', anonymous: false, ...campos }, estado)
+const VENCIDA = qcs(
+  'g3',
+  {
+    code: 'Q-003',
+    channel: 'REUNION',
+    category: 'EMPLEO LOCAL',
+    severity: 'MEDIA',
+    description: 'En la asamblea del sector se reclamó que la contratista no respetó el turno de contratación',
+    deadline_status: 'VENCIDO',
+    resolution_due_date: '2026-09-28'
+  },
+  'in_action'
+)
+const POR_VENCER = qcs(
+  'g5',
+  {
+    code: 'Q-005',
+    channel: 'TELEFONO',
+    category: 'TRANSITO Y POLVO',
+    severity: 'MEDIA',
+    description: 'Polvo en la trocha por el paso de camionetas frente a la escuela',
+    deadline_status: 'POR VENCER',
+    resolution_due_date: '2026-10-19'
+  },
+  'acknowledged'
+)
+const CONSULTA = qcs(
+  'i1',
+  {
+    code: 'C-001',
+    channel: 'TELEFONO',
+    category: 'EMPLEO LOCAL',
+    description: '¿Cuándo se publicará la lista de la siguiente rotación de mano de obra?',
+    deadline_status: 'AL DIA',
+    response_due_date: '2026-10-27',
+    owner_user_email: 'rel@sgspe.test'
+  },
+  'received'
+)
+const SOLICITUD = qcs(
+  'sr1',
+  { code: 'S-001', channel: 'LIBRO DE REGISTRO', category: 'APOYO SOCIAL', description: 'Apoyo con movilidad para la faena comunal del 15 de noviembre' },
+  'under_evaluation'
+)
+const ANONIMA = qcs(
+  'g4',
+  {
+    code: 'Q-004',
+    channel: 'BUZON',
+    category: 'CONDUCTA DEL PERSONAL',
+    severity: 'ALTA',
+    description: 'Trato inadecuado de un vigilante en el campamento',
+    deadline_status: 'AL DIA',
+    resolution_due_date: '2026-10-28',
+    anonymous: true
+  },
+  'in_assessment'
+)
 const COLA = {
   content: [
+    { type: 'grievance', group: 'overdue', record: VENCIDA },
     { type: 'grievance', group: 'overdue', record: QUEJA },
-    { type: 'inquiry', group: 'onTime', record: CONSULTA }
+    { type: 'grievance', group: 'dueSoon', record: POR_VENCER },
+    { type: 'inquiry', group: 'onTime', record: CONSULTA },
+    { type: 'stakeholder_request', group: 'onTime', record: SOLICITUD },
+    { type: 'grievance', group: 'onTime', record: ANONIMA }
   ],
   page: 0,
   size: 25,
-  totalElements: 2,
+  totalElements: 6,
   totalPages: 1,
-  views: { attention: 2, grievances: 1, inquiries: 1, requests: 0, mine: 0, all: 2 },
-  groups: { overdue: 1, dueSoon: 0, onTime: 1 },
-  unfiltered: 2,
-  openDueSoon: 0,
+  views: { attention: 6, grievances: 4, inquiries: 1, requests: 1, mine: 0, all: 9 },
+  groups: { overdue: 2, dueSoon: 1, onTime: 3 },
+  unfiltered: 6,
+  openDueSoon: 1,
   readable: ['grievance', 'inquiry', 'stakeholder_request']
 }
+const riesgo = (id: string, campos: Record<string, unknown>, estado: string) =>
+  registro(id, { project: 'p1', owner_user_email: 'srm@sgspe.test', ...campos }, estado)
 const RIESGOS = [
-  registro(
+  riesgo(
     'r1',
     {
-      project: 'p1',
       code: 'R-001',
-      title: 'Bloqueo de la vía de acceso por la comunidad de la parte alta durante la temporada de lluvias',
+      title: 'Bloqueo de la trocha de acceso durante la campaña',
       category: 'EXPECTATIVAS Y BENEFICIOS',
       probability: 4,
       impact: 4,
       score: 16,
       risk_level: 'CRITICO',
-      review_status: 'AL DIA',
-      next_review_date: '2026-10-30',
-      owner_user_email: 'srm@sgspe.test'
+      trend: 'AUMENTA',
+      review_status: 'REVISION VENCIDA',
+      next_review_date: '2026-09-28',
+      risk_source: 'Expectativas de empleo local no atendidas',
+      treatment_decision: 'MITIGAR'
     },
     'mitigating'
   ),
-  registro(
+  riesgo(
+    'r3',
+    {
+      code: 'R-003',
+      title: 'Reclamos por empleo local en la comunidad',
+      category: 'EMPLEO LOCAL',
+      probability: 3,
+      impact: 4,
+      score: 12,
+      risk_level: 'ALTO',
+      trend: 'AUMENTA',
+      review_status: 'POR REVISAR',
+      next_review_date: '2026-10-22'
+    },
+    'assessed'
+  ),
+  riesgo(
+    'r5',
+    {
+      code: 'R-005',
+      title: 'Afectación percibida a fuentes de agua de la microcuenca',
+      category: 'AGUA',
+      probability: 3,
+      impact: 4,
+      score: 12,
+      risk_level: 'ALTO',
+      trend: 'SE MANTIENE',
+      review_status: 'AL DIA',
+      next_review_date: '2026-11-05'
+    },
+    'monitoring'
+  ),
+  riesgo(
     'r2',
     {
-      project: 'p1',
       code: 'R-002',
       title: 'Desinformación sobre el uso del agua',
       category: 'AGUA',
-      probability: 3,
-      impact: 2,
+      probability: 2,
+      impact: 3,
       score: 6,
       risk_level: 'MEDIO',
+      trend: 'DISMINUYE',
+      review_status: 'AL DIA',
+      next_review_date: '2026-11-02',
       owner_user_email: 'rel@sgspe.test'
     },
-    'identified'
-  )
+    'assessed'
+  ),
+  riesgo('r4', { code: 'R-004', title: 'Reactivación de una disputa de linderos', category: 'TIERRAS Y TERRITORIO' }, 'identified')
+]
+const REVISIONES = [
+  registro('ra3', {
+    social_risk: 'r1',
+    assessment_date: '2026-09-14',
+    probability: 4,
+    impact: 4,
+    score: 16,
+    risk_level: 'CRITICO',
+    trend: 'AUMENTA',
+    residual: false,
+    notes: 'Tras el anuncio del paro',
+    assessor_user_email: 'srm@sgspe.test'
+  }),
+  registro('ra2', {
+    social_risk: 'r1',
+    assessment_date: '2026-08-10',
+    probability: 3,
+    impact: 4,
+    score: 12,
+    risk_level: 'ALTO',
+    trend: 'AUMENTA',
+    residual: false,
+    assessor_user_email: 'srm@sgspe.test'
+  }),
+  registro('ra1', {
+    social_risk: 'r1',
+    assessment_date: '2026-07-06',
+    probability: 2,
+    impact: 4,
+    score: 8,
+    risk_level: 'MEDIO',
+    residual: false,
+    assessor_user_email: 'srm@sgspe.test'
+  })
+]
+const MEDIDAS = [
+  registro('mm1', {
+    social_risk: 'r1',
+    description: 'Mesa de empleo local con la junta directiva',
+    owner_user_email: 'srm@sgspe.test',
+    planned_date: '2026-10-01'
+  }),
+  registro('mm2', { social_risk: 'r1', description: 'Difusión del cronograma de contratación', owner_user_email: 'rel@sgspe.test', planned_date: '2026-10-30' })
 ]
 const ALERTA = registro(
   'w1',
-  { project: 'p1', title: 'Asamblea de protesta anunciada en la radio local', detected_at: '2026-10-03T13:00:00Z', severity: 'ALTO' },
-  'detected'
+  {
+    project: 'p1',
+    title: 'Convocatoria a paro en la comunidad',
+    detected_at: '2026-10-14T13:00:00Z',
+    severity: 'ALTO',
+    early_warning_rule: 'rg1',
+    social_risk: 'r3'
+  },
+  'in_triage'
+)
+const ALERTA_CONFIRMADA = registro(
+  'w2',
+  { project: 'p1', title: 'Mención en radio local sobre contaminación', detected_at: '2026-10-08T13:00:00Z', severity: 'MEDIO' },
+  'confirmed'
 )
 const PROGRAMAS = [
   registro('sp1', { project: 'p1', code: 'PS-001', name: 'Programa de agua segura para las comunidades de la cuenca alta' }, 'executing'),
@@ -715,8 +859,35 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
     ])
   ],
   [/^\/sgspe\/attention\/queue$/, COLA],
-  [/^\/objects\/grievance\/workflow$/, flujo('grievance', [['received', 'Recibida']])],
-  [/^\/objects\/inquiry\/workflow$/, flujo('inquiry', [['received', 'Recibida']])],
+  [
+    /^\/objects\/grievance\/workflow$/,
+    flujo('grievance', [
+      ['received', 'Recibida'],
+      ['acknowledged', 'Acusada'],
+      ['in_assessment', 'En evaluación'],
+      ['in_action', 'En atención'],
+      ['resolved', 'Absuelta'],
+      ['verified', 'Verificada'],
+      ['closed', 'Cerrada']
+    ])
+  ],
+  [
+    /^\/objects\/inquiry\/workflow$/,
+    flujo('inquiry', [
+      ['received', 'Recibida'],
+      ['answered', 'Respondida'],
+      ['closed', 'Cerrada']
+    ])
+  ],
+  [
+    /^\/objects\/stakeholder_request\/workflow$/,
+    flujo('stakeholder_request', [
+      ['received', 'Recibida'],
+      ['under_evaluation', 'En evaluación'],
+      ['accepted', 'Aceptada'],
+      ['closed', 'Cerrada']
+    ])
+  ],
   [/^\/sgspe\/dashboards\/indicators\/KPI-GRV-02$/, ind('KPI-GRV-02', 'QCS abiertas', 2, 'QCS')],
   [/^\/sgspe\/dashboards\/indicators\/KPI-GRV-06$/, ind('KPI-GRV-06', 'QCS fuera de plazo', 1, 'QCS')],
   [/^\/sgspe\/dashboards\/indicators\/KPI-GRV-07$/, { ...ind('KPI-GRV-07', 'QCS absueltas', 50, '%'), numerator: 2, denominator: 4 }],
@@ -724,12 +895,42 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
     /^\/objects\/social_risk\/workflow$/,
     flujo('social_risk', [
       ['identified', 'Identificado'],
-      ['mitigating', 'En mitigación']
+      ['assessed', 'Evaluado'],
+      ['mitigating', 'En mitigación'],
+      ['monitoring', 'En monitoreo'],
+      ['closed', 'Cerrado']
     ])
   ],
   [/^\/objects\/social_risk\/records$/, pagina(RIESGOS)],
-  [/^\/objects\/early_warning\/workflow$/, flujo('early_warning', [['detected', 'Detectada']])],
-  [/^\/objects\/early_warning\/records$/, pagina([ALERTA])],
+  [/^\/objects\/social_risk\/records\/(r\d)$/, (u: URL) => RIESGOS.find((r) => u.pathname.endsWith(`/${r.id}`))],
+  [/^\/objects\/risk_assessment\/records$/, pagina(REVISIONES)],
+  [/^\/objects\/social_risk\/records\/r\d\/related\//, pagina([])],
+  [/^\/objects\/mitigation_measure\/records$/, pagina(MEDIDAS)],
+  [
+    /^\/objects\/early_warning\/workflow$/,
+    flujo('early_warning', [
+      ['detected', 'Detectada'],
+      ['in_triage', 'En triaje'],
+      ['confirmed', 'Confirmada'],
+      ['responding', 'En respuesta'],
+      ['resolved', 'Resuelta'],
+      ['closed', 'Cerrada']
+    ])
+  ],
+  [/^\/objects\/early_warning\/records$/, (u: URL) => pagina(u.searchParams.get('state')?.includes('confirmed') ? [ALERTA, ALERTA_CONFIRMADA] : [ALERTA])],
+  [/^\/objects\/early_warning\/records\/w1$/, ALERTA],
+  [
+    /^\/objects\/early_warning_rule\/records\/rg1$/,
+    registro('rg1', {
+      project: 'p1',
+      name: '3 QCS de empleo en 30 días',
+      rule_kind: 'CONTEO DE QCS',
+      threshold: 3,
+      window_days: 30,
+      severity: 'ALTO',
+      enabled: true
+    })
+  ],
   [
     /^\/objects\/social_program\/workflow$/,
     flujo('social_program', [

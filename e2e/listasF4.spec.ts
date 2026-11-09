@@ -169,17 +169,18 @@ test.describe('a 1440 px', () => {
     const barra = page.getByRole('group', { name: 'Filtros' })
     await expect(barra.getByRole('radio', { name: 'Atención, 2' })).toHaveAttribute('aria-checked', 'true')
     await expect(page.getByRole('tablist')).toHaveCount(0)
-    // las cifras se entienden sin conocer el modelo (U-24)
-    const respondidas = page.getByRole('region', { name: 'Respondidas' })
-    await expect(respondidas).toContainText('0 de 4 recibidas en el periodo tienen respuesta')
-    await expect(respondidas).not.toContainText('/ 4')
-    await sinDesborde(page, page.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' }))
+    // las cifras se entienden sin conocer el modelo (U-24): «Absueltas en 90 días» con su porcentaje y su base (S11)
+    const absueltas = page.getByRole('region', { name: 'Absueltas en 90 días' })
+    await expect(absueltas).toContainText('de las 4 recibidas en los últimos 90 días tienen respuesta')
+    await expect(absueltas).not.toContainText('/ 4')
+    // una sola tabla agrupada por plazo (S11)
+    await sinDesborde(page, page.getByRole('table', { name: 'Quejas, consultas y solicitudes', exact: true }))
   })
 
-  test('el registro de riesgos: el selector de páginas arriba, las vistas en la barra y la tabla sin desborde', async ({ page }) => {
+  test('el registro de riesgos: las pestañas de las páginas arriba, las vistas en la barra y la tabla sin desborde', async ({ page }) => {
     await page.goto('/projects/p1/risks')
     await expect(page.getByRole('navigation', { name: 'Páginas de Riesgos' })).toBeVisible()
-    await expect(page.getByRole('group', { name: 'Filtros' }).getByRole('radio', { name: 'Registro y matriz, 2' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('group', { name: 'Filtros' }).getByRole('radio', { name: 'Vigentes, 2' })).toHaveAttribute('aria-checked', 'true')
     await expect(page.getByRole('tablist')).toHaveCount(0)
     await sinDesborde(page, page.getByRole('table', { name: 'Riesgos', exact: true }))
   })
@@ -241,7 +242,7 @@ test.describe('a 390 px', () => {
     await page.goto('/projects/p1/attention')
     const tarjetas = page.getByRole('list', { name: 'Quejas, consultas y solicitudes: Vencidas' })
     await expect(tarjetas.getByRole('listitem').filter({ hasText: 'Q-001' })).toBeVisible()
-    await expect(page.getByRole('table', { name: 'Quejas, consultas y solicitudes: Vencidas' })).toHaveCount(0)
+    await expect(page.getByRole('table', { name: 'Quejas, consultas y solicitudes', exact: true })).toHaveCount(0)
   })
 
   test('el registro de riesgos es de tarjetas con su nivel', async ({ page }) => {

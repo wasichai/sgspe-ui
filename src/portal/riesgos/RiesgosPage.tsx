@@ -1,11 +1,10 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
-import { PaginasDeRiesgos } from './PaginasDeRiesgos'
-import { VistasDelModulo } from '../componentes/VistasDelModulo'
+import { PaginasDeRiesgos, useBaseDeRiesgos } from './PaginasDeRiesgos'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, cn } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -28,9 +27,13 @@ import { atributo, texto, useTodosSinTope, type Registro } from '../datos/regist
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
-import { CLASE_DE_ZONA, NIVELES, nivelDePuntaje, umbralesDe } from './niveles'
+import { NIVELES, nivelDePuntaje, umbralesDe } from './niveles'
 import { opcion } from '../datos/opciones'
-import { FechaDePlazo } from '../componentes/CuandoVence'
+import { useDiasDelPlazo } from '../componentes/DiasDelPlazo'
+import { Dia } from '../componentes/Dia'
+import { AlertasActivas, AvisoDeTriaje } from './AlertasDelRegistro'
+import { MatrizDeRiesgo } from './MatrizDeRiesgo'
+import { Tendencia } from './Tendencia'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
@@ -45,7 +48,6 @@ import { comparable } from '../componentes/FiltroDeGrupo'
 // el riesgo en identified con motivo (social_risk es requiresReason); ?nuevo=1 lo abre, y ?origin_incident= lo crea desde un
 // incidente
 const VISTAS = ['registro', 'revision', 'mios', 'cerrados'] as const
-const ESCALA = [1, 2, 3, 4, 5] as const
 const CAMPOS_DEL_ALTA = [
   'code',
   'title',
@@ -134,6 +136,12 @@ export function RiesgosPage() {
   )
   const enLaVistaSinFiltros = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id)).length
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
+  // la matriz cuenta los riesgos de la vista por su celda P-I (los sin revisión no entran)
+  const conteoDeCeldas = new Map<string, number>()
+  for (const r of enLaVista) {
+    const c = celdaDe(r)
+    if (c) conteoDeCeldas.set(c, (conteoDeCeldas.get(c) ?? 0) + 1)
+  }
   const crea = proyecto !== undefined && escribe && can('social_risk', 'CREATE')
   const nuevo = busqueda.get('nuevo') === '1'
   const incidente = busqueda.get('origin_incident')
@@ -153,73 +161,78 @@ export function RiesgosPage() {
     ...(celda ? [{ clave: 'cell', etiqueta: t('riesgos.filtroCelda', { p, i }) }] : []),
     ...(buscadoEnUrl ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: buscadoEnUrl }) }] : [])
   ]
-  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el riesgo, el proyecto, el nivel, el estado y la
-  // revisión; secundarias, desde xl, la categoría, P × I y el responsable. una columna no esencial que dice lo mismo en todas las
-  // filas sale a una nota encima, y en «Mis riesgos» el responsable es quien mira: no se dibuja
+  // la tabla de S10 a todo el ancho, con prioridad de columnas (hallazgo U-06, DD-05): el riesgo con su código y su categoría
+  // debajo, P × I numérico, el nivel con barras y la tendencia apilados, el estado y la revisión como situación con sus días. el
+  // proyecto en el alcance global; el responsable, secundaria desde xl (en «Mis riesgos» es quien mira: no se dibuja). una columna
+  // no esencial que dice lo mismo en todas las filas sale a una nota encima
   const columnas: ColumnaPriorizada[] = [
     { id: 'riesgo', encabezado: t('riesgos.columnas.riesgo'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('riesgos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'categoria', encabezado: t('riesgos.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    { id: 'puntaje', encabezado: t('riesgos.columnas.puntaje'), prioridad: 'secundaria', claseDeCelda: 'text-sm tabular-nums', ordenable: true },
+    { id: 'puntaje', encabezado: t('riesgos.columnas.puntaje'), prioridad: 'esencial', numerica: true, ordenable: true },
     { id: 'nivel', encabezado: t('riesgos.columnas.nivel'), prioridad: 'esencial', ordenable: true },
     { id: 'estado', encabezado: t('riesgos.columnas.estado'), prioridad: 'esencial' },
-    { id: 'revision', encabezado: t('riesgos.columnas.revision'), prioridad: 'esencial', claseDeCelda: 'space-x-1 text-sm' },
+    { id: 'revision', encabezado: t('riesgos.columnas.revision'), prioridad: 'esencial' },
     ...(lista.vista === 'mios'
       ? []
       : [{ id: 'responsable', encabezado: t('riesgos.columnas.responsable'), prioridad: 'secundaria' as const, claseDeCelda: 'text-sm' }])
   ]
+  const enlaceDe = (r: Registro) => (
+    <EnlaceDeRegistro
+      codigo={texto(r, 'code')}
+      titulo={texto(r, 'title')}
+      ruta={rutaDeFicha('social_risk', r)}
+      desde={t('riesgos.titulo')}
+      previa={{ objeto: 'social_risk', id: r.id }}
+    />
+  )
   const celdaDeTabla = (r: Registro, columna: string): ReactNode => {
     switch (columna) {
       case 'riesgo':
         return (
-          <EnlaceDeRegistro
-            codigo={texto(r, 'code')}
-            titulo={texto(r, 'title')}
-            ruta={rutaDeFicha('social_risk', r)}
-            desde={t('riesgos.titulo')}
-            previa={{ objeto: 'social_risk', id: r.id }}
-          />
+          <>
+            {enlaceDe(r)}
+            {opcion(r, 'category') ? <span className="block text-sg-caption text-sg-text-secondary">{opcion(r, 'category')}</span> : null}
+          </>
         )
       case 'proyecto':
         return nombreDelProyecto(texto(r, 'project'))
-      case 'categoria':
-        return opcion(r, 'category') || '—'
       case 'puntaje':
-        return celdaDe(r) && texto(r, 'score') ? `${texto(r, 'probability')} × ${texto(r, 'impact')} = ${texto(r, 'score')}` : '—'
+        // sin valores vigentes, vacío: la columna numérica dibuja «—», con su nota al pie
+        return celdaDe(r) && texto(r, 'score') ? <PuntajeDelRiesgo riesgo={r} /> : null
       case 'nivel':
-        return <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
+        return <NivelYTendencia riesgo={r} />
       case 'estado':
         return <EstadoChip objeto="social_risk" estado={r.state} />
       case 'revision':
-        return (
-          <>
-            <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-            {texto(r, 'next_review_date') ? <FechaDePlazo dia={texto(r, 'next_review_date')} situacion={atributo(r, 'review_status')} /> : null}
-          </>
-        )
+        return <RevisionDelRiesgo riesgo={r} />
       default:
         return <Persona correo={texto(r, 'owner_user_email')} />
     }
   }
-  const valorPlano = (r: Registro, columna: string): string => {
-    switch (columna) {
-      case 'categoria':
-        return String(atributo(r, 'category') ?? '')
-      case 'puntaje':
-        return `${texto(r, 'probability')}×${texto(r, 'impact')}=${texto(r, 'score')}`
-      case 'responsable':
-        return texto(r, 'owner_user_email').toLowerCase()
-      default:
-        return r.id
-    }
-  }
+  const valorPlano = (r: Registro, columna: string): string => (columna === 'responsable' ? texto(r, 'owner_user_email').toLowerCase() : r.id)
+  // «5 riesgos · 1 crítico · 2 alertas activas» (S10): lo que muestra la vista, cuántos de ellos son críticos y, en un proyecto,
+  // cuántas alertas siguen activas
+  const criticos = filtrados.filter((r) => texto(r, 'risk_level') === 'CRITICO').length
+  const conAlertas = proyecto !== undefined && can('early_warning', 'READ')
+  const base = useBaseDeRiesgos()
   return (
     <ContenedorDePagina elemento="section">
-      {/* la sección aterriza en el registro y la matriz (decisión 7 de la revisión de UX): el tablero es una vista más, y las
-          demás páginas de riesgos van en su selector, en la cabecera (DD-03, U-20) */}
+      {/* la sección aterriza en el registro y la matriz (decisión 7 de la revisión de UX); las demás páginas de Riesgos y su tablero
+          van en las pestañas de debajo, y las reglas de alerta son una acción (S10) */}
       <EncabezadoDePagina
-        titulo={t('riesgos.titulo')}
-        conteo={riesgos.data ? t('riesgos.conteo', { count: filtrados.length }) : undefined}
+        titulo={conAlertas ? t('riesgos.tituloConAlertas') : t('riesgos.titulo')}
+        conteo={
+          riesgos.data
+            ? [t('riesgos.conteo', { count: filtrados.length }), ...(criticos > 0 ? [t('riesgos.criticos', { count: criticos })] : [])].join(' · ')
+            : undefined
+        }
+        secundarias={
+          can('early_warning_rule', 'READ') ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`${base}/risks/rules`}>{t('riesgos.verReglas')}</Link>
+            </Button>
+          ) : undefined
+        }
         primaria={
           proyecto ? (
             crea ? (
@@ -231,15 +244,12 @@ export function RiesgosPage() {
             <BotonCrear objeto="social_risk" etiqueta={t('riesgos.identificar')} resto="risks?nuevo=1" />
           )
         }
-        vistas={
-          <>
-            <PaginasDeRiesgos actual="registro" />
-            <VistasDelModulo modulo="risks" actual="lista" />
-          </>
-        }
       />
-      {/* la barra de filtros (P-02; hallazgos U-18 y U-22): las vistas en una sola fila con su conteo, y el nivel y la celda del
-          mapa como chips con «Limpiar». ?view=, ?level= y ?cell= siguen siendo los mismos */}
+      <PaginasDeRiesgos actual="registro" />
+      {conAlertas ? <AvisoDeTriaje proyecto={proyecto} /> : null}
+      {/* la barra de filtros (P-02; hallazgos U-18 y U-22): las vistas del registro, el único selector de vista de la página, en
+          una sola fila con su conteo, y el nivel y la celda de la matriz como chips con «Limpiar». ?view=, ?level= y ?cell= siguen
+          siendo los mismos */}
       <BarraDeFiltros
         vista={
           <SelectorDeVista
@@ -264,18 +274,31 @@ export function RiesgosPage() {
       ) : (riesgos.data ?? []).length === 0 ? (
         // sin ningún riesgo, ni la matriz llena de ceros ni «esta vista»: el registro está vacío y se dice cómo empezarlo (rediseño de
         // UX, 2026-10-20)
-        <Vacio titulo={t('riesgos.sinRiesgos')}>{can('social_risk', 'CREATE') ? t('riesgos.sinRiesgosAyuda') : null}</Vacio>
+        <>
+          <Vacio titulo={t('riesgos.sinRiesgos')}>{can('social_risk', 'CREATE') ? t('riesgos.sinRiesgosAyuda') : null}</Vacio>
+          {conAlertas ? <AlertasActivas proyecto={proyecto} /> : null}
+        </>
       ) : (
-        <div className="grid gap-4 min-[105rem]:grid-cols-[360px_minmax(0,1fr)]">
-          <Seccion titulo={t('riesgos.mapa.titulo')} className="w-full max-w-md min-[105rem]:max-w-none">
-            <MapaDeCalor riesgos={enLaVista} umbrales={umbrales} elegida={celda} alElegir={(c) => lista.cambiar({ cell: c })} />
-            <p className="text-sm text-sg-text-secondary">{t('riesgos.mapa.sinEvaluar', { n: numeroPe(sinEvaluar) })}</p>
-            {celda ? (
-              <button type="button" className="text-sm text-sg-primary-text underline" onClick={() => lista.cambiar({ cell: null })}>
-                {t('riesgos.mapa.quitar')}
-              </button>
-            ) : null}
-          </Seccion>
+        <>
+          {/* la matriz de 420 px y, en un proyecto, la alerta temprana a su lado (S10); el registro, debajo a todo el ancho */}
+          <div className={conAlertas ? 'grid items-start gap-4 lg:grid-cols-[420px_minmax(0,1fr)]' : 'max-w-[420px]'}>
+            <Seccion titulo={t('riesgos.mapa.titulo')}>
+              <MatrizDeRiesgo
+                etiqueta={t('riesgos.mapa.leyenda')}
+                celda={(p, i) => ({ n: conteoDeCeldas.get(`${p}-${i}`) ?? 0, nivel: nivelDePuntaje(p * i, umbrales) })}
+                umbrales={umbrales}
+                elegida={celda}
+                alElegir={(c) => lista.cambiar({ cell: c })}
+              />
+              <p className="text-sm text-sg-text-secondary">{t('riesgos.mapa.sinEvaluar', { n: numeroPe(sinEvaluar) })}</p>
+              {celda ? (
+                <button type="button" className="text-sm text-sg-primary-text underline" onClick={() => lista.cambiar({ cell: null })}>
+                  {t('riesgos.mapa.quitar')}
+                </button>
+              ) : null}
+            </Seccion>
+            {conAlertas ? <AlertasActivas proyecto={proyecto} /> : null}
+          </div>
           {filtrados.length === 0 ? (
             // con la celda o el nivel puestos, el vacío los quita (rediseño de UX, 2026-10-20); sin ellos, la vista está vacía
             celda || soloAltos || buscado ? (
@@ -289,27 +312,14 @@ export function RiesgosPage() {
               total={filtrados.length}
               tarjetas={filtrados.map((r) => ({
                 id: r.id,
-                titulo: (
-                  <EnlaceDeRegistro
-                    codigo={texto(r, 'code')}
-                    titulo={texto(r, 'title')}
-                    ruta={rutaDeFicha('social_risk', r)}
-                    desde={t('riesgos.titulo')}
-                    previa={{ objeto: 'social_risk', id: r.id }}
-                  />
-                ),
+                titulo: enlaceDe(r),
                 estado: (
                   <>
                     <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
                     <EstadoChip objeto="social_risk" estado={r.state} />
                   </>
                 ),
-                plazo: (
-                  <>
-                    <SituacionDePlazo valor={atributo(r, 'review_status')} revision />
-                    {texto(r, 'next_review_date') ? <FechaDePlazo dia={texto(r, 'next_review_date')} situacion={atributo(r, 'review_status')} /> : null}
-                  </>
-                ),
+                plazo: <RevisionDelRiesgo riesgo={r} />,
                 proyecto: proyecto ? undefined : nombreDelProyecto(texto(r, 'project'))
               }))}
             />
@@ -330,83 +340,50 @@ export function RiesgosPage() {
                 if (ruta) navegar(ruta, { state: paso(t('riesgos.titulo'), ruta) })
               }}
               previaDe={(r) => ({ objeto: 'social_risk', id: r.id })}
+              notaAlPie={filtrados.some((r) => !celdaDe(r) || !texto(r, 'score')) ? t('riesgos.notaSinPuntaje') : undefined}
             />
           )}
-        </div>
+        </>
       )}
       {crea ? <AltaDeRiesgo proyecto={proyecto} incidente={incidente} abierto={nuevo} alCerrar={() => abrirAlta(false)} /> : null}
     </ContenedorDePagina>
   )
 }
 
-// el mapa de calor (S39): filas de probabilidad (5 arriba) y columnas de impacto; cada celda dice cuántos riesgos tiene y su nivel
-// con texto, y es un botón que filtra la tabla
-function MapaDeCalor({
-  riesgos,
-  umbrales,
-  elegida,
-  alElegir
-}: {
-  riesgos: Registro[]
-  umbrales: ReturnType<typeof umbralesDe>
-  elegida: string
-  alElegir: (celda: string) => void
-}) {
-  const { t } = useTranslation(NS)
-  const conteo = new Map<string, number>()
-  for (const r of riesgos) {
-    const c = celdaDe(r)
-    if (c) conteo.set(c, (conteo.get(c) ?? 0) + 1)
-  }
+// P × I con su puntaje en 800 («4 × 4 = 16», S10)
+function PuntajeDelRiesgo({ riesgo: r }: { riesgo: Registro }) {
   return (
-    <table className="w-full table-fixed border-separate border-spacing-1 text-center text-sg-caption">
-      <caption className="sr-only">{t('riesgos.mapa.leyenda')}</caption>
-      <thead>
-        <tr>
-          <th scope="col" className="font-normal text-sg-text-muted">
-            {t('riesgos.mapa.pi')}
-          </th>
-          {ESCALA.map((i) => (
-            <th key={i} scope="col" className="font-normal text-sg-text-muted">
-              {t('riesgos.mapa.impacto', { n: i })}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {[...ESCALA].reverse().map((p) => (
-          <tr key={p}>
-            <th scope="row" className="font-normal text-sg-text-muted">
-              {t('riesgos.mapa.probabilidad', { n: p })}
-            </th>
-            {ESCALA.map((i) => {
-              const clave = `${p}-${i}`
-              const n = conteo.get(clave) ?? 0
-              const nivel = nivelDePuntaje(p * i, umbrales)
-              return (
-                <td key={i}>
-                  <button
-                    type="button"
-                    aria-pressed={elegida === clave}
-                    aria-label={t('riesgos.mapa.celda', { p, i, count: n, nivel: t(`tableroRiesgos.niveles.${nivel}`) })}
-                    onClick={() => alElegir(clave)}
-                    className={cn(
-                      'h-12 w-full rounded-sg-sm',
-                      CLASE_DE_ZONA[nivel],
-                      'text-sg-text',
-                      elegida === clave && 'outline-2 outline-offset-1 outline-sg-focus'
-                    )}
-                  >
-                    <span className="block text-sm font-semibold tabular-nums">{numeroPe(n)}</span>
-                    <span className="block text-sg-caption">{t(`tableroRiesgos.niveles.${nivel}`)}</span>
-                  </button>
-                </td>
-              )
-            })}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <span className="whitespace-nowrap">
+      {texto(r, 'probability')} × {texto(r, 'impact')} = <span className="font-extrabold">{texto(r, 'score')}</span>
+    </span>
+  )
+}
+
+// el nivel con barras y, debajo, su tendencia frente a la revisión anterior (S10)
+function NivelYTendencia({ riesgo: r }: { riesgo: Registro }) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
+      <Tendencia valor={atributo(r, 'trend')} />
+    </div>
+  )
+}
+
+// la revisión como situación (S10: «REVISIÓN VENCIDA · 52 DÍAS», «POR REVISAR · 6 DÍAS», «AL DÍA»), con la fecha de la próxima
+// revisión debajo. los días son los que faltan o pasaron hasta esa fecha, solo mientras JOB-01 dice una situación
+function RevisionDelRiesgo({ riesgo: r }: { riesgo: Registro }) {
+  const situacion = atributo(r, 'review_status')
+  const proxima = texto(r, 'next_review_date')
+  const dias = useDiasDelPlazo(situacion === 'REVISION VENCIDA' || situacion === 'POR REVISAR' ? proxima : null)
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <SituacionDePlazo valor={situacion} revision detalle={dias} />
+      {proxima ? (
+        <span className="text-sg-caption text-sg-text-muted">
+          <Dia valor={proxima} />
+        </span>
+      ) : null}
+    </div>
   )
 }
 

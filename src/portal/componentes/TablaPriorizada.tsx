@@ -1,6 +1,6 @@
 import { Table, Td, Th, cn } from '@wasichai/ui'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
-import { createContext, useContext, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
+import { createContext, Fragment, useContext, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ATRIBUTO_DE_FICHA, ResultadoDeLista } from '../contexto/Origen'
@@ -81,6 +81,10 @@ export interface PropsDeTablaPriorizada<T> {
   seleccionada?: (fila: T) => boolean
   // lo que la tabla necesita para leerse, bajo ella dentro de su caja: unidades, monedas, «— = sin monto» (DD-38)
   notaAlPie?: ReactNode
+  // la fila abierta (S11: el ciclo de vida de la QCS, su siguiente acción y su primaria): una fila de detalle a todo el ancho bajo
+  // la suya, con el id que el control que la abre referencia (aria-controls). null, la fila va cerrada. la fila abierta se marca
+  // como elegida
+  detalleDe?: (fila: T) => { id: string; contenido: ReactNode } | null
 }
 
 // las celdas de la columna del título: EnlaceDeRegistro se dibuja ahí en su forma de tabla
@@ -187,7 +191,8 @@ export function TablaPriorizada<T>({
   total,
   previaDe,
   seleccionada,
-  notaAlPie
+  notaAlPie,
+  detalleDe
 }: PropsDeTablaPriorizada<T>) {
   const { t } = useTranslation(NS)
   const ancha = useCoincide(ANCHA)
@@ -338,35 +343,54 @@ export function TablaPriorizada<T>({
                     {plegado
                       ? null
                       : grupo.filas.map((f) => {
-                          const esLaElegida = elegida(f)
+                          const detalle = detalleDe?.(f) ?? null
+                          const esLaElegida = elegida(f) || detalle !== null
                           return (
-                            <tr
-                              key={clave(f)}
-                              data-previa={claveDeFila(f)}
-                              aria-current={esLaElegida ? 'true' : undefined}
-                              tabIndex={enfocable ? 0 : undefined}
-                              onKeyDown={enfocable ? alTeclear(f) : undefined}
-                              // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
-                              className={cn('group/fila', esLaElegida ? FILA_ELEGIDA : FILA)}
-                            >
-                              {visibles.map((c) => {
-                                const valor = celda(f, c.id)
-                                return (
-                                  <Td
-                                    key={c.id}
-                                    className={cn(CELDA, visibilidad(c), c.titulo && CELDA_DE_TITULO, c.numerica && 'text-right tabular-nums', c.claseDeCelda)}
+                            <Fragment key={clave(f)}>
+                              <tr
+                                data-previa={claveDeFila(f)}
+                                aria-current={esLaElegida ? 'true' : undefined}
+                                tabIndex={enfocable ? 0 : undefined}
+                                onKeyDown={enfocable ? alTeclear(f) : undefined}
+                                // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
+                                className={cn('group/fila', esLaElegida ? FILA_ELEGIDA : FILA)}
+                              >
+                                {visibles.map((c) => {
+                                  const valor = celda(f, c.id)
+                                  return (
+                                    <Td
+                                      key={c.id}
+                                      className={cn(
+                                        CELDA,
+                                        visibilidad(c),
+                                        c.titulo && CELDA_DE_TITULO,
+                                        c.numerica && 'text-right tabular-nums',
+                                        c.claseDeCelda
+                                      )}
+                                    >
+                                      {c.numerica && vacioNumerico(valor) ? (
+                                        <span className="text-sg-text-muted">—</span>
+                                      ) : c.titulo ? (
+                                        <EnCeldaDeTitulo.Provider value>{valor}</EnCeldaDeTitulo.Provider>
+                                      ) : (
+                                        valor
+                                      )}
+                                    </Td>
+                                  )
+                                })}
+                              </tr>
+                              {detalle ? (
+                                <tr data-detalle className="bg-sg-primary-soft">
+                                  <td
+                                    id={detalle.id}
+                                    colSpan={visibles.length}
+                                    className="border-b border-sg-border px-3 py-3 shadow-[inset_4px_0_0_var(--sg-primary)] in-data-[density=compact]:py-2"
                                   >
-                                    {c.numerica && vacioNumerico(valor) ? (
-                                      <span className="text-sg-text-muted">—</span>
-                                    ) : c.titulo ? (
-                                      <EnCeldaDeTitulo.Provider value>{valor}</EnCeldaDeTitulo.Provider>
-                                    ) : (
-                                      valor
-                                    )}
-                                  </Td>
-                                )
-                              })}
-                            </tr>
+                                    {detalle.contenido}
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </Fragment>
                           )
                         })}
                   </tbody>

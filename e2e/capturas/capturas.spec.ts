@@ -16,6 +16,8 @@ interface Pantalla {
   ruta: string
   sesion?: boolean
   admin?: boolean
+  // el botón que se pulsa antes de la foto (la fila abierta de la cola de QCS)
+  abrir?: string
 }
 
 const PANTALLAS: Pantalla[] = [
@@ -42,7 +44,11 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'compromisos-error', ruta: '/projects/p1/commitments?q=falla-de-prueba' },
   { nombre: 'territorio', ruta: '/territory?project=p1' },
   { nombre: 'riesgos', ruta: '/projects/p1/risks' },
-  { nombre: 'qcs', ruta: '/attention' },
+  { nombre: 'riesgo-ficha', ruta: '/projects/p1/risks/r1?tab=revisiones' },
+  { nombre: 'alertas', ruta: '/projects/p1/risks/warnings?view=todas' },
+  { nombre: 'alerta-ficha', ruta: '/projects/p1/risks/warnings/w1' },
+  { nombre: 'qcs', ruta: '/projects/p1/attention' },
+  { nombre: 'qcs-fila', ruta: '/projects/p1/attention', abrir: 'Ver el ciclo de vida de Q-001' },
   { nombre: 'programas', ruta: '/projects/p1/programs' },
   { nombre: 'entregables', ruta: '/projects/p1/reports' },
   { nombre: 'entregable', ruta: '/reports/deliverables/d1' },
@@ -63,7 +69,8 @@ const PRINCIPALES = [
   'compromisos-vacio',
   'compromisos-error',
   'territorio',
-  'riesgos'
+  'riesgos',
+  'qcs'
 ]
 const ANGOSTAS = [
   'login',
@@ -77,7 +84,9 @@ const ANGOSTAS = [
   'compromiso-ficha',
   'compromiso-bloqueado',
   'compromisos-vacio',
-  'compromisos-error'
+  'compromisos-error',
+  'riesgos',
+  'qcs'
 ]
 
 interface Variante {
@@ -151,6 +160,10 @@ for (const pantalla of PANTALLAS)
       await prepararEscenario(page, { tema: variante.tema, idioma: variante.idioma, sesion: pantalla.sesion ?? true, admin: pantalla.admin })
       await page.goto(pantalla.ruta)
       await esperarPantallaLista(page)
+      if (pantalla.abrir) {
+        await page.getByRole('button', { name: pantalla.abrir }).click()
+        await esperarPantallaLista(page)
+      }
       await expect(page.locator('html')).toHaveAttribute('data-theme', variante.tema)
       await expect(page.locator('html')).toHaveAttribute('lang', variante.idioma === 'es' ? 'es-PE' : 'en')
       await alargarHastaElContenido(page, variante)
