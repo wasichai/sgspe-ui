@@ -70,7 +70,7 @@ export function Campana() {
         {n > 0 ? (
           <span
             aria-hidden
-            className="absolute -right-1 -top-1 min-w-4 rounded-full bg-sg-danger px-1 text-center text-sg-overline font-semibold text-sg-on-critical"
+            className="absolute -right-1 -top-1 min-w-4 rounded-full bg-sg-danger px-1 text-center text-sg-overline font-semibold text-sg-on-danger"
           >
             {n > 99 ? '99+' : n}
           </span>

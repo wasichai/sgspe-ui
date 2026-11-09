@@ -178,6 +178,7 @@ export const EN: Textos = {
     idioma: 'Language',
     idiomaNoGuardado: 'Could not save the language',
     tema: 'Theme',
+    densidad: { titulo: 'Density', normal: 'Comfortable', compacta: 'Compact' },
     bloques: {
       territorio: 'Projects and territory',
       comunidades: 'Work with communities',

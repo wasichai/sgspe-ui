@@ -5,6 +5,7 @@ import { campoDelError, codigoDelError } from '../datos/http'
 import { NS } from '../i18n'
 import type { EstadoDeCapa } from './api'
 import { CAPAS, CAPAS_DE_GESTION, GRUPOS } from './capas'
+import { colorCss } from './colores'
 import { MuestraDeCapa } from './Leyenda'
 
 const TODAS = [...CAPAS, ...CAPAS_DE_GESTION]
@@ -69,7 +70,7 @@ export function ControlDeCapas({
                     {conLeyenda ? (
                       <MuestraDeCapa id={c.id} />
                     ) : (
-                      <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: c.color }} aria-hidden />
+                      <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: colorCss(c.color) }} aria-hidden />
                     )}
                     <span>{t(`mapa.capasNombre.${c.id}`)}</span>
                     {bloqueada || c.sensible ? (

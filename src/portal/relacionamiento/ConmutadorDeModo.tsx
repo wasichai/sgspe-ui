@@ -17,7 +17,7 @@ export function ConmutadorDeModo({ rapido, traspaso }: { rapido: boolean; traspa
       role="switch"
       aria-checked={rapido}
       onClick={() => navegar({ search: conModo(busqueda, rapido ? 'full' : 'quick') }, traspaso ? { state: { traspaso } } : undefined)}
-      className="inline-flex items-center gap-2 rounded-sg-md px-2 py-1 text-sm text-sg-text-secondary hover:bg-sg-surface-hover focus-visible:outline-2 focus-visible:outline-sg-focus"
+      className="inline-flex items-center gap-2 rounded-sg-md px-2 py-1 text-sm text-sg-text-secondary hover:bg-sg-surface-hover"
     >
       <span
         aria-hidden="true"

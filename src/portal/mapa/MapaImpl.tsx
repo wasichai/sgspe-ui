@@ -60,6 +60,16 @@ const elegido = (seleccion: string | null | undefined): ExpressionSpecification 
 // las fuentes y capas WMS llevan este prefijo: el error de una tesela se reconoce por su sourceId
 const PREFIJO_WMS = 'wms:'
 const CALOR = 'calor'
+// la rampa del calor con el tema activo: cada color (un token --sg-heat-* o un hex) en su tramo de la densidad
+const rampaDeCalor = (colores: readonly string[]): ExpressionSpecification =>
+  [
+    'interpolate',
+    ['linear'],
+    ['heatmap-density'],
+    0,
+    'rgba(0,0,0,0)',
+    ...colores.flatMap((color, i) => [(i + 1) / colores.length, colorDe(color)])
+  ] as ExpressionSpecification
 
 // la opacidad de cada dibujo de una capa: una invisible (decisión 7 del plan 6.3) deja ver solo el borde de lo elegido, sobre
 // la tesela WMS que la dibuja
@@ -438,7 +448,6 @@ export default function MapaImpl({
       instancia.removeSource(CALOR)
     }
     if (!calor) return
-    const pasos = calor.colores.flatMap((color, i) => [(i + 1) / calor.colores.length, color])
     instancia.addSource(CALOR, { type: 'geojson', data: calor.datos as never })
     instancia.addLayer(
       {
@@ -447,7 +456,7 @@ export default function MapaImpl({
         source: CALOR,
         paint: {
           'heatmap-weight': ['interpolate', ['linear'], ['get', 'count'], 0, 0, Math.max(1, calor.maximo), 1],
-          'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', ...pasos] as ExpressionSpecification,
+          'heatmap-color': rampaDeCalor(calor.colores),
           'heatmap-radius': 32,
           'heatmap-opacity': 0.8
         }
@@ -464,6 +473,8 @@ export default function MapaImpl({
       if (!instancia) return
       // el fondo apagado (si el estilo no es del proveedor) y el trazo de los puntos también son tokens
       if (basemap.type !== 'style') instancia.setPaintProperty('fondo', 'background-color', colorDe('--sg-map-ground'))
+      // la rampa del calor (--sg-heat-*) también cambia con el tema
+      if (calor && instancia.getSource(CALOR)) instancia.setPaintProperty(CALOR, 'heatmap-color', rampaDeCalor(calor.colores))
       for (const capa of capas) {
         if (!dibujadas.current.has(capa.id)) continue
         const color = colorDe(capa.color)
@@ -479,7 +490,7 @@ export default function MapaImpl({
         }
       }
     })
-  }, [listo, clave])
+  }, [listo, clave, claveCalor])
 
   return <div ref={contenedor} role="region" aria-label={etiqueta} className="h-full w-full" data-testid="mapa" data-reposo={reposo ? 'si' : 'no'} />
 }

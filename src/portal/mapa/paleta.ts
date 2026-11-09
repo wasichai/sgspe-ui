@@ -26,8 +26,8 @@ export interface EstiloDeCapa {
   trazo?: number[]
 }
 
-// una capa que nadie nombra (no debería ocurrir: paleta.test.ts lo vigila) usa el gris neutro de los datos
-const NEUTRO: EstiloDeCapa = { color: '#838b85', fillOpacity: 0.15 }
+// una capa que nadie nombra (no debería ocurrir: paleta.test.ts lo vigila) usa el gris de los límites
+const NEUTRO: EstiloDeCapa = { color: '--sg-lyr-boundary', fillOpacity: 0.15 }
 
 const PUNTOS = new Set(['Point', 'MultiPoint'])
 

@@ -160,7 +160,7 @@ export function CalendarioDeFecha({ elegido, etiqueta, min, max, alElegir }: Pro
                     aria-disabled={fuera(dia) || undefined}
                     onClick={() => elegir(dia)}
                     className={cn(
-                      'h-8 cursor-pointer rounded-sg-sm focus-visible:outline-2 focus-visible:outline-sg-focus',
+                      'h-8 cursor-pointer rounded-sg-sm',
                       dia === elegido ? 'bg-sg-primary text-sg-on-primary' : 'hover:bg-sg-surface-hover',
                       dia === hoy && dia !== elegido && 'font-semibold text-sg-primary-text underline',
                       fuera(dia) && 'cursor-not-allowed text-sg-text-muted line-through hover:bg-transparent'

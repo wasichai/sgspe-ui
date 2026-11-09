@@ -15,6 +15,12 @@ export function colorDe(variable: string): string {
   return leer(variable) ?? leer(TOKEN_DE_RESPALDO) ?? 'gray'
 }
 
+// el mismo color para una hoja de estilo (la muestra de una leyenda, el degradado del calor): un token se lee como var(), que el
+// navegador sigue al cambiar el tema sin volver a dibujar; un hex de la paleta, tal cual
+export function colorCss(color: string): string {
+  return /^--sg-[a-z0-9-]+$/.test(color) ? `var(${color})` : color
+}
+
 // avisa cada vez que cambia el tema: el atributo data-theme de <html> o, sin él, la preferencia del sistema
 // (prefers-color-scheme, que tokens.css también usa); devuelve la función que deja de avisar
 export function alCambiarTema(avisar: () => void): () => void {

@@ -23,7 +23,7 @@ export function Insignia({
         aria-hidden
         className={cn(
           'min-w-4 rounded-full px-1 text-center text-sg-overline font-semibold tabular-nums',
-          tono === 'accion' ? 'bg-sg-danger text-sg-on-critical' : 'bg-sg-surface-sunken text-sg-text-muted',
+          tono === 'accion' ? 'bg-sg-danger text-sg-on-danger' : 'bg-sg-surface-sunken text-sg-text-muted',
           className
         )}
       >

@@ -178,6 +178,8 @@ export const ES = {
     idioma: 'Idioma',
     idiomaNoGuardado: 'No se pudo guardar el idioma',
     tema: 'Tema',
+    // la densidad de cada persona (ADR-0032): normal o compacta
+    densidad: { titulo: 'Densidad', normal: 'Normal', compacta: 'Compacta' },
     // los títulos de bloque de la navegación (navTree.ts, BLOQUES) y su «Contraer»
     bloques: {
       territorio: 'Proyectos y territorio',

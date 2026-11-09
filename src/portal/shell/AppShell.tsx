@@ -20,6 +20,7 @@ import { HojaDeAtajos } from './HojaDeAtajos'
 import { Insignia } from '../componentes/Insignia'
 import { useTituloDeDocumento } from '../componentes/Pagina'
 import { ThemeMenu } from './ThemeMenu'
+import { SelectorDeDensidad } from './densidad'
 import { useNombresDeRol } from '../proyectos/usuarios'
 import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
 import { useCerrarSesion } from '../auth/cerrarSesion'
@@ -194,7 +195,13 @@ export function AppShell() {
           <nav aria-label={t('shell.seccionesDelMenu')} className="min-h-0 flex-1 overflow-y-auto">
             <ListaDeSecciones modo="panel" alElegir={() => setMenuAbierto(false)} />
           </nav>
-          <div className="flex items-center gap-3 border-t border-sg-border pt-3">
+          <div className="flex flex-wrap items-center gap-3 border-t border-sg-border pt-3">
+            <div className="flex w-full items-center gap-3">
+              <span aria-hidden className="text-sm text-sg-text-muted">
+                {t('shell.densidad.titulo')}
+              </span>
+              <SelectorDeDensidad />
+            </div>
             <LanguageMenu />
             <ThemeMenu />
             <button type="button" onClick={cerrarSesion} className="ml-auto flex items-center gap-1 text-sm text-sg-text-secondary">

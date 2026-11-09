@@ -103,7 +103,7 @@ function AyudaDelMotivo({ id, motivo }: { id: string; motivo: string }) {
         aria-label={t('comun.porQue')}
         aria-expanded={abierto}
         aria-describedby={id}
-        className="inline-flex size-6 items-center justify-center rounded-sg-sm hover:text-sg-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sg-focus"
+        className="inline-flex size-6 items-center justify-center rounded-sg-sm hover:text-sg-text"
         onClick={() => setAbierto(!abierto)}
       >
         <CircleHelp aria-hidden className="size-3.5" />

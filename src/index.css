@@ -1,23 +1,31 @@
 @import 'tailwindcss';
 @import '@wasichai/ui/theme.css';
-/* "Pino y piedra" (ASM-077): los tokens de docs/ux/tokens.css y, después, los de wasichai leídos de ellos */
+/* "Civic Modern" (ASM-149, ADR-0032): los tokens de docs/ux/tokens.css y, después, los de wasichai leídos de ellos */
 @import './theme/tokens.css';
 @import './theme/wasichai.css';
 /* la hoja A4 de la página imprimible de un documento emitido (/admin/documents/:id/print, @wasichai/documents): css sin capa,
    para ganarle al preflight de tailwind sin !important; se importa una sola vez, aquí y no por un archivo interno en un .tsx */
 @import '@wasichai/documents/print.css';
-/* IBM Plex Sans (400, 500, 600) e IBM Plex Mono (400, 500), latín y latín extendido, servidas desde el mismo origen:
-   vite copia los woff2 a dist/assets (CSP font-src 'self', ADR-0026) */
-@import '@fontsource/ibm-plex-sans/latin-400.css';
-@import '@fontsource/ibm-plex-sans/latin-ext-400.css';
-@import '@fontsource/ibm-plex-sans/latin-500.css';
-@import '@fontsource/ibm-plex-sans/latin-ext-500.css';
-@import '@fontsource/ibm-plex-sans/latin-600.css';
-@import '@fontsource/ibm-plex-sans/latin-ext-600.css';
+/* Public Sans (400, 500, 600, 700, 800 y la cursiva 400) e IBM Plex Mono (400, 500, 600), latín y latín extendido, servidas
+   desde el mismo origen: vite copia los woff2 a dist/assets (CSP font-src 'self', ADR-0026; design-system.md §9) */
+@import '@fontsource/public-sans/latin-400.css';
+@import '@fontsource/public-sans/latin-ext-400.css';
+@import '@fontsource/public-sans/latin-400-italic.css';
+@import '@fontsource/public-sans/latin-ext-400-italic.css';
+@import '@fontsource/public-sans/latin-500.css';
+@import '@fontsource/public-sans/latin-ext-500.css';
+@import '@fontsource/public-sans/latin-600.css';
+@import '@fontsource/public-sans/latin-ext-600.css';
+@import '@fontsource/public-sans/latin-700.css';
+@import '@fontsource/public-sans/latin-ext-700.css';
+@import '@fontsource/public-sans/latin-800.css';
+@import '@fontsource/public-sans/latin-ext-800.css';
 @import '@fontsource/ibm-plex-mono/latin-400.css';
 @import '@fontsource/ibm-plex-mono/latin-ext-400.css';
 @import '@fontsource/ibm-plex-mono/latin-500.css';
 @import '@fontsource/ibm-plex-mono/latin-ext-500.css';
+@import '@fontsource/ibm-plex-mono/latin-600.css';
+@import '@fontsource/ibm-plex-mono/latin-ext-600.css';
 /* los paquetes @wasichai traen nombres de clase, no css: tailwind los escanea */
 @source '../node_modules/@wasichai';
 /* .design-sync/ es de design-sync (previews de Claude Design): no aporta clases al portal */
