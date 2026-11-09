@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { P1 } from '../../test/compromisos'
 import { definicion, montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
@@ -10,6 +10,8 @@ import { RELACIONISTA } from '../../test/portal'
 import { nivelDePuntaje, umbralesDe } from './niveles'
 import { RiesgosPage } from './RiesgosPage'
 import { numeroPe } from '../i18n'
+
+vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
 // S38 y S39 (screens.md §9): el mapa de calor por los valores vigentes, los riesgos sin revisión fuera del mapa, la celda que filtra
 // la tabla, las vistas armadas en el portal y el alta con motivo, también desde un incidente
@@ -391,5 +393,60 @@ describe('niveles de riesgo', () => {
     const umbrales = umbralesDe(registro('p1', { risk_medium_min_score: 4, risk_high_min_score: 9, risk_critical_min_score: null }))
     expect(umbrales).toEqual({ medio: 4, alto: 9, critico: 15 })
     expect(nivelDePuntaje(9, umbrales)).toBe('ALTO')
+  })
+})
+
+// la vista «Lista + mapa» (design-system.md §5.3): un riesgo se ubica por su punto, su localidad, su comunidad o su área (LYR-21);
+// la vista se ofrece solo si algún riesgo de la lista trae ubicación, y la matriz sigue encima
+describe('S38 · lista + mapa', () => {
+  const EN_TUNAS = registro('k2', { ...NUEVO.attributes, area_of_influence: 'a1' }, { state: 'identified' })
+  const LYR_21 = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        id: 'k2:location',
+        geometry: { type: 'Point', coordinates: [-78.5, -7.9] },
+        properties: { __id: 'k2', __object: 'social_risk', name: 'R-002' }
+      }
+    ]
+  }
+
+  it('sin riesgos con ubicación no se ofrece', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await screen.findByRole('table', { name: 'Riesgos' })
+    expect(screen.queryByRole('radio', { name: 'Vigentes en el mapa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Más vistas' })).not.toBeInTheDocument()
+  })
+
+  it('con uno, «Vigentes en el mapa» deja ?view=mapa, lista los vigentes junto al mapa y elegir el punto marca su fila', async () => {
+    fetch = mockFetch(rutas([{ path: '/sgspe/territory/layers/LYR-21', body: LYR_21 }], [RIESGO, EN_TUNAS, MEDIO, CERRADO]))
+    abrir()
+    await screen.findByRole('table', { name: 'Riesgos' })
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    const vista = within(barra).queryByRole('radio', { name: 'Vigentes en el mapa' })
+    if (vista) await userEvent.click(vista)
+    else {
+      await userEvent.click(within(barra).getByRole('button', { name: 'Más vistas' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Vigentes en el mapa' }))
+    }
+    expect(ubicacion.actual).toBe('/projects/p1/risks/register?view=mapa')
+    const lista = await screen.findByRole('listbox', { name: 'Riesgos' })
+    expect(within(lista).getAllByRole('option')).toHaveLength(3)
+    expect(screen.getByRole('region', { name: 'Matriz probabilidad × impacto' })).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Riesgos' })).not.toBeInTheDocument()
+    const mapa = screen.getByRole('list', { name: 'Mapa de Riesgos' })
+    await userEvent.click(await within(mapa).findByRole('button', { name: 'R-002' }))
+    expect(within(lista).getByRole('option', { name: /R-002/ })).toHaveAttribute('aria-selected', 'true')
+    expect(ubicacion.actual).toBe('/projects/p1/risks/register?view=mapa&selected=social_risk%3Ak2')
+    expect(fetch.calls.find((l) => l.path.startsWith('/sgspe/territory/layers/LYR-21'))!.path).toContain('project=p1')
+  })
+
+  it('abierta por la URL sin riesgos con ubicación, lo dice y deja la tabla', async () => {
+    fetch = mockFetch(rutas())
+    abrir('/projects/p1/risks/register?view=mapa')
+    expect(await screen.findByText('Ningún registro de esta página trae ubicación: no hay nada que mostrar en el mapa.')).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'Riesgos' })).toBeInTheDocument()
   })
 })

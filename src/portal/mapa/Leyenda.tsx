@@ -33,7 +33,7 @@ export function MuestraDeCapa({ id }: { id: string }) {
     <span
       aria-hidden
       data-color={estilo.color}
-      className="relative inline-block size-3.5 shrink-0 overflow-hidden rounded-sg-sm"
+      className="relative inline-block h-2.5 w-[22px] shrink-0 overflow-hidden rounded-[2px]"
       style={{ border: `2px ${estilo.trazo ? 'dashed' : 'solid'} ${colorCss(estilo.color)}` }}
     >
       {estilo.fillOpacity > 0 ? <span className="absolute inset-0" style={{ backgroundColor: colorCss(relleno), opacity: estilo.fillOpacity }} /> : null}

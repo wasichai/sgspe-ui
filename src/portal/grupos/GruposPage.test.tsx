@@ -7,7 +7,7 @@ import { hoyEnLima } from '../datos/fechas'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMINISTRACION, GERENCIA_SOCIAL, permisos, RELACIONISTA } from '../../test/portal'
 import { espiarRed, problema, type Red } from '../../test/red'
-import { base, hace, LEE, P1, S1, S2 } from '../../test/grupos'
+import { base, hace, LEE, P1, S1, S2, S3 } from '../../test/grupos'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
@@ -731,5 +731,51 @@ describe('S16 · escritura sin asignación', () => {
     ])
     await screen.findByText(/No está asignado a este proyecto/)
     expect(screen.queryByText('Registrar grupo de interés')).not.toBeInTheDocument()
+  })
+})
+
+// la vista «Lista + mapa» (design-system.md §5.3): un grupo de interés se dibuja en su localidad (LYR-17), nunca en un punto propio;
+// la vista se ofrece solo si algún grupo de la lista tiene localidad
+describe('S16 · lista + mapa', () => {
+  const EN_TUNAS = registro('s1', { ...S1.attributes, locality: 'l1' }, { state: 'assessed' })
+  const LYR_17 = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        id: 'l1:location',
+        geometry: { type: 'Point', coordinates: [-78.5, -7.9] },
+        properties: { __id: 'l1', __object: 'locality', name: 'Tunas', __aggregate: 'stakeholder', total: 1 }
+      }
+    ]
+  }
+
+  it('sin grupos con localidad no se ofrece', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.queryByRole('button', { name: 'En el mapa' })).not.toBeInTheDocument()
+  })
+
+  it('con uno, «En el mapa» deja ?view=mapa, lista los vigentes junto al mapa y elegir la localidad marca su grupo', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
+      { path: '/objects/stakeholder/records', body: pagina([EN_TUNAS, S2, S3]) },
+      { path: '/sgspe/territory/layers/LYR-17', body: LYR_17 },
+      ...base()
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await elegirVista(/^En el mapa$/)
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=mapa')
+    const lista = await screen.findByRole('listbox', { name: 'Grupos de interés' })
+    expect(within(lista).getAllByRole('option')).toHaveLength(2)
+    expect(await within(lista).findByRole('option', { name: /Ronda campesina Tunas/ })).toBeInTheDocument()
+    expect(within(lista).getAllByRole('option')[1]).toHaveTextContent('Sin ubicación')
+    const mapa = screen.getByRole('list', { name: 'Mapa de Grupos de interés' })
+    await userEvent.click(await within(mapa).findByRole('button', { name: 'Tunas' }))
+    expect(within(lista).getByRole('option', { name: /Ronda campesina Tunas/ })).toHaveAttribute('aria-selected', 'true')
+    expect(rutaActual()).toBe('/projects/p1/stakeholders?view=mapa&selected=stakeholder%3As1')
+    expect(mapa).toHaveAttribute('data-seleccion', 'l1')
+    const acciones = screen.getByRole('group', { name: 'Acciones de Ronda campesina Tunas' })
+    expect(within(acciones).getByRole('link', { name: 'Abrir la ficha de Ronda campesina Tunas' })).toHaveAttribute('href', '/projects/p1/stakeholders/s1')
   })
 })

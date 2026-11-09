@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   baseDeAtencion,
   CANALES,
@@ -24,6 +24,8 @@ import { espiarRed, type Red, type RutaEspecial } from '../../test/red'
 import type { ObjetoDeQcs } from '../datos/atencion'
 import type { Registro } from '../datos/registros'
 import { rotuloDeOpcion } from '../datos/opciones'
+
+vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
 // S35 (screens.md §8): las tres QCS unidas por plazo, cada una con el estado de su workflow y el plazo que corre en él; las vistas,
 // los filtros, «anónima» en lugar de la persona, las cifras con la nota de confidenciales y nunca un vacío mientras carga
@@ -374,5 +376,50 @@ describe('S35 · lista unificada de QCS', () => {
     const tabla = await screen.findByRole('table', { name: TABLA })
     await userEvent.click(within(tabla).getByRole('button', { name: 'QCS' }))
     expect(ubicacion.actual).toBe('/projects/p1/attention?sort=codigo&dir=asc')
+  })
+})
+
+// la vista «Lista + mapa» (design-system.md §5.3): la cola de atención junto al mapa, cada QCS en su punto o en el de su localidad o
+// comunidad (LYR-20); se ofrece solo si alguna QCS de la página trae ubicación, y la cola agrupada y su fila abierta siguen igual
+describe('S35 · lista + mapa', () => {
+  const EN_TUNAS = { ...CONSULTA, attributes: { ...CONSULTA.attributes, locality: 'l1' } }
+  const LYR_20 = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        id: 'i1:location',
+        geometry: { type: 'Point', coordinates: [-78.5, -7.9] },
+        properties: { __id: 'i1', __object: 'inquiry', name: 'C-001' }
+      }
+    ]
+  }
+
+  it('sin QCS con ubicación no se ofrece', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await screen.findByRole('link', { name: /^Q-001\b/ })
+    expect(screen.queryByRole('radio', { name: 'Atención en el mapa' })).not.toBeInTheDocument()
+  })
+
+  it('con una, «Atención en el mapa» deja ?view=mapa, pide la cola de atención y elegir el punto marca su fila con su tipo', async () => {
+    fetch = mockFetch(rutas([{ path: '/sgspe/territory/layers/LYR-20', body: LYR_20 }]))
+    abrir(EQUIPO_DE_QUEJAS, '/projects/p1/attention', { porTipo: { ...TODAS, inquiry: [EN_TUNAS, POR_VENCER] } })
+    await screen.findByRole('link', { name: /^Q-001\b/ })
+    await userEvent.click(screen.getByRole('radio', { name: 'Atención en el mapa' }))
+    expect(ubicacion.actual).toBe('/projects/p1/attention?view=mapa')
+    const lista = await screen.findByRole('listbox', { name: 'Quejas, consultas y solicitudes' })
+    expect(screen.queryByRole('table', { name: 'Quejas, consultas y solicitudes' })).not.toBeInTheDocument()
+    // la cola que se pide es la de atención
+    expect(red!.a('GET', '/sgspe/attention/queue').at(-1)!.ruta).toContain('view=attention')
+    const mapa = screen.getByRole('list', { name: 'Mapa de Quejas, consultas y solicitudes' })
+    await userEvent.click(await within(mapa).findByRole('button', { name: 'C-001' }))
+    expect(within(lista).getByRole('option', { name: /^C-001/ })).toHaveAttribute('aria-selected', 'true')
+    expect(ubicacion.actual).toBe('/projects/p1/attention?view=mapa&selected=inquiry%3Ai1')
+    expect(
+      within(lista)
+        .getAllByRole('option')
+        .filter((o) => o.textContent?.includes('Sin ubicación')).length
+    ).toBeGreaterThan(0)
   })
 })

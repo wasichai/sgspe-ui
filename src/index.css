@@ -149,3 +149,57 @@ table th[scope='row'] {
 .sg-rayado-festivo {
     background: repeating-linear-gradient(135deg, var(--sg-warning-soft) 0 6px, var(--sg-surface) 6px 12px);
 }
+
+/* los controles de MapLibre con los tokens del tema (design-system.md §5.3 «Mapa»): acercar y alejar en una columna de botones de
+   36 px con borde de 2 px border-strong sobre surface y separadores de 1 px, el norte en otro de 40 px y la escala sobre surface,
+   también en oscuro. una pantalla que superpone paneles corre los controles con --sg-mapa-derecha y --sg-mapa-arriba. sin capa
+   y con .sg-mapa delante: la hoja de MapLibre llega después, con el trozo diferido del mapa */
+/* los paneles flotan sobre el mapa desde md; en el teléfono van debajo y los controles quedan en su sitio */
+@media (min-width: 48rem) {
+    .sg-mapa .maplibregl-ctrl-top-right {
+        top: var(--sg-mapa-arriba, 0px);
+        right: var(--sg-mapa-derecha, 0px);
+    }
+    .sg-mapa .maplibregl-ctrl-bottom-right {
+        right: var(--sg-mapa-derecha, 0px);
+    }
+}
+.sg-mapa .maplibregl-ctrl-group:not(:empty) {
+    border: 2px solid var(--sg-border-strong);
+    border-radius: 4px;
+    background: var(--sg-surface);
+    box-shadow: var(--sg-shadow-md);
+}
+.sg-mapa .maplibregl-ctrl-group button {
+    width: 36px;
+    height: 36px;
+}
+.sg-mapa .maplibregl-ctrl-group button + button {
+    border-top: 1px solid var(--sg-border);
+}
+.sg-mapa .maplibregl-ctrl-group button:not(:disabled):hover {
+    background-color: var(--sg-surface-hover);
+}
+.sg-mapa .maplibregl-ctrl-group button.maplibregl-ctrl-compass {
+    width: 40px;
+    height: 40px;
+}
+.sg-mapa .maplibregl-ctrl-scale {
+    border-color: var(--sg-text);
+    background-color: var(--sg-surface);
+    color: var(--sg-text);
+    font-size: 12px;
+}
+.sg-mapa .maplibregl-ctrl-attrib {
+    background-color: var(--sg-surface);
+    color: var(--sg-text-secondary);
+}
+/* los íconos de MapLibre son trazos #333: en oscuro se invierten para leerse sobre surface */
+:root[data-theme='dark'] .sg-mapa .maplibregl-ctrl-icon {
+    filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .sg-mapa .maplibregl-ctrl-icon {
+        filter: invert(1);
+    }
+}

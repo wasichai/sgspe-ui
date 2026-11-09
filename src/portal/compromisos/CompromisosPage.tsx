@@ -35,6 +35,7 @@ import { SituacionDelCompromiso } from './SituacionDelCompromiso'
 import { VistaPreviaDeCompromiso } from './VistaPreviaDeCompromiso'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
+import { ListaConMapa, ofreceMapa, VISTA_MAPA } from '../mapa/ListaConMapa'
 
 // S28 · lista de compromisos (screens.md §7): lo que se debe, a quién y desde cuándo, con lo vencido a un clic. la misma página
 // con alcance global (columna Proyecto) o de un proyecto (ASM-076), con el chip de territorio (localidad o comunidad). la página
@@ -42,9 +43,11 @@ import { Persona } from '../componentes/Persona'
 // estado del workflow en state y state_not (api.md §3.4), y la búsqueda es su q. el filtro por grupo de interés es una relación de
 // muchos a muchos que la lista no filtra: con él, la fuente son los compromisos relacionados del grupo y las vistas se arman aquí
 // con enVista. la vista Candidatos es la de WF-K
-const VISTAS = ['abiertos', 'vencidos', 'porVencer', 'bloqueados', 'mios', 'cerrados', 'candidatos'] as const
+// «Abiertos en el mapa» (VISTA_MAPA) es la vista «Lista + mapa» (design-system.md §5.3): los abiertos, la lista junto al mapa;
+// nunca la de entrada y solo si la lista trae algún compromiso con ubicación
+const VISTAS = ['abiertos', 'vencidos', 'porVencer', 'bloqueados', 'mios', 'cerrados', 'candidatos', VISTA_MAPA] as const
 type VistaDeCompromisos = (typeof VISTAS)[number]
-const DE_LA_LISTA = VISTAS.filter((v) => v !== 'candidatos')
+const DE_LA_LISTA = VISTAS.filter((v) => v !== 'candidatos' && v !== VISTA_MAPA)
 const CERRADOS = ['closed', 'cancelled']
 const POR_PAGINA = 25
 // los órdenes (05-especificacion §1.6): el vencimiento (el que la lista ya pedía), el código y el título, en los dos sentidos. el
@@ -172,6 +175,10 @@ export function CompromisosPage() {
   const sinFiltros = grupo ? relacionados.filter((c) => enVista(lista.vista, c, user?.id)).length : (sinFiltrosDelServidor ?? undefined)
   // la lista relacionada llega en una página de 200: si el grupo tiene más, se dice
   const truncado = Boolean(grupo && delGrupo.data && (delGrupo.data.totalElements ?? 0) > delGrupo.data.content.length)
+  // «Lista + mapa»: se ofrece si la página trae algún compromiso con ubicación; en ella, sin ninguno, se dice y queda la tabla
+  const enMapa = lista.vista === VISTA_MAPA
+  const conUbicacion = ofreceMapa('commitment', filas)
+  const conMapa = conUbicacion || enMapa
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   const rutaDe = (c: Registro) => `/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`
   // el código en mono arriba del título, en la tabla y en la tarjeta del teléfono (S08 y M17b)
@@ -294,7 +301,11 @@ export function CompromisosPage() {
         vista={
           <SelectorDeVista
             etiqueta={t('comun.vistas')}
-            vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`compromisos.vistas.${v}`), n: v === 'candidatos' ? undefined : conteoDe(v) }))}
+            vistas={VISTAS.filter((v) => v !== VISTA_MAPA || conMapa).map((v) => ({
+              id: v,
+              etiqueta: t(`compromisos.vistas.${v}`),
+              n: v === 'candidatos' || v === VISTA_MAPA ? undefined : conteoDe(v)
+            }))}
             actual={lista.vista}
             alElegir={(vista) => lista.cambiar({ view: vista })}
           />
@@ -365,7 +376,33 @@ export function CompromisosPage() {
           ) : (
             // el resultado de la vista con sus filtros (flujo F-C): la ficha abierta desde aquí dice «Volver a Compromisos (N)»
             <ResultadoDeLista total={total}>
-              {telefono ? (
+              {enMapa && !conUbicacion ? <Alert tone="notice">{t('mapa.listaConMapa.sinUbicaciones')}</Alert> : null}
+              {enMapa && conUbicacion ? (
+                <ListaConMapa
+                  objeto="commitment"
+                  etiqueta={t('compromisos.tabla')}
+                  registros={filas}
+                  proyecto={proyecto}
+                  nombreDe={(c) => [texto(c, 'code'), texto(c, 'title')].filter(Boolean).join(' · ')}
+                  detalleDe={(c) => (
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <EstadoChip objeto="commitment" estado={c.state} />
+                      <SituacionDelCompromiso compromiso={c} />
+                      {/* sin enlace: la fila entera es la opción que se elige */}
+                      {proyecto ? null : (
+                        <span className="font-sg-mono">
+                          {texto(
+                            proyectos.data?.find((x) => x.id === texto(c, 'project')),
+                            'code'
+                          )}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  accionesDe={(c) => enlace(c)}
+                  alAbrir={(c) => navegar(rutaDe(c), { state: paso(t('compromisos.titulo'), rutaDe(c)) })}
+                />
+              ) : telefono ? (
                 <ListaEnTarjetas
                   etiqueta={t('compromisos.tabla')}
                   total={total}

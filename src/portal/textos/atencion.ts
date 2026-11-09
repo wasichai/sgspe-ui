@@ -12,7 +12,8 @@ export const ES_ATENCION = {
     consultas: 'Consultas',
     solicitudes: 'Solicitudes',
     mias: 'Mis QCS',
-    todas: 'Todas'
+    todas: 'Todas',
+    mapa: 'Atención en el mapa'
   },
   buscar: 'Buscar por código o descripción',
   canal: 'Canal',
@@ -79,7 +80,8 @@ export const EN_ATENCION: typeof ES_ATENCION = {
     consultas: 'Inquiries',
     solicitudes: 'Requests',
     mias: 'Mine',
-    todas: 'All'
+    todas: 'All',
+    mapa: 'Attention on the map'
   },
   buscar: 'Search by code or description',
   canal: 'Channel',

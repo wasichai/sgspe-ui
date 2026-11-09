@@ -222,7 +222,7 @@ const QUEJA = registro(
 )
 // la cola de S11: dos vencidas, una por vencer y tres al día, de los tres tipos
 const qcs = (id: string, campos: Record<string, unknown>, estado: string) =>
-  registro(id, { project: 'p1', owner_user_email: 'gvm@sgspe.test', anonymous: false, ...campos }, estado)
+  registro(id, { project: 'p1', owner_user_email: 'gvm@sgspe.test', anonymous: false, community: 'c1', ...campos }, estado)
 const VENCIDA = qcs(
   'g3',
   {
@@ -301,7 +301,7 @@ const COLA = {
   readable: ['grievance', 'inquiry', 'stakeholder_request']
 }
 const riesgo = (id: string, campos: Record<string, unknown>, estado: string) =>
-  registro(id, { project: 'p1', owner_user_email: 'srm@sgspe.test', ...campos }, estado)
+  registro(id, { project: 'p1', owner_user_email: 'srm@sgspe.test', community: 'c1', ...campos }, estado)
 const RIESGOS = [
   riesgo(
     'r1',
@@ -800,8 +800,157 @@ const AVISOS = {
   latest: null
 }
 
+// el territorio de S09 (fase 9): un proyecto con su ubicación y su área de interés, diez centros poblados y dos comunidades
+// alrededor, los compromisos (LYR-19) y los grupos por localidad (LYR-17) con su punto, y la ficha de Llamapampa. coordenadas
+// ficticias en la sierra, sin relación con un lugar real
+const CENTRO: [number, number] = [-77.55, -9.45]
+const cerca = (dx: number, dy: number): [number, number] => [CENTRO[0] + dx, CENTRO[1] + dy]
+const puntoEn = (id: string, objeto: string, name: string, xy: [number, number], extra: Record<string, unknown> = {}) => ({
+  type: 'Feature',
+  id: `${id}:location`,
+  geometry: { type: 'Point', coordinates: xy },
+  properties: { __id: id, __object: objeto, name, ...extra }
+})
+const caja = (x0: number, y0: number, x1: number, y1: number) => ({
+  type: 'Polygon',
+  coordinates: [[cerca(x0, y0), cerca(x1, y0 - 0.01), cerca(x1 + 0.01, y1), cerca(x0 - 0.01, y1 + 0.005), cerca(x0, y0)]]
+})
+const LOCALIDADES: [string, string, [number, number]][] = [
+  ['l1', 'Caserío Llamapampa', cerca(0, 0)],
+  ['l2', 'Caserío Huaylla Alto', cerca(-0.09, 0.04)],
+  ['l3', 'Sector Ccollpa', cerca(-0.05, 0.015)],
+  ['l4', 'Pucará Chico', cerca(-0.06, -0.05)],
+  ['l5', 'Yanama', cerca(0.07, 0.025)],
+  ['l6', 'Quishuar', cerca(0.1, 0.06)],
+  ['l7', 'Tambillo', cerca(0.13, -0.005)],
+  ['l8', 'Chacapampa', cerca(0.11, -0.06)],
+  ['l9', 'Santa Rosa de Pallca', cerca(0.02, -0.09)],
+  ['l10', 'Rumichaca', cerca(-0.02, -0.12)]
+]
+const CAPA_LYR_02 = {
+  type: 'FeatureCollection',
+  features: LOCALIDADES.map(([id, name, xy]) => puntoEn(id, 'locality', name, xy, { locality_type: 'CASERIO' }))
+}
+const CAPA_LYR_05 = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      id: 'c1:territory',
+      geometry: caja(-0.04, 0.07, 0.07, -0.02),
+      properties: { __id: 'c1', __object: 'community', name: 'CC Tunas Pampa' }
+    },
+    { type: 'Feature', id: 'c2:territory', geometry: caja(0.06, 0.0, 0.15, -0.08), properties: { __id: 'c2', __object: 'community', name: 'CC San Isidro' } }
+  ]
+}
+const CAPA_LYR_19 = {
+  type: 'FeatureCollection',
+  features: [
+    puntoEn('k4', 'commitment', 'C-004', cerca(0.005, 0.004)),
+    puntoEn('k2', 'commitment', 'C-002', cerca(-0.05, 0.02)),
+    puntoEn('k5', 'commitment', 'C-005', cerca(0.07, 0.03)),
+    puntoEn('k6', 'commitment', 'C-006', cerca(-0.06, -0.045)),
+    puntoEn('k3', 'commitment', 'C-003', cerca(0.11, -0.055))
+  ]
+}
+const CAPA_LYR_17 = {
+  type: 'FeatureCollection',
+  features: [
+    puntoEn('l1', 'locality', 'Caserío Llamapampa', cerca(0, 0), {
+      __aggregate: 'stakeholder',
+      total: 12,
+      byStance: { 'A FAVOR': 3, NEUTRAL: 4, 'EN CONTRA PERO ABIERTO A ESCUCHAR': 3, 'EN CONTRA': 2 }
+    })
+  ]
+}
+// las QCS (LYR-20) y los riesgos (LYR-21) con su punto, para la vista «Lista + mapa» de Riesgos y QCS
+const CAPA_LYR_20 = {
+  type: 'FeatureCollection',
+  features: [
+    puntoEn('g3', 'grievance', 'Q-003', cerca(-0.05, 0.02)),
+    puntoEn('g5', 'grievance', 'Q-005', cerca(0.07, 0.03)),
+    puntoEn('i1', 'inquiry', 'C-001', cerca(0.0, -0.01)),
+    puntoEn('g4', 'grievance', 'Q-004', cerca(0.1, -0.05))
+  ]
+}
+const CAPA_LYR_21 = {
+  type: 'FeatureCollection',
+  features: [
+    puntoEn('r1', 'social_risk', 'R-001', cerca(0.02, 0.01), { risk_level: 'CRITICO' }),
+    puntoEn('r3', 'social_risk', 'R-003', cerca(-0.06, -0.04), { risk_level: 'ALTO' }),
+    puntoEn('r5', 'social_risk', 'R-005', cerca(0.09, 0.05), { risk_level: 'ALTO' }),
+    puntoEn('r2', 'social_risk', 'R-002', cerca(0.12, -0.02), { risk_level: 'MEDIO' })
+  ]
+}
+const PROYECTO_CON_LUGAR = {
+  ...registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa', inactivity_days: 90 }, 'active'),
+  geometries: { location: { type: 'Point', coordinates: cerca(0.01, 0.01) }, interest_area: caja(-0.12, 0.09, 0.16, -0.13) }
+}
+const FICHA_DEL_LUGAR = {
+  locality: registro('l1', { name: 'Caserío Llamapampa', locality_type: 'CASERIO' }),
+  geometry: { location: { type: 'Point', coordinates: CENTRO }, boundary: null },
+  administrativeUnit: { id: 'au1', name: 'Distrito de prueba', level: 'DISTRITO' },
+  communities: [{ id: 'c1', name: 'CC Tunas Pampa' }],
+  areasOfInfluence: [{ id: 'a0', project: 'p1', areaType: 'AIDS', versionNumber: 1, memberCondition: 'INCLUIDO' }],
+  unavailable: []
+}
+const cifra = (code: string, label: string, value: number, unit: string, extra: Record<string, unknown> = {}) => ({
+  key: code,
+  code,
+  label,
+  available: true,
+  value,
+  unit,
+  ...extra
+})
+const RESUMEN_DEL_LUGAR = {
+  code: 'KPI-TER-01',
+  label: 'Resumen de una localidad o comunidad',
+  available: true,
+  value: null,
+  unit: 'cifras',
+  breakdowns: [
+    {
+      by: 'components',
+      rows: [
+        cifra('KPI-STK-02', 'Distribución de posturas', 12, 'grupos de interés', {
+          breakdowns: [
+            {
+              by: 'stance',
+              rows: [
+                { key: 'A FAVOR', label: 'A favor', value: 3 },
+                { key: 'NEUTRAL', label: 'Neutral', value: 4 },
+                { key: 'EN CONTRA PERO ABIERTO A ESCUCHAR', label: 'En contra pero abierto a escuchar', value: 3 },
+                { key: 'EN CONTRA', label: 'En contra', value: 2 }
+              ]
+            }
+          ]
+        }),
+        cifra('KPI-ENG-01', 'Interacciones realizadas', 9, 'interacciones'),
+        cifra('KPI-COM-02', 'Compromisos abiertos', 3, 'compromisos'),
+        cifra('KPI-COM-03', 'Compromisos vencidos', 1, 'compromisos'),
+        cifra('KPI-GRV-02', 'QCS abiertas', 4, 'QCS'),
+        cifra('KPI-RSK-01', 'Riesgos altos', 2, 'riesgos'),
+        cifra('KPI-INV-03', 'Inversión social ejecutada', 48200, 'monto', {
+          breakdowns: [{ by: 'source', rows: [{ key: 'APORTES:PEN', source: 'APORTES', currency: 'PEN', value: 48200 }] }]
+        }),
+        { key: 'lastActivity', available: true, value: '2026-10-14' }
+      ]
+    }
+  ]
+}
+
 type Cuerpo = unknown | ((url: URL) => unknown)
 const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
+  [/^\/objects\/project\/records\/p1$/, PROYECTO_CON_LUGAR],
+  [/^\/sgspe\/territory\/layers\/LYR-02$/, CAPA_LYR_02],
+  [/^\/sgspe\/territory\/layers\/LYR-05$/, CAPA_LYR_05],
+  [/^\/sgspe\/territory\/layers\/LYR-19$/, (u: URL) => (u.searchParams.get('bbox') === '0,0,0,0' ? { type: 'FeatureCollection', features: [] } : CAPA_LYR_19)],
+  [/^\/sgspe\/territory\/layers\/LYR-17$/, CAPA_LYR_17],
+  [/^\/sgspe\/territory\/layers\/LYR-20$/, CAPA_LYR_20],
+  [/^\/sgspe\/territory\/layers\/LYR-21$/, CAPA_LYR_21],
+  [/^\/sgspe\/territory\/localities\/l1\/card$/, FICHA_DEL_LUGAR],
+  [/^\/sgspe\/dashboards\/indicators\/KPI-TER-01$/, RESUMEN_DEL_LUGAR],
   [/^\/auth\/me\/permissions$/, permisos(admin)],
   [/^\/auth\/me$/, { userId: USUARIO.id, organizationId: 'o1', email: USUARIO.email, roles: USUARIO.roles, admin }],
   [/^\/sgspe\/dashboards\/indicators$/, [{ code: 'KPI-EXE-01', label: 'Proyectos activos', dashboard: 'executive', available: true }]],

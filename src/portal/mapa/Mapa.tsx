@@ -1,5 +1,6 @@
 import { useApiClient, useAuth } from '@wasichai/core'
 import type { BasemapSpec } from '@wasichai/gis'
+import { Info } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LimiteDeError } from '../componentes/LimiteDeError'
@@ -23,9 +24,19 @@ export interface CapaDibujada {
   seleccionable: boolean
   // la capa trae miembros de áreas de influencia (LYR-13): se dibujan aparte, con trazo discontinuo
   miembros?: boolean
+  // el color del punto según un atributo del elemento (el nivel de un riesgo en LYR-21, la postura que más pesa en LYR-17), con el
+  // color de la capa para un valor sin color; con anillo, el color va en el borde de un punto hueco (design-system.md §3.3)
+  colorPor?: ColorPorAtributo
   // se elige pero no se ve (solo el borde de lo elegido): una capa pública servida por WMS cuyos lugares tienen ficha
   // (decisión 7 del plan 6.3)
   invisible?: boolean
+}
+
+export interface ColorPorAtributo {
+  campo: string
+  // el valor del atributo y su token (o hex de la paleta)
+  colores: Readonly<Record<string, string>>
+  anillo?: boolean
 }
 
 // una capa ráster del proxy WMS: la URL de GetMap de urlDeWms (wms.ts)
@@ -59,6 +70,9 @@ export interface MapaProps {
   wms?: CapaWms[]
   alFallarWms?: (id: string, estado: number | null) => void
   calor?: CapaDeCalor | null
+  // el acercamiento máximo al encuadrar lo elegido (16 por omisión, el de una ficha); una lista junto al mapa lo deja más lejos,
+  // para que lo elegido se vea entre los demás
+  zoomAlElegir?: number
   // un clic en cualquier punto del mapa: [longitud, latitud] (locate)
   alPulsar?: (punto: [number, number]) => void
   // la firma de las peticiones de MapLibre (transformRequest); la pone Mapa con el token de la sesión
@@ -117,27 +131,33 @@ export function Mapa({ className, basemap, ...props }: MapaProps) {
           <MapaImpl key={JSON.stringify(fondo)} {...props} basemap={fondo} firmar={firmar} camaraPrevia={camaraPrevia} alMoverCamara={alMoverCamara} />
         </Suspense>
       </LimiteDeError>
-      {/* abajo a la izquierda, sobre la escala: arriba quedan los paneles que una pantalla superpone (S12, DD-11) y el zoom */}
-      <div className="absolute bottom-9 left-2 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-2">
-        {fondo.type === 'none' ? (
-          <p className="max-w-sm rounded-sg-sm bg-sg-surface px-2 py-0.5 text-sg-caption text-sg-text-muted shadow-sg-sm">
-            <span>{t('sig.sinMapaBase')}</span>
-            {/* U-32: sin mapa base configurado, quien administra lee dónde se configura; con «Sin fondo» elegido, el mapa base
-                existe y no hace falta. quien no administra solo lee que no lo hay */}
-            {configurado.type === 'none' && isAdmin ? <span className="block">{t('sig.dondeSeConfigura')}</span> : null}
+      {/* «Sin mapa base» (§3.3, ASM-085): un aviso info arriba, entre el panel de capas y los controles que una pantalla superpone
+          (--sg-mapa-izquierda y --sg-mapa-derecha); no tapa el lienzo ni se confunde con un estado */}
+      {fondo.type === 'none' ? (
+        <div className="pointer-events-none absolute top-3 right-14 left-3 flex justify-center md:right-[calc(var(--sg-mapa-derecha,0px)+3.5rem)] md:left-[calc(var(--sg-mapa-izquierda,0px)+0.75rem)]">
+          <p className="pointer-events-auto flex max-w-md items-start gap-2 rounded-sg-md border-2 border-sg-info bg-sg-surface px-3 py-1.5 text-sg-caption text-sg-text shadow-sg-md">
+            <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-sg-info" />
+            <span>
+              <strong className="font-bold">{t('sig.sinMapaBase')}</strong>
+              <span className="block">{t('sig.sinMapaBaseDetalle')}</span>
+              {/* U-32: sin mapa base configurado, quien administra lee dónde se configura; con «Sin fondo» elegido, el mapa base
+                  existe y no hace falta. quien no administra solo lee que no lo hay */}
+              {configurado.type === 'none' && isAdmin ? <span className="block text-sg-text-secondary">{t('sig.dondeSeConfigura')}</span> : null}
+            </span>
           </p>
-        ) : null}
-        {configurado.type !== 'none' ? (
-          <button
-            type="button"
-            aria-pressed={sinFondo}
-            onClick={() => setSinFondo(!sinFondo)}
-            className="rounded-sg-sm border border-sg-border bg-sg-surface px-2 py-0.5 text-sg-caption text-sg-text shadow-sg-sm"
-          >
-            {t('sig.sinFondo')}
-          </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+      {/* «Sin fondo», abajo a la izquierda, sobre la escala */}
+      {configurado.type !== 'none' ? (
+        <button
+          type="button"
+          aria-pressed={sinFondo}
+          onClick={() => setSinFondo(!sinFondo)}
+          className="absolute bottom-9 left-2 rounded-sg-sm border border-sg-border-strong bg-sg-surface px-2 py-0.5 text-sg-caption text-sg-text shadow-sg-sm"
+        >
+          {t('sig.sinFondo')}
+        </button>
+      ) : null}
       {/* la atribución del proveedor siempre a la vista (gis.md §6.4, MapAttribution) */}
       {fondo.type !== 'none' && atribucion ? (
         <p className="absolute bottom-1 right-2 rounded-sg-sm bg-sg-surface px-1.5 text-sg-caption text-sg-text-muted">{atribucion}</p>

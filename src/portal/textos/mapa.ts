@@ -89,11 +89,24 @@ export const ES_MAPA = {
   // los paneles plegables de S12 sobre el mapa (DD-11)
   paneles: {
     capas: 'Capas ({{n}})',
-    enElMapa: 'Capas en el mapa',
-    ningunaEncendida: 'Ninguna capa encendida.',
-    todas: 'Todas las capas ({{n}})',
-    otras: 'Las demás capas',
-    lugares: 'Lugares ({{n}})'
+    porGrupo: 'Capas por grupo',
+    lugares: 'Lugares ({{n}})',
+    sincronizada: 'Sincronizada con el mapa'
+  },
+  verComoLista: 'Ver como lista',
+  // la vista «Lista + mapa» de Compromisos, Grupos de interés, Riesgos y QCS (design-system.md §5.3)
+  listaConMapa: {
+    ayuda: 'Elija una fila para verla en el mapa o un punto del mapa para marcar su fila. Enter abre el registro.',
+    mapa: 'Mapa de {{lista}}',
+    sinUbicacion: 'Sin ubicación',
+    sinPunto: 'Fuera del mapa',
+    enElMapa: 'En el mapa',
+    elegido: 'Acciones de {{nombre}}',
+    leyenda: 'Capa «{{capa}}»: {{n}} en el mapa.',
+    bloqueada: 'Su cuenta no puede ver la capa «{{capa}}»: la lista sigue completa, sin el mapa.',
+    conError: 'No se pudo leer la capa «{{capa}}»: la lista sigue completa, sin el mapa.',
+    truncada: 'La capa tiene más elementos de los que se muestran: algunas filas pueden quedar fuera del mapa.',
+    sinUbicaciones: 'Ningún registro de esta página trae ubicación: no hay nada que mostrar en el mapa.'
   }
 }
 
@@ -185,10 +198,22 @@ export const EN_MAPA: typeof ES_MAPA = {
   nuevaComunidad: 'New community',
   paneles: {
     capas: 'Layers ({{n}})',
-    enElMapa: 'Layers on the map',
-    ningunaEncendida: 'No layer turned on.',
-    todas: 'All layers ({{n}})',
-    otras: 'Other layers',
-    lugares: 'Places ({{n}})'
+    porGrupo: 'Layers by group',
+    lugares: 'Places ({{n}})',
+    sincronizada: 'Synchronized with the map'
+  },
+  verComoLista: 'View as list',
+  listaConMapa: {
+    ayuda: 'Choose a row to see it on the map or a point on the map to mark its row. Enter opens the record.',
+    mapa: 'Map of {{lista}}',
+    sinUbicacion: 'No location',
+    sinPunto: 'Off the map',
+    enElMapa: 'On the map',
+    elegido: 'Actions for {{nombre}}',
+    leyenda: 'Layer “{{capa}}”: {{n}} on the map.',
+    bloqueada: 'Your account cannot see the “{{capa}}” layer: the list is still complete, without the map.',
+    conError: 'The “{{capa}}” layer could not be read: the list is still complete, without the map.',
+    truncada: 'The layer has more features than shown: some rows may be left off the map.',
+    sinUbicaciones: 'No record on this page has a location: there is nothing to show on the map.'
   }
 }

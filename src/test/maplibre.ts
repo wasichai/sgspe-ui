@@ -33,7 +33,11 @@ export class Map {
   emitir(clave: string, ...args: unknown[]) {
     for (const m of this.manejadores[clave] ?? []) m(...args)
   }
-  addControl() {}
+  // los controles agregados, con sus opciones y su posición
+  controles: { control: unknown; posicion?: string }[] = []
+  addControl(control: unknown, posicion?: string) {
+    this.controles.push({ control, posicion })
+  }
   addSource(id: string, fuente: Record<string, unknown>) {
     const registro = { data: fuente.data, opciones: fuente, setData: (d: unknown) => (registro.data = d) }
     this.fuentes.set(id, registro)
@@ -70,8 +74,12 @@ export class Map {
 
 export const setWorkerUrl = vi.fn()
 
-export class NavigationControl {}
-export class ScaleControl {}
+export class NavigationControl {
+  constructor(public opciones: Record<string, unknown> = {}) {}
+}
+export class ScaleControl {
+  constructor(public opciones: Record<string, unknown> = {}) {}
+}
 
 // dispara 'load' en los mapas creados: lo que el mapa real hace al terminar de cargar el estilo
 export function cargarMapas() {

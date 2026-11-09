@@ -43,11 +43,18 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'compromisos-vacio', ruta: '/projects/p1/commitments?q=sin-resultados&view=vencidos' },
   { nombre: 'compromisos-error', ruta: '/projects/p1/commitments?q=falla-de-prueba' },
   { nombre: 'territorio', ruta: '/territory?project=p1' },
+  // fase 9: el lugar elegido con su ficha y la lista sincronizada, y la vista «Lista + mapa» de Compromisos y Grupos de interés
+  { nombre: 'territorio-lugar', ruta: '/territory?project=p1&selected=locality%3Al1' },
+  { nombre: 'compromisos-mapa', ruta: '/projects/p1/commitments?view=mapa&selected=commitment%3Ak4' },
+  { nombre: 'grupos-mapa', ruta: '/projects/p1/stakeholders?view=mapa&selected=stakeholder%3As1' },
   { nombre: 'riesgos', ruta: '/projects/p1/risks' },
   { nombre: 'riesgo-ficha', ruta: '/projects/p1/risks/r1?tab=revisiones' },
   { nombre: 'alertas', ruta: '/projects/p1/risks/warnings?view=todas' },
   { nombre: 'alerta-ficha', ruta: '/projects/p1/risks/warnings/w1' },
   { nombre: 'qcs', ruta: '/projects/p1/attention' },
+  // fase 9: la vista «Lista + mapa» de Riesgos y QCS
+  { nombre: 'riesgos-mapa', ruta: '/projects/p1/risks/register?view=mapa&selected=social_risk%3Ar1' },
+  { nombre: 'qcs-mapa', ruta: '/projects/p1/attention?view=mapa&selected=inquiry%3Ai1' },
   { nombre: 'qcs-fila', ruta: '/projects/p1/attention', abrir: 'Ver el ciclo de vida de Q-001' },
   { nombre: 'programas', ruta: '/projects/p1/programs' },
   { nombre: 'entregables', ruta: '/projects/p1/reports' },
@@ -69,6 +76,7 @@ const PRINCIPALES = [
   'compromisos-vacio',
   'compromisos-error',
   'territorio',
+  'territorio-lugar',
   'riesgos',
   'qcs'
 ]
@@ -86,7 +94,9 @@ const ANGOSTAS = [
   'compromisos-vacio',
   'compromisos-error',
   'riesgos',
-  'qcs'
+  'qcs',
+  'territorio',
+  'territorio-lugar'
 ]
 
 interface Variante {

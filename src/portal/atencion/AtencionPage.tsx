@@ -10,6 +10,7 @@ import { useSiguientePaso } from '../contexto/Rastro'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { ListaConMapa, ofreceMapa, VISTA_MAPA } from '../mapa/ListaConMapa'
 import { TablaPriorizada, type ColumnaPriorizada, type GrupoDeFilas, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, Vacio } from '../componentes/Estados'
@@ -40,8 +41,11 @@ import { Nivel } from '../componentes/Nivel'
 // la arma, ordena, pagina y cuenta el servidor (GET /api/sgspe/attention/queue, decisión 5 y D10 de la revisión de UX), leída como
 // quien mira: una QCS confidencial que la cuenta no lee no llega (security.md §9.6) y las cifras lo dicen (confidentialHidden). la
 // persona que plantea es un campo restringido y no tiene columna: una anónima se dice «anónima»
-const VISTAS = ['atencion', 'quejas', 'consultas', 'solicitudes', 'mias', 'todas'] as const
+// «Atención en el mapa» (VISTA_MAPA) es la vista «Lista + mapa» (design-system.md §5.3): la cola de atención junto al mapa, cada QCS
+// en su punto o en el de su localidad o comunidad (LYR-20); nunca la de entrada y solo si alguna de la página trae ubicación
+const VISTAS = ['atencion', 'quejas', 'consultas', 'solicitudes', 'mias', 'todas', VISTA_MAPA] as const
 const DE_LA_VISTA: Record<(typeof VISTAS)[number], VistaDeLaCola> = {
+  mapa: 'attention',
   atencion: 'attention',
   quejas: 'grievances',
   consultas: 'inquiries',
@@ -134,6 +138,14 @@ export function AtencionPage() {
   const cargando = cola.isPending
   const fallida = cola.isError && !cola.data ? cola : undefined
   const visibles: (Fila & { grupo: GrupoDePlazo })[] = (cola.data?.content ?? []).map((f) => ({ objeto: f.type, registro: f.record, grupo: f.group }))
+  // «Lista + mapa»: la vista se ofrece si alguna QCS de la página trae ubicación; en ella, sin ninguna, se dice y queda la tabla
+  const enMapa = vista === VISTA_MAPA
+  const objetoDeLaFila = new Map(visibles.map((f) => [f.registro.id, f.objeto]))
+  const objetoDe = (r: Registro) => objetoDeLaFila.get(r.id) ?? 'grievance'
+  const conUbicacion = ofreceMapa(
+    objetoDe,
+    visibles.map((f) => f.registro)
+  )
   const opciones = (campo: string) => campoDe(definicion.data, campo)?.enumOptions ?? []
   // la etapa 3 de la revisión de UX: cada vista con su conteo (con los filtros puestos), los filtros como chips con «Limpiar» y el
   // vacío por filtros con cuántos hay sin ellos
@@ -301,7 +313,11 @@ export function AtencionPage() {
         vista={
           <SelectorDeVista
             etiqueta={t('comun.vistas')}
-            vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`atencion.vistas.${v}`), n: conteoDe(v) }))}
+            vistas={VISTAS.filter((v) => v !== VISTA_MAPA || conUbicacion || enMapa).map((v) => ({
+              id: v,
+              etiqueta: t(`atencion.vistas.${v}`),
+              n: v === VISTA_MAPA ? undefined : conteoDe(v)
+            }))}
             actual={vista}
             alElegir={(v) => lista.cambiar({ view: v })}
             visibles={VISTAS.length}
@@ -349,7 +365,38 @@ export function AtencionPage() {
         )
       ) : (
         <>
-          {telefono ? (
+          {enMapa && !conUbicacion ? <Alert tone="notice">{t('mapa.listaConMapa.sinUbicaciones')}</Alert> : null}
+          {enMapa && conUbicacion ? (
+            <ListaConMapa
+              objeto="grievance"
+              objetoDe={objetoDe}
+              etiqueta={t('atencion.tabla')}
+              registros={visibles.map((f) => f.registro)}
+              proyecto={proyecto}
+              nombreDe={(r) => [texto(r, 'code'), asuntoDe(r)].filter(Boolean).join(' · ')}
+              detalleDe={(r) => (
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span>{t(`comun.qcs.${objetoDe(r)}`)}</span>
+                  <EstadoChip objeto={objetoDe(r)} estado={r.state} />
+                  <PlazoDeQcs objeto={objetoDe(r) as ObjetoDeQcs} qcs={r} />
+                </span>
+              )}
+              accionesDe={(r) => (
+                <EnlaceDeRegistro
+                  codigo={texto(r, 'code')}
+                  titulo={asuntoDe(r)}
+                  ruta={rutaDeQcs(texto(r, 'project'), objetoDe(r) as ObjetoDeQcs, r.id)}
+                  desde={t('atencion.titulo')}
+                  previa={{ objeto: objetoDe(r), id: r.id }}
+                  codigoEnElEnlace
+                />
+              )}
+              alAbrir={(r) => {
+                const ruta = rutaDeQcs(texto(r, 'project'), objetoDe(r) as ObjetoDeQcs, r.id)
+                navegar(ruta, { state: paso(t('atencion.titulo'), ruta) })
+              }}
+            />
+          ) : telefono ? (
             // en el teléfono, una lista de tarjetas por grupo, con su título y el total que cuenta el servidor
             grupos.map((grupo) => (
               <section key={grupo.clave} aria-label={grupo.titulo} className="space-y-2">

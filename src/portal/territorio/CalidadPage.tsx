@@ -1,8 +1,9 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
+import { FiltroDeLista, FormaDelFiltro } from '../componentes/FiltroDeLista'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useSearchParams } from 'react-router'
-import { CONTROL } from '../componentes/Campo'
 import { Cargando, ErrorDeCarga, esProhibido, NoDisponible } from '../componentes/Estados'
 import { useProyectos } from '../contexto/proyectos'
 import { rutaParaAbrir } from '../datos/fichas'
@@ -84,19 +85,22 @@ export function CalidadPage() {
     fijar(siguiente, { replace: true })
   }
   return (
-    <section className="mx-auto max-w-[1200px] space-y-4">
-      <h1 className="text-sg-h1 font-semibold">{t('calidad.titulo')}</h1>
-      <p className="text-sm text-sg-text-secondary">{t('calidad.ayuda')}</p>
-      <div role="tablist" aria-label={t('calidad.titulo')} className="flex flex-wrap gap-2">
+    // el ancho único y el encabezado común (design-system.md §6.1); las revisiones como las pestañas de §5.3 y los filtros como chips
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina titulo={t('calidad.titulo')} descripcion={t('calidad.ayuda')} />
+      <div role="tablist" aria-label={t('calidad.titulo')} className="flex flex-wrap border-b-2 border-sg-border">
         {REVISIONES.map((r) => (
           <button
             key={r}
             type="button"
             role="tab"
             aria-selected={r === revision}
-            className={
-              r === revision ? 'rounded-sg-md bg-sg-primary-soft px-3 py-1 text-sm font-medium' : 'rounded-sg-md px-3 py-1 text-sm text-sg-text-secondary'
-            }
+            // como las pestañas de design-system.md §5.3: la elegida en primary-text 800 con un borde inferior de 4 px primary
+            className={`-mb-0.5 inline-flex min-h-8 items-center border-b-4 px-4 py-1.5 text-sg-body ${
+              r === revision
+                ? 'border-sg-primary font-extrabold text-sg-primary-text'
+                : 'border-transparent font-semibold text-sg-text-secondary hover:text-sg-text'
+            }`}
             onClick={() => cambiar({ check: r })}
           >
             {t(`calidad.revisiones.${r}`)}
@@ -104,30 +108,22 @@ export function CalidadPage() {
         ))}
       </div>
       <p className="text-sg-caption text-sg-text-muted">{t(`calidad.explicaciones.${revision}`)}</p>
-      <div className="flex flex-wrap items-end gap-3 text-sm">
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('calidad.objeto')}</span>
-          <select className={CONTROL} value={objeto ?? ''} onChange={(e) => cambiar({ object: e.target.value })}>
-            <option value="">{t('calidad.todos')}</option>
-            {ofrecidos.map((o) => (
-              <option key={o} value={o}>
-                {t(`calidad.objetos.${o}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-1">
-          <span className="block text-sg-label">{t('calidad.proyecto')}</span>
-          <select className={CONTROL} value={proyecto ?? ''} onChange={(e) => cambiar({ project: e.target.value })}>
-            <option value="">{t('calidad.todos')}</option>
-            {(proyectos.data ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {texto(p, 'code')} · {texto(p, 'name')}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <FormaDelFiltro.Provider value="chip">
+        <div className="flex flex-wrap items-center gap-2">
+          <FiltroDeLista
+            etiqueta={t('calidad.objeto')}
+            value={objeto ?? ''}
+            onChange={(e) => cambiar({ object: e.target.value })}
+            opciones={ofrecidos.map((o) => ({ valor: o, etiqueta: t(`calidad.objetos.${o}`) }))}
+          />
+          <FiltroDeLista
+            etiqueta={t('calidad.proyecto')}
+            value={proyecto ?? ''}
+            onChange={(e) => cambiar({ project: e.target.value })}
+            opciones={(proyectos.data ?? []).map((p) => ({ valor: p.id, etiqueta: `${texto(p, 'code')} · ${texto(p, 'name')}` }))}
+          />
+        </div>
+      </FormaDelFiltro.Provider>
       {proyecto ? <p className="text-sg-caption text-sg-text-muted">{t('calidad.notaTenant')}</p> : null}
       {consulta.isPending ? <Cargando /> : null}
       {consulta.isError && esProhibido(consulta.error) ? <NoDisponible enLista /> : null}
@@ -181,6 +177,6 @@ export function CalidadPage() {
           ) : null}
         </>
       ) : null}
-    </section>
+    </ContenedorDePagina>
   )
 }

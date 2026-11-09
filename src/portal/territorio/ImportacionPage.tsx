@@ -3,6 +3,7 @@ import { Alert, Button, cn, Input, Table, Td, Th } from '@wasichai/ui'
 import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
@@ -405,12 +406,15 @@ function Revisar({ id }: { id: string }) {
   if (resultado) return <Confirmada {...resultado} />
   if (!estado)
     return (
-      <Alert tone="warning">
-        {t('importacion.sinArchivo')}{' '}
-        <Link to="/territory/imports/new" className="underline">
-          {t('importacion.empezar')}
-        </Link>
-      </Alert>
+      <ContenedorDePagina>
+        <EncabezadoDePagina titulo={t('importacion.titulo')} />
+        <Alert tone="warning">
+          {t('importacion.sinArchivo')}{' '}
+          <Link to="/territory/imports/new" className="underline">
+            {t('importacion.empezar')}
+          </Link>
+        </Alert>
+      </ContenedorDePagina>
     )
   const { vista, pedido } = estado
   const filas = filasConDecision(vista)
@@ -600,22 +604,29 @@ function Confirmada({ escrito, previsto, vista, pedido }: { escrito: Resultado; 
   const claves = ['created', 'newVersions', 'updated', 'unchanged', 'rejected'] as const
   const difiere = claves.some((k) => escrito[k] !== previsto[k])
   return (
-    <section className="mx-auto max-w-[900px] space-y-4">
-      <h1 className="text-sg-h2 font-semibold">{t('importacion.hecho')}</h1>
+    // el ancho único de las pantallas y su encabezado (design-system.md §6.1), con la vuelta al mapa como primaria
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina
+        antetitulo={t('importacion.titulo')}
+        antetituloEnSans
+        titulo={t('importacion.hecho')}
+        primaria={
+          <Button asChild size="sm">
+            <Link to={`/projects/${encodeURIComponent(pedido.proyecto)}/map`}>{t('importacion.volverAlMapa')}</Link>
+          </Button>
+        }
+      />
       {difiere ? <Alert tone="warning">{t('importacion.difiere', { id: vista.importBatchId })}</Alert> : null}
       <ul className="grid gap-3 sm:grid-cols-5">
         {claves.map((k) => (
-          <li key={k} aria-label={t(`importacion.resultado.${k}`)} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
-            <p className="text-sg-caption text-sg-text-muted">{t(`importacion.resultado.${k}`)}</p>
-            <p className="text-sg-kpi-sm font-semibold">{numeroPe(escrito[k])}</p>
+          <li key={k} aria-label={t(`importacion.resultado.${k}`)} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3 shadow-sg-sm">
+            <p className="text-sg-overline uppercase text-sg-text-secondary">{t(`importacion.resultado.${k}`)}</p>
+            <p className="text-sg-kpi-sm font-bold tabular-nums">{numeroPe(escrito[k])}</p>
             {escrito[k] !== previsto[k] ? <p className="text-sg-caption text-sg-warning">{t('importacion.previsto', { n: numeroPe(previsto[k]) })}</p> : null}
           </li>
         ))}
       </ul>
-      <Button asChild>
-        <Link to={`/projects/${encodeURIComponent(pedido.proyecto)}/map`}>{t('importacion.volverAlMapa')}</Link>
-      </Button>
-    </section>
+    </ContenedorDePagina>
   )
 }
 

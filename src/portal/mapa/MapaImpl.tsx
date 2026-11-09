@@ -50,6 +50,23 @@ export function estiloDe(basemap: BasemapSpec, fondo: string): StyleSpecificatio
   }
 }
 
+// el color del punto por un atributo (colorPor): cada valor con su token resuelto en el tema activo y, sin valor conocido, el de la capa
+const colorDelPunto = (capa: CapaDibujada): string | ExpressionSpecification => {
+  const color = colorDe(capa.color)
+  if (!capa.colorPor) return color
+  const pares = Object.entries(capa.colorPor.colores).flatMap(([valor, token]) => [valor, colorDe(token)])
+  return ['match', ['to-string', ['get', capa.colorPor.campo]], ...pares, color] as ExpressionSpecification
+}
+// el punto: lleno del color de la capa con borde surface o, con anillo, hueco (surface) con el color en un borde de 4 px
+const pinturaDelPunto = (capa: CapaDibujada) => {
+  const anillo = capa.colorPor?.anillo === true
+  return {
+    'circle-color': anillo ? colorDe('--sg-surface') : colorDelPunto(capa),
+    'circle-stroke-color': anillo ? colorDelPunto(capa) : colorDe('--sg-surface'),
+    'circle-stroke-width': anillo ? 4 : 1.5
+  }
+}
+
 // lo elegido: el registro o el miembro que dibuja ese lugar
 const elegido = (seleccion: string | null | undefined): ExpressionSpecification => [
   'any',
@@ -129,6 +146,7 @@ export default function MapaImpl({
   wms,
   alFallarWms,
   calor,
+  zoomAlElegir = 16,
   alPulsar,
   firmar,
   vistaInicial,
@@ -179,7 +197,10 @@ export default function MapaImpl({
       // el token de wasichai solo a las teselas del proxy (firmaDeWms); lo demás sale tal cual
       transformRequest: (url: string) => ultimo.current.firmar?.(url) ?? { url }
     })
+    // acercar y alejar en una columna de 36 px y, aparte, el norte, que devuelve el mapa al norte (design-system.md §5.3 «Mapa»);
+    // su aspecto, con los tokens del tema, vive en index.css
     instancia.addControl(new NavigationControl({ showCompass: false }), 'top-right')
+    instancia.addControl(new NavigationControl({ showZoom: false, visualizePitch: false }), 'top-right')
     instancia.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
     instancia.on('idle', () => setReposo(true))
     instancia.on('dataloading', () => setReposo(false))
@@ -311,11 +332,9 @@ export default function MapaImpl({
         source: capa.id,
         filter: propios(PUNTOS),
         paint: {
-          'circle-color': color,
+          ...pinturaDelPunto(capa),
           'circle-radius': ['case', elegido(seleccion), 8, 5],
           'circle-opacity': opacidad.punto,
-          'circle-stroke-color': colorDe('--sg-surface'),
-          'circle-stroke-width': 1.5,
           'circle-stroke-opacity': opacidad.bordeDelPunto
         }
       })
@@ -399,7 +418,7 @@ export default function MapaImpl({
     const encuadre = elemento ? encuadreDe([{ type: 'FeatureCollection', features: [elemento] }]) : null
     if (!encuadre) return
     encuadradoA.current = seleccion
-    instancia.fitBounds(encuadre, { padding: 80, maxZoom: 16, duration: 300 })
+    instancia.fitBounds(encuadre, { padding: 80, maxZoom: zoomAlElegir, duration: 300 })
   }, [listo, seleccion, clave])
 
   // la primera capa GeoJSON dibujada: el WMS y el calor van debajo de ella (MapLibre inserta antes de esa capa)
@@ -480,8 +499,9 @@ export default function MapaImpl({
         const color = colorDe(capa.color)
         instancia.setPaintProperty(`${capa.id}-relleno`, 'fill-color', colorDe(capa.colorDeRelleno ?? capa.color))
         instancia.setPaintProperty(`${capa.id}-linea`, 'line-color', color)
-        instancia.setPaintProperty(`${capa.id}-punto`, 'circle-color', color)
-        instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-color', colorDe('--sg-surface'))
+        const punto = pinturaDelPunto(capa)
+        instancia.setPaintProperty(`${capa.id}-punto`, 'circle-color', punto['circle-color'])
+        instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-color', punto['circle-stroke-color'])
         if (conMiembros.current.has(capa.id)) {
           instancia.setPaintProperty(`${capa.id}-miembro-relleno`, 'fill-color', color)
           instancia.setPaintProperty(`${capa.id}-miembro-linea`, 'line-color', color)
@@ -492,5 +512,5 @@ export default function MapaImpl({
     })
   }, [listo, clave, claveCalor])
 
-  return <div ref={contenedor} role="region" aria-label={etiqueta} className="h-full w-full" data-testid="mapa" data-reposo={reposo ? 'si' : 'no'} />
+  return <div ref={contenedor} role="region" aria-label={etiqueta} className="sg-mapa h-full w-full" data-testid="mapa" data-reposo={reposo ? 'si' : 'no'} />
 }

@@ -283,3 +283,25 @@ describe('Leyenda', () => {
     expect(screen.queryByRole('region', { name: 'Leyenda' })).not.toBeInTheDocument()
   })
 })
+
+describe('las formas finas de las capas de gestión', () => {
+  it('LYR-17 lleva la postura que más pesa en cada localidad, sin SIN DATO ni empates, y la misma colección da la misma copia', async () => {
+    const { conPostura, dibujoDe } = await import('./capas')
+    const elemento = (id: string, byStance: Record<string, number> | null) => ({
+      type: 'Feature' as const,
+      geometry: null,
+      properties: { __id: id, byStance }
+    })
+    const datos: Coleccion = {
+      type: 'FeatureCollection',
+      features: [elemento('l1', { 'A FAVOR': 3, NEUTRAL: 1, 'SIN DATO': 9 }), elemento('l2', { 'A FAVOR': 2, 'EN CONTRA': 2 }), elemento('l3', null)]
+    }
+    const copia = conPostura('LYR-17', datos)
+    expect(copia.features.map((f) => f.properties.__postura)).toEqual(['A FAVOR', undefined, undefined])
+    expect(conPostura('LYR-17', datos)).toBe(copia)
+    expect(conPostura('LYR-02', datos)).toBe(datos)
+    expect(dibujoDe('LYR-17').colorPor?.anillo).toBe(true)
+    expect(dibujoDe('LYR-21').colorPor?.campo).toBe('risk_level')
+    expect(dibujoDe('LYR-02').colorPor).toBeUndefined()
+  })
+})

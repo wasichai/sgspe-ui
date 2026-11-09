@@ -1,6 +1,6 @@
 import type { UseQueryResult } from '@tanstack/react-query'
 import { Button } from '@wasichai/ui'
-import { X } from 'lucide-react'
+import { MapPin, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
@@ -56,17 +56,37 @@ export function FichaContextual({
   const nombre = ficha.data ? texto(ficha.data.registro, 'name') : ''
   let encabezado = nombre
   if (!encabezado) encabezado = ficha.isPending ? t('comun.cargando') : ficha.data ? t('territorio.sinNombre') : t(`fichaTerritorial.tipos.${objeto}`)
+  // las áreas de influencia que incluyen al lugar, como etiquetas de territorio bajo el título (S09: «Dentro de AIDS»)
+  const areas = [...new Set((ficha.data?.areasOfInfluence ?? []).map((a) => a.areaType).filter((a): a is string => Boolean(a)))]
+  const delPeriodo =
+    periodo.periodStart && periodo.periodEnd ? t('fichaTerritorial.periodo', { desde: diaPe(periodo.periodStart), hasta: diaPe(periodo.periodEnd) }) : null
   return (
-    <Seccion elemento="aside" etiqueta={t('fichaTerritorial.titulo')} className="space-y-3 text-sm">
+    <Seccion elemento="aside" anidada etiqueta={t('fichaTerritorial.titulo')} className="space-y-3 text-sm">
+      {/* la cabecera de S09: sobrelínea con el tipo de lugar, el título, las áreas que lo incluyen y el periodo de las cifras */}
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sg-overline font-semibold uppercase text-sg-territory">{t(`fichaTerritorial.tipos.${objeto}`)}</p>
-          <h2 className="text-sg-h3 font-semibold">{encabezado}</h2>
+        <div className="min-w-0 space-y-1">
+          <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t(`fichaTerritorial.tipos.${objeto}`)}</p>
+          <h2 className="text-sg-h3 font-bold">{encabezado}</h2>
+          <p className="flex flex-wrap items-center gap-2">
+            {areas.map((a) => (
+              <span
+                key={a}
+                className="inline-flex h-6 items-center gap-1 rounded-sg-sm border border-sg-territory-border bg-sg-territory-soft px-1.5 text-sg-caption font-bold text-sg-territory"
+              >
+                <MapPin aria-hidden className="size-3.5" />
+                {t('fichaTerritorial.dentroDe', { area: a })}
+              </span>
+            ))}
+            {delPeriodo ? <span className="text-sg-caption text-sg-text-secondary">{delPeriodo}</span> : null}
+          </p>
         </div>
         <button type="button" aria-label={t('fichaTerritorial.cerrar')} onClick={alCerrar} className="rounded-sg-sm p-1 hover:bg-sg-surface-hover">
           <X aria-hidden className="size-4" />
         </button>
       </div>
+      <Cifras consulta={kpi} />
+      <ParteTerritorial objeto={objeto} consulta={ficha} />
+      {/* las acciones reales del lugar, al pie: su ficha y, con un proyecto, filtrarlo por el lugar */}
       <div className="flex flex-wrap gap-2">
         <Button asChild size="sm">
           <Link to={`/territory/${FICHA[objeto]}/${encodeURIComponent(id)}${sufijo}`} state={paso(t('mapa.mapaTerritorial'))}>
@@ -81,8 +101,6 @@ export function FichaContextual({
           </Button>
         ) : null}
       </div>
-      <ParteTerritorial objeto={objeto} consulta={ficha} />
-      <Cifras consulta={kpi} />
     </Seccion>
   )
 }
@@ -179,7 +197,7 @@ function Cifras({ consulta }: { consulta: UseQueryResult<Indicador> }) {
     const componentes = [...componentesDeFicha(indicador)].sort((a, b) => posicion(a) - posicion(b))
     cuerpo = (
       <>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="divide-y divide-sg-border-subtle border-y border-sg-border-subtle">
           {componentes.map((c) => (
             <Cifra key={c.key} componente={c} />
           ))}
@@ -234,7 +252,7 @@ function Cifra({ componente: c }: { componente: ComponenteDeFicha }) {
     const programas = filasDe(c, 'program')
     valor = (
       <>
-        <p className="text-sg-kpi-sm font-semibold tabular-nums">{numero(c.value)}</p>
+        <p className="font-bold tabular-nums">{numero(c.value)}</p>
         {programas.length > 0 ? (
           <ul aria-label={t('fichaTerritorial.programas')} className="text-sg-caption">
             {programas.map((p) => (
@@ -247,34 +265,61 @@ function Cifra({ componente: c }: { componente: ComponenteDeFicha }) {
   } else if (c.key === 'lastActivity')
     // AAAA-MM-DD es un día de Lima: diaPe lo formatea sin correrlo al día anterior
     valor = <p>{typeof c.value === 'string' ? diaPe(c.value) : t('fichaTerritorial.sinActividad')}</p>
-  else valor = <p className="text-sg-kpi-sm font-semibold tabular-nums">{numero(c.value)}</p>
+  else valor = <p className="font-bold tabular-nums">{numero(c.value)}</p>
+  // una cifra sola va en la fila, a la derecha del rótulo (la tabla compacta de S09); una lista o la postura, debajo
+  const enLaFila = c.available && !['KPI-STK-02', 'KPI-INV-03', 'programs'].includes(c.key)
   return (
-    <section aria-label={titulo} className="space-y-1 rounded-sg-md border border-sg-border p-2">
-      <h4 className="text-sg-caption text-sg-text-muted">{titulo}</h4>
-      {valor}
+    <section aria-label={titulo} className="space-y-1 py-1.5">
+      <div className={enLaFila ? 'flex items-baseline justify-between gap-3' : undefined}>
+        <h4 className={enLaFila ? 'text-sg-body-sm text-sg-text' : 'text-sg-body-sm font-semibold text-sg-text'}>{titulo}</h4>
+        {enLaFila ? valor : null}
+      </div>
+      {enLaFila ? null : valor}
       {c.available ? <NotaDeConfidenciales oculta={c.confidentialHidden} /> : null}
       <NotasDeIndicador indicador={c} />
     </section>
   )
 }
 
-// la barra de posturas (screens.md S12, «StanceBar»): cada postura con su cifra y su barra; el estado siempre con su texto
+// la barra de posturas (screens.md S12, «StanceBar»; design-system.md §5.3 «Postura»): una barra apilada con el color de cada
+// postura y, debajo, cada postura con su texto y su cifra; el estado siempre con su texto
+const COLOR_DE_POSTURA: Record<string, string> = {
+  'A FAVOR': 'var(--sg-stance-favor)',
+  NEUTRAL: 'var(--sg-stance-neutral)',
+  'EN CONTRA PERO ABIERTO A ESCUCHAR': 'var(--sg-stance-open)',
+  'EN CONTRA': 'var(--sg-stance-against)'
+}
 function Posturas({ filas }: { filas: FilaDeDesglose[] }) {
   const { t } = useTranslation(NS)
   const total = filas.reduce((s, f) => s + (f.value ?? 0), 0)
   return (
-    <ul aria-label={t('fichaTerritorial.posturas')} className="space-y-1">
-      {filas.map((f) => (
-        <li key={f.key} className="space-y-0.5">
-          <span className="flex justify-between gap-2">
+    <>
+      {total > 0 ? (
+        <span aria-hidden className="flex h-5 overflow-hidden rounded-sg-sm bg-sg-surface-sunken">
+          {filas
+            .filter((f) => (f.value ?? 0) > 0)
+            .map((f) => (
+              <span
+                key={f.key}
+                className="block h-full border-r border-sg-surface last:border-r-0"
+                style={{ width: `${((f.value ?? 0) / total) * 100}%`, backgroundColor: COLOR_DE_POSTURA[f.key] ?? 'var(--sg-neutral)' }}
+              />
+            ))}
+        </span>
+      ) : null}
+      <ul aria-label={t('fichaTerritorial.posturas')} className="flex flex-wrap gap-x-3 gap-y-0.5 text-sg-caption text-sg-text-secondary">
+        {filas.map((f) => (
+          <li key={f.key} className="inline-flex items-center gap-1">
+            <span
+              aria-hidden
+              className="inline-block size-2.5 rounded-full border border-sg-border-strong"
+              style={{ backgroundColor: COLOR_DE_POSTURA[f.key] ?? 'var(--sg-neutral)' }}
+            />
             <span>{rotuloDeFila(f)}</span>
-            <span className="tabular-nums">{f.value === null ? '—' : numeroPe(f.value)}</span>
-          </span>
-          <span aria-hidden className="block h-1.5 rounded-sg-sm bg-sg-surface-sunken">
-            <span className="block h-1.5 rounded-sg-sm bg-sg-primary" style={{ width: `${total > 0 ? Math.round(((f.value ?? 0) / total) * 100) : 0}%` }} />
-          </span>
-        </li>
-      ))}
-    </ul>
+            <span className="font-bold tabular-nums text-sg-text">{f.value === null ? '—' : numeroPe(f.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }

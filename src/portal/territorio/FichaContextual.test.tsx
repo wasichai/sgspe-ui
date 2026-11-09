@@ -29,6 +29,23 @@ const kpiCon = (filas: Record<string, unknown>[]) => ({ ...KPI_TER_01, breakdown
 const filas = () => KPI_TER_01.breakdowns[0].rows
 
 describe('ficha contextual', () => {
+  // S09: la cabecera dice las áreas que incluyen al lugar como etiquetas de territorio; la postura va en una barra apilada con su
+  // leyenda en texto; las acciones, al pie, después de las cifras
+  it('lleva las áreas como etiquetas, la barra de posturas y las acciones al pie', async () => {
+    fetch = mockFetch([
+      PROYECTOS,
+      { path: '/sgspe/territory/localities/l1/card', body: FICHA_LOCALIDAD },
+      { path: '/sgspe/dashboards/indicators/KPI-TER-01', body: KPI_TER_01 }
+    ])
+    ficha()
+    const panel = await screen.findByRole('complementary', { name: 'Ficha del lugar' })
+    expect(await within(panel).findByText('Dentro de AIDS')).toBeInTheDocument()
+    const posturas = await within(panel).findByRole('list', { name: 'Posturas' })
+    expect(posturas.previousElementSibling).toHaveAttribute('aria-hidden')
+    const abrir = within(panel).getByRole('link', { name: 'Abrir la ficha' })
+    expect(posturas.compareDocumentPosition(abrir) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('dice el lugar, sus zonas y las cifras de KPI-TER-01 con el lugar, el proyecto y el periodo', async () => {
     fetch = mockFetch([
       PROYECTOS,
