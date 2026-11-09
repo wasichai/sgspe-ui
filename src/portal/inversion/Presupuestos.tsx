@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MedidorDeMonto } from '../componentes/MedidorDeMonto'
 import { montoPe } from '../componentes/Monto'
 import { RegistrosSimples, type ColumnaSimple } from '../componentes/RegistrosSimples'
 import { anioEnLima, MONEDA_POR_DEFECTO, porcentaje, sumaPorMoneda } from '../datos/inversion'
@@ -79,6 +80,30 @@ export function Presupuestos({ programa }: { programa: Registro }) {
       ) : asignado.sumas.length > 0 ? (
         <section aria-label={t('fichaPrograma.presupuesto.totales')} className="space-y-2">
           <h3 className="font-medium">{t('fichaPrograma.presupuesto.totales')}</h3>
+          {/* un medidor por moneda frente a lo asignado (design-system.md §5.3, como S03): nunca uno que sume monedas. un programa por
+              aprobar no tiene ejecución que medir */}
+          {porAprobar ? null : (
+            <ul aria-label={t('fichaPrograma.presupuesto.medidores')} className="grid gap-4 sm:grid-cols-2">
+              {asignado.sumas.map(({ moneda, total }) => {
+                const enEjecucion = ejecutadoEn(moneda)
+                return (
+                  <li key={moneda}>
+                    <MedidorDeMonto
+                      moneda={moneda}
+                      avance={enEjecucion === null ? null : porcentaje(enEjecucion, total)}
+                      etiqueta={t('fichaPrograma.presupuesto.avanceEn', { moneda })}
+                    >
+                      <p className="tabular-nums text-sg-text">
+                        {enEjecucion === null
+                          ? t('fichaPrograma.presupuesto.sinEjecutadoDe', { asignado: montoPe(total, moneda) })
+                          : t('fichaPrograma.presupuesto.ejecutadoDe', { ejecutado: montoPe(enEjecucion, moneda), asignado: montoPe(total, moneda) })}
+                      </p>
+                    </MedidorDeMonto>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
           <Table aria-label={t('fichaPrograma.presupuesto.totales')}>
             <thead>
               <tr>

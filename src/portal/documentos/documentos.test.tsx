@@ -196,6 +196,10 @@ describe('S46 · ficha de evidencia', () => {
     expect(screen.queryByText('a1b2')).not.toBeInTheDocument()
     expect(screen.getByText('Reservada')).toBeInTheDocument()
     expect(red.a('GET', '/sgspe/evidence/ev1/content')).toHaveLength(0)
+    // la clasificación restringida va en la cabecera con su candado (nunca solo color)
+    const clasificacion = document.querySelector('[data-clasificacion="CONFIDENCIAL"]') as HTMLElement
+    expect(clasificacion).toHaveTextContent('Confidencial')
+    expect(clasificacion.querySelector('svg')).not.toBeNull()
   })
 
   // UPS-24: el servidor oculta el nombre y la huella a quien no descarga; el tipo y el tamaño siguen

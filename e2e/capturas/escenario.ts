@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { GRUPO, pagina, prepararApi, prepararFichaDeCompromiso, registro, USUARIO } from '../api'
+import { COMPROBACION_F11, RUTAS_F11 } from './escenarioF11'
 
 // el escenario de las capturas del rediseño (wasichai/sgspe-ui#88): una organización con datos en cada pantalla representativa,
 // sobre la API simulada de e2e/api.ts. reúne lo que los specs simulan cada uno por su lado (f4, f5, f6, f8, listasF4,
@@ -54,6 +55,13 @@ const OBJETOS = [
   'early_warning_rule',
   'social_program',
   'social_contribution',
+  'contribution_item',
+  'exploration_campaign',
+  'program_budget',
+  'program_indicator',
+  'program_measurement',
+  'beneficiary_group',
+  'receipt',
   'deliverable',
   'deliverable_section',
   'deliverable_version',
@@ -953,6 +961,8 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
   [/^\/sgspe\/dashboards\/indicators\/KPI-TER-01$/, RESUMEN_DEL_LUGAR],
   [/^\/auth\/me\/permissions$/, permisos(admin)],
   [/^\/auth\/me$/, { userId: USUARIO.id, organizationId: 'o1', email: USUARIO.email, roles: USUARIO.roles, admin }],
+  // programas e inversión, documentos, tareas y aprobaciones (fase 11, escenarioF11.ts)
+  ...RUTAS_F11,
   [/^\/sgspe\/dashboards\/indicators$/, [{ code: 'KPI-EXE-01', label: 'Proyectos activos', dashboard: 'executive', available: true }]],
   [/^\/sgspe\/dashboards\/executive$/, EJECUTIVO],
   [/^\/objects\/stakeholder\/records$/, pagina(GRUPOS)],
@@ -1155,6 +1165,9 @@ export async function prepararEscenario(
     const peticion = route.request()
     const url = new URL(peticion.url())
     const ruta = url.pathname.replace(/^\/api/, '')
+    // la consulta en seco de una transición (fase 11): «Antes de aprobar» de un aporte con un lineamiento que advierte
+    if (peticion.method() === 'POST' && ruta === '/sgspe/transition-checks')
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(COMPROBACION_F11) })
     if (peticion.method() !== 'GET') return route.fallback()
     // E18: la lista de compromisos que no se pudo leer (?q=falla-de-prueba), con su código de correlación
     if (ruta === '/objects/commitment/records' && url.searchParams.get('q') === 'falla-de-prueba' && url.searchParams.get('size') === '25')

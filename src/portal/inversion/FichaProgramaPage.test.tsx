@@ -92,6 +92,20 @@ describe('S43 · ficha del programa', () => {
     expect(screen.getByText('Los presupuestos en otra moneda no se suman al total del programa en PEN: se muestran aparte.')).toBeInTheDocument()
   })
 
+  it('el presupuesto lleva un medidor por moneda frente a lo asignado, sin sumar monedas; sin ejecutado, «—» y nunca 0 %', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Presupuesto' }))
+    const medidores = await screen.findByRole('list', { name: 'Ejecutado frente a lo asignado' })
+    const pen = within(medidores).getByRole('group', { name: 'PEN' })
+    expect(within(pen).getByRole('progressbar', { name: 'Avance de lo ejecutado en PEN' })).toHaveAttribute('aria-valuenow', '25')
+    expect(within(pen).getByText('S/ 20,000.00 de S/ 80,000.00 asignados')).toBeInTheDocument()
+    const usd = within(medidores).getByRole('group', { name: 'USD' })
+    expect(within(usd).getByRole('progressbar', { name: 'Avance de lo ejecutado en USD' })).not.toHaveAttribute('aria-valuenow')
+    expect(within(usd).getByText('Sin ejecutado registrado de USD 10,000.00 asignados')).toBeInTheDocument()
+    expect(within(medidores).queryByText(/90,000/)).not.toBeInTheDocument()
+  })
+
   it('«Nuevo presupuesto» propone el año en curso de Lima y la moneda del programa; registrar el ejecutado de un año manda su cambio con la versión leída', async () => {
     // 22:00 del 31 de diciembre en Lima: en UTC ya es el 1 de enero de 2027
     vi.useFakeTimers({ toFake: ['Date'] })

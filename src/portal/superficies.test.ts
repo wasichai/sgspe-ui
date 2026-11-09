@@ -71,6 +71,21 @@ describe('superficies del portal (CA-1.1.3)', () => {
     expect(apariciones()).toEqual(Object.fromEntries(Object.entries(EXCEPCIONES).map(([archivo, { veces }]) => [archivo, veces])))
   })
 
+  // Civic Modern, fase 11 (wasichai/sgspe-ui#110): programas e inversión, documentos y tareas toman el título de EncabezadoDePagina y
+  // el ancho y los márgenes de ContenedorDePagina; ninguna fuente suya escribe un <h1> ni un max-w-[…] propio
+  it('programas, documentos y tareas no escriben su <h1> ni su ancho a mano', () => {
+    const propios = fuentes(PORTAL)
+      .filter((archivo) => /^(inversion|documentos|tareas)\//.test(ruta(archivo)))
+      .flatMap((archivo) =>
+        readFileSync(archivo, 'utf8')
+          .split('\n')
+          .map(sinComentario)
+          .filter((linea) => /<h1[\s>]|max-w-\[/.test(linea))
+          .map((linea) => `${ruta(archivo)}: ${linea.trim()}`)
+      )
+    expect(propios).toEqual([])
+  })
+
   it('cada excepción dice por qué no es una Seccion', () => {
     for (const { porque } of Object.values(EXCEPCIONES)) expect(porque.length).toBeGreaterThan(10)
   })

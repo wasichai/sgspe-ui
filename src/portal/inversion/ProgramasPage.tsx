@@ -71,6 +71,9 @@ const POR_PAGINA = 25
 // las columnas que el servidor ordena (05-especificacion §1.6). en los programas, el código y el nombre; el estado no (su código
 // no dice su orden), ni el presupuesto ni lo ejecutado, que salen del tablero y no son campos de la lista. en los aportes, el
 // código; el monto no, porque la lista mezcla monedas (ASM-063)
+// una celda de montos: cada moneda en una línea, a la derecha; la línea se corta solo entre monedas
+const MONTOS = 'whitespace-normal! min-w-32'
+const enUnaLinea = (montos: string): string => montos.replace(/ (?!· )(?<! ·)/g, '\u00a0')
 const ORDEN_DE_PROGRAMAS: Record<string, string> = { codigo: 'code', programa: 'name' }
 const ORDEN_INICIAL_DE_PROGRAMAS: OrdenDeTabla = { columna: 'codigo', dir: 'asc' }
 const ORDEN_DE_APORTES: Record<string, string> = { codigo: 'code' }
@@ -313,7 +316,7 @@ function Programas({
     />
   )
   // la tabla con prioridad de columnas (DD-05): esenciales el código, el programa, el proyecto, el estado y el presupuesto del
-  // año; secundarias el socio, lo ejecutado y los beneficiarios
+  // año; secundarias lo ejecutado y los beneficiarios; el socio, opcional (en «Columnas» y desde 1536 px)
   const columnas: ColumnaPriorizada[] = [
     {
       id: 'codigo',
@@ -324,11 +327,12 @@ function Programas({
     },
     { id: 'programa', encabezado: t('inversion.programas.columnas.programa'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('inversion.programas.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'socio', encabezado: t('inversion.programas.columnas.socio'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'socio', encabezado: t('inversion.programas.columnas.socio'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('inversion.programas.columnas.estado'), prioridad: 'esencial' },
-    { id: 'presupuesto', encabezado: t('inversion.programas.columnas.presupuesto', { anio }), prioridad: 'esencial', claseDeCelda: 'text-sm tabular-nums' },
-    { id: 'ejecutado', encabezado: t('inversion.programas.columnas.ejecutado', { anio }), prioridad: 'secundaria', claseDeCelda: 'text-sm tabular-nums' },
-    { id: 'beneficiarios', encabezado: t('inversion.programas.columnas.beneficiarios'), prioridad: 'secundaria', claseDeCelda: 'text-sm tabular-nums' }
+    // los montos a la derecha, uno por moneda (S04 y S08): cada moneda en su línea, nunca sumada a otra (ASM-063)
+    { id: 'presupuesto', encabezado: t('inversion.programas.columnas.presupuesto', { anio }), prioridad: 'esencial', numerica: true, claseDeCelda: MONTOS },
+    { id: 'ejecutado', encabezado: t('inversion.programas.columnas.ejecutado', { anio }), prioridad: 'secundaria', numerica: true, claseDeCelda: MONTOS },
+    { id: 'beneficiarios', encabezado: t('inversion.programas.columnas.beneficiarios'), prioridad: 'secundaria', numerica: true, enDosLineas: true }
   ]
   const celda = (p: Registro, columna: string): ReactNode => {
     switch (columna) {
@@ -347,9 +351,9 @@ function Programas({
       case 'estado':
         return <EstadoChip objeto="social_program" estado={p.state} />
       case 'presupuesto':
-        return presupuestoDelPrograma(presupuesto, p.id, anio, 'allocated', textosDeMonto)
+        return enUnaLinea(presupuestoDelPrograma(presupuesto, p.id, anio, 'allocated', textosDeMonto))
       case 'ejecutado':
-        return presupuestoDelPrograma(presupuesto, p.id, anio, 'executed', textosDeMonto)
+        return enUnaLinea(presupuestoDelPrograma(presupuesto, p.id, anio, 'executed', textosDeMonto))
       default:
         return alcanzados(p.id)
     }
@@ -379,6 +383,7 @@ function Programas({
         <TablaPriorizada<Registro>
           etiqueta={t('inversion.programas.tabla')}
           total={programas.data?.totalElements ?? null}
+          notaAlPie={t('inversion.programas.notaAlPie')}
           columnas={columnas}
           filas={filas}
           clave={(p) => p.id}
@@ -418,20 +423,24 @@ function Aportes({ proyecto, vista, estado, q }: { proyecto?: string; vista: str
   const telefono = useEsTelefono()
   const filtrados = actual ? (aportes.data?.content ?? []) : []
   const fila = useAccionesDeFila('social_contribution', t('inversion.titulo'))
+  // el título dice qué es (U-27): el propósito declarado; sin él, «Aporte AP-001»
   const enlace = (a: Registro) => (
     <EnlaceDeRegistro
-      titulo={texto(a, 'code')}
+      codigo={texto(a, 'code')}
+      codigoEnElEnlace
+      titulo={texto(a, 'declared_purpose') || t('fichaAporte.titulo', { codigo: texto(a, 'code') })}
       ruta={rutaDeFicha('social_contribution', a)}
       previa={{ objeto: 'social_contribution', id: a.id }}
       desde={t('inversion.titulo')}
     />
   )
+  const meta = (a: Registro) => [opcion(a, 'contribution_type'), texto(a, 'occasion')].filter(Boolean).join(' · ')
   // la tabla con prioridad de columnas (DD-05): esenciales el aporte, el proyecto, quién recibe, el estado y el monto (en su
   // moneda, «—» si no vino); secundarias el tipo y la campaña
   const columnas: ColumnaPriorizada[] = [
-    { id: 'codigo', encabezado: t('inversion.aportes.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'font-sg-mono text-sm', ordenable: true },
+    // «Aporte» como «Compromiso» de S08: el código en mono arriba, el propósito como título y el tipo debajo; se ordena por código
+    { id: 'codigo', encabezado: t('inversion.aportes.columnas.aporte'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('inversion.aportes.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'tipo', encabezado: t('inversion.aportes.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'recibe', encabezado: t('inversion.aportes.columnas.recibe'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('inversion.aportes.columnas.estado'), prioridad: 'esencial' },
     { id: 'monto', encabezado: t('inversion.aportes.columnas.monto'), prioridad: 'esencial', numerica: true },
@@ -440,11 +449,14 @@ function Aportes({ proyecto, vista, estado, q }: { proyecto?: string; vista: str
   const celda = (a: Registro, columna: string): ReactNode => {
     switch (columna) {
       case 'codigo':
-        return enlace(a)
+        return (
+          <>
+            {enlace(a)}
+            {meta(a) ? <span className="mt-0.5 block text-sg-caption text-sg-text-secondary">{meta(a)}</span> : null}
+          </>
+        )
       case 'proyecto':
         return nombreDelProyecto(texto(a, 'project'))
-      case 'tipo':
-        return opcion(a, 'contribution_type') || '—'
       case 'recibe':
         return texto(a, 'recipient_organization') ? (
           <RegistroVinculado objeto="organization" id={texto(a, 'recipient_organization')} />

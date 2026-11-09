@@ -57,6 +57,22 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'qcs-mapa', ruta: '/projects/p1/attention?view=mapa&selected=inquiry%3Ai1' },
   { nombre: 'qcs-fila', ruta: '/projects/p1/attention', abrir: 'Ver el ciclo de vida de Q-001' },
   { nombre: 'programas', ruta: '/projects/p1/programs' },
+  // fase 11: programas e inversión, documentos, tareas y aprobaciones (escenarioF11.ts)
+  { nombre: 'aportes', ruta: '/projects/p1/programs?view=todos' },
+  { nombre: 'programa-ficha', ruta: '/projects/p1/programs/sp1' },
+  { nombre: 'programa-presupuesto', ruta: '/projects/p1/programs/sp1?tab=presupuesto' },
+  { nombre: 'aporte-ficha', ruta: '/projects/p1/contributions/ap1' },
+  { nombre: 'aporte-entregado', ruta: '/projects/p1/contributions/ap2?tab=entrega' },
+  { nombre: 'documentos', ruta: '/projects/p1/documents' },
+  { nombre: 'evidencia-ficha', ruta: '/projects/p1/documents/ev1' },
+  { nombre: 'evidencia-restringida', ruta: '/projects/p1/documents/ev3' },
+  { nombre: 'tareas', ruta: '/tasks' },
+  { nombre: 'tareas-tablero', ruta: '/tasks?view=tablero' },
+  { nombre: 'tareas-calendario', ruta: '/tasks?view=calendario' },
+  { nombre: 'aprobaciones', ruta: '/tasks/approvals' },
+  // con una elegida, en el teléfono el detalle ocupa la pantalla sin el título de la bandeja: solo en escritorio
+  { nombre: 'aprobaciones-detalle', ruta: '/tasks/approvals?selected=social_contribution%3Aap1' },
+  { nombre: 'aprobacion-compromiso', ruta: '/tasks/approvals/commitment/k7' },
   { nombre: 'entregables', ruta: '/projects/p1/reports' },
   { nombre: 'entregable', ruta: '/reports/deliverables/d1' },
   { nombre: 'administracion', ruta: '/administration', admin: true }
@@ -78,7 +94,17 @@ const PRINCIPALES = [
   'territorio',
   'territorio-lugar',
   'riesgos',
-  'qcs'
+  'qcs',
+  'programas',
+  'aportes',
+  'programa-ficha',
+  'aporte-ficha',
+  'documentos',
+  'evidencia-ficha',
+  'tareas',
+  'aprobaciones',
+  'aprobaciones-detalle',
+  'aprobacion-compromiso'
 ]
 const ANGOSTAS = [
   'login',
@@ -96,7 +122,16 @@ const ANGOSTAS = [
   'riesgos',
   'qcs',
   'territorio',
-  'territorio-lugar'
+  'territorio-lugar',
+  'programas',
+  'aportes',
+  'programa-ficha',
+  'aporte-ficha',
+  'documentos',
+  'evidencia-ficha',
+  'tareas',
+  'aprobaciones',
+  'aprobacion-compromiso'
 ]
 
 interface Variante {

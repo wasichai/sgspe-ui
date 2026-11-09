@@ -151,7 +151,9 @@ describe('rutas de F3', () => {
       permisos({ project: ['READ'], project_assignment: ['READ'], commitment: ['READ', 'UPDATE', 'APPROVE'], task: ['READ', 'UPDATE'] }),
       [...rutas(APROBADORA), { path: '/objects/commitment/records/c1/transitions', body: [] }]
     )
-    expect(await screen.findByRole('heading', { name: 'Aprobación de compromiso', level: 1 })).toBeInTheDocument()
+    // S31 con la anatomía de una ficha: el título es lo que se decide y «Aprobación de compromiso» va en el antetítulo
+    expect(await screen.findByRole('heading', { name: 'Reservorio de agua para Tunas Pampa', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText(/^Aprobación de compromiso · /)).toBeInTheDocument()
   })
 
   it('los avisos son de toda cuenta, con la campana en la barra superior', async () => {

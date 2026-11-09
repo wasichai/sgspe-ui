@@ -10,7 +10,8 @@ import { Dia } from '../componentes/Dia'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, esIlegible, NoEsDeSusProyectos, Reservado, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { useParametrosDeLista } from '../componentes/Lista'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { montoPe } from '../componentes/Monto'
 import { CLASE_DE_TIPO, FUENTE_DE_APROBACIONES, FUENTE_DE_PLAZOS, FUENTE_DE_RIESGOS, sinBandeja, useAvisos, type Aviso } from '../datos/avisos'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
@@ -25,7 +26,7 @@ import { useComprobacion } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { opcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 
 // S48 · aprobaciones y escalamientos (screens.md §11): las aprobaciones son transiciones, no objetos (domain-model.md §6.13).
 // «Por aprobar» sale de los avisos approval_pending de wasichai-notifications (fuente sgspe.approvals, ACTION, con su enlace
@@ -152,32 +153,34 @@ export function AprobacionesPage() {
   const plazosTruncados = (plazos.data?.totalPages ?? 1) > 1
   if (avisos.isError && !avisos.data && sinBandeja(avisos.error)) {
     return (
-      <section className="mx-auto max-w-[1200px] space-y-4">
-        <h1 className="text-sg-h1 font-semibold">{t('aprobaciones.titulo')}</h1>
+      <ContenedorDePagina elemento="section">
+        <EncabezadoDePagina titulo={t('aprobaciones.titulo')} />
         <Alert tone="notice">{t('aprobaciones.sinModulo')}</Alert>
-      </section>
+      </ContenedorDePagina>
     )
   }
   return (
     <ContenedorDePagina elemento="section">
-      <div className={cn('space-y-1', elegida && lista.vista !== 'escalamientos' && 'hidden xl:block')}>
-        <h1 className="text-sg-h1 font-semibold">{t('aprobaciones.titulo')}</h1>
-        <p className="text-sg-body-sm text-sg-text-secondary">{t('aprobaciones.ayuda')}</p>
+      {/* en el teléfono, con una elegida, el detalle ocupa la pantalla: el encabezado y las vistas quedan para «Volver» */}
+      <div className={cn(elegida && lista.vista !== 'escalamientos' && 'hidden xl:block')}>
+        <EncabezadoDePagina titulo={t('aprobaciones.titulo')} descripcion={t('aprobaciones.ayuda')} />
       </div>
       {hecha ? (
         <p role="status" className="text-sm text-sg-success">
           {t('aprobaciones.decision.hecha')}
         </p>
       ) : null}
+      {/* las vistas en el selector de E (DD-03), con el conteo de lo que espera decisión */}
       <div className={cn(elegida && lista.vista !== 'escalamientos' && 'hidden xl:block')}>
-        <VistasGuardadas
+        <SelectorDeVista
+          etiqueta={t('comun.vistas')}
           vistas={(['porAprobar', 'escalamientos'] as const).map((v) => ({
             id: v,
             etiqueta: t(`aprobaciones.vistas.${v}`),
-            conteo: v === 'porAprobar' && avisos.data ? pendientes.length : null
+            n: v === 'porAprobar' && avisos.data ? pendientes.length : null
           }))}
-          actual={lista.vista}
-          alCambiar={(vista) => lista.cambiar({ view: vista })}
+          actual={lista.vista === 'escalamientos' ? 'escalamientos' : 'porAprobar'}
+          alElegir={(vista) => lista.cambiar({ view: vista })}
         />
       </div>
       {lista.vista === 'escalamientos' ? (

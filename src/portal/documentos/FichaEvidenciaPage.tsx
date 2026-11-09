@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
+import { Lock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -87,9 +88,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
         ficha
         antetitulo={[t('documentos.ficha.tipo'), opcion(evidencia, 'evidence_type')].filter(Boolean).join(' · ')}
         titulo={nombreDeEvidencia(evidencia)}
-        chips={
-          'classification' in evidencia.attributes ? <span className="text-sg-text-secondary">{opcion(evidencia, 'classification')}</span> : <Restringido />
-        }
+        chips={'classification' in evidencia.attributes ? <ClasificacionChip evidencia={evidencia} /> : <Restringido />}
         primaria={
           puedeDescargar ? (
             <Button size="sm" onClick={() => descargar.mutate(evidencia)} disabled={descargar.isPending} aria-busy={descargar.isPending}>
@@ -129,8 +128,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
           <Sustenta evidencia={evidencia} escribe={escribe} />
           <Versiones evidencia={evidencia} />
         </div>
-        <Seccion elemento="aside" etiqueta={t('documentos.ficha.privacidad')} className="space-y-3 text-sm">
-          <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.privacidad')}</h2>
+        <Seccion elemento="aside" titulo={t('documentos.ficha.privacidad')} className="space-y-3 text-sm">
           <dl className="space-y-1">
             <Dato termino={t('documentos.ficha.personas')} valor={atributo(evidencia, 'people_identifiable') === true ? t('comun.si') : t('comun.no')} />
             {atributo(evidencia, 'people_identifiable') === true ? (
@@ -141,7 +139,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
             ) : null}
           </dl>
           <p>{sinConsentimiento ? t('documentos.ficha.externoNo') : t('documentos.ficha.externoSi')}</p>
-          <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.archivo')}</h2>
+          <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.archivo')}</h3>
           <dl className="space-y-1">
             <Dato termino={t('documentos.ficha.archivo')} valor={nombreDeArchivo ?? '—'} />
             <Dato termino={t('documentos.ficha.tipoDeArchivo')} valor={descriptor?.contentType ? <TipoDeArchivo tipo={descriptor.contentType} /> : '—'} />
@@ -172,7 +170,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
               />
             ) : null}
           </dl>
-          <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.datos')}</h2>
+          <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('documentos.ficha.datos')}</h3>
           <dl className="space-y-1">
             <Dato termino={t('evidencias.tituloDelDocumento')} valor={texto(evidencia, 'title') || '—'} />
             <Dato
@@ -198,6 +196,21 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
         />
       </Drawer>
     </ContenedorDePagina>
+  )
+}
+
+// la clasificación como etiqueta de la cabecera (design-system.md §4: nunca solo color): la restringida lleva su candado, porque su
+// archivo pide permiso para descargarse
+function ClasificacionChip({ evidencia }: { evidencia: Registro }) {
+  const restringida = CLASIFICACIONES_RESTRINGIDAS.includes(texto(evidencia, 'classification'))
+  return (
+    <span
+      data-clasificacion={texto(evidencia, 'classification')}
+      className="inline-flex h-6 items-center gap-1 rounded-sg-md border border-sg-border-strong bg-sg-surface px-2 text-sg-caption font-bold tracking-wide text-sg-text-secondary uppercase"
+    >
+      {restringida ? <Lock aria-hidden className="size-3.5" /> : null}
+      {opcion(evidencia, 'classification')}
+    </span>
   )
 }
 
@@ -257,8 +270,7 @@ function VistaPrevia({ evidencia, difuminada }: { evidencia: Registro; difuminad
     }
   }, [pedir, evidencia.id, intento])
   return (
-    <section aria-label={t('documentos.ficha.vistaPrevia')} className="space-y-2">
-      <h2 className="text-sg-h3 font-semibold">{t('documentos.ficha.vistaPrevia')}</h2>
+    <Seccion titulo={t('documentos.ficha.vistaPrevia')} className="space-y-2">
       {difuminada ? <p className="text-sg-caption text-sg-warning">{t('documentos.ficha.difuminada')}</p> : null}
       {fallo ? (
         <FalloDeLectura
@@ -273,7 +285,7 @@ function VistaPrevia({ evidencia, difuminada }: { evidencia: Registro; difuminad
       ) : (
         <Cargando compacto />
       )}
-    </section>
+    </Seccion>
   )
 }
 
@@ -307,8 +319,7 @@ function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolea
   const fallida = legibles.find(({ c }) => c.isError && !c.data)
   const filas = legibles.flatMap(({ objeto, c }) => (c.data?.content ?? []).map((r) => ({ objeto, r })))
   return (
-    <section aria-label={t('documentos.ficha.sustenta')} className="space-y-2">
-      <h2 className="text-sg-h3 font-semibold">{t('documentos.ficha.sustenta')}</h2>
+    <Seccion titulo={t('documentos.ficha.sustenta')} className="space-y-2">
       {fallida ? <FalloDeLectura error={fallida.c.error} alReintentar={() => void fallida.c.refetch()} /> : null}
       {cargando ? (
         <Cargando compacto />
@@ -329,7 +340,7 @@ function Sustenta({ evidencia, escribe }: { evidencia: Registro; escribe: boolea
         </ul>
       )}
       {escribe ? <Vincular evidencia={evidencia} /> : null}
-    </section>
+    </Seccion>
   )
 }
 
@@ -416,8 +427,7 @@ function Versiones({ evidencia }: { evidencia: Registro }) {
   const enlace = (e: Registro) => rutaDeFicha('evidence', e) ?? rutaParaAbrir('evidence', e.id)
   const nombreDeEvidencia = useNombreDeEvidencia()
   return (
-    <section aria-label={t('documentos.ficha.versiones')} className="space-y-2">
-      <h2 className="text-sg-h3 font-semibold">{t('documentos.ficha.versiones')}</h2>
+    <Seccion titulo={t('documentos.ficha.versiones')} className="space-y-2">
       {anterior.isError && !anterior.data ? <FalloDeLectura error={anterior.error} alReintentar={() => void anterior.refetch()} /> : null}
       {posteriores.isError && !posteriores.data ? <FalloDeLectura error={posteriores.error} alReintentar={() => void posteriores.refetch()} /> : null}
       {posteriores.isPending ? <Cargando compacto /> : null}
@@ -440,7 +450,7 @@ function Versiones({ evidencia }: { evidencia: Registro }) {
       {!atributo(evidencia, 'replaces') && posteriores.data?.content.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{t('documentos.ficha.sinVersiones')}</p>
       ) : null}
-    </section>
+    </Seccion>
   )
 }
 

@@ -20,6 +20,7 @@ import { itemsDeAtencion, rutaDeCifra } from './atencionEjecutiva'
 import { ConsultaDeTablero, FiltrosDeTablero, HoraDeCalculo, indicadorDe, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
 import { ListaDeLoCritico } from './LoCritico'
 import { CODIGOS_DE_LAS_TILES, mesesDeTendencia, TOPE_DE_PROYECTOS, type MesDeTendencia, type TableroEjecutivo } from './contratoF8'
+import { MedidorDeMonto } from '../componentes/MedidorDeMonto'
 import { Seccion } from '../componentes/Seccion'
 
 // S51 · revisión ejecutiva de 5 minutos (screens.md, dashboards.md §5.1): qué cambió, qué es crítico, dónde y quién lo atiende,
@@ -361,29 +362,16 @@ function InversionPorMoneda({ indicador, pie }: { indicador: Indicador; pie: str
             {monedas.map((m) => {
               const avance = porcentaje(texto_(m.ejecutado), texto_(m.presupuesto))
               return (
-                <li key={m.moneda} role="group" aria-label={m.moneda} className="space-y-1.5 text-sg-body-sm">
-                  <div className="flex items-baseline justify-between gap-3 text-sg-body font-bold">
-                    <span>{m.moneda}</span>
-                    <span className="tabular-nums">{avance === null ? '—' : `${numeroPe(avance)} %`}</span>
-                  </div>
-                  <div
-                    role="progressbar"
-                    aria-label={t('tablerosF8.ejecutivo.ejecutadoDe', { moneda: m.moneda })}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={avance ?? undefined}
-                    aria-valuetext={avance === null ? '—' : `${numeroPe(avance)} %`}
-                    className="h-4 overflow-hidden rounded-sg-xs border border-sg-border-strong bg-sg-surface-sunken"
-                  >
-                    <div className="h-full bg-sg-primary" style={{ width: `${Math.min(100, avance ?? 0)}%` }} />
-                  </div>
-                  <p className="tabular-nums text-sg-text">
-                    {t('tablerosF8.ejecutivo.ejecutadoDePresupuesto', {
-                      ejecutado: montoPe(texto_(m.ejecutado), m.moneda),
-                      presupuesto: montoPe(texto_(m.presupuesto), m.moneda)
-                    })}
-                  </p>
-                  <p className="tabular-nums text-sg-text-secondary">{t('tablerosF8.ejecutivo.tope', { monto: montoPe(texto_(m.tope), m.moneda) })}</p>
+                <li key={m.moneda}>
+                  <MedidorDeMonto moneda={m.moneda} avance={avance} etiqueta={t('tablerosF8.ejecutivo.ejecutadoDe', { moneda: m.moneda })}>
+                    <p className="tabular-nums text-sg-text">
+                      {t('tablerosF8.ejecutivo.ejecutadoDePresupuesto', {
+                        ejecutado: montoPe(texto_(m.ejecutado), m.moneda),
+                        presupuesto: montoPe(texto_(m.presupuesto), m.moneda)
+                      })}
+                    </p>
+                    <p className="tabular-nums text-sg-text-secondary">{t('tablerosF8.ejecutivo.tope', { monto: montoPe(texto_(m.tope), m.moneda) })}</p>
+                  </MedidorDeMonto>
                 </li>
               )
             })}
