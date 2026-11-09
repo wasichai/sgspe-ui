@@ -87,7 +87,12 @@ el idioma:
 - **Mapa y gráficos:** MapLibre 6.10.0 (`src/portal/mapa`) y ECharts 6 (`src/portal/graficos`) bajan con el primer mapa o
   gráfico; ECharts pinta con los tokens del tema y la familia de `--font-sans`; las capas del mapa, con la paleta compartida
   (`mapa/paleta.json`) y, las que no tienen SLD y el calor, con los tokens cartográficos `--sg-lyr-*`, `--sg-map-*` y
-  `--sg-heat-*` (`mapa/estilos.ts`), que siguen al tema.
+  `--sg-heat-*` (`mapa/estilos.ts`), que siguen al tema. Los rótulos (halo `map-ground`) usan glifos PBF de Public Sans
+  versionados en `public/glifos/` (semibold, bold, extrabold y semibold cursiva; latín, latín extendido, modificadores y
+  puntuación), servidos desde el mismo origen con su licencia OFL (`OFL.txt`). Se regeneran con `node scripts/glifos.mjs`
+  (fontnik, dependencia de desarrollo con binarios N-API, desde los WOFF de `@fontsource/public-sans`) solo si cambian los
+  pesos, los rangos o la fuente; la salida es reproducible byte a byte. Los íconos de LYR-17, LYR-19 y LYR-21 no tienen
+  sprite: `mapa/simbolos.ts` los dibuja con los tokens del tema y `MapaImpl` los entrega con `addImage`.
 - **Idioma:** español por defecto e inglés (`src/portal/textos/`), con números y fechas es-PE. La elección se comparte con
   `/admin`: se guarda en `sgspe.lang` y en las preferencias del usuario (`useSetLocale` de core), y `<html lang>` la sigue
   en las dos apps (`es-PE` para el español).

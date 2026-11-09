@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router'
 import { texto, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { PERU, useCapas, type Coleccion } from './api'
-import { capa, conPostura, dibujoDe } from './capas'
+import { capa, dibujoDe, paraElMapa } from './capas'
 import { Mapa, type CapaDibujada } from './Mapa'
 
 // la vista «Lista + mapa» (préstamo de B, design-system.md §5.3): la lista a la izquierda y el mapa a la derecha (40 % del ancho,
@@ -103,7 +103,7 @@ export function ListaConMapa({
   const datos = estado?.datos
   const filtrados = useMemo<Coleccion | null>(
     () =>
-      datos ? conPostura(idDeCapa, { ...datos, features: unoPorRegistro(datos.features.filter((f) => enLaLista.has(String(f.properties.__id ?? '')))) }) : null,
+      datos ? paraElMapa(idDeCapa, { ...datos, features: unoPorRegistro(datos.features.filter((f) => enLaLista.has(String(f.properties.__id ?? '')))) }) : null,
     [datos, enLaLista, idDeCapa]
   )
   const dibujados = new Set((filtrados?.features ?? []).map((f) => String(f.properties.__id)))

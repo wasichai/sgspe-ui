@@ -6,6 +6,7 @@ import {
   setWorkerUrl,
   type ExpressionSpecification,
   type GeoJSONSource,
+  type LayerSpecification,
   type MapLayerMouseEvent,
   type MapMouseEvent,
   type StyleSpecification
@@ -13,9 +14,11 @@ import {
 import { WMS_TILE_SIZE, wmsTileUrl, type BasemapSpec } from '@wasichai/gis'
 import { useEffect, useRef, useState } from 'react'
 import { destinoDe, encuadreDeGeometrias, idDeElemento, MIEMBRO, PERU, type Coleccion, type Encuadre } from './api'
+import { PREFIJO_DEL_ANILLO } from './capas'
 import { alCambiarTema, colorDe } from './colores'
-import type { CapaDibujada, MapaImplProps } from './Mapa'
+import type { CapaDibujada, MapaImplProps, Rotulo } from './Mapa'
 import { SIN_MAPA_BASE } from './mapaBase'
+import { anilloDe, DENSIDAD, idDelCuadrado, idDelRombo, imagenesFijas, radioDe, SIN_NIVEL, type Imagen, type Simbolo } from './simbolos'
 import { trabajadorDelMapa } from './trabajador'
 
 // el mapa MapLibre de MapaProps: una fuente GeoJSON por capa con tres dibujos (relleno, línea y punto), la selección con
@@ -29,14 +32,27 @@ const ES_MIEMBRO: ExpressionSpecification = ['==', ['get', '__object'], MIEMBRO]
 const NO_ES_MIEMBRO: ExpressionSpecification = ['!=', ['get', '__object'], MIEMBRO]
 const DE_MIEMBROS = ['miembro-relleno', 'miembro-linea', 'miembro-punto'] as const
 
+// los glifos de los rótulos (design-system.md §3.3): PBF de Public Sans generados por scripts/glifos.mjs y servidos desde el
+// propio origen (public/glifos, CSP connect-src 'self'). MapLibre pide una URL absoluta con {fontstack} y {range} sin codificar
+export const urlDeGlifos = (): string => `${window.location.origin}${import.meta.env.BASE_URL}glifos/{fontstack}/{range}.pbf`
+const FUENTE = {
+  semibold: 'public-sans-semibold',
+  bold: 'public-sans-bold',
+  cursiva: 'public-sans-semibold-italic',
+  // el rótulo de lo elegido, en 14 px 800
+  elegido: 'public-sans-extrabold'
+} as const
+
 // el estilo MapLibre del fondo (spec F6 §3.3): un estilo del proveedor tal cual; un ráster sobre el fondo apagado; sin mapa base,
-// solo el fondo apagado del token --sg-map-ground, sin teselas externas (ASM-048)
-export function estiloDe(basemap: BasemapSpec, fondo: string): StyleSpecification | string {
+// solo el fondo apagado del token --sg-map-ground, sin teselas externas (ASM-048). los dos últimos llevan los glifos propios;
+// el del proveedor trae los suyos (sin ellos, MapaImpl pone los propios al cargar)
+export function estiloDe(basemap: BasemapSpec, fondo: string, glifos: string): StyleSpecification | string {
   if (basemap.type === 'style') return basemap.url
   const apagado = { id: 'fondo', type: 'background' as const, paint: { 'background-color': fondo } }
-  if (basemap.type === 'none') return { version: 8, sources: {}, layers: [apagado] }
+  if (basemap.type === 'none') return { version: 8, glyphs: glifos, sources: {}, layers: [apagado] }
   return {
     version: 8,
+    glyphs: glifos,
     sources: {
       basemap: {
         type: 'raster',
@@ -69,6 +85,46 @@ const pinturaDelPunto = (capa: CapaDibujada) => {
   }
 }
 
+// con símbolo (las capas de gestión, simbolos.ts), el círculo no se ve: queda para elegir y para el anillo de 3 px en focus de
+// la selección, por fuera del símbolo (design-system.md §3.3)
+const pinturaDelPuntoDe = (capa: CapaDibujada) =>
+  capa.simbolo ? { 'circle-color': colorDe('--sg-focus'), 'circle-stroke-color': colorDe('--sg-focus'), 'circle-stroke-width': 3 } : pinturaDelPunto(capa)
+const radioDelPunto = (capa: CapaDibujada, seleccion: string | null | undefined): ExpressionSpecification => {
+  const radio = capa.simbolo ? radioDe(capa.simbolo) : 5
+  return ['case', elegido(seleccion), capa.simbolo ? radio + 3 : 8, radio]
+}
+
+// la imagen de cada elemento: el cuadrado de la capa, el rombo de su nivel o el anillo de sus conteos (__anillo, paraElMapa)
+const imagenDelSimbolo = (capa: string, simbolo: Simbolo): ExpressionSpecification | string => {
+  if (simbolo.forma === 'cuadrado') return idDelCuadrado(capa)
+  if (simbolo.forma === 'anillo') return ['to-string', ['coalesce', ['get', '__anillo'], `${PREFIJO_DEL_ANILLO}0`]]
+  const pares = Object.keys(simbolo.niveles).flatMap((nivel) => [nivel, idDelRombo(capa, nivel)])
+  return ['match', ['to-string', ['get', simbolo.campo]], ...pares, idDelRombo(capa, SIN_NIVEL)] as ExpressionSpecification
+}
+const conteoDe = (simbolo: Simbolo): string | null => (simbolo.forma === 'rombo' ? null : simbolo.conteo)
+
+// el halo de las etiquetas: map-ground de 4 px (§3.3); MapLibre lo recorta a un cuarto del tamaño del texto
+const ANCHO_DEL_HALO = 4
+const pinturaDelTexto = (color: string, halo = ANCHO_DEL_HALO) => ({
+  'text-color': colorDe(color),
+  'text-halo-color': colorDe('--sg-map-ground'),
+  'text-halo-width': halo
+})
+
+function repintarTexto(instancia: MapLibreMap, capa: string, color: string) {
+  instancia.setPaintProperty(capa, 'text-color', colorDe(color))
+  instancia.setPaintProperty(capa, 'text-halo-color', colorDe('--sg-map-ground'))
+}
+
+// la letra y el tamaño de un rótulo: el de lo elegido, en 14 px 800
+const fuenteDelRotulo = (rotulo: Rotulo, seleccion: string | null | undefined): ExpressionSpecification => [
+  'case',
+  elegido(seleccion),
+  ['literal', [FUENTE.elegido]],
+  ['literal', [rotulo.cursiva ? FUENTE.cursiva : FUENTE[rotulo.peso]]]
+]
+const tamanoDelRotulo = (rotulo: Rotulo, seleccion: string | null | undefined): ExpressionSpecification => ['case', elegido(seleccion), 14, rotulo.tamano]
+
 // lo elegido: el registro o el miembro que dibuja ese lugar
 const elegido = (seleccion: string | null | undefined): ExpressionSpecification => [
   'any',
@@ -93,22 +149,49 @@ const rampaDeCalor = (colores: readonly string[]): ExpressionSpecification =>
 // la opacidad de cada dibujo de una capa: una invisible (decisión 7 del plan 6.3) deja ver solo el borde de lo elegido, sobre
 // la tesela WMS que la dibuja
 const soloLoElegido = (seleccion: string | null | undefined): ExpressionSpecification => ['case', elegido(seleccion), 1, 0]
+// la de un símbolo, que dibuja sus puntos, deja ver del círculo solo la selección; una invisible tampoco dibuja su rótulo (lo trae
+// la tesela)
 function opacidadesDe(capa: CapaDibujada, seleccion: string | null | undefined) {
   const invisible = capa.invisible === true
+  const sinCirculo = invisible || Boolean(capa.simbolo)
   return {
     relleno: invisible ? 0 : (capa.relleno ?? 0.15),
     linea: invisible ? soloLoElegido(seleccion) : 1,
-    punto: invisible ? 0 : 1,
-    bordeDelPunto: invisible ? soloLoElegido(seleccion) : 1
+    punto: sinCirculo ? 0 : 1,
+    bordeDelPunto: sinCirculo ? soloLoElegido(seleccion) : 1,
+    rotulo: invisible ? 0 : 1
   }
 }
 
-function pintarVisibilidad(instancia: MapLibreMap, capa: CapaDibujada, seleccion: string | null | undefined) {
+function pintarVisibilidad(instancia: MapLibreMap, capa: CapaDibujada, seleccion: string | null | undefined, conRotulo: boolean) {
   const o = opacidadesDe(capa, seleccion)
   instancia.setPaintProperty(`${capa.id}-relleno`, 'fill-opacity', o.relleno)
   instancia.setPaintProperty(`${capa.id}-linea`, 'line-opacity', o.linea)
   instancia.setPaintProperty(`${capa.id}-punto`, 'circle-opacity', o.punto)
   instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-opacity', o.bordeDelPunto)
+  if (conRotulo) instancia.setPaintProperty(`${capa.id}-rotulo`, 'text-opacity', o.rotulo)
+}
+
+// el rótulo de una capa (§3.3): a la derecha de un punto, al centro de un polígono o a lo largo de una línea, con halo
+function capaDeRotulo(capa: CapaDibujada, rotulo: Rotulo, filtro: ExpressionSpecification, seleccion: string | null | undefined): LayerSpecification {
+  const enLinea = rotulo.colocacion === 'linea'
+  const enPunto: ExpressionSpecification = ['==', ['geometry-type'], 'Point']
+  return {
+    id: `${capa.id}-rotulo`,
+    type: 'symbol',
+    source: capa.id,
+    filter: filtro,
+    layout: {
+      'text-field': ['to-string', ['coalesce', ['get', rotulo.campo], '']],
+      'text-font': fuenteDelRotulo(rotulo, seleccion),
+      'text-size': tamanoDelRotulo(rotulo, seleccion),
+      ...(rotulo.mayusculas ? { 'text-transform': 'uppercase', 'text-letter-spacing': 0.1 } : {}),
+      ...(enLinea
+        ? { 'symbol-placement': 'line', 'text-max-angle': 30, 'symbol-spacing': 320 }
+        : { 'text-anchor': ['case', enPunto, 'left', 'center'], 'text-offset': ['case', enPunto, ['literal', [0.9, 0]], ['literal', [0, 0]]] })
+    },
+    paint: { ...pinturaDelTexto(rotulo.color), 'text-opacity': opacidadesDe(capa, seleccion).rotulo }
+  } as LayerSpecification
 }
 
 const limites = ([oeste, sur, este, norte]: Encuadre): [[number, number], [number, number]] => [
@@ -179,6 +262,14 @@ export default function MapaImpl({
   const fijada = useRef(false)
   // el mapa nació con la cámara del anterior («Sin fondo» o el mapa base que llega): no se vuelve a encuadrar
   const desdeCamara = useRef(false)
+  // las capas de texto y símbolos de cada capa (rótulo y símbolo), que van encima de todos los dibujos
+  const encima = useRef(new globalThis.Map<string, string[]>())
+  // los íconos puestos y cómo volver a dibujarlos con el tema activo
+  const imagenes = useRef(new globalThis.Map<string, () => Imagen | null>())
+  // los colores del anillo de LYR-17, para dibujar el que MapLibre pida
+  const coloresDelAnillo = useRef<readonly string[]>([])
+  // hay glifos propios: sin ellos (un estilo del proveedor con los suyos) no se dibuja texto
+  const conTexto = useRef(false)
 
   useEffect(() => {
     if (!contenedor.current) return
@@ -191,7 +282,7 @@ export default function MapaImpl({
     encuadrado.current = previa !== null
     const instancia = new MapLibreMap({
       container: contenedor.current,
-      style: estiloDe(basemap, colorDe('--sg-map-ground')),
+      style: estiloDe(basemap, colorDe('--sg-map-ground'), urlDeGlifos()),
       center: previa?.centro ?? [-75.5, -9.5],
       zoom: previa?.zoom ?? 5,
       attributionControl: { compact: true },
@@ -216,8 +307,19 @@ export default function MapaImpl({
       const estado = typeof e.error?.status === 'number' ? e.error.status : null
       ultimo.current.alFallarWms?.(fuente.slice(PREFIJO_WMS.length), estado)
     })
+    // el anillo de una localidad con otro reparto de posturas: se dibuja cuando MapLibre lo pide
+    instancia.setMissingStyleImageResolver((id) => {
+      const dibujar = () => anilloDe(id, coloresDelAnillo.current)
+      const imagen = dibujar()
+      if (!imagen || instancia.hasImage(id)) return
+      instancia.addImage(id, imagen, { pixelRatio: DENSIDAD })
+      imagenes.current.set(id, dibujar)
+    })
     instancia.on('load', () => {
       if (mapa.current !== instancia) return
+      // un estilo del proveedor sin glifos recibe los propios; con los suyos, los rótulos y los conteos no se dibujan
+      if (!instancia.getGlyphs()) instancia.setGlyphs(urlDeGlifos())
+      conTexto.current = instancia.getGlyphs() === urlDeGlifos()
       const informar = () => {
         const centro = instancia.getCenter()
         ultimo.current.alMoverCamara?.({ centro: [centro.lng, centro.lat], zoom: instancia.getZoom() })
@@ -246,6 +348,8 @@ export default function MapaImpl({
       dibujadas.current.clear()
       conMiembros.current.clear()
       conClic.current.clear()
+      encima.current.clear()
+      imagenes.current.clear()
       puestos.current.clear()
       conWms.current.clear()
       invisibles.current.clear()
@@ -273,6 +377,20 @@ export default function MapaImpl({
     ultimo.current.alMoverVista(vistaDe(instancia))
   }, [listo, claveDeLaVista])
 
+  // la primera capa de texto o de símbolos: los dibujos de una capa nueva van debajo de ella
+  const debajoDelTexto = (): string | undefined => [...encima.current.values()].flat()[0]
+  const conRotulo = (id: string): boolean => (encima.current.get(id) ?? []).includes(`${id}-rotulo`)
+  // los íconos fijos de un símbolo: se agregan o, si ya están (otra capa con el mismo símbolo), se redibujan
+  const ponerImagenes = (instancia: MapLibreMap, capa: string, color: string, simbolo: Simbolo) => {
+    if (simbolo.forma === 'anillo') coloresDelAnillo.current = simbolo.colores
+    const dibujar = () => imagenesFijas(capa, color, simbolo)
+    for (const [id, imagen] of Object.entries(dibujar())) {
+      if (instancia.hasImage(id)) instancia.updateImage(id, imagen)
+      else instancia.addImage(id, imagen, { pixelRatio: DENSIDAD })
+      imagenes.current.set(id, () => dibujar()[id] ?? null)
+    }
+  }
+
   // las capas: se agregan las nuevas, se actualizan sus datos y se quitan las que se apagaron
   const clave = capas.map((c) => `${c.id}:${identidad(c.datos)}:${c.invisible ? 1 : 0}`).join('|')
   useEffect(() => {
@@ -282,8 +400,10 @@ export default function MapaImpl({
     for (const id of [...dibujadas.current]) {
       if (ids.has(id)) continue
       for (const sufijo of ['relleno', 'linea', 'punto', ...(conMiembros.current.has(id) ? DE_MIEMBROS : [])]) instancia.removeLayer(`${id}-${sufijo}`)
+      for (const arriba of encima.current.get(id) ?? []) instancia.removeLayer(arriba)
       instancia.removeSource(id)
       dibujadas.current.delete(id)
+      encima.current.delete(id)
       conMiembros.current.delete(id)
       puestos.current.delete(id)
       invisibles.current.delete(id)
@@ -298,80 +418,134 @@ export default function MapaImpl({
         }
         // se volvió invisible (llegó el WMS) o visible (el WMS se cayó): se repinta sin dibujarla de nuevo
         if (invisibles.current.has(capa.id) !== (capa.invisible === true)) {
-          pintarVisibilidad(instancia, capa, seleccion)
+          pintarVisibilidad(instancia, capa, seleccion, conRotulo(capa.id))
           if (capa.invisible) invisibles.current.add(capa.id)
           else invisibles.current.delete(capa.id)
         }
         continue
       }
       const opacidad = opacidadesDe(capa, seleccion)
+      // los dibujos van debajo de los rótulos y los símbolos de todas las capas
+      const abajo = debajoDelTexto()
       puestos.current.set(capa.id, capa.datos)
       // con miembros, los dibujos de la capa son solo de sus registros y los miembros van en los suyos
       const propios = (filtro: ExpressionSpecification): ExpressionSpecification => (capa.miembros ? ['all', filtro, NO_ES_MIEMBRO] : filtro)
       instancia.addSource(capa.id, { type: 'geojson', data: capa.datos as never })
-      instancia.addLayer({
-        id: `${capa.id}-relleno`,
-        type: 'fill',
-        source: capa.id,
-        filter: propios(POLIGONOS),
-        paint: { 'fill-color': colorDe(capa.colorDeRelleno ?? capa.color), 'fill-opacity': opacidad.relleno }
-      })
-      instancia.addLayer({
-        id: `${capa.id}-linea`,
-        type: 'line',
-        source: capa.id,
-        filter: propios(LINEAS),
-        paint: {
-          'line-color': color,
-          'line-width': ['case', elegido(seleccion), 2.5, 1.2],
-          'line-opacity': opacidad.linea,
-          ...(capa.trazo ? { 'line-dasharray': capa.trazo } : {})
-        }
-      })
-      instancia.addLayer({
-        id: `${capa.id}-punto`,
-        type: 'circle',
-        source: capa.id,
-        filter: propios(PUNTOS),
-        paint: {
-          ...pinturaDelPunto(capa),
-          'circle-radius': ['case', elegido(seleccion), 8, 5],
-          'circle-opacity': opacidad.punto,
-          'circle-stroke-opacity': opacidad.bordeDelPunto
-        }
-      })
-      if (capa.miembros) {
-        instancia.addLayer({
-          id: `${capa.id}-miembro-relleno`,
+      instancia.addLayer(
+        {
+          id: `${capa.id}-relleno`,
           type: 'fill',
           source: capa.id,
-          filter: ['all', POLIGONOS, ES_MIEMBRO],
-          paint: { 'fill-color': color, 'fill-opacity': 0.06 }
-        })
-        instancia.addLayer({
-          id: `${capa.id}-miembro-linea`,
+          filter: propios(POLIGONOS),
+          paint: { 'fill-color': colorDe(capa.colorDeRelleno ?? capa.color), 'fill-opacity': opacidad.relleno }
+        },
+        abajo
+      )
+      instancia.addLayer(
+        {
+          id: `${capa.id}-linea`,
           type: 'line',
           source: capa.id,
-          filter: ['all', LINEAS, ES_MIEMBRO],
-          paint: { 'line-color': color, 'line-dasharray': [2, 2], 'line-width': ['case', elegido(seleccion), 2.5, 1.2] }
-        })
-        instancia.addLayer({
-          id: `${capa.id}-miembro-punto`,
+          filter: propios(LINEAS),
+          paint: {
+            'line-color': color,
+            'line-width': ['case', elegido(seleccion), 2.5, 1.2],
+            'line-opacity': opacidad.linea,
+            ...(capa.trazo ? { 'line-dasharray': capa.trazo } : {})
+          }
+        },
+        abajo
+      )
+      instancia.addLayer(
+        {
+          id: `${capa.id}-punto`,
           type: 'circle',
           source: capa.id,
-          filter: ['all', PUNTOS, ES_MIEMBRO],
+          filter: propios(PUNTOS),
           paint: {
-            'circle-color': colorDe('--sg-surface'),
-            'circle-radius': ['case', elegido(seleccion), 8, 5],
-            'circle-stroke-color': color,
-            'circle-stroke-width': 2
+            ...pinturaDelPuntoDe(capa),
+            'circle-radius': radioDelPunto(capa, seleccion),
+            'circle-opacity': opacidad.punto,
+            'circle-stroke-opacity': opacidad.bordeDelPunto
           }
-        })
+        },
+        abajo
+      )
+      if (capa.miembros) {
+        instancia.addLayer(
+          {
+            id: `${capa.id}-miembro-relleno`,
+            type: 'fill',
+            source: capa.id,
+            filter: ['all', POLIGONOS, ES_MIEMBRO],
+            paint: { 'fill-color': color, 'fill-opacity': 0.06 }
+          },
+          abajo
+        )
+        instancia.addLayer(
+          {
+            id: `${capa.id}-miembro-linea`,
+            type: 'line',
+            source: capa.id,
+            filter: ['all', LINEAS, ES_MIEMBRO],
+            paint: { 'line-color': color, 'line-dasharray': [2, 2], 'line-width': ['case', elegido(seleccion), 2.5, 1.2] }
+          },
+          abajo
+        )
+        instancia.addLayer(
+          {
+            id: `${capa.id}-miembro-punto`,
+            type: 'circle',
+            source: capa.id,
+            filter: ['all', PUNTOS, ES_MIEMBRO],
+            paint: {
+              'circle-color': colorDe('--sg-surface'),
+              'circle-radius': ['case', elegido(seleccion), 8, 5],
+              'circle-stroke-color': color,
+              'circle-stroke-width': 2
+            }
+          },
+          abajo
+        )
         conMiembros.current.add(capa.id)
       }
+      const arriba: string[] = []
+      if (capa.simbolo) {
+        ponerImagenes(instancia, capa.id, capa.color, capa.simbolo)
+        const conteo = conTexto.current ? conteoDe(capa.simbolo) : null
+        instancia.addLayer({
+          id: `${capa.id}-simbolo`,
+          type: 'symbol',
+          source: capa.id,
+          filter: propios(PUNTOS),
+          layout: {
+            'icon-image': imagenDelSimbolo(capa.id, capa.simbolo),
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            ...(conteo
+              ? {
+                  'text-field': ['to-string', ['coalesce', ['get', conteo], '']],
+                  'text-font': [FUENTE.bold],
+                  'text-size': 11,
+                  'text-allow-overlap': true,
+                  'text-ignore-placement': true
+                }
+              : {})
+          },
+          // el conteo con un halo fino: va dentro del símbolo
+          paint: conteo ? pinturaDelTexto('--sg-text', 2) : {}
+        } as LayerSpecification)
+        arriba.push(`${capa.id}-simbolo`)
+      }
+      if (capa.rotulo && conTexto.current) {
+        const filtro = capa.rotulo.colocacion === 'linea' ? LINEAS : (['any', PUNTOS, POLIGONOS] as ExpressionSpecification)
+        instancia.addLayer(capaDeRotulo(capa, capa.rotulo, propios(filtro), seleccion))
+        arriba.push(`${capa.id}-rotulo`)
+      }
+      if (arriba.length > 0) encima.current.set(capa.id, arriba)
       if (capa.seleccionable && !conClic.current.has(capa.id)) {
         conClic.current.add(capa.id)
-        for (const sufijo of ['relleno', 'punto', ...(capa.miembros ? ['miembro-relleno', 'miembro-punto'] : [])]) {
+        for (const sufijo of ['relleno', 'punto', ...(capa.simbolo ? ['simbolo'] : []), ...(capa.miembros ? ['miembro-relleno', 'miembro-punto'] : [])]) {
           instancia.on('click', `${capa.id}-${sufijo}`, (e: MapLayerMouseEvent) => {
             const destino = destinoDe(e.features?.[0]?.properties)
             if (destino) ultimo.current.alSeleccionar?.(destino.id, capa.id, destino.objeto)
@@ -396,13 +570,19 @@ export default function MapaImpl({
     const instancia = mapa.current
     if (!instancia || !listo) return
     for (const id of dibujadas.current) {
+      const capa = capas.find((c) => c.id === id)
       for (const prefijo of ['', ...(conMiembros.current.has(id) ? ['miembro-'] : [])]) {
         instancia.setPaintProperty(`${id}-${prefijo}linea`, 'line-width', ['case', elegido(seleccion), 2.5, 1.2])
-        instancia.setPaintProperty(`${id}-${prefijo}punto`, 'circle-radius', ['case', elegido(seleccion), 8, 5])
+        const radio: ExpressionSpecification = capa && prefijo === '' ? radioDelPunto(capa, seleccion) : ['case', elegido(seleccion), 8, 5]
+        instancia.setPaintProperty(`${id}-${prefijo}punto`, 'circle-radius', radio)
       }
-      // una capa invisible muestra solo el borde de lo elegido
-      const capa = invisibles.current.has(id) ? capas.find((c) => c.id === id) : undefined
-      if (capa) pintarVisibilidad(instancia, capa, seleccion)
+      // una capa invisible o con símbolo muestra del círculo solo el anillo de lo elegido
+      if (capa && (invisibles.current.has(id) || capa.simbolo)) pintarVisibilidad(instancia, capa, seleccion, conRotulo(id))
+      // el rótulo de lo elegido, en 14 px 800
+      if (capa?.rotulo && conRotulo(id)) {
+        instancia.setLayoutProperty(`${id}-rotulo`, 'text-font', fuenteDelRotulo(capa.rotulo, seleccion))
+        instancia.setLayoutProperty(`${id}-rotulo`, 'text-size', tamanoDelRotulo(capa.rotulo, seleccion))
+      }
     }
   }, [listo, seleccion, clave])
 
@@ -494,6 +674,11 @@ export default function MapaImpl({
       if (!instancia) return
       // el fondo apagado (si el estilo no es del proveedor) y el trazo de los puntos también son tokens
       if (basemap.type !== 'style') instancia.setPaintProperty('fondo', 'background-color', colorDe('--sg-map-ground'))
+      // los íconos de los símbolos se vuelven a dibujar con los tokens nuevos
+      for (const [id, dibujar] of imagenes.current) {
+        const imagen = dibujar()
+        if (imagen && instancia.hasImage(id)) instancia.updateImage(id, imagen)
+      }
       // la rampa del calor (--sg-heat-*) también cambia con el tema
       if (calor && instancia.getSource(CALOR)) instancia.setPaintProperty(CALOR, 'heatmap-color', rampaDeCalor(calor.colores))
       for (const capa of capas) {
@@ -501,9 +686,17 @@ export default function MapaImpl({
         const color = colorDe(capa.color)
         instancia.setPaintProperty(`${capa.id}-relleno`, 'fill-color', colorDe(capa.colorDeRelleno ?? capa.color))
         instancia.setPaintProperty(`${capa.id}-linea`, 'line-color', color)
-        const punto = pinturaDelPunto(capa)
+        const punto = pinturaDelPuntoDe(capa)
         instancia.setPaintProperty(`${capa.id}-punto`, 'circle-color', punto['circle-color'])
         instancia.setPaintProperty(`${capa.id}-punto`, 'circle-stroke-color', punto['circle-stroke-color'])
+        // los rótulos y los conteos con su color y su halo del tema
+        const arriba = encima.current.get(capa.id) ?? []
+        if (capa.rotulo && arriba.includes(`${capa.id}-rotulo`)) {
+          repintarTexto(instancia, `${capa.id}-rotulo`, capa.rotulo.color)
+        }
+        if (capa.simbolo && conteoDe(capa.simbolo) && arriba.includes(`${capa.id}-simbolo`) && conTexto.current) {
+          repintarTexto(instancia, `${capa.id}-simbolo`, '--sg-text')
+        }
         if (conMiembros.current.has(capa.id)) {
           instancia.setPaintProperty(`${capa.id}-miembro-relleno`, 'fill-color', color)
           instancia.setPaintProperty(`${capa.id}-miembro-linea`, 'line-color', color)
