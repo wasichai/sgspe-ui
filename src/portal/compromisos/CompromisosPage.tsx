@@ -63,6 +63,8 @@ const GRUPOS: [string, string | null][] = [
   ['alDia', 'AL DIA'],
   ['sinPlazo', null]
 ]
+// S08: «Al día» deja a la vista sus dos primeras filas de la página cuando hay algo más urgente en ella
+const AL_DIA_A_LA_VISTA = 2
 const grupoDe = (c: Registro): string => GRUPOS.find(([, valor]) => valor !== null && atributo(c, 'deadline_status') === valor)?.[0] ?? 'sinPlazo'
 
 export function enVista(vista: string, c: Registro, usuario: string | undefined): boolean {
@@ -245,13 +247,39 @@ export function CompromisosPage() {
     }
   }
   // agrupados por situación (S08) solo con el orden por vencimiento: la página la da el servidor, así que se agrupan las filas de
-  // esta página por la situación que ya trae cada una, sin conteos que el servidor no da (el de cada grupo es el de la página, y la
-  // nota al pie lo dice). con otro orden, la lista sin grupos
+  // esta página por la situación que ya trae cada una. el total de cada grupo es el de la vista filtrada (#124): el servidor lo
+  // cuenta con la consulta de la lista más deadline_status, así que la lectura por proyecto es la misma (lo que la cuenta no lee no
+  // cuenta); «Sin plazo en curso» es el resto del total. con el grupo de interés, se cuentan aquí los relacionados filtrados. sin
+  // alguno de esos conteos, cada grupo dice sus filas de la página y la nota al pie lo dice. con otro orden, la lista sin grupos
   const agrupada = orden.columna === 'vence'
+  const consultaDeSituacion = (valor: string): Parametros | null =>
+    actual && (actual.deadline_status === undefined || actual.deadline_status === valor) ? { ...actual, deadline_status: valor } : null
+  const porSituacion = useConteos(
+    'commitment',
+    Object.fromEntries(GRUPOS.flatMap(([clave, valor]) => (valor === null ? [] : [[clave, consultaDeSituacion(valor)]]))),
+    servidor && agrupada && actual !== null
+  )
+  const totales: Record<string, number> | null = (() => {
+    if (grupo)
+      return delGrupo.data && !truncado ? Object.fromEntries(GRUPOS.map(([clave]) => [clave, filtrados.filter((c) => grupoDe(c) === clave).length])) : null
+    const contados = GRUPOS.flatMap(([clave, valor]) => (valor === null ? [] : [porSituacion[clave]]))
+    if (total === null || contados.some((n) => n === null)) return null
+    const conPlazo = GRUPOS.flatMap(([clave, valor]) => (valor === null ? [] : [[clave, porSituacion[clave] as number] as const]))
+    const resto = total - conPlazo.reduce((s, [, n]) => s + n, 0)
+    return resto < 0 ? null : { ...Object.fromEntries(conPlazo), sinPlazo: resto }
+  })()
+  const filasDe = (clave: string) => filas.filter((c) => grupoDe(c) === clave)
+  const masUrgentes = filasDe('vencidos').length + filasDe('porVencer').length > 0
   const grupos: GrupoDeFilas<Registro>[] | undefined = agrupada
-    ? GRUPOS.map(([clave]) => ({ clave, titulo: t(`compromisos.grupos.${clave}`), filas: filas.filter((c) => grupoDe(c) === clave) })).filter(
-        (g) => g.filas.length > 0
-      )
+    ? GRUPOS.map(([clave]) => ({
+        clave,
+        titulo: t(`compromisos.grupos.${clave}`),
+        filas: filasDe(clave),
+        ...(totales ? { conteo: totales[clave] } : {}),
+        ...(totales && clave === 'alDia' && masUrgentes
+          ? { aLaVista: AL_DIA_A_LA_VISTA, mostrarMas: (n: number) => t('compromisos.mostrarMasAlDia', { count: n }) }
+          : {})
+      })).filter((g) => g.filas.length > 0)
     : undefined
   const vacioPorFiltros = (
     <Vacio
@@ -434,7 +462,7 @@ export function CompromisosPage() {
                   notaAlPie={
                     <>
                       <span>{t('compromisos.notaAlPie')}</span>
-                      {grupos ? <span> {t('compromisos.agrupadosEnLaPagina')}</span> : null}
+                      {grupos ? <span> {t(totales ? 'compromisos.totalesDeLaVista' : 'compromisos.agrupadosEnLaPagina')}</span> : null}
                     </>
                   }
                 />

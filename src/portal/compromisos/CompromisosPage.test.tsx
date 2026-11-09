@@ -431,11 +431,80 @@ describe('S28 · lista de compromisos', () => {
     expect(within(tabla).getByText(/^(US\$|USD) 1,200\.00$/)).toBeInTheDocument()
     expect(within(tabla).queryByText(/\b0\.00$/)).not.toBeInTheDocument()
     expect(screen.getByText(/las monedas no se suman; «—» = sin monto registrado/)).toBeInTheDocument()
-    expect(screen.getByText('Agrupados por situación en esta página.')).toBeInTheDocument()
+    // #124: el total de cada grupo lo cuenta el servidor; aquí la vista entera cabe en la página
+    expect(await screen.findByText('Cada grupo dice su total en la vista; las filas son las de esta página.')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Orden' }), 'codigo:asc')
     await waitFor(() => expect(within(screen.getByRole('table', { name: 'Compromisos' })).queryAllByRole('rowheader')).toHaveLength(0))
-    expect(screen.queryByText('Agrupados por situación en esta página.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Cada grupo dice su total/)).not.toBeInTheDocument()
     expect(screen.getByText(/«—» = sin monto registrado/)).toBeInTheDocument()
+  })
+
+  // #124 (S08): el total de cada situación es el de la vista filtrada, contado por el servidor con la misma consulta que la lista
+  // (la misma lectura por proyecto: lo que la cuenta no lee no cuenta), no las filas de la página; «Al día» muestra sus dos
+  // primeras filas y se despliega con «Mostrar N compromisos más al día», N las que la página trae ocultas
+  const muchos = () => {
+    const uno = (n: number, situacion: string, vence: string) =>
+      registro(
+        `m${n}`,
+        { ...C1.attributes, code: `C-${String(100 + n)}`, title: `Compromiso ${n}`, deadline_status: situacion, due_date: vence },
+        { state: 'in_progress' }
+      )
+    return [
+      uno(1, 'VENCIDO', '2026-09-01'),
+      uno(2, 'VENCIDO', '2026-09-02'),
+      uno(3, 'POR VENCER', '2026-11-12'),
+      ...Array.from({ length: 30 }, (_, i) => uno(10 + i, 'AL DIA', `2026-12-${String(i + 1).padStart(2, '0')}`))
+    ]
+  }
+
+  it('cada grupo dice su total real en la vista y «Al día» se pliega con «Mostrar N compromisos más al día»', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor([], muchos())
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=Compromiso')
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    // la página trae 25 filas (2 vencidas, 1 por vencer y 22 al día) y la vista 33: cada grupo dice su total
+    await waitFor(() =>
+      expect(
+        within(tabla)
+          .getAllByRole('rowheader')
+          .map((g) => g.textContent)
+      ).toEqual(['Vencidos (2)', 'Por vencer (1)', 'Al día (30)'])
+    )
+    // los conteos son la consulta de la vista (alcance, estado y búsqueda) con la situación, de a un registro
+    const conteos = consultasA(red!).filter((c) => c.size === '1' && c.deadline_status)
+    expect(conteos).toEqual(
+      expect.arrayContaining(
+        ['VENCIDO', 'POR VENCER', 'AL DIA'].map((situacion) =>
+          expect.objectContaining({ project: 'p1', state_not: 'closed,cancelled', q: 'Compromiso', deadline_status: situacion })
+        )
+      )
+    )
+    expect(filasDe(tabla).filter((f) => within(f).queryByText(/^Compromiso 1\d$|^Compromiso [23]\d$/))).toHaveLength(2)
+    const mas = within(tabla).getByRole('button', { name: 'Mostrar 20 compromisos más al día' })
+    expect(screen.getByText('Cada grupo dice su total en la vista; las filas son las de esta página.')).toBeInTheDocument()
+    expect(screen.queryByText('Agrupados por situación en esta página.')).not.toBeInTheDocument()
+    await userEvent.click(mas)
+    expect(filasDe(tabla).filter((f) => within(f).queryByText(/^Compromiso 1\d$|^Compromiso [23]\d$/))).toHaveLength(22)
+    expect(within(tabla).queryByRole('button', { name: /^Mostrar \d+ compromisos? más al día$/ })).not.toBeInTheDocument()
+    // el foco pasa a la primera fila que se mostró
+    expect(document.activeElement?.textContent).toContain('Compromiso 12')
+  })
+
+  // sin el conteo del servidor (falla o no llega), los grupos dicen sus filas de la página, como antes, nunca un total inventado
+  it('sin los totales del servidor, los grupos dicen las filas de la página, sin plegar, y la nota lo dice', async () => {
+    fetch = mockFetch(rutas())
+    const soloConteos = /^\/objects\/commitment\/records\?(?=.*deadline_status=AL(\+|%20)DIA)(?=.*(^|&|\?)size=1(&|$))/
+    red = conServidor([{ path: soloConteos, responder: () => problema(500, 'Error interno') }], muchos())
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=Compromiso')
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    await waitFor(() => expect(red!.a('GET', soloConteos).length).toBeGreaterThan(0))
+    expect(
+      within(tabla)
+        .getAllByRole('rowheader')
+        .map((g) => g.textContent)
+    ).toEqual(['Vencidos (2)', 'Por vencer (1)', 'Al día (22)'])
+    expect(within(tabla).queryByRole('button', { name: /más al día$/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Agrupados por situación en esta página.')).toBeInTheDocument()
   })
 
   // E18: la carga es el esqueleto de la tabla con «Cargando compromisos…»; el error dice qué no se cargó y ofrece «Reintentar», que

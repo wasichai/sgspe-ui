@@ -47,6 +47,10 @@ export interface GrupoDeFilas<T> {
   filas: T[]
   // cuántos tiene el grupo entero, si no son las filas que llegan (un conteo del servidor)
   conteo?: number
+  // las primeras filas a la vista y el resto tras un botón al pie del grupo (S08: «Al día» con «Mostrar 5 compromisos más al
+  // día»), con el texto que dice cuántas filas muestra (las ocultas de las que llegan). sin él, todas
+  aLaVista?: number
+  mostrarMas?: (n: number) => string
 }
 
 export interface OrdenDeTabla {
@@ -219,6 +223,17 @@ export function TablaPriorizada<T>({
   const desdeXl = useCoincide(DESDE_XL)
   const filas = grupos ? grupos.flatMap((g) => g.filas) : (lasFilas ?? [])
   const [plegados, setPlegados] = useState<ReadonlySet<string>>(new Set())
+  // los grupos con aLaVista que ya se desplegaron enteros; al desplegar, el foco pasa a la primera fila que se mostró
+  const [desplegados, setDesplegados] = useState<ReadonlySet<string>>(new Set())
+  const [aEnfocar, setAEnfocar] = useState<{ grupo: string; indice: number } | null>(null)
+  useEffect(() => {
+    if (!aEnfocar) return
+    const filasDelGrupo = cuerpo.current?.querySelectorAll<HTMLElement>(`tbody[data-grupo="${CSS.escape(aEnfocar.grupo)}"] > tr[data-fila]`)
+    const fila = filasDelGrupo?.[aEnfocar.indice]
+    const destino = fila && (fila.tabIndex >= 0 ? fila : fila.querySelector<HTMLElement>('a[href], button, input'))
+    destino?.focus()
+    setAEnfocar(null)
+  }, [aEnfocar])
   const [busqueda] = useSearchParams()
   const navegar = useNavigate()
   const rutaDePrevia = useRutaDeVistaPrevia()
@@ -379,8 +394,11 @@ export function TablaPriorizada<T>({
               </thead>
               {(grupos ?? [{ clave: '', titulo: '', filas }]).map((grupo) => {
                 const plegado = plegados.has(grupo.clave)
+                const recortado =
+                  grupo.aLaVista !== undefined && grupo.mostrarMas !== undefined && !desplegados.has(grupo.clave) && grupo.filas.length > grupo.aLaVista
+                const aMostrar = recortado ? grupo.filas.slice(0, grupo.aLaVista) : grupo.filas
                 return (
-                  <tbody key={grupo.clave}>
+                  <tbody key={grupo.clave} data-grupo={grupo.clave}>
                     {grupos ? (
                       <FilaDeGrupo
                         titulo={t('comun.grupoDeTabla', { titulo: grupo.titulo, n: numeroPe(grupo.conteo ?? grupo.filas.length) })}
@@ -396,7 +414,7 @@ export function TablaPriorizada<T>({
                     ) : null}
                     {plegado
                       ? null
-                      : grupo.filas.map((f) => {
+                      : aMostrar.map((f) => {
                           const detalle = detalleDe?.(f) ?? null
                           const esLaElegida = elegida(f) || detalle !== null
                           const elegible = esElegible(f)
@@ -404,6 +422,7 @@ export function TablaPriorizada<T>({
                           return (
                             <Fragment key={clave(f)}>
                               <tr
+                                data-fila=""
                                 data-previa={claveDeFila(f)}
                                 aria-current={esLaElegida ? 'true' : undefined}
                                 aria-selected={elegible ? marcada : undefined}
@@ -463,6 +482,22 @@ export function TablaPriorizada<T>({
                             </Fragment>
                           )
                         })}
+                    {!plegado && recortado ? (
+                      <tr>
+                        <td colSpan={visibles.length + (seleccion ? 1 : 0)} className="border-b border-sg-border px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDesplegados(new Set(desplegados).add(grupo.clave))
+                              setAEnfocar({ grupo: grupo.clave, indice: grupo.aLaVista ?? 0 })
+                            }}
+                            className="inline-flex min-h-8 items-center rounded-sg-sm text-sg-body-sm font-semibold text-sg-primary-text underline underline-offset-2 hover:text-sg-primary"
+                          >
+                            {grupo.mostrarMas?.(grupo.filas.length - (grupo.aLaVista ?? 0))}
+                          </button>
+                        </td>
+                      </tr>
+                    ) : null}
                   </tbody>
                 )
               })}
