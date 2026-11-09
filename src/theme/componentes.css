@@ -1,0 +1,195 @@
+/* la capa de componentes de "Civic Modern" (ADR-0032, design-system.md §5.3) sobre las primitivas de @wasichai/ui: Button,
+   Alert, los campos (Input, Textarea, Select), los encabezados y celdas de Table y las pestañas de Tabs se ven como los del
+   lienzo en el portal y en /admin sin tocar sus fuentes. va después del puente (wasichai.css) y fuera de capa: las clases de
+   wasichai son utilidades y aquí se pisan solo las medidas y los pesos que E fija; los colores se cambian por las variables que
+   esas clases leen (--border, --ink, --surface-muted…), así que una clase propia que pasa una pantalla (el text-shell-* de la
+   barra de /admin) sigue ganando. solo tokens: ningún color suelto (capaDeComponentes.test.ts) */
+
+/* Botones: 40 px (--sg-control, 36 en la densidad compacta), 32 el sm; radio 4, 15/700 y borde de 2 px */
+[data-slot='button'] {
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 4px;
+    font-weight: 700;
+    transition-duration: 120ms;
+}
+/* los botones táctiles del teléfono (registro rápido, visita de campo) piden su propio alto */
+[data-slot='button'][data-size='md']:not(.h-11, .h-12) {
+    height: var(--sg-control);
+    font-size: 15px;
+}
+[data-slot='button'][data-size='sm'] {
+    font-size: 14px;
+}
+/* primaria: un canto inferior sólido de 2 px; presionada, lo pierde */
+[data-slot='button'][data-variant='primary'] {
+    border-color: var(--sg-primary);
+    box-shadow: 0 2px 0 var(--sg-primary-hover);
+}
+[data-slot='button'][data-variant='primary']:hover {
+    border-color: var(--sg-primary-hover);
+}
+[data-slot='button'][data-variant='primary']:active {
+    box-shadow: none;
+}
+/* el canto no tapa el anillo del foco de E (tokens.css, capa base) */
+[data-slot='button'][data-variant='primary']:focus-visible {
+    box-shadow: 0 0 0 5px var(--sg-focus);
+}
+:root[data-theme='dark'] [data-slot='button'][data-variant='primary']:focus-visible {
+    box-shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) [data-slot='button'][data-variant='primary']:focus-visible {
+        box-shadow: none;
+    }
+}
+/* secundaria: contorno primario sobre la superficie */
+[data-slot='button'][data-variant='secondary'] {
+    --border: var(--sg-primary);
+    --ink: var(--sg-primary-text);
+    --surface-muted: var(--sg-surface-hover);
+}
+/* sutil: sin borde ni fondo, un enlace subrayado («Ver historial», «Cancelar»); el de ícono queda sin subrayado */
+[data-slot='button'][data-variant='ghost'] {
+    border-color: transparent;
+    --ink-muted: var(--sg-primary-text);
+    --ink: var(--sg-primary-hover);
+    --surface-muted: var(--sg-surface-hover);
+}
+[data-slot='button'][data-variant='ghost']:not([data-size='icon'], [class*='text-shell']) {
+    text-decoration-line: underline;
+    text-underline-offset: 3px;
+}
+[data-slot='button'][data-variant='danger'] {
+    border-color: var(--sg-danger);
+}
+/* deshabilitado: hundido, texto apagado y borde; sin la opacidad de wasichai (design-system.md §3.8) */
+[data-slot='button']:disabled {
+    opacity: 1;
+    background-color: var(--sg-surface-sunken);
+    color: var(--sg-text-muted);
+    border-color: var(--sg-border);
+    box-shadow: none;
+    text-decoration-line: none;
+}
+
+/* Avisos: relleno de 14 × 16, borde de 2 px, fondo suave del tono, ícono de 18 px en la tinta del tono y el texto en --sg-text */
+[data-slot='alert'] {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 2px solid var(--sg-info);
+    border-radius: 4px;
+    background-color: var(--sg-info-soft);
+    color: var(--sg-text);
+    font-size: 15px;
+    line-height: 23px;
+}
+[data-slot='alert']::before {
+    content: '';
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    background-color: var(--sg-info);
+    mask: var(--sg-icono-aviso) center / contain no-repeat;
+    /* círculo con «i» de lucide (info) */
+    --sg-icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+}
+[data-slot='alert'] [data-slot='alert-text'] {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+[data-slot='alert'][data-tone='danger'] {
+    border-color: var(--sg-danger);
+    background-color: var(--sg-danger-soft);
+}
+[data-slot='alert'][data-tone='danger']::before {
+    background-color: var(--sg-danger);
+    /* círculo con «!» de lucide (circle-alert) */
+    --sg-icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E");
+}
+[data-slot='alert'][data-tone='warning'] {
+    border-color: var(--sg-warning-border);
+    background-color: var(--sg-warning-soft);
+}
+[data-slot='alert'][data-tone='warning']::before {
+    background-color: var(--sg-warning);
+    /* triángulo con «!» de lucide (triangle-alert) */
+    --sg-icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+}
+[data-slot='alert'][data-tone='success'] {
+    border-color: var(--sg-success);
+    background-color: var(--sg-success-soft);
+}
+[data-slot='alert'][data-tone='success']::before {
+    background-color: var(--sg-success);
+    /* círculo con check de lucide (circle-check) */
+    --sg-icono-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E");
+}
+/* notice es la nota informativa del portal: información, en --sg-info */
+[data-slot='alert'][data-tone='notice'] {
+    border-color: var(--sg-info);
+    background-color: var(--sg-info-soft);
+}
+[data-slot='alert'] [data-slot='alert-dismiss'] {
+    flex: none;
+    margin-left: auto;
+}
+
+/* Campos: 44 px (--sg-field, 36 en la compacta), borde de 2 px --sg-border-control y radio 4; con error, 3 px de peligro. los
+   campos de 32 px de wasichai (el tamaño de página de una tabla) conservan su alto */
+[data-slot='input']:not(.h-8),
+[data-slot='select-trigger']:not(.h-8) {
+    height: var(--sg-field);
+}
+[data-slot='input'],
+[data-slot='textarea'],
+[data-slot='select-trigger'] {
+    border-width: 2px;
+    border-radius: 4px;
+    font-size: 15px;
+}
+:is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'])[aria-invalid='true'] {
+    border-width: 3px;
+    border-color: var(--sg-danger);
+}
+
+/* Tablas: encabezado de 40 px (--sg-table-head) en hundido, 13/700 --sg-text-secondary, sin versalitas y con borde inferior de
+   2 px --sg-border-strong; filas de --sg-row separadas por --sg-border-subtle. un encabezado de fila (scope=row) es el nombre del
+   registro y se lee como una celda */
+[data-slot='table-head']:not([scope='row']) {
+    height: var(--sg-table-head);
+    background-color: var(--sg-surface-sunken);
+    color: var(--sg-text-secondary);
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: nowrap;
+    border-bottom: 2px solid var(--sg-border-strong);
+}
+[data-slot='table-cell'] {
+    height: var(--sg-row);
+    --border: var(--sg-border-subtle);
+}
+
+/* Pestañas de una ficha (Tabs de wasichai): fila con borde inferior de 2 px, 15/600 y la activa en 800 con 4 px --sg-primary */
+[data-slot='tabs-list'] {
+    border-bottom-width: 2px;
+}
+[data-slot='tabs-trigger'] {
+    margin-bottom: -2px;
+    border-bottom-width: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--sg-text-secondary);
+}
+[data-slot='tabs-trigger'][aria-selected='true'] {
+    border-bottom-color: var(--sg-primary);
+    color: var(--sg-primary-text);
+    font-weight: 800;
+}

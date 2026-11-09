@@ -1,7 +1,8 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { montar } from '../../test/montar'
+import { montar, ubicacion } from '../../test/montar'
+import { EnlaceDeRegistro } from './EnlaceDeRegistro'
 import { TablaPriorizada, type ColumnaPriorizada } from './TablaPriorizada'
 
 // hallazgo U-06 (DD-05): una tabla ancha decide qué columnas se ven por su prioridad, y la que dice lo mismo en todas las
@@ -329,6 +330,127 @@ describe('TablaPriorizada', () => {
       } finally {
         localStorage.removeItem('sgspe.lang')
       }
+    })
+  })
+
+  // design-system.md §5.3 «Tablas»: grupos, nota al pie, fila elegida, columna del título y «—» en las numéricas
+  describe('Civic Modern', () => {
+    const GRUPOS = [
+      { clave: 'vencidos', titulo: 'Vencidos', filas: [FILAS[0]] },
+      { clave: 'al-dia', titulo: 'Al día', filas: [FILAS[1]], conteo: 7 }
+    ]
+
+    it('cada grupo es una fila con su conteo que se pliega y despliega con aria-expanded', async () => {
+      dibujar({ filas: undefined, grupos: GRUPOS })
+      const vencidos = within(tabla()).getByRole('button', { name: 'Vencidos (1)' })
+      const alDia = within(tabla()).getByRole('button', { name: 'Al día (7)' })
+      expect(vencidos).toHaveAttribute('aria-expanded', 'true')
+      expect(within(tabla()).getByRole('rowheader', { name: 'Vencidos (1)' })).toHaveAttribute('colspan', String(COLUMNAS.length))
+      expect(within(tabla()).getByText('Reservorio de Tunas')).toBeInTheDocument()
+      await userEvent.click(vencidos)
+      expect(vencidos).toHaveAttribute('aria-expanded', 'false')
+      expect(within(tabla()).queryByText('Reservorio de Tunas')).not.toBeInTheDocument()
+      // el otro grupo no se pliega
+      expect(alDia).toHaveAttribute('aria-expanded', 'true')
+      expect(within(tabla()).getByText('Posta de Huaylla')).toBeInTheDocument()
+      await userEvent.click(vencidos)
+      expect(within(tabla()).getByText('Reservorio de Tunas')).toBeInTheDocument()
+    })
+
+    it('con grupos, la columna uniforme se juzga sobre las filas de todos los grupos', () => {
+      dibujar({ filas: undefined, grupos: GRUPOS, ocultarUniformes: true })
+      expect(screen.getByRole('list', { name: 'Igual en todas las filas' })).toHaveTextContent('Responsable: Gestión de compromisos (demo)')
+    })
+
+    it('la nota al pie va bajo la tabla, en la misma caja', () => {
+      dibujar({ notaAlPie: 'Montos en soles; — = sin monto' })
+      const nota = screen.getByText('Montos en soles; — = sin monto')
+      expect(nota).toHaveClass('text-sg-caption', 'text-sg-text-secondary', 'border-t')
+      expect(nota.parentElement).toContainElement(tabla())
+    })
+
+    it('una numérica vacía, o que ya dice «—», es «—» en text-muted', () => {
+      dibujar({
+        filas: [
+          { ...FILAS[0], monto: '' },
+          { ...FILAS[1], monto: '—' }
+        ]
+      })
+      for (const fila of filas()) {
+        const guion = within(fila).getByText('—')
+        expect(guion).toHaveClass('text-sg-text-muted')
+      }
+    })
+
+    it('la fila en ?peek= es la elegida (primary-soft y borde izquierdo de 4 px); la prop seleccionada manda si la hay', () => {
+      montar(
+        <TablaPriorizada<Fila>
+          etiqueta="Compromisos"
+          columnas={COLUMNAS}
+          filas={FILAS}
+          clave={(f) => f.id}
+          celda={valor}
+          previaDe={(f) => ({ objeto: 'commitment', id: f.id })}
+        />,
+        { ruta: '/compromisos?peek=commitment:c2' }
+      )
+      const [primera, segunda] = filas()
+      expect(segunda).toHaveAttribute('aria-current', 'true')
+      expect(segunda).toHaveClass('bg-sg-primary-soft', '[&>td:first-child]:shadow-[inset_4px_0_0_var(--sg-primary)]')
+      expect(primera).not.toHaveAttribute('aria-current')
+      expect(primera).toHaveClass('hover:bg-sg-surface-hover')
+      document.body.innerHTML = ''
+      dibujar({ seleccionada: (f) => f.id === 'c1' })
+      expect(filas()[0]).toHaveAttribute('aria-current', 'true')
+    })
+
+    it('con previaDe y sin alPrevisualizar, Espacio en la fila abre su vista previa', async () => {
+      montar(
+        <TablaPriorizada<Fila>
+          etiqueta="Compromisos"
+          columnas={COLUMNAS}
+          filas={FILAS}
+          clave={(f) => f.id}
+          celda={valor}
+          previaDe={(f) => ({ objeto: 'commitment', id: f.id })}
+        />,
+        { ruta: '/compromisos?view=abiertos' }
+      )
+      filas()[1].focus()
+      await userEvent.keyboard(' ')
+      expect(ubicacion.actual).toBe('/compromisos?view=abiertos&peek=commitment%3Ac2')
+    })
+
+    it('la columna del título toma el ancho sobrante y se parte en líneas; las demás van en una línea', () => {
+      dibujar({ columnas: COLUMNAS.map((c) => (c.id === 'titulo' ? { ...c, titulo: true } : c)) })
+      const titulo = within(filas()[0]).getByRole('cell', { name: 'Reservorio de Tunas' })
+      expect(titulo).toHaveClass('w-full', 'min-w-60', 'whitespace-normal')
+      expect(titulo).not.toHaveClass('whitespace-nowrap')
+      expect(within(filas()[0]).getAllByRole('cell', { name: 'En ejecución' })[0]).toHaveClass('whitespace-nowrap')
+      expect(within(tabla()).getByRole('columnheader', { name: 'Compromiso' })).toHaveClass('sticky', 'top-0')
+    })
+
+    it('un EnlaceDeRegistro en la columna del título: el código en mono arriba, el título sin subrayado y el ojo en su línea', () => {
+      dibujar({
+        columnas: COLUMNAS.map((c) => (c.id === 'titulo' ? { ...c, titulo: true } : c)),
+        celda: (f, columna) =>
+          columna === 'titulo' ? (
+            <EnlaceDeRegistro codigo="C-001" titulo={f.titulo} ruta={`/c/${f.id}`} previa={{ objeto: 'commitment', id: f.id }} />
+          ) : (
+            valor(f, columna)
+          )
+      })
+      const celda = within(filas()[0]).getAllByRole('cell')[0]
+      expect(within(celda).getByText('C-001')).toHaveClass('block', 'font-sg-mono', 'text-sg-caption', 'text-sg-text-secondary')
+      const enlace = within(celda).getByRole('link', { name: 'Reservorio de Tunas' })
+      expect(enlace).toHaveClass('font-semibold', 'text-sg-text', 'no-underline', 'hover:underline')
+      expect(within(enlace).getByText('Reservorio de Tunas')).toHaveClass('line-clamp-2')
+      // el ojo va junto al título, en la misma línea (un flex sin salto), y aparece con la fila
+      const ojo = within(celda).getByRole('link', { name: 'Vista previa de C-001 Reservorio de Tunas' })
+      expect(ojo.parentElement).toBe(enlace.parentElement)
+      expect(ojo.parentElement).toHaveClass('flex')
+      expect(ojo.parentElement).not.toHaveClass('flex-wrap')
+      expect(ojo).toHaveClass('shrink-0', 'pointer-fine:group-hover/fila:opacity-100')
     })
   })
 })

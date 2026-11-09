@@ -8,7 +8,7 @@ import { ChipDeEstado, EstadoChip } from '../componentes/EstadoChip'
 import { useMensajeDeError } from '../componentes/errores'
 import { Consulta, NoEsDeSusProyectos, Vacio } from '../componentes/Estados'
 import { DeLista } from '../componentes/LecturaConEstados'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { Seccion } from '../componentes/Seccion'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { guardarArchivo, usePedir } from '../datos/http'
@@ -48,14 +48,14 @@ export function PresentacionesPage() {
   const { projectId, deliverableId = '' } = useParams()
   const entregable = useRegistro('deliverable', deliverableId)
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <Link to={rutaDeEntregable(deliverableId, projectId)} className="text-sm text-sg-primary-text underline">
         {t('presentaciones.pagina.volver')}
       </Link>
       <Consulta consulta={entregable} noExiste={<NoEsDeSusProyectos />}>
         {(e) => <Presentaciones entregable={e} />}
       </Consulta>
-    </section>
+    </ContenedorDePagina>
   )
 }
 

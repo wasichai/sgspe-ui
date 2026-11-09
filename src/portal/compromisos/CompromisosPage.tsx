@@ -3,7 +3,7 @@ import { PaginasDeCompromisos } from '../acuerdos/PaginasDeCompromisos'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { SelectorDeGrupo, useChipDeGrupo } from '../componentes/FiltroDeGrupo'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Pagination } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
@@ -12,15 +12,14 @@ import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente } from '../componentes/ordenEnCliente'
-import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { ResultadoDeLista } from '../contexto/Origen'
@@ -116,7 +115,6 @@ export function CompromisosPage() {
   const [orden, ordenar] = ordenEnUrl(lista, ORDEN_INICIAL, ['codigo', 'compromiso', 'vence'])
   // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
   const navegar = useNavigate()
-  const previa = useRutaDeVistaPrevia()
   const paso = useSiguientePaso()
 
   // sin grupo: el servidor. la consulta de una vista lleva el alcance, el territorio, el estado elegido y la búsqueda
@@ -184,7 +182,7 @@ export function CompromisosPage() {
       claseDeCelda: 'font-sg-mono text-sg-caption whitespace-nowrap',
       ordenable: true
     },
-    { id: 'compromiso', encabezado: t('compromisos.columnas.compromiso'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm', ordenable: true },
+    { id: 'compromiso', encabezado: t('compromisos.columnas.compromiso'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('compromisos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'estado', encabezado: t('compromisos.columnas.estado'), prioridad: 'esencial' },
     { id: 'situacion', encabezado: t('compromisos.columnas.situacion'), prioridad: 'esencial' },
@@ -213,7 +211,7 @@ export function CompromisosPage() {
     }
   }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         vistas={
           <>
@@ -325,21 +323,19 @@ export function CompromisosPage() {
                   orden={orden}
                   alOrdenar={ordenar}
                   alAbrir={(c) => navegar(rutaDe(c), { state: paso(t('compromisos.titulo'), rutaDe(c)) })}
-                  alPrevisualizar={(c) => navegar(previa('commitment', c.id))}
+                  previaDe={(c) => ({ objeto: 'commitment', id: c.id })}
                 />
               )}
               {total !== null && total > POR_PAGINA ? (
-                <Pagination
-                  page={lista.pagina}
-                  totalPages={Math.ceil(total / POR_PAGINA)}
-                  totalElements={total}
-                  onPage={(p) => lista.cambiar({ page: String(p) })}
+                <PaginacionDelServidor
+                  datos={{ page: lista.pagina, size: POR_PAGINA, totalPages: Math.ceil(total / POR_PAGINA), totalElements: total }}
+                  alPagina={(p) => lista.cambiar({ page: String(p) })}
                 />
               ) : null}
             </ResultadoDeLista>
           )}
         </>
       )}
-    </section>
+    </ContenedorDePagina>
   )
 }

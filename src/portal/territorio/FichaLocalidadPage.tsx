@@ -1,5 +1,5 @@
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
@@ -78,7 +78,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
   const editaGeometria = can('locality', 'UPDATE') && geometrias.length > 0
   const [dibujando, setDibujando] = useState(false)
   return (
-    <article className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="article">
       {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, el reconocimiento como chip y los datos de la
           localidad debajo */}
       <EncabezadoDePagina
@@ -147,7 +147,7 @@ function Ficha({ localidad }: { localidad: Registro }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

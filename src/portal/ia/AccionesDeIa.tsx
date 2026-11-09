@@ -11,7 +11,7 @@ import { NS } from '../i18n'
 import { useAsistente } from './Asistente'
 import { useCorrida, useEstadoDeIa, type CasoDeIa } from './contrato'
 import { FalloDeCorrida } from './FalloDeCorrida'
-import { MarcaDeIa } from './MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from './MarcaDeIa'
 
 // las acciones de IA de una ficha (screens.md §13, decisiones 19 y 20 del plan): la IA lee como la persona y deja sugerencias o
 // candidatos en la bandeja del proyecto; nada cambia hasta que una persona decide. sin IA en la organización el bloque no aparece
@@ -87,15 +87,12 @@ export function AccionesDeIa({
   const borrador = resultado?.suggestions.some((s) => texto(s, 'suggestion_kind') === 'BORRADOR DE ACTA') ?? false
   const base = `/projects/${encodeURIComponent(proyecto)}`
   return (
-    <section
-      aria-label={t('accionesIa.titulo')}
-      className={compacta ? 'space-y-1' : 'space-y-2 rounded-sg-lg border border-dashed border-sg-ai-border bg-sg-ai-soft p-3 text-sm'}
-    >
+    <section aria-label={t('accionesIa.titulo')} className={compacta ? 'space-y-1' : `space-y-2 text-sm ${CAJA_DE_IA}`}>
       {compacta ? null : (
         <>
           <div className="flex items-center gap-2">
             <MarcaDeIa clase="sugerencia" />
-            <h2 className="font-semibold">{t('accionesIa.titulo')}</h2>
+            <h2 className="font-bold text-sg-text">{t('accionesIa.titulo')}</h2>
           </div>
           {ofrecidos.length > 0 ? <p className="text-sg-caption text-sg-text-secondary">{t('accionesIa.ayuda')}</p> : null}
         </>

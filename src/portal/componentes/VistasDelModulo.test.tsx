@@ -11,6 +11,10 @@ describe('VistasDelModulo', () => {
     const vistas = screen.getByRole('navigation', { name: 'Vistas del módulo' })
     expect(within(vistas).getByRole('link', { name: 'Lista' })).toHaveAttribute('aria-current', 'page')
     expect(within(vistas).getByRole('link', { name: 'Tablero' })).toHaveAttribute('href', '/projects/p1/commitments/dashboard')
+    // como las pestañas de design-system.md §5.3: la fila con borde inferior de 2 px y la actual con el de 4 px primary
+    expect(vistas).toHaveClass('border-b-2', 'border-sg-border')
+    expect(within(vistas).getByRole('link', { name: 'Lista' })).toHaveClass('border-b-4', 'border-sg-primary', 'font-extrabold', 'text-sg-primary-text')
+    expect(within(vistas).getByRole('link', { name: 'Tablero' })).toHaveClass('border-transparent', 'font-semibold', 'text-sg-text-secondary')
   })
 
   it('en lo global lleva al tablero global; sin tablero disponible, la lista no lo ofrece', () => {

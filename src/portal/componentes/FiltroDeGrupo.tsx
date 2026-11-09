@@ -1,4 +1,5 @@
 import { cn } from '@wasichai/ui'
+import { Cargando } from './Estados'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRegistro, useTodos } from '../datos/registros'
@@ -38,7 +39,6 @@ export function SelectorDeGrupo({
   alElegir: (id: string) => void
   textos: { etiqueta: string; buscar: string; lista: string; ninguno: string; vacio: string }
 }) {
-  const { t } = useTranslation(NS)
   const id = useId()
   const [q, setQ] = useState('')
   const grupos = useTodos('stakeholder', { project: proyecto })
@@ -49,13 +49,15 @@ export function SelectorDeGrupo({
     .filter((g) => !buscado || comparable(g.nombre).includes(buscado))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
   return (
-    <div role="group" aria-labelledby={id} className="space-y-1 text-sm">
-      <span id={id} className="block text-sg-label">
+    <div role="group" aria-labelledby={id} className="flex flex-col gap-1.5 text-sm">
+      <span id={id} className="block text-sg-label font-bold">
         {textos.etiqueta}
       </span>
       <input type="search" aria-label={textos.buscar} placeholder={textos.buscar} value={q} onChange={(e) => setQ(e.target.value)} className={CONTROL} />
       {grupos.isPending ? (
-        <p className="text-sg-caption text-sg-text-muted">{t('comun.cargando')}</p>
+        <p>
+          <Cargando compacto />
+        </p>
       ) : grupos.isError && !grupos.data ? (
         <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} />
       ) : opciones.length === 0 ? (

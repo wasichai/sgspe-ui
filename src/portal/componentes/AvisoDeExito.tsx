@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { CLASE_DE_TONO } from './apariencias'
+import { Alert } from '@wasichai/ui'
 
 // lo que hizo la pantalla anterior (un alta), dicho por la ficha a la que llegó, bajo su cabecera (tercera pasada de UX, 2.12;
 // DD-34): «Se registró la queja Q-005. Se creó la tarea de acusar recibo.». viaja en el estado del historial (conHecho, que conserva
@@ -29,9 +29,7 @@ export function AvisoDeExito() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   if (!texto) return null
-  return (
-    <p role="status" className={`rounded-sg-md px-3 py-2 text-sm ${CLASE_DE_TONO.success}`}>
-      {texto}
-    </p>
-  )
+  // la alerta de éxito de design-system.md §5.3, en role="status": la caja, el borde de 2 px y el ícono los pone la capa de
+  // componentes sobre el Alert de wasichai
+  return <Alert tone="success">{texto}</Alert>
 }

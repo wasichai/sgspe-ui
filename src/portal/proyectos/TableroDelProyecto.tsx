@@ -2,7 +2,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, RejillaDeKpi } from '../componentes/KpiCard'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { Seccion } from '../componentes/Seccion'
 import { useTablero, type Indicador, type Tablero } from '../datos/indicadores'
@@ -42,7 +42,7 @@ const ACCESO = 'text-sg-caption font-medium text-sg-primary-text no-underline ho
 function Grupo({ titulo, enlace, rotulo, children }: { titulo: string; enlace: string; rotulo: string; children: ReactNode }) {
   return (
     <Seccion titulo={titulo} nivel={3}>
-      <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+      <RejillaDeKpi>{children}</RejillaDeKpi>
       <Link to={enlace} className={ACCESO}>
         {rotulo}
       </Link>

@@ -92,4 +92,22 @@ describe('TextoDeIa', () => {
     expect(screen.getByText('Sugerencia de IA')).toBeInTheDocument()
     expect(screen.getByText('Resumen de IA')).toBeInTheDocument()
   })
+
+  // design-system.md §5.3 «Etiquetas» e «IA»: la etiqueta de 24 px con borde discontinuo de 1,5 px ai-border sobre ai-soft, y el
+  // antetítulo de un bloque de IA en ai 12,5 px 800 MAYÚSCULAS con la chispa y el aviso de verificar
+  it('la etiqueta va con borde discontinuo y, como encabezado de un bloque, pide verificar antes de usar', () => {
+    fetch = mockFetch([])
+    montar(
+      <>
+        <MarcaDeIa clase="sugerencia" />
+        <MarcaDeIa clase="resumen" forma="encabezado" />
+      </>
+    )
+    const etiqueta = screen.getByText('Sugerencia de IA').closest('[data-marca-de-ia]')
+    expect(etiqueta).toHaveClass('h-6', 'border-dashed', 'border-sg-ai-border', 'bg-sg-ai-soft', 'text-sg-ai', 'uppercase', 'font-bold')
+    const encabezado = screen.getByText('Resumen de IA').closest('[data-marca-de-ia]')
+    expect(encabezado).toHaveClass('text-sg-ai', 'uppercase', 'font-extrabold')
+    expect(encabezado).not.toHaveClass('border-dashed')
+    expect(encabezado).toHaveTextContent('Resumen de IA · propuesta, verifique antes de usar')
+  })
 })

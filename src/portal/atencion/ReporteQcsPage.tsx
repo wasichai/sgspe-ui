@@ -18,6 +18,7 @@ import { campoDe, consulta, useDefinicion } from '../datos/registros'
 import { rotuloDeOpcion } from '../datos/opciones'
 import { diaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // el reporte unificado de QCS (api.md §4.6, plan 4.2a): GET /api/sgspe/attention/report con el proyecto del contexto (sin él, los
 // proyectos de quien mira), el periodo de recepción, el tipo, el canal y la categoría, paginado. lee como quien llama: los conteos
@@ -105,7 +106,7 @@ export function ReporteQcsPage() {
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const codigo = codigoDelError(reporte.error)
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{t('reporteQcs.titulo')}</h1>
         <Link to={`${base}/attention`} className="text-sm text-sg-primary-text underline">
@@ -160,7 +161,7 @@ export function ReporteQcsPage() {
       ) : (
         <Contenido reporte={reporte.data as ReporteDeQcs} proyecto={proyecto} alPagina={(p) => cambiar('page', String(p))} />
       )}
-    </section>
+    </ContenedorDePagina>
   )
 }
 

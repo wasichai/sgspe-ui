@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRegistry, resolveConfig, WasichaiProviders } from '@wasichai/core'
 import { QueryClient } from '@tanstack/react-query'
@@ -127,5 +127,81 @@ describe('FormularioPorPasos', () => {
     expect(await screen.findByText('Escriba el título')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByLabelText('Título')).toHaveFocus())
     expect(screen.getByRole('heading', { level: 2, name: 'Origen' })).toBeInTheDocument()
+  })
+
+  // design-system.md §5.3, «Resumen de errores»: con más de un error, arriba del paso un resumen con un enlace a cada campo, que
+  // toma el foco; corregir y avanzar lo quita
+  it('con dos errores, el resumen los lista con su rótulo, toma el foco y cada enlace lleva a su campo', async () => {
+    function ConDosFaltas() {
+      const [actual, setActual] = useState(0)
+      const [titulo, setTitulo] = useState('')
+      const [monto, setMonto] = useState('')
+      const [intentado, setIntentado] = useState(false)
+      return (
+        <FormularioPorPasos
+          titulo="Nuevo compromiso"
+          pasos={['Origen', 'Qué se promete']}
+          actual={actual}
+          visitados={actual}
+          alEnviar={(e) => {
+            e.preventDefault()
+            setIntentado(true)
+            if (titulo.trim() && monto.trim()) setActual(1)
+          }}
+          alAnterior={() => setActual(0)}
+        >
+          <Campo etiqueta="Título" error={intentado && !titulo.trim() ? 'Escriba el título' : undefined}>
+            {(p) => <input {...p} value={titulo} onChange={(e) => setTitulo(e.target.value)} />}
+          </Campo>
+          <Campo etiqueta="Monto" error={intentado && !monto.trim() ? 'Escriba el monto' : undefined}>
+            {(p) => <input {...p} value={monto} onChange={(e) => setMonto(e.target.value)} />}
+          </Campo>
+        </FormularioPorPasos>
+      )
+    }
+    montar(<ConDosFaltas />)
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    const resumen = await screen.findByRole('alert')
+    expect(within(resumen).getByRole('heading', { name: 'Hay 2 problemas por corregir' })).toBeInTheDocument()
+    expect(
+      within(resumen)
+        .getAllByRole('link')
+        .map((a) => a.textContent)
+    ).toEqual(['Título: Escriba el título', 'Monto: Escriba el monto'])
+    await waitFor(() => expect(resumen).toHaveFocus())
+    await userEvent.click(within(resumen).getByRole('link', { name: 'Monto: Escriba el monto' }))
+    expect(screen.getByLabelText('Monto')).toHaveFocus()
+    await userEvent.type(screen.getByLabelText('Título'), 'Cisterna')
+    await userEvent.type(screen.getByLabelText('Monto'), '100')
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Qué se promete' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('con un solo error no hay resumen: el foco va a su campo', async () => {
+    function ConUnaFalta() {
+      const [intentado, setIntentado] = useState(false)
+      return (
+        <FormularioPorPasos
+          titulo="Nuevo compromiso"
+          pasos={['Origen']}
+          actual={0}
+          visitados={0}
+          alEnviar={(e) => {
+            e.preventDefault()
+            setIntentado(true)
+          }}
+          alAnterior={() => undefined}
+        >
+          <Campo etiqueta="Título" error={intentado ? 'Escriba el título' : undefined}>
+            {(p) => <input {...p} />}
+          </Campo>
+        </FormularioPorPasos>
+      )
+    }
+    montar(<ConUnaFalta />)
+    await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    await waitFor(() => expect(screen.getByLabelText('Título')).toHaveFocus())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

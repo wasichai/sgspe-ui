@@ -43,6 +43,15 @@ export const ES_COMUN = {
     uniforme: '{{encabezado}}: <valor/>',
     columnas: 'Columnas'
   },
+  // las filas de grupo de una tabla («Vencidos (4)») y el paginador al pie («Mostrando 1–8 de 23»)
+  grupoDeTabla: '{{titulo}} ({{n}})',
+  paginador: {
+    etiqueta: 'Paginación',
+    mostrando: 'Mostrando {{desde}}–{{hasta}} de {{total}}',
+    anterior: 'Página anterior',
+    siguiente: 'Página siguiente',
+    pagina: 'Página {{n}}'
+  },
   // las vistas de un módulo en una sola fila, con su conteo (hallazgo U-18): «Vencidos, 1» es el nombre accesible
   selectorDeVista: {
     conConteo: '{{etiqueta}}, {{n}}',
@@ -61,6 +70,11 @@ export const ES_COMUN = {
     quitar: 'Quitar el filtro {{etiqueta}}',
     limpiar: 'Limpiar filtros',
     cerrar: 'Ver resultados'
+  },
+  // el resumen de errores arriba de un formulario enviado con más de un error (design-system.md §5.3)
+  resumenDeErrores: {
+    titulo_one: 'Hay {{count}} problema por corregir',
+    titulo_other: 'Hay {{count}} problemas por corregir'
   },
   llegaEn: 'Todavía no está disponible en su organización.',
   guardar: 'Guardar',
@@ -424,6 +438,9 @@ export const ES_COMUN = {
   campoFecha: {
     marcador: 'dd/mm/aaaa',
     marcadorHora: 'hh:mm',
+    // la ayuda con el formato, si la pantalla no da la suya (design-system.md §5.3)
+    ejemplo: 'Por ejemplo, 15/12/2026',
+    ejemploConHora: 'Por ejemplo, 15/12/2026 y 15:30',
     hora: '{{etiqueta}} (hora)',
     formato: 'Escriba la fecha como día/mes/año, por ejemplo 20/10/2026',
     formatoHora: 'Escriba la hora como horas:minutos, de 00:00 a 23:59, por ejemplo 15:30',
@@ -500,6 +517,14 @@ export const EN_COMUN: typeof ES_COMUN = {
     uniforme: '{{encabezado}}: <valor/>',
     columnas: 'Columns'
   },
+  grupoDeTabla: '{{titulo}} ({{n}})',
+  paginador: {
+    etiqueta: 'Pagination',
+    mostrando: 'Showing {{desde}}–{{hasta}} of {{total}}',
+    anterior: 'Previous page',
+    siguiente: 'Next page',
+    pagina: 'Page {{n}}'
+  },
   selectorDeVista: {
     conConteo: '{{etiqueta}}, {{n}}',
     mas: 'More views'
@@ -515,6 +540,10 @@ export const EN_COMUN: typeof ES_COMUN = {
     quitar: 'Remove the filter {{etiqueta}}',
     limpiar: 'Clear filters',
     cerrar: 'Show results'
+  },
+  resumenDeErrores: {
+    titulo_one: 'There is {{count}} problem to fix',
+    titulo_other: 'There are {{count}} problems to fix'
   },
   llegaEn: 'Not available in your organization yet.',
   guardar: 'Save',
@@ -846,6 +875,8 @@ export const EN_COMUN: typeof ES_COMUN = {
   campoFecha: {
     marcador: 'dd/mm/yyyy',
     marcadorHora: 'hh:mm',
+    ejemplo: 'For example, 15/12/2026',
+    ejemploConHora: 'For example, 15/12/2026 and 15:30',
     hora: '{{etiqueta}} (time)',
     formato: 'Write the date as day/month/year, for example 20/10/2026',
     formatoHora: 'Write the time as hours:minutes, from 00:00 to 23:59, for example 15:30',

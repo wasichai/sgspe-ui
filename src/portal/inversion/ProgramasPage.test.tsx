@@ -283,6 +283,9 @@ describe('S42 · programas e inversión', () => {
     const aportes = await screen.findByRole('table', { name: 'Aportes del alcance' })
     expect(within(aportes).getByRole('link', { name: 'AP-001' })).toHaveAttribute('href', '/projects/p1/contributions/a1')
     expect(within(aportes).getByText('S/ 1,750.50')).toBeInTheDocument()
+    // el monto va a la derecha y la tabla dice al pie qué es «—» (DD-38)
+    expect(within(aportes).getByText('S/ 1,750.50')).toHaveClass('text-right', 'tabular-nums')
+    expect(screen.getByText('Cada monto en su moneda; — = sin monto')).toBeInTheDocument()
     // «En curso» por defecto: el cerrado no sale; «Terminados» lo muestra
     expect(within(aportes).queryByText('AP-002')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('radio', { name: /^Aportes terminados\b/ }))

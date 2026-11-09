@@ -1,6 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { useQueries, type UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
@@ -44,7 +44,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
   const editaGeometria = can('community', 'UPDATE') && puedeEscribir(definicion.data, 'territory')
   const [dibujando, setDibujando] = useState(false)
   return (
-    <article className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="article">
       {/* el encabezado común (revisión de UX, etapa 5): el tipo como antetítulo, la situación orgánica y las partidas por verificar
           como chips, y las acciones en su lugar */}
       <EncabezadoDePagina
@@ -115,7 +115,7 @@ function Ficha({ comunidad }: { comunidad: Registro }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

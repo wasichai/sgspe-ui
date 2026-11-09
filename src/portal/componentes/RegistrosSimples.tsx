@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth, type FieldMeta } from '@wasichai/core'
-import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
+import { Alert, Button, Table, Td, Th, cn } from '@wasichai/ui'
+import { CAJA_DE_TABLA, CELDA, CELDA_DE_TITULO, ENCABEZADO, FILA } from './TablaPriorizada'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
@@ -130,12 +131,12 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
           {filas.length === 0 ? (
             <VacioDeLista conFiltros alLimpiar={() => buscar('')} sinFiltros={lista.data?.length} />
           ) : (
-            <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+            <div className={CAJA_DE_TABLA}>
               <Table aria-label={titulo}>
                 <thead>
                   <tr>
                     {columnas.map((c) => (
-                      <Th key={c.id} scope="col">
+                      <Th key={c.id} scope="col" className={ENCABEZADO}>
                         {c.encabezado}
                       </Th>
                     ))}
@@ -143,11 +144,12 @@ export function RegistrosSimples(props: RegistrosSimplesProps) {
                 </thead>
                 <tbody>
                   {filas.map((r) => (
-                    <tr key={r.id}>
+                    <tr key={r.id} className={FILA}>
                       {columnas.map((c, i) => (
-                        <Td key={c.id} className="text-sm">
+                        // la primera columna es la del título: la única que se parte en líneas
+                        <Td key={c.id} className={cn(CELDA, i === 0 && CELDA_DE_TITULO)}>
                           {i === 0 ? (
-                            <button type="button" className="text-left text-sg-primary-text underline" onClick={() => abrir(r.id)}>
+                            <button type="button" className="text-left font-semibold text-sg-text hover:underline" onClick={() => abrir(r.id)}>
                               {c.celda(r)}
                             </button>
                           ) : (

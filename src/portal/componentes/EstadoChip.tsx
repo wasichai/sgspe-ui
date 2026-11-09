@@ -1,6 +1,6 @@
 import { useWorkflow } from '../datos/flujos'
-import { cn } from '@wasichai/ui'
-import { aparienciaDe, CLASE_DE_TONO } from './apariencias'
+import { aparienciaDe, CLASE_DE_CHIP, CLASE_DE_TONO } from './apariencias'
+import { unir } from './clases'
 
 // el StatusBadge de design-system.md §9: el estado de workflow con su tono, su ícono y la etiqueta de la metadata
 // (GET /api/objects/{object}/workflow, de @wasichai/workflow); mientras no llega, el nombre técnico
@@ -15,10 +15,7 @@ export function EstadoChip({ objeto, estado }: { objeto: string; estado: string 
 export function ChipDeEstado({ objeto, estado, etiqueta }: { objeto: string; estado: string; etiqueta: string }) {
   const { tono, Icono } = aparienciaDe(objeto, estado)
   return (
-    <span
-      data-estado={estado}
-      className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-sg-sm px-2 py-0.5 text-sg-caption font-medium', CLASE_DE_TONO[tono])}
-    >
+    <span data-estado={estado} className={unir(CLASE_DE_CHIP, CLASE_DE_TONO[tono])}>
       <Icono aria-hidden className="size-3.5" />
       {etiqueta}
     </span>

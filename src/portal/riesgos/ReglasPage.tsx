@@ -16,6 +16,7 @@ import { usePedir } from '../datos/http'
 import { atributo, campoDe, texto, useActualizar, useCrear, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { opcion } from '../datos/opciones'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // S60 · reglas de alerta (screens.md §9; workflows.md, «Tipos de regla de JOB-04»; ASM-097): las reglas del proyecto
 // (/projects/:projectId/risks/rules) o las de la organización (/risks/rules, sin proyecto). un formulario propio, no el de la
@@ -48,7 +49,7 @@ function Reglas() {
   const editada = abierta && abierta !== 'nueva' ? reglas.find((r) => r.id === abierta) : undefined
   const crea = escribe && can(OBJETO, 'CREATE')
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{projectId ? t('reglasDeAlerta.titulo') : t('reglasDeAlerta.tituloDeLaOrganizacion')}</h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -93,7 +94,7 @@ function Reglas() {
           <FormularioDeRegla key={abierta ?? ''} regla={editada} proyecto={projectId} alTerminar={() => setAbierta(null)} />
         ) : null}
       </Drawer>
-    </section>
+    </ContenedorDePagina>
   )
 }
 

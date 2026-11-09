@@ -1,4 +1,4 @@
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
@@ -30,7 +30,7 @@ export function TableroRiesgosPage() {
   const { scope } = useContextFilters()
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina titulo={t('tableroRiesgos.titulo')} vistas={<VistasDelModulo modulo="risks" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
@@ -64,7 +64,7 @@ export function TableroRiesgosPage() {
           )
         }}
       </ConsultaDeTablero>
-    </section>
+    </ContenedorDePagina>
   )
 }
 

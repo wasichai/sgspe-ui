@@ -41,8 +41,8 @@ export function EleccionDeGrupos({
   const coinciden = visibles.some((g) => !elegidos.includes(g.id) || comparable(nombres.get(g.id) ?? '').includes(buscado))
   const cambiar = (id: string, elegido: boolean) => alCambiar(elegido ? [...elegidos, id] : elegidos.filter((x) => x !== id))
   return (
-    <fieldset className="space-y-1">
-      <legend className={etiquetaOculta ? 'sr-only' : 'text-sg-label font-medium'}>{etiqueta}</legend>
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className={etiquetaOculta ? 'sr-only' : 'text-sg-label font-bold'}>{etiqueta}</legend>
       {conBusqueda ? (
         <div className="flex flex-wrap items-center gap-2">
           <input
@@ -55,7 +55,7 @@ export function EleccionDeGrupos({
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.preventDefault()
             }}
-            className={cn(CONTROL, 'min-w-0 flex-1', grande && 'h-11')}
+            className={cn(CONTROL, 'min-w-0 flex-1', grande && 'h-12!')}
           />
           {elegidos.length > 0 ? (
             <span role="status" className="text-sg-caption text-sg-text-muted">

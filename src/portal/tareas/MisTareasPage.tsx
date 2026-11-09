@@ -2,7 +2,7 @@ import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { cn } from '@wasichai/ui'
 import { ChipsDeFiltro } from '../componentes/Lista'
 import { BarraDeSeleccion } from '../componentes/BarraDeSeleccion'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useLeeTodosLosProyectos, useProyectos } from '../contexto/proyectos'
 import { useAuth } from '@wasichai/core'
@@ -102,7 +102,7 @@ export function MisTareasPage() {
   const conSituacion: Parametros = situacion ? { ...mias, deadline_status: situacion } : mias
   const verLista = () => lista.cambiar({ view: null })
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         titulo={proyecto ? t('tareas.delProyecto') : t('tareas.titulo')}
         conteo={cifras.abiertas !== null ? t('tareas.conteo', { count: cifras.abiertas }) : undefined}
@@ -176,7 +176,7 @@ export function MisTareasPage() {
         </>
       )}
       {abierta.data ? <TareaDrawer tarea={abierta.data} alCerrar={() => lista.cambiar({ task: null, page: pagina })} /> : null}
-    </section>
+    </ContenedorDePagina>
   )
 }
 

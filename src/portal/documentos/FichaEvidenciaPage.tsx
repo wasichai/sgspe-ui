@@ -1,6 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
@@ -77,7 +77,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
   // sustenta es su trazabilidad
   useMigaDelRegistro(nombreDeEvidencia(evidencia))
   return (
-    <article className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="article">
       {proyecto ? null : (
         <Link to={biblioteca} className="text-sm text-sg-primary-text underline">
           {t('documentos.ficha.volver')}
@@ -197,7 +197,7 @@ function Ficha({ evidencia }: { evidencia: Registro }) {
           alCancelar={() => setVersionando(false)}
         />
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

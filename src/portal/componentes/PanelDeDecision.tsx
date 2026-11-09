@@ -30,8 +30,10 @@ export interface SiguienteAccion {
   pide?: string[]
 }
 
-// las columnas en pantalla ancha: una por tarjeta dibujada (clases enteras, para que Tailwind las vea)
-const COLUMNAS: Record<number, string> = { 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4' }
+// la rejilla de design-system.md §5.3: una celda por tarjeta dibujada en una sola fila cuando el panel es ancho, y dos por dos
+// en lo estrecho (el teléfono, la tableta y la vista previa acoplada de 420 px): se mide el panel (consulta de contenedor), no la
+// ventana. clases enteras, para que Tailwind las vea
+const COLUMNAS: Record<number, string> = { 2: '@3xl:grid-cols-2', 3: '@3xl:grid-cols-3', 4: '@3xl:grid-cols-4' }
 
 export function PanelDeDecision({
   objeto,
@@ -76,65 +78,73 @@ export function PanelDeDecision({
   const aQuien = proyecto === undefined || (!isAdmin && !asignaciones.isSuccess) ? null : isAdmin || asignado ? 'leToca' : 'noAsignado'
   const tipoDelEstado = workflow.data?.definition.states.find((s) => s.name === estado)?.type
   return (
-    <section
-      aria-label={t('paginas.decision.titulo')}
-      className={cn('grid gap-3 sm:grid-cols-2', COLUMNAS[2 + Number(responsable !== undefined) + Number(vencimiento !== undefined)])}
-    >
-      <Tarjeta titulo={t('paginas.decision.estado')}>
-        <EstadoChip objeto={objeto} estado={estado} />
-        {/* sin la fecha (un registro anterior a state_changed_at) no se dibuja: «Desde —» no decía nada (rediseño de UX, 2026-10-20) */}
-        {desde ? (
-          <p className="text-sg-caption text-sg-text-muted">
-            {t('paginas.decision.desde')} <Dia valor={desde} />
-          </p>
-        ) : null}
-        {por ? (
-          <p className="text-sg-caption text-sg-text-muted">
-            {t('paginas.decision.por')} <Persona correo={por} />
-          </p>
-        ) : null}
-        {camino ? <CaminoPlegado objeto={objeto} estado={estado} camino={camino} /> : null}
-      </Tarjeta>
-      <Tarjeta titulo={t('paginas.decision.siguiente')}>
-        {siguiente ? (
-          <>
-            <p className="font-medium">{siguiente.etiqueta}</p>
-            {aQuien ? <p className="text-sg-caption text-sg-text-muted">{t(`paginas.decision.${aQuien}`)}</p> : null}
-            {siguiente.falta ? <p className="text-sg-caption text-sg-warning">{siguiente.falta}</p> : null}
-            {siguiente.pide ? (
-              <p className="text-sg-caption text-sg-text-muted">
-                {t('paginas.decision.pide', { count: siguiente.pide.length, campos: lista.format(siguiente.pide.map((c) => `«${c}»`)) })}
-              </p>
-            ) : null}
-          </>
-        ) : workflow.data ? (
-          <p className="text-sg-text-muted">{t(tipoDelEstado === 'FINAL' ? 'paginas.decision.sinSiguiente' : 'paginas.decision.deOtraPersona')}</p>
-        ) : null}
-      </Tarjeta>
-      {responsable !== undefined ? (
-        <Tarjeta titulo={t('paginas.decision.responsable')}>
-          {responsable ? <Persona correo={responsable} /> : <p className="text-sg-text-muted">{t('paginas.decision.sinResponsable')}</p>}
+    <section aria-label={t('paginas.decision.titulo')} className="@container">
+      {/* los separadores de 1 px son el borde derecho e inferior de cada celda; la caja recorta los del borde (margen de -1 px) */}
+      <div
+        data-rejilla-de-decision
+        className={cn(
+          'grid grid-cols-2 overflow-hidden rounded-sg-md border-2 border-sg-border-strong bg-sg-surface',
+          COLUMNAS[2 + Number(responsable !== undefined) + Number(vencimiento !== undefined)]
+        )}
+      >
+        <Tarjeta titulo={t('paginas.decision.estado')}>
+          <EstadoChip objeto={objeto} estado={estado} />
+          {/* sin la fecha (un registro anterior a state_changed_at) no se dibuja: «Desde —» no decía nada (rediseño de UX, 2026-10-20) */}
+          {desde ? (
+            <p className="text-sg-caption text-sg-text-muted">
+              {t('paginas.decision.desde')} <Dia valor={desde} />
+            </p>
+          ) : null}
+          {por ? (
+            <p className="text-sg-caption text-sg-text-muted">
+              {t('paginas.decision.por')} <Persona correo={por} />
+            </p>
+          ) : null}
+          {camino ? <CaminoPlegado objeto={objeto} estado={estado} camino={camino} /> : null}
         </Tarjeta>
-      ) : null}
-      {vencimiento !== undefined ? (
-        <Tarjeta titulo={t('paginas.decision.vencimiento')}>
-          {vencimiento ? (
+        <Tarjeta titulo={t('paginas.decision.siguiente')}>
+          {siguiente ? (
             <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Dia valor={vencimiento} />
-                <SituacionDePlazo valor={situacion} revision={tipoDeSituacion === 'revision'} vigencia={tipoDeSituacion === 'vigencia'} />
-              </div>
-              {/* el relativo, solo mientras el plazo corre: JOB-01 deja la situación vacía fuera de esos estados (un compromiso cumplido
-                no «venció hace 40 días») */}
-              {typeof situacion === 'string' && situacion !== '' ? (
-                <CuandoVence dia={vencimiento} habiles={vencimientoEnHabiles} className="block text-sg-caption text-sg-text-muted" />
+              <p className="font-bold text-sg-text">{siguiente.etiqueta}</p>
+              {aQuien ? <p className="text-sg-caption text-sg-text-muted">{t(`paginas.decision.${aQuien}`)}</p> : null}
+              {siguiente.falta ? <p className="text-sg-caption text-sg-warning">{siguiente.falta}</p> : null}
+              {siguiente.pide ? (
+                <p className="text-sg-caption text-sg-text-muted">
+                  {t('paginas.decision.pide', { count: siguiente.pide.length, campos: lista.format(siguiente.pide.map((c) => `«${c}»`)) })}
+                </p>
               ) : null}
             </>
-          ) : (
-            <p className="text-sg-text-muted">{t('paginas.decision.sinVencimiento')}</p>
-          )}
+          ) : workflow.data ? (
+            <p className="text-sg-text-muted">{t(tipoDelEstado === 'FINAL' ? 'paginas.decision.sinSiguiente' : 'paginas.decision.deOtraPersona')}</p>
+          ) : null}
         </Tarjeta>
-      ) : null}
+        {responsable !== undefined ? (
+          <Tarjeta titulo={t('paginas.decision.responsable')}>
+            {responsable ? <Persona correo={responsable} /> : <p className="text-sg-text-muted">{t('paginas.decision.sinResponsable')}</p>}
+          </Tarjeta>
+        ) : null}
+        {vencimiento !== undefined ? (
+          <Tarjeta titulo={t('paginas.decision.vencimiento')}>
+            {vencimiento ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span data-vencimiento className={situacion === 'VENCIDO' ? 'font-bold text-sg-danger' : 'font-bold text-sg-text'}>
+                    <Dia valor={vencimiento} />
+                  </span>
+                  <SituacionDePlazo valor={situacion} revision={tipoDeSituacion === 'revision'} vigencia={tipoDeSituacion === 'vigencia'} />
+                </div>
+                {/* el relativo, solo mientras el plazo corre: JOB-01 deja la situación vacía fuera de esos estados (un compromiso cumplido
+                no «venció hace 40 días») */}
+                {typeof situacion === 'string' && situacion !== '' ? (
+                  <CuandoVence dia={vencimiento} habiles={vencimientoEnHabiles} className="block text-sg-caption text-sg-text-muted" />
+                ) : null}
+              </>
+            ) : (
+              <p className="text-sg-text-muted">{t('paginas.decision.sinVencimiento')}</p>
+            )}
+          </Tarjeta>
+        ) : null}
+      </div>
     </section>
   )
 }
@@ -164,8 +174,8 @@ function CaminoPlegado({ objeto, estado, camino }: { objeto: string; estado: str
 
 function Tarjeta({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
-    <div role="group" aria-label={titulo} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
-      <p className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</p>
+    <div role="group" aria-label={titulo} className="-mr-px -mb-px min-w-0 space-y-1 border-r border-b border-sg-border px-4 py-3 text-sm">
+      <p className="text-sg-body-sm text-sg-text-secondary">{titulo}</p>
       {children}
     </div>
   )

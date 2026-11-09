@@ -25,6 +25,7 @@ import { useComprobacion } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { opcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // S48 · aprobaciones y escalamientos (screens.md §11): las aprobaciones son transiciones, no objetos (domain-model.md §6.13).
 // «Por aprobar» sale de los avisos approval_pending de wasichai-notifications (fuente sgspe.approvals, ACTION, con su enlace
@@ -158,7 +159,7 @@ export function AprobacionesPage() {
     )
   }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <div className={cn('space-y-1', elegida && lista.vista !== 'escalamientos' && 'hidden xl:block')}>
         <h1 className="text-sg-h1 font-semibold">{t('aprobaciones.titulo')}</h1>
         <p className="text-sg-body-sm text-sg-text-secondary">{t('aprobaciones.ayuda')}</p>
@@ -252,7 +253,7 @@ export function AprobacionesPage() {
           </section>
         </div>
       )}
-    </section>
+    </ContenedorDePagina>
   )
 }
 

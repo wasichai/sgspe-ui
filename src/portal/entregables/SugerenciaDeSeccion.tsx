@@ -11,7 +11,7 @@ import { texto, useRegistros, type Registro } from '../datos/registros'
 import { AvisoDeIa } from '../ia/AvisoDeIa'
 import { useAceptarSugerencia, useCasoDeIa, useCorrida } from '../ia/contrato'
 import { FalloDeCorrida } from '../ia/FalloDeCorrida'
-import { MarcaDeIa } from '../ia/MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from '../ia/MarcaDeIa'
 import { TextoDeIa } from '../ia/TextoDeIa'
 import { fechaYHoraPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
@@ -56,7 +56,7 @@ export function SugerenciaDeSeccion({ entregable, seccion, sucio }: { entregable
   const sugerir = () => corrida.mutate({ caso: 'AI-04', objetivo: { object: 'deliverable_section', recordId: seccion.id } })
   const titulo = t('entregables.ia.titulo')
   return (
-    <section aria-label={titulo} className="space-y-3 rounded-sg-lg border border-dashed border-sg-ai-border bg-sg-ai-soft p-4 text-sm">
+    <section aria-label={titulo} className={`space-y-3 text-sm ${CAJA_DE_IA}`}>
       <div className="flex items-center gap-2">
         <MarcaDeIa clase="sugerencia" />
         <h3 className="text-sg-h3 font-semibold">{titulo}</h3>

@@ -37,7 +37,7 @@ const POR_PROYECTO = 3
 const TOPE_DE_PROYECTOS = 6
 const TAREA_ABIERTA = ['open', 'in_progress', 'blocked']
 const URGENCIA: Record<string, number> = { VENCIDO: 0, 'POR VENCER': 1 }
-const TONO: Record<string, TonoDeEntrada> = { VENCIDO: 'peligro', 'POR VENCER': 'aviso' }
+const TONO: Record<string, TonoDeEntrada> = { VENCIDO: 'danger', 'POR VENCER': 'warning' }
 
 interface DeSuCargo {
   objeto: string
@@ -146,7 +146,7 @@ export function LoQueMeToca() {
       a: rutaDeFicha(item.objeto, item.registro) ?? '/tasks',
       motivo: [tipo, proyecto ?? '', estado, situacion ? rotuloDeOpcion(situacion) : ''].filter(Boolean).join(' · '),
       cuando: fecha ? t(situacion === 'VENCIDO' ? 'miDia.hoy.vencio' : 'miDia.hoy.vence', { fecha: diaLegible(fecha) }) : undefined,
-      tono: TONO[situacion] ?? 'neutro',
+      tono: TONO[situacion] ?? 'neutral',
       accion: paraTomar ? <TomarTarea tarea={item.registro} alTomar={(r) => setTomada(texto(r, 'title'))} /> : undefined
     }
   }

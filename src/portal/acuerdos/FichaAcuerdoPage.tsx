@@ -37,6 +37,7 @@ import { diaPe, NS } from '../i18n'
 import { CAMPOS_DEL_ACUERDO } from './AcuerdosPage'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { CampoDeMotivo, useMotivo } from '../componentes/Motivo'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // S33 · acuerdo o convenio (screens.md §7, WF-I): tipo, estado y vigencia (validity_status como insignia derivada; vencer no
 // concluye el acuerdo), sus cláusulas con los compromisos que originan, las partes con su firma, la comunidad titular, la
@@ -137,7 +138,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
   useMigaDelRegistro(texto(acuerdo, 'code') || texto(acuerdo, 'title'))
   const siguiente = useSiguienteAccion('agreement', acuerdo, COMPROBAR)
   return (
-    <article className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t('acuerdos.ficha.tipo'), texto(acuerdo, 'code'), rotuloDeOpcion(tipo)].filter(Boolean).join(' · ')}
         titulo={texto(acuerdo, 'title')}
@@ -245,7 +246,7 @@ function Ficha({ acuerdo }: { acuerdo: Registro }) {
           alCancelar={() => setEditando(false)}
         />
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

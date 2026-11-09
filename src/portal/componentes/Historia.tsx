@@ -47,12 +47,12 @@ export function Historia({ objeto, id, limite = 50, vacio }: { objeto: string; i
   if (historia.isError && !historia.data) return <FalloDeLectura error={historia.error} alReintentar={() => void historia.refetch()} />
   if (historia.data.length === 0) return <p className="text-sm text-sg-text-muted">{vacio}</p>
   return (
-    <ol className="space-y-1 text-sm">
+    <ol className="divide-y divide-sg-border-subtle text-sm">
       {historia.data.map((e) => {
         const deEstado = e.changes?.find(esCambioDeEstado)
         const otros = (e.changes ?? []).filter((c) => c !== deEstado)
         return (
-          <li key={e.id}>
+          <li key={e.id} className="py-1.5">
             <span className="text-sg-text-muted">{fechaYHoraPe(new Date(e.occurredAt))}</span> · <Persona correo={e.userEmail} /> ·{' '}
             {t(`comun.actividad.operaciones.${e.operation}`, { defaultValue: e.operation })}
             {deEstado ? ` ${t('comun.actividad.cambioDeEstado', { de: estado(deEstado.before), a: estado(deEstado.after) })}` : null}

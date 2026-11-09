@@ -9,6 +9,7 @@ import { CajaDeBusqueda } from '../componentes/BarraDeFiltros'
 import { comparable } from '../componentes/FiltroDeGrupo'
 import { CampoFecha } from '../componentes/CampoFecha'
 import { Drawer } from '../componentes/Drawer'
+import { Cargando } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useProyecto, useProyectos } from '../contexto/proyectos'
@@ -314,8 +315,8 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
               {/* sin lugares, la lista dice por qué: cargando, una capa que falló (la lista estaría incompleta) o, solo si todo
                   respondió, que no hay lugares en la vista */}
               {lugares.size === 0 && cargando ? (
-                <p role="status" className="text-sg-caption text-sg-text-muted">
-                  {t('comun.cargando')}
+                <p>
+                  <Cargando compacto />
                 </p>
               ) : null}
               {conError ? (

@@ -1,13 +1,57 @@
 import { Link } from 'react-router'
 import { ApiError } from '@wasichai/core'
 import { AlertTriangle } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { cn } from '@wasichai/ui'
+import { createContext, useContext, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Indicador } from '../datos/indicadores'
-import { NS, numeroPe } from '../i18n'
+import { fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { Cargando, NoDisponible } from './Estados'
 import { correlacionDe, useMensajeDeError } from './errores'
-import { Seccion } from './Seccion'
+import { useDentroDeSeccion } from './Seccion'
+
+// la fila de cifras de Civic Modern (design-system.md §5.3 «KPI», .kpis del lienzo): las cifras en una sola caja con borde de
+// 1 px y separadores de 1 px, no tarjetas sueltas. cada celda ocupa lo que le toca y la fila se parte en el teléfono; los
+// separadores son el borde derecho e inferior de cada celda, y la caja recorta los del borde (margen de -1 px y overflow
+// oculto), así una fila incompleta no deja huecos. calculadoEn, la hora de cálculo del tablero (computedAt), al pie si existe
+const EnRejilla = createContext(false)
+
+// etiqueta: el nombre del grupo, si la región que lo contiene no lo nombra ya
+export function RejillaDeKpi({
+  etiqueta,
+  calculadoEn,
+  className,
+  children
+}: {
+  etiqueta?: string
+  calculadoEn?: string
+  className?: string
+  children: ReactNode
+}) {
+  const { t } = useTranslation(NS)
+  const instante = calculadoEn ? new Date(calculadoEn) : null
+  return (
+    <div className={cn('space-y-1', className)}>
+      <div
+        role={etiqueta ? 'group' : undefined}
+        aria-label={etiqueta}
+        className="flex flex-wrap overflow-hidden rounded-sg-md border border-sg-border bg-sg-surface"
+      >
+        <EnRejilla.Provider value={true}>{children}</EnRejilla.Provider>
+      </div>
+      {instante && !Number.isNaN(instante.getTime()) ? (
+        <p className="text-sg-caption text-sg-text-muted">{t('tableros.calculado', { fecha: fechaYHoraPe(instante) })}</p>
+      ) : null}
+    </div>
+  )
+}
+
+// las clases enteras, para que Tailwind las vea: la celda de una rejilla, la cifra sola con su caja y la que va dentro de otra
+// superficie sin caja (nunca una tarjeta dentro de otra, U-34). relleno de 14 × 18 px
+const CELDA = 'flex min-w-0 flex-1 basis-40 flex-col gap-1 -mr-px -mb-px border-r border-b border-sg-border px-4.5 py-3.5'
+const SOLA = 'flex min-w-0 flex-col gap-1 rounded-sg-md border border-sg-border bg-sg-surface px-4.5 py-3.5'
+const SIN_CAJA = 'flex min-w-0 flex-col gap-1'
+const TONO_DE_CIFRA = { danger: 'text-sg-danger', warning: 'text-sg-warning' } as const
 
 // una cifra con su contexto (design-system.md §5, dashboards.md §9.2): el valor, su unidad y, si es un porcentaje, el
 // "n de N" que deja ver la base. sin permiso dice "no disponible" y por qué; un módulo que no llegó dice en qué fase llega
@@ -26,7 +70,9 @@ export function KpiCard({
   alReintentar,
   anidada,
   cifra,
-  detalle
+  detalle,
+  tono,
+  codigo
 }: {
   titulo: string
   indicador?: Indicador
@@ -43,8 +89,14 @@ export function KpiCard({
   // la cifra como se lee (con su unidad) y la línea que dice qué cuenta, en lugar de «n / N · unidad»
   cifra?: (indicador: Indicador & { value: number }) => string
   detalle?: (indicador: Indicador & { value: number }) => ReactNode
+  // la cifra en danger o warning, solo cuando el rótulo ya dice que es lo vencido o lo por vencer: lo decide la pantalla
+  tono?: 'danger' | 'warning'
+  // el código del indicador, en la monoespaciada, si la pantalla lo muestra (el catálogo lo nombra; las demás, por su rótulo)
+  codigo?: string
 }) {
   const { t } = useTranslation(NS)
+  const enRejilla = useContext(EnRejilla)
+  const dentro = useDentroDeSeccion()
   let cuerpo
   if (llegaEn) cuerpo = <p className="text-sm text-sg-text-muted">{t('comun.llegaEn', { fase: llegaEn })}</p>
   // sin permiso sobre el indicador (403) no es una falla: la cifra no está disponible para esta cuenta
@@ -76,7 +128,8 @@ export function KpiCard({
       )
     cuerpo = (
       <>
-        <p className="text-sg-kpi font-semibold tabular-nums text-sg-text">
+        {/* sin cn: tailwind-merge confunde el tamaño text-sg-kpi con un color y lo quitaría */}
+        <p className={`text-sg-kpi tabular-nums ${tono ? TONO_DE_CIFRA[tono] : 'text-sg-text'}`}>
           {a ? (
             <Link to={a} aria-label={`${titulo}: ${dicha}`} className="hover:underline">
               {dibujada}
@@ -85,16 +138,17 @@ export function KpiCard({
             dibujada
           )}
         </p>
-        <p className="text-sg-caption text-sg-text-muted">{detalle ? detalle(conValor) : porcentaje ? base : (indicador.unit ?? '')}</p>
+        <p className="text-sg-body-sm text-sg-text-muted">{detalle ? detalle(conValor) : porcentaje ? base : (indicador.unit ?? '')}</p>
       </>
     )
   }
   return (
-    <Seccion etiqueta={titulo} anidada={anidada} className="space-y-1">
-      <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{titulo}</h3>
+    <section aria-label={titulo} className={enRejilla ? CELDA : anidada || dentro ? SIN_CAJA : SOLA}>
+      <h3 className="text-sm font-semibold text-sg-text-secondary">{titulo}</h3>
       {cuerpo}
+      {codigo ? <p className="font-sg-mono text-[11.5px] text-sg-text-muted">{codigo}</p> : null}
       {notas}
-    </Seccion>
+    </section>
   )
 }
 

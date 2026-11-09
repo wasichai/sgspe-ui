@@ -11,7 +11,7 @@ import { texto, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { useAceptarSugerencia } from './contrato'
-import { MarcaDeIa } from './MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from './MarcaDeIa'
 import { personasCitadas, quedanMarcadores, reidentificar } from './marcadores'
 import { confianzaDe, cuerpoDeAceptacion } from './sugerencias'
 import { nombresReales, TextoDeIa, useNombresDePersonas } from './TextoDeIa'
@@ -49,13 +49,10 @@ export function BorradorDeActa({
   const confianza = confianzaDe(borrador)
   const proyecto = texto(interaccion, 'project')
   return (
-    <section
-      aria-label={t('borradorDeActa.titulo')}
-      className="space-y-2 rounded-sg-lg border border-dashed border-sg-ai-border bg-sg-ai-soft p-3 text-sm text-sg-text"
-    >
+    <section aria-label={t('borradorDeActa.titulo')} className={`space-y-2 text-sm text-sg-text ${CAJA_DE_IA}`}>
       <div className="flex flex-wrap items-center gap-2">
         <MarcaDeIa clase="sugerencia" />
-        <h2 className="font-semibold">{t('borradorDeActa.titulo')}</h2>
+        <h2 className="font-bold">{t('borradorDeActa.titulo')}</h2>
         {confianza !== null ? <span className="text-sg-caption text-sg-text-muted">{t('ia.confianza', { n: Math.round(confianza * 100) })}</span> : null}
       </div>
       <p className="text-sg-caption text-sg-text-secondary">{t('borradorDeActa.ayuda')}</p>

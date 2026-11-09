@@ -25,7 +25,7 @@ import {
   type RespuestaDelAsistente
 } from './contrato'
 import { ProyectoDeLaPregunta, RespuestaConFuentes } from './Documentos'
-import { MarcaDeIa } from './MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from './MarcaDeIa'
 import { TextoDeIa } from './TextoDeIa'
 
 // S05 · el panel del asistente (screens.md §13, flujo 18). no es una sección (ASM-073): el AppShell monta el proveedor, el
@@ -172,8 +172,8 @@ export function RespuestaDeDatos({ respuesta }: { respuesta: RespuestaDelAsisten
   const { t } = useTranslation(NS)
   const enlaces = registrosConsultados(respuesta.steps)
   return (
-    <article className="space-y-2 rounded-sg-md border border-dashed border-sg-ai-border bg-sg-ai-soft p-3 text-sm">
-      <MarcaDeIa clase="resumen" />
+    <article className={`space-y-2 text-sm ${CAJA_DE_IA}`}>
+      <MarcaDeIa clase="resumen" forma="encabezado" />
       {/* truncada, el servidor responde un aviso fijo en español: el portal dice el suyo y no repite ambos */}
       {respuesta.truncated ? <Alert tone="warning">{t('asistente.truncada')}</Alert> : <TextoDeIa texto={respuesta.answer} markdown />}
       {enlaces.length > 0 ? (

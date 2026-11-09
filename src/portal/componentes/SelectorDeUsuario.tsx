@@ -66,8 +66,8 @@ export function SelectorDeUsuario({
   }
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sg-body-sm font-medium text-sg-text">{etiqueta}</legend>
-      <p className="text-sg-caption text-sg-text-muted">{usuarios.isError ? t('comun.usuario.noLeido') : t('comun.usuario.aMano')}</p>
+      <legend className="text-sg-label font-bold text-sg-text">{etiqueta}</legend>
+      <p className="text-sg-body-sm text-sg-text-secondary">{usuarios.isError ? t('comun.usuario.noLeido') : t('comun.usuario.aMano')}</p>
       <Campo etiqueta={t('comun.usuario.correo', { etiqueta })} error={error}>
         {(p) => <Input {...p} type="email" value={valor?.email ?? ''} onChange={(e) => cambiar({ email: e.target.value.trim() })} />}
       </Campo>

@@ -2,7 +2,9 @@ import { NoDisponible } from '../componentes/Estados'
 import { desglose, type Indicador } from '../datos/indicadores'
 
 // la mini matriz interés × poder de S08 y S20 (KPI-STK-03): puntos de un solo color sobre los umbrales del proyecto, sin
-// etiquetas; la matriz completa y accesible es S19
+// etiquetas; la matriz completa y accesible es S19. Civic Modern: el marco en border-strong y los umbrales discontinuos (4 3)
+// como la meta de un gráfico. los cuadrantes quedan sin relleno: zone-1 a zone-4 son los niveles de la matriz probabilidad ×
+// impacto (design-system.md §3.3) y pintarlos aquí haría leer un nivel de riesgo donde solo hay interés y poder
 export interface Punto {
   x: number
   y: number
@@ -30,12 +32,28 @@ export function MiniMatriz({
   // de 1 a 5 en los dos ejes, en un cuadro de 100 × 100
   const escala = (v: number) => ((v - 1) / 4) * 100
   return (
-    <svg role="img" aria-label={etiqueta} viewBox="-4 -4 108 108" className="h-32 w-32 text-sg-text-muted">
-      <rect x="0" y="0" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="0.5" />
-      <line x1={escala(umbralInteres)} y1="0" x2={escala(umbralInteres)} y2="100" stroke="currentColor" strokeDasharray="2 2" strokeWidth="0.5" />
-      <line x1="0" y1={100 - escala(umbralPoder)} x2="100" y2={100 - escala(umbralPoder)} stroke="currentColor" strokeDasharray="2 2" strokeWidth="0.5" />
+    <svg role="img" aria-label={etiqueta} viewBox="-4 -4 108 108" className="h-32 w-32">
+      <rect x="0" y="0" width="100" height="100" className="fill-sg-surface stroke-sg-border-strong" strokeWidth="1" />
+      <line
+        x1={escala(umbralInteres)}
+        y1="0"
+        x2={escala(umbralInteres)}
+        y2="100"
+        className="stroke-sg-border-strong"
+        strokeDasharray="4 3"
+        strokeWidth="0.75"
+      />
+      <line
+        x1="0"
+        y1={100 - escala(umbralPoder)}
+        x2="100"
+        y2={100 - escala(umbralPoder)}
+        className="stroke-sg-border-strong"
+        strokeDasharray="4 3"
+        strokeWidth="0.75"
+      />
       {puntos.map((p, i) => (
-        <circle key={i} cx={escala(p.x)} cy={100 - escala(p.y)} r={p.destacado ? 4 : 2.5} fill={p.destacado ? 'var(--sg-data-2)' : 'var(--sg-data-1)'} />
+        <circle key={i} cx={escala(p.x)} cy={100 - escala(p.y)} r={p.destacado ? 4 : 2.5} className={p.destacado ? 'fill-sg-data-2' : 'fill-sg-data-1'} />
       ))}
     </svg>
   )

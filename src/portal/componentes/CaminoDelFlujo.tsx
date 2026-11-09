@@ -52,24 +52,29 @@ export function CaminoDelFlujo({ objeto, estado, camino: dado }: { objeto: strin
   const etiqueta = (nombre: string) => definicion.states.find((s) => s.name === nombre)?.label ?? nombre
   const posicion = estado ? camino.indexOf(estado) : -1
   return (
-    <div className="space-y-1 text-sg-caption">
+    <div className="space-y-1 text-sg-body-sm">
       <ol aria-label={t('paginas.flujo.titulo')} className="flex flex-wrap items-center gap-x-1 gap-y-1">
         {camino.map((nombre, i) => {
           const situacion = i < posicion ? 'hecho' : i === posicion ? 'actual' : 'pendiente'
           return (
-            <li key={nombre} aria-current={situacion === 'actual' ? 'step' : undefined} className="inline-flex items-center gap-1">
-              {i > 0 ? <span aria-hidden className={cn('h-px w-4', i <= posicion ? 'bg-sg-primary' : 'bg-sg-border-strong')} /> : null}
+            <li key={nombre} aria-current={situacion === 'actual' ? 'step' : undefined} className="inline-flex items-center gap-1.5">
+              {i > 0 ? <span aria-hidden className={cn('h-0.5 w-4', i <= posicion ? 'bg-sg-progress' : 'bg-sg-border')} /> : null}
+              {/* el número en un círculo de 24 px, como los pasos (design-system.md §5.3): hecho en progress con el check, actual
+                  en primary y 800, pendiente con el contorno en border */}
               <span
+                aria-hidden
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5',
-                  situacion === 'actual' && 'border-sg-primary bg-sg-primary-soft font-medium text-sg-primary-text',
-                  situacion === 'hecho' && 'border-sg-border text-sg-text-secondary',
-                  situacion === 'pendiente' && 'border-dashed border-sg-border text-sg-text-muted'
+                  'inline-flex size-6 shrink-0 items-center justify-center rounded-full text-sg-caption font-bold tabular-nums',
+                  situacion === 'hecho' && 'bg-sg-progress text-sg-on-primary',
+                  situacion === 'actual' && 'bg-sg-primary text-sg-on-primary',
+                  situacion === 'pendiente' && 'border-2 border-sg-border text-sg-text-muted'
                 )}
               >
-                {situacion === 'hecho' ? <Check aria-hidden className="size-3" /> : null}
-                <span className="sr-only">{t(`paginas.flujo.${situacion}`)}: </span>
-                <span>{etiqueta(nombre)}</span>
+                {situacion === 'hecho' ? <Check className="size-3.5" /> : i + 1}
+              </span>
+              <span className="sr-only">{t(`paginas.flujo.${situacion}`)}: </span>
+              <span className={situacion === 'actual' ? 'font-extrabold text-sg-primary-text' : situacion === 'hecho' ? 'text-sg-text' : 'text-sg-text-muted'}>
+                {etiqueta(nombre)}
               </span>
             </li>
           )

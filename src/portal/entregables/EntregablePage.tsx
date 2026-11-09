@@ -1,4 +1,4 @@
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ConfirmDialog } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -28,14 +28,14 @@ export function EntregablePage() {
   const entregable = useRegistro('deliverable', deliverableId)
   const reportes = projectId ? `/projects/${encodeURIComponent(projectId)}/reports` : '/reports'
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <Link to={reportes} className="text-sm text-sg-primary-text underline">
         {t('entregables.pagina.volver')}
       </Link>
       <Consulta consulta={entregable} noExiste={<NoEsDeSusProyectos />}>
         {(e) => <Entregable entregable={e} />}
       </Consulta>
-    </section>
+    </ContenedorDePagina>
   )
 }
 

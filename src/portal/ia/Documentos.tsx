@@ -8,7 +8,7 @@ import { useRegistro } from '../datos/registros'
 import { useNombreDeEvidencia, usePuedeDescargar } from '../documentos/api'
 import { NS } from '../i18n'
 import type { Cita, RespuestaConCitas } from './contrato'
-import { MarcaDeIa } from './MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from './MarcaDeIa'
 import { TextoDeIa } from './TextoDeIa'
 import { opcion } from '../datos/opciones'
 
@@ -36,8 +36,8 @@ export function RespuestaConFuentes({ respuesta }: { respuesta: RespuestaConCita
   // nunca responde sin fuente (decisión 7 del plan)
   if (respuesta.citations.length === 0) return <p className="rounded-sg-md border border-sg-border bg-sg-surface p-3 text-sm">{t('asistente.sinEvidencia')}</p>
   return (
-    <article className="space-y-2 rounded-sg-md border border-dashed border-sg-ai-border bg-sg-ai-soft p-3 text-sm">
-      <MarcaDeIa clase="resumen" />
+    <article className={`space-y-2 text-sm ${CAJA_DE_IA}`}>
+      <MarcaDeIa clase="resumen" forma="encabezado" />
       <TextoDeIa texto={respuesta.answer} markdown />
       <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('asistente.fuentes')}</h3>
       <ol className="space-y-2">

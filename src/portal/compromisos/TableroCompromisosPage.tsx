@@ -1,5 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { VistasGuardadas } from '../componentes/Lista'
 import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando } from '../componentes/Estados'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, RejillaDeKpi } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
@@ -51,6 +51,8 @@ const TARJETAS = [
 ] as const
 // la vista de la lista que cuenta lo mismo que cada tarjeta: su cifra la enlaza (revisión de UX, etapa 6). los registrados y los
 // cumplidos del periodo no tienen una vista que los cuente igual
+// la cifra en danger o warning solo donde el rótulo ya dice que es lo vencido o lo por vencer (design-system.md §5.3)
+const TONO_DE_TARJETA: Partial<Record<(typeof TARJETAS)[number][1], 'danger' | 'warning'>> = { vencidos: 'danger', porVencer: 'warning' }
 const VISTA_DE_TARJETA: Partial<Record<(typeof TARJETAS)[number][1], string>> = {
   abiertos: 'abiertos',
   vencidos: 'vencidos',
@@ -68,7 +70,7 @@ export function TableroCompromisosPage() {
   const { scope } = useContextFilters()
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina titulo={t('tableroCompromisos.titulo')} vistas={<VistasDelModulo modulo="commitments" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} conCampana conResponsable />
       <ConsultaDeTablero consulta={tablero}>
@@ -78,7 +80,7 @@ export function TableroCompromisosPage() {
             <div className="space-y-4">
               <section aria-label={t('tableroCompromisos.zonas.estado')} className="space-y-2">
                 <h2 className="text-sg-h3 font-semibold">{t('tableroCompromisos.zonas.estado')}</h2>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <RejillaDeKpi>
                   {TARJETAS.map(([code, nombre]) => {
                     const titulo = ind(code)?.label || t(`tableroCompromisos.tarjetas.${nombre}`)
                     const i = ind(code) ?? { code, label: titulo, available: false }
@@ -89,10 +91,11 @@ export function TableroCompromisosPage() {
                         indicador={i}
                         notas={i.available ? <NotasDeIndicador indicador={i} /> : null}
                         a={VISTA_DE_TARJETA[nombre] ? `${base}/commitments?view=${encodeURIComponent(VISTA_DE_TARJETA[nombre])}` : undefined}
+                        tono={TONO_DE_TARJETA[nombre]}
                       />
                     )
                   })}
-                </div>
+                </RejillaDeKpi>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <Zona titulo={t('tableroCompromisos.porEstado')} indicador={ind('KPI-COM-01')}>
                     {(i) => <PorEstado indicador={i} />}
@@ -137,7 +140,7 @@ export function TableroCompromisosPage() {
         }}
       </ConsultaDeTablero>
       <Pendientes proyecto={scope.kind === 'project' ? scope.projectId : undefined} filtros={filtros} />
-    </section>
+    </ContenedorDePagina>
   )
 }
 

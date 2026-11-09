@@ -11,12 +11,26 @@ import { NavegacionDeOrigen } from './NavegacionDeOrigen'
 // las piezas de página de la revisión de UX (etapa 0, design-system.md §6.1 y §6.4): un ancho único para todas las
 // pantallas, un encabezado con el mismo orden y peso en todas, y el título del documento con la pantalla y el proyecto (D7)
 
-// el ancho único de las pantallas; «lectura», más angosto, solo para textos largos (un acta, un entregable)
-export function ContenedorDePagina({ variante = 'pagina', className, children }: { variante?: 'pagina' | 'lectura'; className?: string; children: ReactNode }) {
+// el ancho único de las pantallas; «lectura», más angosto, solo para textos largos (un acta, un entregable). es la .pg del
+// lienzo de Civic Modern (design-system.md §5.3): una columna con 20 px entre bloques, en flujo de bloque (space-y) y no en
+// flex, para que un hijo en línea (un botón, un enlace) no se estire a todo el ancho. el relleno lateral (24 a 32 px) y el de
+// arriba los pone <main> del shell, que también envuelve las pantallas que no usan este contenedor; repetirlo aquí lo doblaría.
+// elemento: la sección de una lista o el artículo de una ficha, como lo eran a mano
+export function ContenedorDePagina({
+  variante = 'pagina',
+  elemento: Elemento = 'div',
+  className,
+  children
+}: {
+  variante?: 'pagina' | 'lectura'
+  elemento?: 'div' | 'section' | 'article'
+  className?: string
+  children: ReactNode
+}) {
   return (
-    <div data-ancho={variante} className={cn('mx-auto space-y-4', variante === 'lectura' ? 'max-w-3xl' : 'max-w-[1440px]', className)}>
+    <Elemento data-ancho={variante} className={cn('mx-auto w-full space-y-5', variante === 'lectura' ? 'max-w-3xl' : 'max-w-[1440px]', className)}>
       {children}
-    </div>
+    </Elemento>
   )
 }
 
@@ -127,10 +141,12 @@ export function EncabezadoDePagina({
       <div className="min-w-0 space-y-1">
         {/* una ficha abierta desde una lista: «‹ Volver a <lista> (N)», «Anterior» y «Siguiente» sobre el antetítulo (flujo F-C) */}
         {ficha ? <NavegacionDeOrigen /> : null}
-        {antetitulo ? <p className={`${antetituloEnSans ? '' : 'font-sg-mono '}text-sg-caption text-sg-text-muted`}>{antetitulo}</p> : null}
-        <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
+        {/* el antetítulo es un overline en MAYÚSCULAS («PROYECTO · DEMO-T1»), el título un h1 de 28/36 y la descripción en
+            text-secondary (design-system.md §5.3, s05) */}
+        {antetitulo ? <p className={`${antetituloEnSans ? '' : 'font-sg-mono '}text-sg-overline uppercase text-sg-text-secondary`}>{antetitulo}</p> : null}
+        <h1 className="text-sg-h1 text-sg-text">{titulo}</h1>
         {chips ? <div className="flex flex-wrap items-center gap-2 text-sm">{chips}</div> : null}
-        {descripcion ? <p className="text-sm text-sg-text-secondary">{descripcion}</p> : null}
+        {descripcion ? <p className="max-w-prose text-sg-body text-sg-text-secondary">{descripcion}</p> : null}
         {conteo ? <p className="text-sm text-sg-text-muted">{conteo}</p> : null}
       </div>
       {acciones ? (

@@ -2,7 +2,7 @@ import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { PaginasDeCompromisos } from './PaginasDeCompromisos'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
@@ -10,7 +10,6 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
-import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
@@ -82,7 +81,6 @@ export function AcuerdosPage() {
   const motivo = useMotivo()
   const fijos = proyecto ? { project: proyecto } : undefined
   // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
-  const previa = useRutaDeVistaPrevia()
   const paso = useSiguientePaso()
   const rutaDe = (a: Registro) => `/projects/${encodeURIComponent(texto(a, 'project'))}/agreements/${encodeURIComponent(a.id)}`
   const enlace = (a: Registro) => (
@@ -98,7 +96,7 @@ export function AcuerdosPage() {
   // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el acuerdo, el proyecto (en lo global), el estado, la
   // vigencia y el vencimiento; secundario, desde xl, el tipo
   const columnas: ColumnaPriorizada[] = [
-    { id: 'acuerdo', encabezado: t('acuerdos.columnas.acuerdo'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm', ordenable: true },
+    { id: 'acuerdo', encabezado: t('acuerdos.columnas.acuerdo'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('acuerdos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'tipo', encabezado: t('acuerdos.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('acuerdos.columnas.estado'), prioridad: 'esencial' },
@@ -122,7 +120,7 @@ export function AcuerdosPage() {
     }
   }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         titulo={t('acuerdos.titulo')}
         vistas={<PaginasDeCompromisos actual="agreements" />}
@@ -184,7 +182,7 @@ export function AcuerdosPage() {
           orden={orden}
           alOrdenar={ordenar}
           alAbrir={(a) => navegar(rutaDe(a), { state: paso(t('acuerdos.titulo'), rutaDe(a)) })}
-          alPrevisualizar={(a) => navegar(previa('agreement', a.id))}
+          previaDe={(a) => ({ objeto: 'agreement', id: a.id })}
         />
       )}
       <PaginacionDelServidor datos={acuerdos.data} alPagina={(p) => parametros.cambiar({ page: String(p) })} />
@@ -208,6 +206,6 @@ export function AcuerdosPage() {
           />
         </Drawer>
       ) : null}
-    </section>
+    </ContenedorDePagina>
   )
 }

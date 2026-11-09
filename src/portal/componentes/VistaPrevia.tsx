@@ -1,5 +1,6 @@
 import { Button, cn } from '@wasichai/ui'
-import { Eye } from 'lucide-react'
+import { Eye, X } from 'lucide-react'
+import { useId, useLayoutEffect, useSyncExternalStore, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useSiguientePaso } from '../contexto/Rastro'
@@ -12,6 +13,7 @@ import { Drawer } from './Drawer'
 import { EstadoChip } from './EstadoChip'
 import { Cargando, esIlegible, esProhibido, NoDisponible, Reservado } from './Estados'
 import { FalloDeLectura } from './LecturaConEstados'
+import { useCoincide } from './ListaEnTarjetas'
 import { PanelDeDecision } from './PanelDeDecision'
 import { useRotuloDeRegistro } from './RegistroVinculado'
 
@@ -43,7 +45,7 @@ export function BotonDeVistaPrevia({ objeto, id, nombre, enFila }: { objeto: str
       aria-label={etiqueta}
       title={etiqueta}
       className={cn(
-        'inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text',
+        'inline-flex size-6 shrink-0 items-center justify-center rounded-sg-sm align-middle text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text',
         enFila &&
           'pointer-fine:opacity-0 pointer-fine:group-hover/fila:opacity-100 pointer-fine:group-focus-within/fila:opacity-100 pointer-fine:focus-visible:opacity-100'
       )}
@@ -68,59 +70,145 @@ const DATOS: Record<string, string[]> = {
   social_contribution: ['contribution_type']
 }
 
-export function VistaPrevia() {
+// la vista previa acoplada (design-system.md §5.3, préstamo de D): desde xl (1280 px), el ?peek= de una fila de una tabla de
+// lista es un panel lateral de 420 px junto a la tabla, no modal, que no la tapa; por debajo, el cajón de siempre. la monta la
+// tabla (TablaPriorizada con previaDe) y no el shell: cada tabla anota aquí las claves «objeto:id» de sus filas, y la vista
+// previa del shell (un cajón) cede solo cuando el ?peek= es de una fila de una tabla montada. así, una vista previa abierta
+// desde una ficha o desde un enlace de otra tabla sigue siendo el cajón, y en una página con dos tablas (programas y aportes)
+// el panel se acopla a la que tiene la fila
+export const DESDE_XL = '(min-width: 80rem)'
+const acoples = new Map<string, ReadonlySet<string>>()
+const oyentesDeAcople = new Set<() => void>()
+const suscribirAcople = (oyente: () => void) => {
+  oyentesDeAcople.add(oyente)
+  return () => {
+    oyentesDeAcople.delete(oyente)
+  }
+}
+const avisarAcople = () => oyentesDeAcople.forEach((oyente) => oyente())
+const estaAcoplada = (peek: string) => [...acoples.values()].some((claves) => claves.has(peek))
+
+// la clave de una fila en ?peek=
+export const claveDePrevia = ({ objeto, id }: { objeto: string; id: string }) => `${objeto}:${id}`
+
+// una tabla anota sus filas mientras está montada (antes de pintar, para que el cajón no alcance a abrirse)
+export function useAcopleDeVistaPrevia(claves: readonly string[] | null) {
+  const tabla = useId()
+  const juntas = claves ? claves.join('\n') : null
+  useLayoutEffect(() => {
+    if (juntas === null) return
+    acoples.set(tabla, new Set(juntas ? juntas.split('\n') : []))
+    avisarAcople()
+    return () => {
+      acoples.delete(tabla)
+      avisarAcople()
+    }
+  }, [tabla, juntas])
+}
+
+const useEstaAcoplada = (peek: string | null) => useSyncExternalStore(suscribirAcople, () => (peek ? estaAcoplada(peek) : false))
+
+// el ?peek= válido de la consulta y cómo cerrarlo: la quita de la consulta con el resto de la búsqueda y el rastro intactos
+export function usePeek(): { objeto: string; id: string; clave: string; cerrar: () => void } | null {
   const [busqueda] = useSearchParams()
   const { pathname, state } = useLocation()
   const navegar = useNavigate()
   const pedida = PATRON.exec(busqueda.get('peek') ?? '')
   if (!pedida) return null
-  const [, objeto, id] = pedida
+  const [clave, objeto, id] = pedida
   const cerrar = () => {
     const resto = new URLSearchParams(busqueda)
     resto.delete('peek')
     const consulta = resto.toString()
-    // el rastro (estado del historial) se conserva al cerrar
     navegar(`${pathname}${consulta ? `?${consulta}` : ''}`, { replace: true, state })
   }
-  // la clave remonta el contenido al cambiar de registro: una vista previa reemplaza a la otra
-  return <ContenidoDeVistaPrevia key={`${objeto}:${id}`} objeto={objeto} id={id} alCerrar={cerrar} />
+  return { objeto, id, clave, cerrar }
 }
 
-function ContenidoDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; id: string; alCerrar: () => void }) {
+// la que monta el shell: el cajón, salvo que desde xl una tabla de la página la tenga acoplada
+export function VistaPrevia() {
+  const peek = usePeek()
+  const ancha = useCoincide(DESDE_XL)
+  const acoplada = useEstaAcoplada(peek?.clave ?? null)
+  if (!peek || (ancha && acoplada)) return null
+  // la clave remonta el contenido al cambiar de registro: una vista previa reemplaza a la otra
+  return <ContenidoDeVistaPrevia key={peek.clave} objeto={peek.objeto} id={peek.id} alCerrar={peek.cerrar} />
+}
+
+// lo que dicen el cajón y el panel: el título, «Abrir ficha» y el cuerpo
+function useVistaPreviaDe(objeto: string, id: string): { titulo: string; pie: ReactNode; cuerpo: ReactNode } {
   const { t } = useTranslation(NS)
   const registro = useRegistro(objeto, id)
   const rotulo = useRotuloDeRegistro()
   const paso = useSiguientePaso()
   const ruta = registro.data ? rutaDeFicha(objeto, registro.data) : null
-  return (
-    <Drawer
-      titulo={registro.data ? rotulo(registro.data) : t('paginas.vistaPrevia.titulo')}
-      abierto
-      alCerrar={alCerrar}
-      pie={
-        ruta ? (
-          <Button asChild size="sm">
-            <Link to={ruta} state={paso(undefined, ruta)}>
-              {t('paginas.vistaPrevia.abrirFicha')}
-            </Link>
-          </Button>
-        ) : undefined
-      }
-    >
-      {registro.isPending ? (
-        <Cargando />
-      ) : registro.isError && !registro.data ? (
-        esIlegible(registro.error) ? (
-          <Reservado />
-        ) : esProhibido(registro.error) ? (
-          <NoDisponible />
-        ) : (
-          <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
-        )
+  return {
+    titulo: registro.data ? rotulo(registro.data) : t('paginas.vistaPrevia.titulo'),
+    pie: ruta ? (
+      <Button asChild size="sm">
+        <Link to={ruta} state={paso(undefined, ruta)}>
+          {t('paginas.vistaPrevia.abrirFicha')}
+        </Link>
+      </Button>
+    ) : undefined,
+    cuerpo: registro.isPending ? (
+      <Cargando />
+    ) : registro.isError && !registro.data ? (
+      esIlegible(registro.error) ? (
+        <Reservado />
+      ) : esProhibido(registro.error) ? (
+        <NoDisponible />
       ) : (
-        <Resumen objeto={objeto} registro={registro.data as Registro} />
-      )}
+        <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
+      )
+    ) : (
+      <Resumen objeto={objeto} registro={registro.data as Registro} />
+    )
+  }
+}
+
+function ContenidoDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; id: string; alCerrar: () => void }) {
+  const { titulo, pie, cuerpo } = useVistaPreviaDe(objeto, id)
+  return (
+    <Drawer titulo={titulo} abierto alCerrar={alCerrar} pie={pie}>
+      {cuerpo}
     </Drawer>
+  )
+}
+
+// el panel acoplado: una región complementaria, no modal, con su título, «×» y «Abrir ficha»; se queda arriba al desplazar la
+// página y, si es más alto que la ventana, se desplaza por dentro. Esc dentro de él lo cierra (la tabla hace lo mismo en sus
+// filas); quien lo monta devuelve el foco a la fila
+export function PanelDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; id: string; alCerrar: () => void }) {
+  const { t } = useTranslation(NS)
+  const { titulo, pie, cuerpo } = useVistaPreviaDe(objeto, id)
+  const encabezado = useId()
+  return (
+    <aside
+      aria-labelledby={encabezado}
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape' || e.defaultPrevented) return
+        e.preventDefault()
+        alCerrar()
+      }}
+      className="sticky top-0 flex max-h-[calc(100dvh-8rem)] flex-col rounded-sg-md border-2 border-sg-border-strong bg-sg-surface"
+    >
+      <div className="flex items-start gap-2 border-b border-sg-border px-5 py-4">
+        <h2 id={encabezado} className="min-w-0 flex-1 text-[1.1875rem] leading-6.5 font-bold text-sg-text">
+          {titulo}
+        </h2>
+        <button
+          type="button"
+          onClick={alCerrar}
+          aria-label={t('paginas.vistaPrevia.cerrar')}
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-sg-md text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
+        >
+          <X aria-hidden className="size-5" />
+        </button>
+      </div>
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">{cuerpo}</div>
+      {pie ? <div className="flex justify-end gap-2 border-t border-sg-border px-5 py-3">{pie}</div> : null}
+    </aside>
   )
 }
 

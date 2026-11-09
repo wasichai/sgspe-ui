@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -122,7 +122,9 @@ describe('FormularioDeRegistro', () => {
     expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
   })
 
-  it('muestra todos los errores de campo reconocidos, cada uno con su etiqueta, no solo el primero', async () => {
+  // design-system.md §5.3: con más de un error de campo, el resumen de errores los dice todos (antes, un aviso con los textos
+  // unidos por «; »), cada uno con su etiqueta y, si su campo está a la vista, con un enlace a su control, que también lo dice
+  it('muestra todos los errores de campo reconocidos, cada uno con su etiqueta, en el resumen de errores', async () => {
     fetch = mockFetch([{ path: '/metadata/objects/community', body: COMUNIDAD }])
     red = espiarRed([
       {
@@ -141,13 +143,25 @@ describe('FormularioDeRegistro', () => {
     await userEvent.type(await screen.findByLabelText(/^Nombre/), 'CC Tunas Pampa')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     const derivado = 'Ese dato lo calcula el sistema: no se escribe a mano.'
-    const aviso = await screen.findByText(new RegExp(`^Comuneros inscritos: ${derivado} Escriba un número\\.`))
+    const resumen = await screen.findByRole('alert')
+    expect(within(resumen).getByRole('heading', { name: 'Hay 3 problemas por corregir' })).toBeInTheDocument()
     // dos violaciones del mismo campo se unen en lugar de pisarse
-    expect(aviso).toHaveTextContent(`Área calculada: ${derivado}`)
-    expect(aviso).toHaveTextContent(/Nombre: Indique exactamente uno/)
-    // los campos se separan con «; » (un salto de línea lo colapsa el HTML) y el aviso es un solo texto
-    expect(aviso.textContent).not.toContain('\n')
-    expect(aviso.textContent).toMatch(/número\.; Área calculada: /)
+    expect(
+      within(resumen)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent)
+    ).toEqual([`Comuneros inscritos: ${derivado} Escriba un número.`, `Área calculada: ${derivado}`, expect.stringMatching(/^Nombre: Indique exactamente uno/)])
+    // los campos a la vista llevan a su control, que dice su error; el área calculada es derivada, no se ve y va sin enlace
+    expect(
+      within(resumen)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href'))
+    ).toEqual(['#registered_members_count', '#name'])
+    const enlace = within(resumen).getByRole('link', { name: /^Nombre: Indique exactamente uno/ })
+    await waitFor(() => expect(resumen).toHaveFocus())
+    await userEvent.click(enlace)
+    expect(screen.getByLabelText(/^Nombre/)).toHaveFocus()
+    expect(screen.getByLabelText(/^Nombre/)).toHaveAttribute('aria-invalid', 'true')
     expect(screen.queryByText(/DERIVED_FIELD|EXACTLY_ONE/)).not.toBeInTheDocument()
   })
 

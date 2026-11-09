@@ -12,6 +12,7 @@ import { guardarArchivo, usePedir } from '../datos/http'
 import { fechaPe, NS } from '../i18n'
 import { hallazgosDe, marcaDe, rutaDeLaPlantilla, usePlantillas, useSubirPlantilla, type Hallazgo, type PlantillaSubida } from './contrato'
 import { Seccion } from '../componentes/Seccion'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // S64 · Plantillas de entregables (screens.md, api.md §4.12, ASM-135): solo para la administración (isAdmin o MANAGE_METADATA
 // sobre deliverable; decisión 20 del plan). una plantilla no se edita ni se borra: subir otra con la misma clave la reemplaza para
@@ -69,13 +70,13 @@ export function PlantillasPage() {
   const { isAdmin, can } = useAuth()
   const administra = isAdmin || can('deliverable', 'MANAGE_METADATA')
   return (
-    <section className="mx-auto max-w-[1100px] space-y-4">
+    <ContenedorDePagina elemento="section" className="max-w-[1100px]">
       <Link to="/reports" className="text-sm text-sg-primary-text underline">
         {t('plantillas.volver')}
       </Link>
       <h1 className="text-sg-h1 font-semibold">{t('plantillas.titulo')}</h1>
       {administra ? <Plantillas /> : <Alert tone="notice">{t('plantillas.soloAdministracion')}</Alert>}
-    </section>
+    </ContenedorDePagina>
   )
 }
 

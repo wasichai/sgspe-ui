@@ -1,22 +1,12 @@
-import { cn } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { CLASE_DE_TONO } from '../componentes/apariencias'
+import { Nivel } from '../componentes/Nivel'
 import { NS } from '../i18n'
-import { esNivel, TONO_DE_NIVEL } from './niveles'
+import { esNivel } from './niveles'
 
-// el nivel de un riesgo (risk_level o residual_level) con su tono y su texto, nunca solo color (design-system.md §4.1); sin nivel,
-// «sin evaluar»
+// el nivel de un riesgo (risk_level o residual_level): la insignia de barras de componentes/Nivel.tsx con el rótulo del tablero de
+// riesgos, nunca solo color (design-system.md §4.3); sin nivel, «sin evaluar»
 export function NivelDeRiesgo({ valor, residual = false }: { valor: unknown; residual?: boolean }) {
   const { t } = useTranslation(NS)
-  const nombre = t(residual ? 'riesgos.nivelResidual' : 'riesgos.nivel')
   if (!esNivel(valor)) return <span className="text-sg-caption text-sg-text-muted">{t('riesgos.sinEvaluar')}</span>
-  return (
-    <span
-      data-nivel={valor}
-      aria-label={`${nombre}: ${t(`tableroRiesgos.niveles.${valor}`)}`}
-      className={cn('inline-flex items-center whitespace-nowrap rounded-sg-sm px-2 py-0.5 text-sg-caption font-medium', CLASE_DE_TONO[TONO_DE_NIVEL[valor]])}
-    >
-      {t(`tableroRiesgos.niveles.${valor}`)}
-    </span>
-  )
+  return <Nivel valor={valor} nombre={t(residual ? 'riesgos.nivelResidual' : 'riesgos.nivel')} rotulo={t(`tableroRiesgos.niveles.${valor}`)} />
 }

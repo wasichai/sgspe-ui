@@ -13,7 +13,7 @@ const entradas = (n: number): EntradaPriorizada[] =>
     titulo: `Compromiso ${i + 1}`,
     a: `/commitments/c${i}`,
     motivo: `Vencido hace ${i + 1} días`,
-    tono: i === 0 ? 'peligro' : i === 1 ? 'aviso' : 'neutro'
+    tono: i === 0 ? 'danger' : i === 1 ? 'warning' : 'neutral'
   }))
 
 const grupo = () => screen.getByRole('region', { name: /Compromisos vencidos/ })
@@ -64,9 +64,10 @@ describe('ListaPriorizada', () => {
       expect(enlace).toHaveClass('no-underline')
       expect(within(item).getByText(`Vencido hace ${i + 1} días`)).toBeInTheDocument()
     }
-    expect(items[0]).toHaveClass('border-l-2', 'border-sg-danger')
-    expect(items[1]).toHaveClass('border-l-2', 'border-sg-warning')
-    expect(items[2]).toHaveClass('border-l-2', 'border-sg-border')
+    // el borde izquierdo de 4 px de Civic Modern (design-system.md §3.6), en la tinta de su tono: aviso con su borde ámbar
+    expect(items[0]).toHaveClass('border-l-4', 'border-sg-danger')
+    expect(items[1]).toHaveClass('border-l-4', 'border-sg-warning-border')
+    expect(items[2]).toHaveClass('border-l-4', 'border-sg-border')
   })
 
   it('dice cuándo, si quien llama lo da', () => {
@@ -74,7 +75,7 @@ describe('ListaPriorizada', () => {
       <ListaPriorizada
         titulo="Compromisos vencidos"
         total={1}
-        entradas={[{ clave: 'c1', titulo: 'Reservorio', a: '/c1', motivo: 'Vencido', cuando: '3 oct. 2026', tono: 'peligro' }]}
+        entradas={[{ clave: 'c1', titulo: 'Reservorio', a: '/c1', motivo: 'Vencido', cuando: '3 oct. 2026', tono: 'danger' }]}
       />
     )
     expect(within(grupo()).getByText('3 oct. 2026')).toBeInTheDocument()

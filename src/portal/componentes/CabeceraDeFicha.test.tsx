@@ -56,10 +56,12 @@ describe('CabeceraDeFicha', () => {
       <CabeceraDeFicha antetitulo="Compromiso · C-001 · Material" titulo="Reservorio de agua" objeto="commitment" registro={C1} chips={<span>Al día</span>} />
     )
     expect(screen.getByRole('heading', { level: 1, name: 'Reservorio de agua' })).toBeInTheDocument()
-    // U-27: el antetítulo en la letra del texto, no en la monoespaciada
+    // U-27: el antetítulo en la letra del texto, no en la monoespaciada; en Civic Modern, un overline en MAYÚSCULAS
+    // text-secondary sobre el h1 de 28/36 (design-system.md §5.3, s05)
     const antetitulo = screen.getByText('Compromiso · C-001 · Material')
     expect(antetitulo).not.toHaveClass('font-sg-mono')
-    expect(antetitulo).toHaveClass('text-sg-caption', 'text-sg-text-muted')
+    expect(antetitulo).toHaveClass('text-sg-overline', 'uppercase', 'text-sg-text-secondary')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveClass('text-sg-h1')
     expect(screen.getByText('Al día')).toBeInTheDocument()
     await transicionesLeidas()
   })

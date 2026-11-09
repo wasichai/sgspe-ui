@@ -2,7 +2,7 @@ import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import type { UseQueryResult } from '@tanstack/react-query'
@@ -131,7 +131,7 @@ export function ProgramasPage() {
     ...(q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }) }] : [])
   ]
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         vistas={<VistasDelModulo modulo="programs" actual="lista" conTablero={conTablero} />}
         titulo={t('inversion.titulo')}
@@ -203,7 +203,7 @@ export function ProgramasPage() {
         <Aportes proyecto={proyecto} vista={vista} estado={estado} q={q} />
       ) : null}
       {alta && proyecto ? <Alta objeto={alta} proyecto={proyecto} alCerrar={() => setAlta(null)} /> : null}
-    </section>
+    </ContenedorDePagina>
   )
 }
 
@@ -261,7 +261,9 @@ function useAccionesDeFila(objeto: 'social_program' | 'social_contribution', des
       const ruta = rutaDeFicha(objeto, r)
       if (ruta) navegar(ruta, { state: paso(desde, ruta) })
     },
-    previsualizar: (r: Registro) => navegar(previa(objeto, r.id))
+    previsualizar: (r: Registro) => navegar(previa(objeto, r.id)),
+    // la vista previa de la fila, acoplada a su tabla desde xl
+    previaDe: (r: Registro) => ({ objeto, id: r.id })
   }
 }
 
@@ -320,7 +322,7 @@ function Programas({
       claseDeCelda: 'font-sg-mono text-sg-caption whitespace-nowrap',
       ordenable: true
     },
-    { id: 'programa', encabezado: t('inversion.programas.columnas.programa'), prioridad: 'esencial', claseDeCelda: 'min-w-48 text-sm', ordenable: true },
+    { id: 'programa', encabezado: t('inversion.programas.columnas.programa'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('inversion.programas.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'socio', encabezado: t('inversion.programas.columnas.socio'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('inversion.programas.columnas.estado'), prioridad: 'esencial' },
@@ -382,7 +384,7 @@ function Programas({
           clave={(p) => p.id}
           celda={celda}
           alAbrir={fila.abrir}
-          alPrevisualizar={fila.previsualizar}
+          previaDe={fila.previaDe}
           orden={orden}
           alOrdenar={alOrdenar}
         />
@@ -432,7 +434,7 @@ function Aportes({ proyecto, vista, estado, q }: { proyecto?: string; vista: str
     { id: 'tipo', encabezado: t('inversion.aportes.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'recibe', encabezado: t('inversion.aportes.columnas.recibe'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('inversion.aportes.columnas.estado'), prioridad: 'esencial' },
-    { id: 'monto', encabezado: t('inversion.aportes.columnas.monto'), prioridad: 'esencial', claseDeCelda: 'text-sm tabular-nums' },
+    { id: 'monto', encabezado: t('inversion.aportes.columnas.monto'), prioridad: 'esencial', numerica: true },
     { id: 'campana', encabezado: t('inversion.aportes.columnas.campana'), prioridad: 'secundaria', claseDeCelda: 'text-sm' }
   ]
   const celda = (a: Registro, columna: string): ReactNode => {
@@ -481,12 +483,13 @@ function Aportes({ proyecto, vista, estado, q }: { proyecto?: string; vista: str
       ) : (
         <TablaPriorizada<Registro>
           etiqueta={t('inversion.aportes.tabla')}
+          notaAlPie={t('inversion.aportes.sinMonto')}
           columnas={columnas}
           filas={filtrados}
           clave={(a) => a.id}
           celda={celda}
           alAbrir={fila.abrir}
-          alPrevisualizar={fila.previsualizar}
+          previaDe={fila.previaDe}
           orden={orden}
           alOrdenar={ordenar}
         />

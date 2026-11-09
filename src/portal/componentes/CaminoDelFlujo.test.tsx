@@ -67,7 +67,13 @@ describe('CaminoDelFlujo', () => {
     montar(<CaminoDelFlujo objeto="commitment" estado="in_progress" />)
     const camino = await screen.findByRole('list', { name: 'Camino del flujo' })
     const pasos = within(camino).getAllByRole('listitem')
-    expect(pasos.map((p) => p.textContent)).toEqual([
+    // lo que lee un lector de pantalla: sin el número del círculo, que es solo visual (aria-hidden)
+    const leido = (paso: HTMLElement) =>
+      [...paso.childNodes]
+        .filter((n) => !(n instanceof HTMLElement && n.getAttribute('aria-hidden') === 'true'))
+        .map((n) => n.textContent)
+        .join('')
+    expect(pasos.map(leido)).toEqual([
       'Paso cumplido: Borrador',
       'Paso cumplido: Aprobado',
       'Estado actual: En ejecución',
@@ -75,6 +81,8 @@ describe('CaminoDelFlujo', () => {
       'Paso pendiente: Verificado'
     ])
     expect(pasos[2]).toHaveAttribute('aria-current', 'step')
+    // el número del paso en su círculo de 24 px, como los pasos de un formulario (design-system.md §5.3)
+    expect(within(pasos[2]).getByText('3')).toHaveClass('size-6', 'rounded-full', 'bg-sg-primary')
     expect(screen.getByText('Otros cierres:', { exact: false })).toHaveTextContent('Otros cierres: Cancelado')
   })
 

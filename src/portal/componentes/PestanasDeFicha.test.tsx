@@ -33,6 +33,22 @@ describe('PestanasDeFicha', () => {
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Panel de actividad')
   })
 
+  // design-system.md §5.3 «Pestañas»: 15 px 600 text-secondary; la elegida en primary-text 800 con borde inferior de 4 px
+  // primary; el conteo, una etiqueta en caption 700 con borde de 1 px
+  it('la elegida va en primary-text 800 con el borde de 4 px primary; las demás en 600 text-secondary', () => {
+    montar(<PestanasDeFicha etiqueta="Compromiso" pestanas={PESTANAS} />)
+    expect(screen.getByRole('tab', { name: 'Resumen' })).toHaveClass(
+      'border-b-4',
+      'border-sg-primary',
+      'font-extrabold',
+      'text-sg-primary-text',
+      'text-sg-body'
+    )
+    const otra = screen.getByRole('tab', { name: 'Entregas' })
+    expect(otra).toHaveClass('border-b-4', 'border-transparent', 'font-semibold', 'text-sg-text-secondary')
+    expect(screen.getByText('2')).toHaveClass('border', 'border-sg-border', 'text-sg-caption', 'font-bold')
+  })
+
   it('abre la pestaña de la URL; una desconocida cae en la primera', () => {
     const { unmount } = montar(<PestanasDeFicha etiqueta="Compromiso" pestanas={PESTANAS} />, { ruta: '/c?tab=actividad' })
     expect(screen.getByRole('tab', { name: 'Actividad' })).toHaveAttribute('aria-selected', 'true')

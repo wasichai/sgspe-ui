@@ -142,6 +142,18 @@ describe('CampoFecha', () => {
     expect(screen.queryByText(/La fecha no puede ser/)).not.toBeInTheDocument()
   })
 
+  // design-system.md §5.3: el formato en la ayuda, si la pantalla no da la suya
+  it('sin ayuda propia, la ayuda dice el formato; con hora, también la hora; la de la pantalla gana', () => {
+    const { unmount } = montar(<CampoFecha etiqueta="Inicio" valor={null} alCambiar={() => {}} />)
+    expect(screen.getByLabelText('Inicio')).toHaveAccessibleDescription('Por ejemplo, 15/12/2026')
+    unmount()
+    const otra = montar(<CampoFecha etiqueta="Inicio" conHora valor={null} alCambiar={() => {}} />)
+    expect(screen.getByLabelText('Inicio')).toHaveAccessibleDescription('Por ejemplo, 15/12/2026 y 15:30')
+    otra.unmount()
+    montar(<CampoFecha etiqueta="Inicio" ayuda="El día de la visita" valor={null} alCambiar={() => {}} />)
+    expect(screen.getByLabelText('Inicio')).toHaveAccessibleDescription('El día de la visita')
+  })
+
   it('muestra el error que le pasa el formulario, toma su id, se marca obligatorio y se deshabilita', () => {
     const { unmount } = montar(<CampoFecha etiqueta="Inicio" id="inicio" requerido error="Falta la fecha." valor={null} alCambiar={() => {}} />)
     const campo = screen.getByLabelText('Inicio')

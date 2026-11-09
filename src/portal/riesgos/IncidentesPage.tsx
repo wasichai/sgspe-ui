@@ -17,7 +17,7 @@ import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista }
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { useMigaDelRegistro } from '../componentes/Migas'
@@ -86,7 +86,7 @@ export function IncidentesPage() {
   )
   const ocurrio = (i: Registro) => (texto(i, 'occurred_at') ? fechaPe(new Date(texto(i, 'occurred_at'))) : '—')
   const columnas: ColumnaPriorizada[] = [
-    { id: 'incidente', encabezado: t('incidentes.columnas.incidente'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm', ordenable: true },
+    { id: 'incidente', encabezado: t('incidentes.columnas.incidente'), prioridad: 'esencial', titulo: true, ordenable: true },
     { id: 'ocurrio', encabezado: t('incidentes.columnas.ocurrio'), prioridad: 'esencial', claseDeCelda: 'text-sm', ordenable: true },
     { id: 'tipo', encabezado: t('incidentes.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'lugar', encabezado: t('incidentes.columnas.lugar'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
@@ -108,7 +108,7 @@ export function IncidentesPage() {
   }
   const valorPlano = (i: Registro, columna: string): string => (columna === 'tipo' ? texto(i, 'incident_type') : columna === 'lugar' ? texto(i, 'place') : i.id)
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         titulo={t('incidentes.titulo')}
         conteo={total != null ? t('incidentes.conteo', { count: total }) : undefined}
@@ -175,7 +175,7 @@ export function IncidentesPage() {
           />
         ) : null}
       </Drawer>
-    </section>
+    </ContenedorDePagina>
   )
 }
 
@@ -227,7 +227,7 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
   useMigaDelRegistro(codigo)
   const siguiente = useSiguienteAccion('incident', incidente, COMPROBAR)
   return (
-    <article className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="article">
       <Link to={volver} className="text-sm text-sg-primary-text underline">
         {t('incidentes.ficha.volver')}
       </Link>
@@ -333,7 +333,7 @@ function Ficha({ incidente, volver }: { incidente: Registro; volver: string }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

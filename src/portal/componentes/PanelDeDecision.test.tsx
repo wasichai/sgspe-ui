@@ -38,6 +38,32 @@ describe('PanelDeDecision', () => {
     await within(tarjeta('Estado actual')).findByText('Aprobado')
   })
 
+  // design-system.md §5.3 «Panel de decisión»: una rejilla de cuatro celdas con borde de 2 px border-strong y separadores de
+  // 1 px (dos por dos en lo estrecho), el rótulo en body-sm text-secondary y el valor en 700; el vencimiento vencido en danger
+  it('es una rejilla con borde fuerte y celdas separadas por 1 px; el vencimiento vencido va en danger', async () => {
+    fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
+    montar(
+      <PanelDeDecision
+        objeto="commitment"
+        estado="approved"
+        siguiente={{ etiqueta: 'Registrar el cumplimiento' }}
+        responsable={null}
+        vencimiento="2026-10-30"
+        situacion="VENCIDO"
+      />
+    )
+    const rejilla = screen.getByRole('region', { name: 'Situación' }).querySelector('[data-rejilla-de-decision]') as HTMLElement
+    expect(rejilla).toHaveClass('grid', 'grid-cols-2', 'border-2', 'border-sg-border-strong', 'rounded-sg-md', 'bg-sg-surface')
+    for (const nombre of ['Estado actual', 'Siguiente acción', 'Responsable', 'Vencimiento']) {
+      const celda = tarjeta(nombre)
+      expect(celda).toHaveClass('border-r', 'border-b', 'border-sg-border', 'px-4', 'py-3')
+      expect(celda).not.toHaveClass('rounded-sg-md')
+      expect(within(celda).getByText(nombre)).toHaveClass('text-sg-body-sm', 'text-sg-text-secondary')
+    }
+    expect(within(tarjeta('Siguiente acción')).getByText('Registrar el cumplimiento')).toHaveClass('font-bold')
+    expect(within(tarjeta('Vencimiento')).getByText('30 oct. 2026').closest('[data-vencimiento]')).toHaveClass('font-bold', 'text-sg-danger')
+  })
+
   it('dibuja las cuatro tarjetas con lo que llega', async () => {
     fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
     montar(

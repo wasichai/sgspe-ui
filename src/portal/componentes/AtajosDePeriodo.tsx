@@ -42,7 +42,7 @@ export function AtajosDePeriodo({
   const { t } = useTranslation(NS)
   const hoy = hoyEnLima()
   return (
-    <div role="group" aria-label={t('comun.atajosDePeriodo.grupo')} className="flex flex-wrap gap-1">
+    <div role="group" aria-label={t('comun.atajosDePeriodo.grupo')} className="flex flex-wrap gap-2">
       {ATAJOS.map((atajo) => {
         const periodo = periodoDelAtajo(atajo, hoy)
         const elegido = periodo.desde === (desde ?? '') && periodo.hasta === (hasta ?? '')
@@ -53,10 +53,12 @@ export function AtajosDePeriodo({
             aria-pressed={elegido}
             disabled={deshabilitado}
             onClick={() => alElegir(periodo)}
-            className={`h-8 rounded-sg-md border px-2.5 text-sm disabled:opacity-50 ${
+            // como los chips de la barra de filtros (design-system.md §5.3): 32 px, borde de 1 px border-strong; el elegido, borde de 2 px
+            // primary sobre primary-soft y en 700
+            className={`h-8 rounded-sg-md px-2.5 text-sm disabled:cursor-not-allowed disabled:border-sg-border disabled:bg-sg-surface-sunken disabled:text-sg-text-muted ${
               elegido
-                ? 'border-sg-primary bg-sg-primary-soft font-medium text-sg-primary-text'
-                : 'border-sg-border bg-sg-surface text-sg-text-secondary hover:bg-sg-surface-hover'
+                ? 'border-2 border-sg-primary bg-sg-primary-soft font-bold text-sg-primary-text'
+                : 'border border-sg-border-strong bg-sg-surface text-sg-text hover:bg-sg-surface-hover'
             }`}
           >
             {t(`comun.atajosDePeriodo.${atajo}`)}

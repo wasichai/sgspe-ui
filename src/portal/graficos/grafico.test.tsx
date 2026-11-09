@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 import { echarts } from './echarts'
@@ -80,16 +81,17 @@ describe('opcionesConTema', () => {
   it('los ejes, el tooltip y la leyenda que la pantalla declara siguen los tokens, y lo suyo gana', () => {
     document.documentElement.style.setProperty('--sg-border-strong', '#111111')
     document.documentElement.style.setProperty('--sg-grid', '#222222')
-    document.documentElement.style.setProperty('--sg-surface', '#333333')
+    document.documentElement.style.setProperty('--sg-text', '#333333')
     document.documentElement.style.setProperty('--sg-text-secondary', '#444444')
     const r = opcionesConTema({
       xAxis: { type: 'category', axisLabel: { width: 150 } },
       yAxis: { type: 'value', splitLine: { lineStyle: { color: '#abcdef' } } },
       tooltip: { trigger: 'axis' },
-      legend: {}
+      legend: {},
+      series: [{ type: 'line' }, { type: 'line' }, { type: 'line' }]
     }) as Record<string, any>
     expect(r.xAxis.axisLine.lineStyle.color).toBe('#111111')
-    expect(r.xAxis.axisLabel).toEqual({ width: 150, color: '#444444' })
+    expect(r.xAxis.axisLabel).toEqual({ width: 150, color: '#444444', fontSize: 12.5 })
     expect(r.yAxis.splitLine.lineStyle.color).toBe('#abcdef')
     expect(r.tooltip).toMatchObject({ trigger: 'axis', backgroundColor: '#333333' })
     expect(r.legend.textStyle.color).toBe('#444444')
@@ -139,6 +141,70 @@ describe('opcionesConTema', () => {
     expect(arriba.grid.bottom).toBe(24)
   })
 
+  // design-system.md §5.3 «Gráficos»: el valor de cada barra va rotulado sobre ella (a su derecha si es horizontal), en 13/700
+  // text, y la barra tiene radio 2; lo que la pantalla declara gana, y una pila no se rotula tramo por tramo
+  it('rotula el valor de cada barra encima, en 13/700 text, con radio 2', () => {
+    document.documentElement.style.setProperty('--sg-text', '#0f1a2a')
+    const r = opcionesConTema({ xAxis: { type: 'category' }, yAxis: { type: 'value' }, series: [{ type: 'bar', data: [1200, 3] }] }) as Record<string, any>
+    const serie = r.series[0]
+    expect(serie.label).toMatchObject({ show: true, position: 'top', color: '#0f1a2a', fontWeight: 700, fontSize: 13 })
+    expect(serie.label.formatter({ value: 1200 })).toMatch(/1\D?200/)
+    expect(serie.itemStyle.borderRadius).toBe(2)
+    expect(serie.labelLayout).toMatchObject({ hideOverlap: true })
+    const horizontal = opcionesConTema({ xAxis: { type: 'value' }, yAxis: { type: 'category' }, series: [{ type: 'bar', data: [1] }] }) as Record<string, any>
+    expect(horizontal.series[0].label.position).toBe('right')
+    const propia = opcionesConTema({ series: [{ type: 'bar', data: [1], label: { show: false } }] }) as Record<string, any>
+    expect(propia.series[0].label).toEqual({ show: false })
+    const pila = opcionesConTema({ series: [{ type: 'bar', stack: 't', data: [1] }] }) as Record<string, any>
+    expect(pila.series[0].label).toBeUndefined()
+    expect(pila.series[0].itemStyle.borderRadius).toBe(2)
+  })
+
+  // anotación directa (préstamo de C): con una o dos líneas, el último valor y el nombre van al final de cada línea y la leyenda
+  // sobra; con tres series o más (o barras agrupadas, que no tienen un final donde rotular), la leyenda queda
+  it('con una o dos líneas anota el final de cada una y quita la leyenda; con tres o más la deja', () => {
+    const una = opcionesConTema({ legend: {}, series: [{ type: 'line', name: 'Vencidos', data: [3, 7] }] }) as Record<string, any>
+    expect(una.legend).toBeUndefined()
+    expect(una.series[0].endLabel.show).toBe(true)
+    expect(una.series[0].endLabel.formatter({ seriesName: 'Vencidos', value: 7 })).toBe('7')
+    const dos = opcionesConTema({
+      legend: {},
+      series: [
+        { type: 'line', name: 'Recibidas', data: [9, 1200] },
+        { type: 'line', name: 'Cerradas', data: [6, 4] }
+      ]
+    }) as Record<string, any>
+    expect(dos.legend).toBeUndefined()
+    expect(dos.series[0].endLabel.formatter({ seriesName: 'Recibidas', value: 1200 })).toMatch(/^Recibidas 1\D?200$/)
+    expect(dos.grid.right).toBeGreaterThanOrEqual(72)
+    const tres = opcionesConTema({ legend: {}, series: [{ type: 'line' }, { type: 'line' }, { type: 'line' }] }) as Record<string, any>
+    expect(tres.legend).toBeDefined()
+    expect(tres.series[0].endLabel).toBeUndefined()
+    const agrupadas = opcionesConTema({ legend: {}, series: [{ type: 'bar' }, { type: 'bar' }] }) as Record<string, any>
+    expect(agrupadas.legend).toBeDefined()
+  })
+
+  // §5.3 «Tooltip»: fondo text, texto surface, radio 4, 8 × 12, 13,5/19, sombra overlay, hasta 260 px; el periodo en 700
+  it('el tooltip es oscuro sobre claro, con el periodo en negrita y sin insertar nombres sin escapar', () => {
+    document.documentElement.style.setProperty('--sg-text', '#0f1a2a')
+    document.documentElement.style.setProperty('--sg-surface', '#ffffff')
+    const r = opcionesConTema({ tooltip: { trigger: 'axis' }, series: [{ type: 'bar', data: [1] }] }) as Record<string, any>
+    expect(r.tooltip).toMatchObject({
+      backgroundColor: '#0f1a2a',
+      borderWidth: 0,
+      padding: [8, 12],
+      textStyle: { color: '#ffffff', fontSize: 13.5, lineHeight: 19 }
+    })
+    expect(r.tooltip.extraCssText).toMatch(/border-radius: ?4px/)
+    expect(r.tooltip.extraCssText).toMatch(/max-width: ?260px/)
+    expect(r.tooltip.extraCssText).toMatch(/var\(--sg-shadow-overlay\)/)
+    const html = r.tooltip.formatter([{ axisValueLabel: 'nov <b>', marker: '•', seriesName: 'Reuniones', value: 1200 }])
+    expect(html).toContain('<strong>nov &#60;b&#62;</strong>')
+    expect(html).toMatch(/Reuniones: 1\D?200/)
+    const propio = opcionesConTema({ tooltip: { trigger: 'axis', formatter: 'x' } }) as Record<string, any>
+    expect(propio.tooltip.formatter).toBe('x')
+  })
+
   it('no agrega un tooltip ni una leyenda que la pantalla no pidió', () => {
     const r = opcionesConTema({ series: [] }) as Record<string, unknown>
     expect(r.tooltip).toBeUndefined()
@@ -159,13 +225,26 @@ describe('Grafico', () => {
   it('dibuja el gráfico y, bajo "Ver datos", su tabla con título, encabezados y filas', async () => {
     montar(<Grafico etiqueta="Reuniones al mes" opciones={OPCIONES} datos={datos} />)
     await waitFor(() => expect(screen.getByRole('group', { name: 'Reuniones al mes' }).querySelector('svg')).not.toBeNull())
-    const resumen = screen.getByText('Ver datos')
-    expect(resumen.tagName).toBe('SUMMARY')
-    expect(resumen.closest('details')).not.toHaveAttribute('open')
+    // «Ver datos» es un botón visible en la cabecera del gráfico, cerrado: la tabla sigue en el árbol accesible, oculta a la vista
+    const verDatos = screen.getByRole('button', { name: 'Ver datos' })
+    expect(verDatos).toHaveAttribute('aria-expanded', 'false')
     const tabla = screen.getByRole('table', { name: 'Reuniones al mes' })
+    expect(verDatos).toHaveAttribute('aria-controls', tabla.id)
+    expect(tabla).toHaveClass('sr-only')
     expect(tabla.querySelector('caption')).toHaveTextContent('Reuniones al mes')
     expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Mes', 'Reuniones'])
     expect(screen.getAllByRole('row').map((f) => f.textContent)).toEqual(['MesReuniones', '2026-091', '2026-103'])
+  })
+
+  it('«Ver datos» abre y cierra la tabla a la vista', async () => {
+    montar(<Grafico etiqueta="Reuniones al mes" opciones={OPCIONES} datos={datos} />)
+    const verDatos = screen.getByRole('button', { name: 'Ver datos' })
+    await userEvent.click(verDatos)
+    expect(verDatos).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('table', { name: 'Reuniones al mes' })).not.toHaveClass('sr-only')
+    await userEvent.click(verDatos)
+    expect(verDatos).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('table', { name: 'Reuniones al mes' })).toHaveClass('sr-only')
   })
 
   it('sin filas o con todo en cero dice que no hay datos en el periodo, sin ejes vacíos', () => {

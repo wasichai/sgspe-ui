@@ -10,6 +10,7 @@ import { AvisoDeConflicto, useReleer } from './AvisoDeConflicto'
 import { useMarcarGuardado } from './Drawer'
 import { useErroresDeCampo } from './errores'
 import { Cargando, ErrorDeCarga } from './Estados'
+import { ResumenDeErrores } from './ResumenDeErrores'
 
 // el formulario de un registro armado desde la metadata del objeto (screens.md §2: el esquema Zod sale de
 // /api/metadata/objects/**), con DynamicForm de @wasichai/core y React Hook Form. lo que SGSPE agrega: los derivados no
@@ -130,11 +131,18 @@ export function FormularioDeRegistro({
   if (definicion.isError || !preparada) return <ErrorDeCarga error={definicion.error} />
   const error = crear.error ?? actualizar.error
   // cada error que apunta a un campo del formulario se dice con su etiqueta («Etiqueta: texto») y se muestran todos, para
-  // que la persona corrija de una vez; lo que no es de un campo (un objeto, `record`) va como mensaje del formulario
-  const deCampo = Object.entries(erroresDeCampo(error))
-    .map(([nombre, texto]) => [preparada.fields.find((f) => f.name === nombre)?.label, texto] as const)
-    .filter(([etiqueta]) => etiqueta)
-    .map(([etiqueta, texto]) => `${etiqueta}: ${texto}`)
+  // que la persona corrija de una vez; lo que no es de un campo (un objeto, `record`) va como mensaje del formulario. si son más
+  // de uno, van en el resumen de errores con un enlace a cada control (design-system.md §5.3; DynamicForm da a cada control el
+  // nombre del campo como id) y también junto a su control (violations de DynamicForm, que lo marca con aria-invalid); uno de un
+  // campo oculto (una relación fija) va en el resumen sin enlace
+  const porCampo = Object.entries(erroresDeCampo(error)).flatMap(([nombre, texto]) => {
+    const campo = preparada.fields.find((f) => f.name === nombre)
+    return campo ? [{ nombre, texto, etiqueta: campo.label, visible: campo.visible }] : []
+  })
+  const deCampo = porCampo.map((e) => `${e.etiqueta}: ${e.texto}`)
+  // con uno solo, el aviso con su etiqueta basta (como antes): no se repite bajo el control
+  const enControles = porCampo.length > 1 ? porCampo.filter((e) => e.visible).map((e) => ({ field: e.nombre, message: e.texto })) : []
+  const resumen = porCampo.map((e) => ({ id: e.visible ? e.nombre : undefined, texto: `${e.etiqueta}: ${e.texto}` }))
   const conCodigo = propuesta.codigo && preparada.fields.some((f) => f.name === 'code') ? { code: propuesta.codigo } : {}
   const base = registro ?? { id: '', createdAt: null, updatedAt: null, attributes: { ...conCodigo, ...iniciales, ...fijos } }
   abierto.current ??= registro
@@ -150,7 +158,9 @@ export function FormularioDeRegistro({
   // no reinicia sus valores, así que lo escrito se conserva y el siguiente guardado lleva el If-Match nuevo
   return (
     <div className="space-y-3">
-      {error ? (
+      {resumen.length > 1 ? (
+        <ResumenDeErrores errores={resumen} />
+      ) : error ? (
         <AvisoDeConflicto
           error={error}
           releer={() => releer(['record', objeto, registro?.id])}
@@ -163,6 +173,7 @@ export function FormularioDeRegistro({
         record={base}
         timeZone={ZONA_DE_LIMA}
         submitting={crear.isPending || actualizar.isPending}
+        violations={enControles}
         onSubmit={enviar}
         onCancel={alCancelar}
       />

@@ -16,10 +16,31 @@ describe('Seccion', () => {
     expect(region.tagName).toBe('SECTION')
     const encabezado = within(region).getByRole('heading', { name: 'Reuniones' })
     expect(encabezado.tagName).toBe('H2')
-    expect(encabezado).toHaveClass('text-sg-h3', 'font-semibold')
+    expect(encabezado).toHaveClass('text-sg-h3', 'font-bold')
     expect(region).toHaveAttribute('aria-labelledby', encabezado.id)
-    expect(region).toHaveClass('rounded-sg-lg', 'border', 'border-sg-border', 'bg-sg-surface', 'p-4', 'space-y-2')
+    // el panel de Civic Modern (design-system.md §5.3): radio 4, borde de 1 px, superficie y relleno de 16 a 20 px
+    expect(region).toHaveClass('rounded-sg-md', 'border', 'border-sg-border', 'bg-sg-surface', 'p-4', 'sm:px-5', 'space-y-2')
     expect(within(region).getByText('contenido')).toBeInTheDocument()
+  })
+
+  it('fuerte, el borde es de 2 px en border-strong (el panel que manda en la pantalla)', () => {
+    montar(
+      <Seccion titulo="Qué requiere atención" variante="fuerte">
+        <p>contenido</p>
+      </Seccion>
+    )
+    const region = screen.getByRole('region', { name: 'Qué requiere atención' })
+    expect(region).toHaveClass('border-2', 'border-sg-border-strong', 'rounded-sg-md', 'bg-sg-surface')
+    expect(region).not.toHaveClass('border-sg-border')
+  })
+
+  it('fuerte y anidada no dibuja caja: dentro de otra sección no hay borde', () => {
+    montar(
+      <Seccion titulo="Externa">
+        <Seccion titulo="Interna" variante="fuerte" />
+      </Seccion>
+    )
+    expect(screen.getByRole('region', { name: 'Interna' })).not.toHaveClass('border-2')
   })
 
   it('anidada, no lleva borde y su encabezado es h3', () => {

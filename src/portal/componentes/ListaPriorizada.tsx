@@ -5,13 +5,15 @@ import { Link } from 'react-router'
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { ResultadoDeLista } from '../contexto/Origen'
 import { NS, numeroPe } from '../i18n'
+import type { Tono } from './apariencias'
 import { Seccion } from './Seccion'
 
 // un grupo de avisos que muestra solo lo más urgente, con su motivo, y «Ver los N» hacia la lista filtrada (hallazgo U-05,
 // DD-13): reemplaza los «muros» de títulos subrayados. el orden lo da quien llama; el tono se marca con el borde izquierdo y,
 // siempre, con el texto del motivo (nunca solo con color). sin una lista a la que ir, el resto se despliega en el lugar:
 // ninguna entrada queda sin forma de verse
-export type TonoDeEntrada = 'peligro' | 'aviso' | 'neutro'
+// el tono es el mismo vocabulario que el de los estados (apariencias.ts): danger, warning o neutral
+export type TonoDeEntrada = Extract<Tono, 'danger' | 'warning' | 'neutral'>
 
 export interface EntradaPriorizada {
   clave: string
@@ -36,9 +38,9 @@ export interface PropsDeListaPriorizada {
 }
 
 const BORDE: Record<TonoDeEntrada, string> = {
-  peligro: 'border-sg-danger',
-  aviso: 'border-sg-warning',
-  neutro: 'border-sg-border'
+  danger: 'border-sg-danger',
+  warning: 'border-sg-warning-border',
+  neutral: 'border-sg-border'
 }
 
 export function ListaPriorizada({ titulo, total, entradas, limite = 3, verTodos, vacio }: PropsDeListaPriorizada) {
@@ -81,9 +83,12 @@ export function ListaPriorizada({ titulo, total, entradas, limite = 3, verTodos,
         <ResultadoDeLista>
           <ul className="space-y-2">
             {visibles.map((e) => (
-              <li key={e.clave} className={cn('flex items-start justify-between gap-3 border-l-2 pl-3', BORDE[e.tono])}>
+              <li key={e.clave} className={cn('flex items-start justify-between gap-3 border-l-4 py-0.5 pl-3', BORDE[e.tono])}>
                 <div className="min-w-0">
-                  <EnlaceConRastro to={e.a} className="text-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
+                  <EnlaceConRastro
+                    to={e.a}
+                    className="text-sg-body font-semibold text-sg-text no-underline hover:text-sg-primary-text hover:underline focus-visible:underline"
+                  >
                     {e.titulo}
                   </EnlaceConRastro>
                   <p className="text-sg-caption text-sg-text-secondary">

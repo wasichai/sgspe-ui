@@ -12,7 +12,7 @@ export function ListaPlegable({ titulo, elementos, limite = 5 }: { titulo: strin
   const visibles = abierta ? elementos : elementos.slice(0, limite)
   return (
     <div role="group" aria-labelledby={id} className="space-y-1">
-      <h3 id={id} className="text-sm font-medium">
+      <h3 id={id} className="text-sm font-bold text-sg-text">
         {titulo}
       </h3>
       <ul className="space-y-1 text-sm">

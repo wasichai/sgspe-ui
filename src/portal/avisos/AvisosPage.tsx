@@ -1,4 +1,4 @@
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { Alert, Button, cn, Pagination } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { ResultadoDeLista } from '../contexto/Origen'
@@ -61,7 +61,7 @@ export function AvisosPage() {
   const conteos: Record<string, number | null> = { todos: sumar('active'), sinLeer: sumar('unread'), pospuestos: null }
   // el ancho único de las pantallas (revisión de UX, etapa 3): antes, centrado y angosto, distinto del resto
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         titulo={t('avisos.titulo')}
         secundarias={
@@ -134,7 +134,7 @@ export function AvisosPage() {
         </>
       )}
       <PreferenciasDeAvisos />
-    </section>
+    </ContenedorDePagina>
   )
 }
 
