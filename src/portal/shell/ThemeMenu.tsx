@@ -117,7 +117,7 @@ export function ThemeMenu({ className }: { className?: string }) {
                 aria-checked={checked}
                 tabIndex={-1}
                 onClick={() => choose(option.id)}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-ink hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:-outline-offset-2"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-ink hover:bg-surface-muted focus-visible:bg-surface-muted"
               >
                 <OptionIcon className="size-4 text-ink-muted" />
                 <span className="flex-1">{option.label}</span>

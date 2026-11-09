@@ -355,7 +355,9 @@ describe('celdas de tabla restringidas', () => {
     montar(<Restringido />)
     const boton = await screen.findByRole('button', { name: 'Por qué no se muestra' })
     expect(boton).toHaveClass('size-6')
-    expect(boton.className).toMatch(/focus-visible:outline-/)
+    // el foco visible es el anillo de E de tokens.css (capa base, para todo <button>): el botón no lo apaga ni lo reemplaza
+    expect(boton.tagName).toBe('BUTTON')
+    expect(boton.className).not.toMatch(/outline-none|focus-visible:outline/)
   })
 
   it('un motivo que es el código de una guarda se dice con el texto de los códigos, sin duplicarlo', async () => {

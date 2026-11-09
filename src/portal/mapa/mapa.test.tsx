@@ -440,6 +440,26 @@ describe('MapaImpl', () => {
     expect(mapa.fuentes.has('calor')).toBe(false)
   })
 
+  // la rampa de la paleta son los tokens --sg-heat-*: se resuelven con el tema activo y se repintan al cambiarlo
+  it('la rampa de calor de tokens sigue al tema', async () => {
+    document.documentElement.style.setProperty('--sg-heat-1', '#fde9c8')
+    document.documentElement.style.setProperty('--sg-heat-4', '#a8361b')
+    const celdas = { type: 'FeatureCollection', features: [] } as never
+    render(<MapaImpl etiqueta="Mapa" capas={[]} calor={{ datos: celdas, maximo: 2, colores: ['--sg-heat-1', '--sg-heat-4'] }} />)
+    await act(async () => cargarMapas())
+    const mapa = Falso.todos[0]
+    const rampa = (a: string, b: string) => ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.5, a, 1, b]
+    expect(mapa.capas.find((c) => c.id === 'calor')!.paint['heatmap-color']).toEqual(rampa('#fde9c8', '#a8361b'))
+    document.documentElement.style.setProperty('--sg-heat-1', '#3a2a14')
+    document.documentElement.style.setProperty('--sg-heat-4', '#ff8a5c')
+    await act(async () => {
+      document.documentElement.setAttribute('data-theme', 'dark')
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    expect(mapa.setPaintProperty).toHaveBeenCalledWith('calor', 'heatmap-color', rampa('#3a2a14', '#ff8a5c'))
+    document.documentElement.removeAttribute('data-theme')
+  })
+
   it('un clic en el mapa entrega el punto pulsado', async () => {
     const pulsar = vi.fn()
     render(<MapaImpl etiqueta="Mapa" capas={[]} alPulsar={pulsar} />)

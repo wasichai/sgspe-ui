@@ -246,7 +246,7 @@ export function TablaPriorizada<T>({
                   tabIndex={enfocable ? 0 : undefined}
                   onKeyDown={enfocable ? alTeclear(f) : undefined}
                   // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
-                  className={cn('group/fila', enfocable && 'focus-visible:outline-2 focus-visible:outline-sg-focus')}
+                  className="group/fila"
                 >
                   {visibles.map((c) => (
                     <Td key={c.id} className={cn(visibilidad(c), c.numerica && 'text-right tabular-nums', c.claseDeCelda)}>
@@ -297,11 +297,7 @@ function ThExplicado({
 function BotonDeOrden({ sentido, alPulsar, children }: { sentido?: OrdenDeTabla['dir']; alPulsar: () => void; children: ReactNode }) {
   const Flecha = sentido === 'asc' ? ArrowUp : sentido === 'desc' ? ArrowDown : ChevronsUpDown
   return (
-    <button
-      type="button"
-      onClick={alPulsar}
-      className="inline-flex items-center gap-1 rounded-sg-sm hover:text-sg-text focus-visible:outline-2 focus-visible:outline-sg-focus"
-    >
+    <button type="button" onClick={alPulsar} className="inline-flex items-center gap-1 rounded-sg-sm hover:text-sg-text">
       {children}
       <Flecha aria-hidden className={cn('size-3.5 shrink-0', sentido ? 'text-sg-text' : 'text-sg-text-muted')} />
     </button>

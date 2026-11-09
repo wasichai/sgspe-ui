@@ -53,7 +53,7 @@ export function AtajosDePeriodo({
             aria-pressed={elegido}
             disabled={deshabilitado}
             onClick={() => alElegir(periodo)}
-            className={`h-8 rounded-sg-md border px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-sg-focus disabled:opacity-50 ${
+            className={`h-8 rounded-sg-md border px-2.5 text-sm disabled:opacity-50 ${
               elegido
                 ? 'border-sg-primary bg-sg-primary-soft font-medium text-sg-primary-text'
                 : 'border-sg-border bg-sg-surface text-sg-text-secondary hover:bg-sg-surface-hover'

@@ -9,10 +9,17 @@ import type { GraficoProps } from './Grafico'
 // color, su leyenda y su tabla «Ver datos»
 export const PALETA = ['--sg-data-1', '--sg-data-2', '--sg-data-3', '--sg-data-4', '--sg-data-5', '--sg-data-6']
 
+// la familia del portal (Public Sans, design-system.md §3.4) es la de --font-sans del tema (theme/wasichai.css): el lienzo de
+// ECharts no hereda la del documento. sin hoja, la del sistema
+function familiaDelTema(): string {
+  if (typeof document === 'undefined') return 'system-ui, sans-serif'
+  return getComputedStyle(document.documentElement).getPropertyValue('--font-sans').trim() || 'system-ui, sans-serif'
+}
+
 export function temaDelGrafico() {
   return {
     color: PALETA.map(colorDe),
-    textStyle: { color: colorDe('--sg-text-secondary'), fontFamily: 'IBM Plex Sans, system-ui, sans-serif' },
+    textStyle: { color: colorDe('--sg-text-secondary'), fontFamily: familiaDelTema() },
     aria: { enabled: true },
     animation: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   }
@@ -35,7 +42,8 @@ export function opcionesConTema(opciones: Objeto): Objeto {
     axisLine: { lineStyle: { color: colorDe('--sg-border-strong') } },
     axisTick: { lineStyle: { color: colorDe('--sg-border-strong') } },
     axisLabel: { color: colorDe('--sg-text-secondary') },
-    splitLine: { lineStyle: { color: colorDe('--sg-border-subtle') } }
+    // la rejilla de los gráficos es su token (design-system.md §3.3)
+    splitLine: { lineStyle: { color: colorDe('--sg-grid') } }
   }
   // un conteo no tiene «0,2 personas»: si toda serie es de enteros, el eje de valores avanza de uno en uno (salvo que la
   // pantalla diga su minInterval)

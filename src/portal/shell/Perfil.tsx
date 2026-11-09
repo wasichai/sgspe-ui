@@ -7,6 +7,7 @@ import { useNombresDeRol } from '../proyectos/usuarios'
 import { useCuenta, useOrganizacion } from '../queries'
 import { LanguageMenu } from './LanguageMenu'
 import { ThemeMenu } from './ThemeMenu'
+import { SelectorDeDensidad } from './densidad'
 import { abrirHojaDeAtajos } from './HojaDeAtajos'
 import { useCerrarSesion } from '../auth/cerrarSesion'
 
@@ -43,7 +44,7 @@ export function DatosDeLaCuenta() {
   )
 }
 
-// el botón con el nombre y, debajo, los rótulos de los roles; abre la cuenta con el idioma, el tema y la salida (DD-09: nada de
+// el botón con el nombre y, debajo, los rótulos de los roles; abre la cuenta con el idioma, el tema, la densidad y la salida (DD-09: nada de
 // eso va suelto en la barra). Escape o un clic fuera lo cierran; el Escape que ya atendió el menú de tema (preventDefault) solo
 // cierra ese menú
 export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
@@ -109,6 +110,12 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
                 {t('shell.tema')}
               </span>
               <ThemeMenu />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span aria-hidden className="text-sg-text-muted">
+                {t('shell.densidad.titulo')}
+              </span>
+              <SelectorDeDensidad />
             </div>
           </div>
           <button

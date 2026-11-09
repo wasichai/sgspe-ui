@@ -6,7 +6,7 @@
         <title>SGSPE</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <script>
-            // antes del bundle: el tema guardado (portal y /admin comparten sgspe.*), para que un usuario en oscuro no vea un
+            // antes del bundle: el tema guardado y la densidad (portal y /admin comparten sgspe.*), para que un usuario en oscuro no vea un
             // destello claro. cada tema de core, id -> esquema de color: claro y oscuro (themes.test.ts los mantiene a la par).
             // system y un id desconocido toman el ajuste del sistema operativo, como resolveTheme de core. es el único
             // script en línea: la CSP lo autoriza por su hash (csp.ts)
@@ -17,6 +17,9 @@
                 const theme = stored && Object.hasOwn(schemes, stored) ? stored : dark ? 'dark' : 'light'
                 document.documentElement.dataset.theme = theme
                 document.documentElement.style.colorScheme = schemes[theme]
+                // la densidad compacta de cada persona (sgspe.densidad, ADR-0032), también antes de pintar: shell/densidad.ts la
+                // cambia después desde el menú de la cuenta
+                if (localStorage.getItem('sgspe.densidad') === 'compacta') document.documentElement.dataset.density = 'compact'
             } catch {}
         </script>
     </head>

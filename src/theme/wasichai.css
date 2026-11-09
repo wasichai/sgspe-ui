@@ -1,9 +1,8 @@
-/* los tokens de @wasichai/ui/theme.css leídos de los de SGSPE ("Pino y piedra", ASM-077, docs/ux/tokens.css): las
-   primitivas de wasichai (Button, Card, Alert, Table, Badge) y /admin se ven con la misma paleta que el portal. es la
-   correspondencia que tokens.css deja para F1 (pregunta Q2 de docs/ux/ux-architecture.md). wasichai fija sus tokens en
-   :root y en [data-theme] (el atributo que core y el script de arranque ponen en <html>); este bloque va después, con la
-   misma especificidad, y los --sg-* ya cambian solos entre claro y oscuro. --overlay y --map-selected siguen siendo los
-   de wasichai: tokens.css no tiene un equivalente */
+/* los tokens de @wasichai/ui/theme.css leídos de los de SGSPE ("Civic Modern", ASM-149, ADR-0032, docs/ux/tokens.css y
+   design-system.md §9): las primitivas de wasichai (Button, Card, Alert, Table, Badge) y /admin se ven con la misma paleta que
+   el portal. wasichai fija sus tokens en :root y en [data-theme] (el atributo que core y el script de arranque ponen en <html>);
+   este bloque va después, con la misma especificidad, y los --sg-* ya cambian solos entre claro y oscuro. --overlay, el velo de
+   los diálogos, sigue siendo el de wasichai: tokens.css no tiene un equivalente y el de wasichai ya es oscuro en los dos temas */
 :root,
 [data-theme='light'],
 [data-theme='dark'] {
@@ -12,15 +11,18 @@
     --border: var(--sg-border);
     --ink: var(--sg-text);
     --ink-muted: var(--sg-text-muted);
+    /* el *:focus-visible de wasichai lee --brand; el anillo de E (tokens.css, capa base) le gana a todo lo enfocable */
     --brand: var(--sg-primary);
     --brand-strong: var(--sg-primary-hover);
     --brand-soft: var(--sg-primary-soft);
     --on-brand: var(--sg-on-primary);
-    --shell: var(--sg-surface);
-    --shell-muted: var(--sg-text-secondary);
-    --shell-ink: var(--sg-text);
+    /* la barra de /admin es la cabecera institucional de E: azul con texto blanco en los dos temas */
+    --shell: var(--sg-header);
+    --shell-muted: var(--sg-header-text);
+    --shell-ink: var(--sg-header-text);
     --danger: var(--sg-danger);
-    --on-danger: var(--sg-on-critical);
+    /* propio de danger: en oscuro, danger es rosado y el blanco no se lee sobre él */
+    --on-danger: var(--sg-on-danger);
     --success: var(--sg-success);
     --warning: var(--sg-warning);
     --warning-soft: var(--sg-warning-soft);
@@ -33,17 +35,21 @@
     --table-head: var(--sg-surface-sunken);
     --table-stripe: var(--sg-surface-hover);
     --line: var(--sg-border-subtle);
+    /* la selección en un mapa de wasichai es la de E: el color del foco (design-system.md §3.3) */
+    --map-selected: var(--sg-focus);
     /* desde @wasichai/ui 1.1.0 (W-06 y W-07): lo que flota (menús, diálogos, popovers) y el borde y el ejemplo de los
-       campos. el borde de control da 3:1 sobre la superficie y el fondo (WCAG 1.4.11; DD-15); un campo inválido
-       conserva su borde de error */
+       campos. el borde de control da 3:1 sobre la superficie y el fondo (WCAG 1.4.11); un campo inválido conserva su
+       borde de error */
     --surface-raised: var(--sg-surface-raised);
     --border-control: var(--sg-border-control);
     --placeholder: var(--sg-text-muted);
 }
 
-/* IBM Plex Sans y Plex Mono para todo, también para /admin: font-sans y font-mono son las familias por defecto de
-   tailwind. las fuentes se sirven desde el mismo origen (index.css), nunca desde un CDN (font-src 'self') */
+/* Public Sans e IBM Plex Mono para todo, también para /admin: font-sans y font-mono son las familias por defecto de
+   tailwind. las fuentes se sirven desde el mismo origen (index.css), nunca desde un CDN (font-src 'self'). las tarjetas de
+   wasichai (--radius-card) llevan el radio de 4 px de E, como todo lo demás (design-system.md §3.6) */
 @theme {
-    --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-sans: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --radius-card: 4px;
 }

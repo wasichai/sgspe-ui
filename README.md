@@ -85,15 +85,22 @@ el idioma:
   `componentes/errores.ts` lo dice con el texto de `comun.codigos` (o el de la pantalla, o el `detail` si el código es
   nuevo), también junto al campo de un formulario. Nunca se muestra el código crudo.
 - **Mapa y gráficos:** MapLibre 6.10.0 (`src/portal/mapa`) y ECharts 6 (`src/portal/graficos`) bajan con el primer mapa o
-  gráfico; ECharts pinta con los tokens del tema; las capas del mapa, con la paleta compartida (`mapa/paleta.json`).
+  gráfico; ECharts pinta con los tokens del tema y la familia de `--font-sans`; las capas del mapa, con la paleta compartida
+  (`mapa/paleta.json`) y, las que no tienen SLD y el calor, con los tokens cartográficos `--sg-lyr-*`, `--sg-map-*` y
+  `--sg-heat-*` (`mapa/estilos.ts`), que siguen al tema.
 - **Idioma:** español por defecto e inglés (`src/portal/textos/`), con números y fechas es-PE. La elección se comparte con
   `/admin`: se guarda en `sgspe.lang` y en las preferencias del usuario (`useSetLocale` de core), y `<html lang>` la sigue
   en las dos apps (`es-PE` para el español).
-- **Temas:** «Pino y piedra» en claro y oscuro. `src/theme/tokens.css` es copia exacta de `docs/ux/tokens.css` (se compara
-  con `cmp`, prettier no la toca) y `src/theme/wasichai.css` lee de ella los tokens de `@wasichai/ui`; IBM Plex Sans y Mono
-  vienen de `@fontsource/*` y se sirven desde el mismo origen. Dentro de `cn()`, el cuerpo se escribe `text-sm`, no
-  `text-sg-body`. El script de arranque de `index.html` es el único script en línea; `csp.ts` arma la CSP con su hash,
-  Vite la manda en modo de solo informe y `yarn csp` la imprime para el proxy de producción.
+- **Temas:** «Civic Modern» (ADR-0032 de `sgspe`) en claro, por defecto, y oscuro, con los ids `light` y `dark` de core.
+  `src/theme/tokens.css` es copia exacta de `docs/ux/tokens.css` (se compara con `cmp`, prettier no la toca) y
+  `src/theme/wasichai.css` lee de ella los tokens de `@wasichai/ui`, así que `/admin` se ve igual. Public Sans e IBM Plex
+  Mono vienen de `@fontsource/*` y se sirven desde el mismo origen (`font-src 'self'`). El anillo de foco (halo amarillo y
+  anillo marino) vive en la capa base de `tokens.css`: ningún componente pinta otro. Dentro de `cn()`, el cuerpo se escribe
+  `text-sm`, no `text-sg-body`. El script de arranque de `index.html` es el único script en línea; `csp.ts` arma la CSP con
+  su hash, Vite la manda en modo de solo informe y `yarn csp` la imprime para el proxy de producción.
+- **Densidad:** normal o compacta, por persona y en el navegador (`sgspe.densidad`), desde el menú de la cuenta y el panel
+  «Más» del teléfono (`shell/densidad.tsx`). El script de arranque y React la escriben como `data-density="compact"` en
+  `<html>`, y `tokens.css` baja filas, controles, campos, cabecera y navegación (`h-sg-row`, `h-sg-control`…).
 - **Fronteras:** `src/boundaries.test.ts` falla ante un nombre de rol en el código o una importación interna de `@wasichai/*`.
 
 ## Requisitos

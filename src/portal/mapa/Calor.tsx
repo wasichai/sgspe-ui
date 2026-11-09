@@ -8,6 +8,7 @@ import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { OBJETOS_DE_CALOR, type Concentracion, type ObjetoDeCalor } from '../territorio/consultas'
 import type { CapaDeCalor } from './Mapa'
+import { colorCss } from './colores'
 import { RAMPA_DE_CALOR } from './estilos'
 
 // el mapa de calor de S12 (spec F6 §3.1 y §3.7): conteos por localidad o comunidad, nunca por punto (RQ-GIS-015). el selector va en
@@ -62,7 +63,10 @@ export function TablaDeCalor({ objeto, consulta }: { objeto: ObjetoDeCalor; cons
       </h2>
       <div className="flex items-center gap-2 text-sg-caption text-sg-text-muted" aria-hidden>
         {t('sig.calor.menos')}
-        <span className="inline-block h-2 w-32 rounded-sg-sm" style={{ backgroundImage: `linear-gradient(to right, ${RAMPA_DE_CALOR.join(', ')})` }} />
+        <span
+          className="inline-block h-2 w-32 rounded-sg-sm"
+          style={{ backgroundImage: `linear-gradient(to right, ${RAMPA_DE_CALOR.map(colorCss).join(', ')})` }}
+        />
         {t('sig.calor.mas')}
       </div>
       {consulta.isPending ? <Cargando /> : null}

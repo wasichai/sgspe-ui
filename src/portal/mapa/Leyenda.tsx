@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
+import { colorCss } from './colores'
 import { estiloDeCapa } from './paleta'
 
 // la leyenda de las capas encendidas con la paleta compartida (RQ-GIS-014, spec F6 §3.7): el mismo color y el mismo trazo que
-// la tesela WMS y el mapa de informe. el color de la paleta es la excepción a los tokens: es el de la capa, no de la interfaz
+// la tesela WMS y el mapa de informe. el color es el de la capa: un hex de la paleta compartida o un token del mapa (estilos.ts)
 export function Leyenda({ ids }: { ids: readonly string[] }) {
   const { t } = useTranslation(NS)
   if (ids.length === 0) return null
@@ -27,20 +28,15 @@ export function Leyenda({ ids }: { ids: readonly string[] }) {
 export function MuestraDeCapa({ id }: { id: string }) {
   const estilo = estiloDeCapa(id)
   const relleno = estilo.colorDeRelleno ?? estilo.color
+  // el relleno va en su propia capa con la opacidad de la tesela: el color puede ser un token (var()) y no admite sufijo alfa
   return (
     <span
       aria-hidden
       data-color={estilo.color}
-      className="inline-block size-3.5 shrink-0 rounded-sg-sm"
-      style={{
-        border: `2px ${estilo.trazo ? 'dashed' : 'solid'} ${estilo.color}`,
-        backgroundColor:
-          estilo.fillOpacity > 0
-            ? `${relleno}${Math.round(estilo.fillOpacity * 255)
-                .toString(16)
-                .padStart(2, '0')}`
-            : 'transparent'
-      }}
-    />
+      className="relative inline-block size-3.5 shrink-0 overflow-hidden rounded-sg-sm"
+      style={{ border: `2px ${estilo.trazo ? 'dashed' : 'solid'} ${colorCss(estilo.color)}` }}
+    >
+      {estilo.fillOpacity > 0 ? <span className="absolute inset-0" style={{ backgroundColor: colorCss(relleno), opacity: estilo.fillOpacity }} /> : null}
+    </span>
   )
 }

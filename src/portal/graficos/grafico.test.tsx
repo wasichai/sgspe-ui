@@ -79,7 +79,7 @@ describe('GraficoImpl', () => {
 describe('opcionesConTema', () => {
   it('los ejes, el tooltip y la leyenda que la pantalla declara siguen los tokens, y lo suyo gana', () => {
     document.documentElement.style.setProperty('--sg-border-strong', '#111111')
-    document.documentElement.style.setProperty('--sg-border-subtle', '#222222')
+    document.documentElement.style.setProperty('--sg-grid', '#222222')
     document.documentElement.style.setProperty('--sg-surface', '#333333')
     document.documentElement.style.setProperty('--sg-text-secondary', '#444444')
     const r = opcionesConTema({
@@ -93,6 +93,19 @@ describe('opcionesConTema', () => {
     expect(r.yAxis.splitLine.lineStyle.color).toBe('#abcdef')
     expect(r.tooltip).toMatchObject({ trigger: 'axis', backgroundColor: '#333333' })
     expect(r.legend.textStyle.color).toBe('#444444')
+  })
+
+  // design-system.md §6 (gráficos): el texto en la familia del portal (Public Sans), leída de la variable del tema y no escrita
+  // aquí; la rejilla es el token grid
+  it('el texto del gráfico usa la familia del tema y la rejilla su token', () => {
+    document.documentElement.style.setProperty('--font-sans', "'Public Sans', 'Segoe UI', system-ui, sans-serif")
+    document.documentElement.style.setProperty('--sg-grid', '#e3e7ed')
+    const r = opcionesConTema({ yAxis: { type: 'value' } }) as Record<string, any>
+    expect(r.textStyle.fontFamily).toBe("'Public Sans', 'Segoe UI', system-ui, sans-serif")
+    expect(r.yAxis.splitLine.lineStyle.color).toBe('#e3e7ed')
+    document.documentElement.style.removeProperty('--font-sans')
+    // sin hoja (o sin la variable), la familia del sistema
+    expect((opcionesConTema({}) as Record<string, any>).textStyle.fontFamily).toBe('system-ui, sans-serif')
   })
 
   it('la descripción accesible que la pantalla da se suma al aria del tema sin apagarlo', () => {
