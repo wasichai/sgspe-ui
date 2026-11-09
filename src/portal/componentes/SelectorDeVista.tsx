@@ -5,7 +5,7 @@ import { Link } from 'react-router'
 import { NS, numeroPe } from '../i18n'
 import { MasAcciones } from './Pagina'
 
-// las vistas de un módulo en una sola fila, con su conteo (hallazgo U-18, DD-03): reemplaza la segunda fila de pestañas y va
+// las vistas de un módulo en una fila (en filas, si no caben), con su conteo (hallazgo U-18, DD-03): reemplaza la segunda fila de pestañas y va
 // dentro de la barra de filtros. es un radiogroup con tabulación itinerante: un solo radio entra en el orden de tabulación,
 // las flechas mueven y eligen, y Home y End van a los extremos. las que no caben van en «Más vistas»; la actual nunca queda
 // escondida: si está en el menú, entra en lugar de la última visible. quien lo usa escribe ?view= con los demás parámetros
@@ -61,7 +61,7 @@ export function SelectorDeVista({
   }
 
   return (
-    <div className="flex max-w-full items-center gap-2">
+    <div className="flex max-w-full flex-wrap items-center gap-2">
       <div role="radiogroup" aria-label={etiqueta} className={SEGMENTADO}>
         {aLaVista.map((v, i) => {
           const elegida = v.id === actual
@@ -133,7 +133,7 @@ export function SelectorDePagina({
   const [aLaVista, enMenu] = repartir(paginas, actual, visibles)
   const nombre = (p: PaginaDelSelector) => (p.n != null ? t('comun.selectorDeVista.conConteo', { etiqueta: p.etiqueta, n: numeroPe(p.n) }) : undefined)
   return (
-    <nav aria-label={etiqueta} className="flex max-w-full items-center gap-2">
+    <nav aria-label={etiqueta} className="flex max-w-full flex-wrap items-center gap-2">
       <div className={SEGMENTADO}>
         {aLaVista.map((p) => {
           const elegida = p.id === actual
@@ -165,11 +165,13 @@ export function SelectorDePagina({
 }
 
 // el control segmentado de design-system.md §5.3 («Barra de filtros y chips»): borde de 2 px primary, radio 4, segmentos de 30 px
-// en 14 px 600 primary-text sobre surface, separados por 2 px primary; el elegido en primary con on-primary
-const SEGMENTADO = 'inline-flex max-w-full overflow-x-auto rounded-sg-md divide-x-2 divide-sg-primary border-2 border-sg-primary bg-sg-surface text-sm'
+// en 14 px 600 primary-text sobre surface, separados por 2 px primary (el fondo primary que asoma entre ellos); el elegido en
+// primary con on-primary. si no caben en una fila (390 px, #116), se parten en filas que cada segmento estira hasta el borde:
+// ninguna vista sale cortada ni el control se desplaza, y el orden y el teclado del radiogroup no cambian
+const SEGMENTADO = 'inline-flex max-w-full flex-wrap gap-0.5 overflow-hidden rounded-sg-md border-2 border-sg-primary bg-sg-primary text-sm'
 const segmento = (elegida: boolean) =>
   cn(
-    'flex h-7.5 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 font-semibold',
+    'flex h-7.5 shrink-0 grow items-center justify-center gap-1.5 whitespace-nowrap px-3 font-semibold',
     elegida ? 'bg-sg-primary text-sg-on-primary' : 'bg-sg-surface text-sg-primary-text hover:bg-sg-primary-soft'
   )
 

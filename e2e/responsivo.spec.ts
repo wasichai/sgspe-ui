@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { prepararApi, prepararFichaDeCompromiso } from './api'
+import { prepararApi, prepararFichaDeCompromiso, selectorDeVistasSinDesborde } from './api'
 
 // el teléfono (revisión de UX, etapa 8, D3): a 390 px ninguna pantalla principal se desplaza en horizontal. cuenta tanto la página
 // como el contenido (main se desplaza por su cuenta); lo que se desplaza dentro de su propio contenedor, como una tabla, no
@@ -83,4 +83,12 @@ for (const [ruta, lista, titulo] of [
     const tarjetas = page.getByRole('list', { name: lista })
     await expect(tarjetas.getByRole('listitem').filter({ hasText: titulo }).first()).toBeVisible()
     await expect(page.getByRole('table', { name: lista })).toHaveCount(0)
+  })
+
+// #116: el selector de vistas de Compromisos y de Proyectos, sin desbordar (selectorDeVistasSinDesborde, api.ts); los de QCS y
+// Programas, en listasF4.spec.ts, que simula sus listas
+for (const ruta of ['/projects/p1/commitments', '/projects'])
+  test(`a 390 px el selector de vistas de ${ruta} no desborda`, async ({ page }) => {
+    await page.goto(ruta)
+    await selectorDeVistasSinDesborde(page)
   })
