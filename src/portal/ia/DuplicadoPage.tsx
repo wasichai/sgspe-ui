@@ -7,13 +7,14 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Campo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
 import { Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { texto, useDefinicion, useRegistro, type Registro } from '../datos/registros'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { NS } from '../i18n'
 import { useAplicarTransicion } from '../transiciones/api'
 import { useAceptarSugerencia } from './contrato'
-import { MarcaDeIa } from './MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from './MarcaDeIa'
 import { quedanMarcadores } from './marcadores'
 import { cuerpoDeAceptacion, filaDe } from './sugerencias'
 import { TextoDeIa } from './TextoDeIa'
@@ -26,9 +27,11 @@ export function DuplicadoPage() {
   const { projectId = '', suggestionId = '' } = useParams()
   const sugerencia = useRegistro('ai_suggestion', suggestionId)
   return (
-    <Consulta consulta={sugerencia} noExiste={<NoEsDeSusProyectos />}>
-      {(s) => <Comparacion sugerencia={s} proyecto={projectId} />}
-    </Consulta>
+    <ContenedorDePagina elemento="section">
+      <Consulta consulta={sugerencia} noExiste={<NoEsDeSusProyectos />}>
+        {(s) => <Comparacion sugerencia={s} proyecto={projectId} />}
+      </Consulta>
+    </ContenedorDePagina>
   )
 }
 
@@ -105,18 +108,14 @@ function Comparacion({ sugerencia, proyecto }: { sugerencia: Registro; proyecto:
         ? t('bandejaIa.duplicado.noEsNota')
         : null
   return (
-    <section aria-label={t('bandejaIa.duplicado.titulo')} className="space-y-4">
+    <section aria-label={t('bandejaIa.duplicado.titulo')} className="space-y-5">
       {volver}
-      <header className="space-y-1">
-        <div className="flex items-center gap-2">
-          <h1 className="text-sg-h1 font-semibold">{t('bandejaIa.duplicado.titulo')}</h1>
-          <MarcaDeIa clase="sugerencia" />
-        </div>
-        <p className="text-sm text-sg-text-secondary">{t('bandejaIa.duplicado.ayuda')}</p>
-      </header>
+      <EncabezadoDePagina titulo={t('bandejaIa.duplicado.titulo')} chips={<MarcaDeIa clase="sugerencia" />} descripcion={t('bandejaIa.duplicado.ayuda')} />
       {fila.razones.length > 0 ? (
-        <div className="space-y-1 text-sm">
-          <p className="text-sg-caption text-sg-text-muted">{t('bandejaIa.propuesta.razones')}</p>
+        // por qué la IA cree que son el mismo: una propuesta, en el bloque de IA
+        <div className={`space-y-1 text-sm ${CAJA_DE_IA}`}>
+          <MarcaDeIa clase="sugerencia" forma="encabezado" />
+          <p className="text-sg-caption text-sg-text-secondary">{t('bandejaIa.propuesta.razones')}</p>
           <ul className="ml-5 list-disc">
             {fila.razones.map((razon, i) => (
               <li key={i}>
@@ -126,7 +125,7 @@ function Comparacion({ sugerencia, proyecto }: { sugerencia: Registro; proyecto:
           </ul>
         </div>
       ) : null}
-      <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+      <div className="overflow-x-auto rounded-sg-md border border-sg-border bg-sg-surface">
         <Table aria-label={t('bandejaIa.duplicado.titulo')}>
           <thead>
             <tr>

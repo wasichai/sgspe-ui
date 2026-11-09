@@ -148,7 +148,7 @@ export function ReportesPage() {
   ]
   return (
     <ContenedorDePagina>
-      <EncabezadoDePagina titulo={t('reportes.titulo')} />
+      <EncabezadoDePagina titulo={t('reportes.titulo')} descripcion={t('reportes.descripcion')} />
       <PestanasDeFicha etiqueta={t('reportes.titulo')} pestanas={pestanas} />
     </ContenedorDePagina>
   )

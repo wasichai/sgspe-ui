@@ -5,13 +5,28 @@ import { NS } from '../i18n'
 // la marca de procedencia de design-system.md §4.4 y §5.3, siempre con su texto y la chispa. como etiqueta (SUGERENCIA IA): 24 px,
 // 12,5 px 700 MAYÚSCULAS, borde discontinuo de 1,5 px ai-border sobre ai-soft. como encabezado de un bloque de IA (.ai-h del
 // lienzo): sin caja, en ai 12,5 px 800 MAYÚSCULAS, con el aviso de que es una propuesta que se verifica antes de usar
-export function MarcaDeIa({ clase, forma = 'etiqueta' }: { clase: 'sugerencia' | 'resumen'; forma?: 'etiqueta' | 'encabezado' }) {
+// el aviso del encabezado: «verifique antes de usar» o, en un entregable, «no es parte del informe» hasta que una persona lo adopte
+export function MarcaDeIa({
+  clase,
+  forma = 'etiqueta',
+  aviso = 'verifique',
+  pendiente = false
+}: {
+  clase: 'sugerencia' | 'resumen'
+  forma?: 'etiqueta' | 'encabezado'
+  aviso?: 'verifique' | 'noEsDelInforme'
+  // la etiqueta de algo que espera una decisión («Sugerencia de IA pendiente», la cabecera de una sección de S50)
+  pendiente?: boolean
+}) {
   const { t } = useTranslation(NS)
   if (forma === 'encabezado')
     return (
-      <p data-marca-de-ia className="flex items-center gap-2 text-sg-caption font-extrabold uppercase tracking-[0.06em] text-sg-ai">
-        <Sparkles aria-hidden className="size-3.5 shrink-0" />
-        <span>{t(`ia.marcas.${clase}`)}</span> <span>· {t('ia.marcas.verifique')}</span>
+      <p data-marca-de-ia className="flex items-start gap-2 text-sg-caption font-extrabold uppercase tracking-[0.06em] text-sg-ai">
+        <Sparkles aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+        {/* una frase: en una columna angosta se parte como texto, no en dos columnas */}
+        <span>
+          <span>{t(`ia.marcas.${clase}`)}</span> <span>· {t(`ia.marcas.${aviso}`)}</span>
+        </span>
       </p>
     )
   return (
@@ -21,6 +36,7 @@ export function MarcaDeIa({ clase, forma = 'etiqueta' }: { clase: 'sugerencia' |
     >
       <Sparkles aria-hidden className="size-3.5" />
       {t(`ia.marcas.${clase}`)}
+      {pendiente ? <span className="font-semibold normal-case tracking-normal">{t('ia.marcas.pendiente')}</span> : null}
     </span>
   )
 }

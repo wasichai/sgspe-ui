@@ -17,7 +17,20 @@ export const ES_ENTREGABLES = {
       estado: 'Estado',
       borrador: 'Borrador',
       revision: 'Revisión',
-      niveles: 'Niveles'
+      niveles: 'Niveles',
+      proyecto: 'Proyecto'
+    },
+    // la causa de un borrador fallido, en pocas palabras (el detalle está en el entregable)
+    causas: {
+      MAP_FAILED: 'mapa sin dibujar',
+      PDF_CHECK_FAILED: 'PDF sin verificar',
+      PDF_CONVERTER_UNAVAILABLE: 'conversión a PDF sin respuesta',
+      FILE_TOO_LARGE: 'archivo demasiado grande',
+      TEMPLATE_UNAVAILABLE: 'plantilla no disponible',
+      TYPE_NOT_AVAILABLE: 'tipo no disponible',
+      DELIVERABLE_PARAMETERS_MISSING: 'faltan datos del entregable',
+      GENERATION_FAILED: 'no se pudo preparar',
+      otra: 'vea el entregable'
     }
   },
   nuevo: {
@@ -56,7 +69,31 @@ export const ES_ENTREGABLES = {
     volver: 'Volver a Reportes',
     camino: 'Camino del entregable',
     periodo: 'Periodo: {{desde}} a {{hasta}}',
-    niveles: 'Niveles: {{niveles}}'
+    niveles: 'Niveles: {{niveles}}',
+    corte: 'Corte {{fecha}}',
+    seccionesRevisadas: '{{n}} de {{m}} secciones'
+  },
+  // la columna derecha de S50 (lienzo S12): lo que pide la versión EXTERNO, con lo que se sabe de los datos
+  externo: {
+    titulo: 'Lista para la versión «Externo»',
+    cumple: 'Cumple',
+    falta: 'Falta',
+    revisadas: 'Todas las secciones revisadas',
+    sinRevisar_one: '{{n}} sección sin revisar',
+    sinRevisar_other: '{{n}} secciones sin revisar',
+    irALaPrimera: 'Ir a la primera sin revisar',
+    sinCambios: 'Ninguna sección cambió después del borrador',
+    cambiadas_one: '{{n}} sección cambió después del borrador',
+    cambiadas_other: '{{n}} secciones cambiaron después del borrador',
+    borradorListo: 'Borrador listo',
+    sinBorradorListo: 'Todavía no hay un borrador listo',
+    sinDatosPersonales: 'Sin avisos de posibles datos personales',
+    datosPersonales_one: '{{n}} aviso de posibles datos personales',
+    datosPersonales_other: '{{n}} avisos de posibles datos personales',
+    mapas: 'Los mapas se dibujaron',
+    mapaFallido: 'Un mapa no se pudo dibujar',
+    alEmitir: 'Al emitir se confirma además',
+    congelado: 'Lo emitido queda congelado con su huella y no se edita: un cambio es otra versión.'
   },
   secciones: {
     titulo: 'Secciones',
@@ -64,7 +101,13 @@ export const ES_ENTREGABLES = {
     cambiada: 'Cambió después del borrador',
     // cuántas lleva revisadas el entregable (tercera pasada de UX, 4.6)
     revisadas: 'Revisadas: {{n}} de {{m}}',
-    revisada: 'Revisada'
+    revisada: 'Revisada',
+    leyenda: {
+      titulo: 'Origen',
+      calculada: 'Calculada desde los datos',
+      humana: 'Escrita por una persona',
+      asistida: 'Asistida por IA (requiere adopción)'
+    }
   },
   seccion: {
     texto: 'Texto de la sección',
@@ -108,17 +151,21 @@ export const ES_ENTREGABLES = {
     sugerir: 'Sugerir con IA',
     sugerirDeNuevo: 'Sugerir de nuevo',
     redactando: 'Redactando…',
-    redactada: 'Redactada el {{fecha}}. Una persona decide si la usa.',
+    redactada: 'Redactada el {{fecha}} · una persona decide si la usa',
     sinSugerencia: 'Todavía no hay una sugerencia para esta sección.',
-    usar: 'Usar…',
+    adoptar: 'Adoptar en la sección',
+    usar: 'Adoptar y editar',
     usarResumen: 'Usar el resumen ejecutivo del proyecto…',
     guardeAntes: 'Guarde o descarte los cambios de la sección antes de usar una sugerencia.',
-    usarTitulo: 'Usar la sugerencia en la sección',
+    usarTitulo: 'Adoptar la sugerencia en la sección',
     usarAyuda: 'Este será el texto de la sección. Corríjalo y escriba el motivo: la sección queda asistida por IA.',
+    adoptarAyuda: 'Este será el texto de la sección, tal cual. Escriba el motivo: la sección queda asistida por IA.',
+    editarTexto: 'Editar el texto',
+    basadaEn: 'Basada en',
     texto: 'Texto que irá a la sección',
     textoFalta: 'Escriba el texto de la sección.',
     quedanMarcadores: 'El texto todavía lleva datos reservados por la IA: reemplácelos por una mención o por un texto genérico.',
-    confirmar: 'Usar en la sección',
+    confirmar: 'Adoptar en la sección',
     usando: 'Usando…'
   },
   borrador: {
@@ -213,7 +260,27 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     sinAsignacion: 'Creating a deliverable in this project needs a current assignment to it.',
     vacio: 'There are no deliverables yet.',
     comoEmpezar: '“New deliverable” builds the draft with the sections of its type (a field report, a social diagnosis) from the project data.',
-    columnas: { entregable: 'Deliverable', tipo: 'Type', corte: 'Cutoff', estado: 'State', borrador: 'Draft', revision: 'Revision', niveles: 'Levels' }
+    columnas: {
+      entregable: 'Deliverable',
+      tipo: 'Type',
+      corte: 'Cutoff',
+      estado: 'State',
+      borrador: 'Draft',
+      revision: 'Revision',
+      niveles: 'Levels',
+      proyecto: 'Project'
+    },
+    causas: {
+      MAP_FAILED: 'map not drawn',
+      PDF_CHECK_FAILED: 'PDF not verified',
+      PDF_CONVERTER_UNAVAILABLE: 'PDF conversion did not respond',
+      FILE_TOO_LARGE: 'file too large',
+      TEMPLATE_UNAVAILABLE: 'template unavailable',
+      TYPE_NOT_AVAILABLE: 'type unavailable',
+      DELIVERABLE_PARAMETERS_MISSING: 'deliverable data missing',
+      GENERATION_FAILED: 'could not be prepared',
+      otra: 'see the deliverable'
+    }
   },
   nuevo: {
     titulo: 'New deliverable',
@@ -251,14 +318,43 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     volver: 'Back to Reports',
     camino: 'Deliverable path',
     periodo: 'Period: {{desde}} to {{hasta}}',
-    niveles: 'Levels: {{niveles}}'
+    niveles: 'Levels: {{niveles}}',
+    corte: 'Cutoff {{fecha}}',
+    seccionesRevisadas: '{{n}} of {{m}} sections'
+  },
+  externo: {
+    titulo: 'Checklist for the «Externo» version',
+    cumple: 'Met',
+    falta: 'Missing',
+    revisadas: 'All sections reviewed',
+    sinRevisar_one: '{{n}} section not reviewed',
+    sinRevisar_other: '{{n}} sections not reviewed',
+    irALaPrimera: 'Go to the first one not reviewed',
+    sinCambios: 'No section changed after the draft',
+    cambiadas_one: '{{n}} section changed after the draft',
+    cambiadas_other: '{{n}} sections changed after the draft',
+    borradorListo: 'Draft ready',
+    sinBorradorListo: 'There is no ready draft yet',
+    sinDatosPersonales: 'No possible personal data warnings',
+    datosPersonales_one: '{{n}} possible personal data warning',
+    datosPersonales_other: '{{n}} possible personal data warnings',
+    mapas: 'The maps were drawn',
+    mapaFallido: 'A map could not be drawn',
+    alEmitir: 'When issuing, you also confirm',
+    congelado: 'What is issued stays frozen with its fingerprint and is not edited: a change is another version.'
   },
   secciones: {
     titulo: 'Sections',
     conIa: 'With AI',
     cambiada: 'Changed after the draft',
     revisadas: 'Reviewed: {{n}} of {{m}}',
-    revisada: 'Reviewed'
+    revisada: 'Reviewed',
+    leyenda: {
+      titulo: 'Origin',
+      calculada: 'Calculated from the data',
+      humana: 'Written by a person',
+      asistida: 'AI-assisted (needs adoption)'
+    }
   },
   seccion: {
     texto: 'Section text',
@@ -302,17 +398,21 @@ export const EN_ENTREGABLES: typeof ES_ENTREGABLES = {
     sugerir: 'Suggest with AI',
     sugerirDeNuevo: 'Suggest again',
     redactando: 'Writing…',
-    redactada: 'Written on {{fecha}}. A person decides whether to use it.',
+    redactada: 'Written on {{fecha}} · a person decides whether to use it',
     sinSugerencia: 'There is no suggestion for this section yet.',
-    usar: 'Use…',
+    adoptar: 'Adopt in the section',
+    usar: 'Adopt and edit',
     usarResumen: 'Use the project executive summary…',
     guardeAntes: 'Save or discard the section changes before using a suggestion.',
-    usarTitulo: 'Use the suggestion in the section',
+    usarTitulo: 'Adopt the suggestion in the section',
     usarAyuda: 'This will be the section text. Correct it and write the reason: the section becomes AI-assisted.',
+    adoptarAyuda: 'This will be the section text, as is. Write the reason: the section becomes AI-assisted.',
+    editarTexto: 'Edit the text',
+    basadaEn: 'Based on',
     texto: 'Text that will go to the section',
     textoFalta: 'Write the section text.',
     quedanMarcadores: 'The text still has data reserved by the AI: replace it with a mention or a generic text.',
-    confirmar: 'Use in the section',
+    confirmar: 'Adopt in the section',
     usando: 'Using…'
   },
   borrador: {

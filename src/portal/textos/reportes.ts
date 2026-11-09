@@ -1,6 +1,7 @@
 // S49 · reportes y exportaciones en F2 (screens.md, ux-architecture.md §9; api.md §4.13)
 export const ES_REPORTES = {
   titulo: 'Reportes',
+  descripcion: 'Los entregables por secciones con su revisión, las exportaciones con nivel de divulgación y su historial.',
   registroDeGrupos: 'Registro de grupos de interés',
   registroAyuda:
     'XLSX con la evaluación vigente de cada grupo de interés, con el nivel de divulgación aplicado antes de escribir el archivo. Queda en el registro de exportaciones.',
@@ -141,6 +142,7 @@ export const ES_REPORTES = {
 
 export const EN_REPORTES: typeof ES_REPORTES = {
   titulo: 'Reports',
+  descripcion: 'Deliverables by section with their review, exports with a disclosure level, and their history.',
   registroDeGrupos: 'Stakeholder register',
   registroAyuda:
     'XLSX with the current assessment of each stakeholder, with the disclosure level applied before the file is written. It is recorded in the export log.',

@@ -57,7 +57,8 @@ describe('S50 · entregable por secciones', () => {
     // el código va en el antetítulo del encabezado común, con el tipo (revisión de UX, etapa 4)
     expect(screen.getByText(/^INF-001 · /)).toBeInTheDocument()
     const camino = screen.getByRole('navigation', { name: 'Camino del entregable' })
-    expect(await within(camino).findByText('Borrador')).toHaveAttribute('aria-current', 'step')
+    // los pasos de WF-H (lienzo S12): el actual es el paso entero, con su número y su nombre
+    expect((await within(camino).findByText('Borrador')).closest('li')).toHaveAttribute('aria-current', 'step')
     const lista = await screen.findByRole('navigation', { name: 'Secciones' })
     const conclusiones = within(lista).getByRole('button', { name: /Conclusiones/ })
     expect(conclusiones).toHaveTextContent('Asistido por IA')
@@ -68,6 +69,38 @@ describe('S50 · entregable por secciones', () => {
     expect(await within(lista).findByText('Revisadas: 1 de 4')).toBeInTheDocument()
     expect(conclusiones).toHaveTextContent('Revisada')
     expect(within(lista).getByRole('button', { name: /Antecedentes/ })).not.toHaveTextContent('Revisada')
+  })
+
+  it('cada sección lleva el ícono de su origen con la leyenda, y en revisión el segundo paso cuenta las revisadas', async () => {
+    abrir('/reports/deliverables/d1', [], entregableEn('in_review'))
+    const camino = await screen.findByRole('navigation', { name: 'Camino del entregable' })
+    const enRevision = (await within(camino).findByText('En revisión')).closest('li')!
+    expect(enRevision).toHaveAttribute('aria-current', 'step')
+    expect(await within(camino).findByText(/1 de 4 secciones/)).toBeInTheDocument()
+    expect(within(camino).getByText('Borrador').closest('li')).toHaveTextContent('Paso cumplido')
+    const lista = screen.getByRole('navigation', { name: 'Secciones' })
+    expect(await within(lista).findByText('Calculada desde los datos')).toBeInTheDocument()
+    expect(within(lista).getByText('Escrita por una persona')).toBeInTheDocument()
+    expect(within(lista).getByText('Asistida por IA (requiere adopción)')).toBeInTheDocument()
+  })
+
+  it('observado ocupa el segundo paso con su nombre', async () => {
+    abrir('/reports/deliverables/d1', [], entregableEn('observed'))
+    const camino = await screen.findByRole('navigation', { name: 'Camino del entregable' })
+    expect((await within(camino).findByText('Observado')).closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(within(camino).queryByText('En revisión')).not.toBeInTheDocument()
+  })
+
+  it('la lista para EXTERNO dice cuántas secciones faltan revisar y lleva a la primera', async () => {
+    abrir('/reports/deliverables/d1?seccion=conclusiones')
+    const externo = await screen.findByRole('complementary', { name: 'Lista para la versión «Externo»' })
+    expect(await within(externo).findByText('3 secciones sin revisar')).toBeInTheDocument()
+    expect(within(externo).getByText('1 sección cambió después del borrador')).toBeInTheDocument()
+    // lo que solo una persona juzga se confirma al emitir: aquí va como regla
+    expect(within(externo).getByText('Los anexos no traen datos personales.')).toBeInTheDocument()
+    expect(within(externo).getByText(/Lo emitido queda congelado/)).toBeInTheDocument()
+    await userEvent.click(within(externo).getByRole('button', { name: 'Ir a la primera sin revisar' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Portada' })).toBeInTheDocument()
   })
 
   it('muestra la guía de redacción del backend, edita una sección humana y la guarda con su versión, sin motivo', async () => {
@@ -176,11 +209,13 @@ describe('S50 · entregable por secciones', () => {
         responder: () => jsonResponse(pagina([SUG_SECCION]))
       }
     ])
-    const usar = await screen.findByRole('button', { name: 'Usar…' })
+    const usar = await screen.findByRole('button', { name: 'Adoptar y editar' })
     expect(usar).toBeEnabled()
+    // la cabecera de la sección dice que espera una decisión sobre la sugerencia
+    expect(screen.getByRole('heading', { level: 2, name: 'Antecedentes' }).parentElement).toHaveTextContent('Sugerencia de IApendiente')
     await userEvent.click(await screen.findByRole('button', { name: 'Editar como Markdown' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Texto de la sección' }), ' Más.')
-    expect(screen.getByRole('button', { name: 'Usar…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Adoptar y editar' })).toBeDisabled()
     expect(screen.getAllByText('Guarde o descarte los cambios de la sección antes de usar una sugerencia.').length).toBeGreaterThan(0)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Revisada' }))
     await userEvent.click(screen.getByRole('button', { name: 'Guardar sección' }))

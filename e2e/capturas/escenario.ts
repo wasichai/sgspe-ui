@@ -67,7 +67,9 @@ const OBJETOS = [
   'deliverable_version',
   'deliverable_template',
   'indicator',
-  'indicator_measurement'
+  'indicator_measurement',
+  'ai_suggestion',
+  'commitment_candidate'
 ]
 export const permisos = (admin = false) => ({ admin, objects: Object.fromEntries(OBJETOS.map((o) => [o, ['READ']])) })
 
@@ -481,7 +483,39 @@ const ENTREGABLES = [
       period_end_date: '2026-06-30'
     },
     'issued'
+  ),
+  registro(
+    'd3',
+    {
+      project: 'p1',
+      document_code: 'INF-002',
+      title: 'Informe de campo de la Comunidad Ejemplo — octubre',
+      deliverable_type: 'INFORME DE CAMPO Y AVANCE',
+      period_start_date: '2026-10-01',
+      period_end_date: '2026-10-31',
+      draft_generation_status: 'EN PROCESO'
+    },
+    'in_review'
+  ),
+  registro(
+    'd4',
+    {
+      project: 'p1',
+      document_code: 'INF-003',
+      title: 'Informe de campo de la Comunidad Ribereña — setiembre',
+      deliverable_type: 'INFORME DE CAMPO Y AVANCE',
+      period_start_date: '2026-09-01',
+      period_end_date: '2026-09-30',
+      draft_generation_status: 'FALLIDO',
+      draft_warnings: 'MAP_FAILED anexo-mapa'
+    },
+    'observed'
   )
+]
+// las secciones de los entregables en curso, para los conteos de la lista («Revisadas: N de M»)
+const OTRAS_SECCIONES = [
+  ...Array.from({ length: 11 }, (_, i) => registro(`sec-d3-${i}`, { deliverable: 'd3', reviewed: i < 4 })),
+  ...Array.from({ length: 11 }, (_, i) => registro(`sec-d4-${i}`, { deliverable: 'd4', reviewed: i < 9 }))
 ]
 const SECCIONES = [
   registro('sec-resumen', {
@@ -503,8 +537,83 @@ const SECCIONES = [
     content_origin: 'HUMANO',
     content: 'La comunidad pidió una reunión para revisar el avance del reservorio.',
     reviewed: false
+  }),
+  registro('sec-estrategia', {
+    deliverable: 'd1',
+    section_key: 'estrategia',
+    title: 'Estrategia de relacionamiento',
+    sort_order: 3,
+    section_kind: 'NARRATIVA',
+    content_origin: 'ASISTIDO POR IA',
+    content: 'Reuniones mensuales con la directiva y devolución escrita de los monitoreos participativos.',
+    reviewed: false
+  }),
+  registro('sec-anexo', {
+    deliverable: 'd1',
+    section_key: 'anexo-mapa',
+    title: 'Anexo: mapa del área de influencia',
+    sort_order: 4,
+    section_kind: 'CALCULADA',
+    content_origin: 'CALCULADO',
+    content: null,
+    reviewed: true
   })
 ]
+// la bandeja de IA de S52 (fase 12): una clasificación de la consulta C-001 y un borrador de acta de la interacción e1
+const PROPUESTAS_DE_IA = [
+  {
+    ...registro(
+      'sug-clasificacion',
+      {
+        project: 'p1',
+        model: 'modelo-de-prueba',
+        confidence: 0.82,
+        suggestion_kind: 'CLASIFICACION',
+        target_object: 'inquiry',
+        target_record_id: 'i1',
+        suggested_value: JSON.stringify({ field: 'category', value: 'EMPLEO LOCAL' }),
+        evidence_quote: '¿Cuándo se publicará la lista de la siguiente rotación de mano de obra?'
+      },
+      'proposed'
+    ),
+    createdAt: '2026-10-16T12:10:00Z'
+  },
+  {
+    ...registro(
+      'sug-acta',
+      {
+        project: 'p1',
+        model: 'modelo-de-prueba',
+        confidence: 0.74,
+        suggestion_kind: 'BORRADOR DE ACTA',
+        target_object: 'engagement',
+        target_record_id: 'e1',
+        suggested_value: 'Se revisó el avance del reservorio. La directiva pidió una visita conjunta y la devolución escrita del monitoreo.'
+      },
+      'proposed'
+    ),
+    createdAt: '2026-10-16T11:40:00Z'
+  }
+]
+const CASOS_DE_IA = ['AI-01', 'AI-02', 'AI-03', 'AI-04', 'AI-05', 'AI-06', 'AI-07']
+// la sugerencia de IA pendiente de la sección «Antecedentes» (AI-04)
+const SUGERENCIA_DE_SECCION = {
+  ...registro(
+    'sug-antecedentes',
+    {
+      project: 'p1',
+      model: 'modelo-de-prueba',
+      suggestion_kind: 'BORRADOR DE SECCION',
+      target_object: 'deliverable_section',
+      target_record_id: 'sec-antecedentes',
+      suggested_value:
+        'En setiembre la directiva de la Comunidad Ejemplo pidió revisar el avance del reservorio. Se acordó una visita conjunta y la devolución escrita del monitoreo participativo de agua.',
+      evidence_quote: 'La directiva pidió revisar el avance del reservorio y conocer los resultados del monitoreo.'
+    },
+    'proposed'
+  ),
+  createdAt: '2026-10-16T13:20:00Z'
+}
 const BORRADOR = {
   status: 'LISTO',
   requestedAt: '2026-10-16T14:59:00Z',
@@ -525,7 +634,17 @@ const TIPOS = [
     version: 1,
     sections: [
       { key: 'resumen', title: 'Resumen', order: 1, kind: 'NARRATIVA', required: true, assisted: false, guide: 'Lo principal del periodo.' },
-      { key: 'antecedentes', title: 'Antecedentes', order: 2, kind: 'MIXTA', required: true, assisted: true, guide: 'Describa el contexto del periodo.' }
+      { key: 'antecedentes', title: 'Antecedentes', order: 2, kind: 'MIXTA', required: true, assisted: true, guide: 'Describa el contexto del periodo.' },
+      {
+        key: 'estrategia',
+        title: 'Estrategia de relacionamiento',
+        order: 3,
+        kind: 'NARRATIVA',
+        required: true,
+        assisted: true,
+        guide: 'Cómo se relaciona el proyecto con la comunidad.'
+      },
+      { key: 'anexo-mapa', title: 'Anexo: mapa del área de influencia', order: 4, kind: 'CALCULADA', required: true, assisted: false, guide: '' }
     ]
   }
 ]
@@ -802,6 +921,39 @@ const PERSONAS = [
   { email: 'rel@sgspe.test', displayName: 'Relacionista de prueba' },
   { email: 'srm@sgspe.test', displayName: 'Responsable de riesgos' },
   { email: 'gvm@sgspe.test', displayName: 'Gestión de quejas' }
+]
+// la bandeja de avisos (fase 12): una aprobación por hacer y un plazo por vencer, los dos sin leer, como dice el resumen
+const LISTA_DE_AVISOS = [
+  {
+    id: 'n1',
+    kind: 'ACTION',
+    title: 'Aprobar el compromiso C-001 · Reservorio de agua',
+    body: 'Lo envió la jefatura de relacionamiento para su aprobación.',
+    link: { type: 'RECORD', object: 'commitment', recordId: 'k1' },
+    publishAt: '2026-10-16T13:05:00Z',
+    expiresAt: null,
+    dueAt: '2026-10-19T22:00:00Z',
+    overdue: false,
+    source: 'sgspe.approvals',
+    read: false,
+    snoozedUntil: null,
+    dismissible: false
+  },
+  {
+    id: 'n2',
+    kind: 'WARNING',
+    title: 'La queja Q-001 vence pasado mañana',
+    body: null,
+    link: { type: 'RECORD', object: 'grievance', recordId: 'g1' },
+    publishAt: '2026-10-16T12:00:00Z',
+    expiresAt: null,
+    dueAt: '2026-10-18T22:00:00Z',
+    overdue: false,
+    source: 'sgspe.deadlines',
+    read: false,
+    snoozedUntil: null,
+    dismissible: true
+  }
 ]
 const AVISOS = {
   kinds: { ACTION: { active: 1, unread: 1, overdue: 0 }, WARNING: { active: 1, unread: 1, overdue: 0 }, INFO: { active: 0, unread: 0, overdue: 0 } },
@@ -1105,7 +1257,11 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
   [/^\/sgspe\/deliverable-types$/, TIPOS],
   [/^\/objects\/deliverable\/records$/, pagina(ENTREGABLES)],
   [/^\/objects\/deliverable\/records\/d1$/, ENTREGABLES[0]],
-  [/^\/objects\/deliverable\/records\/d1\/(transitions|documents)$/, []],
+  [/^\/objects\/deliverable\/records\/d1\/documents$/, []],
+  [
+    /^\/objects\/deliverable\/records\/d1\/transitions$/,
+    [{ name: 'submit', label: 'Enviar a revisión', to: 'in_review', toLabel: 'En revisión', allowed: true, reason: null }]
+  ],
   [
     /^\/objects\/deliverable\/workflow$/,
     flujo('deliverable', [
@@ -1117,9 +1273,48 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
       ['voided', 'Anulado']
     ])
   ],
-  [/^\/objects\/deliverable_section\/records$/, pagina(SECCIONES)],
+  // la lista de un entregable, o un conteo (size=1) de las suyas y de las revisadas
+  [
+    /^\/objects\/deliverable_section\/records$/,
+    (u: URL) => {
+      const de = [...SECCIONES, ...OTRAS_SECCIONES].filter(
+        (s) =>
+          s.attributes.deliverable === (u.searchParams.get('deliverable') ?? 'd1') &&
+          (u.searchParams.get('reviewed') === null || String(s.attributes.reviewed) === u.searchParams.get('reviewed'))
+      )
+      return u.searchParams.get('size') === '1' ? { ...pagina(de.slice(0, 1)), totalElements: de.length } : pagina(de)
+    }
+  ],
   [/^\/objects\/deliverable_section\/records\/(sec-[a-z]+)$/, (u: URL) => SECCIONES.find((s) => u.pathname.endsWith(s.id))],
   [/^\/sgspe\/deliverables\/d1\/draft$/, BORRADOR],
+  [
+    /^\/objects\/ai_suggestion\/records$/,
+    (u: URL) =>
+      pagina(
+        u.searchParams.get('target_record_id') === 'sec-antecedentes'
+          ? [SUGERENCIA_DE_SECCION]
+          : u.searchParams.get('state') === 'proposed' && !u.searchParams.get('target_object')
+            ? PROPUESTAS_DE_IA
+            : []
+      )
+  ],
+  [/^\/objects\/inquiry\/records\/i1$/, CONSULTA],
+  [
+    /^\/objects\/ai_suggestion\/records\/sug-(clasificacion|acta)\/transitions$/,
+    [{ name: 'reject', label: 'Rechazar', to: 'rejected', toLabel: 'Rechazada', allowed: true, reason: null }]
+  ],
+  [
+    /^\/objects\/ai_suggestion\/records\/sug-antecedentes\/transitions$/,
+    [{ name: 'reject', label: 'Descartar', to: 'rejected', toLabel: 'Rechazada', allowed: true, reason: null }]
+  ],
+  [
+    /^\/objects\/ai_suggestion\/workflow$/,
+    flujo('ai_suggestion', [
+      ['proposed', 'Propuesta'],
+      ['accepted', 'Aceptada'],
+      ['rejected', 'Rechazada']
+    ])
+  ],
   [/^\/objects\/(deliverable_version|deliverable_template|ai_suggestion)\/records$/, pagina([])],
   [/^\/sgspe\/projects\/p1\/counts$/, { counts: CONTEOS, confidentialHidden: false }],
   [/^\/sgspe\/dashboards\/investment$/, { dashboard: 'investment', computedAt: ahora, filters: {}, indicators: [] }],
@@ -1127,7 +1322,7 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
   [/^\/sgspe\/people$/, PERSONAS],
   [/^\/sgspe\/calendar\/holidays$/, (u: URL) => ({ year: Number(u.searchParams.get('year')), configured: true, holidays: [] })],
   [/^\/auth\/me\/notifications\/summary$/, AVISOS],
-  [/^\/auth\/me\/notifications$/, { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0 }],
+  [/^\/auth\/me\/notifications$/, { content: LISTA_DE_AVISOS, page: 0, size: 25, totalElements: 2, totalPages: 1 }],
   [/^\/roles$/, []],
   // lo demás de un objeto, vacío: su lista, su workflow sin estados, su historial y sus transiciones. los que e2e/api.ts ya
   // contesta con datos quedan fuera, para que sus respuestas sigan valiendo
@@ -1140,7 +1335,7 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
 // sgspe.lang (createWasichaiI18n), y las preferencias del usuario dicen lo mismo para que core no los cambie al validar la sesión
 export async function prepararEscenario(
   page: Page,
-  { tema, idioma, sesion = true, admin = false }: { tema: Tema; idioma: Idioma; sesion?: boolean; admin?: boolean }
+  { tema, idioma, sesion = true, admin = false, ia = false }: { tema: Tema; idioma: Idioma; sesion?: boolean; admin?: boolean; ia?: boolean }
 ) {
   // un mismo día para el «antes» y el «después»: los plazos, los periodos y «calculado hace…» no cambian con la fecha de la corrida.
   // solo se fija la hora (los temporizadores siguen corriendo)
@@ -1160,7 +1355,12 @@ export async function prepararEscenario(
   }
   await prepararApi(page)
   await prepararFichaDeCompromiso(page)
-  const rutas: [RegExp, Cuerpo][] = [[/^\/auth\/me\/preferences$/, { theme: tema, locale: idioma }], ...RUTAS(admin)]
+  const rutas: [RegExp, Cuerpo][] = [
+    [/^\/auth\/me\/preferences$/, { theme: tema, locale: idioma }],
+    // la IA activada solo en las pantallas que la muestran (S12: la sugerencia de una sección); las demás, sin IA como siempre
+    ...(ia ? [[/^\/sgspe\/ai\/status$/, { enabled: true, providerAvailable: true, useCases: CASOS_DE_IA }] as [RegExp, Cuerpo]] : []),
+    ...RUTAS(admin)
+  ]
   await page.route('**/api/**', async (route) => {
     const peticion = route.request()
     const url = new URL(peticion.url())

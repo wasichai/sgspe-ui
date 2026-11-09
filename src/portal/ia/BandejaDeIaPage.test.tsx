@@ -178,7 +178,12 @@ describe('S52 · bandeja de revisión de IA', () => {
     await userEvent.selectOptions(screen.getByLabelText('Origen'), 'persona')
     expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
     expect(screen.getByText(/^Sin los filtros hay \d+\.$/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+    // la barra de filtros (design-system.md §5.3) muestra cada filtro aplicado como chip y también los limpia; aquí, el vacío
+    const barra = screen.getByRole('group', { name: 'Filtros' })
+    expect(within(barra).getByText('Tipo: Posible duplicado')).toBeInTheDocument()
+    expect(within(barra).getByText('Origen: Persona')).toBeInTheDocument()
+    const delVacio = screen.getAllByRole('button', { name: 'Limpiar filtros' }).find((b) => !barra.contains(b))!
+    await userEvent.click(delVacio)
     expect(within(await lista()).getAllByRole('listitem')).toHaveLength(antes)
   })
 

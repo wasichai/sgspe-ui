@@ -3,6 +3,7 @@ import { Navigate, useLocation, useParams } from 'react-router'
 import { conFichaReubicada } from '../contexto/Origen'
 import { Cargando, esIlegible, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { rutaDeFicha } from '../datos/fichas'
 import { useRegistro } from '../datos/registros'
 import { NS } from '../i18n'
@@ -19,14 +20,31 @@ export function AbrirRegistroPage() {
   const { object = '', recordId = '' } = useParams()
   const registro = useRegistro(object, recordId)
   const { pathname, state } = useLocation()
-  if (registro.isPending) return <Cargando etiqueta={t('avisos.abrirRegistro.abriendo')} />
+  // lo que se ve mientras tanto, en el ancho y los márgenes de toda página
+  if (registro.isPending)
+    return (
+      <ContenedorDePagina>
+        <Cargando etiqueta={t('avisos.abrirRegistro.abriendo')} />
+      </ContenedorDePagina>
+    )
   if (registro.isError && !registro.data && esIlegible(registro.error))
-    return <Vacio titulo={t('comun.registroReservado')}>{t('comun.registroReservadoAyuda')}</Vacio>
-  if (registro.isError && !registro.data) return <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
+    return (
+      <ContenedorDePagina>
+        <Vacio titulo={t('comun.registroReservado')}>{t('comun.registroReservadoAyuda')}</Vacio>
+      </ContenedorDePagina>
+    )
+  if (registro.isError && !registro.data)
+    return (
+      <ContenedorDePagina>
+        <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
+      </ContenedorDePagina>
+    )
   const ruta = rutaDeFicha(object, registro.data)
   return ruta ? (
     <Navigate to={ruta} replace state={conFichaReubicada(state, pathname, ruta)} />
   ) : (
-    <Vacio titulo={t('comun.noDisponible')}>{t('avisos.abrirRegistro.sinFicha')}</Vacio>
+    <ContenedorDePagina>
+      <Vacio titulo={t('comun.noDisponible')}>{t('avisos.abrirRegistro.sinFicha')}</Vacio>
+    </ContenedorDePagina>
   )
 }
