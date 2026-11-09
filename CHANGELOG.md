@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.4.0](https://github.com/wasichai/sgspe-ui/compare/v3.3.0...v3.4.0) (2026-11-09)
+
+
+### Features
+
+* **componentes:** componentes base de Civic Modern ([#96](https://github.com/wasichai/sgspe-ui/issues/96)) ([5f8b9eb](https://github.com/wasichai/sgspe-ui/commit/5f8b9ebeac4c128d532a0882984b4001134daaf6))
+* **compromisos:** compromisos y acuerdos de Civic Modern ([#106](https://github.com/wasichai/sgspe-ui/issues/106)) ([6001009](https://github.com/wasichai/sgspe-ui/commit/60010091c1e056eaade48579511e800072ccd7ba))
+* **compromisos:** total real por situación y «Mostrar N compromisos más al día» ([#133](https://github.com/wasichai/sgspe-ui/issues/133)) ([9cb1cf5](https://github.com/wasichai/sgspe-ui/commit/9cb1cf5cc598edc66ae83646b91e9cf6ff6ceb59)), closes [#124](https://github.com/wasichai/sgspe-ui/issues/124)
+* **mapa:** rótulos con halo y símbolos de las capas de gestión ([#135](https://github.com/wasichai/sgspe-ui/issues/135)) ([8a3c619](https://github.com/wasichai/sgspe-ui/commit/8a3c619407682dda70be40cfe312b621d5f7b5a6)), closes [#120](https://github.com/wasichai/sgspe-ui/issues/120)
+* **portal:** grupos de interés y relacionamiento de Civic Modern ([#104](https://github.com/wasichai/sgspe-ui/issues/104)) ([fb9a927](https://github.com/wasichai/sgspe-ui/commit/fb9a9279e93abe96ec21853ce1562c39cce23086))
+* **portal:** ingreso, inicio, revisión ejecutiva y tableros de Civic Modern ([#100](https://github.com/wasichai/sgspe-ui/issues/100)) ([f0dc74f](https://github.com/wasichai/sgspe-ui/commit/f0dc74faa6b2250736575fbaaf63be64e544a539))
+* **portal:** programas, documentos, tareas y aprobaciones de Civic Modern ([#112](https://github.com/wasichai/sgspe-ui/issues/112)) ([3f1fd8a](https://github.com/wasichai/sgspe-ui/commit/3f1fd8ae4fb48425bb27a24a1259cc5d1e171e82)), closes [#110](https://github.com/wasichai/sgspe-ui/issues/110)
+* **portal:** pulido final de Civic Modern ([#115](https://github.com/wasichai/sgspe-ui/issues/115)) ([d0f818c](https://github.com/wasichai/sgspe-ui/commit/d0f818c4c92f590b85a3b0702f7d7e5c7f54773e)), closes [#114](https://github.com/wasichai/sgspe-ui/issues/114)
+* **portal:** reportes, entregables, IA y pantallas secundarias de Civic Modern ([#113](https://github.com/wasichai/sgspe-ui/issues/113)) ([9d5cb20](https://github.com/wasichai/sgspe-ui/commit/9d5cb20e598a1bf45f7d9e67e945bf7456676095))
+* **portal:** riesgos, alerta temprana y QCS de Civic Modern ([#108](https://github.com/wasichai/sgspe-ui/issues/108)) ([0a05c79](https://github.com/wasichai/sgspe-ui/commit/0a05c79d078a78d64e1340d9d2cacdad3e8b31e5))
+* **proyectos:** «Tabla · Mapa» del portafolio y «Vista compacta» en la barra de filtros ([#132](https://github.com/wasichai/sgspe-ui/issues/132)) ([b89dbf8](https://github.com/wasichai/sgspe-ui/commit/b89dbf8da1d57da2be92f97de3b9e29705c43b72)), closes [#123](https://github.com/wasichai/sgspe-ui/issues/123)
+* **proyectos:** portafolio y Proyecto 360 de Civic Modern ([#102](https://github.com/wasichai/sgspe-ui/issues/102)) ([f7e34b3](https://github.com/wasichai/sgspe-ui/commit/f7e34b3bce4798c86411a8dce17b56647359d219))
+* **shell:** cabecera institucional, navegación por bloques y banda de contexto de Civic Modern ([#97](https://github.com/wasichai/sgspe-ui/issues/97)) ([13f5a52](https://github.com/wasichai/sgspe-ui/commit/13f5a523a64a8b220bd65bf9f76927d3fdc4079e))
+* **tableros:** imprimir la revisión ejecutiva y vencidos por tramo de antigüedad ([#134](https://github.com/wasichai/sgspe-ui/issues/134)) ([114c5ea](https://github.com/wasichai/sgspe-ui/commit/114c5ea6f0efc6341e72022af7ebf486dd7f3dd6)), closes [#122](https://github.com/wasichai/sgspe-ui/issues/122)
+* **tema:** fundamentos de Civic Modern con Public Sans, foco de E y densidad compacta ([#92](https://github.com/wasichai/sgspe-ui/issues/92)) ([ebb0115](https://github.com/wasichai/sgspe-ui/commit/ebb01158bf24e5441ae20065dec71d2140221c2f)), closes [#91](https://github.com/wasichai/sgspe-ui/issues/91)
+* **territorio:** mapa SIG a todo el ancho y vista «Lista + mapa» de Civic Modern ([#109](https://github.com/wasichai/sgspe-ui/issues/109)) ([b692148](https://github.com/wasichai/sgspe-ui/commit/b6921485a321b405b71a21932dfa8a0eecb76e12))
+
+
+### Bug Fixes
+
+* **admin:** subir @wasichai/* a 1.8.2 con el cajón de /admin en el teléfono ([#126](https://github.com/wasichai/sgspe-ui/issues/126)) ([e62268b](https://github.com/wasichai/sgspe-ui/commit/e62268b077eb4b6feca06b171d98b86962809dd7))
+* **componentes:** el selector de vistas se parte en filas a 390 px ([#130](https://github.com/wasichai/sgspe-ui/issues/130)) ([8ff88cf](https://github.com/wasichai/sgspe-ui/commit/8ff88cfcc072fa2708bfa45d32b9c61091c5d54d)), closes [#116](https://github.com/wasichai/sgspe-ui/issues/116)
+* **inversion:** presupuesto de programas en tarjetas por moneda a 390 px ([#131](https://github.com/wasichai/sgspe-ui/issues/131)) ([afcf504](https://github.com/wasichai/sgspe-ui/commit/afcf50489891d73680c6a980697284f134e82d57)), closes [#117](https://github.com/wasichai/sgspe-ui/issues/117)
+* **mapa:** paleta cartográfica de Civic Modern en las capas con SLD ([#128](https://github.com/wasichai/sgspe-ui/issues/128)) ([b24b8aa](https://github.com/wasichai/sgspe-ui/commit/b24b8aa7e47bd1d8c10a5f0883e8cce8bf771a55))
+* **proyectos:** columnas del resumen del proyecto equilibradas a 1440 px ([#129](https://github.com/wasichai/sgspe-ui/issues/129)) ([124ce6a](https://github.com/wasichai/sgspe-ui/commit/124ce6ae1564d89d156a2e130491d1a4d6758a05)), closes [#118](https://github.com/wasichai/sgspe-ui/issues/118)
+* **shell:** borde del avatar de la cabecera visible en el tema oscuro ([#127](https://github.com/wasichai/sgspe-ui/issues/127)) ([d390f65](https://github.com/wasichai/sgspe-ui/commit/d390f65308aa4a7e3bb6bed5ba6248e9addda93e)), closes [#119](https://github.com/wasichai/sgspe-ui/issues/119)
+
 ## [3.3.0](https://github.com/wasichai/sgspe-ui/compare/v3.2.0...v3.3.0) (2026-10-28)
 
 
