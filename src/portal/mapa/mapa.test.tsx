@@ -359,6 +359,17 @@ describe('MapaImpl', () => {
     expect(grupos.paint['circle-stroke-width']).toBe(4)
   })
 
+  it('un punto hueco (LYR-02) lleva relleno surface y el color de la capa en un borde de 2 px', async () => {
+    document.documentElement.style.setProperty('--sg-lyr-place', '#0f1a2a')
+    document.documentElement.style.setProperty('--sg-surface', '#ffffff')
+    render(<MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-02', datos: localidades, color: '--sg-lyr-place', hueco: true, seleccionable: true }]} />)
+    await act(async () => cargarMapas())
+    const punto = Falso.todos[0].capas.find((c) => c.id === 'LYR-02-punto')!
+    expect(punto.paint['circle-color']).toBe('#ffffff')
+    expect(punto.paint['circle-stroke-color']).toBe('#0f1a2a')
+    expect(punto.paint['circle-stroke-width']).toBe(2)
+  })
+
   it('encuadra lo elegido hasta el acercamiento de la pantalla: 16 por omisión y el que pida una lista junto al mapa', async () => {
     const capas = [{ id: 'LYR-02', datos: localidades, color: '--sg-data-1', seleccionable: true }]
     const { rerender } = render(<MapaImpl etiqueta="Mapa" capas={capas} seleccion="l1" />)

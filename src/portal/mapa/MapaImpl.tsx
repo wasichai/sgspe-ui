@@ -57,13 +57,15 @@ const colorDelPunto = (capa: CapaDibujada): string | ExpressionSpecification => 
   const pares = Object.entries(capa.colorPor.colores).flatMap(([valor, token]) => [valor, colorDe(token)])
   return ['match', ['to-string', ['get', capa.colorPor.campo]], ...pares, color] as ExpressionSpecification
 }
-// el punto: lleno del color de la capa con borde surface o, con anillo, hueco (surface) con el color en un borde de 4 px
+// el punto: lleno del color de la capa con borde surface o, con anillo o hueco, relleno surface con el color en un borde de 4 px
+// (anillo, LYR-17) o de 2 px (hueco, los centros poblados de LYR-02)
 const pinturaDelPunto = (capa: CapaDibujada) => {
   const anillo = capa.colorPor?.anillo === true
+  const hueco = anillo || capa.hueco === true
   return {
-    'circle-color': anillo ? colorDe('--sg-surface') : colorDelPunto(capa),
-    'circle-stroke-color': anillo ? colorDelPunto(capa) : colorDe('--sg-surface'),
-    'circle-stroke-width': anillo ? 4 : 1.5
+    'circle-color': hueco ? colorDe('--sg-surface') : colorDelPunto(capa),
+    'circle-stroke-color': hueco ? colorDelPunto(capa) : colorDe('--sg-surface'),
+    'circle-stroke-width': anillo ? 4 : hueco ? 2 : 1.5
   }
 }
 

@@ -27,6 +27,8 @@ export interface CapaDibujada {
   // el color del punto según un atributo del elemento (el nivel de un riesgo en LYR-21, la postura que más pesa en LYR-17), con el
   // color de la capa para un valor sin color; con anillo, el color va en el borde de un punto hueco (design-system.md §3.3)
   colorPor?: ColorPorAtributo
+  // los puntos son huecos: relleno surface con el color en un borde de 2 px (LYR-02, design-system.md §3.3)
+  hueco?: boolean
   // se elige pero no se ve (solo el borde de lo elegido): una capa pública servida por WMS cuyos lugares tienen ficha
   // (decisión 7 del plan 6.3)
   invisible?: boolean
