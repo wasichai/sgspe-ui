@@ -20,12 +20,16 @@ interface Pantalla {
   ia?: boolean
   // el botón que se pulsa antes de la foto (la fila abierta de la cola de QCS)
   abrir?: string
+  // la versión imprimible (componentes/Impresion.ts): data-impresion y el tema claro como al imprimir, con el medio print
+  imprimir?: boolean
 }
 
 const PANTALLAS: Pantalla[] = [
   { nombre: 'login', ruta: '/login', sesion: false },
   { nombre: 'inicio', ruta: '/' },
   { nombre: 'revision-ejecutiva', ruta: '/dashboards/executive' },
+  // «Imprimir o guardar en PDF» (wasichai/sgspe-ui#122): la hoja que imprime el navegador, desde el tema oscuro
+  { nombre: 'revision-ejecutiva-impresion', ruta: '/dashboards/executive', imprimir: true },
   { nombre: 'proyectos', ruta: '/projects' },
   { nombre: 'proyectos-previa', ruta: '/projects?view=all&peek=project%3Ap1' },
   // «Tabla · Mapa» del portafolio (wasichai/sgspe-ui#123): la lista junto al mapa con Pukaqaqa elegido y su vista previa
@@ -160,8 +164,14 @@ const ESCRITORIO = { ancho: 1440, alto: 900 }
 // 1440 claro es en todas; 1440 oscuro es y 1440 claro en en las principales; 1024 y 390 claro es en las angostas
 // las que solo existen en el teléfono (un control que desde md no se dibuja): 390 claro es y nada más
 const SOLO_390 = ['admin-menu']
+// la versión imprimible, desde el tema oscuro de la persona y al ancho de una hoja A4 apaisada (≈ 1123 px)
+const SOLO_IMPRESION = ['revision-ejecutiva-impresion']
 const variantesDe = (nombre: string): Variante[] =>
-  SOLO_390.includes(nombre) ? [{ ancho: 390, alto: 844, tema: 'light', idioma: 'es' }] : variantesComunes(nombre)
+  SOLO_390.includes(nombre)
+    ? [{ ancho: 390, alto: 844, tema: 'light', idioma: 'es' }]
+    : SOLO_IMPRESION.includes(nombre)
+      ? [{ ancho: 1123, alto: 794, tema: 'dark', idioma: 'es' }]
+      : variantesComunes(nombre)
 const variantesComunes = (nombre: string): Variante[] => [
   { ...ESCRITORIO, tema: 'light', idioma: 'es' },
   ...(FASE_12.includes(nombre)
@@ -235,7 +245,13 @@ for (const pantalla of PANTALLAS)
         await page.getByRole('button', { name: pantalla.abrir }).click()
         await esperarPantallaLista(page)
       }
-      await expect(page.locator('html')).toHaveAttribute('data-theme', variante.tema)
+      if (pantalla.imprimir) {
+        // lo que hace beforeprint en Impresion.ts, y el medio print para la hoja @media print
+        await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')))
+        await page.emulateMedia({ media: 'print', colorScheme: variante.tema })
+        await esperarPantallaLista(page)
+      }
+      await expect(page.locator('html')).toHaveAttribute('data-theme', pantalla.imprimir ? 'light' : variante.tema)
       await expect(page.locator('html')).toHaveAttribute('lang', variante.idioma === 'es' ? 'es-PE' : 'en')
       await alargarHastaElContenido(page, variante)
       await page.screenshot({ path: join(SALIDA, archivo), fullPage: true, animations: 'disabled' })

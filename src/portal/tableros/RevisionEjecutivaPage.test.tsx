@@ -148,6 +148,73 @@ describe('S51 · revisión ejecutiva', () => {
     }
   })
 
+  // S03 (#122): los vencidos (KPI-COM-03) con su antigüedad bajo la cifra: una barra de tres tramos (sin depender del color: los
+  // tramos van separados y el texto los dice) con los umbrales del desglose daysOverdue, cero en el que no vino
+  it('los vencidos dicen su antigüedad por tramo en una barra y en texto', async () => {
+    abrir()
+    const tiles = await screen.findByRole('region', { name: 'Indicadores de la cartera' })
+    const vencidos = within(tiles).getByRole('region', { name: 'Compromisos vencidos' })
+    expect(within(vencidos).getByText('3')).toBeInTheDocument()
+    expect(within(vencidos).getByText('1–7 días: 1 · 8–15 días: 0 · más de 15 días: 2')).toBeInTheDocument()
+    const tramos = [...vencidos.querySelectorAll('[data-tramo]')]
+    expect(tramos.map((x) => x.getAttribute('data-tramo'))).toEqual(['OVERDUE_FIRST', 'OVERDUE_OVER'])
+    expect(tramos[0].parentElement).toHaveAttribute('aria-hidden', 'true')
+    // la unidad cede su lugar al desglose; las demás tiles la conservan
+    expect(within(vencidos).queryByText('compromisos')).not.toBeInTheDocument()
+  })
+
+  it('sin el desglose de los vencidos, la cifra queda sola, sin tramos inventados', async () => {
+    const sinDesglose = {
+      ...TABLERO_EJECUTIVO,
+      indicators: TABLERO_EJECUTIVO.indicators.map((i) => (i.code === 'KPI-COM-03' ? { ...i, breakdowns: undefined } : i))
+    }
+    abrir(sinDesglose)
+    const vencidos = await screen.findByRole('region', { name: 'Compromisos vencidos' })
+    expect(within(vencidos).getByText('compromisos')).toBeInTheDocument()
+    expect(vencidos.querySelector('[data-tramo]')).toBeNull()
+    expect(within(vencidos).queryByText(/días:/)).not.toBeInTheDocument()
+  })
+
+  // S03 (#122): la revisión del periodo elegido se imprime (o se guarda en PDF desde el diálogo del navegador) en tema claro, sin
+  // el shell ni los controles, con su periodo y su hora de cálculo; al terminar vuelve el tema de la persona
+  it('«Imprimir o guardar en PDF» imprime la revisión en claro, con su periodo y su hora de cálculo, y devuelve el tema', async () => {
+    const raiz = document.documentElement
+    const antes = raiz.dataset.theme
+    let alImprimir: { tema?: string; impresion: boolean; esquema: string } | null = null
+    const imprimir = vi.spyOn(window, 'print').mockImplementation(() => {
+      alImprimir = { tema: raiz.dataset.theme, impresion: raiz.hasAttribute('data-impresion'), esquema: raiz.style.colorScheme }
+    })
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-16T18:00:00Z'))
+    try {
+      abrir(TABLERO_EJECUTIVO, '/?periodStart=2026-09-01&periodEnd=2026-09-30')
+      expect(await screen.findByRole('heading', { level: 1, name: 'Setiembre de 2026' })).toBeInTheDocument()
+      // la persona usa el tema oscuro
+      raiz.dataset.theme = 'dark'
+      // en la hoja, la hora de cálculo con su fecha (el «hoy» no se lee en papel) y su alcance; en pantalla, «hoy»
+      expect(await screen.findByText('Calculado el 16 oct. 2026 a las 10:00 con los datos de todos sus proyectos')).toHaveAttribute('data-solo-impresion')
+      expect(screen.getByText('Calculado hoy 10:00 con los datos de todos sus proyectos').closest('[data-sin-imprimir]')).not.toBeNull()
+      // los controles no se imprimen
+      expect(screen.getByRole('combobox', { name: 'Periodo' }).closest('[data-sin-imprimir]')).not.toBeNull()
+      await userEvent.click(screen.getByRole('button', { name: 'Imprimir o guardar en PDF' }))
+      await waitFor(() => expect(imprimir).toHaveBeenCalledTimes(1))
+      expect(alImprimir).toEqual({ tema: 'light', impresion: true, esquema: 'light' })
+      window.dispatchEvent(new Event('afterprint'))
+      expect(raiz.dataset.theme).toBe('dark')
+      expect(raiz).not.toHaveAttribute('data-impresion')
+      // Ctrl+P en la misma pantalla también imprime en claro
+      window.dispatchEvent(new Event('beforeprint'))
+      expect(raiz.dataset.theme).toBe('light')
+      window.dispatchEvent(new Event('afterprint'))
+      expect(raiz.dataset.theme).toBe('dark')
+    } finally {
+      vi.useRealTimers()
+      imprimir.mockRestore()
+      if (antes === undefined) delete raiz.dataset.theme
+      else raiz.dataset.theme = antes
+    }
+  })
+
   // P-07 (u): toda cifra lleva su periodo y su fecha de cálculo, también la tendencia, que es de 12 meses
   it('cada zona de cifras dice su periodo y su fecha de cálculo', async () => {
     // el periodo por omisión es el mes de hoy: se fija el día del cálculo para que la prueba no dependa de la fecha de la corrida

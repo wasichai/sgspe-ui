@@ -212,3 +212,36 @@
         border-color: var(--sg-border-control);
     }
 }
+
+/* la versión imprimible de una pantalla (S03, la revisión ejecutiva; componentes/Impresion.ts): solo mientras <html> lleva
+   data-impresion, que también fija el tema claro. sin lo que el shell pone junto a <main> (la cabecera, la navegación y las
+   migas), la vista previa acoplada, los botones («Ver datos»: en papel no se pulsan) ni los controles marcados con
+   data-sin-imprimir (la barra inferior ya no se ve desde sm); la página corre entera en lugar de quedar en el desplazamiento de
+   <main>, sobre la superficie y sin sombras. la hoja A4 de los documentos emitidos (@wasichai/documents/print.css) no cambia */
+@media print {
+    :root[data-impresion] body,
+    :root[data-impresion] #root,
+    :root[data-impresion] :has(> #content) {
+        display: block;
+        height: auto;
+        overflow: visible;
+        background-color: var(--sg-surface);
+    }
+    :root[data-impresion] #content {
+        overflow: visible;
+        padding-bottom: 0;
+    }
+    :root[data-impresion] :has(> #content) > :not(#content),
+    :root[data-impresion] #content > aside,
+    :root[data-impresion] #content button,
+    :root[data-impresion] [data-sin-imprimir] {
+        display: none;
+    }
+    :root[data-impresion] [data-solo-impresion] {
+        display: block;
+    }
+    :root[data-impresion] section {
+        break-inside: avoid;
+        box-shadow: none;
+    }
+}

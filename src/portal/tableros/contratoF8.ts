@@ -1,6 +1,6 @@
 import { useComando } from '../datos/comandos'
 import { codigoDelError, ErrorDeSgspe } from '../datos/http'
-import type { Indicador, Tablero } from '../datos/indicadores'
+import { desglose, type Indicador, type Tablero } from '../datos/indicadores'
 import type { Registro } from '../datos/registros'
 
 // el contrato de los tableros de F8 (api.md §4.11, Dashboards.kt y MonitoringTable.kt de sgspe): las formas propias del
@@ -73,6 +73,58 @@ export function mesesDeTendencia(indicador: Indicador | undefined): MesDeTendenc
     grievancesClosed: numero(m.grievancesClosed),
     overdueCommitments: numero(m.overdueCommitments)
   }))
+}
+
+// KPI-COM-03 por antigüedad (dashboards.md §4.4, api.md §4.11): el desglose daysOverdue de la tile, con la misma regla de lectura
+// que la cifra (AggregateKpis.overdueCommitments en sgspe). los tramos son los umbrales de escalamiento del proyecto (7 y 15 días
+// por defecto); el servidor manda solo los tramos con vencidos y dice sus días en la etiqueta («1-7», «8-15», «más de 15») solo si
+// todos los compromisos comparten umbrales
+export const TRAMOS_DE_VENCIDOS = ['OVERDUE_FIRST', 'OVERDUE_SECOND', 'OVERDUE_OVER'] as const
+export type ClaveDeTramo = (typeof TRAMOS_DE_VENCIDOS)[number]
+
+export interface TramoDeVencidos {
+  clave: ClaveDeTramo
+  valor: number
+  // los días de atraso del tramo, si se saben; hasta null en el último («más de»)
+  desde: number | null
+  hasta: number | null
+}
+
+// los tres tramos en su orden, con cero donde no vino. null si no hay nada que dibujar: la cifra no está, es cero, no trae el
+// desglose o el desglose no suma la cifra (nunca tramos inventados)
+export function tramosDeVencidos(indicador: Indicador | undefined): TramoDeVencidos[] | null {
+  if (!indicador?.available || typeof indicador.value !== 'number' || indicador.value <= 0) return null
+  const filas = desglose(indicador, 'daysOverdue')
+  const valorDe = (clave: ClaveDeTramo) => {
+    const valor = filas.find((f) => f.key === clave)?.value
+    return typeof valor === 'number' && Number.isFinite(valor) ? valor : 0
+  }
+  const valores = TRAMOS_DE_VENCIDOS.map(valorDe)
+  if (valores.reduce((s, v) => s + v, 0) !== indicador.value) return null
+  // los umbrales, de la etiqueta de cualquiera de los tramos que vinieron
+  let primero: number | null = null
+  let segundo: number | null = null
+  for (const f of filas) {
+    const etiqueta = (f.label ?? '').trim()
+    const rango = /^(\d+)-(\d+)$/.exec(etiqueta)
+    const mas = /^más de (\d+)$/.exec(etiqueta)
+    if (f.key === 'OVERDUE_FIRST' && rango) primero = Number(rango[2])
+    if (f.key === 'OVERDUE_SECOND' && rango) {
+      primero = Number(rango[1]) - 1
+      segundo = Number(rango[2])
+    }
+    if (f.key === 'OVERDUE_OVER' && mas) segundo = Number(mas[1])
+  }
+  return [
+    { clave: 'OVERDUE_FIRST', valor: valores[0], desde: primero === null ? null : 1, hasta: primero },
+    {
+      clave: 'OVERDUE_SECOND',
+      valor: valores[1],
+      desde: primero === null || segundo === null ? null : primero + 1,
+      hasta: primero === null || segundo === null ? null : segundo
+    },
+    { clave: 'OVERDUE_OVER', valor: valores[2], desde: segundo === null ? null : segundo + 1, hasta: null }
+  ]
 }
 
 // el mes anterior a hoy en Lima (AAAA-MM): el que en la práctica ya se puede cerrar (api.md §4.11, NOT_PERIOD_BOUND)

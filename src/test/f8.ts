@@ -361,7 +361,20 @@ export const TABLERO_EJECUTIVO = {
   indicators: [
     ind('KPI-EXE-01', 'Proyectos activos', { value: 2, unit: 'proyectos' }),
     ind('KPI-COM-02', 'Compromisos abiertos', { value: 9, unit: 'compromisos' }),
-    ind('KPI-COM-03', 'Compromisos vencidos', { value: 3, unit: 'compromisos' }),
+    // los vencidos por antigüedad (daysOverdue), con los umbrales por defecto: solo los tramos con vencidos
+    ind('KPI-COM-03', 'Compromisos vencidos', {
+      value: 3,
+      unit: 'compromisos',
+      breakdowns: [
+        {
+          by: 'daysOverdue',
+          rows: [
+            { key: 'OVERDUE_FIRST', label: '1-7', value: 1 },
+            { key: 'OVERDUE_OVER', label: 'más de 15', value: 2 }
+          ]
+        }
+      ]
+    }),
     ind('KPI-GRV-02', 'Quejas abiertas', { value: 4, unit: 'quejas' }),
     ind('KPI-RSK-01', 'Riesgos altos y críticos', { value: 1, unit: 'riesgos' }),
     ind('KPI-ENG-01', 'Interacciones realizadas', { value: 12, unit: 'interacciones' }),

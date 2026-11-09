@@ -78,7 +78,8 @@ export function KpiCard({
   detalle,
   tono,
   codigo,
-  meta
+  meta,
+  desglose
 }: {
   titulo: string
   indicador?: Indicador
@@ -101,6 +102,8 @@ export function KpiCard({
   codigo?: string
   // la meta del periodo (S03): «63 de 70 (meta)», el avance en un medidor y lo que falta; sin meta (null) no se dice nada
   meta?: number | null
+  // en lugar de la unidad, el desglose de la cifra que la pantalla dibuja bajo ella (S03: los vencidos por tramo de antigüedad)
+  desglose?: ReactNode
 }) {
   const { t } = useTranslation(NS)
   const enRejilla = useContext(EnRejilla)
@@ -151,6 +154,8 @@ export function KpiCard({
         </p>
         {conMeta(meta) ? (
           <MetaDeLaCifra valor={indicador.value} meta={meta} />
+        ) : desglose ? (
+          desglose
         ) : (
           <p className="text-sg-body-sm text-sg-text-muted">{detalle ? detalle(conValor) : porcentaje ? base : (indicador.unit ?? '')}</p>
         )}

@@ -80,7 +80,20 @@ const EJECUTIVO = {
   indicators: [
     ind('KPI-EXE-01', 'Proyectos activos', 1, 'proyectos'),
     ind('KPI-COM-02', 'Compromisos abiertos', 12, 'compromisos'),
-    ind('KPI-COM-03', 'Compromisos vencidos', 3, 'compromisos'),
+    // los vencidos por antigüedad (KPI-COM-03, daysOverdue), con los umbrales por defecto (wasichai/sgspe-ui#122)
+    {
+      ...ind('KPI-COM-03', 'Compromisos vencidos', 3, 'compromisos'),
+      breakdowns: [
+        {
+          by: 'daysOverdue',
+          rows: [
+            { key: 'OVERDUE_FIRST', label: '1-7', value: 1 },
+            { key: 'OVERDUE_SECOND', label: '8-15', value: 1 },
+            { key: 'OVERDUE_OVER', label: 'más de 15', value: 1 }
+          ]
+        }
+      ]
+    },
     ind('KPI-GRV-02', 'QCS abiertas', 4, 'QCS'),
     ind('KPI-RSK-01', 'Riesgos altos', 1, 'riesgos'),
     ind('KPI-ENG-01', 'Interacciones realizadas', 22, 'interacciones'),

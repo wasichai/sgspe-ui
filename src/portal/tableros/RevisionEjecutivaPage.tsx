@@ -1,4 +1,5 @@
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
+import { Printer } from 'lucide-react'
 import { CONTROL } from '../componentes/Campo'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useId, useMemo, useState, type ReactNode } from 'react'
@@ -19,7 +20,17 @@ import { diaPe, fechaPe, mesPe, NS, numeroPe, periodoPe } from '../i18n'
 import { itemsDeAtencion, rutaDeCifra } from './atencionEjecutiva'
 import { ConsultaDeTablero, FiltrosDeTablero, HoraDeCalculo, indicadorDe, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
 import { ListaDeLoCritico } from './LoCritico'
-import { CODIGOS_DE_LAS_TILES, mesesDeTendencia, TOPE_DE_PROYECTOS, type MesDeTendencia, type TableroEjecutivo } from './contratoF8'
+import {
+  CODIGOS_DE_LAS_TILES,
+  mesesDeTendencia,
+  TOPE_DE_PROYECTOS,
+  tramosDeVencidos,
+  type ClaveDeTramo,
+  type MesDeTendencia,
+  type TableroEjecutivo,
+  type TramoDeVencidos
+} from './contratoF8'
+import { useImpresionEnClaro } from '../componentes/Impresion'
 import { MedidorDeMonto } from '../componentes/MedidorDeMonto'
 import { Seccion } from '../componentes/Seccion'
 
@@ -146,6 +157,9 @@ export function RevisionEjecutivaPage() {
   const calculo = useCalculo(tablero.data?.computedAt)
   const pie = t('tablerosF8.ejecutivo.pie', { periodo, calculado: calculo.texto })
   const alcance = elegidos ? t('tablerosF8.ejecutivo.alcanceElegidos', { count: elegidos }) : t('tablerosF8.ejecutivo.alcanceTodos')
+  // S03 (#122): la revisión del periodo elegido, impresa por el navegador (o guardada en PDF desde su diálogo) en tema claro, sin
+  // el shell ni los controles; el servidor no arma un PDF de esta revisión
+  const imprimir = useImpresionEnClaro()
   return (
     <ContenedorDePagina>
       {/* S03: la sobrelínea «Revisión ejecutiva», el periodo como título y la hora de cálculo visible con su alcance (préstamo de
@@ -156,11 +170,19 @@ export function RevisionEjecutivaPage() {
         titulo={periodo}
         tituloDelDocumento={t('tablerosF8.ejecutivo.titulo')}
         descripcion={
-          tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} alcance={alcance} /> : <span className="text-sg-body-sm">{calculo.texto}</span>
+          tablero.data ? (
+            <HoraDeCalculo instante={tablero.data.computedAt} alcance={alcance} imprimible />
+          ) : (
+            <span className="text-sg-body-sm">{calculo.texto}</span>
+          )
         }
         secundarias={
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-end gap-3" data-sin-imprimir="">
             <SelectorDePeriodo periodo={periodo} />
+            <Button variant="secondary" disabled={!tablero.data} onClick={() => void imprimir()}>
+              <Printer aria-hidden className="size-4" />
+              {t('tablerosF8.ejecutivo.imprimir')}
+            </Button>
             <Button variant="secondary" aria-expanded={abierto} aria-controls={panel} onClick={() => fijarAbierto((x) => !x)}>
               {t('tablerosF8.ejecutivo.cambiarFiltros')}
             </Button>
@@ -177,7 +199,7 @@ export function RevisionEjecutivaPage() {
           className="flex flex-wrap items-center gap-3 rounded-sg-md border-2 border-sg-warning-border bg-sg-warning-soft px-4 py-3 text-sg-body-sm text-sg-text"
         >
           <span>{t('tablerosF8.ejecutivo.antiguo.texto')}</span>
-          <Button variant="secondary" size="sm" onClick={() => void tablero.refetch()}>
+          <Button variant="secondary" size="sm" data-sin-imprimir="" onClick={() => void tablero.refetch()}>
             {t('tablerosF8.ejecutivo.antiguo.actualizar')}
           </Button>
         </div>
@@ -251,6 +273,11 @@ function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: Tablero
         </Link>
       </Vacio>
     )
+  // la cifra de vencidos con sus tramos de antigüedad, si el servidor los da
+  const desgloseDe = (i: Indicador) => {
+    const tramos = i.code === 'KPI-COM-03' ? tramosDeVencidos(i) : null
+    return tramos ? <TramosDeVencidos tramos={tramos} /> : undefined
+  }
   const indicador = (code: string): Indicador => indicadorDe(datos.indicators, code) ?? { code, label: code, available: false }
   const tiles = disponiblesPrimero(
     CODIGOS_DE_LAS_TILES.map((code) => indicador(code)),
@@ -274,6 +301,7 @@ function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: Tablero
               indicador={i}
               meta={metaDelPeriodo(i)}
               tono={i.code === 'KPI-COM-03' ? 'danger' : undefined}
+              desglose={desgloseDe(i)}
               a={enlaceDe(i.code)}
               notas={<NotaDeConfidenciales oculta={i.confidentialHidden} />}
             />
@@ -292,6 +320,38 @@ function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: Tablero
       </div>
       <PorProyecto datos={datos} pie={pie} alElegirProyectos={alElegirProyectos} />
     </div>
+  )
+}
+
+// el color de cada tramo, de lo reciente a lo más atrasado (la rampa secuencial de calor, design-system.md §2)
+const COLOR_DE_TRAMO: Record<ClaveDeTramo, string> = {
+  OVERDUE_FIRST: 'bg-sg-heat-2',
+  OVERDUE_SECOND: 'bg-sg-heat-3',
+  OVERDUE_OVER: 'bg-sg-heat-4'
+}
+
+// KPI-COM-03 por antigüedad (S03): una barra de tres tramos bajo la cifra, separados entre sí, y debajo el texto que la lee
+// («1–7 días: 3 · 8–15 días: 2 · más de 15 días: 2»): la barra no dice nada que el texto no diga
+function TramosDeVencidos({ tramos }: { tramos: TramoDeVencidos[] }) {
+  const { t } = useTranslation(NS)
+  const total = tramos.reduce((s, x) => s + x.valor, 0)
+  const rotulo = (x: TramoDeVencidos) => {
+    const n = numeroPe(x.valor)
+    if (x.desde !== null && x.hasta !== null) return t('tablerosF8.ejecutivo.tramos.rango', { desde: x.desde, hasta: x.hasta, n })
+    if (x.clave === 'OVERDUE_OVER' && x.desde !== null) return t('tablerosF8.ejecutivo.tramos.masDe', { dias: x.desde - 1, n })
+    return t(`tablerosF8.ejecutivo.tramos.${x.clave}`, { n })
+  }
+  return (
+    <>
+      <div aria-hidden className="flex h-2 gap-0.5 overflow-hidden rounded-sg-xs">
+        {tramos
+          .filter((x) => x.valor > 0)
+          .map((x) => (
+            <div key={x.clave} data-tramo={x.clave} className={COLOR_DE_TRAMO[x.clave]} style={{ width: `${(x.valor / total) * 100}%` }} />
+          ))}
+      </div>
+      <p className="text-sg-body-sm text-sg-text-secondary tabular-nums">{tramos.map(rotulo).join(' · ')}</p>
+    </>
   )
 }
 
