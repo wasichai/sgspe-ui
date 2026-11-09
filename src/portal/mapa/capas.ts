@@ -96,10 +96,12 @@ export const COLORES_POR_ATRIBUTO: Readonly<Record<string, ColorPorAtributo>> = 
   }
 }
 
-// el relleno y el trazo de la capa en el mapa, de la paleta, y su color por atributo
-export const dibujoDe = (id: string): { relleno: number; colorDeRelleno?: string; trazo?: number[]; colorPor?: ColorPorAtributo } => {
+// el relleno y el trazo de la capa en el mapa, de la paleta, su color por atributo y si sus puntos son huecos
+export const dibujoDe = (id: string): { relleno: number; colorDeRelleno?: string; trazo?: number[]; colorPor?: ColorPorAtributo; hueco?: boolean } => {
   const estilo = estiloDeCapa(id)
   return {
+    // los puntos de la capa, huecos si la paleta los quiere así (los centros poblados de LYR-02)
+    ...(estiloDeCapa(id, 'Point').hueco ? { hueco: true } : {}),
     relleno: estilo.fillOpacity,
     ...(estilo.colorDeRelleno ? { colorDeRelleno: estilo.colorDeRelleno } : {}),
     ...(estilo.trazo ? { trazo: estilo.trazo } : {}),
