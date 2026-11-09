@@ -16,6 +16,8 @@ interface Pantalla {
   ruta: string
   sesion?: boolean
   admin?: boolean
+  // con la IA activada para la organización
+  ia?: boolean
   // el botón que se pulsa antes de la foto (la fila abierta de la cola de QCS)
   abrir?: string
 }
@@ -74,9 +76,18 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'aprobaciones-detalle', ruta: '/tasks/approvals?selected=social_contribution%3Aap1' },
   { nombre: 'aprobacion-compromiso', ruta: '/tasks/approvals/commitment/k7' },
   { nombre: 'entregables', ruta: '/projects/p1/reports' },
-  { nombre: 'entregable', ruta: '/reports/deliverables/d1' },
-  { nombre: 'administracion', ruta: '/administration', admin: true }
+  { nombre: 'entregable', ruta: '/reports/deliverables/d1?seccion=antecedentes', admin: true, ia: true },
+  { nombre: 'administracion', ruta: '/administration', admin: true },
+  // fase 12: reportes y entregables, IA, avisos, la consola de la plataforma y la ruta que no existe
+  { nombre: 'entregables-global', ruta: '/reports' },
+  { nombre: 'plantillas', ruta: '/reports/templates', admin: true },
+  { nombre: 'bandeja-ia', ruta: '/projects/p1/ai-review', ia: true },
+  { nombre: 'avisos', ruta: '/notifications' },
+  { nombre: 'admin-consola', ruta: '/admin', admin: true },
+  { nombre: 'no-encontrada', ruta: '/reports/no-existe' }
 ]
+// las de la fase 12 (wasichai/sgspe-ui#111): 1440 en claro y oscuro y 390 en claro
+const FASE_12 = ['entregables', 'entregable', 'bandeja-ia', 'avisos', 'administracion', 'admin-consola', 'no-encontrada']
 const PRINCIPALES = [
   'login',
   'inicio',
@@ -144,6 +155,12 @@ const ESCRITORIO = { ancho: 1440, alto: 900 }
 // 1440 claro es en todas; 1440 oscuro es y 1440 claro en en las principales; 1024 y 390 claro es en las angostas
 const variantesDe = (nombre: string): Variante[] => [
   { ...ESCRITORIO, tema: 'light', idioma: 'es' },
+  ...(FASE_12.includes(nombre)
+    ? [
+        { ...ESCRITORIO, tema: 'dark' as const, idioma: 'es' as const },
+        { ancho: 390, alto: 844, tema: 'light' as const, idioma: 'es' as const }
+      ]
+    : []),
   ...(PRINCIPALES.includes(nombre)
     ? [
         { ...ESCRITORIO, tema: 'dark' as const, idioma: 'es' as const },
@@ -202,7 +219,7 @@ for (const pantalla of PANTALLAS)
       })
       await page.setViewportSize({ width: variante.ancho, height: variante.alto })
       await page.emulateMedia({ colorScheme: variante.tema })
-      await prepararEscenario(page, { tema: variante.tema, idioma: variante.idioma, sesion: pantalla.sesion ?? true, admin: pantalla.admin })
+      await prepararEscenario(page, { tema: variante.tema, idioma: variante.idioma, sesion: pantalla.sesion ?? true, admin: pantalla.admin, ia: pantalla.ia })
       await page.goto(pantalla.ruta)
       await esperarPantallaLista(page)
       if (pantalla.abrir) {

@@ -109,10 +109,12 @@ export function TarjetaDeSugerencia({ sugerencia, proyecto, alAceptar }: { suger
   const version = texto(interaccion.data, 'prompt_version')
   const base = `/projects/${encodeURIComponent(proyecto)}`
   return (
+    // el bloque de IA (design-system.md §5.3): el encabezado «Sugerencia de IA · propuesta, verifique antes de usar», qué propone
+    // y con qué confianza, sobre qué registro, lo propuesto, la cita y las decisiones de una persona
     <li className={cn('space-y-2 text-sm', CAJA_DE_IA)}>
-      <div className="flex flex-wrap items-center gap-2">
-        <MarcaDeIa clase="sugerencia" />
-        <span className="font-medium">{t(`bandejaIa.tipos.${tipo}`, { defaultValue: tipo })}</span>
+      <MarcaDeIa clase="sugerencia" forma="encabezado" />
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-sg-body font-bold text-sg-text">{t(`bandejaIa.tipos.${tipo}`, { defaultValue: tipo })}</span>
         {confianza !== null ? <span className="text-sg-caption text-sg-text-muted">{t('ia.confianza', { n: porcentaje(confianza) })}</span> : null}
         <span className="text-sg-caption text-sg-text-muted">{t('ia.modelo', { modelo: texto(sugerencia, 'model') || '—' })}</span>
         {version ? <span className="text-sg-caption text-sg-text-muted">{t('ia.instruccion', { version })}</span> : null}
@@ -155,9 +157,9 @@ export function TarjetaDeCandidatoEnBandeja({ candidato, alRevisar }: { candidat
   return (
     // propuesto por la IA, el bloque de IA; por una persona, la caja de un dato registrado
     <li className={cn('space-y-2 text-sm', ia ? CAJA_DE_IA : 'rounded-sg-md border border-sg-border bg-sg-surface px-4 py-3.5')}>
-      <div className="flex flex-wrap items-center gap-2">
-        {ia ? <MarcaDeIa clase="sugerencia" /> : null}
-        <span className="font-medium">{t('bandejaIa.tipos.candidato')}</span>
+      {ia ? <MarcaDeIa clase="sugerencia" forma="encabezado" /> : null}
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-sg-body font-bold text-sg-text">{t('bandejaIa.tipos.candidato')}</span>
         <span className="text-sg-caption text-sg-text-muted">{ia ? t('bandejaIa.origenIa') : t('bandejaIa.origenPersona')}</span>
         {confianza !== null ? <span className="text-sg-caption text-sg-text-muted">{t('ia.confianza', { n: porcentaje(confianza) })}</span> : null}
       </div>

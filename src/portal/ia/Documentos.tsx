@@ -39,7 +39,7 @@ export function RespuestaConFuentes({ respuesta }: { respuesta: RespuestaConCita
     <article className={`space-y-2 text-sm ${CAJA_DE_IA}`}>
       <MarcaDeIa clase="resumen" forma="encabezado" />
       <TextoDeIa texto={respuesta.answer} markdown />
-      <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('asistente.fuentes')}</h3>
+      <h3 className="text-sg-caption font-extrabold uppercase tracking-[0.06em] text-sg-ai">{t('asistente.fuentes')}</h3>
       <ol className="space-y-2">
         {respuesta.citations.map((cita, i) => (
           <FuenteCitada key={`${cita.evidenceId}-${cita.chunkIndex}`} cita={cita} n={i + 1} />

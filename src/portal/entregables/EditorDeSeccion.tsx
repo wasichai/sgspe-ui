@@ -1,5 +1,5 @@
 import { useAuth } from '@wasichai/core'
-import { Badge, Button, Textarea } from '@wasichai/ui'
+import { Button, Textarea } from '@wasichai/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -11,7 +11,6 @@ import { NS } from '../i18n'
 import { VistaMarkdown } from '../relacionamiento/markdown'
 import { partirMenciones } from './menciones'
 import { contenidoDe, esCalculada, ORIGEN_IA, seEditan } from './tipos'
-import { opcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
 
 // tiptap y ProseMirror bajan solo al abrir una sección que se edita (revisión final de 8.3, importante 3): el resto del portal
@@ -45,13 +44,10 @@ export function ConMenciones({ texto: contenido }: { texto: string }) {
 export function EditorDeSeccion({
   entregable,
   seccion: abierta,
-  guia,
   alCambiarSucio
 }: {
   entregable: Registro
   seccion: Registro
-  // la guía de redacción del tipo para esta sección (guide de GET /api/sgspe/deliverable-types); sin ella, nada
-  guia?: string
   alCambiarSucio?: (sucio: boolean) => void
 }) {
   const { t } = useTranslation(NS)
@@ -84,19 +80,8 @@ export function EditorDeSeccion({
     actualizar.mutate({ registro: seccion, cambios: { content: contenido, reviewed: revisada }, motivo: motivo.trim() || null })
   }
   return (
-    <Seccion etiqueta={texto(seccion, 'title')} className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sg-h3 font-semibold">{texto(seccion, 'title')}</h2>
-        <Badge className={asistida ? 'border border-dashed border-sg-ai-border bg-sg-ai-soft text-sg-ai' : 'bg-sg-neutral-soft text-sg-neutral'}>
-          {opcion(seccion, 'content_origin')}
-        </Badge>
-      </div>
-      {guia ? (
-        <div className="rounded-sg-md bg-sg-surface-sunken p-3 text-sm">
-          <p className="text-sg-label font-medium">{t('entregables.seccion.guia')}</p>
-          <p className="text-sg-text-secondary">{guia}</p>
-        </div>
-      ) : null}
+    // el título, el origen y la guía van en la cabecera de la sección (EntregablePage), sobre el bloque de IA (lienzo S12)
+    <Seccion anidada etiqueta={texto(seccion, 'title')} className="space-y-3">
       {calculada ? (
         <>
           <p className="text-sm text-sg-text-muted">{t('entregables.seccion.calculada')}</p>

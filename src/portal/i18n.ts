@@ -15,6 +15,11 @@ export const numeroPe = (valor: number): string => new Intl.NumberFormat('es-PE'
 export const fechaPe = (valor: Date): string => new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeZone: 'America/Lima' }).format(valor)
 export const fechaYHoraPe = (valor: Date): string =>
   new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Lima' }).format(valor)
+// el día y la hora en 24 h, sin el año, para una celda angosta («10 oct. 10:00»: cuándo quedó listo un borrador)
+export const diaYHoraCortaPe = (valor: Date): string =>
+  new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Lima' })
+    .format(valor)
+    .replace(',', '')
 // un día AAAA-MM-DD (assessment_date, start_date…) se dice como fecha es-PE sin correrse de día: se toma su mediodía de Lima.
 // lo que no es un día se devuelve tal cual
 export const diaPe = (dia: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(dia) ? fechaPe(new Date(`${dia}T12:00:00-05:00`)) : dia)

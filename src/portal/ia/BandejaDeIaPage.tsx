@@ -4,7 +4,9 @@ import { Alert } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
-import { Campo, SelectNativo } from '../componentes/Campo'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
@@ -90,39 +92,52 @@ export function BandejaDeIaPage() {
   const enRevision = (candidatos.data ?? []).find((c) => c.id === revisando)
   const enAceptacion = (sugerencias.data ?? []).find((s) => s.id === aceptando)
   return (
-    <section aria-label={t('bandejaIa.titulo')} className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-sg-h1 font-semibold">{t('bandejaIa.titulo')}</h1>
-        <p className="text-sm text-sg-text-secondary">{t('bandejaIa.ayuda')}</p>
-      </header>
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina titulo={t('bandejaIa.titulo')} descripcion={t('bandejaIa.ayuda')} />
       {estado.data && !estado.data.enabled ? <Alert tone="notice">{t('bandejaIa.sinIaOrganizacion')}</Alert> : null}
       {sugerencias.truncado || candidatos.truncado ? <Alert tone="warning">{t('bandejaIa.truncado', { n: numeroPe(propuestas.length) })}</Alert> : null}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-3">
-            <Campo etiqueta={t('bandejaIa.filtros.tipo')}>
-              {(p) => (
-                <SelectNativo
-                  {...p}
-                  vacio={false}
-                  value={tipo}
-                  onChange={(e) => lista.cambiar({ kind: e.target.value === 'todos' ? null : e.target.value })}
-                  opciones={TIPOS.map((x) => ({ valor: x, etiqueta: x === 'todos' ? t('bandejaIa.filtros.todos') : t(`bandejaIa.tipos.${x}`) }))}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0 space-y-3">
+          {/* la barra de filtros común (design-system.md §5.3): el tipo y el origen como chips, cada uno aplicado con su «×» */}
+          <BarraDeFiltros
+            frecuentes={
+              <>
+                <FiltroDeLista
+                  etiqueta={t('bandejaIa.filtros.tipo')}
+                  value={tipo === 'todos' ? '' : tipo}
+                  onChange={(e) => lista.cambiar({ kind: e.target.value || null })}
+                  opciones={TIPOS.filter((x) => x !== 'todos').map((x) => ({ valor: x, etiqueta: t(`bandejaIa.tipos.${x}`) }))}
                 />
-              )}
-            </Campo>
-            <Campo etiqueta={t('bandejaIa.filtros.origen')}>
-              {(p) => (
-                <SelectNativo
-                  {...p}
-                  vacio={false}
-                  value={origen}
-                  onChange={(e) => lista.cambiar({ origin: e.target.value === 'todos' ? null : e.target.value })}
-                  opciones={ORIGENES.map((x) => ({ valor: x, etiqueta: t(`bandejaIa.filtros.${x}`) }))}
+                <FiltroDeLista
+                  etiqueta={t('bandejaIa.filtros.origen')}
+                  value={origen === 'todos' ? '' : origen}
+                  onChange={(e) => lista.cambiar({ origin: e.target.value || null })}
+                  opciones={ORIGENES.filter((x) => x !== 'todos').map((x) => ({ valor: x, etiqueta: t(`bandejaIa.filtros.${x}`) }))}
                 />
-              )}
-            </Campo>
-          </div>
+              </>
+            }
+            aplicados={[
+              ...(tipo !== 'todos'
+                ? [
+                    {
+                      clave: 'kind',
+                      etiqueta: `${t('bandejaIa.filtros.tipo')}: ${t(`bandejaIa.tipos.${tipo}`)}`,
+                      alQuitar: () => lista.cambiar({ kind: null })
+                    }
+                  ]
+                : []),
+              ...(origen !== 'todos'
+                ? [
+                    {
+                      clave: 'origin',
+                      etiqueta: `${t('bandejaIa.filtros.origen')}: ${t(`bandejaIa.filtros.${origen}`)}`,
+                      alQuitar: () => lista.cambiar({ origin: null })
+                    }
+                  ]
+                : [])
+            ]}
+            alLimpiar={limpiar}
+          />
           {aceptada ? (
             <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-sg-success">
               {t('bandejaIa.aceptadaEn')}
@@ -164,9 +179,8 @@ export function BandejaDeIaPage() {
             </ul>
           )}
         </div>
-        <Seccion elemento="aside" etiqueta={t('bandejaIa.reglas.titulo')} className="text-sm">
-          <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('bandejaIa.reglas.titulo')}</h2>
-          <ul className="ml-5 list-disc space-y-1">
+        <Seccion elemento="aside" titulo={t('bandejaIa.reglas.titulo')} className="text-sm">
+          <ul className="ml-5 list-disc space-y-1 text-sg-body-sm text-sg-text-secondary">
             <li>{t('bandejaIa.reglas.unaPersona')}</li>
             <li>{t('bandejaIa.reglas.revisados')}</li>
             <li>{t('bandejaIa.reglas.motivo')}</li>
@@ -177,6 +191,6 @@ export function BandejaDeIaPage() {
       {enAceptacion ? (
         <AceptarSugerencia key={enAceptacion.id} sugerencia={enAceptacion} alCerrar={() => setAceptando(null)} alAceptar={() => setAceptada(enAceptacion)} />
       ) : null}
-    </section>
+    </ContenedorDePagina>
   )
 }

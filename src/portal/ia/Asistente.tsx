@@ -177,6 +177,7 @@ export function RespuestaDeDatos({ respuesta }: { respuesta: RespuestaDelAsisten
       <MarcaDeIa clase="resumen" forma="encabezado" />
       {/* truncada, el servidor responde un aviso fijo en español: el portal dice el suyo y no repite ambos */}
       {respuesta.truncated ? <Alert tone="warning">{t('asistente.truncada')}</Alert> : <TextoDeIa texto={respuesta.answer} markdown />}
+      {enlaces.length > 0 ? <h3 className="text-sg-caption font-extrabold uppercase tracking-[0.06em] text-sg-ai">{t('asistente.fuentes')}</h3> : null}
       {enlaces.length > 0 ? (
         <ul className="space-y-1">
           {enlaces.map((e, i) => (
@@ -246,7 +247,8 @@ export function Conversacion<R, V>({
     <ol aria-label={t('asistente.titulo')} className="space-y-4">
       {turnos.map((turno) => (
         <li key={turno.id} className="space-y-2">
-          <p className="ml-8 whitespace-pre-line rounded-sg-md bg-sg-primary-soft p-2 text-sm">
+          {/* la pregunta, a la derecha y en la superficie de lo que escribió la persona; la respuesta, en el bloque de IA */}
+          <p className="ml-8 whitespace-pre-line rounded-sg-md border border-sg-border bg-sg-primary-soft px-3 py-2 text-sm text-sg-text">
             <span className="sr-only">{t('asistente.usted')}: </span>
             {turno.pregunta}
           </p>

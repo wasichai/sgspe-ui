@@ -47,7 +47,54 @@ describe('S49 · entregables', () => {
     const fila = within(tabla).getByRole('link', { name: 'Informe de campo de la Comunidad Ejemplo' }).closest('tr')!
     expect(within(fila).getByText('Informe de campo y avance')).toBeInTheDocument()
     expect(within(fila).getByText('Listo')).toBeInTheDocument()
-    expect(within(fila).getByText('Interno, Externo')).toBeInTheDocument()
+    // los niveles como etiquetas (lienzo S12 de Civic Modern), una por nivel
+    expect(within(fila).getByText('Interno')).toBeInTheDocument()
+    expect(within(fila).getByText('Externo')).toBeInTheDocument()
+  })
+
+  it('dice el tipo como etiqueta T1 o T2, las secciones revisadas mientras se revisa y la causa de un borrador fallido', async () => {
+    const fallido = registro(
+      'd2',
+      {
+        ...ENTREGABLE.attributes,
+        document_code: 'INF-002',
+        title: 'Informe de octubre',
+        draft_generation_status: 'FALLIDO',
+        draft_warnings: 'MAP_FAILED anexo-mapa'
+      },
+      { state: 'observed' }
+    )
+    const emitido = registro(
+      'd3',
+      { ...ENTREGABLE.attributes, document_code: 'DSO-001', title: 'Diagnóstico', deliverable_type: 'DIAGNOSTICO SOCIAL', current_revision: 'B' },
+      { state: 'issued' }
+    )
+    fetch = mockFetch([
+      { path: '/objects/deliverable/records', body: pagina([ENTREGABLE, fallido, emitido]) },
+      // dos conteos por entregable en curso: todas sus secciones y las revisadas
+      { path: /\/objects\/deliverable_section\/records\?deliverable=d1&reviewed=true/, body: { ...pagina([]), totalElements: 3 } },
+      { path: /\/objects\/deliverable_section\/records\?deliverable=d1&size/, body: { ...pagina([]), totalElements: 11 } },
+      { path: '/objects/deliverable_section/records', body: { ...pagina([]), totalElements: 0 } },
+      ...baseDeF8(GERENCIA_SOCIAL)
+    ])
+    montar(<EntregablesDeReportes />, {
+      ruta: '/projects/p1/reports',
+      camino: '/projects/:projectId/reports',
+      usuario: GERENCIA_SOCIAL,
+      permisos: EQUIPO_DE_ENTREGABLES
+    })
+    const tabla = await screen.findByRole('table', { name: 'Entregables' })
+    const fila = (titulo: string) => within(tabla).getByRole('link', { name: titulo }).closest('tr')!
+    // el tipo: visible la abreviatura, entero para el lector de pantalla
+    expect(within(fila('Informe de campo de la Comunidad Ejemplo')).getByText('T2')).toHaveAttribute('aria-hidden')
+    expect(within(fila('Diagnóstico')).getByText('Diagnóstico social')).toBeInTheDocument()
+    expect(await within(fila('Informe de campo de la Comunidad Ejemplo')).findByText('Revisadas: 3 de 11')).toBeInTheDocument()
+    // FALLIDO en danger con su causa en pocas palabras
+    const borrador = within(fila('Informe de octubre')).getByText('Fallido').parentElement!
+    expect(borrador).toHaveClass('text-sg-danger')
+    expect(borrador).toHaveTextContent('mapa sin dibujar')
+    // emitido: la revisión emitida, no el conteo
+    expect(within(fila('Diagnóstico')).getByText('B')).toBeInTheDocument()
   })
 
   it('fuera de un proyecto, enlaza a la ruta global de cada entregable', async () => {

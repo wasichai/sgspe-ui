@@ -12,7 +12,7 @@ import { guardarArchivo, usePedir } from '../datos/http'
 import { fechaPe, NS } from '../i18n'
 import { hallazgosDe, marcaDe, rutaDeLaPlantilla, usePlantillas, useSubirPlantilla, type Hallazgo, type PlantillaSubida } from './contrato'
 import { Seccion } from '../componentes/Seccion'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 
 // S64 · Plantillas de entregables (screens.md, api.md §4.12, ASM-135): solo para la administración (isAdmin o MANAGE_METADATA
 // sobre deliverable; decisión 20 del plan). una plantilla no se edita ni se borra: subir otra con la misma clave la reemplaza para
@@ -70,11 +70,12 @@ export function PlantillasPage() {
   const { isAdmin, can } = useAuth()
   const administra = isAdmin || can('deliverable', 'MANAGE_METADATA')
   return (
-    <ContenedorDePagina elemento="section" className="max-w-[1100px]">
+    // el ancho y el encabezado comunes de las pantallas (ContenedorDePagina, EncabezadoDePagina): antes, 1100 px y un h1 propio
+    <ContenedorDePagina elemento="section">
       <Link to="/reports" className="text-sm text-sg-primary-text underline">
         {t('plantillas.volver')}
       </Link>
-      <h1 className="text-sg-h1 font-semibold">{t('plantillas.titulo')}</h1>
+      <EncabezadoDePagina titulo={t('plantillas.titulo')} descripcion={administra ? t('plantillas.ayuda') : undefined} />
       {administra ? <Plantillas /> : <Alert tone="notice">{t('plantillas.soloAdministracion')}</Alert>}
     </ContenedorDePagina>
   )
@@ -97,7 +98,6 @@ function Plantillas() {
   const titulo = t('plantillas.titulo')
   return (
     <div className="space-y-4">
-      <p className="text-sm text-sg-text-secondary">{t('plantillas.ayuda')}</p>
       <Button size="sm" onClick={() => setSubiendo(true)}>
         {t('plantillas.subir')}
       </Button>
@@ -106,7 +106,7 @@ function Plantillas() {
           lista.length === 0 ? (
             <Vacio titulo={t('plantillas.vacio')} />
           ) : (
-            <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+            <div className="overflow-x-auto rounded-sg-md border border-sg-border bg-sg-surface">
               <Table aria-label={titulo}>
                 <thead>
                   <tr>

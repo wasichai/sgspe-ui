@@ -117,7 +117,9 @@ export function AvisosPage() {
           {/* la bandeja es un resultado (flujo F-C): el registro de un aviso ofrece volver a ella y pasar al del siguiente */}
           {avisos.data.content.some((a) => !a.dismissible) ? <p className="text-sg-caption text-sg-text-muted">{t('avisos.noDescartables')}</p> : null}
           <ResultadoDeLista total={avisos.data.totalElements ?? null}>
-            <ul className="space-y-2">
+            {/* una lista en un solo panel (design-system.md §5.3): cada aviso en una fila con el borde izquierdo de 4 px del color de
+                su tipo, el título en 600 si no se leyó, y sus acciones a la derecha desde md */}
+            <ul aria-label={t('avisos.titulo')} className="divide-y divide-sg-border overflow-hidden rounded-sg-md border border-sg-border bg-sg-surface">
               {avisos.data.content.map((a) => (
                 <AvisoDeLaBandeja key={a.id} aviso={a} />
               ))}
@@ -147,22 +149,22 @@ function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
   const mensaje = useMensajeDeError()
   const destino = destinoDeAviso(aviso.link)
   return (
-    <li className={cn('space-y-1 rounded-sg-lg border border-l-4 border-sg-border bg-sg-surface p-3 text-sm', CLASE_DE_TIPO[aviso.kind])}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className={cn('text-sm', !aviso.read && 'font-semibold')}>{aviso.title}</h2>
-        <span className="text-sg-caption text-sg-text-muted">
+    <li className={cn('flex flex-col gap-2 border-l-4 px-4 py-3 text-sm md:flex-row md:items-start md:justify-between md:gap-4', CLASE_DE_TIPO[aviso.kind])}>
+      <div className="min-w-0 space-y-1">
+        <p className="text-sg-caption font-semibold text-sg-text-secondary">
           {t(`avisos.tipos.${aviso.kind}`)} · {t(`avisos.fuentes.${fuenteDe(aviso)}`)}
-          {!aviso.read ? ` · ${t('avisos.sinLeer')}` : ''}
-        </span>
+          {!aviso.read ? <span className="font-bold text-sg-primary-text"> · {t('avisos.sinLeer')}</span> : null}
+        </p>
+        <h2 className={cn('text-sg-body text-sg-text', aviso.read ? 'font-medium' : 'font-bold')}>{aviso.title}</h2>
+        {aviso.body ? <p className="whitespace-pre-line text-sg-text-secondary">{aviso.body}</p> : null}
+        <p className="text-sg-caption text-sg-text-muted">
+          {t('avisos.publicado', { fecha: fechaYHoraPe(new Date(aviso.publishAt)) })}
+          {aviso.dueAt ? ` · ${t('avisos.vence', { fecha: fechaYHoraPe(new Date(aviso.dueAt)) })}` : ''}
+          {aviso.overdue ? ` · ${t('avisos.vencido')}` : ''}
+          {aviso.snoozedUntil ? ` · ${t('avisos.pospuesto', { fecha: fechaYHoraPe(new Date(aviso.snoozedUntil)) })}` : ''}
+        </p>
       </div>
-      {aviso.body ? <p className="whitespace-pre-line">{aviso.body}</p> : null}
-      <p className="text-sg-caption text-sg-text-muted">
-        {t('avisos.publicado', { fecha: fechaYHoraPe(new Date(aviso.publishAt)) })}
-        {aviso.dueAt ? ` · ${t('avisos.vence', { fecha: fechaYHoraPe(new Date(aviso.dueAt)) })}` : ''}
-        {aviso.overdue ? ` · ${t('avisos.vencido')}` : ''}
-        {aviso.snoozedUntil ? ` · ${t('avisos.pospuesto', { fecha: fechaYHoraPe(new Date(aviso.snoozedUntil)) })}` : ''}
-      </p>
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
         {/* abrir es lo que se hace con un aviso (tercera pasada de UX, 3.5): la acción principal; lo demás, secundario */}
         {destino ? (
           <Button asChild size="sm">
@@ -189,8 +191,12 @@ function AvisoDeLaBandeja({ aviso }: { aviso: Aviso }) {
             {t('avisos.descartar')}
           </Button>
         ) : null}
+        {accion.isError ? (
+          <Alert tone="danger" className="basis-full">
+            {mensaje(accion.error)}
+          </Alert>
+        ) : null}
       </div>
-      {accion.isError ? <Alert tone="danger">{mensaje(accion.error)}</Alert> : null}
     </li>
   )
 }
