@@ -54,7 +54,8 @@ describe('rutas de F3', () => {
     expect(screen.queryByRole('navigation', { name: 'Vistas de Compromisos' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Más secciones del proyecto' })).toBeInTheDocument()
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })
-    for (const nombre of ['Compromisos', 'Documentos', 'Tareas']) expect(within(secciones).getByRole('link', { name: nombre })).toBeInTheDocument()
+    for (const nombre of ['Compromisos', 'Documentos', 'Tareas'])
+      expect(within(secciones).getByRole('link', { name: nombre, hidden: true })).toBeInTheDocument()
   })
 
   it('los acuerdos de todos los proyectos viven en /agreements, con la guarda de Compromisos', async () => {
@@ -69,7 +70,7 @@ describe('rutas de F3', () => {
   it('sin READ sobre compromisos, la ruta lo dice y la sección no se ofrece', async () => {
     fetch = abrirPortal('/projects/p1/commitments', GESTORA, permisos({ project: ['READ'], project_assignment: ['READ'] }), rutas())
     expect(await screen.findByRole('heading', { name: 'No puede abrir «Compromisos»' })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Compromisos' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Compromisos', hidden: true })).not.toBeInTheDocument()
   })
 
   // DD-12 (05 §1.8): dentro de un proyecto, «Sin acceso» nombra a la jefatura del proyecto si la cuenta la lee, y vuelve al
@@ -140,7 +141,7 @@ describe('rutas de F3', () => {
   ])('sin READ, %s lo dice y no se ofrece', async (ruta, seccion) => {
     fetch = abrirPortal(ruta, GESTORA, permisos({ project: ['READ'], project_assignment: ['READ'], commitment: ['READ'] }), rutas())
     expect(await screen.findByRole('heading', { name: `No puede abrir «${seccion}»` })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: seccion })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: seccion, hidden: true })).not.toBeInTheDocument()
   })
 
   it('las aprobaciones y la decisión de un compromiso viven bajo Tareas', async () => {
@@ -206,6 +207,8 @@ describe('rutas de F3', () => {
 
   it('Reportes se ofrece a quien exporta la matriz de compromisos', async () => {
     fetch = abrirPortal('/', GESTORA, permisos({ project: ['READ'], commitment: ['READ', 'EXPORT'] }), rutas())
-    expect(await within(await screen.findByRole('navigation', { name: 'Secciones' })).findByRole('link', { name: 'Reportes' })).toBeInTheDocument()
+    expect(
+      await within(await screen.findByRole('navigation', { name: 'Secciones' })).findByRole('link', { name: 'Reportes', hidden: true })
+    ).toBeInTheDocument()
   })
 })

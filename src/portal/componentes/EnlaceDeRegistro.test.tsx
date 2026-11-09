@@ -61,6 +61,6 @@ describe('EnlaceDeRegistro', () => {
     )
     await userEvent.click(screen.getByRole('link', { name: 'Reservorio de agua' }))
     expect(ubicacion.actual).toBe('/projects/p1/commitments/c1')
-    expect(screen.getByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1?tab=acuerdos')
+    expect(screen.getByRole('link', { name: 'Volver a Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1?tab=acuerdos')
   })
 })

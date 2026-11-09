@@ -17,6 +17,8 @@ export interface OpcionesDeMontaje {
   permisos?: CallerPermissions
   // sobre un data router (createMemoryRouter), como el de PortalApp: lo pide una pantalla que usa useBlocker
   datos?: boolean
+  // el estado del historial con que se llega a la ruta (el rastro y el origen de una ficha)
+  estado?: unknown
 }
 
 // la ubicación actual, para ver a dónde navegó un componente
@@ -31,10 +33,11 @@ function Ubicacion() {
 
 export function montar(
   ui: ReactElement,
-  { ruta = '/', camino = '*', usuario = RELACIONISTA, permisos = { admin: true, objects: {} }, datos = false }: OpcionesDeMontaje = {}
+  { ruta = '/', camino = '*', usuario = RELACIONISTA, permisos = { admin: true, objects: {} }, datos = false, estado }: OpcionesDeMontaje = {}
 ) {
   localStorage.setItem('sgspe.token', 't')
   const config = resolveConfig({ apiBaseUrl: '/api', storagePrefix: 'sgspe', appName: 'SGSPE', languages: IDIOMAS, timeZone: ZONA_DE_LIMA })
+  const entrada = estado === undefined ? ruta : { pathname: ruta.split('?')[0], search: ruta.includes('?') ? `?${ruta.split('?')[1]}` : '', state: estado }
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const rutas = (
     <>
@@ -55,9 +58,9 @@ export function montar(
       initialPermissions={permisos}
     >
       {datos ? (
-        <RouterProvider router={createMemoryRouter([{ path: '*', element: rutas }], { initialEntries: [ruta] })} />
+        <RouterProvider router={createMemoryRouter([{ path: '*', element: rutas }], { initialEntries: [entrada] })} />
       ) : (
-        <MemoryRouter initialEntries={[ruta]}>{rutas}</MemoryRouter>
+        <MemoryRouter initialEntries={[entrada]}>{rutas}</MemoryRouter>
       )}
     </WasichaiProviders>
   )

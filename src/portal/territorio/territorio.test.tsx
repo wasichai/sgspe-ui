@@ -110,7 +110,7 @@ describe('S12 · mapa territorial', () => {
     const panel = await screen.findByRole('complementary', { name: 'Ficha del lugar' })
     await userEvent.click(within(panel).getByRole('link', { name: 'Abrir la ficha' }))
     await waitFor(() => expect(rutaActual()).toBe('/territory/communities/c1'))
-    expect(await screen.findByRole('link', { name: 'Mapa territorial' })).toHaveAttribute('href', '/territory?selected=community%3Ac1')
+    expect(await screen.findByRole('link', { name: 'Volver a Mapa territorial' })).toHaveAttribute('href', '/territory?selected=community%3Ac1')
   })
 
   it('con otro periodo, los registros del lugar vuelven a su primera página', async () => {

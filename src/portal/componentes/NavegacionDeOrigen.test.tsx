@@ -118,12 +118,10 @@ describe('NavegacionDeOrigen', () => {
     // el origen sigue: volver lleva a la misma lista filtrada
     expect(volver()).toHaveAttribute('href', '/commitments?view=vencidos&q=agua')
     expect(volver()).toHaveAccessibleName('Volver a Compromisos (11)')
-    // el rastro no suma la ficha que se deja: sigue nombrando la lista
-    expect(
-      within(screen.getByRole('navigation', { name: 'Recorrido' }))
-        .getAllByRole('link')
-        .map((l) => l.textContent)
-    ).toEqual(['Compromisos'])
+    // el rastro no suma la ficha que se deja: sigue nombrando la lista (en la banda no se ve: su único paso es el origen, que
+    // ya ofrece «Volver a Compromisos»)
+    expect((ubicacion.estado as { rastro: { etiqueta: string }[] }).rastro.map((p) => p.etiqueta)).toEqual(['Compromisos'])
+    expect(screen.queryByRole('navigation', { name: 'Recorrido' })).not.toBeInTheDocument()
     await userEvent.click(anterior())
     expect(await screen.findByRole('heading', { level: 1, name: 'Canal de riego' })).toBeInTheDocument()
   })

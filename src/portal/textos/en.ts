@@ -185,8 +185,13 @@ export const EN: Textos = {
       riesgos: 'Risks and social investment',
       seguimiento: 'Documents and follow-up'
     },
-    contraer: 'Collapse',
-    expandir: 'Expand'
+    mapa: 'Map',
+    registrar: 'Record',
+    queRegistrar: 'What do you want to record?',
+    noRegistra: 'Your account does not record anything from here',
+    sinAcceso: '{{destino}}: your account cannot open this section',
+    bloqueActual: '{{bloque}}, open section: {{seccion}}',
+    organizacion: 'Organization'
   },
   seccionesCortas: {
     attention: 'GIR'

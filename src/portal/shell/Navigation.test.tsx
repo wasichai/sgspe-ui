@@ -43,10 +43,10 @@ function start(user: AuthUser, rutas: MockRoute[], path = '/') {
 }
 
 const lateral = () => screen.getByRole('navigation', { name: 'Secciones' })
-// el nombre de cada sección en la barra lateral
+// el nombre de cada sección en la navegación principal, también las de un desplegable cerrado (hidden), en su orden
 const enlaces = () =>
   within(lateral())
-    .getAllByRole('link')
+    .getAllByRole('link', { hidden: true })
     .map((link) => link.getAttribute('aria-label') ?? link.textContent)
 
 // una cuenta que puede exactamente estos pares "objeto ACCION", con todas las pantallas registradas
@@ -129,17 +129,22 @@ describe('NAV_TREE', () => {
 })
 
 describe('navegación del portal', () => {
+  // la cabecera de Civic Modern lleva el avatar con las iniciales: el nombre y los roles por su rótulo van en su title
   it('el encabezado no muestra el código del rol; con el directorio de roles, su rótulo', async () => {
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, permisosConCapacidades({ project: ['READ'] }, [])))
     await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(screen.getByText('Relacionista de prueba')).toBeInTheDocument()
-    expect(screen.queryByText(RELACIONISTA.roles.join(', '))).not.toBeInTheDocument()
+    const cuenta = within(screen.getByRole('banner')).getByRole('button', { name: 'Su cuenta' })
+    expect(cuenta).toHaveAttribute('title', 'Relacionista de prueba')
+    expect(cuenta).toHaveTextContent('RD')
+    expect(screen.getByRole('banner')).not.toHaveTextContent(RELACIONISTA.roles.join(', '))
     cleanup()
     start(ADMINISTRACION, [
       ...rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS),
       { path: '/roles', body: ADMINISTRACION.roles.map((name) => ({ name, label: 'Administración de la organización' })) }
     ])
-    expect(await within(screen.getByRole('banner')).findByText('Administración de la organización')).toBeInTheDocument()
+    const otra = within(screen.getByRole('banner')).getByRole('button', { name: 'Su cuenta' })
+    await waitFor(() => expect(otra.getAttribute('title')).toMatch(/· Administración de la organización$/))
+    expect(screen.getByRole('banner')).not.toHaveTextContent(ADMINISTRACION.roles.join(', '))
   })
 
   // S53: Administración lleva a su pantalla del portal, que enlaza la consola de /admin (AdministracionPage.test.tsx)
@@ -205,11 +210,16 @@ describe('navegación del portal', () => {
   // revisión de UX, etapa 1: dentro de una ficha de proyecto se marca el módulo, no «Proyectos»
   it('dentro de un proyecto marca la sección del módulo abierto', async () => {
     registradas.projects = Prueba
+    registradas.territory = Prueba
+    registradas.stakeholders = Prueba
     registradas.commitments = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/projects/p1/commitments/c1')
-    const compromisos = await within(lateral()).findByRole('link', { name: 'Compromisos' })
+    const compromisos = await within(lateral()).findByRole('link', { name: 'Compromisos', hidden: true })
     expect(compromisos).toHaveAttribute('aria-current', 'page')
-    expect(within(lateral()).getByRole('link', { name: 'Proyectos' })).not.toHaveAttribute('aria-current')
+    expect(within(lateral()).getByRole('link', { name: 'Proyectos', hidden: true })).not.toHaveAttribute('aria-current')
+    // y el bloque que la contiene, no «Proyectos y territorio»
+    expect(await within(lateral()).findByRole('button', { name: 'Trabajo con las comunidades' })).toHaveAttribute('aria-current', 'true')
+    expect(within(lateral()).getByRole('button', { name: 'Proyectos y territorio' })).not.toHaveAttribute('aria-current')
   })
 
   it('el título del documento dice la sección (D7)', async () => {
@@ -223,7 +233,7 @@ describe('navegación del portal', () => {
   it('en la barra, QCS se dice «Quejas y solicitudes», con el nombre completo en title', async () => {
     registradas.attention = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/attention')
-    const qcs = await within(lateral()).findByRole('link', { name: 'Quejas y solicitudes' })
+    const qcs = await within(lateral()).findByRole('link', { name: 'Quejas y solicitudes', hidden: true })
     expect(qcs).toHaveTextContent('Quejas y solicitudes')
     expect(qcs).not.toHaveTextContent('QCS')
     expect(qcs).toHaveAttribute('title', 'Quejas, consultas y solicitudes')
@@ -234,55 +244,57 @@ describe('navegación del portal', () => {
     localStorage.setItem('sgspe.lang', 'en')
     registradas.attention = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS), '/attention')
-    expect(await within(screen.getByRole('navigation', { name: 'Sections' })).findByRole('link', { name: 'Grievances and requests' })).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('navigation', { name: 'Sections' })).findByRole('link', { name: 'Grievances and requests', hidden: true })
+    ).toBeInTheDocument()
   })
 
-  // DD-10: expandida desde lg (1024 px), con los títulos de bloque a la vista; por debajo, solo íconos. jsdom no evalúa las
-  // media queries: se prueban las clases y la estructura
-  it('desde lg la barra lateral está expandida, con las etiquetas y los títulos de bloque a la vista', async () => {
+  // Civic Modern (ux-architecture.md §7.1): desde lg, una barra horizontal con Inicio, un botón por bloque y Administración; el
+  // desplegable de cada bloque es una lista nombrada por él (NavegacionPrincipal.test.tsx prueba su teclado). por debajo de lg,
+  // las secciones van en el panel del menú. jsdom no evalúa las media queries: se prueban las clases y la estructura
+  it('desde lg, la navegación principal es horizontal, con un botón por bloque y sus secciones en orden', async () => {
     for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
     const nav = await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(nav).toHaveClass('w-[52px]', 'lg:w-60')
-    const proyectos = await within(nav).findByRole('link', { name: 'Proyectos' })
-    expect(within(proyectos).getByText('Proyectos')).toHaveClass('sr-only', 'lg:not-sr-only')
-    // cada bloque con título es una lista nombrada por él, y el título se ve desde lg
-    const bloque = within(nav).getByRole('list', { name: 'Trabajo con las comunidades' })
+    expect(nav).toHaveClass('hidden', 'lg:block')
+    const bloque = await within(nav).findByRole('button', { name: 'Trabajo con las comunidades' })
+    await userEvent.click(bloque)
+    const lista = within(nav).getByRole('list', { name: 'Trabajo con las comunidades' })
     expect(
-      within(bloque)
+      within(lista)
         .getAllByRole('link')
         .map((l) => l.textContent)
     ).toEqual(['Grupos de interés', 'Relacionamiento', 'Compromisos', 'Quejas y solicitudes'])
-    expect(within(nav).getByText('Trabajo con las comunidades')).toHaveClass('sr-only', 'lg:not-sr-only')
-    expect(within(nav).getAllByRole('list').length).toBe(6)
+    expect(
+      within(nav)
+        .getAllByRole('button')
+        .map((b) => b.textContent)
+    ).toEqual(['Proyectos y territorio', 'Trabajo con las comunidades', 'Riesgos e inversión social', 'Documentos y seguimiento'])
   })
 
-  it('un bloque sin secciones para la cuenta no se dibuja', async () => {
+  it('un bloque sin secciones para la cuenta no se dibuja, y uno con una sola es un enlace', async () => {
     registradas.projects = Prueba
     start(RELACIONISTA, rutasDeSesion(RELACIONISTA, { admin: false, objects: { project: ['READ'] } }))
     const nav = await screen.findByRole('navigation', { name: 'Secciones' })
-    await within(nav).findByRole('list', { name: 'Proyectos y territorio' })
-    expect(within(nav).queryByRole('list', { name: 'Trabajo con las comunidades' })).not.toBeInTheDocument()
+    expect(await within(nav).findByRole('link', { name: 'Proyectos' })).toHaveAttribute('href', '/projects')
+    expect(within(nav).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(nav).queryByText('Trabajo con las comunidades')).not.toBeInTheDocument()
     expect(within(nav).queryByText('Riesgos e inversión social')).not.toBeInTheDocument()
   })
 
-  it('«Contraer» deja solo los íconos y se recuerda al volver a abrir el portal', async () => {
+  // la barra lateral y su «Contraer» (con la preferencia sgspe.navegacion) ya no existen: la navegación principal es horizontal
+  // (ADR-0032) y no tiene nada que contraer. el panel del menú conserva las secciones en sus bloques
+  it('el panel del menú trae las secciones en sus bloques con sus títulos', async () => {
+    for (const seccion of NAV_TREE) registradas[seccion.clave] = Prueba
     start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
-    const nav = await screen.findByRole('navigation', { name: 'Secciones' })
-    const contraer = within(nav).getByRole('button', { name: 'Contraer' })
-    expect(contraer).toHaveClass('hidden', 'lg:flex')
-    await userEvent.click(contraer)
-    expect(nav).not.toHaveClass('lg:w-60')
-    expect(within(within(nav).getByRole('link', { name: 'Inicio' })).getByText('Inicio')).not.toHaveClass('lg:not-sr-only')
-    expect(localStorage.getItem('sgspe.navegacion')).toBe('contraida')
-    cleanup()
-    fetch?.restore()
-    start(ADMINISTRACION, rutasDeSesion(ADMINISTRACION, ADMIN_PERMISOS))
-    const otra = await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(otra).not.toHaveClass('lg:w-60')
-    await userEvent.click(within(otra).getByRole('button', { name: 'Expandir' }))
-    expect(otra).toHaveClass('lg:w-60')
-    expect(localStorage.getItem('sgspe.navegacion')).toBeNull()
+    await userEvent.click(within(await screen.findByRole('banner')).getByRole('button', { name: 'Menú' }))
+    const menu = within(await screen.findByRole('dialog', { name: 'Menú' })).getByRole('navigation', { name: 'Secciones del menú' })
+    expect(within(menu).getAllByRole('list').length).toBe(6)
+    expect(
+      within(within(menu).getByRole('list', { name: 'Trabajo con las comunidades' }))
+        .getAllByRole('link')
+        .map((l) => l.textContent)
+    ).toEqual(['Grupos de interés', 'Relacionamiento', 'Compromisos', 'Quejas y solicitudes'])
   })
 
   // ASM-073: el asistente es el botón Preguntar de la barra superior, nunca una sección. llega en F7: se dibuja si

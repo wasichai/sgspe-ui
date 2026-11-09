@@ -64,13 +64,14 @@ export function Campana() {
         // el panel solo existe abierto: cerrado, aria-controls apuntaría a un id que no está
         aria-controls={abierta ? panel : undefined}
         onClick={() => setAbierta(!abierta)}
-        className="relative flex size-8 items-center justify-center rounded-sg-md text-sg-text-muted hover:bg-sg-surface-hover hover:text-sg-text"
+        // en la cabecera: un botón de ícono de 40 px (48 en el teléfono) con la insignia amarilla de los sin leer (design-system.md §5.2)
+        className="relative flex size-12 items-center justify-center rounded-sg-md text-sg-header-text hover:bg-sg-header-2 md:size-10"
       >
-        <Bell aria-hidden className="size-4" />
+        <Bell aria-hidden className="size-5" />
         {n > 0 ? (
           <span
             aria-hidden
-            className="absolute -right-1 -top-1 min-w-4 rounded-full bg-sg-danger px-1 text-center text-sg-overline font-semibold text-sg-on-danger"
+            className="absolute top-0.5 right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-sg-header bg-sg-halo px-1 text-sg-caption font-extrabold text-sg-header md:-top-1 md:-right-1"
           >
             {n > 99 ? '99+' : n}
           </span>
@@ -91,7 +92,7 @@ function PanelDeAvisos({ id, alCerrar }: { id: string; alCerrar: () => void }) {
       id={id}
       role="region"
       aria-label={t('avisos.ultimos')}
-      className="absolute right-0 z-50 mt-2 w-80 space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface-raised p-3 shadow-sg-md"
+      className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1rem)] space-y-2 rounded-sg-md border-2 border-sg-border-strong bg-sg-surface-raised p-3 text-sg-text shadow-sg-overlay"
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{t('avisos.ultimos')}</h2>

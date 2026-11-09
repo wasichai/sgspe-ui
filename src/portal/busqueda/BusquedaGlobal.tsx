@@ -102,15 +102,20 @@ export function BotonBuscar() {
   }, [])
   return (
     <>
+      {/* en la cabecera (design-system.md §5.2): un campo blanco de 44 px, hasta 520 px, con el atajo en un kbd; en el teléfono, un
+          botón de ícono de 48 px. abre el mismo diálogo que ⌘K */}
       <button
         type="button"
         aria-label={t('busqueda.boton')}
+        aria-keyshortcuts={tecla === t('atajos.buscarMac') ? 'Meta+K' : 'Control+K'}
         onClick={() => setAbierta(true)}
-        className="flex h-8 items-center gap-2 rounded-sg-md border border-sg-border px-2 text-sm text-sg-text-secondary hover:bg-sg-surface-hover"
+        className="flex size-12 shrink-0 items-center justify-center gap-3 rounded-sg-md text-sg-header-text hover:bg-sg-header-2 md:h-sg-field md:w-auto md:max-w-130 md:min-w-0 md:flex-[1_1_20rem] md:justify-start md:border-2 md:border-sg-surface md:bg-sg-surface md:px-3 md:text-sg-text-secondary md:hover:bg-sg-surface"
       >
-        <Search aria-hidden className="size-4" />
-        <span className="hidden md:inline">{t('busqueda.boton')}</span>
-        <kbd className="hidden rounded-sg-xs border border-sg-border px-1 font-sg-mono text-sg-caption lg:inline">{tecla}</kbd>
+        <Search aria-hidden className="size-5 shrink-0 md:text-sg-text" />
+        <span className="hidden min-w-0 flex-1 truncate text-left text-sg-body md:inline">{t('busqueda.campo')}</span>
+        <kbd className="hidden shrink-0 rounded-sg-xs border border-sg-border-strong px-1.5 font-sg-mono text-sg-caption text-sg-text-secondary lg:inline">
+          {tecla}
+        </kbd>
       </button>
       {abierta ? <DialogoDeBusqueda alCerrar={() => setAbierta(false)} /> : null}
     </>

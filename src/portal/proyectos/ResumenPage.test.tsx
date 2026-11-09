@@ -595,7 +595,10 @@ describe('S08 · Project 360, resumen', () => {
     await waitFor(() => expect(within(zona).getAllByRole('listitem')).toHaveLength(4))
     await screen.findByRole('link', { name: 'Asamblea de agosto' })
     await within(screen.getByRole('region', { name: 'Tablero del proyecto' })).findByRole('link', { name: 'Ver el tablero de compromisos' })
-    const subrayados = screen.getAllByRole('link').filter((a) => a.classList.contains('underline'))
+    // la ficha es el contenido: las migas de la banda de contexto del shell sí van subrayadas (design-system.md §5.2)
+    const subrayados = within(screen.getByRole('main'))
+      .getAllByRole('link')
+      .filter((a) => a.classList.contains('underline'))
     expect(subrayados.map((a) => a.textContent)).toEqual([])
   })
 

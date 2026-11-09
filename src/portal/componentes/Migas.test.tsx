@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, describe, expect, it } from 'vitest'
 import { montar, registro, workflow } from '../../test/montar'
-import { Migas, MigasDelProyecto } from './Migas'
+import { Migas, MigasDelProyecto, MigasGlobales } from './Migas'
 
 // ux-architecture.md §8.1: las migas dicen dónde vive el registro (Proyectos / PRJ-01 · Pukaqaqa / Compromisos /
 // COM-2026-031) y no cambian con el recorrido, que es el rastro
@@ -36,6 +36,27 @@ describe('Migas', () => {
   })
 })
 
+// fuera de un proyecto, derivadas de la ruta: Inicio, la sección y el registro que declara la ficha
+describe('MigasGlobales', () => {
+  it('en el inicio, solo «Inicio» como la página actual', () => {
+    fetch = mockFetch([])
+    montar(<MigasGlobales />, { ruta: '/' })
+    expect(pasos()).toEqual(['Inicio (aquí)'])
+  })
+
+  it('en una sección, Inicio y la sección actual', () => {
+    fetch = mockFetch([])
+    montar(<MigasGlobales />, { ruta: '/commitments' })
+    expect(pasos()).toEqual(['Inicio → /', 'Compromisos (aquí)'])
+  })
+
+  it('dentro de una sección, la sección enlazada y el registro abierto', () => {
+    fetch = mockFetch([])
+    montar(<MigasGlobales registro="CC Tunas Pampa" />, { ruta: '/territory/communities/c1' })
+    expect(pasos()).toEqual(['Inicio → /', 'Territorio → /territory', 'CC Tunas Pampa (aquí)'])
+  })
+})
+
 describe('MigasDelProyecto', () => {
   it('derivadas de la ruta: proyectos, el proyecto, su pestaña y el registro abierto', async () => {
     fetch = mockFetch([{ path: '/objects/project/records/p1', body: P1 }])
@@ -45,6 +66,7 @@ describe('MigasDelProyecto', () => {
     })
     expect(await screen.findByRole('link', { name: 'PRJ-01 · Proyecto Ejemplo A' })).toBeInTheDocument()
     expect(pasos()).toEqual([
+      'Inicio → /',
       'Proyectos → /projects',
       'PRJ-01 · Proyecto Ejemplo A → /projects/p1/overview',
       'Compromisos → /projects/p1/commitments',
@@ -60,6 +82,7 @@ describe('MigasDelProyecto', () => {
     })
     await screen.findByRole('link', { name: 'PRJ-01 · Proyecto Ejemplo A' })
     expect(pasos()).toEqual([
+      'Inicio → /',
       'Proyectos → /projects',
       'PRJ-01 · Proyecto Ejemplo A → /projects/p1/overview',
       'Quejas, consultas y solicitudes → /projects/p1/attention',
@@ -74,9 +97,9 @@ describe('MigasDelProyecto', () => {
     expect(pasos()).toContain('Quejas, consultas y solicitudes → /projects/p1/attention')
   })
 
-  // tercera pasada de UX: el estado del proyecto va junto al proyecto, no tras el último paso, donde se leía como el estado
-  // del registro abierto («C-001 · Borrador» en un compromiso en ejecución)
-  it('el estado del proyecto va en su paso, fuera del enlace, y se anuncia como del proyecto', async () => {
+  // el estado del proyecto ya no va en las migas: va en el sello de alcance de la banda de contexto, junto al código del proyecto
+  // (BarraDeContexto, contexto.test.tsx); las migas solo dicen dónde se está
+  it('las migas no llevan el estado del proyecto', async () => {
     fetch = mockFetch([
       { path: '/objects/project/records/p1', body: registro('p1', { code: 'PRJ-01', name: 'Proyecto Ejemplo A' }, { state: 'draft' }) },
       { path: '/objects/project/workflow', body: workflow('project', [['draft', 'Borrador']]) }
@@ -85,18 +108,13 @@ describe('MigasDelProyecto', () => {
       ruta: '/projects/p1/commitments/c1',
       camino: '/projects/:projectId/commitments/:commitmentId'
     })
-    const enlace = await screen.findByRole('link', { name: 'PRJ-01 · Proyecto Ejemplo A' })
-    const paso = enlace.closest('li') as HTMLElement
-    expect(await within(paso).findByText('Borrador')).toBeInTheDocument()
-    expect(within(paso).getByText('Estado del proyecto:')).toHaveClass('sr-only')
-    expect(enlace).not.toHaveTextContent('Borrador')
-    const ultimo = screen.getByText('COM-2026-031').closest('li') as HTMLElement
-    expect(ultimo).not.toHaveTextContent('Borrador')
+    await screen.findByRole('link', { name: 'PRJ-01 · Proyecto Ejemplo A' })
+    expect(screen.getByRole('navigation', { name: 'Ubicación' })).not.toHaveTextContent('Borrador')
   })
 
   it('mientras el proyecto no llega, lo nombra por su id', () => {
     fetch = mockFetch([])
     montar(<MigasDelProyecto />, { ruta: '/projects/p1/risks', camino: '/projects/:projectId/risks' })
-    expect(pasos()).toEqual(['Proyectos → /projects', 'p1 → /projects/p1/overview', 'Riesgos (aquí)'])
+    expect(pasos()).toEqual(['Inicio → /', 'Proyectos → /projects', 'p1 → /projects/p1/overview', 'Riesgos (aquí)'])
   })
 })

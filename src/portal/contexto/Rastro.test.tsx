@@ -30,24 +30,43 @@ function Paginas() {
   return <Vista titulo="Acta firmada" />
 }
 
+// en la banda de contexto el rastro es «‹ Volver a <último paso>» y, con más de un paso, el recorrido entero a pedido: se
+// verifica lo mismo que antes (los pasos, su orden, sus rutas y la vuelta) en esa forma nueva
+const rastro = () => screen.getByRole('navigation', { name: 'Recorrido' })
+const pasosDelRecorrido = async () => {
+  const boton = within(rastro()).getByRole('button', { name: /^Recorrido/ })
+  if (boton.getAttribute('aria-expanded') !== 'true') await userEvent.click(boton)
+  return within(rastro())
+    .getAllByRole('listitem')
+    .map((li) => {
+      const enlace = within(li).getByRole('link')
+      return [enlace.textContent?.replace(/^\d+/, ''), enlace.getAttribute('href')]
+    })
+}
+
 describe('el rastro', () => {
   it('suma la vista que se deja con el título de la página, vuelve a ella y no repite la misma', async () => {
     montar(<Paginas />, { ruta: '/a' })
     expect(screen.queryByRole('navigation', { name: 'Recorrido' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Ir a /b' }))
+    // con un paso, solo «Volver a»
+    expect(await within(rastro()).findByRole('link', { name: 'Volver a Asamblea de agosto' })).toHaveAttribute('href', '/a')
+    expect(within(rastro()).queryByRole('button')).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('link', { name: 'Ir a /c' }))
-    const rastro = await screen.findByRole('navigation', { name: 'Recorrido' })
-    expect(
-      within(rastro)
-        .getAllByRole('link')
-        .map((l) => [l.textContent, l.getAttribute('href')])
-    ).toEqual([
+    await screen.findByRole('heading', { name: 'Acta firmada' })
+    expect(within(rastro()).getByRole('link', { name: 'Volver a Canal de riego' })).toHaveAttribute('href', '/b')
+    expect(within(rastro()).getByRole('button', { name: 'Recorrido (2 pasos)' })).toHaveAttribute('aria-expanded', 'false')
+    expect(await pasosDelRecorrido()).toEqual([
       ['Asamblea de agosto', '/a'],
       ['Canal de riego', '/b']
     ])
     await userEvent.click(screen.getByRole('link', { name: 'Aquí mismo' }))
-    expect(within(screen.getByRole('navigation', { name: 'Recorrido' })).getAllByRole('link')).toHaveLength(2)
-    await userEvent.click(within(screen.getByRole('navigation', { name: 'Recorrido' })).getByRole('link', { name: 'Asamblea de agosto' }))
+    expect(await pasosDelRecorrido()).toHaveLength(2)
+    await userEvent.click(within(rastro()).getByRole('link', { name: 'Canal de riego' }))
+    expect(await screen.findByRole('heading', { name: 'Canal de riego' })).toBeInTheDocument()
+    // volver a un paso deja el rastro hasta él
+    expect(within(rastro()).getByRole('link', { name: 'Volver a Asamblea de agosto' })).toBeInTheDocument()
+    await userEvent.click(within(rastro()).getByRole('link', { name: 'Volver a Asamblea de agosto' }))
     expect(await screen.findByRole('heading', { name: 'Asamblea de agosto' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Recorrido' })).not.toBeInTheDocument()
   })
@@ -55,8 +74,23 @@ describe('el rastro', () => {
   it('EnlaceConRastro suma el paso como EnlaceDeRegistro', async () => {
     montar(<Paginas />, { ruta: '/a' })
     await userEvent.click(screen.getByRole('link', { name: 'Enlace a /b' }))
-    const rastro = await screen.findByRole('navigation', { name: 'Recorrido' })
-    expect(within(rastro).getByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/a')
+    expect(await within(rastro()).findByRole('link', { name: 'Volver a Asamblea de agosto' })).toHaveAttribute('href', '/a')
+  })
+
+  // la ficha abierta desde una lista ya ofrece volver a ella (NavegacionDeOrigen): el rastro no repite ese «Volver»
+  it('no repite el «Volver» que ya da el origen de la ficha', async () => {
+    montar(<Paginas />, {
+      ruta: '/c',
+      estado: {
+        rastro: [
+          { etiqueta: 'Asamblea de agosto', ruta: '/a' },
+          { etiqueta: 'Canal de riego', ruta: '/b' }
+        ],
+        origen: { ruta: '/b', etiqueta: 'Canal de riego', total: 2, fichas: [] }
+      }
+    })
+    expect(within(rastro()).queryByRole('link', { name: /^Volver/ })).not.toBeInTheDocument()
+    expect(await pasosDelRecorrido()).toHaveLength(2)
   })
 
   // ninguna fuente del portal enlaza la ficha de un registro con un Link sin el paso del rastro: usa EnlaceConRastro,

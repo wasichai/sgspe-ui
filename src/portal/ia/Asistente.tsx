@@ -96,11 +96,12 @@ export function BotonPreguntar() {
       type="button"
       onClick={() => asistente.abrir({ proyecto: scope.kind === 'project' ? scope.projectId : undefined })}
       title={t('shell.preguntar')}
-      className="flex h-8 items-center gap-1.5 rounded-sg-md border border-dashed border-sg-ai-border bg-sg-ai-soft px-2.5 text-sg-body-sm text-sg-ai hover:bg-sg-surface-hover"
+      // en la cabecera: 40 px con borde de 2 px ai-header-border y la chispa; en tableta y teléfono, solo el ícono
+      className="flex size-12 shrink-0 items-center justify-center gap-2 rounded-sg-md text-sg-header-text hover:bg-sg-header-2 md:size-11 md:border-2 md:border-sg-ai-header-border lg:h-10 lg:w-auto lg:px-3"
     >
-      <Sparkles aria-hidden className="size-4" />
-      {/* en el teléfono, solo el ícono: la barra superior no da para más (el nombre sigue para lectores y en title) */}
-      <span className="sr-only sm:not-sr-only">{t('shell.preguntar')}</span>
+      <Sparkles aria-hidden className="size-5" />
+      {/* el nombre sigue para lectores y en title cuando solo se ve el ícono */}
+      <span className="sr-only text-sg-body font-semibold lg:not-sr-only">{t('shell.preguntar')}</span>
     </button>
   )
 }

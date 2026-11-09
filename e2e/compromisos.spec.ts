@@ -167,10 +167,13 @@ test('la ficha dice dónde se está: migas, sección marcada y título del docum
   const migas = page.getByRole('navigation', { name: 'Ubicación' })
   await expect(migas.getByText('C-001')).toHaveAttribute('aria-current', 'page')
   await expect(migas.getByRole('link', { name: /^PRJ-01 · / })).toHaveAttribute('href', '/projects/p1/overview')
-  await expect(page.getByRole('navigation', { name: 'Secciones', exact: true }).getByRole('link', { name: 'Compromisos' })).toHaveAttribute(
-    'aria-current',
-    'page'
-  )
+  // la navegación principal marca el bloque del módulo y, dentro de su desplegable, la sección
+  const principal = page.getByRole('navigation', { name: 'Secciones', exact: true })
+  const bloque = principal.getByRole('button', { name: 'Trabajo con las comunidades' })
+  await expect(bloque).toHaveAttribute('aria-current', 'true')
+  await bloque.click()
+  await expect(principal.getByRole('link', { name: 'Compromisos' })).toHaveAttribute('aria-current', 'page')
+  await page.keyboard.press('Escape')
   await expect(page).toHaveTitle(/^C-001 Reservorio de agua para Tunas Pampa · .* · SGSPE$/)
   await migas.getByRole('link', { name: 'Compromisos' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/commitments$/)

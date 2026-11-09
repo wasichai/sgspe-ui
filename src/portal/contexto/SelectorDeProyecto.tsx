@@ -15,15 +15,17 @@ import { conBusquedaQueSeConserva, rutaEquivalente } from './rutas'
 // van primero. quien lee todos los proyectos (useLeeTodosLosProyectos, ADMIN incluido) ve el alcance global como «Todos los
 // proyectos», y los demás como «Todos mis proyectos»; es el valor por defecto. sin proyectos que leer ni la acción, dice que no
 // tiene asignaciones en lugar de un selector que solo lleva a listas vacías (spec 4.4 §3.12). elegir otro alcance monta la misma
-// página con ese alcance (ASM-076). sin READ sobre project no se dibuja. en la barra superior se ve desde md; «siempre» es el del
-// panel del menú, que en el teléfono es el único (D2 de la revisión de UX).
+// página con ese alcance (ASM-076). sin READ sobre project no se dibuja. en la cabecera se ve desde md (design-system.md §5.2):
+// con el alcance global, un botón de contorno blanco; con un proyecto, blanco con el código en Plex Mono y el nombre desde lg.
+// «siempre» es el del panel del menú, el único en el teléfono, donde la banda de contexto dice el alcance (D2 de la revisión
+// de UX).
 // en Territorio el selector es el lente del mapa (A24 de la segunda pasada de UX, recuperado en la tercera; ux-architecture.md
 // §6.1: el territorio es del tenant y el proyecto es el lente con que se mira): lee y escribe ?project= sin salir de la pantalla,
 // y sin proyecto dice «Todo el territorio». la pantalla no tiene su propio «Proyecto del mapa»: hay un solo control de proyecto
 export const esTerritorio = (pathname: string) => /^\/territory(\/|$)/.test(pathname)
 
 // el proyecto que la barra muestra: el del alcance o, en Territorio, el del lente
-function useProyectoDeLaBarra(): string {
+export function useProyectoDeLaBarra(): string {
   const { scope } = useContextFilters()
   const { pathname } = useLocation()
   const [busqueda] = useSearchParams()
@@ -36,32 +38,9 @@ export function SelectorDeProyecto({ siempre = false }: { siempre?: boolean }) {
   return can('project', 'READ') ? <Selector siempre={siempre} /> : null
 }
 
-// el chip de la barra superior por debajo de md: dice el alcance actual y abre el panel del menú, donde está el selector
-export function ChipDeProyecto({ alAbrir }: { alAbrir: () => void }) {
-  const { can } = useAuth()
-  return can('project', 'READ') ? <Chip alAbrir={alAbrir} /> : null
-}
-
-function Chip({ alAbrir }: { alAbrir: () => void }) {
-  const { t } = useTranslation(NS)
-  const { pathname } = useLocation()
-  const elegido = useProyectoDeLaBarra()
-  // la lista que ya lee el selector: el chip no pide nada más
-  const proyectos = useProyectos()
-  const proyecto = elegido ? proyectos.data?.find((p) => p.id === elegido) : undefined
-  const codigo = proyecto ? String(atributo(proyecto, 'code') ?? '') : ''
-  const actual = elegido ? codigo || elegido : esTerritorio(pathname) ? t('sig.todosLosLugares') : t('contexto.todos')
-  return (
-    <button
-      type="button"
-      onClick={alAbrir}
-      aria-label={t('contexto.cambiarProyecto', { proyecto: actual })}
-      className="min-h-8 max-w-24 shrink-0 truncate rounded-full border border-sg-border-strong px-2.5 py-1.5 text-sg-caption text-sg-text-secondary md:hidden"
-    >
-      {actual}
-    </button>
-  )
-}
+// la etiqueta de una opción es «CÓDIGO · Nombre»
+const codigoDe = (etiqueta: string) => etiqueta.split(' · ')[0]
+const nombreDe = (etiqueta: string) => etiqueta.split(' · ').slice(1).join(' · ')
 
 // sin tildes ni mayúsculas, para buscar «Qorí» como «qori»
 const normalizar = (texto: string) =>
@@ -109,7 +88,7 @@ function Selector({ siempre }: { siempre: boolean }) {
     if (abierto) document.getElementById(`${id}-opcion-${activa}`)?.scrollIntoView?.({ block: 'nearest' })
   }, [abierto, activa, id])
   if (proyectos.isSuccess && lista.length === 0 && !leeTodo)
-    return <p className={cn('max-w-64 text-sm text-sg-text-muted', siempre ? 'block' : 'hidden md:block')}>{t('contexto.sinProyectos')}</p>
+    return <p className={cn('max-w-64 text-sm', siempre ? 'block text-sg-text-muted' : 'hidden text-sg-header-text md:block')}>{t('contexto.sinProyectos')}</p>
 
   const abrir = () => {
     if (abierto) return
@@ -157,7 +136,7 @@ function Selector({ siempre }: { siempre: boolean }) {
   return (
     <div
       ref={raiz}
-      className={cn('relative text-sm', siempre ? 'block w-full' : 'hidden md:block')}
+      className={cn('relative text-sm', siempre ? 'block w-full' : 'hidden shrink-0 md:block')}
       onBlur={(e) => {
         if (!raiz.current?.contains(e.relatedTarget as Node | null)) cerrar()
       }}
@@ -183,13 +162,35 @@ function Selector({ siempre }: { siempre: boolean }) {
         }}
         onKeyDown={alTeclear}
         className={cn(
-          'h-8 w-full truncate rounded-sg-md border border-sg-border-control bg-sg-surface pr-7 pl-2 text-sm text-sg-text placeholder:text-sg-text-muted',
-          !siempre && 'md:w-64'
+          'w-full truncate rounded-sg-md text-sg-text placeholder:text-sg-text-muted',
+          siempre
+            ? 'h-sg-field border-2 border-sg-border-control bg-sg-surface pr-8 pl-3 text-sg-body'
+            : 'h-10 border-2 pr-9 pl-3 text-sg-body font-semibold md:w-40 lg:w-56 xl:w-64',
+          !siempre &&
+            (abierto
+              ? 'border-sg-surface bg-sg-surface'
+              : actual
+                ? 'border-sg-surface bg-sg-surface text-transparent'
+                : 'border-sg-header-text/55 bg-transparent text-sg-header-text')
         )}
       />
-      <ChevronDown aria-hidden className="pointer-events-none absolute top-2 right-2 size-4 text-sg-text-muted" />
+      {/* el proyecto elegido en la cabecera: el código en Plex Mono y el nombre (desde lg), dibujados sobre el campo cerrado; el
+          valor del campo sigue siendo el que leen los lectores de pantalla */}
+      {!siempre && !abierto && actual ? (
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 flex max-w-full items-center gap-2 pr-9 pl-3 text-sg-primary-text">
+          <span className="shrink-0 font-sg-mono text-sg-body-sm font-semibold">{elegida ? codigoDe(elegida.etiqueta) : actual}</span>
+          <span className="hidden truncate text-sg-body font-semibold lg:inline">{elegida ? nombreDe(elegida.etiqueta) : ''}</span>
+        </span>
+      ) : null}
+      <ChevronDown
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2',
+          siempre || abierto ? 'text-sg-text-muted' : actual ? 'text-sg-primary-text' : 'text-sg-header-text'
+        )}
+      />
       {abierto ? (
-        <div className="absolute top-full left-0 z-30 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-sg-md border border-sg-border bg-sg-surface-raised p-1 shadow-sg-md">
+        <div className="absolute top-full left-0 z-30 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-sg-md border-2 border-sg-border-strong bg-sg-surface-raised p-1 text-sg-text shadow-sg-overlay">
           <ul id={`${id}-lista`} role="listbox" aria-label={t('contexto.proyecto')} className="max-h-80 overflow-y-auto">
             {filtradas.map((o, i) => (
               <li

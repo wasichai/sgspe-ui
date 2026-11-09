@@ -10,16 +10,19 @@ import { NS } from '../i18n'
 // fila (las del proyecto llegan con los permisos y sus conteos después, y las ensanchan; U-19), hasta que la persona la
 // desplace por su cuenta: desde ahí manda ella, hasta la próxima ruta. con rol «tablist»
 // (las pestañas de una ficha, PestanasDeFicha) la fila es una lista de pestañas en lugar de una navegación, y la activa es la
-// de aria-selected
+// de aria-selected. con rol «grupo» la fila no es un punto de referencia propio: vive dentro de una navegación que la contiene
+// (la navegación local del proyecto, que en tableta es esta fila y en escritorio una columna; filaClassName cambia su forma)
 export function PestanasDesplazables({
   etiqueta,
   rol = 'navigation',
   className,
+  filaClassName,
   children
 }: {
   etiqueta: string
-  rol?: 'navigation' | 'tablist'
+  rol?: 'navigation' | 'tablist' | 'grupo'
   className?: string
+  filaClassName?: string
   children: ReactNode
 }) {
   const { t } = useTranslation(NS)
@@ -59,7 +62,7 @@ export function PestanasDesplazables({
     }
   }, [medir, pathname, search])
   const desplazar = (sentido: 1 | -1) => nav.current?.scrollBy?.({ left: sentido * nav.current.clientWidth * 0.8, behavior: 'smooth' })
-  const fila = 'flex gap-1 overflow-x-auto border-b border-sg-border [scrollbar-width:none]'
+  const fila = filaClassName ?? 'flex gap-1 overflow-x-auto border-b border-sg-border [scrollbar-width:none]'
   const boton = 'absolute top-0 bottom-px z-10 flex w-8 items-center justify-center bg-sg-bg text-sg-text-secondary hover:text-sg-text'
   return (
     <div className={cn('relative', className)}>
@@ -70,6 +73,10 @@ export function PestanasDesplazables({
       ) : null}
       {rol === 'tablist' ? (
         <div ref={nav} role="tablist" aria-label={etiqueta} className={fila}>
+          {children}
+        </div>
+      ) : rol === 'grupo' ? (
+        <div ref={nav} className={fila}>
           {children}
         </div>
       ) : (

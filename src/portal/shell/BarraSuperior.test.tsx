@@ -6,10 +6,10 @@ import { pagina, registro } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ADMIN_PERMISOS, ADMINISTRACION } from '../../test/portal'
 
-// la barra superior del rediseño (DD-09, U-12): seis controles a la vista desde md (la marca, el proyecto, Buscar, Preguntar,
-// la campana y la cuenta). el idioma, el tema y la salida van en el menú de la cuenta, con el mismo comportamiento. jsdom no
-// evalúa las media queries: los controles solo del teléfono (el botón del menú y el chip del proyecto, md:hidden) se apartan
-// por su clase
+// la cabecera institucional de Civic Modern (design-system.md §5.2, DD-09): seis controles a la vista desde lg (la marca, la
+// búsqueda, el alcance, Preguntar, la campana y la cuenta) y la organización. el idioma, el tema y la salida van en el menú de la
+// cuenta, con el mismo comportamiento. jsdom no evalúa las media queries: el botón del menú, solo por debajo de lg (lg:hidden),
+// se aparta por su clase
 const P1 = registro('p1', { code: 'PRJ-01', name: 'Proyecto Ejemplo A' }, { state: 'active' })
 const CON_IA = { path: '/sgspe/ai/status', body: { enabled: true, providerAvailable: true, useCases: ['AI-05'] } }
 // la campana se dibuja si la bandeja de wasichai-notifications responde
@@ -38,11 +38,11 @@ afterEach(() => {
 // los controles de la barra en su orden, sin los del teléfono
 const controles = (barra: HTMLElement) =>
   Array.from(barra.querySelectorAll<HTMLElement>('a, button, select, input, [role="combobox"]')).filter(
-    (el, i, todos) => !el.closest('.md\\:hidden') && todos.indexOf(el) === i
+    (el, i, todos) => !el.closest('.lg\\:hidden') && todos.indexOf(el) === i
   )
 
 describe('barra superior', () => {
-  it('tiene seis controles: marca, proyecto, Buscar, Preguntar, campana y cuenta', async () => {
+  it('tiene seis controles: marca, Buscar, proyecto, Preguntar, campana y cuenta', async () => {
     fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [CON_IA, BANDEJA, ...PROYECTOS])
     const barra = await screen.findByRole('banner')
     await within(barra).findByRole('button', { name: 'Preguntar' })
@@ -50,7 +50,7 @@ describe('barra superior', () => {
     await within(barra).findByRole('button', { name: /^Avisos/ })
     const lista = controles(barra)
     expect(lista).toHaveLength(6)
-    const [marca, proyecto, buscar, preguntar, campana, cuenta] = lista
+    const [marca, buscar, proyecto, preguntar, campana, cuenta] = lista
     expect(marca).toHaveAccessibleName('SGSPE')
     expect(proyecto).toHaveAccessibleName('Proyecto')
     expect(buscar).toHaveAccessibleName(/^Buscar/)
@@ -61,6 +61,16 @@ describe('barra superior', () => {
     expect(within(barra).queryByRole('combobox', { name: 'Idioma' })).not.toBeInTheDocument()
     expect(within(barra).queryByRole('button', { name: /^Tema/ })).not.toBeInTheDocument()
     expect(within(barra).queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
+  })
+
+  // la organización de la cuenta, como la lee su menú (GET /organizations/current); sin el dato no se inventa
+  it('dice la organización desde xl, y sin ella no dibuja nada en su lugar', async () => {
+    fetch = abrirPortal('/', ADMINISTRACION, ADMIN_PERMISOS, [
+      { path: '/organizations/current', body: { id: 'o1', name: 'Minera Ejemplo S.A.', slug: 'ejemplo' } }
+    ])
+    const organizacion = await within(await screen.findByRole('banner')).findByText('Minera Ejemplo S.A.')
+    expect(organizacion.closest('p')).toHaveClass('hidden', 'xl:line-clamp-2')
+    expect(organizacion.closest('p')).toHaveTextContent('Organización: Minera Ejemplo S.A.')
   })
 
   it('el lema de la marca se oculta por debajo de 1536 px', async () => {
