@@ -1,4 +1,4 @@
-import type { Page, Route } from '@playwright/test'
+import { expect, type Page, type Route } from '@playwright/test'
 
 // la API de SGSPE simulada en el navegador: cada prueba abre una sesión y contesta /api/** desde estas tablas, con la
 // forma de wasichai (api.md §2). una ruta sin respuesta es un 404 problem+json, como el mockFetch de las pruebas unitarias
@@ -256,4 +256,35 @@ export async function prepararFichaDeCompromiso(page: Page): Promise<void> {
     if (!encontrada || route.request().method() !== 'GET') return route.fallback()
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(encontrada[1]) })
   })
+}
+
+// #116 (design-system §5.1): el selector de vistas no se desplaza ni corta ninguna vista en la pantalla abierta: los segmentos se
+// parten en filas dentro de su caja, la vista actual se ve entera y el radiogroup sigue respondiendo a End
+export async function selectorDeVistasSinDesborde(page: Page): Promise<void> {
+  const selector = page.getByRole('radiogroup').first()
+  await expect(selector).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  const medidas = await selector.evaluate((g) => {
+    const caja = g.getBoundingClientRect()
+    return {
+      scroll: g.scrollWidth,
+      cliente: g.clientWidth,
+      fuera: [...g.querySelectorAll('[role="radio"]')].filter((r) => {
+        const b = r.getBoundingClientRect()
+        return b.left < caja.left - 0.5 || b.right > caja.right + 0.5 || b.right > window.innerWidth
+      }).length
+    }
+  })
+  expect(medidas.scroll).toBeLessThanOrEqual(medidas.cliente)
+  expect(medidas.fuera).toBe(0)
+  // la actual, entera y a la vista (el selector puede quedar bajo las cifras: se lleva a la vista); End lleva a la última, que
+  // tampoco sale cortada
+  await selector.scrollIntoViewIfNeeded()
+  await expect(selector.getByRole('radio', { checked: true })).toBeInViewport({ ratio: 1 })
+  await selector.getByRole('radio', { checked: true }).focus()
+  await page.keyboard.press('End')
+  const ultima = selector.getByRole('radio').last()
+  await expect(ultima).toBeFocused()
+  await expect(ultima).toHaveAttribute('aria-checked', 'true')
+  await expect(ultima).toBeInViewport({ ratio: 1 })
 }

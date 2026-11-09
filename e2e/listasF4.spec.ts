@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { pagina, prepararApi, registro } from './api'
+import { pagina, prepararApi, registro, selectorDeVistasSinDesborde } from './api'
 
 // P-02 en las listas de QCS, Riesgos, alerta temprana y Programas (rediseño de UX, área 4.3b), en un navegador de verdad: lo que jsdom no ve porque
 // depende del CSS compilado. una sola fila de pestañas (las vistas van en el selector de la barra de filtros), la tabla sin
@@ -267,4 +267,11 @@ test.describe('a 390 px', () => {
     await expect(page.getByRole('list', { name: 'Aportes del alcance' }).getByRole('listitem').filter({ hasText: 'AP-001' })).toBeVisible()
     await expect(page.getByRole('table', { name: 'Aportes del alcance' })).toHaveCount(0)
   })
+
+  // #116: el selector de vistas de QCS y de Programas, sin desbordar (selectorDeVistasSinDesborde, api.ts)
+  for (const ruta of ['/projects/p1/attention', '/projects/p1/programs'])
+    test(`el selector de vistas de ${ruta} no desborda`, async ({ page }) => {
+      await page.goto(ruta)
+      await selectorDeVistasSinDesborde(page)
+    })
 })
