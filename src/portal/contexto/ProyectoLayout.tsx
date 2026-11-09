@@ -1,25 +1,23 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, cn } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, House, MapIcon, type LucideIcon } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
-import { Insignia } from '../componentes/Insignia'
-import { MigasDelProyecto, pestanaDeSegmento, ProveedorDeMigas } from '../componentes/Migas'
+import { pestanaDeSegmento } from '../componentes/Migas'
 import { useTituloDeDocumento } from '../componentes/Pagina'
 import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
 import { NS } from '../i18n'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
 import { LEE_PROPUESTAS } from '../shell/leePropuestas'
-import { estadoDe, guardaDe, useOferta, type ClaveDeSeccion, type Par } from '../shell/navTree'
+import { estadoDe, guardaDe, NAV_TREE, useOferta, type ClaveDeSeccion, type Par } from '../shell/navTree'
 import { seccionDeRuta } from '../shell/seccionActual'
-import { BarraDeContexto } from './BarraDeContexto'
 import { useConteosDelProyecto } from './conteos'
 import { useMisAsignaciones, useProyecto, vigenciaDeAsignacion } from './proyectos'
 
-// el ProjectLayout de screens.md §2: dentro de un proyecto, la barra de contexto y la sub-navegación de Project 360; por
-// debajo de lg pasa a una fila desplazable. con el alcance por proyecto (ADR-0029) solo llega aquí sin asignación quien lee
+// el ProjectLayout de screens.md §2: dentro de un proyecto, la navegación local de Project 360 (las migas y el sello del proyecto
+// van en la banda de contexto del shell, BarraDeContexto). con el alcance por proyecto (ADR-0029) solo llega aquí sin asignación quien lee
 // todos los proyectos (READ_ALL_PROJECTS): lee en solo lectura (design-system.md §6.5), salvo ADMIN, que no necesita asignación.
 // un proyecto que responde 404 no existe o no es de sus proyectos, sin distinguir (spec 4.4 §3.6)
 const PESTANAS = [
@@ -38,7 +36,7 @@ const PESTANAS = [
   'reports',
   'settings'
 ] as const
-type Pestana = (typeof PESTANAS)[number]
+export type Pestana = (typeof PESTANAS)[number]
 // la revisión de UX (decisión 2, ux-architecture.md §7.1): nueve pestañas a la vista y «Más» con las demás. Acuerdos no es
 // pestaña: su pestaña es Compromisos, y las dos páginas se ofrecen en el selector de su cabecera (PaginasDeCompromisos). una sola
 // fila de pestañas por pantalla (DD-03): las vistas de un módulo van en el selector de su lista, nunca en una segunda fila
@@ -62,36 +60,104 @@ const SECCION_DE_PESTANA: Partial<Record<Pestana, ClaveDeSeccion>> = {
 }
 const PERMISOS_DE_PESTANA: Partial<Record<Pestana, Par[][]>> = { agreements: LEE_ACUERDOS, 'ai-review': LEE_PROPUESTAS }
 
+// los íconos de la navegación local (design-system.md §5.2): los de las secciones del árbol, y el resumen y el mapa del proyecto
+// (se busca al dibujar: navTree y las pantallas se importan en ciclo con este módulo)
+const iconoDe = (p: Pestana): LucideIcon | undefined => {
+  if (p === 'overview') return House
+  if (p === 'map') return MapIcon
+  const clave = SECCION_DE_PESTANA[p]
+  return clave ? NAV_TREE.find((s) => s.clave === clave)?.icon : undefined
+}
+
+// las pestañas que la cuenta tiene en el proyecto y la marcada para la ruta: la navegación local y las migas de la banda de
+// contexto (BarraDeContexto) dicen la misma
+export function usePestanasDelProyecto(): { pestanas: Pestana[]; marcada: string } {
+  const oferta = useOferta()
+  const { pathname } = useLocation()
+  const pestanas = PESTANAS.filter((p) => {
+    const clave = SECCION_DE_PESTANA[p]
+    return !clave || estadoDe(guardaDe(clave, PERMISOS_DE_PESTANA[p]), oferta) === 'disponible'
+  })
+  // la ficha de una queja vive en /grievances/:id y su pestaña es la de QCS: se marca esa y las migas la nombran
+  const pestanaActual = pestanaDeSegmento(pathname.split('/')[3] ?? 'overview')
+  return { pestanas, marcada: contenedoraDe(pestanaActual, pestanas) ?? pestanaActual }
+}
+
+// una vista es pestaña propia si la cuenta no tiene la pestaña que la contiene (lee acuerdos pero no compromisos)
+function contenedoraDe(p: string, pestanas: readonly Pestana[]): Pestana | undefined {
+  const de = PESTANA_DE_VISTA[p]
+  return de && pestanas.includes(de) ? de : undefined
+}
+
 export function ProyectoLayout() {
   const { t } = useTranslation(NS)
   const { projectId } = useParams()
   const proyecto = useProyecto(projectId)
   const asignaciones = useMisAsignaciones()
   const escribe = useEscribeEnProyecto(projectId)
-  const oferta = useOferta()
   const { pathname } = useLocation()
-  const [registro, setRegistro] = useState<string | null>(null)
-  // la ficha de una queja vive en /grievances/:id y su pestaña es la de QCS: se marca esa y las migas la nombran
-  const pestanaActual = pestanaDeSegmento(pathname.split('/')[3] ?? 'overview')
+  const { pestanas, marcada } = usePestanasDelProyecto()
   const seccion = seccionDeRuta(pathname)
   // D7: la pestaña (o la sección de la ruta, si no es una pestaña) y el proyecto en el título del documento
-  useTituloDeDocumento(t(`contexto.pestanas.${pestanaActual}`, { defaultValue: '' }) || (seccion ? t(`secciones.${seccion}`) : ''), 1)
-  const pestanas = PESTANAS.filter((p) => {
-    const clave = SECCION_DE_PESTANA[p]
-    return !clave || estadoDe(guardaDe(clave, PERMISOS_DE_PESTANA[p]), oferta) === 'disponible'
-  })
-  const base = `/projects/${encodeURIComponent(projectId ?? '')}`
-  // una vista es pestaña propia si la cuenta no tiene la pestaña que la contiene (lee acuerdos pero no compromisos)
-  const contenedora = (p: string) => {
-    const de = PESTANA_DE_VISTA[p]
-    return de && pestanas.includes(de) ? de : undefined
-  }
-  const marcada = contenedora(pestanaActual) ?? pestanaActual
-  const visibles = pestanas.filter((p) => !EN_MAS.includes(p) && !contenedora(p))
+  useTituloDeDocumento(
+    t(`contexto.pestanas.${pestanaDeSegmento(pathname.split('/')[3] ?? 'overview')}`, { defaultValue: '' }) || (seccion ? t(`secciones.${seccion}`) : ''),
+    1
+  )
+  // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
+  if (proyecto.isError && !proyecto.data)
+    return (
+      <div className="space-y-3">
+        {esIlegible(proyecto.error) ? <NoEsDeSusProyectos /> : <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />}
+        <Link to="/projects" className="inline-block text-sm font-medium text-sg-primary-text">
+          {t('contexto.irAProyectos')}
+        </Link>
+      </div>
+    )
+  return (
+    // desde lg, la navegación local de 248 px pegada al borde izquierdo del contenido, a toda su altura (el shell da los márgenes
+    // de la página: aquí se recuperan para el panel)
+    <div className="flex flex-col gap-4 lg:-my-6 lg:-ml-8 lg:min-h-[calc(100%+3rem)] lg:flex-row lg:gap-0">
+      <NavegacionLocal projectId={projectId ?? ''} pestanas={pestanas} marcada={marcada} />
+      <div className="min-w-0 flex-1 space-y-4 lg:py-6 lg:pl-8">
+        {asignaciones.isSuccess && !escribe ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
+        <Outlet />
+      </div>
+    </div>
+  )
+}
+
+// la navegación local del proyecto (ux-architecture.md §7.1, design-system.md §5.2): una sola navegación con tres formas. desde
+// lg, una columna de 248 px con las nueve secciones, el rótulo «Más» con las otras cuatro y la leyenda del punto; en tableta
+// (md), una fila de pestañas de 48 px que se desplaza, con «Más» como desplegable que nombra la abierta si está ahí; en el
+// teléfono, un botón con la sección abierta que despliega la misma lista. cada entrada lleva el total del alcance y, si pide
+// acción, un punto danger con su número, dichos en la descripción del enlace: su nombre sigue siendo el de la sección
+const ENTRADA = cn(
+  'flex items-center gap-3 border-transparent whitespace-nowrap',
+  'h-10 border-l-4 px-4',
+  'md:h-12 md:gap-1.5 md:border-b-4 md:border-l-0 md:px-3',
+  'lg:h-10 lg:gap-3 lg:border-b-0 lg:border-l-4 lg:pr-4 lg:pl-5 in-data-[density=compact]:lg:h-9'
+)
+const ACTIVA = 'border-sg-primary bg-sg-primary-soft font-bold text-sg-primary-text md:bg-transparent lg:bg-sg-primary-soft'
+const REPOSO =
+  'font-medium text-sg-text hover:bg-sg-surface-hover md:text-sg-text-secondary md:hover:bg-transparent md:hover:text-sg-text lg:text-sg-text lg:hover:bg-sg-surface-hover'
+// las de «Más»: en tableta son las opciones de un desplegable
+const ENTRADA_DE_MAS = cn(
+  'flex h-10 items-center border-l-4 px-4 whitespace-nowrap',
+  'md:h-auto md:rounded-sg-sm md:border-l-0 md:px-2.5 md:py-1.5',
+  'lg:h-10 lg:rounded-none lg:border-l-4 lg:py-0 lg:pr-4 lg:pl-5 in-data-[density=compact]:lg:h-9'
+)
+
+function NavegacionLocal({ projectId, pestanas, marcada }: { projectId: string; pestanas: Pestana[]; marcada: string }) {
+  const { t } = useTranslation(NS)
+  const { pathname } = useLocation()
+  const [desplegada, setDesplegada] = useState(false)
+  const id = useId()
+  useEffect(() => setDesplegada(false), [pathname])
+  const base = `/projects/${encodeURIComponent(projectId)}`
+  const visibles = pestanas.filter((p) => !EN_MAS.includes(p) && !contenedoraDe(p, pestanas))
   const enMas = pestanas.filter((p) => EN_MAS.includes(p))
   const corto = (p: Pestana) => (p === 'attention' ? t('seccionesCortas.attention') : '')
   const conteos = useConteosDelProyecto(projectId, visibles)
-  const idConteo = useId()
   // el total y lo que pide acción, dichos en la descripción del enlace: su nombre sigue siendo el de la pestaña
   const describir = (p: Pestana) => {
     const c = conteos[p]
@@ -101,62 +167,89 @@ export function ProyectoLayout() {
     ]
     return partes.filter(Boolean).join(', ')
   }
-  // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
-  if (proyecto.isError && !proyecto.data)
-    return (
-      <div className="mx-auto max-w-[1440px] space-y-3">
-        {esIlegible(proyecto.error) ? <NoEsDeSusProyectos /> : <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />}
-        <Link to="/projects" className="inline-block text-sm font-medium text-sg-primary-text">
-          {t('contexto.irAProyectos')}
-        </Link>
-      </div>
-    )
+  const nombreDe = (p: string) => t(`contexto.pestanas.${p}`, { defaultValue: '' }) || p
   return (
-    <ProveedorDeMigas value={setRegistro}>
-      <div className="mx-auto max-w-[1440px] space-y-4">
-        <BarraDeContexto principal={<MigasDelProyecto pestana={marcada} registro={registro ?? undefined} />} />
-        <div className="flex items-end gap-1 border-b border-sg-border">
-          <PestanasDesplazables etiqueta={t('contexto.subnav')} className="min-w-0 flex-1 [&>nav]:border-b-0">
-            {visibles.map((p) => (
-              <Link
-                key={p}
-                to={`${base}/${p}`}
-                aria-current={p === marcada ? 'page' : undefined}
-                aria-label={corto(p) ? t(`contexto.pestanas.${p}`) : undefined}
-                aria-describedby={describir(p) ? `${idConteo}-${p}` : undefined}
-                title={corto(p) ? t(`contexto.pestanas.${p}`) : undefined}
-                className={cn(CLASE_DE_PESTANA, 'flex items-center gap-1.5', p === marcada ? ACTIVA : REPOSO)}
-              >
-                {corto(p) || t(`contexto.pestanas.${p}`)}
-                {conteos[p]?.total != null ? (
-                  <span aria-hidden className="text-sg-caption tabular-nums text-sg-text-muted">
-                    {conteos[p].total}
-                  </span>
-                ) : null}
-                <Insignia n={conteos[p]?.accion} id={`${idConteo}-${p}-accion`} descripcion="" />
-                {describir(p) ? (
-                  <span id={`${idConteo}-${p}`} hidden>
-                    {describir(p)}
-                  </span>
-                ) : null}
-              </Link>
-            ))}
+    <nav aria-label={t('contexto.subnav')} className="shrink-0 text-sg-body lg:w-62 lg:border-r lg:border-sg-border lg:bg-sg-surface lg:pt-4">
+      <div className="lg:sticky lg:top-0">
+        {/* el teléfono: la sección abierta, y la lista entera a pedido */}
+        <button
+          type="button"
+          aria-expanded={desplegada}
+          aria-controls={`${id}-secciones`}
+          onClick={() => setDesplegada((d) => !d)}
+          className="flex h-12 w-full items-center justify-between gap-2 rounded-sg-md border-2 border-sg-border-control bg-sg-surface px-4 text-sg-body font-semibold md:hidden"
+        >
+          <span className="truncate">{t('contexto.seccionAbierta', { seccion: nombreDe(marcada) })}</span>
+          <ChevronDown aria-hidden className={cn('size-5 shrink-0', desplegada && 'rotate-180')} />
+        </button>
+        <div
+          id={`${id}-secciones`}
+          className={cn(
+            'max-md:mt-2 max-md:rounded-sg-md max-md:border max-md:border-sg-border max-md:bg-sg-surface max-md:py-2',
+            'md:flex md:items-end md:border-b md:border-sg-border lg:block lg:border-b-0',
+            !desplegada && 'max-md:hidden'
+          )}
+        >
+          <PestanasDesplazables
+            etiqueta={t('contexto.subnav')}
+            rol="grupo"
+            className="min-w-0 md:flex-1"
+            filaClassName="flex flex-col md:flex-row md:gap-1 md:overflow-x-auto md:[scrollbar-width:none] lg:flex-col lg:gap-0 lg:overflow-visible"
+          >
+            {visibles.map((p) => {
+              const Icono = iconoDe(p)
+              const c = conteos[p]
+              return (
+                <Link
+                  key={p}
+                  to={`${base}/${p}`}
+                  aria-current={p === marcada ? 'page' : undefined}
+                  aria-label={corto(p) ? nombreDe(p) : undefined}
+                  aria-describedby={describir(p) ? `${id}-${p}` : undefined}
+                  title={corto(p) ? nombreDe(p) : undefined}
+                  className={cn(ENTRADA, p === marcada ? ACTIVA : REPOSO)}
+                >
+                  {Icono ? <Icono aria-hidden className="size-5 shrink-0 md:hidden lg:block" /> : null}
+                  <span className="min-w-0 truncate">{corto(p) || nombreDe(p)}</span>
+                  {c?.total != null ? (
+                    <span aria-hidden className="ml-auto text-sg-body-sm font-bold text-sg-text-secondary tabular-nums md:ml-0 lg:ml-auto">
+                      {c.total}
+                    </span>
+                  ) : null}
+                  {c?.accion ? (
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'inline-flex items-center gap-1 text-sg-body-sm font-extrabold text-sg-danger tabular-nums',
+                        c.total == null && 'ml-auto md:ml-0 lg:ml-auto'
+                      )}
+                    >
+                      <span className="size-2 rounded-full bg-sg-danger" />
+                      {c.accion}
+                    </span>
+                  ) : null}
+                  {describir(p) ? (
+                    <span id={`${id}-${p}`} hidden>
+                      {describir(p)}
+                    </span>
+                  ) : null}
+                </Link>
+              )
+            })}
           </PestanasDesplazables>
-          {enMas.length > 0 ? <MasPestanas base={base} pestanas={enMas} marcada={marcada} /> : null}
+          {enMas.length > 0 ? <MasSecciones base={base} pestanas={enMas} marcada={marcada} /> : null}
+          <p aria-hidden className="px-4 pt-4 pb-2 text-sg-caption text-sg-text-secondary md:hidden lg:block lg:px-5">
+            {t('contexto.leyenda')}
+          </p>
         </div>
-        {asignaciones.isSuccess && !escribe ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
-        <Outlet />
       </div>
-    </ProveedorDeMigas>
+    </nav>
   )
 }
 
-const CLASE_DE_PESTANA = 'whitespace-nowrap border-b-2 px-3 py-2 text-sm'
-const ACTIVA = 'border-sg-primary font-medium text-sg-primary-text'
-const REPOSO = 'border-transparent text-sg-text-secondary hover:text-sg-text'
-
-// «Más»: las pestañas que no van a la vista. si la abierta es una de ellas, el botón la nombra y queda marcado
-function MasPestanas({ base, pestanas, marcada }: { base: string; pestanas: readonly Pestana[]; marcada: string }) {
+// «Más»: Tareas, Bandeja de IA, Reportes y Equipo y parámetros. en la columna y en el teléfono, un rótulo y su lista; en tableta,
+// un desplegable cuyo botón nombra la abierta y queda marcado si es una de ellas
+function MasSecciones({ base, pestanas, marcada }: { base: string; pestanas: readonly Pestana[]; marcada: string }) {
   const { t } = useTranslation(NS)
   const [abierto, setAbierto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
@@ -175,9 +268,9 @@ function MasPestanas({ base, pestanas, marcada }: { base: string; pestanas: read
   return (
     <div
       ref={raiz}
-      className="relative shrink-0"
+      className="relative md:shrink-0 lg:mt-2"
       onKeyDown={(e) => {
-        if (e.key !== 'Escape') return
+        if (e.key !== 'Escape' || !abierto) return
         setAbierto(false)
         boton.current?.focus()
       }}
@@ -186,38 +279,46 @@ function MasPestanas({ base, pestanas, marcada }: { base: string; pestanas: read
         ref={boton}
         type="button"
         aria-expanded={abierto}
-        aria-controls={abierto ? id : undefined}
+        aria-controls={`${id}-mas`}
         aria-label={nombre}
         aria-current={abierta ? 'page' : undefined}
         onClick={() => setAbierto((a) => !a)}
-        className={cn(CLASE_DE_PESTANA, 'flex items-center gap-1', abierta ? ACTIVA : REPOSO)}
+        className={cn(ENTRADA, 'hidden md:flex lg:hidden', abierta ? ACTIVA : REPOSO)}
       >
         {abierta ? t(`contexto.pestanas.${abierta}`) : t('shell.mas')}
         <ChevronDown aria-hidden className="size-3.5" />
       </button>
-      {abierto ? (
-        <div
-          id={id}
-          role="group"
-          aria-label={t('contexto.masPestanas')}
-          className="absolute top-full right-0 z-30 mt-1 flex min-w-48 flex-col rounded-sg-md border border-sg-border bg-sg-surface-raised p-1 shadow-sg-md"
-        >
-          {pestanas.map((p) => (
-            <Link
-              key={p}
-              to={`${base}/${p}`}
-              onClick={() => setAbierto(false)}
-              aria-current={p === marcada ? 'page' : undefined}
-              className={cn(
-                'rounded-sg-sm px-2.5 py-1.5 text-sm',
-                p === marcada ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : 'text-sg-text-secondary hover:bg-sg-surface-hover'
-              )}
-            >
-              {t(`contexto.pestanas.${p}`)}
-            </Link>
-          ))}
-        </div>
-      ) : null}
+      <p aria-hidden className="px-4 pt-3 pb-1 text-sg-overline tracking-wide text-sg-text-secondary uppercase md:hidden lg:block lg:px-5">
+        {t('contexto.mas')}
+      </p>
+      <div
+        id={`${id}-mas`}
+        role="group"
+        aria-label={t('contexto.masPestanas')}
+        className={cn(
+          'flex flex-col',
+          abierto
+            ? 'md:absolute md:top-full md:right-0 md:z-30 md:mt-1 md:min-w-48 md:rounded-sg-md md:border-2 md:border-sg-border-strong md:bg-sg-surface-raised md:p-1 md:shadow-sg-overlay lg:static lg:mt-0 lg:min-w-0 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none'
+            : 'md:hidden lg:flex'
+        )}
+      >
+        {pestanas.map((p) => (
+          <Link
+            key={p}
+            to={`${base}/${p}`}
+            onClick={() => setAbierto(false)}
+            aria-current={p === marcada ? 'page' : undefined}
+            className={cn(
+              ENTRADA_DE_MAS,
+              p === marcada
+                ? 'border-sg-primary bg-sg-primary-soft font-bold text-sg-primary-text'
+                : 'border-transparent font-medium text-sg-text hover:bg-sg-surface-hover'
+            )}
+          >
+            {t(`contexto.pestanas.${p}`)}
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }

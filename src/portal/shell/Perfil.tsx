@@ -1,5 +1,5 @@
 import { useAuth } from '@wasichai/core'
-import { ChevronDown, Keyboard, LogOut } from 'lucide-react'
+import { Keyboard, LogOut } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
@@ -44,7 +44,16 @@ export function DatosDeLaCuenta() {
   )
 }
 
-// el botón con el nombre y, debajo, los rótulos de los roles; abre la cuenta con el idioma, el tema, la densidad y la salida (DD-09: nada de
+// las iniciales del avatar: las de las dos primeras palabras del nombre
+export const iniciales = (nombre: string): string =>
+  nombre
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p.charAt(0).toLocaleUpperCase('es'))
+    .join('')
+
+// el avatar de la cuenta (el nombre y los rótulos de los roles, en title); abre la cuenta con el idioma, el tema, la densidad y la salida (DD-09: nada de
 // eso va suelto en la barra). Escape o un clic fuera lo cierran; el Escape que ya atendió el menú de tema (preventDefault) solo
 // cierra ese menú
 export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
@@ -66,35 +75,34 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
   return (
     <div
       ref={raiz}
-      className="relative hidden sm:block"
+      className="relative"
       onKeyDown={(e) => {
         if (e.key !== 'Escape' || e.defaultPrevented) return
         setAbierto(false)
         boton.current?.focus()
       }}
     >
+      {/* el avatar de 36 px con las iniciales (design-system.md §5.2); el nombre y los roles por su rótulo, en title y en el menú */}
       <button
         ref={boton}
         type="button"
         aria-expanded={abierto}
         aria-controls={abierto ? id : undefined}
         aria-label={t('inicio.cuenta')}
-        title={user?.email}
+        title={[user?.displayName, rotulosDeRol].filter(Boolean).join(' · ') || user?.email}
         onClick={() => setAbierto((a) => !a)}
-        className="flex max-w-56 items-center gap-1.5 rounded-sg-md px-1.5 py-1 text-right leading-tight hover:bg-sg-surface-hover"
+        className="flex size-12 items-center justify-center rounded-full md:size-10"
       >
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate text-sg-body-sm text-sg-text">{user?.displayName}</span>
-          {rotulosDeRol ? <span className="truncate text-sg-caption text-sg-text-muted">{rotulosDeRol}</span> : null}
+        <span aria-hidden className="flex size-9 items-center justify-center rounded-full bg-sg-surface text-sg-body-sm font-extrabold text-sg-primary-text">
+          {iniciales(user?.displayName ?? user?.email ?? '')}
         </span>
-        <ChevronDown aria-hidden className="size-3.5 shrink-0 text-sg-text-muted" />
       </button>
       {abierto ? (
         <div
           id={id}
           role="group"
           aria-label={t('inicio.cuenta')}
-          className="absolute top-full right-0 z-30 mt-1 w-80 rounded-sg-md border border-sg-border bg-sg-surface-raised p-4 text-left shadow-sg-md"
+          className="absolute top-full right-0 z-30 mt-1 w-80 max-w-[calc(100vw-1rem)] rounded-sg-md border-2 border-sg-border-strong bg-sg-surface-raised p-4 text-left text-sg-text shadow-sg-overlay"
         >
           <DatosDeLaCuenta />
           {/* las preferencias: cada control ya tiene su nombre accesible, el rótulo visible es para la vista */}

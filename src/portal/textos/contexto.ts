@@ -21,6 +21,19 @@ export const ES_CONTEXTO = {
   territorio: 'Territorio: {{nombre}}',
   quitarTerritorio: 'Quitar el filtro de territorio',
   rastro: 'Recorrido',
+  // la banda de contexto (design-system.md §5.2): el rastro como «‹ Volver a …», el recorrido entero a pedido y el sello de alcance
+  volverA: 'Volver a {{paso}}',
+  verRecorrido_one: 'Recorrido ({{count}} paso)',
+  verRecorrido_other: 'Recorrido ({{count}} pasos)',
+  alcance: 'Alcance',
+  alcanceGlobal: 'Alcance: {{alcance}} ({{n}})',
+  alcanceSinConteo: 'Alcance: {{alcance}}',
+  selloProyecto: 'Proyecto · {{codigo}}',
+  selloTerritorio: 'Territorio · {{lugar}}',
+  // la navegación local del proyecto (248 px): el grupo «Más», la leyenda del punto y el selector del teléfono
+  mas: 'Más',
+  leyenda: '● = vencidos o críticos',
+  seccionAbierta: 'Sección del proyecto: {{seccion}}',
   // el origen de una ficha abierta desde una lista (flujo F-C): volver a ella y pasar a la anterior o la siguiente
   origen: {
     volver: 'Volver a {{lista}}',
@@ -77,6 +90,17 @@ export const EN_CONTEXTO: typeof ES_CONTEXTO = {
   territorio: 'Territory: {{nombre}}',
   quitarTerritorio: 'Remove the territory filter',
   rastro: 'Trail',
+  volverA: 'Back to {{paso}}',
+  verRecorrido_one: 'Trail ({{count}} step)',
+  verRecorrido_other: 'Trail ({{count}} steps)',
+  alcance: 'Scope',
+  alcanceGlobal: 'Scope: {{alcance}} ({{n}})',
+  alcanceSinConteo: 'Scope: {{alcance}}',
+  selloProyecto: 'Project · {{codigo}}',
+  selloTerritorio: 'Territory · {{lugar}}',
+  mas: 'More',
+  leyenda: '● = overdue or critical',
+  seccionAbierta: 'Project section: {{seccion}}',
   origen: {
     volver: 'Back to {{lista}}',
     volverConConteo: 'Back to {{lista}} ({{n}})',

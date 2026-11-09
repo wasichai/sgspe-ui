@@ -61,7 +61,7 @@ describe('rutas de F6', () => {
   it('sin leer el territorio, la sección no se ofrece ni abre sus rutas de F6', async () => {
     fetch = abrirPortal('/territory/quality', ANALISTA_SIG, permisos({ project: ['READ'] }), deSig())
     expect(await screen.findByRole('navigation', { name: 'Secciones' })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Territorio' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Territorio', hidden: true })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Calidad de datos', level: 1 })).not.toBeInTheDocument()
   })
 })

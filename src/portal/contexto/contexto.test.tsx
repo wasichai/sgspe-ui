@@ -1,6 +1,7 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
+import type { ReactNode } from 'react'
 import { Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
@@ -8,9 +9,9 @@ import { ADMIN_PERMISOS, permisos, RELACIONISTA } from '../../test/portal'
 import { BarraDeContexto } from './BarraDeContexto'
 import { useLeeTodosLosProyectos, useMisAsignaciones, useProyecto } from './proyectos'
 import { ProyectoLayout } from './ProyectoLayout'
-import { useMigaDelRegistro } from '../componentes/Migas'
+import { ProveedorDeMigas, useMigaDelRegistro } from '../componentes/Migas'
 import { conBusquedaQueSeConserva, filtroDeTerritorio, rutaEquivalente } from './rutas'
-import { ChipDeProyecto, SelectorDeProyecto } from './SelectorDeProyecto'
+import { SelectorDeProyecto } from './SelectorDeProyecto'
 
 let fetch: FetchMock | null = null
 beforeEach(() => localStorage.clear())
@@ -221,6 +222,11 @@ describe('selector de proyecto', () => {
 
 // A24 de la segunda pasada, perdido al integrar el combobox y recuperado en la tercera: el territorio es del tenant y el
 // proyecto es su lente (ux-architecture.md §6.1). en /territory/** el selector lee y escribe ?project= sin salir de la pantalla
+function cleanupYMontar(ruta: string) {
+  cleanup()
+  montar(<BarraDeContexto />, { ruta, permisos: LEE_PROYECTOS })
+}
+
 describe('selector de proyecto en Territorio', () => {
   it('es el lente del mapa: dice «Todo el territorio» y escribe ?project= sin salir de la pantalla', async () => {
     fetch = mockFetch([
@@ -248,17 +254,26 @@ describe('selector de proyecto en Territorio', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto' })).toHaveValue('PRJ-02 · Qorihuasi'))
   })
 
-  it('en el teléfono, el chip dice el lente', async () => {
-    fetch = mockFetch([
-      { path: '/objects/project/records', body: pagina([P1, P2]) },
-      { path: '/objects/project_assignment/records', body: pagina([MI_ASIGNACION]) }
-    ])
-    montar(<ChipDeProyecto alAbrir={() => {}} />, { ruta: '/territory', permisos: LEE_PROYECTOS })
-    expect(await screen.findByRole('button', { name: 'Proyecto: Todo el territorio. Cambiar de proyecto' })).toBeInTheDocument()
+  // el chip del teléfono ya no existe: la banda de contexto, visible en todo ancho, dice el lente con su sello
+  it('el sello de la banda dice el lente: todo el territorio o el código del proyecto', async () => {
+    fetch = mockFetch([{ path: '/objects/project/records/p2', body: P2 }])
+    montar(<BarraDeContexto />, { ruta: '/territory', permisos: LEE_PROYECTOS })
+    const contexto = screen.getByRole('group', { name: 'Contexto' })
+    expect(within(contexto).getByText('Territorio · Todo el territorio')).toBeInTheDocument()
+    cleanupYMontar('/territory/communities/c1?project=p2')
+    expect(await within(screen.getByRole('group', { name: 'Contexto' })).findByText('Territorio · PRJ-02')).toBeInTheDocument()
   })
 })
 
+// las secciones de la navegación local que no van bajo «Más»
+const aLaVista = (subnav: HTMLElement) =>
+  within(subnav)
+    .getAllByRole('link')
+    .filter((a) => !a.closest('[role="group"]'))
+
 describe('barra de contexto y Project 360', () => {
+  // la banda de contexto: las migas con el proyecto y, a la derecha, el sello «Proyecto · código» con el estado del proyecto al
+  // lado (DD-30, fuera de las migas) y el chip de territorio
   it('muestra el proyecto con su estado y quita el chip de territorio sin cambiar de pantalla', async () => {
     fetch = mockFetch([
       { path: '/objects/project/records/p1', body: P1 },
@@ -266,9 +281,13 @@ describe('barra de contexto y Project 360', () => {
       { path: '/objects/community/records/c1', body: registro('c1', { name: 'CC Tunas Pampa' }) }
     ])
     montar(<BarraDeContexto />, { ruta: '/projects/p1/stakeholders?territory=community:c1' })
-    expect(await screen.findByText('PRJ-01 · Pukaqaqa')).toBeInTheDocument()
-    expect(await screen.findByText('Activo')).toBeInTheDocument()
-    expect(await screen.findByText('Territorio: Comunidad CC Tunas Pampa')).toBeInTheDocument()
+    expect(await within(screen.getByRole('navigation', { name: 'Ubicación' })).findByRole('link', { name: 'PRJ-01 · Pukaqaqa' })).toBeInTheDocument()
+    const contexto = screen.getByRole('group', { name: 'Contexto' })
+    expect(within(contexto).getByText('Proyecto · PRJ-01')).toBeInTheDocument()
+    expect(await within(contexto).findByText('Activo')).toBeInTheDocument()
+    expect(within(contexto).getByText('Estado del proyecto:')).toHaveClass('sr-only')
+    expect(screen.getByRole('navigation', { name: 'Ubicación' })).not.toHaveTextContent('Activo')
+    expect(await within(contexto).findByText('Territorio: Comunidad CC Tunas Pampa')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Quitar el filtro de territorio' }))
     expect(ubicacion.actual).toBe('/projects/p1/stakeholders')
   })
@@ -285,7 +304,14 @@ describe('barra de contexto y Project 360', () => {
       </>
     )
   }
-  const LAYOUT = (
+  // la banda de contexto vive en el shell, fuera de la ruta del proyecto: se monta como allí
+  const enElShell = (rutas: ReactNode) => (
+    <ProveedorDeMigas>
+      <BarraDeContexto />
+      {rutas}
+    </ProveedorDeMigas>
+  )
+  const LAYOUT = enElShell(
     <Routes>
       <Route path="/projects/:projectId" element={<ProyectoLayout />}>
         <Route path="overview" element={<Sonda />} />
@@ -340,11 +366,13 @@ describe('barra de contexto y Project 360', () => {
       return <p>Ficha</p>
     }
     montar(
-      <Routes>
-        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
-          <Route path="commitments/:commitmentId" element={<Ficha />} />
-        </Route>
-      </Routes>,
+      enElShell(
+        <Routes>
+          <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+            <Route path="commitments/:commitmentId" element={<Ficha />} />
+          </Route>
+        </Routes>
+      ),
       { ruta: '/projects/p1/commitments/c1', permisos: ADMIN_PERMISOS }
     )
     const migas = await screen.findByRole('navigation', { name: 'Ubicación' })
@@ -370,11 +398,13 @@ describe('barra de contexto y Project 360', () => {
       return <p>Ficha</p>
     }
     montar(
-      <Routes>
-        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
-          <Route path="*" element={<Ficha />} />
-        </Route>
-      </Routes>,
+      enElShell(
+        <Routes>
+          <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+            <Route path="*" element={<Ficha />} />
+          </Route>
+        </Routes>
+      ),
       { ruta: `/projects/p1/${ruta}`, permisos: ADMIN_PERMISOS }
     )
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
@@ -394,19 +424,17 @@ describe('barra de contexto y Project 360', () => {
   it('nueve pestañas y «Más» con Tareas, Revisión de IA, Reportes y Equipo; la de «Más» abierta se marca en el botón', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(
-      <Routes>
-        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
-          <Route path="*" element={null} />
-        </Route>
-      </Routes>,
+      enElShell(
+        <Routes>
+          <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+            <Route path="*" element={null} />
+          </Route>
+        </Routes>
+      ),
       { ruta: '/projects/p1/overview', permisos: ADMIN_PERMISOS }
     )
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
-    expect(
-      within(subnav)
-        .getAllByRole('link')
-        .map((a) => a.getAttribute('aria-label') ?? a.textContent)
-    ).toEqual([
+    expect(aLaVista(subnav).map((a) => a.getAttribute('aria-label') ?? a.textContent)).toEqual([
       'Resumen',
       'Mapa',
       'Grupos de interés',
@@ -417,9 +445,14 @@ describe('barra de contexto y Project 360', () => {
       'Programas sociales',
       'Documentos'
     ])
+    // en la columna de escritorio, «Más» es un rótulo con su lista; en tableta, un desplegable (jsdom no evalúa las media
+    // queries: se prueba el botón y la clase de la lista)
     const mas = screen.getByRole('button', { name: 'Más secciones del proyecto' })
-    await userEvent.click(mas)
     const grupo = screen.getByRole('group', { name: 'Más secciones del proyecto' })
+    expect(grupo).toHaveClass('md:hidden', 'lg:flex')
+    await userEvent.click(mas)
+    expect(mas).toHaveAttribute('aria-expanded', 'true')
+    expect(grupo).not.toHaveClass('md:hidden')
     expect(
       within(grupo)
         .getAllByRole('link')
@@ -516,12 +549,14 @@ describe('barra de contexto y Project 360', () => {
   it('una sola fila de pestañas: en Acuerdos queda marcada Compromisos y no hay una segunda fila de vistas', async () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(
-      <Routes>
-        <Route path="/projects/:projectId" element={<ProyectoLayout />}>
-          <Route path="agreements" element={<p>Acuerdos</p>} />
-          <Route path="commitments" element={<p>Compromisos</p>} />
-        </Route>
-      </Routes>,
+      enElShell(
+        <Routes>
+          <Route path="/projects/:projectId" element={<ProyectoLayout />}>
+            <Route path="agreements" element={<p>Acuerdos</p>} />
+            <Route path="commitments" element={<p>Compromisos</p>} />
+          </Route>
+        </Routes>
+      ),
       { ruta: '/projects/p1/agreements', permisos: ADMIN_PERMISOS }
     )
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
@@ -537,11 +572,7 @@ describe('barra de contexto y Project 360', () => {
     fetch = mockFetch([...RUTAS_DEL_PROYECTO, { path: '/objects/project_assignment/records', body: pagina([]) }])
     montar(LAYOUT, { ruta: '/projects/p1/overview', permisos: permisos({ project: ['READ'] }) })
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
-    expect(
-      within(subnav)
-        .getAllByRole('link')
-        .map((a) => a.textContent)
-    ).toEqual(['Resumen', 'Mapa'])
+    expect(aLaVista(subnav).map((a) => a.textContent)).toEqual(['Resumen', 'Mapa'])
   })
 
   it('con los permisos de cada sección, sus pestañas (unas a la vista y otras en «Más»)', async () => {
@@ -552,7 +583,12 @@ describe('barra de contexto y Project 360', () => {
     })
     const subnav = await screen.findByRole('navigation', { name: 'Secciones del proyecto' })
     // Resumen, Mapa, Grupos de interés y Relacionamiento a la vista; Reportes y Equipo en «Más»
-    expect(within(subnav).getAllByRole('link')).toHaveLength(4)
+    expect(aLaVista(subnav)).toHaveLength(4)
+    expect(
+      within(screen.getByRole('group', { name: 'Más secciones del proyecto' }))
+        .getAllByRole('link')
+        .map((a) => a.textContent)
+    ).toEqual(['Reportes', 'Equipo y parámetros'])
   })
 
   // con el alcance por proyecto, un proyecto ajeno responde 404 como uno inexistente (spec 4.4 §3.6): no se distingue y

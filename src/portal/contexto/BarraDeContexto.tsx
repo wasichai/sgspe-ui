@@ -1,45 +1,69 @@
-import { X } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useAuth } from '@wasichai/core'
+import { cn } from '@wasichai/ui'
+import { FolderKanban, MapPin, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
+import { MigasDelProyecto, MigasGlobales, useRegistroDeLasMigas } from '../componentes/Migas'
 import { atributo, useRegistro } from '../datos/registros'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { nombreDeProyecto, useProyecto } from './proyectos'
+import { usePestanasDelProyecto } from './ProyectoLayout'
+import { useLeeTodosLosProyectos, useProyecto, useProyectos } from './proyectos'
+import { Rastro } from './Rastro'
+import { esTerritorio, useProyectoDeLaBarra } from './SelectorDeProyecto'
 import { OBJETO_DE_TERRITORIO } from './rutas'
 
-// la barra de contexto de ux-architecture.md §8.1: el proyecto con su estado y el chip de territorio; quitar el chip
-// devuelve el proyecto entero sin cambiar de pantalla. con «principal» (las migas de ProyectoLayout, revisión de UX) dibuja eso
-// en lugar del nombre del proyecto, que ya va en las migas con su estado: tras el último paso, el estado se leía como el del
-// registro abierto (tercera pasada de UX)
-export function BarraDeContexto({ principal }: { principal?: ReactNode }) {
+// la banda de contexto de Civic Modern (ux-architecture.md §7.1 y §8.1, design-system.md §5.2): la única capa de orientación,
+// bajo la navegación principal. a la izquierda, el rastro como «‹ Volver a …» (Rastro) y las migas estructurales (dónde vive lo
+// que se ve: MigasDelProyecto dentro de un proyecto, MigasGlobales fuera); a la derecha, el contexto: el sello de alcance
+// («Alcance: Todos mis proyectos (N)», «Proyecto · CÓDIGO» con el estado del proyecto o, en Territorio, «Territorio · …» con
+// la banda en territory-soft) y el chip de territorio de la URL (?territory=), que se quita sin cambiar de pantalla
+export function BarraDeContexto() {
+  const { scope, territory } = useContextFilters()
+  const { pathname } = useLocation()
+  const registro = useRegistroDeLasMigas() ?? undefined
+  const territorial = esTerritorio(pathname) || territory !== null
+  return (
+    <div
+      className={cn(
+        'flex min-h-11 shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2 md:px-6 lg:px-8',
+        territorial ? 'border-b-2 border-sg-territory-border bg-sg-territory-soft' : 'border-b border-sg-border bg-sg-bg'
+      )}
+    >
+      <Rastro />
+      <div className="min-w-0 flex-1">{scope.kind === 'project' ? <MigasEnElProyecto registro={registro} /> : <MigasGlobales registro={registro} />}</div>
+      <Contexto />
+    </div>
+  )
+}
+
+// en Acuerdos se marca Compromisos, como en la navegación local: las migas dicen la misma pestaña
+function MigasEnElProyecto({ registro }: { registro?: string }) {
+  const { marcada } = usePestanasDelProyecto()
+  return <MigasDelProyecto pestana={marcada} registro={registro} />
+}
+
+const SELLO = 'inline-flex min-h-7 items-center gap-1.5 rounded-sg-md border px-2.5 text-sg-body-sm font-semibold whitespace-nowrap'
+
+function Contexto() {
   const { t } = useTranslation(NS)
   const { scope, territory } = useContextFilters()
-  const proyecto = useProyecto(scope.kind === 'project' ? scope.projectId : undefined)
-  const lugar = useRegistro(territory ? OBJETO_DE_TERRITORIO[territory.kind] : 'locality', territory?.id)
+  const { pathname } = useLocation()
   const [busqueda, fijar] = useSearchParams()
-  if (scope.kind !== 'project' && !territory) return null
+  const lugar = useRegistro(territory ? OBJETO_DE_TERRITORIO[territory.kind] : 'locality', territory?.id)
   const nombreDelLugar = lugar.data ? String(atributo(lugar.data, 'name') ?? atributo(lugar.data, 'area_type') ?? territory?.id) : (territory?.id ?? '')
   return (
-    <nav aria-label={t('contexto.contexto')} className="flex flex-wrap items-center gap-3 text-sm">
-      {proyecto.data ? (
-        <span className="flex items-center gap-2">
-          {principal ?? (
-            <>
-              <span className="font-medium text-sg-text">{nombreDeProyecto(proyecto.data)}</span>
-              <EstadoChip objeto="project" estado={proyecto.data.state} />
-            </>
-          )}
-        </span>
-      ) : null}
+    <div role="group" aria-label={t('contexto.contexto')} className="flex flex-wrap items-center gap-2">
+      {esTerritorio(pathname) ? <SelloDeTerritorio /> : scope.kind === 'project' ? <SelloDeProyecto projectId={scope.projectId} /> : <SelloGlobal />}
       {territory ? (
-        <span className="inline-flex items-center gap-1 rounded-sg-sm border border-sg-territory-border bg-sg-territory-soft px-2 py-0.5 text-sg-territory">
+        <span className={cn(SELLO, 'border-sg-territory-border bg-sg-territory-soft text-sg-territory')}>
+          <MapPin aria-hidden className="size-4 shrink-0" />
           {t('contexto.territorio', { nombre: `${t(`contexto.tipos.${territory.kind}`)} ${nombreDelLugar}` })}
-          {/* un objetivo de 24 px como mínimo (WCAG 2.5.8): el ícono solo medía 12 */}
+          {/* un objetivo de 24 px como mínimo (WCAG 2.5.8) */}
           <button
             type="button"
-            className="-my-1 -mr-1 inline-flex size-6 items-center justify-center rounded-sg-sm hover:bg-sg-surface-hover"
+            className="-mr-1.5 inline-flex size-6 items-center justify-center rounded-sg-sm hover:bg-sg-surface-hover"
             aria-label={t('contexto.quitarTerritorio')}
             onClick={() => {
               const siguiente = new URLSearchParams(busqueda)
@@ -47,10 +71,67 @@ export function BarraDeContexto({ principal }: { principal?: ReactNode }) {
               fijar(siguiente)
             }}
           >
-            <X aria-hidden className="size-3" />
+            <X aria-hidden className="size-3.5" />
           </button>
         </span>
       ) : null}
-    </nav>
+    </div>
+  )
+}
+
+// «Alcance: Todos mis proyectos (N)»: los proyectos que la cuenta lee, ya acotados por el servidor (ADR-0029). quien lee todos
+// los proyectos ve «Todos los proyectos». sin READ sobre project no hay alcance que decir
+function SelloGlobal() {
+  const { can } = useAuth()
+  return can('project', 'READ') ? <AlcanceGlobal /> : null
+}
+
+function AlcanceGlobal() {
+  const { t } = useTranslation(NS)
+  const leeTodo = useLeeTodosLosProyectos()
+  const proyectos = useProyectos()
+  const alcance = leeTodo ? t('contexto.todosLosProyectos') : t('contexto.todos')
+  const n = proyectos.data?.length
+  return (
+    <span className={cn(SELLO, 'border-sg-border-strong bg-sg-surface text-sg-text')}>
+      <FolderKanban aria-hidden className="size-4 shrink-0" />
+      {n === undefined ? t('contexto.alcanceSinConteo', { alcance }) : t('contexto.alcanceGlobal', { alcance, n })}
+    </span>
+  )
+}
+
+// «Proyecto · CÓDIGO» con el estado del proyecto al lado (DD-30: el estado va junto al proyecto, nunca tras el último paso de
+// las migas, donde se leía como el del registro abierto)
+function SelloDeProyecto({ projectId }: { projectId: string }) {
+  const { t } = useTranslation(NS)
+  const proyecto = useProyecto(projectId)
+  const codigo = (proyecto.data ? String(atributo(proyecto.data, 'code') ?? '') : '') || projectId
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <span className={cn(SELLO, 'border-sg-primary bg-sg-primary-soft text-sg-primary-text')}>
+        <FolderKanban aria-hidden className="size-4 shrink-0" />
+        {t('contexto.selloProyecto', { codigo })}
+      </span>
+      {proyecto.data?.state ? (
+        <span className="inline-flex items-center gap-1">
+          <span className="sr-only">{t('contexto.estadoDelProyecto')}</span>
+          <EstadoChip objeto="project" estado={proyecto.data.state} />
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+// en Territorio, el lente del mapa: «Territorio · CÓDIGO» con el proyecto de ?project= o «Territorio · Todo el territorio»
+function SelloDeTerritorio() {
+  const { t } = useTranslation(NS)
+  const elegido = useProyectoDeLaBarra()
+  const proyecto = useProyecto(elegido || undefined)
+  const lugar = elegido ? (proyecto.data ? String(atributo(proyecto.data, 'code') ?? '') : '') || elegido : t('sig.todosLosLugares')
+  return (
+    <span className={cn(SELLO, 'border-sg-territory-border bg-sg-territory-soft text-sg-territory')}>
+      <MapPin aria-hidden className="size-4 shrink-0" />
+      {t('contexto.selloTerritorio', { lugar })}
+    </span>
   )
 }

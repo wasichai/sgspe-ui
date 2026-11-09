@@ -54,8 +54,8 @@ describe('rutas de F4', () => {
     // la gestión de quejas lee los riesgos (security.md §7.6): la pestaña Riesgos lleva al registro del proyecto
     expect(within(pestanas).getByRole('link', { name: 'Riesgos' })).toHaveAttribute('href', '/projects/p1/risks')
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })
-    // en la barra lateral, por su nombre largo (DD-10); la sigla queda en la pestaña
-    expect(within(secciones).getByRole('link', { name: 'Quejas y solicitudes' })).toBeInTheDocument()
+    // en la navegación principal (dentro del desplegable de su bloque), por su nombre largo (DD-10); la sigla queda en la pestaña
+    expect(within(secciones).getByRole('link', { name: 'Quejas y solicitudes', hidden: true })).toBeInTheDocument()
   })
 
   it('la ficha de una queja vive bajo su proyecto', async () => {
@@ -154,19 +154,19 @@ describe('rutas de F4', () => {
     fetch = abrirPortal('/attention', GESTOR_DE_RIESGOS, permisos({ project: ['READ'], social_risk: ['READ'] }), deRiesgos())
     expect(await screen.findByRole('heading', { name: 'No puede abrir «Quejas, consultas y solicitudes»' })).toBeInTheDocument()
     const secciones = screen.getByRole('navigation', { name: 'Secciones' })
-    expect(within(secciones).queryByRole('link', { name: 'Quejas y solicitudes' })).not.toBeInTheDocument()
-    expect(within(secciones).getByRole('link', { name: 'Riesgos' })).toBeInTheDocument()
+    expect(within(secciones).queryByRole('link', { name: 'Quejas y solicitudes', hidden: true })).not.toBeInTheDocument()
+    expect(within(secciones).getByRole('link', { name: 'Riesgos', hidden: true })).toBeInTheDocument()
   })
 
   it('Reportes se ofrece con EXPORT sobre los riesgos o sobre las tres QCS', async () => {
     fetch = abrirPortal('/projects/p1/attention', GESTORA_DE_QUEJAS, EQUIPO_DE_QUEJAS, deQuejas())
     expect(await screen.findByRole('heading', { name: 'Quejas, consultas y solicitudes', level: 1 })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Reportes' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Reportes', hidden: true })).toBeInTheDocument()
     cleanup()
     fetch!.restore()
     fetch = abrirPortal('/risks', GESTOR_DE_RIESGOS, permisos({ project: ['READ'], social_risk: ['READ', 'EXPORT'] }), deRiesgos())
     expect(await screen.findByRole('heading', { name: 'Riesgos', level: 1 })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Reportes' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Reportes', hidden: true })).toBeInTheDocument()
   })
 
   it.each([

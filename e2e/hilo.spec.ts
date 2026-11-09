@@ -13,12 +13,13 @@ test('del mapa territorial a la interacción, con el chip de territorio y el ras
   await lugares.getByRole('link', { name: 'CC Tunas Pampa' }).click()
   await expect(page).toHaveURL(/\/territory\/communities\/c1\?project=p1$/)
   await expect(page.getByRole('heading', { name: 'CC Tunas Pampa', level: 1 })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Recorrido' }).getByRole('link', { name: 'Mapa territorial' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Recorrido' }).getByRole('link', { name: 'Volver a Mapa territorial' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Trabajar en el proyecto con este lugar' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/stakeholders\?territory=community%3Ac1$/)
-  const contexto = page.getByRole('navigation', { name: 'Contexto' })
-  await expect(contexto.getByText('PRJ-01 · Pukaqaqa')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Ubicación' }).getByText('PRJ-01 · Pukaqaqa')).toBeVisible()
+  const contexto = page.getByRole('group', { name: 'Contexto' })
+  await expect(contexto.getByText('Proyecto · PRJ-01')).toBeVisible()
   await expect(contexto.getByText('Territorio: Comunidad CC Tunas Pampa')).toBeVisible()
 
   await page.goto('/projects/p1/stakeholders/s1')
@@ -26,7 +27,7 @@ test('del mapa territorial a la interacción, con el chip de territorio y el ras
   await page.getByRole('complementary', { name: 'Qué generó' }).getByRole('link', { name: 'Asamblea de agosto' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/engagements\/e1$/)
   await expect(page.getByRole('heading', { name: 'Asamblea de agosto', level: 1 })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Contexto' }).getByText('PRJ-01 · Pukaqaqa')).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Contexto' }).getByText('Proyecto · PRJ-01')).toBeVisible()
 })
 
 test('quitar el chip de territorio devuelve el proyecto entero sin cambiar de pantalla', async ({ page }) => {
@@ -96,18 +97,18 @@ test('del mapa a la evidencia en el drawer y de vuelta por el rastro, con el pro
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/\/projects\/p1\/commitments\/k1$/)
 
-  // el rastro lleva cada paso; volver a la lista la devuelve con su territorio, en el mismo proyecto
+  // el rastro lleva cada paso (en la banda, «Volver a» el último y el recorrido entero a pedido); volver a la lista la devuelve
+  // con su territorio, en el mismo proyecto
   const rastro = page.getByRole('navigation', { name: 'Recorrido' })
-  await expect(rastro.getByRole('link')).toHaveText([
-    'Mapa territorial',
-    'CC Tunas Pampa',
-    'Grupos de interés',
-    'Junta directiva comunal',
-    'Asamblea de agosto'
-  ])
+  await expect(rastro.getByRole('link', { name: 'Volver a Asamblea de agosto' })).toBeVisible()
+  await rastro.getByRole('button', { name: 'Recorrido (5 pasos)' }).click()
+  await expect(rastro.getByRole('listitem').getByRole('link')).toHaveText(
+    ['Mapa territorial', 'CC Tunas Pampa', 'Grupos de interés', 'Junta directiva comunal', 'Asamblea de agosto'].map((n, i) => `${i + 1}${n}`)
+  )
   await rastro.getByRole('link', { name: 'Grupos de interés' }).click()
   await expect(page).toHaveURL(/\/projects\/p1\/stakeholders\?territory=community%3Ac1$/)
-  const contexto = page.getByRole('navigation', { name: 'Contexto' })
-  await expect(contexto.getByText('PRJ-01 · Pukaqaqa')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Ubicación' }).getByText('PRJ-01 · Pukaqaqa')).toBeVisible()
+  const contexto = page.getByRole('group', { name: 'Contexto' })
+  await expect(contexto.getByText('Proyecto · PRJ-01')).toBeVisible()
   await expect(contexto.getByText('Territorio: Comunidad CC Tunas Pampa')).toBeVisible()
 })

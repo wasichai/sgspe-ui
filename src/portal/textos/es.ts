@@ -187,8 +187,15 @@ export const ES = {
       riesgos: 'Riesgos e inversión social',
       seguimiento: 'Documentos y seguimiento'
     },
-    contraer: 'Contraer',
-    expandir: 'Expandir'
+    // la barra inferior del teléfono (design-system.md §5.2): Inicio · Proyectos · Registrar · Mapa · Tareas
+    mapa: 'Mapa',
+    registrar: 'Registrar',
+    queRegistrar: '¿Qué quiere registrar?',
+    noRegistra: 'Su cuenta no registra nada desde aquí',
+    sinAcceso: '{{destino}}: su cuenta no puede abrir esta sección',
+    // un bloque de la navegación principal y la sección de él que está abierta
+    bloqueActual: '{{bloque}}, sección abierta: {{seccion}}',
+    organizacion: 'Organización'
   },
   // las 13 secciones de docs/ux/ux-architecture.md §6.2, con la clave de NAV_TREE (Navigation.test.tsx las mantiene iguales)
   // el rótulo corto de una sección en la pestaña del proyecto (ProyectoLayout); el completo va en aria-label y title

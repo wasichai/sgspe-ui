@@ -40,7 +40,10 @@ describe('rutas de F5', () => {
   it('la sección Programas sociales se ofrece y /programs abre S42 de todos los proyectos', async () => {
     fetch = abrirPortal('/programs', INVERSION, EQUIPO_DE_INVERSION, deInversion())
     expect(await screen.findByRole('heading', { name: 'Programas sociales', level: 1 })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Programas sociales' })).toHaveAttribute('href', '/programs')
+    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).getByRole('link', { name: 'Programas sociales', hidden: true })).toHaveAttribute(
+      'href',
+      '/programs'
+    )
   })
 
   it('la pestaña del proyecto lleva a S42; programs/dashboard es el tablero y programs/sp1 la ficha del programa', async () => {
@@ -67,7 +70,9 @@ describe('rutas de F5', () => {
   it('sin READ sobre programas ni aportes, la ruta lo dice y la sección no se ofrece', async () => {
     fetch = abrirPortal('/programs', INVERSION, permisos({ project: ['READ'], commitment: ['READ'] }), deInversion())
     expect(await screen.findByRole('heading', { name: 'No puede abrir «Programas sociales»' })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Programas sociales' })).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('navigation', { name: 'Secciones' })).queryByRole('link', { name: 'Programas sociales', hidden: true })
+    ).not.toBeInTheDocument()
   })
 
   it.each([

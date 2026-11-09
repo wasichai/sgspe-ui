@@ -1,11 +1,12 @@
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { FetchMock } from '@wasichai/testing'
+import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { useEffect } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pagina, registro, workflow } from '../../test/montar'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
-import { permisos, RELACIONISTA } from '../../test/portal'
+import { abrirSesion, permisos, RELACIONISTA, rutasDeSesion } from '../../test/portal'
+import { PortalApp } from '../PortalApp'
 import { espiarRed, type Red } from '../../test/red'
 
 // el doble del mapa, más lo que el mapa real informa: la vista (que acota las capas con un bbox) y el cursor. el doble de
@@ -115,7 +116,7 @@ describe('S09 · mapa del proyecto', () => {
       ...rutas()
     ])
     red = espiarRed()
-    await screen.findByRole('button', { name: 'SDJ-001' })
+    await within(await screen.findByRole('list', { name: 'Mapa del proyecto' })).findByRole('button', { name: 'SDJ-001' })
     expect(doble.vistaInicial).toEqual([-78.5, -8.6, -78, -8.1])
     const capas = red.a('GET', /^\/sgspe\/territory\/layers\//)
     expect(capas.map((l) => l.ruta.split('?')[0]).sort()).toEqual([
@@ -130,7 +131,11 @@ describe('S09 · mapa del proyecto', () => {
 
   it('mientras el proyecto no llega no pide ninguna capa', async () => {
     let liberar: (() => void) | null = null
-    fetch = abrirPortal('/projects/p1/map', RELACIONISTA, permisos({ project: ['READ'] }), rutas())
+    // la banda de contexto del shell pide el proyecto al montar: la red se espía antes de dibujar el portal, para que esa primera
+    // lectura ya quede en espera
+    abrirSesion(RELACIONISTA)
+    window.history.pushState({}, '', '/projects/p1/map')
+    fetch = mockFetch([...rutas(), ...rutasDeSesion(RELACIONISTA, permisos({ project: ['READ'] }))])
     red = espiarRed([
       {
         path: '/objects/project/records/p1',
@@ -140,6 +145,7 @@ describe('S09 · mapa del proyecto', () => {
         }
       }
     ])
+    render(<PortalApp />)
     await screen.findByRole('list', { name: 'Mapa del proyecto' })
     await waitFor(() => expect(liberar).not.toBeNull())
     expect(doble.vistaInicial).toBe('esperar')
