@@ -1,4 +1,4 @@
-import { useWasichaiConfig } from '@wasichai/core'
+import { useAppTitle } from '@wasichai/core'
 import { cn } from '@wasichai/ui'
 import { ChevronDown, MoreHorizontal } from 'lucide-react'
 import {
@@ -96,7 +96,7 @@ export function useVistaActual(): string {
 }
 
 export function useTituloDeDocumento(titulo: string, prioridad: PrioridadDeTitulo = 2) {
-  const { appName } = useWasichaiConfig()
+  const { appName } = useAppTitle()
   const { projectId } = useParams()
   const proyecto = useRegistro('project', projectId)
   const nombre = proyecto.data ? texto(proyecto.data, 'name') : ''

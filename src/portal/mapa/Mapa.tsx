@@ -9,7 +9,7 @@ import { PERU, type Coleccion, type Encuadre } from './api'
 import { SIN_MAPA_BASE, useAtribucionDelMapa, useMapaBase } from './mapaBase'
 import { firmaDeWms } from './wms'
 
-// el mapa del portal (gis.md §6.5): MapLibre 6.10.0, la versión que fija @wasichai/gis, usado directamente y cargado bajo
+// el mapa del portal (gis.md §6.5): MapLibre 6.16.0, la versión que fija @wasichai/gis, usado directamente y cargado bajo
 // demanda, como el mapa de srtm. el fondo es el mapa base de la organización (/map/settings, mapaBase.tsx) o el que la pantalla
 // pase por la prop basemap; «Sin fondo» siempre está disponible y «Sin mapa base» se dice cuando no hay fondo (gis.md §6.4).
 // siempre va acompañado de una lista o tabla sincronizada, su alternativa accesible

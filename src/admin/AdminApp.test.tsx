@@ -86,6 +86,35 @@ describe('admin', () => {
     expect(document.documentElement.lang).toBe('en')
   })
 
+  // la marca del portal (la montaña de la cabecera) también en la barra y en la cabecera angosta de /admin (core 1.7.0 y 1.8.0,
+  // appLogo): las dos caras de SGSPE se reconocen como el mismo producto
+  it('muestra la marca del portal en la barra lateral y en la cabecera angosta', async () => {
+    await signIn()
+    const marcas = document.querySelectorAll('[data-slot="app-logo"]')
+    expect(marcas).toHaveLength(2)
+    for (const marca of marcas) {
+      expect(marca).toHaveAttribute('aria-hidden')
+      expect(marca.querySelector('[data-marca="sgspe"] svg')).not.toBeNull()
+    }
+  })
+
+  // a 390 px la barra lateral es un cajón (core 1.3.1): se abre con «Abrir el menú» como un diálogo con nombre y, abierto,
+  // Tab no sale de él (core 1.8.2, wasichai/wasichai-ui#179); Escape lo cierra y el foco vuelve al botón
+  it('el menú angosto abre un cajón que atrapa el foco y se cierra con Escape', async () => {
+    await signIn()
+    const boton = screen.getByRole('button', { name: 'Abrir el menú' })
+    await userEvent.click(boton)
+    const cajon = screen.getByRole('dialog', { name: 'Menú' })
+    expect(cajon).toHaveAttribute('aria-modal', 'true')
+    for (let i = 0; i < 40; i++) {
+      await userEvent.tab()
+      expect(cajon).toContainElement(document.activeElement as HTMLElement)
+    }
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument()
+    expect(boton).toHaveFocus()
+  })
+
   // los formularios de registro de /admin (DynamicForm) leen y escriben los DATETIME en la hora de Lima, no en la del navegador
   it('fija el huso de Lima para los DATETIME', () => {
     expect(configDeAdministracion.timeZone).toBe('America/Lima')

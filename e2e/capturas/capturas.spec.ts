@@ -84,6 +84,8 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'bandeja-ia', ruta: '/projects/p1/ai-review', ia: true },
   { nombre: 'avisos', ruta: '/notifications' },
   { nombre: 'admin-consola', ruta: '/admin', admin: true },
+  // el cajón de /admin abierto en el teléfono (wasichai/sgspe-ui#121, @wasichai/core 1.8.2): solo a 390, donde está el botón
+  { nombre: 'admin-menu', ruta: '/admin', admin: true, abrir: 'Abrir el menú' },
   { nombre: 'no-encontrada', ruta: '/reports/no-existe' }
 ]
 // las de la fase 12 (wasichai/sgspe-ui#111): 1440 en claro y oscuro y 390 en claro
@@ -153,7 +155,11 @@ interface Variante {
 }
 const ESCRITORIO = { ancho: 1440, alto: 900 }
 // 1440 claro es en todas; 1440 oscuro es y 1440 claro en en las principales; 1024 y 390 claro es en las angostas
-const variantesDe = (nombre: string): Variante[] => [
+// las que solo existen en el teléfono (un control que desde md no se dibuja): 390 claro es y nada más
+const SOLO_390 = ['admin-menu']
+const variantesDe = (nombre: string): Variante[] =>
+  SOLO_390.includes(nombre) ? [{ ancho: 390, alto: 844, tema: 'light', idioma: 'es' }] : variantesComunes(nombre)
+const variantesComunes = (nombre: string): Variante[] => [
   { ...ESCRITORIO, tema: 'light', idioma: 'es' },
   ...(FASE_12.includes(nombre)
     ? [

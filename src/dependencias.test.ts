@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-// roadmap F2, «Starters y capacidades»: @wasichai/gis con maplibre-gl 6.10.0 y @wasichai/workflow; React Hook Form y Zod;
+// roadmap F2, «Starters y capacidades»: @wasichai/gis con maplibre-gl 6.16.0 y @wasichai/workflow; React Hook Form y Zod;
 // ECharts 6 en los tableros de módulo; Playwright desde F2 (ASM-066). F3 suma @wasichai/documents y @wasichai/automation, los
 // paquetes de interfaz de los starters de documentos y automatizaciones. toda versión va fijada, sin rangos, como en F1
 const leer = (ruta: string) => JSON.parse(readFileSync(ruta, 'utf8')) as Record<string, Record<string, string>>
@@ -9,11 +9,11 @@ const paquete = leer('package.json')
 
 describe('dependencias de F2 y F3', () => {
   it.each([
-    ['@wasichai/gis', '1.1.0'],
-    ['@wasichai/workflow', '1.1.0'],
-    ['@wasichai/documents', '1.1.0'],
-    ['@wasichai/automation', '1.1.0'],
-    ['maplibre-gl', '6.10.0'],
+    ['@wasichai/gis', '1.8.2'],
+    ['@wasichai/workflow', '1.8.2'],
+    ['@wasichai/documents', '1.8.2'],
+    ['@wasichai/automation', '1.8.2'],
+    ['maplibre-gl', '6.16.0'],
     ['echarts', '6.1.0'],
     ['react-hook-form', '7.89.0'],
     ['zod', '4.6.5'],
@@ -33,7 +33,7 @@ describe('dependencias de F2 y F3', () => {
 
   it('maplibre-gl es la misma versión que fija @wasichai/gis', () => {
     expect(leer('node_modules/@wasichai/gis/package.json').dependencies['maplibre-gl']).toBe(paquete.dependencies['maplibre-gl'])
-    expect(leer('node_modules/maplibre-gl/package.json').version).toBe('6.10.0')
+    expect(leer('node_modules/maplibre-gl/package.json').version).toBe('6.16.0')
   })
 
   // @wasichai/sgspe-slides no es de la plataforma: sale con la versión de sgspe (ADR-0031) y tiene su prueba abajo
@@ -43,7 +43,7 @@ describe('dependencias de F2 y F3', () => {
         .filter(([nombre]) => nombre.startsWith('@wasichai/') && nombre !== '@wasichai/sgspe-slides')
         .map(([, v]) => v)
     )
-    expect([...versiones]).toEqual(['1.1.0'])
+    expect([...versiones]).toEqual(['1.8.2'])
   })
 })
 
