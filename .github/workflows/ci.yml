@@ -48,6 +48,8 @@ jobs:
           SGSPE_REPO: .sgspe
           SGSPE_PALETA_OBLIGATORIA: 'true'
       - run: yarn build
+      # las capturas del rediseño corren aparte (capturas.yml); aquí solo se verifica que el proyecto arma sus casos
+      - run: yarn capturas --list
       # las pruebas extremo a extremo de F2 (ASM-066): chromium de Playwright sobre vite preview, con la API simulada
       - run: npx playwright install --with-deps chromium
       - run: yarn e2e

@@ -118,12 +118,19 @@ describe('S51 · revisión ejecutiva', () => {
 
   // P-07 (u): toda cifra lleva su periodo y su fecha de cálculo, también la tendencia, que es de 12 meses
   it('cada zona de cifras dice su periodo y su fecha de cálculo', async () => {
-    abrir()
-    await screen.findByRole('table', { name: 'Por proyecto' })
-    for (const zona of ['Qué es crítico y dónde se atiende', 'Indicadores de la cartera', 'Inversión ejecutada frente a presupuesto y topes', 'Por proyecto'])
-      expect(within(screen.getByRole('region', { name: zona })).getByText(/^Octubre de 2026 · calculado (hace|el) /)).toBeInTheDocument()
-    const tendencia = screen.getByRole('region', { name: 'Tendencia de 12 meses' })
-    expect(within(tendencia).getByText(/^set\. 2026 a oct\. 2026 · calculado (hace|el) /)).toBeInTheDocument()
+    // el periodo por omisión es el mes de hoy: se fija el día del cálculo para que la prueba no dependa de la fecha de la corrida
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-16T18:00:00Z'))
+    try {
+      abrir()
+      await screen.findByRole('table', { name: 'Por proyecto' })
+      for (const zona of ['Qué es crítico y dónde se atiende', 'Indicadores de la cartera', 'Inversión ejecutada frente a presupuesto y topes', 'Por proyecto'])
+        expect(within(screen.getByRole('region', { name: zona })).getByText(/^Octubre de 2026 · calculado (hace|el) /)).toBeInTheDocument()
+      const tendencia = screen.getByRole('region', { name: 'Tendencia de 12 meses' })
+      expect(within(tendencia).getByText(/^set\. 2026 a oct\. 2026 · calculado (hace|el) /)).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   // una cifra no disponible no ocupa el centro: las disponibles van primero
