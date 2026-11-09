@@ -178,7 +178,7 @@ function Requisitos({ entrega, abierta }: { entrega: Registro; abierta: boolean 
         ) : (
           EVIDENCIAS_DE_ENTREGA.map((tipo) => (
             <li key={tipo} className="flex justify-between gap-2">
-              <span>{tipo}</span>
+              <span>{rotuloDeOpcion(tipo)}</span>
               <span className={tipos.has(tipo) ? 'text-sg-success' : 'text-sg-warning'}>{situacion(tipos.has(tipo))}</span>
             </li>
           ))

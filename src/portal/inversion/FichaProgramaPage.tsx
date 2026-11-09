@@ -3,6 +3,7 @@ import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha, type PestanaDeFicha } from '../componentes/PestanasDeFicha'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
@@ -102,7 +103,7 @@ function Ficha({ programa }: { programa: Registro }) {
     }
   ]
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       {/* tercera pasada de UX (1.5): la cabecera común, con una sola primaria (la siguiente acción) y lo que la impide debajo; cancelar
           va en «Más acciones» */}
       <CabeceraDeFicha
@@ -155,7 +156,7 @@ function Ficha({ programa }: { programa: Registro }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

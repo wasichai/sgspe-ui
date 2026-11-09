@@ -125,7 +125,10 @@ describe('S48 · aprobaciones', () => {
     )
     const otra = (await within(tabla).findByText('C-007 · Botiquín')).closest('li') as HTMLElement
     expect(await within(otra).findByText('Sí')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Escalamientos' }))
+    // un solo título de página y las vistas en el selector de E, con su conteo
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByRole('radio', { name: 'Por aprobar, 2' })).toBeChecked()
+    await userEvent.click(screen.getByRole('radio', { name: 'Escalamientos' }))
     expect(await screen.findByRole('heading', { name: 'Pendiente c1' })).toBeInTheDocument()
   })
 
@@ -201,7 +204,7 @@ describe('S48 · aprobaciones', () => {
     const detalle = screen.getByRole('region', { name: 'Detalle' })
     expect(await within(detalle).findByRole('link', { name: 'Decidir en su ficha' })).toHaveAttribute('href', '/r/grievance/g1')
     expect(red.a('POST', '/sgspe/transition-checks')[0].cuerpo).toMatchObject({ object: 'grievance', transition: 'resolve_high_severity' })
-    await userEvent.click(screen.getByRole('tab', { name: 'Escalamientos' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Escalamientos' }))
     expect(await screen.findByRole('heading', { name: 'Pendiente k1' })).toBeInTheDocument()
   })
 
@@ -304,6 +307,7 @@ describe('S48 · aprobaciones', () => {
     fetch = mockFetch(rutas().filter((r) => r.path !== '/auth/me/notifications'))
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: APROBACION })
     expect(await screen.findByText(/Los avisos no están disponibles en esta instalación/)).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1, name: 'Aprobaciones y escalamientos' })).toHaveLength(1)
     expect(screen.queryByText('No tiene decisiones pendientes.')).not.toBeInTheDocument()
   })
 })
@@ -336,6 +340,24 @@ describe('S31 · aprobación de compromiso', () => {
     const [llamada] = red.a('POST', '/objects/commitment/records/c1/transitions/return_to_draft')
     expect(llamada.cabeceras.get('If-Match')).toBe('"2026-10-08T15:00:00Z"')
     expect(llamada.cabeceras.get('X-Change-Reason')).toBe("UTF-8''Falta%20el%20acta%20firmada")
+  })
+
+  it('tiene la anatomía de una ficha: un solo título, el compromiso como título y el estado solo en el panel de decisión', async () => {
+    fetch = mockFetch(rutas())
+    red = reglas()
+    abrirS31('c7')
+    // un solo <h1>: lo que se decide (el compromiso), con el tipo y el código en el antetítulo
+    expect(await screen.findByRole('heading', { level: 1, name: 'Botiquín' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByText('Aprobación de compromiso · C-007')).toBeInTheDocument()
+    // el panel de decisión de la ficha: el estado y la siguiente acción, que le toca a quien mira
+    const panel = screen.getByRole('region', { name: 'Situación' })
+    expect(within(panel).getByRole('group', { name: 'Estado actual' }).querySelector('[data-estado]')).not.toBeNull()
+    expect(document.querySelectorAll('[data-estado]')).toHaveLength(1)
+    expect(await within(within(panel).getByRole('group', { name: 'Siguiente acción' })).findByText('Aprobar')).toBeInTheDocument()
+    // la decisión y las reglas como secciones con su título
+    expect(screen.getByRole('region', { name: 'Decisión' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Reglas' })).toBeInTheDocument()
   })
 
   it('un monto guardado inválido de la campaña es una advertencia de CAP_DATA_INVALID que se dice y no bloquea', async () => {
@@ -594,7 +616,7 @@ describe('P-05 · decidir desde la bandeja', () => {
     abrirBandeja()
     await waitFor(() => expect(ubicacion.actual).toBe('/tasks/approvals?selected=social_contribution%3Aa1'))
     expect(await within(screen.getByRole('region', { name: 'Detalle' })).findByRole('heading', { name: 'Aporte AP-001' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Por aprobar' })).toHaveAccessibleDescription('1 registro')
+    expect(screen.getByRole('radio', { name: 'Por aprobar, 1' })).toBeChecked()
   })
 
   it('«Volver» deja la lista sola (en el teléfono, el detalle ocupa la pantalla)', async () => {

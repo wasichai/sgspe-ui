@@ -159,9 +159,9 @@ describe('S44 · entrega del aporte', () => {
     expect(screen.getAllByText('Restringido').length).toBeGreaterThanOrEqual(2)
     const requisitos = screen.getByRole('region', { name: 'Lo que pide «Registrar entrega»' })
     const estadoDe = (nombre: string) => (within(requisitos).getByText(nombre).closest('li') as HTMLElement).textContent
-    await waitFor(() => expect(estadoDe('ACTA DE RECEPCION')).toContain('Lista'))
-    expect(estadoDe('FOTO')).toContain('Lista')
-    expect(estadoDe('COMPROBANTE')).toContain('Falta')
+    await waitFor(() => expect(estadoDe('Acta de recepción')).toContain('Lista'))
+    expect(estadoDe('Foto')).toContain('Lista')
+    expect(estadoDe('Comprobante')).toContain('Falta')
     expect(estadoDe('Conformidad dada')).toContain('Lista')
     expect(estadoDe('Quiénes dieron la conformidad')).toContain('Su cuenta no lo lee')
     expect(screen.getByRole('button', { name: 'Subir acta de recepción firmada' })).toBeInTheDocument()

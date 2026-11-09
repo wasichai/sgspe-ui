@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AvisoDeConflicto, useReleer } from '../componentes/AvisoDeConflicto'
 import { Campo } from '../componentes/Campo'
-import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Consulta, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { sinBandeja } from '../datos/avisos'
@@ -18,9 +17,10 @@ import { useAplicarTransicion, useComprobacion } from '../transiciones/api'
 import { useTextoDeAviso } from '../transiciones/avisos'
 import { APROBACIONES_DE, rutaDeDecision, useAprobacionesPendientes } from './AprobacionesPage'
 import { opcion } from '../datos/opciones'
-import { Dia } from '../componentes/Dia'
-import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 
 // S31 · aprobación de compromiso (/tasks/approvals/commitment/:recordId; screens.md §7, flujo 8): la bandeja a la izquierda,
 // el compromiso con su origen y la decisión con motivo obligatorio (commitment es requiresReason); a la derecha, las reglas de
@@ -67,6 +67,8 @@ function Decision({ compromiso }: { compromiso: Registro }) {
   const [intentado, setIntentado] = useState(false)
   const origen = useRegistro('engagement', atributo<string>(compromiso, 'origin_engagement'))
   const campana = useRegistro('exploration_campaign', atributo<string>(compromiso, 'exploration_campaign'))
+  // la siguiente acción del panel: la aprobación de su rol, con lo que la bloquea
+  const siguiente = useSiguienteAccion('commitment', compromiso, APROBACIONES_DE.commitment)
   const bloqueado = (comprobacion.data?.blocking.length ?? 0) > 0 || comprobacion.data?.allowed === false
   const confirmar = () => {
     setIntentado(true)
@@ -76,160 +78,161 @@ function Decision({ compromiso }: { compromiso: Registro }) {
       { onSuccess: () => navegar('/tasks/approvals', { state: { hecha: true } }) }
     )
   }
+  const codigo = texto(compromiso, 'code')
+  // la anatomía de una ficha (design-system.md §6.1): un solo título, que dice qué se decide (el compromiso), con el tipo y el código
+  // en el antetítulo; el estado vive en el panel de decisión. a la izquierda la bandeja; a la derecha las reglas de la decisión elegida
   return (
-    <div className="mx-auto grid max-w-[1440px] gap-4 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
-      <Bandeja actual={compromiso.id} />
-      <article className="space-y-4">
-        <Link to="/tasks/approvals" className="text-sm text-sg-primary-text underline">
-          {t('aprobaciones.decision.volver')}
-        </Link>
-        <h1 className="text-sg-h1 font-semibold">{t('aprobaciones.decision.titulo')}</h1>
-        <Seccion etiqueta={t('aprobaciones.decision.resumen')} className="text-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-sg-mono">{texto(compromiso, 'code')}</span>
-            <EstadoChip objeto="commitment" estado={compromiso.state} />
-          </div>
-          <h2 className="text-sg-h2 font-semibold">{texto(compromiso, 'title')}</h2>
-          <p className="whitespace-pre-line">{texto(compromiso, 'description')}</p>
-          <dl className="grid gap-2 sm:grid-cols-2">
+    <ContenedorDePagina>
+      <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_320px]">
+        <Bandeja actual={compromiso.id} />
+        <article className="min-w-0 space-y-4">
+          <Link to="/tasks/approvals" className="text-sm text-sg-primary-text underline">
+            {t('aprobaciones.decision.volver')}
+          </Link>
+          <EncabezadoDePagina
+            antetitulo={[t('aprobaciones.decision.titulo'), codigo].filter(Boolean).join(' · ')}
+            antetituloEnSans
+            titulo={texto(compromiso, 'title') || [t('aprobaciones.decision.titulo'), codigo].filter(Boolean).join(' · ')}
+            tituloDelDocumento={[t('aprobaciones.decision.titulo'), codigo].filter(Boolean).join(' · ')}
+            chips={<span className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</span>}
+          />
+          <PanelDeDecision
+            objeto="commitment"
+            proyecto={proyecto}
+            estado={compromiso.state}
+            desde={texto(compromiso, 'state_changed_at') || null}
+            siguiente={siguiente}
+            responsable={texto(compromiso, 'owner_user_email') || null}
+            vencimiento={texto(compromiso, 'due_date') || null}
+          />
+          <Seccion etiqueta={t('aprobaciones.decision.resumen')} className="text-sm">
+            {texto(compromiso, 'description') ? <p className="whitespace-pre-line">{texto(compromiso, 'description')}</p> : null}
+            <dl className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <dt className="text-sg-text-muted">{t('aprobaciones.decision.monto')}</dt>
+                <dd className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</dd>
+              </div>
+              <div>
+                <dt className="text-sg-text-muted">{t('aprobaciones.decision.campana')}</dt>
+                <dd>
+                  {campana.data ? (
+                    texto(campana.data, 'name')
+                  ) : !atributo(compromiso, 'exploration_campaign') ? (
+                    '—'
+                  ) : campana.isError ? (
+                    <FalloDeLectura error={campana.error} alReintentar={() => void campana.refetch()} />
+                  ) : (
+                    '…'
+                  )}
+                </dd>
+              </div>
+            </dl>
             <div>
-              <dt className="text-sg-text-muted">{t('aprobaciones.decision.monto')}</dt>
-              <dd className="tabular-nums">{montoPe(atributo(compromiso, 'amount'), atributo(compromiso, 'currency'))}</dd>
+              {t('aprobaciones.decision.origen')}:{' '}
+              {origen.data ? (
+                <EnlaceConRastro
+                  to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(origen.data.id)}`}
+                  className="text-sg-primary-text underline"
+                >
+                  {texto(origen.data, 'title')} · {opcion(origen.data, 'engagement_type')}
+                </EnlaceConRastro>
+              ) : !atributo(compromiso, 'origin_engagement') ? (
+                t('aprobaciones.decision.sinOrigen')
+              ) : origen.isError ? (
+                <FalloDeLectura error={origen.error} alReintentar={() => void origen.refetch()} />
+              ) : (
+                '…'
+              )}
             </div>
-            <div>
-              <dt className="text-sg-text-muted">{t('aprobaciones.decision.campana')}</dt>
-              <dd>
-                {campana.data ? (
-                  texto(campana.data, 'name')
-                ) : !atributo(compromiso, 'exploration_campaign') ? (
-                  '—'
-                ) : campana.isError ? (
-                  <FalloDeLectura error={campana.error} alReintentar={() => void campana.refetch()} />
-                ) : (
-                  '…'
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sg-text-muted">{t('aprobaciones.decision.responsable')}</dt>
-              <dd>
-                <Persona correo={texto(compromiso, 'owner_user_email')} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sg-text-muted">{t('aprobaciones.decision.vence')}</dt>
-              <dd>
-                <Dia valor={texto(compromiso, 'due_date')} />
-              </dd>
-            </div>
-          </dl>
-          <div>
-            {t('aprobaciones.decision.origen')}:{' '}
-            {origen.data ? (
-              <EnlaceConRastro
-                to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(origen.data.id)}`}
-                className="text-sg-primary-text underline"
-              >
-                {texto(origen.data, 'title')} · {opcion(origen.data, 'engagement_type')}
-              </EnlaceConRastro>
-            ) : !atributo(compromiso, 'origin_engagement') ? (
-              t('aprobaciones.decision.sinOrigen')
-            ) : origen.isError ? (
-              <FalloDeLectura error={origen.error} alReintentar={() => void origen.refetch()} />
+            <EnlaceConRastro
+              to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(compromiso.id)}`}
+              className="text-sg-primary-text underline"
+            >
+              {t('aprobaciones.decision.abrirFicha')}
+            </EnlaceConRastro>
+          </Seccion>
+          <Seccion titulo={t('aprobaciones.decision.decidir')} className="space-y-3">
+            {!escribe ? (
+              <Alert tone="notice">{t('aprobaciones.decision.soloLectura')}</Alert>
+            ) : transiciones.isPending ? (
+              <Cargando compacto />
+            ) : transiciones.isError ? (
+              <FalloDeLectura error={transiciones.error} alReintentar={() => void transiciones.refetch()} />
+            ) : opciones.length === 0 ? (
+              <p className="text-sm text-sg-text-muted">{t('aprobaciones.decision.sinDecisiones')}</p>
             ) : (
-              '…'
+              <>
+                <fieldset className="space-y-1">
+                  <legend className="sr-only">{t('aprobaciones.decision.decidir')}</legend>
+                  {opciones.map((x) => (
+                    <label key={x.name} className="flex min-h-8 items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="decision"
+                        checked={decision === x.name}
+                        onChange={() => {
+                          setElegida(x.name)
+                          aplicar.reset()
+                        }}
+                      />
+                      {x.label}
+                    </label>
+                  ))}
+                </fieldset>
+                <Campo etiqueta={t('comun.motivoObligatorio')} error={intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined}>
+                  {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
+                </Campo>
+                {aplicar.isError ? (
+                  <AvisoDeConflicto
+                    error={aplicar.error}
+                    releer={() =>
+                      releer(
+                        ['record', 'commitment', compromiso.id],
+                        ['transitions', 'commitment', compromiso.id],
+                        ['transition-check', 'commitment', compromiso.id]
+                      )
+                    }
+                    alRecargar={() => aplicar.reset()}
+                  />
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={() => navegar('/tasks/approvals')}>
+                    {t('aprobaciones.decision.despues')}
+                  </Button>
+                  <Button onClick={confirmar} disabled={aplicar.isPending || bloqueado || !comprobacion.isSuccess} aria-busy={aplicar.isPending}>
+                    {aplicar.isPending ? t('aprobaciones.decision.confirmando') : t('aprobaciones.decision.confirmar')}
+                  </Button>
+                </div>
+              </>
             )}
-          </div>
-          <EnlaceConRastro
-            to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(compromiso.id)}`}
-            className="text-sg-primary-text underline"
-          >
-            {t('aprobaciones.decision.abrirFicha')}
-          </EnlaceConRastro>
-        </Seccion>
-        <section aria-label={t('aprobaciones.decision.decidir')} className="space-y-3">
-          <h2 className="text-sg-h3 font-semibold">{t('aprobaciones.decision.decidir')}</h2>
-          {!escribe ? (
-            <Alert tone="notice">{t('aprobaciones.decision.soloLectura')}</Alert>
-          ) : transiciones.isPending ? (
-            <Cargando compacto />
-          ) : transiciones.isError ? (
-            <FalloDeLectura error={transiciones.error} alReintentar={() => void transiciones.refetch()} />
-          ) : opciones.length === 0 ? (
-            <p className="text-sm text-sg-text-muted">{t('aprobaciones.decision.sinDecisiones')}</p>
+          </Seccion>
+        </article>
+        <Seccion elemento="aside" titulo={t('aprobaciones.decision.reglas')} className="space-y-2 text-sm">
+          {!decision ? null : comprobacion.isPending ? (
+            <p className="text-sg-text-muted">{t('transiciones.comprobando')}</p>
+          ) : comprobacion.isError ? (
+            <FalloDeLectura error={comprobacion.error} alReintentar={() => void comprobacion.refetch()} />
           ) : (
             <>
-              <fieldset className="space-y-1">
-                <legend className="sr-only">{t('aprobaciones.decision.decidir')}</legend>
-                {opciones.map((x) => (
-                  <label key={x.name} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="decision"
-                      checked={decision === x.name}
-                      onChange={() => {
-                        setElegida(x.name)
-                        aplicar.reset()
-                      }}
-                    />
-                    {x.label}
-                  </label>
-                ))}
-              </fieldset>
-              <Campo etiqueta={t('comun.motivoObligatorio')} error={intentado && !motivo.trim() ? t('comun.motivoFalta') : undefined}>
-                {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-              </Campo>
-              {aplicar.isError ? (
-                <AvisoDeConflicto
-                  error={aplicar.error}
-                  releer={() =>
-                    releer(
-                      ['record', 'commitment', compromiso.id],
-                      ['transitions', 'commitment', compromiso.id],
-                      ['transition-check', 'commitment', compromiso.id]
-                    )
-                  }
-                  alRecargar={() => aplicar.reset()}
-                />
+              {comprobacion.data.blocking.map((b) => (
+                <Alert key={`${b.code}-${b.field ?? ''}`} tone="danger" title={t('transiciones.bloqueo')}>
+                  {textoDe(b, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
+                </Alert>
+              ))}
+              {comprobacion.data.warnings.map((w) => (
+                <Alert key={`${w.code}-${w.field ?? ''}`} tone="warning" title={t('transiciones.advertencia')}>
+                  {textoDe(w, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
+                </Alert>
+              ))}
+              {!bloqueado && comprobacion.data.warnings.length === 0 ? <p className="text-sg-success">{t('transiciones.sinBloqueos')}</p> : null}
+              {comprobacion.data.allowed === false && comprobacion.data.blocking.length === 0 ? (
+                <Alert tone="danger">{t('transiciones.noPermitido')}</Alert>
               ) : null}
-              <div className="flex gap-2">
-                <Button onClick={confirmar} disabled={aplicar.isPending || bloqueado || !comprobacion.isSuccess} aria-busy={aplicar.isPending}>
-                  {aplicar.isPending ? t('aprobaciones.decision.confirmando') : t('aprobaciones.decision.confirmar')}
-                </Button>
-                <Button variant="secondary" onClick={() => navegar('/tasks/approvals')}>
-                  {t('aprobaciones.decision.despues')}
-                </Button>
-              </div>
             </>
           )}
-        </section>
-      </article>
-      <Seccion elemento="aside" etiqueta={t('aprobaciones.decision.reglas')} className="text-sm">
-        <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('aprobaciones.decision.reglas')}</h2>
-        {!decision ? null : comprobacion.isPending ? (
-          <p className="text-sg-text-muted">{t('transiciones.comprobando')}</p>
-        ) : comprobacion.isError ? (
-          <FalloDeLectura error={comprobacion.error} alReintentar={() => void comprobacion.refetch()} />
-        ) : (
-          <>
-            {comprobacion.data.blocking.map((b) => (
-              <Alert key={`${b.code}-${b.field ?? ''}`} tone="danger" title={t('transiciones.bloqueo')}>
-                {textoDe(b, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
-              </Alert>
-            ))}
-            {comprobacion.data.warnings.map((w) => (
-              <Alert key={`${w.code}-${w.field ?? ''}`} tone="warning" title={t('transiciones.advertencia')}>
-                {textoDe(w, transicionDecidida).texto ?? t('transiciones.reglaSinTexto')}
-              </Alert>
-            ))}
-            {!bloqueado && comprobacion.data.warnings.length === 0 ? <p className="text-sg-success">{t('transiciones.sinBloqueos')}</p> : null}
-            {comprobacion.data.allowed === false && comprobacion.data.blocking.length === 0 ? (
-              <Alert tone="danger">{t('transiciones.noPermitido')}</Alert>
-            ) : null}
-          </>
-        )}
-      </Seccion>
-    </div>
+        </Seccion>
+      </div>
+    </ContenedorDePagina>
   )
 }
 

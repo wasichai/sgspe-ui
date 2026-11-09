@@ -4,6 +4,7 @@ import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha, tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
 import { CamposPlegables, type CampoDeFicha } from '../componentes/CamposPlegables'
 import { Seccion } from '../componentes/Seccion'
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha, type PestanaDeFicha } from '../componentes/PestanasDeFicha'
@@ -13,6 +14,7 @@ import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
+import { Lock } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -27,7 +29,7 @@ import { RegistrosSimples, type ColumnaSimple } from '../componentes/RegistrosSi
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { aDiezmilesimos } from '../datos/decimales'
-import { APORTE_TERMINADO, enSolicitud, monedaDe, TERMINOS_APROBADOS, totalDeItems } from '../datos/inversion'
+import { APORTE_TERMINADO, comprobantesCongelados, enSolicitud, monedaDe, TERMINOS_APROBADOS, totalDeItems } from '../datos/inversion'
 import { atributo, texto, usePuedeEditar, useRegistro, useRegistros, useTodosConTope, type Registro } from '../datos/registros'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { NS, numeroPe } from '../i18n'
@@ -126,12 +128,26 @@ function Ficha({ aporte }: { aporte: Registro }) {
     }
   ]
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t('fichaAporte.tipo'), texto(aporte, 'code'), opcion(aporte, 'contribution_type'), texto(aporte, 'occasion')].filter(Boolean).join(' · ')}
         titulo={tituloQueDiceQueEs(texto(aporte, 'declared_purpose'), titulo)}
         tituloDelDocumento={titulo}
-        chips={<span className="tabular-nums">{t('fichaAporte.total', { monto: montoPe(atributo(aporte, 'total_amount'), monedaDe(aporte)) })}</span>}
+        chips={
+          <>
+            <span className="tabular-nums">{t('fichaAporte.total', { monto: montoPe(atributo(aporte, 'total_amount'), monedaDe(aporte)) })}</span>
+            {/* desde «Entregado» la entrega, sus evidencias y su comprobante no cambian: se dice en la cabecera, con su candado */}
+            {comprobantesCongelados(aporte) ? (
+              <span
+                data-congelado
+                className="inline-flex h-6 items-center gap-1 rounded-sg-md border border-sg-border-strong bg-sg-surface-sunken px-2 text-sg-caption font-bold text-sg-text-secondary"
+              >
+                <Lock aria-hidden className="size-3.5" />
+                {t('fichaAporte.congelada')}
+              </span>
+            ) : null}
+          </>
+        }
         objeto="social_contribution"
         registro={aporte}
         proyecto={proyecto}
@@ -189,7 +205,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

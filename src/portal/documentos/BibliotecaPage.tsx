@@ -6,11 +6,11 @@ import { Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import { CajaDeBusqueda } from '../componentes/BarraDeFiltros'
-import { SelectNativo } from '../componentes/Campo'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { Drawer } from '../componentes/Drawer'
 import { Restringido } from '../componentes/Estados'
-import { ChipsDeFiltro, TablaDeRegistros, useParametrosDeLista, VacioDeLista, type Columna } from '../componentes/Lista'
+import { TablaDeRegistros, useParametrosDeLista, VacioDeLista, type Columna } from '../componentes/Lista'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyectos } from '../contexto/proyectos'
 import { descriptorDe, tamanoPe } from '../datos/archivos'
@@ -58,13 +58,20 @@ export function BibliotecaPage() {
   const chips = [
     ...(['evidence_type', 'classification', 'q'] as const)
       .filter((f) => lista.filtro(f))
-      .map((f) => ({ clave: f, etiqueta: f === 'q' ? lista.filtro(f) : rotuloDeOpcion(lista.filtro(f)) })),
+      .map((f) => ({
+        clave: f,
+        etiqueta:
+          f === 'q'
+            ? t('comun.contiene', { texto: lista.filtro(f) })
+            : `${t(f === 'evidence_type' ? 'documentos.tipo' : 'documentos.clasificacion')}: ${rotuloDeOpcion(lista.filtro(f))}`
+      })),
     ...(sinConsentimiento ? [{ clave: 'consent', etiqueta: t('documentos.sinConsentimiento') }] : [])
   ]
   const columnas: Columna[] = [
     // el título es un enlace a la ficha (D12 de la revisión de UX: la fila se abría, pero nada lo decía)
     {
       id: 'evidencia',
+      titulo: true,
       encabezado: t('documentos.columnas.evidencia'),
       celda: (e) => <EnlaceDeRegistro titulo={nombreDeEvidencia(e)} ruta={rutaDeFicha('evidence', e)} desde={t('documentos.titulo')} />
     },
@@ -89,6 +96,7 @@ export function BibliotecaPage() {
     },
     {
       id: 'tamano',
+      numerica: true,
       encabezado: t('documentos.columnas.tamano'),
       celda: (e) => {
         const d = descriptorDe(atributo(e, 'file'))
@@ -118,37 +126,33 @@ export function BibliotecaPage() {
           ) : undefined
         }
       />
-      <div role="group" aria-label={t('comun.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
-        {/* la búsqueda espera a que se deje de escribir, como la de BarraDeFiltros (tercera pasada de UX) */}
-        <CajaDeBusqueda etiqueta={t('documentos.buscar')} valor={lista.filtro('q')} alCambiar={(q) => lista.cambiar({ q })} />
-        <label className="space-y-1">
-          <span className="block">{t('documentos.tipo')}</span>
-          <SelectNativo
-            textoVacio={t('comun.todos')}
-            value={lista.filtro('evidence_type')}
-            onChange={(e) => lista.cambiar({ evidence_type: e.target.value })}
-            opciones={opciones('evidence_type')}
-          />
-        </label>
-        {leeClasificacion ? (
-          <label className="space-y-1">
-            <span className="block">{t('documentos.clasificacion')}</span>
-            <SelectNativo
-              textoVacio={t('comun.todos')}
-              value={lista.filtro('classification')}
-              onChange={(e) => lista.cambiar({ classification: e.target.value })}
-              opciones={opciones('classification')}
+      {/* la barra de filtros de E (DD-04): la búsqueda, el tipo y la clasificación como filtros frecuentes y cada filtro aplicado como
+          chip con su «×»; la búsqueda espera a que se deje de escribir */}
+      <BarraDeFiltros
+        busqueda={{ etiqueta: t('documentos.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
+        frecuentes={
+          <>
+            <FiltroDeLista
+              etiqueta={t('documentos.tipo')}
+              value={lista.filtro('evidence_type')}
+              onChange={(e) => lista.cambiar({ evidence_type: e.target.value })}
+              opciones={opciones('evidence_type')}
             />
-          </label>
-        ) : null}
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={sinConsentimiento} onChange={(e) => lista.cambiar({ consent: e.target.checked ? 'missing' : null })} />
-          {t('documentos.sinConsentimiento')}
-        </label>
-      </div>
-      <ChipsDeFiltro
-        chips={chips}
-        alQuitar={(clave) => lista.cambiar({ [clave]: null })}
+            {leeClasificacion ? (
+              <FiltroDeLista
+                etiqueta={t('documentos.clasificacion')}
+                value={lista.filtro('classification')}
+                onChange={(e) => lista.cambiar({ classification: e.target.value })}
+                opciones={opciones('classification')}
+              />
+            ) : null}
+            <label className="inline-flex min-h-8 items-center gap-2 text-sm">
+              <input type="checkbox" checked={sinConsentimiento} onChange={(e) => lista.cambiar({ consent: e.target.checked ? 'missing' : null })} />
+              {t('documentos.sinConsentimiento')}
+            </label>
+          </>
+        }
+        aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
         alLimpiar={() => lista.cambiar({ q: null, evidence_type: null, classification: null, consent: null })}
       />
       <TablaDeRegistros

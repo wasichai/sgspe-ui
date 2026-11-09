@@ -34,6 +34,7 @@ export const ES_INVERSION = {
       beneficiarios: 'Beneficiarios alcanzados'
     },
     sinSocio: 'Sin socio',
+    notaAlPie: 'Cada monto en su moneda: las monedas no se suman; — = sin presupuesto del año',
     alcanzados: '{{alcanzados}} de {{meta}}'
   },
   aportes: {
@@ -44,7 +45,7 @@ export const ES_INVERSION = {
     vacioAyuda: 'Un aporte es un apoyo puntual a una comunidad u organización, con su tope de campaña; pruebe otra vista o regístrelo dentro de su proyecto.',
     estado: 'Estado',
     vistas: { enCurso: 'Aportes en curso', terminados: 'Aportes terminados', todos: 'Todos los aportes' },
-    columnas: { codigo: 'Código', proyecto: 'Proyecto', tipo: 'Tipo', recibe: 'Quién recibe', estado: 'Estado', monto: 'Monto', campana: 'Campaña' },
+    columnas: { aporte: 'Aporte', proyecto: 'Proyecto', recibe: 'Quién recibe', estado: 'Estado', monto: 'Monto', campana: 'Campaña' },
     // la nota al pie de la tabla (DD-38): un monto que no vino se escribe «—», nunca cero
     sinMonto: 'Cada monto en su moneda; — = sin monto'
   },
@@ -114,6 +115,7 @@ export const EN_INVERSION: typeof ES_INVERSION = {
       beneficiarios: 'Beneficiaries reached'
     },
     sinSocio: 'No partner',
+    notaAlPie: 'Each amount in its currency: currencies are not added; — = no budget for the year',
     alcanzados: '{{alcanzados}} of {{meta}}'
   },
   aportes: {
@@ -125,7 +127,7 @@ export const EN_INVERSION: typeof ES_INVERSION = {
       'A contribution is a one-off support to a community or organization, within its campaign cap; try another view or record it inside its project.',
     estado: 'State',
     vistas: { enCurso: 'Contributions in progress', terminados: 'Finished contributions', todos: 'All contributions' },
-    columnas: { codigo: 'Code', proyecto: 'Project', tipo: 'Type', recibe: 'Recipient', estado: 'State', monto: 'Amount', campana: 'Campaign' },
+    columnas: { aporte: 'Contribution', proyecto: 'Project', recibe: 'Recipient', estado: 'State', monto: 'Amount', campana: 'Campaign' },
     sinMonto: 'Each amount in its currency; — = no amount'
   },
   cifras: {

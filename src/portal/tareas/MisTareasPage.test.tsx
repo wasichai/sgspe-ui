@@ -108,6 +108,25 @@ describe('S47 · mis tareas', () => {
     expect(within(drawer).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
   })
 
+  // Civic Modern (design-system.md §4.3): la prioridad es la insignia de nivel con barras, variante prioridad; sin prioridad, «—»
+  it('la prioridad se dice con la insignia de nivel y las vistas van en el selector de E', async () => {
+    fetch = mockFetch(rutas())
+    red = servidor()
+    montar(<MisTareasPage />, { ruta: '/tasks', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
+    const tabla = await screen.findByRole('table', { name: 'Mis tareas' })
+    const alta = within(tabla).getByLabelText('Prioridad: Alta')
+    expect(alta).toHaveAttribute('data-nivel', 'ALTA')
+    expect(alta.querySelectorAll('[data-barra="llena"]')).toHaveLength(3)
+    const fila = within(tabla).getByRole('button', { name: 'Abrir Reprogramar el taller' }).closest('tr') as HTMLElement
+    expect(within(fila).getAllByText('—').length).toBeGreaterThan(0)
+    const vistas = screen.getByRole('radiogroup', { name: 'Vistas' })
+    expect(
+      within(vistas)
+        .getAllByRole('radio')
+        .map((r) => r.textContent)
+    ).toEqual(['Lista', 'Tablero', 'Calendario'])
+  })
+
   // revisión de UX, etapa 3: las cifras de arriba son filtros; en lo global, la columna Proyecto
   it('pulsar «Vencidas» filtra la lista, queda como chip y «Abiertas» lo quita; en lo global se dice el proyecto', async () => {
     fetch = mockFetch(rutas())
@@ -119,7 +138,7 @@ describe('S47 · mis tareas', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Vencidas 1' }))
     expect(ubicacion.actual).toBe('/tasks?situacion=VENCIDO')
     await waitFor(() => expect(within(screen.getByRole('table', { name: 'Mis tareas' })).getAllByRole('row')).toHaveLength(2))
-    expect(screen.getByRole('button', { name: 'Quitar Vencidas' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quitar el filtro Vencidas' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Abiertas 2' }))
     expect(ubicacion.actual).toBe('/tasks')
   })
@@ -134,7 +153,7 @@ describe('S47 · mis tareas', () => {
     await waitFor(() => expect(screen.getByRole('region', { name: 'En curso' })).toHaveTextContent('Reprogramar el taller'))
     // cada columna es una consulta por estado
     expect(red.a('GET', '/objects/task/records').map((l) => l.ruta)).toContainEqual(expect.stringContaining('state=done'))
-    await userEvent.click(screen.getByRole('tab', { name: 'Calendario' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Calendario' }))
     const mes = await screen.findByRole('region', { name: /octubre/ })
     expect((await within(mes).findByRole('button', { name: 'Ejecutar compromiso C-001' })).closest('div')).toHaveTextContent(/^5/)
     expect(await within(mes).findByText('Sin fecha de vencimiento: 1')).toBeInTheDocument()
@@ -335,7 +354,7 @@ describe('S47 · mis tareas', () => {
     const abiertas = await screen.findByRole('region', { name: 'Abiertas' })
     await userEvent.click(await within(abiertas).findByRole('button', { name: 'Ver las 2 restantes en la lista' }))
     expect(ubicacion.actual).toBe('/tasks')
-    await userEvent.click(screen.getByRole('tab', { name: 'Calendario' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Calendario' }))
     expect(await screen.findByText('Este mes tiene más tareas de las que el calendario puede mostrar: véalas todas en la lista.')).toBeInTheDocument()
   })
 
@@ -368,8 +387,8 @@ describe('S47 · mis tareas', () => {
     red = servidor()
     montar(<MisTareasPage />, { ruta: '/tasks?view=paraTomar', camino: '/tasks', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     expect(await screen.findByRole('button', { name: 'Abrir Ejecutar compromiso C-001' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Lista' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.queryByRole('tab', { name: 'Para tomar' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Lista' })).toBeChecked()
+    expect(screen.queryByRole('radio', { name: 'Para tomar' })).not.toBeInTheDocument()
   })
 
   // B-04: el servidor acota la lectura de task a los proyectos de la cuenta (ADR-0029), así que «Para tomar» no exige un proyecto

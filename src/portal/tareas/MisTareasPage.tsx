@@ -1,6 +1,5 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { cn } from '@wasichai/ui'
-import { ChipsDeFiltro } from '../componentes/Lista'
 import { BarraDeSeleccion } from '../componentes/BarraDeSeleccion'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
@@ -11,7 +10,10 @@ import { useTranslation } from 'react-i18next'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { PaginacionDelServidor, useParametrosDeLista, VistasGuardadas } from '../componentes/Lista'
+import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
+import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { Nivel } from '../componentes/Nivel'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { hoyEnLima } from '../datos/fechas'
 import {
@@ -133,11 +135,18 @@ export function MisTareasPage() {
           })}
         </div>
       )}
-      <ChipsDeFiltro chips={chips} alQuitar={() => filtrar(null)} alLimpiar={() => filtrar(null)} />
-      <VistasGuardadas
-        vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`tareas.vistas.${v}`) }))}
-        actual={vista}
-        alCambiar={(vista) => lista.cambiar({ view: vista })}
+      {/* la barra de filtros de E (DD-04): Lista · Tablero · Calendario en el selector de vista y la situación elegida como chip */}
+      <BarraDeFiltros
+        vista={
+          <SelectorDeVista
+            etiqueta={t('comun.vistas')}
+            vistas={VISTAS.map((v) => ({ id: v, etiqueta: t(`tareas.vistas.${v}`) }))}
+            actual={vista}
+            alElegir={(v) => lista.cambiar({ view: v })}
+          />
+        }
+        aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => filtrar(null) }))}
+        alLimpiar={() => filtrar(null)}
       />
       {vista === 'tablero' ? (
         <Tablero consulta={conSituacion} alAbrir={abrir} alVerLista={verLista} />
@@ -359,9 +368,10 @@ function TablaDeTareas({
                     </Td>
                   ) : null}
                   <Td className="text-sm">
+                    {/* el título como en la columna de título de E (design-system.md §5.3): 600 sin subrayado, que vuelve al pasar */}
                     <button
                       type="button"
-                      className="text-left text-sg-primary-text underline"
+                      className="text-left font-semibold text-sg-text hover:underline"
                       aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
                       onClick={() => alAbrir(x)}
                     >
@@ -378,7 +388,11 @@ function TablaDeTareas({
                       <OrigenDeTarea tarea={x} />
                     </Td>
                   ) : null}
-                  {conPrioridad ? <Td className="text-sm">{opcion(x, 'priority') || '—'}</Td> : null}
+                  {conPrioridad ? (
+                    <Td className="text-sm">
+                      <Nivel valor={atributo(x, 'priority')} escala="prioridad" nombre={t('tareas.columnas.prioridad')} />
+                    </Td>
+                  ) : null}
                   <Td className="space-x-2 text-sm">
                     <span>
                       <Dia valor={texto(x, 'due_date')} />
@@ -454,6 +468,9 @@ function ColumnaDelTablero({
                   <Dia valor={texto(x, 'due_date')} />
                   <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
                 </span>
+                {opcion(x, 'priority') ? (
+                  <Nivel valor={atributo(x, 'priority')} escala="prioridad" nombre={t('tareas.columnas.prioridad')} className="mt-1" />
+                ) : null}
               </button>
             </li>
           ))}

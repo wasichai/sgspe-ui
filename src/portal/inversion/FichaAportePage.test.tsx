@@ -157,6 +157,22 @@ describe('S44 · ficha del aporte', () => {
     expect(within(drawer).queryByLabelText(/^contribution_type/)).not.toBeInTheDocument()
   })
 
+  it('desde «Entregado» la cabecera dice que la entrega quedó congelada, con su candado', async () => {
+    fetch = mockFetch(rutas({ ...APORTE, state: 'delivered' }))
+    abrir()
+    const cabecera = await screen.findByRole('heading', { level: 1 })
+    const chip = await screen.findByText('Entrega congelada')
+    expect(chip.closest('[data-congelado]')).not.toBeNull()
+    expect(cabecera.parentElement).toContainElement(chip)
+  })
+
+  it('antes de «Entregado» la cabecera no dice que la entrega está congelada', async () => {
+    fetch = mockFetch(rutas({ ...APORTE, state: 'approved' }))
+    abrir()
+    await screen.findByText('Total aprobado: S/ 1,750.50')
+    expect(screen.queryByText('Entrega congelada')).not.toBeInTheDocument()
+  })
+
   it('al guardar «Editar» (fijar el tipo) vuelve a consultar en seco: «Aprobar» deja de estar bloqueado sin recargar', async () => {
     const sinTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: null } }
     const conTipo = { ...APORTE, attributes: { ...APORTE.attributes, contribution_type: 'DONACION' }, updatedAt: '2026-10-05T16:00:00Z' }
