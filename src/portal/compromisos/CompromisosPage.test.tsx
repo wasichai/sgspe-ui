@@ -63,6 +63,11 @@ const conServidor = (especiales: RutaEspecial[] = [], compromisos = [C1, C2, C3,
   espiarRed([...especiales, listaDelServidor('commitment', compromisos), ...(candidatos ? [listaDelServidor('commitment_candidate', candidatos)] : [])])
 const consultasA = (r: Red, objeto = 'commitment') =>
   r.a('GET', `/objects/${objeto}/records`).map((l) => Object.fromEntries(new URLSearchParams(l.ruta.split('?')[1] ?? '')))
+// las filas de datos de la tabla, sin la del encabezado ni las de los grupos por situación (S08)
+const filasDe = (tabla: HTMLElement) =>
+  within(tabla)
+    .getAllByRole('row')
+    .filter((f) => within(f).queryAllByRole('cell').length > 0)
 const enProyecto = (p = EQUIPO_DE_COMPROMISOS, ruta = '/projects/p1/commitments') =>
   montar(<CompromisosPage />, { ruta, camino: '/projects/:projectId/commitments', usuario: GESTORA, permisos: p })
 
@@ -72,7 +77,7 @@ describe('S28 · lista de compromisos', () => {
     red = conServidor()
     enProyecto()
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
-    expect(within(tabla).getAllByRole('row')).toHaveLength(4)
+    expect(filasDe(tabla)).toHaveLength(3)
     expect(within(tabla).queryByText('Botiquín comunal')).not.toBeInTheDocument()
     expect(within(tabla).getByRole('link', { name: 'Reservorio de agua para Tunas Pampa' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
     // el ojo abre su vista previa sin dejar la lista (revisión de UX, etapa 6)
@@ -83,12 +88,12 @@ describe('S28 · lista de compromisos', () => {
     expect(within(tabla).getAllByText('S/ 25,000.00')).toHaveLength(3)
     await userEvent.click(screen.getByRole('radio', { name: /^Vencidos\b/ }))
     expect(await within(await screen.findByRole('table', { name: 'Compromisos' })).findByText('Taller de costura')).toBeInTheDocument()
-    expect(screen.getAllByRole('row')).toHaveLength(2)
+    expect(filasDe(screen.getByRole('table', { name: 'Compromisos' }))).toHaveLength(1)
     await userEvent.click(screen.getByRole('radio', { name: /^Bloqueados\b/ }))
     expect(screen.getByText('Taller de costura')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('radio', { name: /^Por vencer\b/ }))
     expect(screen.getByText('Becas escolares')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Nuevo compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new')
+    expect(screen.getByRole('link', { name: 'Registrar compromiso' })).toHaveAttribute('href', '/projects/p1/commitments/new')
   })
 
   // hallazgo U-18 (CA-1.3.1): las vistas van en una sola fila, sin una segunda fila de pestañas
@@ -117,7 +122,7 @@ describe('S28 · lista de compromisos', () => {
     enProyecto()
     expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByText('No hay compromisos en esta vista.')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Nuevo compromiso' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Registrar compromiso' })).not.toBeInTheDocument()
   })
 
   // revisión de UX, etapa 3: crear no depende del selector de proyecto
@@ -127,7 +132,7 @@ describe('S28 · lista de compromisos', () => {
     montar(<CompromisosPage />, { ruta: '/commitments', camino: '/commitments', usuario: GESTORA, permisos: EQUIPO_DE_COMPROMISOS })
     expect(await screen.findByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
     expect((await screen.findAllByRole('link', { name: 'PRJ-01 · Pukaqaqa' }))[0]).toHaveAttribute('href', '/projects/p1/overview')
-    expect(screen.getByRole('button', { name: 'Nuevo compromiso' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Registrar compromiso' })).toBeInTheDocument()
     expect(screen.queryByText(/elija su proyecto en el selector/)).not.toBeInTheDocument()
   })
 
@@ -142,7 +147,7 @@ describe('S28 · lista de compromisos', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
     expect(screen.getByRole('button', { name: 'Cerrados y cancelados, 1' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Candidatos' })).toHaveTextContent(/^Candidatos$/)
-    expect(screen.getByText('3 compromisos')).toBeInTheDocument()
+    expect(screen.getByText('Vista «Abiertos» · 3 compromisos')).toBeInTheDocument()
     expect(within(tabla).getByText('C-002')).toHaveClass('font-sg-mono')
   })
 
@@ -150,10 +155,11 @@ describe('S28 · lista de compromisos', () => {
     fetch = mockFetch(rutas())
     red = conServidor()
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?q=inexistente')
-    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    // el vacío por filtros de E18: cuántos filtros, cuántos hay sin ellos y «Quitar los filtros»
+    expect(await screen.findByText('Ningún compromiso coincide con este filtro')).toBeInTheDocument()
     expect(screen.getByText('Sin los filtros hay 3.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quitar el filtro Contiene «inexistente»' })).toBeInTheDocument()
-    await userEvent.click(screen.getAllByRole('button', { name: 'Limpiar filtros' })[0])
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar los filtros' }))
     expect(ubicacion.actual).toBe('/projects/p1/commitments')
     expect(await screen.findByRole('table', { name: 'Compromisos' })).toBeInTheDocument()
   })
@@ -214,7 +220,7 @@ describe('S28 · lista de compromisos', () => {
     })
     await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
     await userEvent.click(screen.getByRole('button', { name: /^Cerrados y cancelados\b/ }))
-    expect(await screen.findByText('Nada coincide con los filtros')).toBeInTheDocument()
+    expect(await screen.findByText('Ningún compromiso coincide con estos 2 filtros')).toBeInTheDocument()
     // la vista elegida del menú entra a la fila, con su conteo
     expect(screen.getByRole('radio', { name: 'Cerrados y cancelados, 0' })).toHaveAttribute('aria-checked', 'true')
     expect(consultasA(red).some((c) => c.state === 'closed,cancelled' && c.size === '25')).toBe(false)
@@ -232,10 +238,10 @@ describe('S28 · lista de compromisos', () => {
     red = conServidor([], muchos)
     enProyecto()
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
-    expect(within(tabla).getAllByRole('row')).toHaveLength(26)
-    expect(screen.getByText('30 compromisos')).toBeInTheDocument()
+    expect(filasDe(tabla)).toHaveLength(25)
+    expect(screen.getByText('Vista «Abiertos» · 30 compromisos')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /siguiente|next/i }))
-    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Compromisos' })).getAllByRole('row')).toHaveLength(6))
+    await waitFor(() => expect(filasDe(screen.getByRole('table', { name: 'Compromisos' }))).toHaveLength(5))
     expect(consultasA(red)).toContainEqual(expect.objectContaining({ state_not: 'closed,cancelled', page: '1', size: '25' }))
   })
 
@@ -249,7 +255,7 @@ describe('S28 · lista de compromisos', () => {
     red = conServidor()
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?stakeholder=s1')
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
-    expect(within(tabla).getAllByRole('row')).toHaveLength(3)
+    expect(filasDe(tabla)).toHaveLength(2)
     expect(within(tabla).queryByText('Becas escolares')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
     expect(screen.getByRole('button', { name: 'Cerrados y cancelados, 1' })).toBeInTheDocument()
@@ -295,7 +301,7 @@ describe('S28 · lista de compromisos', () => {
     const chips = within(screen.getByRole('list', { name: 'Filtros aplicados' })).getAllByRole('listitem')
     expect(chips.map((c) => c.textContent)).toContain('Grupo de interés: Junta de regantes')
     const tabla = await screen.findByRole('table', { name: 'Compromisos' })
-    expect(within(tabla).getAllByRole('row')).toHaveLength(2)
+    expect(filasDe(tabla)).toHaveLength(1)
     expect(within(tabla).getByText('Taller de costura')).toBeInTheDocument()
   })
 
@@ -321,8 +327,9 @@ describe('S28 · lista de compromisos', () => {
     expect(screen.queryByRole('button', { name: 'Más filtros' })).not.toBeInTheDocument()
   })
 
-  // 05-especificacion §1.6 y DD-05: el código, el título y el vencimiento se ordenan en el servidor; el orden dura la visita
-  it('el código, el título y el vencimiento ordenan en el servidor, con aria-sort, y otro orden vuelve a la primera página', async () => {
+  // 05-especificacion §1.6 y DD-05: el código, el título y el vencimiento se ordenan en el servidor; el orden viaja en la URL. con
+  // la columna «Compromiso» de S08 (código, título, responsable y fecha en una celda), el orden se elige en la barra («Orden»)
+  it('«Orden» ordena en el servidor por el vencimiento, el código o el título, en la URL, y otro orden vuelve a la primera página', async () => {
     const muchos = Array.from({ length: 30 }, (_, i) =>
       registro(
         `m${i}`,
@@ -339,29 +346,31 @@ describe('S28 · lista de compromisos', () => {
     red = conServidor([], muchos)
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?page=1')
     const tabla = () => screen.getByRole('table', { name: 'Compromisos' })
+    const orden = () => screen.getByRole('combobox', { name: 'Orden' })
     await screen.findByRole('table', { name: 'Compromisos' })
-    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
-    // la prioridad de columnas (DD-05): el responsable y el monto, desde xl
-    expect(within(tabla()).getByRole('columnheader', { name: 'Responsable' })).toHaveClass('hidden', 'xl:table-cell')
-    expect(within(tabla()).getByRole('columnheader', { name: 'Monto' })).toHaveClass('hidden', 'xl:table-cell')
-    // el estado, la situación y el monto no se ordenan
-    for (const c of ['Estado', 'Plazo', 'Monto']) expect(within(tabla()).queryByRole('button', { name: c })).not.toBeInTheDocument()
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    expect(orden()).toHaveValue('vence:asc')
+    // las columnas de S08, todas esenciales; ninguna ordena desde su encabezado (el monto mezcla monedas, ASM-063)
+    expect(
+      within(tabla())
+        .getAllByRole('columnheader')
+        .map((c) => c.textContent)
+    ).toEqual(['Compromiso', 'Estado y situación', 'Monto'])
+    expect(within(tabla()).getByRole('columnheader', { name: 'Monto' })).not.toHaveClass('hidden')
+    expect(within(within(tabla()).getAllByRole('row')[0]).queryAllByRole('button')).toHaveLength(0)
+    await userEvent.selectOptions(orden(), 'codigo:asc')
     await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'asc', page: '0', size: '25' })))
     // el orden viaja en la URL (tercera pasada de UX, 3.6; DD-37): volver de una ficha lo conserva
     expect(ubicacion.actual).toBe('/projects/p1/commitments?sort=codigo&dir=asc')
-    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('C-100'))
-    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'ascending')
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await waitFor(() => expect(filasDe(tabla())[0]).toHaveTextContent('C-100'))
+    await userEvent.selectOptions(orden(), 'codigo:desc')
     await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'code', dir: 'desc' })))
-    await waitFor(() => expect(within(tabla()).getAllByRole('row')[1]).toHaveTextContent('C-129'))
-    expect(within(tabla()).getByRole('columnheader', { name: 'Código' })).toHaveAttribute('aria-sort', 'descending')
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Compromiso' }))
+    await waitFor(() => expect(filasDe(tabla())[0]).toHaveTextContent('C-129'))
+    await userEvent.selectOptions(orden(), 'compromiso:asc')
     await waitFor(() => expect(consultasA(red!)).toContainEqual(expect.objectContaining({ sort: 'title', dir: 'asc' })))
-    expect(within(tabla()).getByRole('columnheader', { name: 'Compromiso' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(orden()).toHaveValue('compromiso:asc')
   })
 
-  it('con el filtro de un grupo de interés, el orden es del portal por la misma columna, estable, y vuelve a la primera página', async () => {
+  it('con el filtro de un grupo de interés, el orden es del portal por el mismo campo, estable, y vuelve a la primera página', async () => {
     const delGrupo = [
       registro('g1', { ...C1.attributes, code: 'C-003', title: 'Óvalo deportivo', due_date: '2026-12-01' }, { state: 'in_progress' }),
       registro('g2', { ...C1.attributes, code: 'C-001', title: 'Zanja de riego', due_date: null }, { state: 'in_progress' }),
@@ -376,25 +385,141 @@ describe('S28 · lista de compromisos', () => {
     red = conServidor()
     enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?stakeholder=s1&page=0')
     const tabla = () => screen.getByRole('table', { name: 'Compromisos' })
-    const codigos = () =>
-      within(tabla())
-        .getAllByRole('row')
-        .slice(1)
-        .map((f) => within(f).getAllByRole('cell')[0].textContent)
+    const orden = () => screen.getByRole('combobox', { name: 'Orden' })
+    // el código en mono arriba del título, en la celda «Compromiso»
+    const codigos = () => filasDe(tabla()).map((f) => within(f).getAllByRole('cell')[0].querySelector('.font-sg-mono')?.textContent)
     await screen.findByRole('table', { name: 'Compromisos' })
     // por el vencimiento, de antes a después; el que no tiene fecha, al final
     expect(codigos()).toEqual(['C-002', 'C-003', 'C-001'])
-    expect(within(tabla()).getByRole('columnheader', { name: 'Vence' })).toHaveAttribute('aria-sort', 'ascending')
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Vence' }))
+    await userEvent.selectOptions(orden(), 'vence:desc')
     expect(codigos()).toEqual(['C-003', 'C-002', 'C-001'])
     // el título con el colador del español: la «Ó» va con la «O», no al final
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Compromiso' }))
+    await userEvent.selectOptions(orden(), 'compromiso:asc')
     expect(codigos()).toEqual(['C-002', 'C-003', 'C-001'])
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Código' }))
+    await userEvent.selectOptions(orden(), 'codigo:asc')
     expect(codigos()).toEqual(['C-001', 'C-002', 'C-003'])
     expect(ubicacion.actual).toBe('/projects/p1/commitments?stakeholder=s1&sort=codigo&dir=asc')
     // el servidor no ordena lo que filtra el portal
     expect(consultasA(red)).toEqual([])
+  })
+
+  // S08: con el orden por vencimiento, las filas de la página se agrupan por la situación que trae cada una (Vencidos, Por vencer,
+  // Al día), con el número de filas de la página en cada grupo y la nota que lo dice; con otro orden, sin grupos. la nota al pie
+  // dice que los montos no se suman entre monedas y que «—» es sin monto (nunca un cero)
+  it('agrupa la página por situación con el orden por vencimiento, lo dice en la nota al pie, y con otro orden no agrupa', async () => {
+    const sinMonto = registro(
+      'c5',
+      { ...C1.attributes, code: 'C-005', title: 'Faena comunal', amount: null, deadline_status: 'VENCIDO' },
+      { state: 'approved' }
+    )
+    const enDolares = registro('c6', { ...C1.attributes, code: 'C-006', title: 'Equipo de radio', amount: 1200, currency: 'USD' }, { state: 'in_progress' })
+    fetch = mockFetch(rutas())
+    red = conServidor([], [C1, C2, C3, sinMonto, enDolares])
+    enProyecto()
+    const tabla = await screen.findByRole('table', { name: 'Compromisos' })
+    const grupos = within(tabla)
+      .getAllByRole('rowheader')
+      .map((g) => g.textContent)
+    expect(grupos).toEqual(['Vencidos (2)', 'Por vencer (1)', 'Al día (2)'])
+    // cada fila dice su estado y su situación, apilados, y el responsable con la fecha bajo el título
+    const vencida = filasDe(tabla).find((f) => within(f).queryByText('Faena comunal'))!
+    expect(within(vencida).getByText('Aprobado')).toBeInTheDocument()
+    expect(within(vencida).getByLabelText(/^Situación de plazo: Vencido/)).toBeInTheDocument()
+    expect(within(vencida).getByText('—')).toHaveClass('text-sg-text-muted')
+    expect(within(tabla).getByText(/^(US\$|USD) 1,200\.00$/)).toBeInTheDocument()
+    expect(within(tabla).queryByText(/\b0\.00$/)).not.toBeInTheDocument()
+    expect(screen.getByText(/las monedas no se suman; «—» = sin monto registrado/)).toBeInTheDocument()
+    expect(screen.getByText('Agrupados por situación en esta página.')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Orden' }), 'codigo:asc')
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Compromisos' })).queryAllByRole('rowheader')).toHaveLength(0))
+    expect(screen.queryByText('Agrupados por situación en esta página.')).not.toBeInTheDocument()
+    expect(screen.getByText(/«—» = sin monto registrado/)).toBeInTheDocument()
+  })
+
+  // E18: la carga es el esqueleto de la tabla con «Cargando compromisos…»; el error dice qué no se cargó y ofrece «Reintentar», que
+  // vuelve a pedir la página
+  it('cargando dice «Cargando compromisos…» con el esqueleto; el error lo dice con «Reintentar», que vuelve a pedir', async () => {
+    let falla = true
+    const servidor = listaDelServidor('commitment', [C1, C2, C3, C4])
+    fetch = mockFetch(rutas())
+    red = espiarRed([
+      {
+        path: '/objects/commitment/records',
+        responder: (l) => (falla && new URLSearchParams(l.ruta.split('?')[1]).get('size') === '25' ? problema(500, 'caído') : servidor.responder(l))
+      }
+    ])
+    enProyecto()
+    expect(screen.getByText('Cargando compromisos…').closest('[role="status"]')).toHaveAttribute('aria-busy', 'true')
+    expect(document.querySelectorAll('[data-esqueleto-fila]').length).toBeGreaterThan(0)
+    expect(await screen.findByText('No se pudieron cargar los compromisos.')).toBeInTheDocument()
+    falla = false
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(await screen.findByRole('table', { name: 'Compromisos' })).toBeInTheDocument()
+  })
+
+  // S08: desde xl, ?peek= abre la vista previa acoplada con la anatomía del compromiso: el antetítulo y el título, el estado y la
+  // situación, la primaria (la siguiente transición real), el motivo del bloqueo, el panel de decisión, el monto, los grupos que lo
+  // pidieron, la trazabilidad y la caja de candidatos de IA por decidir
+  it('la vista previa acoplada dice la anatomía de S08 con la primaria real y el motivo del bloqueo', async () => {
+    const original = window.matchMedia
+    window.matchMedia = ((consulta: string) => ({
+      matches: consulta === '(min-width: 80rem)',
+      media: consulta,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    })) as unknown as typeof window.matchMedia
+    try {
+      const DE_IA = registro('k3', { project: 'p1', proposed_text: 'Arreglar el canal', ai_generated: true }, { state: 'proposed' })
+      fetch = mockFetch(
+        rutas([
+          { path: '/objects/commitment/records/c2', body: C2 },
+          {
+            path: '/objects/commitment/records/c2/transitions',
+            body: [
+              { name: 'unblock', label: 'Desbloquear', to: 'in_progress', toLabel: 'En ejecución', allowed: true, reason: null },
+              { name: 'cancel_blocked', label: 'Cancelar', to: 'cancelled', toLabel: 'Cancelado', allowed: true, reason: null }
+            ]
+          },
+          {
+            path: /^\/objects\/commitment\/records\/c2\/history/,
+            body: [
+              {
+                id: 'h1',
+                userEmail: 'cmm@sgspe.test',
+                operation: 'TRANSITION',
+                occurredAt: '2026-10-01T15:00:00Z',
+                reason: 'Falta la autorización de uso de agua',
+                changes: [{ field: 'state', before: 'in_progress', after: 'blocked' }]
+              }
+            ]
+          },
+          {
+            path: '/objects/commitment/records/c2/related/commitment_stakeholder',
+            body: pagina([registro('s1', { project: 'p1', organization: 'o-reg' })])
+          },
+          { path: '/objects/organization/records/o-reg', body: registro('o-reg', { name: 'Comité de regantes' }) }
+        ])
+      )
+      red = conServidor([], [C1, C2, C3, C4], [PROPUESTO, RECHAZADO, DE_IA])
+      enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?peek=commitment%3Ac2')
+      const panel = await screen.findByRole('complementary', { name: 'Taller de costura' })
+      expect(within(panel).getByText('C-002', { exact: false })).toBeInTheDocument()
+      expect(within(panel).getAllByText('Bloqueado')[0]).toBeInTheDocument()
+      expect(await within(panel).findByRole('button', { name: 'Desbloquear' })).toBeInTheDocument()
+      // cancelar es destructiva: en «Más acciones», no junto a la primaria
+      expect(within(panel).queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument()
+      expect(await within(panel).findByText('«Falta la autorización de uso de agua»')).toBeInTheDocument()
+      expect(within(panel).getByText('Motivo del bloqueo')).toBeInTheDocument()
+      expect(within(panel).getByText('Estado actual')).toBeInTheDocument()
+      expect(within(panel).getByText('S/ 25,000.00')).toBeInTheDocument()
+      expect(await within(panel).findByText('Comité de regantes')).toBeInTheDocument()
+      expect(within(panel).getByRole('complementary', { name: 'Trazabilidad' })).toBeInTheDocument()
+      expect(await within(panel).findByText('Candidatos de IA · 1 propuesta')).toBeInTheDocument()
+      expect(within(panel).getByRole('link', { name: 'Revisar candidatos' })).toHaveAttribute('href', '/projects/p1/commitments?view=candidatos')
+      expect(within(panel).getByRole('link', { name: 'Abrir ficha' })).toHaveAttribute('href', '/projects/p1/commitments/c2')
+    } finally {
+      window.matchMedia = original
+    }
   })
 
   it('consultaDeVista dice lo mismo que enVista; «Míos» sin quien mira no pide nada; conEstado cruza el estado con la vista', () => {

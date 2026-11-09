@@ -93,28 +93,33 @@ export function AcuerdosPage() {
     />
   )
   const proyectoDe = (a: Registro) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === texto(a, 'project'))} />
-  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el acuerdo, el proyecto (en lo global), el estado, la
-  // vigencia y el vencimiento; secundario, desde xl, el tipo
+  // la tabla en el lenguaje de S08 (hallazgo U-06, DD-05): «Acuerdo» con el código en mono arriba, el título en dos líneas como
+  // mucho y el tipo debajo; el proyecto (en lo global); «Estado y vigencia» apilados (el chip del flujo y, debajo, la vigencia
+  // derivada, sin caja); y el vencimiento, que ordena
   const columnas: ColumnaPriorizada[] = [
     { id: 'acuerdo', encabezado: t('acuerdos.columnas.acuerdo'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('acuerdos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'tipo', encabezado: t('acuerdos.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    { id: 'estado', encabezado: t('acuerdos.columnas.estado'), prioridad: 'esencial' },
-    { id: 'vigencia', encabezado: t('acuerdos.columnas.vigencia'), prioridad: 'esencial' },
+    { id: 'estado', encabezado: t('acuerdos.columnas.estadoYVigencia'), prioridad: 'esencial' },
     { id: 'vence', encabezado: t('acuerdos.columnas.vence'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap', ordenable: true }
   ]
   const celda = (a: Registro, columna: string): ReactNode => {
     switch (columna) {
       case 'acuerdo':
-        return enlace(a)
+        return (
+          <>
+            {enlace(a)}
+            {opcion(a, 'agreement_type') ? <span className="mt-0.5 block text-sg-caption text-sg-text-secondary">{opcion(a, 'agreement_type')}</span> : null}
+          </>
+        )
       case 'proyecto':
         return proyectoDe(a)
-      case 'tipo':
-        return opcion(a, 'agreement_type')
       case 'estado':
-        return <EstadoChip objeto="agreement" estado={a.state} />
-      case 'vigencia':
-        return <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
+        return (
+          <span className="flex flex-col items-start gap-1.5">
+            <EstadoChip objeto="agreement" estado={a.state} />
+            <SituacionDePlazo valor={atributo(a, 'validity_status')} vigencia />
+          </span>
+        )
       default:
         return <Dia valor={texto(a, 'expiry_date')} />
     }

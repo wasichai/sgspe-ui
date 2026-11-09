@@ -49,14 +49,14 @@ export function Cargando({ etiqueta, compacto }: { etiqueta?: string; compacto?:
   )
 }
 
-export function ErrorDeCarga({ error, alReintentar }: { error: unknown; alReintentar?: () => void }) {
+export function ErrorDeCarga({ error, alReintentar, titulo }: { error: unknown; alReintentar?: () => void; titulo?: string }) {
   const { t } = useTranslation(NS)
   const mensaje = useMensajeDeError()
   const correlacion = correlacionDe(error)
   return (
     // la alerta de peligro de design-system.md §5.3 (la caja, el borde de 2 px y el ícono los pone la capa de componentes): qué
     // falló, el código de soporte en Plex Mono si el error lo trae (X-Correlation-Id) y «Reintentar»
-    <Alert tone="danger" title={t('comun.errorDeCarga')}>
+    <Alert tone="danger" title={titulo ?? t('comun.errorDeCarga')}>
       <span className="block">{mensaje(error)}</span>
       {correlacion ? <span className="block font-sg-mono text-sg-caption">{t('comun.correlacion', { id: correlacion })}</span> : null}
       {alReintentar ? (

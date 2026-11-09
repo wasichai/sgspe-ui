@@ -25,7 +25,7 @@ import { useMigaDelRegistro } from '../componentes/Migas'
 import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
-import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
+import { MotivoDelBloqueo, SituacionDelCompromiso } from './SituacionDelCompromiso'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { EvidenciasDelRegistro } from '../documentos/EvidenciasDelRegistro'
 import { atributo, texto, usePuedeEditar, useRegistro, useRegistros, useRelacionados, useTodos, type Registro } from '../datos/registros'
@@ -70,8 +70,8 @@ const EDITABLES_SIEMPRE = [
   'origin_justification'
 ]
 const ANTES_DE_APROBAR = ['draft', 'pending_approval']
-const CAMINO = ['draft', 'pending_approval', 'approved', 'in_progress', 'fulfilled', 'verified', 'closed']
-const COMPROBAR = ['submit', 'approve', 'approve_senior', 'approve_direct', 'register_fulfillment', 'verify', 'close']
+export const CAMINO = ['draft', 'pending_approval', 'approved', 'in_progress', 'fulfilled', 'verified', 'closed']
+export const COMPROBAR = ['submit', 'approve', 'approve_senior', 'approve_direct', 'register_fulfillment', 'verify', 'close']
 
 export function FichaCompromisoPage() {
   const { t } = useTranslation(NS)
@@ -125,7 +125,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         tituloDelDocumento={[texto(compromiso, 'code'), texto(compromiso, 'title')].filter(Boolean).join(' ')}
         chips={
           <>
-            <SituacionDePlazo valor={atributo(compromiso, 'deadline_status')} />
+            <SituacionDelCompromiso compromiso={compromiso} />
             {texto(compromiso, 'due_date') ? (
               <span>
                 <Dia valor={texto(compromiso, 'due_date')} />
@@ -168,6 +168,8 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
         ]}
       />
       {atributo(compromiso, 'delay_risk_reported') === true ? <Alert tone="warning">{t('fichaCompromiso.riesgoInformado')}</Alert> : null}
+      {/* el motivo con que se bloqueó (S08, M17b), en la alerta de peligro bajo la cabecera */}
+      <MotivoDelBloqueo compromiso={compromiso} />
       {/* el camino de WF-D sin la excepción (bloqueado): si el compromiso está bloqueado, se agrega igual al camino */}
       <PanelDeDecision
         camino={CAMINO}
@@ -329,7 +331,7 @@ function Resumen({ compromiso }: { compromiso: Registro }) {
 // acuerdo y cláusula, candidato, queja de origen, riesgo que atiende), qué generó (tareas, entregas) y lo que lo sustenta (sus
 // evidencias), con los grupos fijos de PanelDeTrazabilidad. una queja confidencial que quien mira no lee se dice «Registro
 // reservado» (RegistroVinculado); una lectura que falló lo dice al pie
-function Trazabilidad({ compromiso }: { compromiso: Registro }) {
+export function Trazabilidad({ compromiso }: { compromiso: Registro }) {
   // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
   const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)

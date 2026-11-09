@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { pagina, prepararApi, prepararFichaDeCompromiso, registro, USUARIO } from '../api'
+import { GRUPO, pagina, prepararApi, prepararFichaDeCompromiso, registro, USUARIO } from '../api'
 
 // el escenario de las capturas del rediseño (wasichai/sgspe-ui#88): una organización con datos en cada pantalla representativa,
 // sobre la API simulada de e2e/api.ts. reúne lo que los specs simulan cada uno por su lado (f4, f5, f6, f8, listasF4,
@@ -140,47 +140,68 @@ const AREAS = ['AIDS', 'AIDI', 'AIS', 'AII'].map((tipo, n) =>
   registro(`a${n}`, { project: 'p1', area_type: tipo, version_number: n + 1 }, n === 3 ? 'draft' : 'approved')
 )
 
+// los compromisos de S08: vencidos, por vencer y al día, con y sin monto, uno bloqueado con su motivo (k4) y uno por aprobar
+const compromiso = (id: string, code: string, title: string, estado: string, extra: Record<string, unknown>) =>
+  registro(id, { project: 'p1', code, title, community: 'c1', currency: 'PEN', ...extra }, estado)
 const COMPROMISOS = [
-  registro(
-    'k1',
-    {
-      project: 'p1',
-      code: 'C-001',
-      title: 'Reservorio de agua',
-      origin_engagement: 'e1',
-      community: 'c1',
-      due_date: '2026-11-30',
-      deadline_status: 'AL DIA',
-      owner_user_id: USUARIO.id,
-      owner_user_email: USUARIO.email
-    },
-    'in_progress'
-  ),
-  registro(
-    'k2',
-    {
-      project: 'p1',
-      code: 'C-002',
-      title: 'Mantenimiento del camino vecinal a la parte alta',
-      community: 'c1',
-      due_date: '2026-10-01',
-      deadline_status: 'VENCIDO',
-      owner_user_email: 'cmm@sgspe.test'
-    },
-    'in_progress'
-  ),
-  registro(
-    'k3',
-    {
-      project: 'p1',
-      code: 'C-003',
-      title: 'Capacitación en crianza de cuyes',
-      due_date: '2026-10-25',
-      deadline_status: 'POR VENCER',
-      owner_user_email: 'rel@sgspe.test'
-    },
-    'agreed'
-  )
+  compromiso('k4', 'C-004', 'Cemento para el revestimiento de un tramo del canal principal', 'blocked', {
+    due_date: '2026-09-15',
+    deadline_status: 'VENCIDO',
+    amount: 18400,
+    owner_user_id: USUARIO.id,
+    owner_user_email: USUARIO.email,
+    origin_engagement: 'e1'
+  }),
+  compromiso('k2', 'C-002', 'Mantenimiento del camino vecinal a la parte alta', 'in_progress', {
+    due_date: '2026-10-01',
+    deadline_status: 'VENCIDO',
+    owner_user_email: 'cmm@sgspe.test'
+  }),
+  compromiso('k5', 'C-005', 'Implementos para el comité de vigilancia de la perforación', 'approved', {
+    due_date: '2026-10-08',
+    deadline_status: 'VENCIDO',
+    amount: 6200,
+    owner_user_email: 'rel@sgspe.test'
+  }),
+  compromiso('k6', 'C-006', 'Apoyo técnico al expediente de agua potable', 'in_progress', {
+    due_date: '2026-10-22',
+    deadline_status: 'POR VENCER',
+    owner_user_email: 'cmm@sgspe.test'
+  }),
+  compromiso('k3', 'C-003', 'Capacitación en crianza de cuyes', 'in_progress', {
+    due_date: '2026-10-25',
+    deadline_status: 'POR VENCER',
+    amount: 12500,
+    owner_user_email: 'rel@sgspe.test'
+  }),
+  compromiso('k1', 'C-001', 'Reservorio de agua', 'in_progress', {
+    origin_engagement: 'e1',
+    due_date: '2026-11-30',
+    deadline_status: 'AL DIA',
+    owner_user_id: USUARIO.id,
+    owner_user_email: USUARIO.email
+  }),
+  compromiso('k7', 'C-007', 'Faenas comunales para el mantenimiento de la trocha carrozable', 'pending_approval', {
+    due_date: '2026-12-20',
+    deadline_status: 'AL DIA',
+    amount: 7300,
+    owner_user_email: 'cmm@sgspe.test'
+  })
+]
+// el bloqueado de la vista previa: su motivo está en la actividad, y lo pidió la junta directiva
+const BLOQUEO = [
+  {
+    id: 'h1',
+    userEmail: 'cmm@sgspe.test',
+    operation: 'TRANSITION',
+    occurredAt: '2026-09-20T15:00:00Z',
+    reason: 'Falta la autorización de uso de agua de la autoridad local',
+    changes: [{ field: 'state', before: 'in_progress', after: 'blocked' }]
+  }
+]
+const CANDIDATOS_DE_IA = [
+  registro('cc1', { project: 'p1', proposed_text: 'Arreglar la toma del canal', ai_generated: true, confidence: 0.8 }, 'proposed'),
+  registro('cc2', { project: 'p1', proposed_text: 'Taller de primeros auxilios', ai_generated: true, confidence: 0.7 }, 'proposed')
 ]
 
 const QUEJA = registro(
@@ -666,12 +687,31 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
     ])
   ],
   [/^\/objects\/task\/records$/, pagina(TAREAS)],
-  [/^\/objects\/commitment\/records$/, pagina(COMPROMISOS)],
+  [/^\/objects\/commitment\/records$/, (u: URL) => pagina(u.searchParams.get('q') === 'sin-resultados' ? [] : COMPROMISOS)],
+  [/^\/objects\/commitment\/records\/k4$/, COMPROMISOS[0]],
+  [
+    /^\/objects\/commitment\/records\/k4\/transitions$/,
+    [
+      { name: 'unblock', label: 'Desbloquear', to: 'in_progress', toLabel: 'En ejecución', allowed: true, reason: null },
+      { name: 'cancel_blocked', label: 'Cancelar', to: 'cancelled', toLabel: 'Cancelado', allowed: true, reason: null }
+    ]
+  ],
+  [/^\/objects\/commitment\/records\/k4\/history$/, BLOQUEO],
+  [/^\/objects\/commitment\/records\/k4\/related\/commitment_stakeholder$/, pagina([GRUPO])],
+  [/^\/objects\/commitment\/records\/k4\/related\/[a-z_]+$/, pagina([])],
+  [/^\/objects\/commitment_candidate\/records$/, pagina(CANDIDATOS_DE_IA)],
   [
     /^\/objects\/commitment\/workflow$/,
     flujo('commitment', [
-      ['agreed', 'Acordado'],
-      ['in_progress', 'En ejecución']
+      ['draft', 'Borrador'],
+      ['pending_approval', 'Pendiente de aprobación'],
+      ['approved', 'Aprobado'],
+      ['in_progress', 'En ejecución'],
+      ['blocked', 'Bloqueado'],
+      ['fulfilled', 'Cumplido'],
+      ['verified', 'Verificado'],
+      ['closed', 'Cerrado'],
+      ['cancelled', 'Cancelado']
     ])
   ],
   [/^\/sgspe\/attention\/queue$/, COLA],
@@ -766,6 +806,14 @@ export async function prepararEscenario(
     const url = new URL(peticion.url())
     const ruta = url.pathname.replace(/^\/api/, '')
     if (peticion.method() !== 'GET') return route.fallback()
+    // E18: la lista de compromisos que no se pudo leer (?q=falla-de-prueba), con su código de correlación
+    if (ruta === '/objects/commitment/records' && url.searchParams.get('q') === 'falla-de-prueba' && url.searchParams.get('size') === '25')
+      return route.fulfill({
+        status: 503,
+        contentType: 'application/problem+json',
+        headers: { 'X-Correlation-Id': 'REQ-7F3A' },
+        body: JSON.stringify({ title: 'Service Unavailable', status: 503 })
+      })
     const encontrada = rutas.find(([patron]) => patron.test(ruta))
     if (!encontrada) return route.fallback()
     const cuerpo = typeof encontrada[1] === 'function' ? (encontrada[1] as (u: URL) => unknown)(url) : encontrada[1]

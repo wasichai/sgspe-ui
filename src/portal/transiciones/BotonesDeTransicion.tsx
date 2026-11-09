@@ -75,7 +75,7 @@ export function useTransicionesOfrecidas({
   // hasta la siguiente acción, abrir otra transición (DD-34 de la tercera pasada de UX: la que se iba sola a los 6 s no se leía)
   const [hecha, setHecha] = useState<{ a: string; en: number } | null>(null)
   // aplicado el paso, el foco va a la confirmación: el botón que abrió el diálogo puede irse con el estado nuevo
-  const confirmacion = useRef<HTMLParagraphElement>(null)
+  const confirmacion = useRef<HTMLDivElement>(null)
   const ofrece = proyecto === undefined || escribeEnElProyecto
   const permitidas = ofrece
     ? (transiciones.data ?? []).filter((tr) => tr.allowed && !esDeComando(objeto, tr.name) && !ocultar.includes(tr.name) && (!solo || solo.includes(tr.name)))
@@ -112,10 +112,14 @@ export function useTransicionesOfrecidas({
     otras: avanzan.filter((tr) => tr !== primaria).map(ofrecida),
     destructivas: destructivas.map(ofrecida),
     confirmacion: hecha ? (
-      <p ref={confirmacion} role="status" tabIndex={-1} className="text-sm text-sg-success">
-        {t('transiciones.hecho', { a: hecha.a })}
-        {ahora ? ` ${t('transiciones.ahora', { accion: ahora })}` : null}
-      </p>
+      // el éxito de E18 (design-system.md §5.3): la alerta de éxito de la capa de componentes (data-slot de Alert), propia para
+      // poder recibir el foco
+      <div ref={confirmacion} role="status" tabIndex={-1} data-slot="alert" data-tone="success" className="text-left text-sm">
+        <span data-slot="alert-text">
+          {t('transiciones.hecho', { a: hecha.a })}
+          {ahora ? ` ${t('transiciones.ahora', { accion: ahora })}` : null}
+        </span>
+      </div>
     ) : null,
     dialogo: abierta ? (
       <DialogoDeTransicion
