@@ -36,14 +36,17 @@ const localidades: Coleccion = {
 
 describe('MapaImpl', () => {
   it('sin mapa base el fondo es el token apagado; un ráster y un estilo se dibujan como los da el servidor', () => {
-    expect(estiloDe({ type: 'none' }, '#e8ebe3')).toEqual({
+    const glifos = 'http://localhost:3000/glifos/{fontstack}/{range}.pbf'
+    expect(estiloDe({ type: 'none' }, '#e8ebe3', glifos)).toEqual({
       version: 8,
+      glyphs: glifos,
       sources: {},
       layers: [{ id: 'fondo', type: 'background', paint: { 'background-color': '#e8ebe3' } }]
     })
-    expect(estiloDe({ type: 'style', url: 'https://mapas.example/estilo.json' }, '#e8ebe3')).toBe('https://mapas.example/estilo.json')
-    expect(estiloDe({ type: 'raster', tiles: ['https://t.example/{z}/{x}/{y}.png'], attribution: '© Ejemplo' }, '#e8ebe3')).toEqual({
+    expect(estiloDe({ type: 'style', url: 'https://mapas.example/estilo.json' }, '#e8ebe3', glifos)).toBe('https://mapas.example/estilo.json')
+    expect(estiloDe({ type: 'raster', tiles: ['https://t.example/{z}/{x}/{y}.png'], attribution: '© Ejemplo' }, '#e8ebe3', glifos)).toEqual({
       version: 8,
+      glyphs: glifos,
       sources: { basemap: { type: 'raster', tiles: ['https://t.example/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© Ejemplo' } },
       layers: [
         { id: 'fondo', type: 'background', paint: { 'background-color': '#e8ebe3' } },
@@ -560,5 +563,236 @@ describe('colorDe', () => {
     document.documentElement.style.setProperty('--sg-data-6', '#838b85')
     expect(colorDe('--sg-no-existe')).toBe('#838b85')
     expect(colorDe('--sg-data-6')).toBe('#838b85')
+  })
+
+  describe('rótulos y símbolos (design-system.md §3.3)', () => {
+    const SIN_ELEGIR = ['any', ['==', ['get', '__id'], ''], ['==', ['get', '__targetId'], '']]
+    const punto = (id: string, xy: [number, number], propiedades: Record<string, unknown>) => ({
+      type: 'Feature' as const,
+      id: `${id}:location`,
+      geometry: { type: 'Point', coordinates: xy },
+      properties: { __id: id, ...propiedades }
+    })
+    const coleccion = (...features: ReturnType<typeof punto>[]): Coleccion => ({ type: 'FeatureCollection', features })
+    const rotuloDeLocalidades = { campo: 'name', tamano: 12, peso: 'semibold', color: '--sg-lyr-place', colocacion: 'punto' } as const
+    beforeEach(() => {
+      for (const [token, valor] of Object.entries({
+        '--sg-lyr-place': '#0f1a2a',
+        '--sg-lyr-water-label': '#2f6aa3',
+        '--sg-text': '#0f1a2a',
+        '--sg-surface': '#ffffff',
+        '--sg-focus': '#0b1d3a',
+        '--sg-data-3': '#159f78',
+        '--sg-risk-critical': '#a11a1a',
+        '--sg-critical': '#7a1212',
+        '--sg-on-critical': '#ffffff'
+      }))
+        document.documentElement.style.setProperty(token, valor)
+    })
+
+    it('el estilo propio pide los glifos al mismo origen; un estilo del proveedor sin glifos recibe los propios', async () => {
+      render(<MapaImpl etiqueta="Mapa" capas={[]} />)
+      expect((Falso.todos[0].opciones.style as { glyphs: string }).glyphs).toBe(`${window.location.origin}/glifos/{fontstack}/{range}.pbf`)
+      render(<MapaImpl etiqueta="Mapa" capas={[]} basemap={{ type: 'style', url: 'https://mapas.example/estilo.json' }} />)
+      await act(async () => cargarMapas())
+      expect(Falso.todos[0].setGlyphs).not.toHaveBeenCalled()
+      expect(Falso.todos[1].setGlyphs).toHaveBeenCalledWith(`${window.location.origin}/glifos/{fontstack}/{range}.pbf`)
+    })
+
+    it('un estilo del proveedor con sus propios glifos no dibuja rótulos ni conteos, pero sí los símbolos', async () => {
+      render(
+        <MapaImpl
+          etiqueta="Mapa"
+          basemap={{ type: 'style', url: 'https://mapas.example/estilo.json' }}
+          capas={[
+            { id: 'LYR-02', datos: localidades, color: '--sg-lyr-place', seleccionable: true, rotulo: rotuloDeLocalidades },
+            {
+              id: 'LYR-19',
+              datos: coleccion(punto('k1', [-78, -8], { __conteo: 2 })),
+              color: '--sg-data-3',
+              seleccionable: true,
+              simbolo: { forma: 'cuadrado', conteo: '__conteo' }
+            }
+          ]}
+        />
+      )
+      const [mapa] = Falso.todos
+      mapa.glifos = 'https://mapas.example/fonts/{fontstack}/{range}.pbf'
+      await act(async () => cargarMapas())
+      expect(mapa.capas.map((c) => c.id)).not.toContain('LYR-02-rotulo')
+      const simbolo = mapa.capas.find((c) => c.id === 'LYR-19-simbolo')!
+      expect(simbolo.layout!['icon-image']).toBe('sg-cuadrado-LYR-19')
+      expect(simbolo.layout!['text-field']).toBeUndefined()
+    })
+
+    it('el rótulo lleva halo map-ground de 4 px, va encima de los dibujos de todas las capas y lo elegido pasa a 14 px 800', async () => {
+      const capas = [{ id: 'LYR-02', datos: localidades, color: '--sg-lyr-place', seleccionable: true, rotulo: rotuloDeLocalidades }]
+      const rio = coleccion()
+      rio.features.push({
+        type: 'Feature',
+        id: 'e1:trace',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [-78, -8],
+            [-77.9, -8.1]
+          ]
+        },
+        properties: { __id: 'e1', name: 'Río Tunas' }
+      })
+      const conRio = [
+        ...capas,
+        {
+          id: 'LYR-08',
+          datos: rio,
+          color: '--sg-lyr-water',
+          seleccionable: false,
+          rotulo: { campo: 'name', tamano: 12, peso: 'semibold', color: '--sg-lyr-water-label', colocacion: 'linea', cursiva: true } as const
+        }
+      ]
+      const { rerender } = render(<MapaImpl etiqueta="Mapa" capas={capas} />)
+      await act(async () => cargarMapas())
+      const [mapa] = Falso.todos
+      const rotulo = mapa.capas.find((c) => c.id === 'LYR-02-rotulo')!
+      expect(rotulo.type).toBe('symbol')
+      expect(rotulo.layout!['text-field']).toEqual(['to-string', ['coalesce', ['get', 'name'], '']])
+      expect(rotulo.layout!['text-font']).toEqual(['case', SIN_ELEGIR, ['literal', ['public-sans-extrabold']], ['literal', ['public-sans-semibold']]])
+      expect(rotulo.layout!['text-size']).toEqual(['case', SIN_ELEGIR, 14, 12])
+      expect(rotulo.paint).toMatchObject({ 'text-color': '#0f1a2a', 'text-halo-color': '#e8ebe3', 'text-halo-width': 4, 'text-opacity': 1 })
+      // los ríos, en cursiva a lo largo del cauce; sus dibujos entran debajo del rótulo de LYR-02
+      rerender(<MapaImpl etiqueta="Mapa" capas={conRio} />)
+      const delRio = mapa.capas.find((c) => c.id === 'LYR-08-rotulo')!
+      expect(delRio.layout!['symbol-placement']).toBe('line')
+      expect(delRio.layout!['text-font']).toEqual(['case', SIN_ELEGIR, ['literal', ['public-sans-extrabold']], ['literal', ['public-sans-semibold-italic']]])
+      expect(delRio.paint['text-color']).toBe('#2f6aa3')
+      expect(mapa.capas.find((c) => c.id === 'LYR-08-linea')!.antes).toBe('LYR-02-rotulo')
+      expect(mapa.capas.at(-1)!.id).toBe('LYR-08-rotulo')
+      rerender(<MapaImpl etiqueta="Mapa" capas={conRio} seleccion="l1" />)
+      const elegidoL1 = ['any', ['==', ['get', '__id'], 'l1'], ['==', ['get', '__targetId'], 'l1']]
+      expect(mapa.setLayoutProperty).toHaveBeenCalledWith('LYR-02-rotulo', 'text-size', ['case', elegidoL1, 14, 12])
+      // al apagar la capa se quita también su rótulo
+      rerender(<MapaImpl etiqueta="Mapa" capas={capas} seleccion="l1" />)
+      expect(mapa.capas.map((c) => c.id).filter((id) => id.startsWith('LYR-08'))).toEqual([])
+    })
+
+    it('el territorio comunal va en mayúsculas espaciadas y una capa invisible (la dibuja el WMS) no muestra su rótulo', async () => {
+      const comunal = { campo: 'name', tamano: 12, peso: 'bold', color: '--sg-lyr-place', colocacion: 'punto', mayusculas: true } as const
+      const { rerender } = render(
+        <MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-05', datos: localidades, color: '--sg-data-1', seleccionable: true, rotulo: comunal, invisible: true }]} />
+      )
+      await act(async () => cargarMapas())
+      const [mapa] = Falso.todos
+      const rotulo = mapa.capas.find((c) => c.id === 'LYR-05-rotulo')!
+      expect(rotulo.layout).toMatchObject({ 'text-transform': 'uppercase', 'text-letter-spacing': 0.1 })
+      expect(rotulo.paint['text-opacity']).toBe(0)
+      rerender(<MapaImpl etiqueta="Mapa" capas={[{ id: 'LYR-05', datos: localidades, color: '--sg-data-1', seleccionable: true, rotulo: comunal }]} />)
+      expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-05-rotulo', 'text-opacity', 1)
+    })
+
+    it('LYR-19 es un cuadrado con su conteo; el círculo queda solo para el anillo en focus de lo elegido, y el símbolo se elige', async () => {
+      const elegir = vi.fn()
+      const datos = coleccion(punto('k1', [-78, -8], { __object: 'commitment', __conteo: 2 }))
+      const capa = { id: 'LYR-19', datos, color: '--sg-data-3', seleccionable: true, simbolo: { forma: 'cuadrado', conteo: '__conteo' } as const }
+      render(<MapaImpl etiqueta="Mapa" capas={[capa]} alSeleccionar={elegir} />)
+      await act(async () => cargarMapas())
+      const [mapa] = Falso.todos
+      expect(mapa.addImage).toHaveBeenCalledWith('sg-cuadrado-LYR-19', expect.objectContaining({ width: 36, height: 36 }), { pixelRatio: 2 })
+      const simbolo = mapa.capas.find((c) => c.id === 'LYR-19-simbolo')!
+      expect(simbolo.layout).toMatchObject({
+        'icon-image': 'sg-cuadrado-LYR-19',
+        'icon-allow-overlap': true,
+        'text-field': ['to-string', ['coalesce', ['get', '__conteo'], '']],
+        'text-font': ['public-sans-bold']
+      })
+      expect(simbolo.paint).toMatchObject({ 'text-color': '#0f1a2a', 'text-halo-color': '#e8ebe3' })
+      const circulo = mapa.capas.find((c) => c.id === 'LYR-19-punto')!
+      expect(circulo.paint).toMatchObject({ 'circle-opacity': 0, 'circle-stroke-color': '#0b1d3a', 'circle-stroke-width': 3 })
+      expect(circulo.paint['circle-radius']).toEqual(['case', SIN_ELEGIR, 12, 9])
+      expect(circulo.paint['circle-stroke-opacity']).toEqual(['case', SIN_ELEGIR, 1, 0])
+      mapa.emitir('click:LYR-19-simbolo', { features: [{ properties: datos.features[0].properties }] })
+      expect(elegir).toHaveBeenCalledWith('k1', 'LYR-19', 'commitment')
+    })
+
+    it('LYR-21 elige el rombo de su nivel y LYR-17 pide su anillo, que se dibuja cuando MapLibre lo pide', async () => {
+      const riesgos = coleccion(punto('r1', [-78, -8], { risk_level: 'CRITICO' }))
+      const grupos = coleccion(punto('l1', [-78.1, -8.1], { __anillo: 'sg-anillo-3-4-3-2', total: 12 }))
+      render(
+        <MapaImpl
+          etiqueta="Mapa"
+          capas={[
+            {
+              id: 'LYR-21',
+              datos: riesgos,
+              color: '--sg-risk-high',
+              seleccionable: true,
+              simbolo: {
+                forma: 'rombo',
+                campo: 'risk_level',
+                niveles: { CRITICO: { relleno: '--sg-risk-critical', borde: '--sg-critical', marca: '--sg-on-critical' } }
+              }
+            },
+            {
+              id: 'LYR-17',
+              datos: grupos,
+              color: '--sg-stance-favor',
+              seleccionable: true,
+              simbolo: { forma: 'anillo', conteo: 'total', colores: ['--sg-data-1', '--sg-data-2'] }
+            }
+          ]}
+        />
+      )
+      await act(async () => cargarMapas())
+      const [mapa] = Falso.todos
+      expect(mapa.capas.find((c) => c.id === 'LYR-21-simbolo')!.layout!['icon-image']).toEqual([
+        'match',
+        ['to-string', ['get', 'risk_level']],
+        'CRITICO',
+        'sg-rombo-LYR-21-CRITICO',
+        'sg-rombo-LYR-21-SIN'
+      ])
+      expect([...mapa.imagenes.keys()]).toEqual(['sg-rombo-LYR-21-SIN', 'sg-rombo-LYR-21-CRITICO'])
+      expect(mapa.capas.find((c) => c.id === 'LYR-21-simbolo')!.layout!['text-field']).toBeUndefined()
+      const anillo = mapa.capas.find((c) => c.id === 'LYR-17-simbolo')!
+      expect(anillo.layout!['icon-image']).toEqual(['to-string', ['coalesce', ['get', '__anillo'], 'sg-anillo-0']])
+      expect(anillo.layout!['text-field']).toEqual(['to-string', ['coalesce', ['get', 'total'], '']])
+      await mapa.resolverIcono!('sg-anillo-3-4-3-2')
+      await mapa.resolverIcono!('otra')
+      expect(mapa.imagenes.has('sg-anillo-3-4-3-2')).toBe(true)
+      expect(mapa.imagenes.has('otra')).toBe(false)
+    })
+
+    it('al cambiar de tema vuelve a dibujar los íconos y repinta los rótulos con los tokens nuevos', async () => {
+      render(
+        <MapaImpl
+          etiqueta="Mapa"
+          capas={[
+            { id: 'LYR-02', datos: localidades, color: '--sg-lyr-place', seleccionable: true, rotulo: rotuloDeLocalidades },
+            {
+              id: 'LYR-19',
+              datos: coleccion(punto('k1', [-78, -8], { __conteo: 1 })),
+              color: '--sg-data-3',
+              seleccionable: true,
+              simbolo: { forma: 'cuadrado', conteo: '__conteo' }
+            }
+          ]}
+        />
+      )
+      await act(async () => cargarMapas())
+      const [mapa] = Falso.todos
+      const antes = mapa.imagenes.get('sg-cuadrado-LYR-19')!.data.slice()
+      document.documentElement.style.setProperty('--sg-data-3', '#1a9e78')
+      document.documentElement.style.setProperty('--sg-lyr-place', '#f1f4f8')
+      document.documentElement.style.setProperty('--sg-map-ground', '#121a22')
+      await act(async () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        await new Promise((r) => setTimeout(r, 0))
+      })
+      expect(mapa.updateImage).toHaveBeenCalledWith('sg-cuadrado-LYR-19', expect.objectContaining({ width: 36 }))
+      expect(mapa.imagenes.get('sg-cuadrado-LYR-19')!.data).not.toEqual(antes)
+      expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-02-rotulo', 'text-color', '#f1f4f8')
+      expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-02-rotulo', 'text-halo-color', '#121a22')
+      expect(mapa.setPaintProperty).toHaveBeenCalledWith('LYR-19-simbolo', 'text-halo-color', '#121a22')
+      document.documentElement.removeAttribute('data-theme')
+    })
   })
 })

@@ -7,6 +7,7 @@ import { LimiteDeError } from '../componentes/LimiteDeError'
 import { NS } from '../i18n'
 import { PERU, type Coleccion, type Encuadre } from './api'
 import { SIN_MAPA_BASE, useAtribucionDelMapa, useMapaBase } from './mapaBase'
+import type { Simbolo } from './simbolos'
 import { firmaDeWms } from './wms'
 
 // el mapa del portal (gis.md §6.5): MapLibre 6.16.0, la versión que fija @wasichai/gis, usado directamente y cargado bajo
@@ -32,6 +33,24 @@ export interface CapaDibujada {
   // se elige pero no se ve (solo el borde de lo elegido): una capa pública servida por WMS cuyos lugares tienen ficha
   // (decisión 7 del plan 6.3)
   invisible?: boolean
+  // el rótulo de cada elemento, con halo map-ground de 4 px (design-system.md §3.3); una capa invisible no lo dibuja: lo pone la
+  // tesela WMS
+  rotulo?: Rotulo
+  // el símbolo de los puntos de una capa de gestión (simbolos.ts): reemplaza al círculo, que queda solo para la selección
+  simbolo?: Simbolo
+}
+
+// el rótulo de una capa: el atributo que dice, su tamaño en px, su peso y su color (un token); en cursiva (los ríos) o en
+// mayúsculas espaciadas (las versalitas del territorio comunal). 'punto' lo pone a la derecha del punto y al centro del
+// polígono; 'linea', a lo largo de la línea
+export interface Rotulo {
+  campo: string
+  tamano: number
+  peso: 'semibold' | 'bold'
+  color: string
+  colocacion: 'punto' | 'linea'
+  cursiva?: boolean
+  mayusculas?: boolean
 }
 
 export interface ColorPorAtributo {

@@ -20,7 +20,7 @@ import { NS } from '../i18n'
 import { useTableroDisponible } from '../tableros/comunes'
 import { destinoDe, encuadreDeGeometrias, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
-import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, conPostura, dibujoDe } from '../mapa/capas'
+import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, dibujoDe, paraElMapa } from '../mapa/capas'
 import { capaDeCalor, SelectorDeCalor, TablaDeCalor } from '../mapa/Calor'
 import { Mapa } from '../mapa/Mapa'
 import { useWms } from '../mapa/wms'
@@ -267,7 +267,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
             .filter((e) => e.datos)
             .map((e) => ({
               id: e.id,
-              datos: conPostura(e.id, e.datos!),
+              datos: paraElMapa(e.id, e.datos!),
               color: capa(e.id)!.color,
               ...dibujoDe(e.id),
               seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) || capa(e.id)!.grupo === 'gestion',

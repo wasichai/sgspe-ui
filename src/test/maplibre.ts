@@ -15,7 +15,25 @@ export class Map {
   static fallar = false
   opciones: Record<string, unknown>
   fuentes = new globalThis.Map<string, { data: unknown; opciones: Record<string, unknown>; setData: (d: unknown) => void }>()
-  capas: { id: string; type: string; paint: Record<string, unknown>; antes?: string }[] = []
+  capas: { id: string; type: string; paint: Record<string, unknown>; layout?: Record<string, unknown>; filter?: unknown; antes?: string }[] = []
+  // los íconos (addImage y updateImage) y los glifos del estilo (el del estilo propio o el que se fija al cargar)
+  imagenes = new globalThis.Map<string, { width: number; height: number; data: Uint8Array }>()
+  addImage = vi.fn((id: string, imagen: { width: number; height: number; data: Uint8Array }) => void this.imagenes.set(id, imagen))
+  updateImage = vi.fn((id: string, imagen: { width: number; height: number; data: Uint8Array }) => void this.imagenes.set(id, imagen))
+  hasImage(id: string) {
+    return this.imagenes.has(id)
+  }
+  glifos: string | null = null
+  getGlyphs() {
+    return this.glifos
+  }
+  setGlyphs = vi.fn((url: string | null) => void (this.glifos = url))
+  setLayoutProperty = vi.fn()
+  // lo que MapLibre llama al pedir un ícono que no tiene (MapaImpl dibuja ahí los anillos de LYR-17)
+  resolverIcono: ((id: string) => void | Promise<void>) | null = null
+  setMissingStyleImageResolver(resolver: (id: string) => void | Promise<void>) {
+    this.resolverIcono = resolver
+  }
   manejadores: Record<string, ((...args: unknown[]) => void)[]> = {}
   fitBounds = vi.fn()
   setPaintProperty = vi.fn()
@@ -23,6 +41,8 @@ export class Map {
   constructor(opciones: Record<string, unknown>) {
     if (Map.fallar) throw new Error('Failed to initialize WebGL')
     this.opciones = opciones
+    const estilo = opciones.style as { glyphs?: string } | string | undefined
+    this.glifos = typeof estilo === 'object' ? (estilo.glyphs ?? null) : null
     Map.todos.push(this)
   }
   on(evento: string, ...resto: unknown[]) {
@@ -49,7 +69,7 @@ export class Map {
     this.fuentes.delete(id)
   }
   // antes: la capa sobre la que se inserta (MapLibre la dibuja debajo de esa)
-  addLayer(capa: { id: string; type: string; paint: Record<string, unknown> }, antes?: string) {
+  addLayer(capa: { id: string; type: string; paint: Record<string, unknown>; layout?: Record<string, unknown> }, antes?: string) {
     this.capas.push({ ...capa, antes })
   }
   removeLayer(id: string) {

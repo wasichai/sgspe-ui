@@ -286,7 +286,7 @@ describe('Leyenda', () => {
 
 describe('las formas finas de las capas de gestión', () => {
   it('LYR-17 lleva la postura que más pesa en cada localidad, sin SIN DATO ni empates, y la misma colección da la misma copia', async () => {
-    const { conPostura, dibujoDe } = await import('./capas')
+    const { paraElMapa, dibujoDe } = await import('./capas')
     const elemento = (id: string, byStance: Record<string, number> | null) => ({
       type: 'Feature' as const,
       geometry: null,
@@ -296,12 +296,41 @@ describe('las formas finas de las capas de gestión', () => {
       type: 'FeatureCollection',
       features: [elemento('l1', { 'A FAVOR': 3, NEUTRAL: 1, 'SIN DATO': 9 }), elemento('l2', { 'A FAVOR': 2, 'EN CONTRA': 2 }), elemento('l3', null)]
     }
-    const copia = conPostura('LYR-17', datos)
+    const copia = paraElMapa('LYR-17', datos)
     expect(copia.features.map((f) => f.properties.__postura)).toEqual(['A FAVOR', undefined, undefined])
-    expect(conPostura('LYR-17', datos)).toBe(copia)
-    expect(conPostura('LYR-02', datos)).toBe(datos)
+    // el anillo lleva los conteos en el orden de la escala divergente, sin SIN DATO
+    expect(copia.features.map((f) => f.properties.__anillo)).toEqual(['sg-anillo-3-1-0-0', 'sg-anillo-2-0-0-2', 'sg-anillo-0-0-0-0'])
+    expect(paraElMapa('LYR-17', datos)).toBe(copia)
+    expect(paraElMapa('LYR-02', datos)).toBe(datos)
     expect(dibujoDe('LYR-17').colorPor?.anillo).toBe(true)
     expect(dibujoDe('LYR-21').colorPor?.campo).toBe('risk_level')
     expect(dibujoDe('LYR-02').colorPor).toBeUndefined()
+  })
+
+  it('cada compromiso de LYR-19 lleva cuántos comparten su lugar', async () => {
+    const { paraElMapa } = await import('./capas')
+    const en = (id: string, xy: [number, number] | null) => ({
+      type: 'Feature' as const,
+      geometry: xy ? { type: 'Point', coordinates: xy } : null,
+      properties: { __id: id }
+    })
+    const datos: Coleccion = {
+      type: 'FeatureCollection',
+      features: [en('k1', [-77.55, -9.45]), en('k2', [-77.5500000001, -9.45]), en('k3', [-77.6, -9.4]), en('k4', null)]
+    }
+    expect(paraElMapa('LYR-19', datos).features.map((f) => f.properties.__conteo)).toEqual([2, 2, 1, undefined])
+  })
+
+  it('§3.3: rótulos de los lugares, el territorio comunal, los ríos y las áreas; símbolos de LYR-17, LYR-19 y LYR-21', async () => {
+    const { dibujoDe } = await import('./capas')
+    expect(dibujoDe('LYR-02').rotulo).toMatchObject({ campo: 'name', colocacion: 'punto', color: '--sg-lyr-place' })
+    expect(dibujoDe('LYR-05').rotulo).toMatchObject({ tamano: 12, mayusculas: true, color: '--sg-lyr-community-label' })
+    expect(dibujoDe('LYR-08').rotulo).toMatchObject({ tamano: 12, cursiva: true, colocacion: 'linea', color: '--sg-lyr-water-label' })
+    expect(dibujoDe('LYR-13').rotulo).toMatchObject({ campo: 'area_type', color: '--sg-primary-text' })
+    expect(dibujoDe('LYR-17').simbolo).toMatchObject({ forma: 'anillo', conteo: 'total' })
+    expect(dibujoDe('LYR-19').simbolo).toEqual({ forma: 'cuadrado', conteo: '__conteo' })
+    expect(dibujoDe('LYR-21').simbolo).toMatchObject({ forma: 'rombo', niveles: { CRITICO: { marca: '--sg-on-critical' } } })
+    expect(dibujoDe('LYR-20').simbolo).toBeUndefined()
+    expect(dibujoDe('LYR-20').rotulo).toBeUndefined()
   })
 })
