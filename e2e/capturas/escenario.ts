@@ -101,10 +101,44 @@ const DEL_PROYECTO = {
     ind('KPI-GRV-01', 'QCS recibidas', 5, 'QCS'),
     ind('KPI-GRV-02', 'QCS abiertas', 4, 'quejas'),
     ind('KPI-GRV-06', 'QCS fuera de plazo', 1, 'QCS'),
-    ind('KPI-RSK-01', 'Riesgos altos', 0, 'riesgos')
+    ind('KPI-RSK-01', 'Riesgos altos', 0, 'riesgos'),
+    // fase 6 (S05): la postura, la matriz interés × poder y las reuniones frente a la meta, para que el resumen no se vea vacío
+    {
+      ...ind('KPI-STK-02', 'Distribución de posturas', 42, 'grupos de interés'),
+      breakdowns: [
+        {
+          by: 'stance',
+          rows: [
+            { key: 'A FAVOR', value: 15 },
+            { key: 'NEUTRAL', value: 14 },
+            { key: 'EN CONTRA PERO ABIERTO A ESCUCHAR', value: 8 },
+            { key: 'EN CONTRA', value: 5 }
+          ]
+        }
+      ]
+    },
+    {
+      ...ind('KPI-STK-03', 'Interés × poder', 36, 'grupos de interés'),
+      numerator: 36,
+      denominator: 42,
+      breakdowns: [
+        {
+          by: 'stakeholder',
+          rows: Array.from({ length: 36 }, (_, n) => ({ key: `s${n}`, value: 1, interest: 1 + (n % 5), power: 1 + ((n * 3) % 5) }))
+        }
+      ]
+    },
+    {
+      ...ind('KPI-ENG-02', 'Reuniones frente a la meta', 3, 'reuniones'),
+      numerator: 3,
+      denominator: 4,
+      series: ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'].map((period, n) => ({ period, value: [3, 4, 2, 4, 3, 1][n], target: 4 }))
+    }
   ]
 }
-const AREAS = ['AIDS', 'AIDI', 'AIS', 'AII'].map((tipo, n) => registro(`a${n}`, { project: 'p1', area_type: tipo, version_number: n + 1 }, 'approved'))
+const AREAS = ['AIDS', 'AIDI', 'AIS', 'AII'].map((tipo, n) =>
+  registro(`a${n}`, { project: 'p1', area_type: tipo, version_number: n + 1 }, n === 3 ? 'draft' : 'approved')
+)
 
 const COMPROMISOS = [
   registro(
@@ -363,6 +397,13 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
   [/^\/sgspe\/dashboards\/executive$/, EJECUTIVO],
   [/^\/sgspe\/dashboards\/project$/, DEL_PROYECTO],
   [/^\/objects\/area_of_influence\/records$/, pagina(AREAS)],
+  [
+    /^\/objects\/area_of_influence\/workflow$/,
+    flujo('area_of_influence', [
+      ['draft', 'Borrador'],
+      ['approved', 'Aprobada']
+    ])
+  ],
   [/^\/objects\/task\/records$/, pagina(TAREAS)],
   [/^\/objects\/commitment\/records$/, pagina(COMPROMISOS)],
   [

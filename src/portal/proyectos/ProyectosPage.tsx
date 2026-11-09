@@ -352,7 +352,7 @@ function VistaPreviaDelProyecto({
     return { indicador: l.data, error: l.isError ? l.error : undefined, cargando: l.isPending }
   }
   return (
-    <section aria-label={t('proyectos.previa.titulo', { nombre })} className="rounded-sg-md border-2 border-sg-border-strong bg-sg-surface">
+    <section aria-label={t('proyectos.previa.titulo', { nombre })} className="mt-5 rounded-sg-md border-2 border-sg-border-strong bg-sg-surface">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-sg-border px-5 py-3.5">
         <div className="min-w-0 space-y-0.5">
           <p className="text-sg-overline tracking-wide text-sg-text-muted uppercase">
