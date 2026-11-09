@@ -12,7 +12,8 @@ import { MapaDeCalor } from '../riesgos/TableroRiesgosPage'
 import { ConsultaDeTablero, indicadorDe, Zona } from '../tableros/comunes'
 
 // S08 desde F8 (screens.md, dashboards.md §5.2): el tablero project en una sola llamada (api.md §4.11), repartido entre las
-// zonas del resumen. de(code) da la lectura de un indicador con la forma que el resumen ya usaba para cada consulta (cargando,
+// zonas del resumen. ninguna cifra se repite entre la rejilla del inicio y este tablero (DD-42): las QCS vencidas (KPI-GRV-06)
+// van junto a las abiertas, arriba. de(code) da la lectura de un indicador con la forma que el resumen ya usaba para cada consulta (cargando,
 // error o el indicador): un indicador que falta en la respuesta sale no disponible, nunca vacío
 export type LecturaDeIndicador =
   | { isPending: true; isError: false; data: undefined; error: null; refetch: () => Promise<unknown> }
@@ -71,7 +72,7 @@ export function TableroDelProyecto({ tablero, proyecto }: { tablero: UseQueryRes
                 {tarjetas(['KPI-COM-02', 'KPI-COM-04', 'KPI-COM-06'])}
               </Grupo>
               <Grupo titulo={t('tablerosF8.proyecto.qcs')} enlace={`${base}/attention/dashboard`} rotulo={t('tablerosF8.proyecto.verQcs')}>
-                {tarjetas(['KPI-GRV-01', 'KPI-GRV-06'])}
+                {tarjetas(['KPI-GRV-01'])}
               </Grupo>
               <Zona titulo={t('tablerosF8.proyecto.mapaDeCalor')} indicador={ind('KPI-RSK-02')}>
                 {(i) => (

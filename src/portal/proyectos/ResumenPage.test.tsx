@@ -118,6 +118,12 @@ const falla = (ruta: string | RegExp, status = 400, correlacion = 'corr-123'): R
   path: ruta,
   responder: () => problema(status, 'Falló', [], correlacion)
 })
+// S05: cada tipo de «Qué requiere atención» es una fila con su número y su acción, que despliega cuáles son
+const desplegar = async (atencion: HTMLElement, fila: RegExp) => {
+  const region = await within(atencion).findByRole('region', { name: fila })
+  await userEvent.click(within(region).getByRole('button', { expanded: false }))
+  return region
+}
 
 describe('S08 · Project 360, resumen', () => {
   it('muestra la jefatura y las cifras de salud de una sola llamada al tablero del proyecto', async () => {
@@ -145,7 +151,12 @@ describe('S08 · Project 360, resumen', () => {
     const compromisos = await within(tablero).findByRole('region', { name: 'Compromisos' })
     expect(await within(compromisos).findByText('2')).toBeInTheDocument()
     expect(within(compromisos).getByRole('link', { name: 'Ver el tablero de compromisos' })).toHaveAttribute('href', '/projects/p1/commitments/dashboard')
-    expect(within(tablero).getByRole('region', { name: 'Quejas, consultas y solicitudes' })).toHaveTextContent('QCS vencidas')
+    // las QCS vencidas van junto a las abiertas, en la rejilla del inicio: el tablero no repite ninguna cifra (DD-42)
+    const qcs = within(tablero).getByRole('region', { name: 'Quejas, consultas y solicitudes' })
+    expect(qcs).toHaveTextContent('QCS recibidas')
+    expect(qcs).not.toHaveTextContent('QCS vencidas')
+    const salud = screen.getByRole('region', { name: 'Salud del proyecto' })
+    expect(within(salud).getByRole('region', { name: 'QCS abiertas' })).toHaveTextContent('1 vencida')
     expect(within(tablero).getByRole('region', { name: 'Mapa de calor de riesgos' })).toBeInTheDocument()
     expect(within(tablero).getByRole('region', { name: 'Inversión ejecutada' })).toBeInTheDocument()
   })
@@ -190,9 +201,14 @@ describe('S08 · Project 360, resumen', () => {
   it('"Qué requiere atención" lista las actas por redactar de reuniones formales y los grupos sin contacto', async () => {
     fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
     const atencion = await screen.findByRole('region', { name: 'Qué requiere atención' })
-    expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
+    // una fila por tipo con su número; su acción despliega cuáles son (S05: sin muro de enlaces)
+    const actas = await within(atencion).findByRole('region', { name: /^Actas por redactar/ })
+    expect(within(actas).queryByRole('link', { name: 'Asamblea de agosto' })).not.toBeInTheDocument()
+    await userEvent.click(within(actas).getByRole('button', { name: 'Redactar actas' }))
+    expect(within(actas).getByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute('href', '/projects/p1/engagements/e1')
     expect(within(atencion).queryByText(/Llamada/)).not.toBeInTheDocument()
-    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
+    const sinContacto = await desplegar(atencion, /^Sin contacto en más de 90 días/)
+    expect(await within(sinContacto).findByRole('link', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
     // cada entrada dice su motivo como texto (hallazgo U-05)
     expect(within(atencion).getByText('Realizada, sin acta')).toBeInTheDocument()
     expect(within(atencion).getByText(`Último contacto hace ${diasDesde(120)} días`)).toBeInTheDocument()
@@ -323,7 +339,8 @@ describe('S08 · Project 360, resumen', () => {
     expect(await within(atencion).findByText('Grupos de interés')).toBeInTheDocument()
     expect(within(atencion).getByText('No disponible')).toBeInTheDocument()
     // la otra lectura sí respondió: su aviso se lista
-    expect(await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })).toBeInTheDocument()
+    const actas = await desplegar(atencion, /^Actas por redactar/)
+    expect(within(actas).getByRole('link', { name: 'Asamblea de agosto' })).toBeInTheDocument()
     expect(within(atencion).queryByText(/Nada pide atención/)).not.toBeInTheDocument()
     cerrar()
     abrir(rutas(SIN_STANCE), [falla(/^\/objects\/engagement\/records/, 400, 'corr-77')])
@@ -345,14 +362,14 @@ describe('S08 · Project 360, resumen', () => {
     const siete = Array.from({ length: 7 }, (_, n) => registro(`s${n}`, { organization: 'o1', last_contact_date: hace(100 + n) }, { state: 'profiled' }))
     abrir([{ path: '/objects/stakeholder/records', body: pagina(siete) }, ...rutas(SIN_STANCE)])
     const atencion = await screen.findByRole('region', { name: 'Qué requiere atención' })
-    const sinContacto = await within(atencion).findByRole('region', { name: /^Sin contacto en más de 90 días/ })
+    const sinContacto = await desplegar(atencion, /^Sin contacto en más de 90 días/)
     expect(within(sinContacto).getByRole('heading')).toHaveTextContent('7')
     await waitFor(() => expect(within(sinContacto).getAllByRole('listitem')).toHaveLength(3))
     // primero el que lleva más tiempo sin contacto
     expect(within(sinContacto).getAllByRole('listitem')[0]).toHaveTextContent(`Último contacto hace ${diasDesde(106)} días`)
     expect(within(sinContacto).getByRole('link', { name: 'Ver los 7' })).toHaveAttribute('href', '/projects/p1/stakeholders?view=sinContacto')
     // las actas no tienen una lista filtrada a la que ir: sin «Ver los N»
-    const actas = within(atencion).getByRole('region', { name: /^Actas por redactar/ })
+    const actas = await desplegar(atencion, /^Actas por redactar/)
     expect(within(actas).getAllByRole('listitem')).toHaveLength(1)
     expect(within(actas).queryByRole('link', { name: /^Ver/ })).not.toBeInTheDocument()
   })
@@ -363,7 +380,7 @@ describe('S08 · Project 360, resumen', () => {
     )
     abrir([{ path: '/objects/stakeholder/records', body: pagina(cinco) }, ...rutas(SIN_STANCE)])
     const atencion = await screen.findByRole('region', { name: 'Qué requiere atención' })
-    const evaluaciones = await within(atencion).findByRole('region', { name: /^Evaluaciones con más de 30 días/ })
+    const evaluaciones = await desplegar(atencion, /^Evaluaciones con más de 30 días/)
     await waitFor(() => expect(within(evaluaciones).getAllByRole('listitem')).toHaveLength(3))
     expect(within(evaluaciones).getAllByRole('listitem')[0]).toHaveTextContent(`Evaluada hace ${diasDesde(44)} días`)
     expect(within(evaluaciones).queryByRole('link', { name: /^Ver/ })).not.toBeInTheDocument()
@@ -376,7 +393,8 @@ describe('S08 · Project 360, resumen', () => {
       ...rutas(SIN_STANCE)
     ])
     const atencion = await screen.findByRole('region', { name: 'Qué requiere atención' })
-    expect(await within(atencion).findByRole('link', { name: 'Ronda campesina Tunas' })).toHaveAttribute('href', '/projects/p1/stakeholders/s9')
+    const sinContacto = await desplegar(atencion, /^Sin contacto en más de 90 días/)
+    expect(within(sinContacto).getByRole('link', { name: 'Ronda campesina Tunas' })).toHaveAttribute('href', '/projects/p1/stakeholders/s9')
     expect(within(atencion).getByText('Nunca contactado')).toBeInTheDocument()
   })
 
@@ -404,12 +422,13 @@ describe('S08 · Project 360, resumen', () => {
       ]
       abrir(con('2026-07-09'))
       const atencion = await screen.findByRole('region', { name: 'Qué requiere atención' })
-      await within(atencion).findByRole('link', { name: 'Asamblea de agosto' })
+      await within(atencion).findByRole('region', { name: /^Actas por redactar/ })
       expect(within(atencion).queryByText(/sin contacto/i)).not.toBeInTheDocument()
       cerrar()
       abrir(con('2026-07-08'))
       const mas = await screen.findByRole('region', { name: 'Qué requiere atención' })
-      expect(await within(mas).findByRole('link', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
+      const sinContacto = await desplegar(mas, /^Sin contacto en más de 90 días/)
+      expect(within(sinContacto).getByRole('link', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
     })
   })
 
@@ -471,7 +490,7 @@ describe('S08 · Project 360, resumen', () => {
       falla('/sgspe/dashboards/project', 403),
       falla('/objects/area_of_influence/records', 403)
     ])
-    for (const region of ['Actividad reciente', 'Reuniones al mes frente a la meta', 'Paisaje de grupos de interés', 'Áreas de influencia vigentes']) {
+    for (const region of ['Actividad reciente', 'Reuniones al mes frente a la meta', 'Paisaje de grupos de interés', 'Áreas de influencia']) {
       const seccion = await screen.findByRole('region', { name: region })
       await waitFor(() => expect(within(seccion).getAllByText('No disponible').length).toBeGreaterThan(0))
     }
@@ -520,7 +539,7 @@ describe('S08 · Project 360, resumen', () => {
       ...rutas(SIN_STANCE, { 'KPI-ENG-01': { label: 'x', available: true, value: 30, unit: '%', numerator: 3, denominator: 10 } })
     ])
     const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
-    const interacciones = within(salud).getByRole('group', { name: 'Interacciones realizadas este mes' })
+    const interacciones = within(salud).getByRole('region', { name: 'Interacciones realizadas este mes' })
     expect(await within(interacciones).findByRole('link', { name: 'Interacciones realizadas este mes: 30 %' })).toHaveTextContent('30 %')
     expect(within(interacciones).getByText('3 de 10')).toBeInTheDocument()
     expect(interacciones).not.toHaveTextContent('/')
@@ -528,10 +547,11 @@ describe('S08 · Project 360, resumen', () => {
     expect(screen.queryByText(/^Fase de exploración:/)).not.toBeInTheDocument()
   })
 
+  // Civic Modern (S05): la franja es una RejillaDeKpi, una sola caja con separadores, y lo que pide acción va en danger
   it('la franja del inicio lleva las cinco cifras en una sola superficie y tiñe solo las que piden acción', async () => {
     abrir(rutas(SIN_STANCE))
     const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
-    const cifras = within(salud).getAllByRole('group')
+    const cifras = within(salud).getAllByRole('region')
     expect(cifras.map((c) => c.getAttribute('aria-label'))).toEqual([
       'Grupos de interés vigentes',
       'Interacciones realizadas este mes',
@@ -542,14 +562,14 @@ describe('S08 · Project 360, resumen', () => {
     // la franja va antes que «Qué requiere atención»
     const atencion = screen.getByRole('region', { name: 'Qué requiere atención' })
     expect(salud.compareDocumentPosition(atencion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // la franja es la superficie; ninguna cifra es una tarjeta con su propio borde dentro de ella
-    expect(salud).toHaveClass('border')
-    expect(salud.querySelectorAll('.border')).toHaveLength(0)
+    // la rejilla es la única superficie; ninguna cifra es una tarjeta con su propio borde dentro de ella
+    expect(salud.querySelectorAll('.border')).toHaveLength(1)
+    for (const c of cifras) expect(c).not.toHaveClass('rounded-sg-md')
     const vencidos = await within(salud).findByRole('link', { name: 'Compromisos vencidos: 3' })
-    expect(vencidos).toHaveClass('text-sg-warning')
+    expect(vencidos.closest('p')).toHaveClass('text-sg-danger')
     expect(within(cifras[2]).getByText('Pide acción')).toBeInTheDocument()
     const riesgos = within(salud).getByRole('link', { name: 'Riesgos altos: 8' })
-    expect(riesgos).toHaveClass('text-sg-danger')
+    expect(riesgos.closest('p')).toHaveClass('text-sg-danger')
     expect(within(cifras[4]).getByText('Pide acción')).toBeInTheDocument()
     // las QCS abiertas, los grupos y las interacciones no piden acción por sí mismas
     for (const [i, nombre] of [
@@ -558,15 +578,14 @@ describe('S08 · Project 360, resumen', () => {
       [3, 'QCS abiertas: 4']
     ] as const) {
       const enlace = within(salud).getByRole('link', { name: nombre })
-      expect(enlace).not.toHaveClass('text-sg-warning')
-      expect(enlace).not.toHaveClass('text-sg-danger')
+      expect(enlace.closest('p')).not.toHaveClass('text-sg-danger')
       expect(within(cifras[i]).queryByText('Pide acción')).not.toBeInTheDocument()
     }
     cerrar()
     abrir(rutas(SIN_STANCE, { 'KPI-COM-03': { label: 'x', available: true, value: 0 }, 'KPI-RSK-01': { label: 'x', available: true, value: 0 } }))
     const enCero = await screen.findByRole('region', { name: 'Salud del proyecto' })
-    expect(await within(enCero).findByRole('link', { name: 'Compromisos vencidos: 0' })).not.toHaveClass('text-sg-warning')
-    expect(within(enCero).getByRole('link', { name: 'Riesgos altos: 0' })).not.toHaveClass('text-sg-danger')
+    expect((await within(enCero).findByRole('link', { name: 'Compromisos vencidos: 0' })).closest('p')).not.toHaveClass('text-sg-danger')
+    expect(within(enCero).getByRole('link', { name: 'Riesgos altos: 0' }).closest('p')).not.toHaveClass('text-sg-danger')
     expect(within(enCero).queryByText('Pide acción')).not.toBeInTheDocument()
   })
 
@@ -578,7 +597,7 @@ describe('S08 · Project 360, resumen', () => {
       })
     )
     const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
-    const qcs = within(salud).getByRole('group', { name: 'QCS abiertas' })
+    const qcs = within(salud).getByRole('region', { name: 'QCS abiertas' })
     expect(await within(qcs).findByRole('note')).toHaveTextContent(/confidenciales/)
     expect(within(salud).getAllByRole('note')).toHaveLength(1)
     const tablero = screen.getByRole('region', { name: 'Tablero del proyecto' })
@@ -591,8 +610,9 @@ describe('S08 · Project 360, resumen', () => {
   it('ningún enlace de la ficha va subrayado: ni en las listas ni en los accesos a la matriz, el mapa o los tableros', async () => {
     const areas = ['AIDS', 'AIDI', 'AIS', 'AII'].map((tipo, n) => registro(`a${n}`, { area_type: tipo, version_number: n + 1 }, { state: 'approved' }))
     abrir([{ path: '/objects/area_of_influence/records', body: pagina(areas) }, ...rutas(SIN_STANCE)])
-    const zona = await screen.findByRole('region', { name: 'Áreas de influencia vigentes' })
-    await waitFor(() => expect(within(zona).getAllByRole('listitem')).toHaveLength(4))
+    const zona = await screen.findByRole('region', { name: 'Áreas de influencia' })
+    await waitFor(() => expect(within(zona).getAllByRole('row')).toHaveLength(4))
+    await desplegar(screen.getByRole('region', { name: 'Qué requiere atención' }), /^Actas por redactar/)
     await screen.findByRole('link', { name: 'Asamblea de agosto' })
     await within(screen.getByRole('region', { name: 'Tablero del proyecto' })).findByRole('link', { name: 'Ver el tablero de compromisos' })
     // la ficha es el contenido: las migas de la banda de contexto del shell sí van subrayadas (design-system.md §5.2)
@@ -610,5 +630,125 @@ describe('S08 · Project 360, resumen', () => {
     const cifras = within(compromisos).getAllByRole('region')
     expect(cifras).toHaveLength(3)
     for (const c of cifras) expect(c).not.toHaveClass('border')
+  })
+})
+
+// Civic Modern, S05 y T17: la banda del proyecto a todo el ancho, la rejilla de cifras con su meta, los cuadrantes interés × poder,
+// las reuniones frente a la meta en barras y las áreas de influencia con su estado
+describe('S05 · Proyecto 360 en Civic Modern', () => {
+  const conCampana = permisos({ ...LECTOR.objects, exploration_campaign: ['READ'] })
+  const campana: MockRoute = {
+    path: '/objects/exploration_campaign/records',
+    body: pagina([
+      registro('c1', {
+        project: 'p1',
+        name: 'Perforación 2026',
+        campaign_status: 'EN EJECUCION',
+        social_support_cap: 600000,
+        executed_social_amount: 412300,
+        currency: 'PEN'
+      })
+    ])
+  }
+
+  it('la banda del proyecto va sobre la navegación local con el código, el estado, los datos, la campaña y sus acciones', async () => {
+    fetch = abrirPortal('/projects/p1/overview', RELACIONISTA, conCampana, [campana, ...rutas(SIN_STANCE)])
+    const banda = await screen.findByRole('region', { name: 'Proyecto' })
+    expect(within(banda).getByText('Proyecto · PRJ-01')).toBeInTheDocument()
+    expect(within(banda).getByRole('heading', { level: 1, name: 'Pukaqaqa' })).toBeInTheDocument()
+    expect(await within(banda).findByText('Activo')).toBeInTheDocument()
+    expect(await within(banda).findByText(/jefa@sgspe.test/)).toBeInTheDocument()
+    expect(within(banda).getByText('Perforación 2026')).toBeInTheDocument()
+    const medidor = await within(banda).findByRole('meter', { name: 'Ejecutado frente al tope de Perforación 2026' })
+    expect(medidor).toHaveAttribute('aria-valuenow', '69')
+    expect(medidor).toHaveAttribute('aria-valuetext', 'S/ 412,300.00 de S/ 600,000.00')
+    expect(within(banda).getByRole('link', { name: 'Ver en el mapa' })).toHaveAttribute('href', '/projects/p1/map')
+    // a todo el ancho: antes que la navegación local en el documento, no dentro del contenido
+    const subnav = screen.getByRole('navigation', { name: 'Secciones del proyecto' })
+    expect(banda.compareDocumentPosition(subnav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // la banda de contexto no repite el sello del proyecto
+    expect(screen.queryByRole('group', { name: 'Contexto' })).not.toBeInTheDocument()
+  })
+
+  it('la banda es solo del resumen: en otra pestaña vuelve el sello del proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/settings', RELACIONISTA, LECTOR, rutas(SIN_STANCE))
+    expect(await within(await screen.findByRole('group', { name: 'Contexto' })).findByText('Proyecto · PRJ-01')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Proyecto' })).not.toBeInTheDocument()
+  })
+
+  it('las interacciones dicen la meta de reuniones del mes y las QCS abiertas sus vencidas', async () => {
+    abrir(
+      rutas(SIN_STANCE, {
+        'KPI-ENG-02': { label: 'x', available: true, value: 3, numerator: 3, denominator: 4, series: [{ period: '2026-10', value: 3, target: 4 }] },
+        'KPI-GRV-06': { label: 'x', available: true, value: 2 }
+      })
+    )
+    const salud = await screen.findByRole('region', { name: 'Salud del proyecto' })
+    expect(await within(salud).findByText('Reuniones: 3 de 4 (meta)')).toBeInTheDocument()
+    const qcs = within(salud).getByRole('region', { name: 'QCS abiertas' })
+    expect(within(qcs).getByText('2 vencidas')).toHaveClass('text-sg-danger')
+  })
+
+  it('los cuadrantes cuentan los grupos por el grupo que dice el servidor o, sin él, por los umbrales', async () => {
+    abrir(
+      rutas(SIN_STANCE, {
+        'KPI-STK-03': {
+          label: 'x',
+          available: true,
+          value: 4,
+          numerator: 4,
+          denominator: 6,
+          breakdowns: [
+            {
+              by: 'stakeholder',
+              rows: [
+                { key: 's1', value: 1, interest: 4, power: 4 },
+                { key: 's2', value: 1, interest: 2, power: 4 },
+                { key: 's3', value: 1, interest: 3, power: 1 },
+                { key: 's4', value: 1, interest: 1, power: 1, influence_group: 'ESTRATEGICO' }
+              ]
+            }
+          ]
+        }
+      })
+    )
+    const paisaje = await screen.findByRole('region', { name: 'Paisaje de grupos de interés' })
+    const cuadrante = async (nombre: string) => (await within(paisaje).findByText(nombre)).nextElementSibling?.textContent
+    expect(await cuadrante('Estratégico')).toBe('2')
+    expect(await cuadrante('Político')).toBe('1')
+    expect(await cuadrante('Para monitoreo')).toBe('1')
+    expect(await cuadrante('Vulnerable')).toBe('0')
+    expect(within(paisaje).getByText('2 sin evaluar')).toBeInTheDocument()
+  })
+
+  it('las reuniones van en barras con su valor y la meta anotada, y las áreas en borrador también se listan con su estado', async () => {
+    abrir([
+      {
+        path: '/objects/area_of_influence/records',
+        body: pagina([
+          registro('a1', { area_type: 'AIDS', version_number: 2 }, { state: 'approved' }),
+          registro('a2', { area_type: 'AID', version_number: 1 }, { state: 'draft' }),
+          registro('a3', { area_type: 'AIDS', version_number: 1 }, { state: 'superseded' })
+        ])
+      },
+      {
+        path: '/objects/area_of_influence/workflow',
+        body: workflow('area_of_influence', [
+          ['draft', 'Borrador'],
+          ['approved', 'Aprobada'],
+          ['superseded', 'Reemplazada']
+        ])
+      },
+      ...rutas(SIN_STANCE)
+    ])
+    const reuniones = await screen.findByRole('region', { name: 'Reuniones al mes frente a la meta' })
+    expect(await within(reuniones).findByText('meta 2')).toBeInTheDocument()
+    expect(within(reuniones).getByRole('link', { name: 'Ver datos' })).toHaveAttribute('href', '/projects/p1/engagements/dashboard')
+    const areas = screen.getByRole('region', { name: 'Áreas de influencia' })
+    await waitFor(() => expect(within(areas).getAllByRole('row')).toHaveLength(2))
+    expect(within(areas).getByText('Territorio')).toBeInTheDocument()
+    expect(await within(areas).findByText('Borrador')).toBeInTheDocument()
+    expect(within(areas).queryByText('Reemplazada')).not.toBeInTheDocument()
+    expect(within(areas).getByRole('link', { name: 'Abrir el mapa' })).toHaveAttribute('href', '/projects/p1/map')
   })
 })

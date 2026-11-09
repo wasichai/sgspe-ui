@@ -337,3 +337,82 @@ describe('un refetch fallido con la lista ya cargada', () => {
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 })
+
+// Civic Modern, S04: las cifras de atención de cada proyecto y la vista previa del elegido bajo la tabla
+describe('S04 · portafolio', () => {
+  const original = window.matchMedia
+  afterEach(() => {
+    window.matchMedia = original
+  })
+  const desdeXl = () => {
+    window.matchMedia = ((consulta: string) => ({
+      matches: consulta === '(min-width: 80rem)',
+      media: consulta,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    })) as unknown as typeof window.matchMedia
+  }
+  const conCifras = [
+    { path: '/sgspe/projects/p1/counts', body: { counts: { 'commitments:accion': 2, 'attention:accion': 0 }, confidentialHidden: true } },
+    { path: '/sgspe/projects/p3/counts', body: { counts: { 'commitments:accion': null, 'attention:accion': 1 }, confidentialHidden: false } },
+    { path: /^\/objects\/social_risk\/records\?.*project=p1.*risk_level=ALTO/, body: { ...pagina([]), totalElements: 1 } },
+    { path: /^\/objects\/social_risk\/records\?.*project=p1.*risk_level=CRITICO/, body: { ...pagina([]), totalElements: 2 } },
+    { path: /^\/objects\/social_risk\/records\?.*project=p3/, body: { ...pagina([]), totalElements: 0 } },
+    ...rutas()
+  ]
+  const conRiesgos = permisos({ ...LECTOR.objects, social_risk: ['READ'] })
+
+  it('cada fila dice sus vencidos y riesgos altos: en danger si pasan de cero, atenuados en cero y «—» si no se leen', async () => {
+    fetch = abrirPortal('/projects', RELACIONISTA, conRiesgos, conCifras)
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    const tabla = screen.getByRole('table', { name: 'Proyectos' })
+    for (const encabezado of ['Comp. vencidos', 'QCS vencidas', 'Riesgos altos'])
+      expect(within(tabla).getByRole('columnheader', { name: encabezado })).toHaveClass('text-right', 'whitespace-normal')
+    const celdas = (fila: HTMLElement) => within(fila).getAllByRole('cell').slice(-3)
+    await waitFor(() => expect(celdas(filas()[0]).map((c) => c.textContent)).toEqual(['2', '0', '3']))
+    const [vencidos, qcs, riesgos] = celdas(filas()[0])
+    expect(within(vencidos).getByText('2')).toHaveClass('text-sg-danger')
+    expect(within(qcs).getByText('0')).toHaveClass('text-sg-text-muted')
+    expect(within(riesgos).getByText('3')).toHaveClass('text-sg-danger')
+    await waitFor(() => expect(celdas(filas()[1]).map((c) => c.textContent)).toEqual(['—', '1', '0']))
+    // la nota al pie explica la raya y, como las QCS del primero no cuentan las confidenciales, lo dice sin cuántas
+    expect(screen.getByText(/«—» en una cifra: su cuenta no la lee/)).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent(/confidenciales/)
+  })
+
+  it('sin permiso sobre los riesgos, sus cifras dicen «—» y no se piden', async () => {
+    fetch = abrirPortal('/projects', RELACIONISTA, LECTOR, conCifras)
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await waitFor(() => expect(within(filas()[0]).getAllByRole('cell').at(-1)!.textContent).toBe('—'))
+  })
+
+  it('desde xl la vista previa del proyecto elegido va bajo la tabla, con «Ver en el mapa» y «Abrir Proyecto 360»', async () => {
+    desdeXl()
+    fetch = abrirPortal('/projects', RELACIONISTA, conRiesgos, [
+      {
+        path: '/sgspe/dashboards/project',
+        body: {
+          dashboard: 'project',
+          computedAt: '2026-10-16T15:00:00Z',
+          filters: {},
+          indicators: [{ code: 'KPI-STK-01', label: 'x', available: true, value: 42 }]
+        }
+      },
+      ...conCifras
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    await userEvent.click(within(filas()[0]).getByRole('link', { name: 'Vista previa de PRJ-01 Pukaqaqa' }))
+    const previa = await screen.findByRole('region', { name: 'Vista previa de Pukaqaqa' })
+    expect(filas()[0]).toHaveAttribute('aria-current', 'true')
+    expect(within(previa).getByText('Proyecto · PRJ-01')).toBeInTheDocument()
+    expect(within(previa).getByRole('link', { name: 'Ver en el mapa' })).toHaveAttribute('href', '/projects/p1/map')
+    expect(within(previa).getByRole('link', { name: 'Abrir Proyecto 360' })).toHaveAttribute('href', '/projects/p1/overview')
+    expect(await within(previa).findByText('Perforación 2026')).toBeInTheDocument()
+    expect(within(await within(previa).findByRole('region', { name: 'Grupos de interés vigentes' })).getByText('42')).toBeInTheDocument()
+    // no es el cajón del shell
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(within(previa).getByRole('button', { name: 'Cerrar la vista previa' }))
+    expect(screen.queryByRole('region', { name: 'Vista previa de Pukaqaqa' })).not.toBeInTheDocument()
+    expect(rutaActual()).toBe('/projects')
+  })
+})

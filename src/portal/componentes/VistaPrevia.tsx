@@ -57,6 +57,7 @@ export function BotonDeVistaPrevia({ objeto, id, nombre, enFila }: { objeto: str
 
 // los datos que la vista previa dice de cada objeto, además del estado (los que no se leen no llegan y no se dicen)
 const DATOS: Record<string, string[]> = {
+  project: ['project_type', 'stage', 'exploration_phase'],
   evidence: ['evidence_type', 'classification'],
   stakeholder: ['stakeholder_type', 'influence_group', 'relationship_status'],
   engagement: ['engagement_type', 'place'],

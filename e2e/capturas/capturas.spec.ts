@@ -23,6 +23,7 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'inicio', ruta: '/' },
   { nombre: 'revision-ejecutiva', ruta: '/dashboards/executive' },
   { nombre: 'proyectos', ruta: '/projects' },
+  { nombre: 'proyectos-previa', ruta: '/projects?view=all&peek=project%3Ap1' },
   { nombre: 'p360-resumen', ruta: '/projects/p1/overview' },
   { nombre: 'grupos', ruta: '/projects/p1/stakeholders' },
   { nombre: 'relacionamiento', ruta: '/projects/p1/engagements' },
@@ -36,8 +37,8 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'entregable', ruta: '/reports/deliverables/d1' },
   { nombre: 'administracion', ruta: '/administration', admin: true }
 ]
-const PRINCIPALES = ['login', 'inicio', 'revision-ejecutiva', 'p360-resumen', 'compromisos', 'territorio', 'riesgos']
-const ANGOSTAS = ['login', 'inicio', 'revision-ejecutiva', 'p360-resumen', 'compromisos']
+const PRINCIPALES = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'compromisos', 'territorio', 'riesgos']
+const ANGOSTAS = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'compromisos']
 
 interface Variante {
   ancho: number

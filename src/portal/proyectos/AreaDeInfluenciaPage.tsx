@@ -1,6 +1,7 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { capa, dibujoDe } from '../mapa/capas'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogTitle, Table, Td, Textarea, Th } from '@wasichai/ui'
@@ -81,7 +82,8 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
         .filter((v) => v.geometries?.boundary)
         .map((v, i) => ({
           id: `v${texto(v, 'version_number')}`,
-          color: i === 0 ? '--sg-primary' : '--sg-text-muted',
+          // la versión abierta con el estilo de las áreas de influencia (LYR-13, mapa/estilos.ts) y la vigente atenuada
+          ...(i === 0 ? { color: capa('LYR-13')!.color, ...dibujoDe('LYR-13') } : { color: '--sg-text-muted' }),
           seleccionable: false,
           datos: {
             type: 'FeatureCollection' as const,
@@ -103,14 +105,13 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
   // el área y su versión en las migas del proyecto (revisión de UX, etapa 4)
   useMigaDelRegistro(t('areas.titulo', { tipo: opcion(area, 'area_type'), version }))
   return (
-    <section className="space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         titulo={t('areas.titulo', { tipo: opcion(area, 'area_type'), version })}
         chips={<EstadoChip objeto="area_of_influence" estado={area.state} />}
         primaria={
           borrador && escribeEnElProyecto && can('area_of_influence', 'APPROVE') ? (
             <Button
-              size="sm"
               onClick={() => setAprobando(true)}
               disabled={!miembros.isSuccess || sinMiembros}
               title={sinMiembros ? t('areas.sinMiembros') : miembros.isError ? t('areas.miembrosNoCargaron') : undefined}
@@ -195,7 +196,7 @@ function Area({ area, refrescando }: { area: Registro; refrescando: boolean }) {
           alCerrar={() => setAprobando(false)}
         />
       ) : null}
-    </section>
+    </ContenedorDePagina>
   )
 }
 

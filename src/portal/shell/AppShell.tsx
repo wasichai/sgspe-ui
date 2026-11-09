@@ -7,7 +7,7 @@ import { DialogoDeSesionVencida } from '../auth/DialogoDeSesionVencida'
 import { useCerrarSesion } from '../auth/cerrarSesion'
 import { Insignia } from '../componentes/Insignia'
 import { ProveedorDeMigas } from '../componentes/Migas'
-import { useTituloDeDocumento } from '../componentes/Pagina'
+import { MARGENES_DE_RESPALDO, useTituloDeDocumento } from '../componentes/Pagina'
 import { VistaPrevia } from '../componentes/VistaPrevia'
 import { BarraDeContexto } from '../contexto/BarraDeContexto'
 import { SelectorDeProyecto } from '../contexto/SelectorDeProyecto'
@@ -59,13 +59,14 @@ export function AppShell() {
           <Cabecera alMenu={() => setMenuAbierto(true)} />
           <NavegacionPrincipal className="hidden lg:block" />
           <BarraDeContexto />
-          {/* los márgenes de la página (16, 24 y 32 px); el ancho de 1440 lo da cada pantalla. la barra fija de acciones de una ficha
-              va sobre la barra inferior de 64 px del teléfono */}
+          {/* los márgenes de la página (16, 24 y 32 px) y el ancho de 1440 los da cada pantalla con ContenedorDePagina; aquí quedan
+              solo como respaldo de las que aún no lo usan. abajo, el lugar de la barra inferior de 64 px del teléfono y, en una
+              ficha, el de su barra fija de acciones */}
           <main
             id="content"
             ref={principal}
             tabIndex={-1}
-            className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-6 pb-24 has-[[data-barra-de-acciones]]:max-sm:pb-40 sm:pb-6 md:px-6 lg:px-8 max-sm:[&_[data-barra-de-acciones]]:bottom-16"
+            className={cn('min-h-0 min-w-0 flex-1 overflow-auto pb-24 has-[[data-barra-de-acciones]]:max-sm:pb-40 sm:pb-6', MARGENES_DE_RESPALDO)}
           >
             <Outlet />
             <VistaPrevia />

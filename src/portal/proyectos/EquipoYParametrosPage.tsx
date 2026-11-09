@@ -30,7 +30,7 @@ import { TemasPriorizados } from './TemasPriorizados'
 import { PARAMETROS_F2, PARAMETROS_F4, PARAMETROS_INVERSION, problemasDeParametros, vigente, type Parametro } from './parametros'
 import { opcion } from '../datos/opciones'
 import { Persona } from '../componentes/Persona'
-import { MasAcciones } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, MasAcciones } from '../componentes/Pagina'
 import { useNombreDePersona } from '../datos/personas'
 
 // S11 · equipo y parámetros del proyecto (screens.md §3): asignaciones con su vigencia (una vencida no da escritura,
@@ -49,8 +49,8 @@ export function EquipoYParametrosPage() {
   const puedeEditar = usePuedeEditar('project')
   const editaProyecto = escribeEnElProyecto && puedeEditar
   return (
-    <section className="space-y-4">
-      <h1 className="text-sg-h2 font-semibold">{t('p360.equipo.titulo')}</h1>
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina titulo={t('p360.equipo.titulo')} />
       <Tabs
         label={t('p360.equipo.titulo')}
         tabs={[
@@ -76,7 +76,7 @@ export function EquipoYParametrosPage() {
           }
         ]}
       />
-    </section>
+    </ContenedorDePagina>
   )
 }
 

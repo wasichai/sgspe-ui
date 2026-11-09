@@ -56,7 +56,8 @@ describe('shell responsive', () => {
     ])
     const enLaCabecera = await within(cabecera()).findByRole('combobox', { name: 'Proyecto' })
     expect(enLaCabecera.parentElement).toHaveClass('hidden', 'md:block')
-    expect(await within(screen.getByRole('group', { name: 'Contexto' })).findByText('Proyecto · PRJ-01')).toBeInTheDocument()
+    // en el resumen la banda de contexto crece en la banda del proyecto (S05), que dice el código en lugar del sello
+    expect(await within(screen.getByRole('region', { name: 'Proyecto' })).findByText('Proyecto · PRJ-01')).toBeInTheDocument()
     await userEvent.click(within(cabecera()).getByRole('button', { name: 'Menú' }))
     const panel = await screen.findByRole('dialog', { name: 'Menú' })
     const selector = await within(panel).findByRole('combobox', { name: 'Proyecto' })

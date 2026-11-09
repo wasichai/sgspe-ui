@@ -1,7 +1,18 @@
 import { useWasichaiConfig } from '@wasichai/core'
 import { cn } from '@wasichai/ui'
 import { ChevronDown, MoreHorizontal } from 'lucide-react'
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent as ClicDeReact, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type MouseEvent as ClicDeReact,
+  type ReactNode
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { texto, useRegistro } from '../datos/registros'
@@ -13,9 +24,17 @@ import { NavegacionDeOrigen } from './NavegacionDeOrigen'
 
 // el ancho único de las pantallas; «lectura», más angosto, solo para textos largos (un acta, un entregable). es la .pg del
 // lienzo de Civic Modern (design-system.md §5.3): una columna con 20 px entre bloques, en flujo de bloque (space-y) y no en
-// flex, para que un hijo en línea (un botón, un enlace) no se estire a todo el ancho. el relleno lateral (24 a 32 px) y el de
-// arriba los pone <main> del shell, que también envuelve las pantallas que no usan este contenedor; repetirlo aquí lo doblaría.
-// elemento: la sección de una lista o el artículo de una ficha, como lo eran a mano
+// flex, para que un hijo en línea (un botón, un enlace) no se estire a todo el ancho. pone los márgenes de la página
+// (design-system.md §3.5: 16 px en el teléfono, 24 en tableta y 32 desde lg; 24 arriba): <main> del shell ya no los pone y
+// solo los da como respaldo a una pantalla que todavía no usa este contenedor (MARGENES_DE_RESPALDO). uno dentro de otro no
+// los repite. elemento: la sección de una lista o el artículo de una ficha, como lo eran a mano
+const DentroDeContenedor = createContext(false)
+
+export const MARGENES_DE_PAGINA = 'px-4 pt-6 md:px-6 lg:px-8'
+// el respaldo de <main> del shell y del contenido de un proyecto: los márgenes solo si dentro no hay un ContenedorDePagina
+// (data-ancho), para que una pantalla que no lo usa no quede pegada al borde
+export const MARGENES_DE_RESPALDO = 'not-has-[[data-ancho]]:px-4 not-has-[[data-ancho]]:pt-6 md:not-has-[[data-ancho]]:px-6 lg:not-has-[[data-ancho]]:px-8'
+
 export function ContenedorDePagina({
   variante = 'pagina',
   elemento: Elemento = 'div',
@@ -27,9 +46,19 @@ export function ContenedorDePagina({
   className?: string
   children: ReactNode
 }) {
+  const dentro = useContext(DentroDeContenedor)
   return (
-    <Elemento data-ancho={variante} className={cn('mx-auto w-full space-y-5', variante === 'lectura' ? 'max-w-3xl' : 'max-w-[1440px]', className)}>
-      {children}
+    <Elemento
+      data-ancho={variante}
+      className={cn(
+        'mx-auto w-full space-y-5',
+        // la lectura: 768 px de texto más los márgenes
+        variante === 'lectura' ? (dentro ? 'max-w-3xl' : 'max-w-[52rem]') : 'max-w-[1440px]',
+        !dentro && MARGENES_DE_PAGINA,
+        className
+      )}
+    >
+      <DentroDeContenedor.Provider value={true}>{children}</DentroDeContenedor.Provider>
     </Elemento>
   )
 }
@@ -104,8 +133,8 @@ export interface PropsDeEncabezado {
   mas?: ReactNode
   // «Lista · Tablero» del módulo (VistasDelModulo): va primero entre las acciones
   vistas?: ReactNode
-  // la ficha de un registro: en el teléfono, sus acciones van en una barra fija sobre la barra de accesos (revisión de UX,
-  // etapa 8), siempre a mano mientras se lee la ficha
+  // la ficha de un registro: en el teléfono, sus acciones van en una barra fija sobre la barra inferior de 64 px (revisión de
+  // UX, etapa 8; design-system.md §5.2), siempre a mano mientras se lee la ficha
   ficha?: boolean
   // si el título visible no basta para el documento (el código de una ficha)
   tituloDelDocumento?: string
@@ -157,7 +186,7 @@ export function EncabezadoDePagina({
           className={cn(
             'flex flex-wrap items-center gap-2',
             ficha &&
-              'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-12 max-sm:z-20 max-sm:justify-end max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2'
+              'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-16 max-sm:z-20 max-sm:justify-end max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2'
           )}
         >
           {vistas}

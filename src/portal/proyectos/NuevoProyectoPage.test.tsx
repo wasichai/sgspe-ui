@@ -166,11 +166,22 @@ describe('S07 · crear proyecto', () => {
     for (let i = 0; i < 6; i++) {
       await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     }
-    expect(await screen.findByText(/CRS de trabajo informado/)).toHaveAttribute('data-cumple', 'true')
-    await waitFor(() => expect(screen.getByText(/Una parte «Cliente» u «Operador»/)).toHaveAttribute('data-cumple', 'true'))
+    expect((await screen.findByText(/CRS de trabajo informado/)).closest('li')).toHaveAttribute('data-cumple', 'true')
+    await waitFor(() => expect(screen.getByText(/Una parte «Cliente» u «Operador»/).closest('li')).toHaveAttribute('data-cumple', 'true'))
     await userEvent.click(screen.getByRole('button', { name: 'Crear y enviar a revisión' }))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p9/overview'))
     expect(red.a('POST', '/objects/project/records/p9/transitions/submit_for_review')).toHaveLength(1)
+  })
+
+  // Civic Modern (design-system.md §6.3): «Revise sus respuestas» agrupa lo escrito por paso y «Cambiar» vuelve a ese paso
+  it('el último paso agrupa las respuestas por paso y «Cambiar» vuelve a ese paso', async () => {
+    fetch = abrirPortal('/projects/new?draft=p9', ADMINISTRACION_DE_PROYECTO, PAD, rutas())
+    await screen.findByRole('heading', { name: 'Completar proyecto' })
+    for (let i = 0; i < 6; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Revise sus respuestas' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: 'Identificación' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cambiar: Ubicación y CRS de trabajo' }))
+    expect(await screen.findByRole('combobox', { name: /CRS de trabajo/ })).toBeInTheDocument()
   })
 
   it('sin el directorio de usuarios, la asignación se escribe a mano', async () => {
