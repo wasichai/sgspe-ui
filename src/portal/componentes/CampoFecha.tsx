@@ -29,6 +29,8 @@ export interface PropsDeCampoFecha {
   ayuda?: string
   // inválido por una regla de la pantalla (un periodo con «desde» después de «hasta»), que dice su error aparte
   invalido?: boolean
+  // la etiqueta junto al campo (Campo enLinea)
+  enLinea?: boolean
 }
 
 type Motivo = 'formato' | 'formatoHora' | 'antesDe' | 'despuesDe'
@@ -51,7 +53,21 @@ function leer(textoDia: string, textoHora: string, conHora: boolean, min?: strin
 
 const horaDe = (valor: string | null): string => /T(\d{2}:\d{2})/.exec(valor ?? '')?.[1] ?? ''
 
-export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, requerido, min, max, error, deshabilitado, ayuda, invalido }: PropsDeCampoFecha) {
+export function CampoFecha({
+  valor,
+  alCambiar,
+  etiqueta,
+  conHora = false,
+  id,
+  requerido,
+  min,
+  max,
+  error,
+  deshabilitado,
+  ayuda,
+  invalido,
+  enLinea
+}: PropsDeCampoFecha) {
   const { t } = useTranslation(NS)
   const [textoDia, setTextoDia] = useState(textoDeDia(valor ?? ''))
   const [textoHora, setTextoHora] = useState(horaDe(valor))
@@ -136,7 +152,13 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
 
   return (
     // design-system.md §5.3: el formato va en la ayuda («Por ejemplo, 15/12/2026») si la pantalla no da la suya
-    <Campo etiqueta={etiqueta} error={propio ?? error} ayuda={ayuda ?? t(conHora ? 'comun.campoFecha.ejemploConHora' : 'comun.campoFecha.ejemplo')} id={id}>
+    <Campo
+      etiqueta={etiqueta}
+      error={propio ?? error}
+      ayuda={ayuda ?? t(conHora ? 'comun.campoFecha.ejemploConHora' : 'comun.campoFecha.ejemplo')}
+      id={id}
+      enLinea={enLinea}
+    >
       {(p) => (
         <div
           ref={contenedor}

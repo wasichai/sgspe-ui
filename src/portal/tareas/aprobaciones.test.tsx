@@ -485,7 +485,8 @@ describe('S48 · aprobaciones de programas y aportes', () => {
     ])
     montar(<AprobacionesPage />, { ruta: '/tasks/approvals', camino: '/tasks/approvals', usuario: APROBADORA, permisos: PERMISOS_DE_APROBACION })
     const tabla = await screen.findByRole('list', { name: 'Por aprobar' })
-    const aporte = (await within(tabla).findByText('AP-001')).closest('li') as HTMLElement
+    // la tarjeta de un aporte dice su propósito, como la de un programa su nombre (fase 13a de Civic Modern)
+    const aporte = (await within(tabla).findByText('AP-001 · Equipar la biblioteca escolar')).closest('li') as HTMLElement
     expect(within(aporte).getByText('Aprobación de aporte')).toBeInTheDocument()
     expect(within(aporte).getByText('S/ 1,750.50')).toBeInTheDocument()
     expect(
@@ -493,7 +494,10 @@ describe('S48 · aprobaciones de programas y aportes', () => {
         'No: Por segregación de funciones, quien registró un compromiso, un aporte o un programa no lo aprueba, y el responsable de un compromiso no lo verifica.'
       )
     ).toBeInTheDocument()
-    expect(within(aporte).getByRole('link', { name: 'AP-001' })).toHaveAttribute('href', '/tasks/approvals?selected=social_contribution%3Aa1')
+    expect(within(aporte).getByRole('link', { name: 'AP-001 · Equipar la biblioteca escolar' })).toHaveAttribute(
+      'href',
+      '/tasks/approvals?selected=social_contribution%3Aa1'
+    )
     const programa = (await within(tabla).findByText('PS-001 · Programa Ejemplo de agua segura')).closest('li') as HTMLElement
     expect(within(programa).getByText('Aprobación de programa')).toBeInTheDocument()
     expect(await within(programa).findByText('Sí')).toBeInTheDocument()
@@ -537,9 +541,9 @@ describe('P-05 · decidir desde la bandeja', () => {
     const detalle = screen.getByRole('region', { name: 'Detalle' })
     expect(within(detalle).getByText('Elija una aprobación de la lista para ver su detalle y decidir.')).toBeInTheDocument()
     const lista = await screen.findByRole('list', { name: 'Por aprobar' })
-    await userEvent.click(await within(lista).findByRole('link', { name: 'AP-001' }))
+    await userEvent.click(await within(lista).findByRole('link', { name: 'AP-001 · Equipar la biblioteca escolar' }))
     expect(ubicacion.actual).toBe('/tasks/approvals?selected=social_contribution%3Aa1')
-    expect(within(lista).getByRole('link', { name: 'AP-001' })).toHaveAttribute('aria-current', 'true')
+    expect(within(lista).getByRole('link', { name: 'AP-001 · Equipar la biblioteca escolar' })).toHaveAttribute('aria-current', 'true')
     expect(await within(detalle).findByRole('heading', { name: 'Aporte AP-001' })).toBeInTheDocument()
     expect(await within(detalle).findByText('Estantes de madera')).toBeInTheDocument()
     expect(within(detalle).getByText('Transporte a la institución')).toBeInTheDocument()

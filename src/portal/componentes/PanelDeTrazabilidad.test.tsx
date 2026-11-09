@@ -35,13 +35,16 @@ describe('PanelDeTrazabilidad', () => {
 
   // design-system.md §5.3 «Trazabilidad»: tres columnas iguales en una caja de 1 px con separadores de 1 px, relleno de
   // 10 × 14 px y el título en 700; en una ficha estrecha, cada grupo es una fila con el título en 150 px y el resto
-  it('es una caja de 1 px con tres celdas separadas, que en lo ancho son tres columnas y en lo estrecho filas de 150 px', () => {
+  it('es una caja de 1 px con tres celdas separadas, que en lo ancho son tres columnas y en lo estrecho filas de 150 px (apiladas en una columna lateral)', () => {
     montar(<PanelDeTrazabilidad queGenero={[{ clave: 'tareas', titulo: 'Tareas', contenido: '2 tareas abiertas' }]} />)
     const panel = screen.getByRole('complementary', { name: 'Trazabilidad' })
     const caja = panel.querySelector('[data-rejilla-de-trazabilidad]') as HTMLElement
     expect(caja).toHaveClass('grid', '@2xl:grid-cols-3', 'border', 'border-sg-border', 'rounded-sg-md', 'bg-sg-surface')
     for (const grupo of within(panel).getAllByRole('region')) {
-      expect(grupo).toHaveClass('border-r', 'border-b', 'border-sg-border', 'px-3.5', 'py-2.5', 'grid-cols-[150px_minmax(0,1fr)]')
+      // fase 13a: en una columna lateral de menos de 448 px (la de una ficha), el título va encima de su contenido
+      expect(grupo).toHaveClass('border-r', 'border-b', 'border-sg-border', 'px-3.5', 'py-2.5', 'grid-cols-1', '@md:grid-cols-[150px_minmax(0,1fr)]')
+      // los vínculos de sus listas no van subrayados (U-05): solo al pasar o con el foco
+      expect(grupo).toHaveClass('[&_a]:no-underline', '[&_a:hover]:underline', '[&_a:focus-visible]:underline')
       expect(within(grupo).getByRole('heading', { level: 2 })).toHaveClass('font-bold', 'text-sm')
     }
   })

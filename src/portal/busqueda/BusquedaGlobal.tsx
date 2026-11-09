@@ -106,6 +106,8 @@ export function BotonBuscar() {
           botón de ícono de 48 px. abre el mismo diálogo que ⌘K */}
       <button
         type="button"
+        // en oscuro, hundido con el borde de control (theme/componentes.css)
+        data-campo-de-cabecera
         aria-label={t('busqueda.boton')}
         aria-keyshortcuts={tecla === t('atajos.buscarMac') ? 'Meta+K' : 'Control+K'}
         onClick={() => setAbierta(true)}

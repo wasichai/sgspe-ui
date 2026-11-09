@@ -1,6 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, ContenedorSiFalta } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -73,10 +73,19 @@ export function VisitaDeCampoPage() {
 
 function VisitaExistente({ id }: { id: string }) {
   const visita = useRegistro('field_visit', id)
-  if (visita.isPending) return <Cargando />
+  if (visita.isPending)
+    return (
+      <ContenedorSiFalta>
+        <Cargando />
+      </ContenedorSiFalta>
+    )
   // una visita de otro proyecto o de una asignación vencida responde 404, como una que no existe (ADR-0029)
   if (visita.isError && !visita.data)
-    return esIlegible(visita.error) ? <NoEsDeSusProyectos /> : <FalloDeLectura error={visita.error} alReintentar={() => void visita.refetch()} />
+    return (
+      <ContenedorSiFalta>
+        {esIlegible(visita.error) ? <NoEsDeSusProyectos /> : <FalloDeLectura error={visita.error} alReintentar={() => void visita.refetch()} />}
+      </ContenedorSiFalta>
+    )
   return <Visita visita={visita.data as Registro} />
 }
 
@@ -94,11 +103,31 @@ function NuevaVisita() {
     [projectId, lider]
   )
   // sin permiso para crear, o sin asignación vigente (el servidor rechazaría el alta), no hay formulario que llenar en vano
-  if (!can('field_visit', 'CREATE')) return <NoDisponible />
+  if (!can('field_visit', 'CREATE'))
+    return (
+      <ContenedorSiFalta>
+        <NoDisponible />
+      </ContenedorSiFalta>
+    )
   if (!isAdmin) {
-    if (asignaciones.isPending) return <Cargando />
-    if (asignaciones.isError && !asignaciones.data) return <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
-    if (!asignado) return <NoDisponible motivo="NOT_ASSIGNED" />
+    if (asignaciones.isPending)
+      return (
+        <ContenedorSiFalta>
+          <Cargando />
+        </ContenedorSiFalta>
+      )
+    if (asignaciones.isError && !asignaciones.data)
+      return (
+        <ContenedorSiFalta>
+          <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
+        </ContenedorSiFalta>
+      )
+    if (!asignado)
+      return (
+        <ContenedorSiFalta>
+          <NoDisponible motivo="NOT_ASSIGNED" />
+        </ContenedorSiFalta>
+      )
   }
   return (
     <ContenedorDePagina elemento="section" variante="lectura">

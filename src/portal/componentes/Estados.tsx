@@ -1,12 +1,13 @@
 import type { UseQueryResult } from '@tanstack/react-query'
 import { ApiError } from '@wasichai/core'
 import { Alert, Button, cn, Th } from '@wasichai/ui'
-import { CircleHelp, Info, Lock, RotateCw } from 'lucide-react'
+import { CircleHelp, ClipboardCheck, Info, Lock, RotateCw } from 'lucide-react'
 import { type ReactNode, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { codigoDelError } from '../datos/http'
 import { NS } from '../i18n'
 import { correlacionDe, useMensajeDeError } from './errores'
+import { ContenedorSiFalta } from './Pagina'
 
 // los estados comunes de design-system.md §6.5: carga, error con su código de correlación y reintento, vacío, campo
 // restringido y cifra no disponible (nunca vacío ni cero, RQ-DSH-032)
@@ -71,9 +72,11 @@ export function ErrorDeCarga({ error, alReintentar, titulo }: { error: unknown; 
 
 // el vacío de design-system.md §5.3: un panel con relleno de 40 × 32 px, alineado a la izquierda, con el título, lo que sí hay
 // y la acción que saca del vacío («Quitar los filtros», «Registrar…»)
+// arriba, su ícono de 20 px (E18), solo de adorno
 export function Vacio({ titulo, accion, children }: { titulo: string; accion?: ReactNode; children?: ReactNode }) {
   return (
     <div data-vacio className="space-y-2 rounded-sg-md border border-sg-border bg-sg-surface px-8 py-10 text-left">
+      <ClipboardCheck aria-hidden className="size-5 text-sg-text-secondary" />
       <p className="text-sg-h3 text-sg-text">{titulo}</p>
       {children ? <div className="max-w-prose text-sg-body text-sg-text-secondary">{children}</div> : null}
       {accion ? <div className="flex flex-wrap items-center gap-3 pt-2">{accion}</div> : null}
@@ -85,14 +88,25 @@ export function Vacio({ titulo, accion, children }: { titulo: string; accion?: R
 // (un «Recargar» tras un 412, la invalidación tras una transición) conserva los datos y no desmonta lo que está debajo,
 // donde puede haber texto sin guardar; quien relee dice su propio fallo. un 403 es «no disponible», nunca un error. con
 // noExiste, un 404 (el registro de una ficha que no existe) dibuja ese contenido y no un error con «Reintentar», que no sirve
+// la carga, el error y el «no existe» van en ContenedorSiFalta: una ficha que se lee con Consulta pone su contenedor al tener
+// los datos, y mientras tanto sus estados no quedan pegados al borde
 export function Consulta<T>({ consulta, noExiste, children }: { consulta: UseQueryResult<T>; noExiste?: ReactNode; children: (datos: T) => ReactNode }) {
-  if (consulta.isPending) return <Cargando />
+  if (consulta.isPending)
+    return (
+      <ContenedorSiFalta>
+        <Cargando />
+      </ContenedorSiFalta>
+    )
   if (consulta.isError && consulta.data === undefined) {
-    if (noExiste && consulta.error instanceof ApiError && consulta.error.status === 404) return <>{noExiste}</>
-    return esProhibido(consulta.error) ? (
-      <NoDisponible motivo={codigoDelError(consulta.error)} />
-    ) : (
-      <ErrorDeCarga error={consulta.error} alReintentar={() => void consulta.refetch()} />
+    if (noExiste && consulta.error instanceof ApiError && consulta.error.status === 404) return <ContenedorSiFalta>{noExiste}</ContenedorSiFalta>
+    return (
+      <ContenedorSiFalta>
+        {esProhibido(consulta.error) ? (
+          <NoDisponible motivo={codigoDelError(consulta.error)} />
+        ) : (
+          <ErrorDeCarga error={consulta.error} alReintentar={() => void consulta.refetch()} />
+        )}
+      </ContenedorSiFalta>
     )
   }
   return <>{children(consulta.data as T)}</>

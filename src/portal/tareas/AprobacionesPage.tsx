@@ -1,3 +1,4 @@
+import { tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAvailableTransitions } from '../datos/flujos'
@@ -260,8 +261,11 @@ export function AprobacionesPage() {
   )
 }
 
-// el nombre de lo que se decide: su código y su título, nombre o categoría
-const nombreDe = (r: Registro): string => [texto(r, 'code'), texto(r, 'title') || texto(r, 'name') || opcion(r, 'category')].filter(Boolean).join(' · ')
+// el nombre de lo que se decide: su código y su título, nombre, propósito (un aporte, cortado como el título de su ficha) o categoría
+const nombreDe = (r: Registro): string =>
+  [texto(r, 'code'), texto(r, 'title') || texto(r, 'name') || tituloQueDiceQueEs(texto(r, 'declared_purpose'), '') || opcion(r, 'category')]
+    .filter(Boolean)
+    .join(' · ')
 
 // una aprobación de la lista: qué es, cuánto, cuánto espera y si quien mira puede decidir. el nombre la elige (?selected=) y toda la
 // tarjeta responde al clic; el reintento de una lectura fallida queda encima del enlace

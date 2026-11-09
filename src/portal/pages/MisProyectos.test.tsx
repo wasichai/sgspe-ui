@@ -84,6 +84,18 @@ describe('Mis proyectos', () => {
     expect(within(region).getByText('Cada cifra lleva a su lista. — = la cifra no se pudo leer.')).toBeInTheDocument()
   })
 
+  // fase 13a de Civic Modern: a 390 px la tabla cabe sin desplazarse: los encabezados de cifras se parten en dos líneas y las
+  // celdas de cifras se angostan
+  it('en el teléfono, los encabezados de cifras se parten y las cifras se angostan', async () => {
+    fetch = mockFetch(rutas())
+    montar(<MisProyectos />, { usuario: RELACIONISTA, permisos: LEE })
+    const tabla = await screen.findByRole('table', { name: 'Mis proyectos' })
+    const encabezado = within(tabla).getByRole('columnheader', { name: 'Compromisos vencidos' })
+    expect(encabezado).toHaveClass('max-sm:whitespace-normal', 'max-sm:px-2', 'max-sm:leading-tight')
+    const cifra = within(tabla).getAllByRole('row')[1].querySelectorAll('td')[1]
+    expect(cifra).toHaveClass('max-sm:px-2')
+  })
+
   it('sin proyectos asignados, no se dibuja', async () => {
     fetch = mockFetch([
       { path: /^\/objects\/project_assignment\/records/, body: pagina([]) },

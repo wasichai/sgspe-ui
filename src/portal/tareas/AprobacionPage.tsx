@@ -83,7 +83,7 @@ function Decision({ compromiso }: { compromiso: Registro }) {
   // en el antetítulo; el estado vive en el panel de decisión. a la izquierda la bandeja; a la derecha las reglas de la decisión elegida
   return (
     <ContenedorDePagina>
-      <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_320px]">
+      <div className="grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)_320px]">
         <Bandeja actual={compromiso.id} />
         <article className="min-w-0 space-y-4">
           <Link to="/tasks/approvals" className="text-sm text-sg-primary-text underline">

@@ -40,7 +40,10 @@ export function ListaEnTarjetas({ etiqueta, tarjetas, total }: { etiqueta: strin
       <ul aria-label={etiqueta} className="space-y-2">
         {tarjetas.map((t) => (
           <li key={t.id} className="space-y-1.5 rounded-sg-md border border-sg-border bg-sg-surface p-3 text-sg-table">
-            <div className="min-w-0">{t.titulo}</div>
+            {/* el título en 600 y sin subrayar (U-05): se subraya al pasar o con el foco */}
+            <div className="min-w-0 font-semibold [&_a]:no-underline [&_a_span]:no-underline [&_a:focus-visible]:underline [&_a:hover]:underline">
+              {t.titulo}
+            </div>
             {t.estado || t.plazo ? (
               <div className="flex flex-wrap items-center gap-2">
                 {t.estado}

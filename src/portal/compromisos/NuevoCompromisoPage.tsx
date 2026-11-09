@@ -1,3 +1,4 @@
+import { ContenedorSiFalta } from '../componentes/Pagina'
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useCodigoPropuesto } from '../datos/codigos'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -152,11 +153,31 @@ export function NuevoCompromisoPage() {
   const definicion = useDefinicion('commitment')
   // sin permiso o sin asignación vigente, el servidor rechazaría el alta. mientras se leen las asignaciones no se dice «solo
   // lectura», y si su lectura falla se dice con reintento
-  if (!can('commitment', 'CREATE')) return <Alert tone="notice">{t('contexto.soloLectura')}</Alert>
+  if (!can('commitment', 'CREATE'))
+    return (
+      <ContenedorSiFalta>
+        <Alert tone="notice">{t('contexto.soloLectura')}</Alert>
+      </ContenedorSiFalta>
+    )
   if (!isAdmin) {
-    if (asignaciones.isPending) return <Cargando />
-    if (asignaciones.isError && !asignaciones.data) return <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
-    if (!asignado) return <Alert tone="notice">{t('contexto.soloLectura')}</Alert>
+    if (asignaciones.isPending)
+      return (
+        <ContenedorSiFalta>
+          <Cargando />
+        </ContenedorSiFalta>
+      )
+    if (asignaciones.isError && !asignaciones.data)
+      return (
+        <ContenedorSiFalta>
+          <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
+        </ContenedorSiFalta>
+      )
+    if (!asignado)
+      return (
+        <ContenedorSiFalta>
+          <Alert tone="notice">{t('contexto.soloLectura')}</Alert>
+        </ContenedorSiFalta>
+      )
   }
   // la clave del proyecto: lo tecleado para un proyecto nunca pasa al alta de otro
   return <ConDefiniciones definiciones={[definicion]}>{() => <Asistente key={projectId} />}</ConDefiniciones>

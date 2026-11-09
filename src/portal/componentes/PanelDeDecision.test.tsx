@@ -38,6 +38,14 @@ describe('PanelDeDecision', () => {
     await within(tarjeta('Estado actual')).findByText('Aprobado')
   })
 
+  // fase 13a de Civic Modern (S31): un estado largo («Pendiente de aprobación») no se sale de su celda: el chip se parte en líneas
+  it('el chip del estado cabe en su celda: no pasa de su ancho y se parte en líneas', async () => {
+    fetch = mockFetch([{ path: '/objects/commitment/workflow', body: WF }])
+    montar(<PanelDeDecision objeto="commitment" estado="approved" siguiente={null} responsable={null} vencimiento={null} />)
+    const chip = (await within(tarjeta('Estado actual')).findByText('Aprobado')).closest('[data-estado]') as HTMLElement
+    expect(chip.parentElement).toHaveClass('[&>[data-estado]]:max-w-full', '[&>[data-estado]]:whitespace-normal', '[&>[data-estado]]:h-auto')
+  })
+
   // design-system.md §5.3 «Panel de decisión»: una rejilla de cuatro celdas con borde de 2 px border-strong y separadores de
   // 1 px (dos por dos en lo estrecho), el rótulo en body-sm text-secondary y el valor en 700; el vencimiento vencido en danger
   it('es una rejilla con borde fuerte y celdas separadas por 1 px; el vencimiento vencido va en danger', async () => {

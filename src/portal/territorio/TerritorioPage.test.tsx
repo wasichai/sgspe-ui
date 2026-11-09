@@ -200,6 +200,22 @@ describe('S12 · el mapa primero', () => {
     expect(screen.getByText('Sincronizada con el mapa')).toBeInTheDocument()
   })
 
+  // fase 13a de Civic Modern: la franja del periodo es una sola línea (S09): las etiquetas junto a las fechas, el ejemplo del
+  // formato solo para el lector de pantalla y lo que filtra el periodo tras un botón de ayuda
+  it('la franja del periodo va en una línea y dice lo que filtra al pedirlo', async () => {
+    fetch = abrirPortal('/territory?hide=places', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
+    const periodo = await screen.findByRole('group', { name: 'Filtros del mapa' })
+    expect(periodo.firstElementChild).toHaveClass('lg:flex-nowrap', 'items-center')
+    expect(within(periodo).getByRole('textbox', { name: 'Desde' })).toHaveAccessibleDescription('Por ejemplo, 15/12/2026')
+    for (const ejemplo of within(periodo).getAllByText('Por ejemplo, 15/12/2026')) expect(ejemplo).toHaveClass('sr-only')
+    expect(within(periodo).getByText(/El periodo filtra las capas de gestión/)).not.toBeVisible()
+    const ayuda = within(periodo).getByRole('button', { name: '¿Qué filtra el periodo?' })
+    expect(ayuda).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(ayuda)
+    expect(ayuda).toHaveAttribute('aria-expanded', 'true')
+    expect(within(periodo).getByText(/El periodo filtra las capas de gestión/)).toBeVisible()
+  })
+
   it('la cabecera tiene una sola primaria y las demás acciones van en «Más acciones»', async () => {
     fetch = abrirPortal('/territory', ANALISTA_SIG, EQUIPO_SIG, rutas(...sinGestion()))
     const titulo = await screen.findByRole('heading', { name: 'Mapa territorial', level: 1 })

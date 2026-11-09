@@ -131,7 +131,7 @@ export function FormularioPorPasos({
     </>
   )
   return (
-    <ContenedorDePagina elemento="section" className="max-w-[1100px]">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina titulo={titulo} descripcion={descripcion} secundarias={accionesDeCabecera} />
       {avisos}
       <div className="space-y-5">

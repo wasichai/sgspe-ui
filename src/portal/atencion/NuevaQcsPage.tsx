@@ -22,7 +22,7 @@ import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useRegist
 import { NS } from '../i18n'
 import { Seccion } from '../componentes/Seccion'
 import { RevisionDeRespuestas } from '../componentes/RevisionDeRespuestas'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, ContenedorSiFalta } from '../componentes/Pagina'
 import { conHecho } from '../componentes/AvisoDeExito'
 import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
 import { leerBorrador, useBorradorLocal, useClaveDelBorrador } from '../datos/borrador'
@@ -73,11 +73,31 @@ export function NuevaQcsPage() {
     useDefinicion(tipos.includes('inquiry') ? 'inquiry' : undefined),
     useDefinicion(tipos.includes('stakeholder_request') ? 'stakeholder_request' : undefined)
   ]
-  if (tipos.length === 0) return <Alert tone="notice">{t('nuevaQcs.sinTipo')}</Alert>
+  if (tipos.length === 0)
+    return (
+      <ContenedorSiFalta>
+        <Alert tone="notice">{t('nuevaQcs.sinTipo')}</Alert>
+      </ContenedorSiFalta>
+    )
   if (!isAdmin) {
-    if (asignaciones.isPending) return <Cargando />
-    if (asignaciones.isError && !asignaciones.data) return <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
-    if (!asignado) return <Alert tone="notice">{t('contexto.soloLectura')}</Alert>
+    if (asignaciones.isPending)
+      return (
+        <ContenedorSiFalta>
+          <Cargando />
+        </ContenedorSiFalta>
+      )
+    if (asignaciones.isError && !asignaciones.data)
+      return (
+        <ContenedorSiFalta>
+          <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
+        </ContenedorSiFalta>
+      )
+    if (!asignado)
+      return (
+        <ContenedorSiFalta>
+          <Alert tone="notice">{t('contexto.soloLectura')}</Alert>
+        </ContenedorSiFalta>
+      )
   }
   // la clave del proyecto: lo tecleado para uno nunca pasa al alta de otro
   return (

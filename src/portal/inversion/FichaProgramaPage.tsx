@@ -38,8 +38,8 @@ import { Presupuestos } from './Presupuestos'
 // un solo dueño (elección 15): quien no los escribe los ve en solo lectura. un 404 no dice si no existe o no es de sus proyectos
 const EDITABLES = ['name', 'description', 'topic', 'partner_organization', 'agreement', 'start_date', 'end_date', 'currency']
 // el camino de WF-G sin sus excepciones (suspender, cancelar); un estado fuera de él se agrega
-const CAMINO = ['draft', 'pending_approval', 'planned', 'executing', 'monitoring', 'evaluation', 'closed']
-const COMPROBAR = ['submit', 'approve', 'plan_direct']
+export const CAMINO_DEL_PROGRAMA = ['draft', 'pending_approval', 'planned', 'executing', 'monitoring', 'evaluation', 'closed']
+export const COMPROBAR_DEL_PROGRAMA = ['submit', 'approve', 'plan_direct']
 const TERMINADOS = ['closed', 'cancelled']
 const DECIDIENDO = ['draft', 'pending_approval']
 
@@ -79,7 +79,7 @@ function Ficha({ programa }: { programa: Registro }) {
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
   // decisión con el fin del programa como vencimiento, pestañas con conteo y trazabilidad en tres grupos
   useMigaDelRegistro(texto(programa, 'code') || texto(programa, 'name'))
-  const siguiente = useSiguienteAccion('social_program', programa, COMPROBAR)
+  const siguiente = useSiguienteAccion('social_program', programa, COMPROBAR_DEL_PROGRAMA)
   const evidencias = useEvidenciasDe('social_program', programa.id)
   const pestanas: PestanaDeFicha[] = [
     { id: 'resumen', etiqueta: t('fichaPrograma.pestanas.resumen'), render: () => <Resumen programa={programa} /> },
@@ -112,7 +112,7 @@ function Ficha({ programa }: { programa: Registro }) {
         objeto="social_program"
         registro={programa}
         proyecto={proyecto}
-        comprobarAntes={COMPROBAR}
+        comprobarAntes={COMPROBAR_DEL_PROGRAMA}
         falta={siguiente?.falta}
         faltaCampo={siguiente?.campo}
         secundarias={
@@ -131,7 +131,7 @@ function Ficha({ programa }: { programa: Registro }) {
         }
       />
       <PanelDeDecision
-        camino={CAMINO}
+        camino={CAMINO_DEL_PROGRAMA}
         objeto="social_program"
         proyecto={proyecto}
         estado={programa.state}
@@ -143,7 +143,7 @@ function Ficha({ programa }: { programa: Registro }) {
       {avisaSinergia ? <Alert tone="notice">{t('fichaPrograma.sinergia')}</Alert> : null}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <PestanasDeFicha etiqueta={texto(programa, 'name')} pestanas={pestanas} />
-        <Trazabilidad programa={programa} evidencias={evidencias.data?.content ?? []} />
+        <TrazabilidadDelPrograma programa={programa} evidencias={evidencias.data?.content ?? []} />
       </div>
       <Drawer titulo={t('fichaPrograma.editarTitulo')} abierto={editando} alCerrar={() => setEditando(false)}>
         {editando ? (
@@ -196,7 +196,7 @@ function Resumen({ programa }: { programa: Registro }) {
 
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (el convenio y el socio), qué generó (sus aportes y
 // las tareas que nacen de él, task.social_program, spec F5 §3.1) y lo que lo sustenta (sus evidencias)
-function Trazabilidad({ programa, evidencias }: { programa: Registro; evidencias: Registro[] }) {
+export function TrazabilidadDelPrograma({ programa, evidencias }: { programa: Registro; evidencias: Registro[] }) {
   // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
   const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)

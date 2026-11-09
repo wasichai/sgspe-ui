@@ -69,3 +69,10 @@ describe('ListaEnTarjetas', () => {
     expect(within(tarjeta).getByText('ACTA')).toBeInTheDocument()
   })
 })
+
+// fase 13a de Civic Modern (U-05): el título de una tarjeta es un vínculo sin subrayar, que se subraya al pasar o con el foco
+it('el título de la tarjeta va en 600 y su vínculo sin subrayar salvo al pasar o con el foco', () => {
+  render(<ListaEnTarjetas etiqueta="Aportes" tarjetas={[{ id: 'a1', titulo: <a href="/a1">Equipar la biblioteca</a> }]} />)
+  const titulo = screen.getByRole('link', { name: 'Equipar la biblioteca' }).parentElement!
+  expect(titulo).toHaveClass('font-semibold', '[&_a]:no-underline', '[&_a_span]:no-underline', '[&_a:hover]:underline', '[&_a:focus-visible]:underline')
+})

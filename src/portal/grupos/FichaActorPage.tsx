@@ -1,5 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
-import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, ContenedorSiFalta } from '../componentes/Pagina'
 import { useQueries, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
@@ -43,13 +43,22 @@ export function FichaActorPage() {
   const persona = useRegistro('person', buscaPersona ? actorId : undefined)
   if (organizacion.data) return <Ficha actor={organizacion.data} tipo="organization" />
   if (persona.data) return <Ficha actor={persona.data} tipo="person" />
-  if (organizacion.isPending || (buscaPersona && persona.isPending)) return <Cargando />
+  if (organizacion.isPending || (buscaPersona && persona.isPending))
+    return (
+      <ContenedorSiFalta>
+        <Cargando />
+      </ContenedorSiFalta>
+    )
   const reintentar = () => {
     void organizacion.refetch()
     if (buscaPersona) void persona.refetch()
   }
   const error = buscaPersona && !(estadoHttp(persona.error) === 404 && estadoHttp(organizacion.error) === 403) ? persona.error : organizacion.error
-  return <FalloDeLectura error={error} alReintentar={reintentar} />
+  return (
+    <ContenedorSiFalta>
+      <FalloDeLectura error={error} alReintentar={reintentar} />
+    </ContenedorSiFalta>
+  )
 }
 
 function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {

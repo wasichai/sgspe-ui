@@ -63,8 +63,8 @@ const EDITABLES = [
   'agreement'
 ]
 // el camino de WF-P sin sus excepciones (rechazar, cancelar); un estado fuera de él se agrega
-const CAMINO = ['requested', 'approved', 'procured', 'delivered', 'closed']
-const COMPROBAR = ['approve', 'approve_direct', 'register_procurement', 'register_delivery', 'close']
+export const CAMINO_DEL_APORTE = ['requested', 'approved', 'procured', 'delivered', 'closed']
+export const COMPROBAR_DEL_APORTE = ['approve', 'approve_direct', 'register_procurement', 'register_delivery', 'close']
 const CAMPOS_DEL_ITEM = ['description', 'item_kind', 'quantity', 'unit', 'unit_cost', 'line_amount']
 
 export function FichaAportePage() {
@@ -106,7 +106,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
   // la anatomía de design-system.md §6.1 (revisión de UX, etapa 4): migas con el código, encabezado, camino del flujo, panel de
   // decisión, pestañas con conteo y trazabilidad en tres grupos
   useMigaDelRegistro(texto(aporte, 'code'))
-  const siguiente = useSiguienteAccion('social_contribution', aporte, COMPROBAR)
+  const siguiente = useSiguienteAccion('social_contribution', aporte, COMPROBAR_DEL_APORTE)
   const evidencias = useEvidenciasDe('social_contribution', aporte.id)
   const pestanas: PestanaDeFicha[] = [
     { id: 'resumen', etiqueta: t('fichaAporte.pestanas.resumen'), render: () => <Resumen aporte={aporte} /> },
@@ -151,7 +151,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
         objeto="social_contribution"
         registro={aporte}
         proyecto={proyecto}
-        comprobarAntes={COMPROBAR}
+        comprobarAntes={COMPROBAR_DEL_APORTE}
         falta={siguiente?.falta}
         faltaCampo={siguiente?.campo}
         secundarias={
@@ -170,7 +170,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
         }
       />
       <PanelDeDecision
-        camino={CAMINO}
+        camino={CAMINO_DEL_APORTE}
         objeto="social_contribution"
         proyecto={proyecto}
         estado={aporte.state}
@@ -183,7 +183,7 @@ function Ficha({ aporte }: { aporte: Registro }) {
         {/* en teléfono, «Antes de aprobar» sube antes de los ítems (screens.md S44, Responsive) */}
         <aside className="order-first space-y-4 lg:order-none">
           {solicitud ? <AntesDeAprobar aporte={aporte} escribe={escribe} /> : null}
-          <Trazabilidad aporte={aporte} evidencias={evidencias.data?.content ?? []} />
+          <TrazabilidadDelAporte aporte={aporte} evidencias={evidencias.data?.content ?? []} />
         </aside>
       </div>
       <Drawer
@@ -344,7 +344,7 @@ function TopeDeLaCampana({ aporte, total }: { aporte: Registro; total: string | 
 // lista (alcance y confidencialidad), así que solo se dice que no nace de una solicitud que la cuenta lea
 // la trazabilidad con los grupos fijos (revisión de UX, etapa 4): de dónde viene (la solicitud de origen, el acuerdo, el compromiso
 // y la campaña) y lo que lo sustenta (sus evidencias)
-function Trazabilidad({ aporte, evidencias }: { aporte: Registro; evidencias: Registro[] }) {
+export function TrazabilidadDelAporte({ aporte, evidencias }: { aporte: Registro; evidencias: Registro[] }) {
   // una evidencia que lo sustenta se abre en la vista previa, sobre la ficha (revisión de UX, etapa 6)
   const previa = useRutaDeVistaPrevia()
   const { t } = useTranslation(NS)

@@ -188,10 +188,42 @@ describe('la barra de acciones de una ficha en el teléfono', () => {
   // va sobre la barra inferior de 64 px (design-system.md §5.2): su borde inferior a 64 px del pie
   it('queda fija a 64 px del pie', () => {
     montar(<EncabezadoDePagina titulo="Reservorio" ficha primaria={<button type="button">Registrar avance</button>} />)
-    const barra = screen.getByRole('button', { name: 'Registrar avance' }).parentElement!
-    expect(barra).toHaveAttribute('data-barra-de-acciones')
+    // la primaria va en su envoltorio del teléfono (M17b): la barra es el contenedor con data-barra-de-acciones
+    const barra = screen.getByRole('button', { name: 'Registrar avance' }).closest('[data-barra-de-acciones]')!
+    expect(barra).toBeInTheDocument()
     expect(barra).toHaveClass('max-sm:fixed', 'max-sm:bottom-16')
     expect(barra).not.toHaveClass('max-sm:bottom-12')
+  })
+})
+
+// M17b: en el teléfono, la primaria a todo el ancho arriba y debajo las secundarias, que se reparten el ancho (con «Más» al lado)
+describe('la barra de acciones de una ficha en el teléfono (M17b)', () => {
+  it('pone la primaria primero y a todo el ancho, y reparte el ancho entre las secundarias', () => {
+    montar(
+      <EncabezadoDePagina
+        titulo="Reservorio"
+        ficha
+        primaria={<button type="button">Desbloquear</button>}
+        secundarias={<button type="button">Adjuntar foto</button>}
+      />
+    )
+    const primaria = screen.getByRole('button', { name: 'Desbloquear' }).parentElement!
+    expect(primaria).toHaveClass('contents', 'max-sm:order-first', 'max-sm:basis-full', 'max-sm:[&>*]:w-full')
+    const secundarias = screen.getByRole('button', { name: 'Adjuntar foto' }).parentElement!
+    expect(secundarias).toHaveClass('contents', 'max-sm:flex', 'max-sm:flex-1', 'max-sm:[&>*]:flex-1')
+    expect(secundarias.parentElement).toHaveAttribute('data-barra-de-acciones')
+  })
+
+  it('sin secundarias, la primaria se reparte la fila con «Más»', () => {
+    montar(<EncabezadoDePagina titulo="Aporte" ficha primaria={<button type="button">Aprobar</button>} mas={<button type="button">Anular</button>} />)
+    const primaria = screen.getByRole('button', { name: 'Aprobar' }).parentElement!
+    expect(primaria).toHaveClass('max-sm:flex-1')
+    expect(primaria).not.toHaveClass('max-sm:basis-full')
+  })
+
+  it('fuera de una ficha, las acciones van tal cual', () => {
+    montar(<EncabezadoDePagina titulo="Compromisos" primaria={<button type="button">Registrar</button>} />)
+    expect(screen.getByRole('button', { name: 'Registrar' }).parentElement).not.toHaveClass('contents')
   })
 })
 

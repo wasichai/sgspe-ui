@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { pestanaDeSegmento } from '../componentes/Migas'
-import { MARGENES_DE_PAGINA, MARGENES_DE_RESPALDO, useTituloDeDocumento } from '../componentes/Pagina'
+import { ContenedorDePagina, MARGENES_DE_PAGINA, useTituloDeDocumento } from '../componentes/Pagina'
 import { CabeceraDelProyecto } from '../proyectos/CabeceraDelProyecto'
 import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
 import { NS } from '../i18n'
@@ -107,22 +107,22 @@ export function ProyectoLayout() {
   // solo sin datos: un refetch fallido (tras guardar o volver a la pestaña) no desmonta el Outlet ni pierde lo escrito
   if (proyecto.isError && !proyecto.data)
     return (
-      <div className="space-y-3">
+      <ContenedorDePagina>
         {esIlegible(proyecto.error) ? <NoEsDeSusProyectos /> : <ErrorDeCarga error={proyecto.error} alReintentar={() => void proyecto.refetch()} />}
         <Link to="/projects" className="inline-block text-sm font-medium text-sg-primary-text">
           {t('contexto.irAProyectos')}
         </Link>
-      </div>
+      </ContenedorDePagina>
     )
   return (
     // el proyecto ocupa todo el ancho de <main> (data-ancho: el shell no le pone márgenes): en el resumen, la banda del proyecto
     // arriba (CabeceraDelProyecto, S05 y T17); debajo, desde lg, la navegación local de 248 px pegada al borde izquierdo y a toda
-    // la altura, y el contenido, que pone sus márgenes con ContenedorDePagina o, si la pantalla aún no lo usa, con el respaldo
+    // la altura, y el contenido, que pone sus márgenes con ContenedorDePagina
     <div data-ancho="proyecto" className="flex min-h-full flex-col">
       {marcada === 'overview' && proyecto.data ? <CabeceraDelProyecto proyecto={proyecto.data} /> : null}
       <div className="flex flex-1 flex-col lg:flex-row">
         <NavegacionLocal projectId={projectId ?? ''} pestanas={pestanas} marcada={marcada} />
-        <div className={cn('min-w-0 flex-1', MARGENES_DE_RESPALDO)}>
+        <div className="min-w-0 flex-1">
           {asignaciones.isSuccess && !escribe ? (
             <div className={MARGENES_DE_PAGINA}>
               <Alert tone="notice">{t('contexto.soloLectura')}</Alert>

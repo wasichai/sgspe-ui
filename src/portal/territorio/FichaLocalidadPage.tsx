@@ -1,5 +1,5 @@
 import { VerEnElMapa } from '../componentes/VerEnElMapa'
-import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, ContenedorSiFalta } from '../componentes/Pagina'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
@@ -41,9 +41,18 @@ const CAMPOS = ['economic_activities', 'crops', 'livestock', 'water_source', 'el
 
 // el estado de una consulta auxiliar cuando todavía no hay datos: carga, no disponible (403) o error con reintento
 function SinDatos({ consulta }: { consulta: Pick<UseQueryResult, 'isPending' | 'isError' | 'error' | 'refetch'> }) {
-  if (consulta.isPending) return <Cargando />
+  if (consulta.isPending)
+    return (
+      <ContenedorSiFalta>
+        <Cargando />
+      </ContenedorSiFalta>
+    )
   if (!consulta.isError) return null
-  return <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
+  return (
+    <ContenedorSiFalta>
+      <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
+    </ContenedorSiFalta>
+  )
 }
 
 // el nombre de un registro al que apunta la localidad (el distrito, la localidad de la que es sector): sin referencia, un

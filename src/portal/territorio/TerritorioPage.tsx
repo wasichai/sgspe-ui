@@ -1,7 +1,7 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import { Layers, List, PanelRightOpen, TableProperties } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { CircleHelp, Layers, List, PanelRightOpen, TableProperties } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
@@ -382,7 +382,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
                         <Link
                           to={rutaDe(l.objeto, l.id)!}
                           state={paso(t('mapa.mapaTerritorial'))}
-                          className="min-w-0 flex-1 truncate text-sg-primary-text underline"
+                          className="min-w-0 flex-1 truncate text-sg-primary-text no-underline hover:underline focus-visible:underline"
                         >
                           {l.nombre || t('territorio.sinNombre')}
                         </Link>
@@ -420,7 +420,7 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
         </button>
       </div>
       {/* el periodo, abajo y compacto (S09): lo leen las capas de gestión, el calor, la ficha y los registros de la zona */}
-      <FiltrosDelMapa compacto />
+      <FiltrosDelMapa />
       {aviso ? (
         <p role="status" className="text-sm text-sg-text-muted">
           {t(`mapa.avisos.${aviso}`)}
@@ -479,8 +479,10 @@ export function problemaDelPeriodo(desde: string, hasta: string, hoy: string = h
 // de la zona (las de referencia no tienen fecha: enmienda 5.2 del plan 6.3). un periodo que el servidor rechazaría (OUT_OF_RANGE)
 // se dice aquí y no llega a la URL (enmienda 5.3). el proyecto del mapa (?project=, que acota las capas de proyecto y marca sus
 // concesiones) lo elige el selector de la barra, que en Territorio es el lente (A24): la pantalla no tiene uno propio
-export function FiltrosDelMapa({ compacto = false }: { compacto?: boolean } = {}) {
+export function FiltrosDelMapa() {
   const { t } = useTranslation(NS)
+  const [ayudaAbierta, setAyudaAbierta] = useState(false)
+  const idDeAyuda = useId()
   const [busqueda, fijar] = useSearchParams()
   // las fechas tecleadas que no forman un periodo válido: se muestran y se dicen, sin escribirlas en la URL. valen mientras el
   // periodo de la URL sea el mismo que cuando se teclearon: si cambia por otro camino (atrás, un enlace), mandan las de la URL
@@ -508,21 +510,21 @@ export function FiltrosDelMapa({ compacto = false }: { compacto?: boolean } = {}
     escribir(periodo)
   }
   return (
-    <div
-      role="group"
-      aria-label={t('sig.filtros')}
-      className={compacto ? 'space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface px-3 py-2 text-sm' : 'space-y-1 text-sm'}
-    >
-      <div className="flex flex-wrap items-end gap-3">
-        {compacto ? <span className="self-center text-sg-overline font-semibold uppercase text-sg-text-muted">{t('sig.periodo')}</span> : null}
+    // una franja de una línea bajo el mapa (S09): «PERIODO», las dos fechas con su etiqueta al lado y los atajos; lo que filtra el
+    // periodo, tras el botón de ayuda. en el teléfono y la tableta, la franja se parte en líneas
+    <div role="group" aria-label={t('sig.filtros')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface px-3 py-2 text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:flex-nowrap">
+        <span className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('sig.periodo')}</span>
         <CampoFecha
           etiqueta={t('sig.desde')}
+          enLinea
           valor={fecha('periodStart') || null}
           invalido={Boolean(borrador)}
           alCambiar={(v) => cambiarPeriodo('periodStart', v ?? '')}
         />
         <CampoFecha
           etiqueta={t('sig.hasta')}
+          enLinea
           valor={fecha('periodEnd') || null}
           invalido={Boolean(borrador)}
           alCambiar={(v) => cambiarPeriodo('periodEnd', v ?? '')}
@@ -536,13 +538,27 @@ export function FiltrosDelMapa({ compacto = false }: { compacto?: boolean } = {}
             escribir({ periodStart: desde, periodEnd: hasta })
           }}
         />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="ml-auto shrink-0"
+          aria-label={t('sig.queFiltraElPeriodo')}
+          aria-expanded={ayudaAbierta}
+          aria-controls={idDeAyuda}
+          onClick={() => setAyudaAbierta((x) => !x)}
+        >
+          <CircleHelp aria-hidden className="size-4" />
+        </Button>
       </div>
       {borrador ? (
         <p role="alert" className="text-sg-caption text-sg-danger">
           {t(`sig.${borrador.problema}`)}
         </p>
       ) : null}
-      <p className="text-sg-caption text-sg-text-muted">{t('sig.ayudaDelPeriodo')}</p>
+      <p id={idDeAyuda} hidden={!ayudaAbierta} className="text-sg-caption text-sg-text-muted">
+        {t('sig.ayudaDelPeriodo')}
+      </p>
     </div>
   )
 }

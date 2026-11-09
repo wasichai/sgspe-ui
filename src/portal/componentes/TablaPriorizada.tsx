@@ -1,6 +1,6 @@
 import { Table, Td, Th, cn } from '@wasichai/ui'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
-import { createContext, Fragment, useContext, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
+import { createContext, Fragment, useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ATRIBUTO_DE_FICHA, ResultadoDeLista } from '../contexto/Origen'
@@ -54,6 +54,17 @@ export interface OrdenDeTabla {
   dir: 'asc' | 'desc'
 }
 
+// la selección de filas (para actuar sobre varias: tomar las tareas elegidas): las claves elegidas las guarda quien llama
+export interface SeleccionDeFilas<T> {
+  elegidas: ReadonlySet<string>
+  alCambiar: (elegidas: Set<string>) => void
+  // la casilla de una fila, con el nombre de lo que elige («Elegir «Escalamiento C-002»»)
+  etiquetaDeFila: (fila: T) => string
+  etiquetaDeTodas: string
+  // sin casilla (una tarea que ya no se puede tomar); por defecto, todas
+  puedeElegir?: (fila: T) => boolean
+}
+
 export interface PropsDeTablaPriorizada<T> {
   etiqueta: string
   columnas: ColumnaPriorizada[]
@@ -85,6 +96,9 @@ export interface PropsDeTablaPriorizada<T> {
   // la suya, con el id que el control que la abre referencia (aria-controls). null, la fila va cerrada. la fila abierta se marca
   // como elegida
   detalleDe?: (fila: T) => { id: string; contenido: ReactNode } | null
+  // una primera columna de casillas y la de todas en su encabezado; la fila que se puede elegir lleva aria-selected y Espacio,
+  // con ella enfocada, la elige o la deja (en lugar de la vista previa)
+  seleccion?: SeleccionDeFilas<T>
 }
 
 // las celdas de la columna del título: EnlaceDeRegistro se dibuja ahí en su forma de tabla
@@ -96,11 +110,16 @@ export const useEnCeldaDeTitulo = (): boolean => useContext(EnCeldaDeTitulo)
 // encabezado fijo y la densidad compacta (data-density en <html>: 36 px, 3 × 10 y 14 px)
 export const CAJA_DE_TABLA = 'overflow-hidden rounded-sg-md border border-sg-border bg-sg-surface text-sg-text'
 export const ENCABEZADO = 'sticky top-0 z-[1] px-3 py-0 align-middle in-data-[density=compact]:px-2.5'
+// los vínculos de una celda no van subrayados (U-05): solo al pasar o con el foco
 export const CELDA =
-  'whitespace-nowrap px-3 py-1.5 align-middle text-sg-table in-data-[density=compact]:px-2.5 in-data-[density=compact]:py-0.75 in-data-[density=compact]:text-sg-table-dense'
+  '[&_a]:no-underline [&_a:hover]:underline [&_a:focus-visible]:underline whitespace-nowrap px-3 py-1.5 align-middle text-sg-table in-data-[density=compact]:px-2.5 in-data-[density=compact]:py-0.75 in-data-[density=compact]:text-sg-table-dense'
 export const CELDA_DE_TITULO = 'w-full min-w-60 whitespace-normal'
 export const FILA = 'hover:bg-sg-surface-hover'
 export const FILA_ELEGIDA = 'bg-sg-primary-soft hover:bg-sg-primary-soft [&>td:first-child]:shadow-[inset_4px_0_0_var(--sg-primary)]'
+// la fila elegida para actuar sobre ella (selección), sin la barra de la fila abierta
+export const FILA_MARCADA = 'bg-sg-primary-soft hover:bg-sg-primary-soft'
+// la casilla de selección: 16 px con el color de la marca, y su objetivo de 24 px con el relleno de la celda
+const CASILLA = 'size-4 cursor-pointer accent-sg-primary align-middle'
 export const NOTA_AL_PIE = 'border-t border-sg-border px-3 py-2 text-sg-caption text-sg-text-secondary'
 
 // un valor numérico vacío es «—» en text-muted (DD-38), con su nota al pie
@@ -192,7 +211,8 @@ export function TablaPriorizada<T>({
   previaDe,
   seleccionada,
   notaAlPie,
-  detalleDe
+  detalleDe,
+  seleccion
 }: PropsDeTablaPriorizada<T>) {
   const { t } = useTranslation(NS)
   const ancha = useCoincide(ANCHA)
@@ -231,11 +251,24 @@ export function TablaPriorizada<T>({
   const visibles = columnas.filter((c) => !uniformes.includes(c))
   // «Columnas» ofrece las opcionales que están en la tabla: las esenciales siempre se ven y las secundarias, desde xl
   const opcionales = visibles.filter((c) => c.prioridad === 'opcional')
-  const enfocable = Boolean(alAbrir || previsualizar)
+  // las filas que se pueden elegir, de las que llegan
+  const elegibles = seleccion ? filas.filter((f) => seleccion.puedeElegir?.(f) ?? true) : []
+  const esElegible = (f: T) => Boolean(seleccion) && (seleccion!.puedeElegir?.(f) ?? true)
+  const elegidasAqui = elegibles.filter((f) => seleccion!.elegidas.has(clave(f)))
+  const alternarFila = (f: T) => {
+    const siguientes = new Set(seleccion!.elegidas)
+    if (siguientes.has(clave(f))) siguientes.delete(clave(f))
+    else siguientes.add(clave(f))
+    seleccion!.alCambiar(siguientes)
+  }
+  const enfocable = Boolean(alAbrir || previsualizar || seleccion)
   const alTeclear = (fila: T) => (e: KeyboardEvent<HTMLTableRowElement>) => {
     // solo la fila enfocada: Enter o Espacio en un enlace o una casilla de la fila es de ese control
     if (e.target !== e.currentTarget) return
-    if (e.key === 'Enter' && alAbrir) {
+    if (e.key === ' ' && esElegible(fila)) {
+      e.preventDefault()
+      alternarFila(fila)
+    } else if (e.key === 'Enter' && alAbrir) {
       e.preventDefault()
       // la ficha de la fila se abre como con su enlace, con el origen de la lista (flujo F-C); sin enlace, como diga quien llama
       const enlace = e.currentTarget.querySelector<HTMLAnchorElement>(`a[${ATRIBUTO_DE_FICHA}]`)
@@ -295,6 +328,27 @@ export function TablaPriorizada<T>({
             <Table aria-label={etiqueta}>
               <thead>
                 <tr>
+                  {seleccion ? (
+                    <Th scope="col" className={cn(ENCABEZADO, 'w-10')}>
+                      {elegibles.length > 0 ? (
+                        <CasillaDeTodas
+                          etiqueta={seleccion.etiquetaDeTodas}
+                          todas={elegidasAqui.length === elegibles.length}
+                          algunas={elegidasAqui.length > 0 && elegidasAqui.length < elegibles.length}
+                          alCambiar={(si) => {
+                            const siguientes = new Set(seleccion.elegidas)
+                            for (const f of elegibles) {
+                              if (si) siguientes.add(clave(f))
+                              else siguientes.delete(clave(f))
+                            }
+                            seleccion.alCambiar(siguientes)
+                          }}
+                        />
+                      ) : (
+                        <span className="sr-only">{seleccion.etiquetaDeTodas}</span>
+                      )}
+                    </Th>
+                  ) : null}
                   {visibles.map((c) => {
                     // la que ordena dice su sentido en el th; una ordenable que no ordena no lleva aria-sort
                     const sentido = alOrdenar && c.ordenable && orden?.columna === c.id ? orden.dir : undefined
@@ -330,7 +384,7 @@ export function TablaPriorizada<T>({
                     {grupos ? (
                       <FilaDeGrupo
                         titulo={t('comun.grupoDeTabla', { titulo: grupo.titulo, n: numeroPe(grupo.conteo ?? grupo.filas.length) })}
-                        columnas={visibles.length}
+                        columnas={visibles.length + (seleccion ? 1 : 0)}
                         plegado={plegado}
                         alAlternar={() => {
                           const siguientes = new Set(plegados)
@@ -345,16 +399,32 @@ export function TablaPriorizada<T>({
                       : grupo.filas.map((f) => {
                           const detalle = detalleDe?.(f) ?? null
                           const esLaElegida = elegida(f) || detalle !== null
+                          const elegible = esElegible(f)
+                          const marcada = elegible && seleccion!.elegidas.has(clave(f))
                           return (
                             <Fragment key={clave(f)}>
                               <tr
                                 data-previa={claveDeFila(f)}
                                 aria-current={esLaElegida ? 'true' : undefined}
+                                aria-selected={elegible ? marcada : undefined}
                                 tabIndex={enfocable ? 0 : undefined}
                                 onKeyDown={enfocable ? alTeclear(f) : undefined}
                                 // group/fila: lo que la fila muestra al pasar o con el foco (la vista previa, hallazgo U-17)
-                                className={cn('group/fila', esLaElegida ? FILA_ELEGIDA : FILA)}
+                                className={cn('group/fila', esLaElegida ? FILA_ELEGIDA : marcada ? FILA_MARCADA : FILA)}
                               >
+                                {seleccion ? (
+                                  <Td className={cn(CELDA, 'w-10')}>
+                                    {elegible ? (
+                                      <input
+                                        type="checkbox"
+                                        aria-label={seleccion.etiquetaDeFila(f)}
+                                        checked={marcada}
+                                        onChange={() => alternarFila(f)}
+                                        className={CASILLA}
+                                      />
+                                    ) : null}
+                                  </Td>
+                                ) : null}
                                 {visibles.map((c) => {
                                   const valor = celda(f, c.id)
                                   return (
@@ -383,7 +453,7 @@ export function TablaPriorizada<T>({
                                 <tr data-detalle className="bg-sg-primary-soft">
                                   <td
                                     id={detalle.id}
-                                    colSpan={visibles.length}
+                                    colSpan={visibles.length + (seleccion ? 1 : 0)}
                                     className="border-b border-sg-border px-3 py-3 shadow-[inset_4px_0_0_var(--sg-primary)] in-data-[density=compact]:py-2"
                                   >
                                     {detalle.contenido}
@@ -468,4 +538,13 @@ function FilaDeGrupo({ titulo, columnas, plegado, alAlternar }: { titulo: string
       </th>
     </tr>
   )
+}
+
+// la casilla de todas: marcada con todas, a medias (indeterminate, que el lector de pantalla dice «mixto») con algunas
+function CasillaDeTodas({ etiqueta, todas, algunas, alCambiar }: { etiqueta: string; todas: boolean; algunas: boolean; alCambiar: (si: boolean) => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = algunas
+  }, [algunas])
+  return <input ref={ref} type="checkbox" aria-label={etiqueta} checked={todas} onChange={() => alCambiar(!todas)} className={CASILLA} />
 }

@@ -88,7 +88,10 @@ export function PanelDeDecision({
         )}
       >
         <Tarjeta titulo={t('paginas.decision.estado')}>
-          <EstadoChip objeto={objeto} estado={estado} />
+          {/* un estado largo se parte en líneas dentro de su celda en lugar de salirse (S31) */}
+          <div className="[&>[data-estado]]:h-auto [&>[data-estado]]:min-h-6.5 [&>[data-estado]]:max-w-full [&>[data-estado]]:whitespace-normal [&>[data-estado]]:py-1 [&>[data-estado]]:leading-tight [&>[data-estado]>svg]:shrink-0">
+            <EstadoChip objeto={objeto} estado={estado} />
+          </div>
           {/* sin la fecha (un registro anterior a state_changed_at) no se dibuja: «Desde —» no decía nada (rediseño de UX, 2026-10-20) */}
           {desde ? (
             <p className="text-sg-caption text-sg-text-muted">

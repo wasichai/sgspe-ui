@@ -1,3 +1,4 @@
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
@@ -118,7 +119,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
   ])
   const evidencias = useEvidenciasDe('commitment', compromiso.id)
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t('fichaCompromiso.titulo'), texto(compromiso, 'code'), opcion(compromiso, 'resource_type')].filter(Boolean).join(' · ')}
         titulo={texto(compromiso, 'title')}
@@ -252,7 +253,7 @@ function Ficha({ compromiso }: { compromiso: Registro }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 
