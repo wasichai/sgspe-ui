@@ -5,7 +5,8 @@ import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useLeeTodosLosProyectos, useProyectos } from '../contexto/proyectos'
 import { useAuth } from '@wasichai/core'
-import { Button, Table, Td, Th } from '@wasichai/ui'
+import { Button } from '@wasichai/ui'
+import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { useTranslation } from 'react-i18next'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
@@ -242,18 +243,12 @@ function TablaDeTareas({
   const { t } = useTranslation(NS)
   const proyectos = useProyectos()
   const telefono = useEsTelefono()
-  const [elegidas, setElegidas] = useState<Set<string>>(new Set())
+  const [elegidas, setElegidas] = useState<ReadonlySet<string>>(new Set())
   const varias = useTomarVarias()
   if (tareas.length === 0) return <Vacio titulo={vacio} />
   // solo lo que sigue en la página y se puede tomar: una tarea tomada o que ya no está no viaja
   const tomablesAqui = tomables ? tareas.filter((x) => varias.puedeTomar(x)) : []
   const deLaSeleccion = tomablesAqui.filter((x) => elegidas.has(x.id))
-  const alternar = (id: string, si: boolean) => {
-    const siguiente = new Set(elegidas)
-    if (si) siguiente.add(id)
-    else siguiente.delete(id)
-    setElegidas(siguiente)
-  }
   const conOrigen = tareas.some((x) => origenDe(x) !== null)
   const conPrioridad = tareas.some((x) => Boolean(opcion(x, 'priority')))
   // la barra común de una selección (BarraDeSeleccion, 3.9): cuántas van, «Tomar N», quitar la selección y el resultado del lote
@@ -312,106 +307,81 @@ function TablaDeTareas({
         }))}
       />
     )
+  const columnas: ColumnaPriorizada[] = [
+    { id: 'tarea', encabezado: t('tareas.columnas.tarea'), prioridad: 'esencial', titulo: true },
+    ...(conProyecto ? [{ id: 'proyecto', encabezado: t('tareas.columnas.proyecto'), prioridad: 'secundaria' as const }] : []),
+    ...(conOrigen
+      ? [{ id: 'origen', encabezado: t('tareas.columnas.origen'), prioridad: 'secundaria' as const, claseDeCelda: 'min-w-48 whitespace-normal!' }]
+      : []),
+    ...(conPrioridad ? [{ id: 'prioridad', encabezado: t('tareas.columnas.prioridad'), prioridad: 'esencial' as const }] : []),
+    { id: 'vence', encabezado: t('tareas.columnas.vence'), prioridad: 'esencial' },
+    { id: 'estado', encabezado: t('tareas.columnas.estado'), prioridad: 'esencial' },
+    ...(tomablesAqui.length > 0 ? [{ id: 'accion', encabezado: t('tareas.columnas.accion'), prioridad: 'esencial' as const, encabezadoOculto: true }] : [])
+  ]
+  const celda = (x: Registro, columna: string): ReactNode => {
+    switch (columna) {
+      case 'tarea':
+        // el título como en la columna de título de E (design-system.md §5.3): 600 sin subrayado, que vuelve al pasar
+        return (
+          <button
+            type="button"
+            className="text-left font-semibold text-sg-text hover:underline"
+            aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
+            onClick={() => alAbrir(x)}
+          >
+            {texto(x, 'title')}
+          </button>
+        )
+      case 'proyecto':
+        return <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} />
+      case 'origen':
+        return <OrigenDeTarea tarea={x} />
+      case 'prioridad':
+        return <Nivel valor={atributo(x, 'priority')} escala="prioridad" nombre={t('tareas.columnas.prioridad')} />
+      case 'vence':
+        return (
+          <span className="space-x-2">
+            <span>
+              <Dia valor={texto(x, 'due_date')} />
+            </span>
+            <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
+            {texto(x, 'due_date') && atributo(x, 'deadline_status') ? (
+              <CuandoVence dia={texto(x, 'due_date')} className="block text-sg-caption text-sg-text-muted" />
+            ) : null}
+          </span>
+        )
+      case 'estado':
+        return <EstadoChip objeto="task" estado={x.state} />
+      case 'accion':
+        return tomablesAqui.includes(x) ? <TomarTarea tarea={x} /> : null
+      default:
+        return null
+    }
+  }
+  // la tabla de E (TablaPriorizada) con sus casillas: las que se pueden tomar se eligen con la casilla o con Espacio en la fila, y
+  // Enter en la fila abre la tarea en su drawer
   return (
     <div className="space-y-2">
       {seleccion}
-      <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-        <Table aria-label={etiqueta ?? t('tareas.titulo')}>
-          <thead>
-            <tr>
-              {tomablesAqui.length > 0 ? (
-                <Th scope="col">
-                  <input
-                    type="checkbox"
-                    aria-label={t('tareas.seleccion.todas')}
-                    checked={deLaSeleccion.length === tomablesAqui.length}
-                    onChange={(e) => setElegidas(e.target.checked ? new Set(tomablesAqui.map((x) => x.id)) : new Set())}
-                  />
-                </Th>
-              ) : null}
-              {(
-                [
-                  'tarea',
-                  ...(conProyecto ? (['proyecto'] as const) : []),
-                  ...(conOrigen ? (['origen'] as const) : []),
-                  ...(conPrioridad ? (['prioridad'] as const) : []),
-                  'vence',
-                  'estado'
-                ] as const
-              ).map((c) => (
-                <Th key={c} scope="col">
-                  {t(`tareas.columnas.${c}`)}
-                </Th>
-              ))}
-              {tomablesAqui.length > 0 ? (
-                <Th scope="col">
-                  <span className="sr-only">{t('tareas.columnas.accion')}</span>
-                </Th>
-              ) : null}
-            </tr>
-          </thead>
-          <tbody>
-            {tareas.map((x) => {
-              const tomable = tomablesAqui.includes(x)
-              return (
-                <tr key={x.id}>
-                  {tomablesAqui.length > 0 ? (
-                    <Td>
-                      {tomable ? (
-                        <input
-                          type="checkbox"
-                          aria-label={t('tareas.seleccion.elegir', { tarea: texto(x, 'title') })}
-                          checked={elegidas.has(x.id)}
-                          onChange={(e) => alternar(x.id, e.target.checked)}
-                        />
-                      ) : null}
-                    </Td>
-                  ) : null}
-                  <Td className="text-sm">
-                    {/* el título como en la columna de título de E (design-system.md §5.3): 600 sin subrayado, que vuelve al pasar */}
-                    <button
-                      type="button"
-                      className="text-left font-semibold text-sg-text hover:underline"
-                      aria-label={t('tareas.abrir', { tarea: texto(x, 'title') })}
-                      onClick={() => alAbrir(x)}
-                    >
-                      {texto(x, 'title')}
-                    </button>
-                  </Td>
-                  {conProyecto ? (
-                    <Td className="text-sm">
-                      <ProyectoEnLista proyecto={proyectos.data?.find((p) => p.id === texto(x, 'project'))} />
-                    </Td>
-                  ) : null}
-                  {conOrigen ? (
-                    <Td className="text-sm">
-                      <OrigenDeTarea tarea={x} />
-                    </Td>
-                  ) : null}
-                  {conPrioridad ? (
-                    <Td className="text-sm">
-                      <Nivel valor={atributo(x, 'priority')} escala="prioridad" nombre={t('tareas.columnas.prioridad')} />
-                    </Td>
-                  ) : null}
-                  <Td className="space-x-2 text-sm">
-                    <span>
-                      <Dia valor={texto(x, 'due_date')} />
-                    </span>
-                    <SituacionDePlazo valor={atributo(x, 'deadline_status')} />
-                    {texto(x, 'due_date') && atributo(x, 'deadline_status') ? (
-                      <CuandoVence dia={texto(x, 'due_date')} className="block text-sg-caption text-sg-text-muted" />
-                    ) : null}
-                  </Td>
-                  <Td>
-                    <EstadoChip objeto="task" estado={x.state} />
-                  </Td>
-                  {tomablesAqui.length > 0 ? <Td>{tomable ? <TomarTarea tarea={x} /> : null}</Td> : null}
-                </tr>
-              )
-            })}
-          </tbody>
-        </Table>
-      </div>
+      <TablaPriorizada<Registro>
+        etiqueta={etiqueta ?? t('tareas.titulo')}
+        columnas={columnas}
+        filas={tareas}
+        clave={(x) => x.id}
+        celda={celda}
+        alAbrir={alAbrir}
+        seleccion={
+          tomablesAqui.length > 0
+            ? {
+                elegidas,
+                alCambiar: setElegidas,
+                puedeElegir: (x) => tomablesAqui.includes(x),
+                etiquetaDeFila: (x) => t('tareas.seleccion.elegir', { tarea: texto(x, 'title') }),
+                etiquetaDeTodas: t('tareas.seleccion.todas')
+              }
+            : undefined
+        }
+      />
     </div>
   )
 }

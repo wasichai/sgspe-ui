@@ -207,7 +207,7 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
               <li key={p.key}>
                 <EnlaceConRastro
                   to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(p.key)}`}
-                  className="text-sg-primary-text underline"
+                  className="font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline"
                 >
                   {nombre(p)}
                 </EnlaceConRastro>{' '}

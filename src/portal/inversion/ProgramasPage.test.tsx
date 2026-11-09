@@ -270,6 +270,77 @@ describe('S42 · programas e inversión', () => {
     expect(ubicacion.actual).toBe('/projects/p1/programs?view=enCurso&peek=social_contribution%3Aa1')
   })
 
+  // fase 13a de Civic Modern: la vista previa acoplada de un programa y de un aporte tiene su cuerpo propio, como la de un compromiso
+  // (S08): el antetítulo con el código, el título que dice qué es, el estado, la primaria real, el panel de decisión, sus datos y
+  // la trazabilidad
+  describe('vista previa acoplada', () => {
+    const desdeXl = () => {
+      const original = window.matchMedia
+      window.matchMedia = ((consulta: string) => ({
+        matches: consulta === '(min-width: 80rem)',
+        media: consulta,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined
+      })) as unknown as typeof window.matchMedia
+      return () => {
+        window.matchMedia = original
+      }
+    }
+
+    it('la de un programa dice su estado, su primaria, su presupuesto, su periodo y su socio', async () => {
+      const restaurar = desdeXl()
+      try {
+        fetch = mockFetch(
+          rutas([
+            {
+              path: '/objects/social_program/records/sp1/transitions',
+              body: [{ name: 'monitor', label: 'Pasar a monitoreo', to: 'monitoring', toLabel: 'En monitoreo', allowed: true, reason: null }]
+            },
+            { path: '/objects/social_program/records/sp1', body: PROGRAMA }
+          ])
+        )
+        abrir({ ruta: '/projects/p1/programs?peek=social_program%3Asp1' })
+        const panel = await screen.findByRole('complementary', { name: 'Programa Ejemplo de agua segura' })
+        expect(within(panel).getByText(/PS-001/)).toBeInTheDocument()
+        expect(within(panel).getAllByText('En ejecución')[0]).toBeInTheDocument()
+        expect(await within(panel).findByRole('button', { name: 'Pasar a monitoreo' })).toBeInTheDocument()
+        expect(within(panel).getByText('Estado actual')).toBeInTheDocument()
+        expect(within(panel).getByText('S/ 80,000.00')).toBeInTheDocument()
+        expect(within(panel).getByText('Periodo')).toBeInTheDocument()
+        expect(await within(panel).findAllByText('Asociación Ejemplo')).not.toHaveLength(0)
+        expect(within(panel).getByRole('complementary', { name: 'Trazabilidad' })).toBeInTheDocument()
+        expect(within(panel).getByRole('link', { name: 'Abrir ficha' })).toHaveAttribute('href', '/projects/p1/programs/sp1')
+      } finally {
+        restaurar()
+      }
+    })
+
+    it('la de un aporte lleva por título su propósito y dice su total, sus beneficiarios y quién lo recibe', async () => {
+      const restaurar = desdeXl()
+      try {
+        fetch = mockFetch(
+          rutas([
+            { path: '/objects/social_contribution/records/a1/transitions', body: [] },
+            { path: '/objects/social_contribution/records/a1', body: APORTE },
+            { path: /^\/objects\/stakeholder_request\/records/, body: pagina([]) }
+          ])
+        )
+        red = espiarRed([listaDelServidor('social_contribution', [APORTE, CERRADO])])
+        abrir({ ruta: '/projects/p1/programs?view=enCurso&peek=social_contribution%3Aa1' })
+        const panel = await screen.findByRole('complementary', { name: 'Equipar la biblioteca escolar' })
+        expect(within(panel).getByText(/AP-001/)).toBeInTheDocument()
+        expect(within(panel).getAllByText('Solicitado')[0]).toBeInTheDocument()
+        expect(within(panel).getByText('S/ 1,750.50')).toBeInTheDocument()
+        expect(within(panel).getByText('120')).toBeInTheDocument()
+        expect(await within(panel).findByText('Asociación Ejemplo')).toBeInTheDocument()
+        expect(within(panel).getByRole('complementary', { name: 'Trazabilidad' })).toBeInTheDocument()
+        expect(within(panel).getByRole('link', { name: 'Abrir ficha' })).toHaveAttribute('href', '/projects/p1/contributions/a1')
+      } finally {
+        restaurar()
+      }
+    })
+  })
+
   it('lista los programas y los aportes con su enlace, su socio y su monto en su moneda; filtra los terminados', async () => {
     fetch = mockFetch(rutas())
     // las vistas de los aportes son consultas del servidor, con su página y su conteo (D10 de la revisión de UX)

@@ -40,6 +40,8 @@ export const ES_FICHA_PROGRAMA = {
     totalesTruncados: 'La lista de presupuestos llegó al tope de lectura: los totales por moneda no se calculan porque podría faltar alguno.'
   },
   tipo: 'Programa',
+  // la vista previa acoplada de un programa (fase 13a de Civic Modern)
+  previa: { presupuesto: 'Presupuesto', sinPresupuesto: 'Sin presupuesto registrado', periodo: 'Periodo', delAl: 'Del {{desde}} al {{hasta}}' },
   trazabilidad: { titulo: 'Trazabilidad', tareas: 'Tareas', sinTareas: 'Sin tareas del programa' },
   indicadores: {
     titulo: 'Indicadores',
@@ -128,6 +130,7 @@ export const EN_FICHA_PROGRAMA: typeof ES_FICHA_PROGRAMA = {
     totalesTruncados: 'The budget list reached the read limit: the totals by currency are not calculated because some may be missing.'
   },
   tipo: 'Program',
+  previa: { presupuesto: 'Budget', sinPresupuesto: 'No budget recorded', periodo: 'Period', delAl: 'From {{desde}} to {{hasta}}' },
   trazabilidad: { titulo: 'Traceability', tareas: 'Tasks', sinTareas: 'No program tasks' },
   indicadores: {
     titulo: 'Indicators',

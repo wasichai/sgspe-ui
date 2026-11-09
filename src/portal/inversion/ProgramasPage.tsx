@@ -1,3 +1,5 @@
+import { useCuerpoDeVistaPrevia } from '../componentes/VistaPrevia'
+import { tituloDelPrograma, useTituloDelAporte, VistaPreviaDeAporte, VistaPreviaDePrograma } from './VistasPreviasDeInversion'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
@@ -85,6 +87,10 @@ export function ProgramasPage() {
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const escribe = useEscribeEnProyecto(proyecto)
+  // las vistas previas acopladas de sus filas tienen cuerpo propio (fase 13a de Civic Modern)
+  const tituloDelAporte = useTituloDelAporte()
+  useCuerpoDeVistaPrevia('social_program', VistaPreviaDePrograma, tituloDelPrograma)
+  useCuerpoDeVistaPrevia('social_contribution', VistaPreviaDeAporte, tituloDelAporte)
   const conTablero = useTableroDisponible('investment')
   const tablero = useTablero('investment', proyecto ? { project: [proyecto] } : {})
   // ?nuevo=social_contribution o social_program abre el alta: así llega BotonCrear desde lo global, ya con el proyecto elegido

@@ -1,5 +1,6 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { montar, ubicacion } from '../../test/montar'
 import { EnlaceDeRegistro } from './EnlaceDeRegistro'
@@ -453,4 +454,95 @@ describe('TablaPriorizada', () => {
       expect(ojo).toHaveClass('shrink-0', 'pointer-fine:group-hover/fila:opacity-100')
     })
   })
+})
+
+// fase 13a de Civic Modern: la selección de filas es de la tabla (la de tareas para tomar varias): una columna de casillas con
+// nombre, la de todas con su estado intermedio, aria-selected en cada fila que se puede elegir y Espacio en la fila enfocada
+describe('selección de filas', () => {
+  function ConSeleccion({ puedeElegir, alAbrir }: { puedeElegir?: (f: Fila) => boolean; alAbrir?: (f: Fila) => void }) {
+    const [elegidas, setElegidas] = useState<ReadonlySet<string>>(new Set())
+    return (
+      <>
+        <TablaPriorizada<Fila>
+          etiqueta="Compromisos"
+          columnas={COLUMNAS}
+          filas={[...FILAS, { ...FILAS[0], id: 'c3', titulo: 'Canal de Sora' }]}
+          clave={(f) => f.id}
+          celda={valor}
+          alAbrir={alAbrir}
+          seleccion={{
+            elegidas,
+            alCambiar: setElegidas,
+            puedeElegir,
+            etiquetaDeFila: (f) => `Elegir «${f.titulo}»`,
+            etiquetaDeTodas: 'Elegir todas'
+          }}
+        />
+        <output aria-label="elegidas">{[...elegidas].join(',')}</output>
+      </>
+    )
+  }
+  const elegidas = () => screen.getByRole('status', { name: 'elegidas' })
+
+  it('cada fila lleva su casilla con nombre y la elegida se marca con aria-selected', async () => {
+    montar(<ConSeleccion />)
+    const casilla = within(filas()[1]).getByRole('checkbox', { name: 'Elegir «Posta de Huaylla»' })
+    expect(filas()[1]).toHaveAttribute('aria-selected', 'false')
+    await userEvent.click(casilla)
+    expect(casilla).toBeChecked()
+    expect(filas()[1]).toHaveAttribute('aria-selected', 'true')
+    expect(filas()[1]).toHaveClass('bg-sg-primary-soft')
+    expect(elegidas()).toHaveTextContent(/^c2$/)
+  })
+
+  it('la casilla de todas elige las que se pueden elegir, queda a medias con algunas y las quita todas', async () => {
+    montar(<ConSeleccion puedeElegir={(f) => f.id !== 'c3'} />)
+    const todas = within(tabla()).getByRole('checkbox', { name: 'Elegir todas' })
+    expect(within(tabla()).getByRole('columnheader', { name: 'Elegir todas' })).toBeInTheDocument()
+    // la que no se puede elegir no tiene casilla ni aria-selected
+    expect(within(filas()[2]).queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(filas()[2]).not.toHaveAttribute('aria-selected')
+    await userEvent.click(within(filas()[0]).getByRole('checkbox'))
+    expect(todas).not.toBeChecked()
+    expect(todas).toBePartiallyChecked()
+    await userEvent.click(todas)
+    expect(todas).toBeChecked()
+    expect(elegidas()).toHaveTextContent(/^c1,c2$/)
+    await userEvent.click(todas)
+    expect(elegidas()).toHaveTextContent(/^$/)
+  })
+
+  it('con el teclado: la fila se enfoca aunque no se abra, Espacio la elige y la deja de elegir; Enter sigue abriéndola', async () => {
+    const alAbrir = vi.fn()
+    const { unmount } = montar(<ConSeleccion />)
+    expect(filas()[0]).toHaveAttribute('tabIndex', '0')
+    filas()[0].focus()
+    await userEvent.keyboard(' ')
+    expect(filas()[0]).toHaveAttribute('aria-selected', 'true')
+    expect(fireEvent.keyDown(filas()[0], { key: ' ' })).toBe(false)
+    expect(filas()[0]).toHaveAttribute('aria-selected', 'false')
+    unmount()
+    montar(<ConSeleccion alAbrir={alAbrir} />)
+    filas()[1].focus()
+    await userEvent.keyboard('{Enter}')
+    expect(alAbrir).toHaveBeenCalledWith(FILAS[1])
+    expect(filas()[1]).toHaveAttribute('aria-selected', 'false')
+  })
+})
+
+// fase 13a de Civic Modern (U-05): un vínculo dentro de una celda (quién recibe, la campaña, el origen) no va subrayado; se
+// subraya al pasar o con el foco
+it('los vínculos de las celdas no van subrayados salvo al pasar o con el foco', () => {
+  dibujar({
+    celda: (f, c) =>
+      c === 'responsable' ? (
+        <a href="/x" className="underline">
+          {f.responsable}
+        </a>
+      ) : (
+        valor(f, c)
+      )
+  })
+  const celda = within(filas()[0]).getAllByRole('cell')[2]
+  expect(celda).toHaveClass('[&_a]:no-underline', '[&_a:hover]:underline', '[&_a:focus-visible]:underline')
 })

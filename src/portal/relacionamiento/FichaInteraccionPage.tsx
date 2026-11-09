@@ -1,3 +1,4 @@
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { EnlaceConRastro, useSiguientePaso } from '../contexto/Rastro'
 import { rutaEnElMapa, VerEnElMapa } from '../componentes/VerEnElMapa'
 import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
@@ -112,7 +113,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
   const edita = usePuedeEditar('engagement') && escribe
   const [editando, setEditando] = useState(false)
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t('relacionamiento.ficha.tipo'), opcion(interaccion, 'engagement_type')].filter(Boolean).join(' · ')}
         titulo={texto(interaccion, 'title')}
@@ -252,7 +253,7 @@ function Ficha({ interaccion }: { interaccion: Registro }) {
           />
         ) : null}
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

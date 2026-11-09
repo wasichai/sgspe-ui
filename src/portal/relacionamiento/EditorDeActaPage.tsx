@@ -1,4 +1,4 @@
-import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, ContenedorSiFalta } from '../componentes/Pagina'
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
@@ -48,8 +48,18 @@ export function EditorDeActaPage() {
   const interaccion = useRegistro('engagement', engagementId)
   const definicion = useDefinicion('engagement')
   // sin la definición no se sabe si la cuenta puede leer o escribir el acta: no se dibuja un editor a ciegas
-  if (definicion.isError && !definicion.data) return <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
-  if (definicion.isPending) return <Cargando />
+  if (definicion.isError && !definicion.data)
+    return (
+      <ContenedorSiFalta>
+        <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
+      </ContenedorSiFalta>
+    )
+  if (definicion.isPending)
+    return (
+      <ContenedorSiFalta>
+        <Cargando />
+      </ContenedorSiFalta>
+    )
   // un 404 es un registro que no existe o que no es de sus proyectos (alcance por proyecto, spec 4.4 §3.6): no se distingue
   return (
     <Consulta consulta={interaccion} noExiste={<NoEsDeSusProyectos />}>

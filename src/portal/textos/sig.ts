@@ -12,6 +12,7 @@ export const ES_SIG = {
   desde: 'Desde',
   hasta: 'Hasta',
   // el periodo no filtra las capas de F2 (Layers.kt; enmienda 5.2 y H5 del plan 6.3)
+  queFiltraElPeriodo: '¿Qué filtra el periodo?',
   ayudaDelPeriodo: 'El periodo filtra las capas de gestión, el calor, la ficha de un lugar y sus registros; las capas de referencia no tienen fecha.',
   periodoAlReves: 'La fecha de inicio no puede ser posterior a la de fin.',
   periodoLargo: 'El periodo no puede pasar de 5 años.',
@@ -61,6 +62,7 @@ export const EN_SIG: typeof ES_SIG = {
   todosLosLugares: 'The whole territory',
   desde: 'From',
   hasta: 'To',
+  queFiltraElPeriodo: 'What does the period filter?',
   ayudaDelPeriodo: 'The period filters the management layers, the heat map, the card of a place and its records; the reference layers have no date.',
   periodoAlReves: 'The start date cannot be later than the end date.',
   periodoLargo: 'The period cannot exceed 5 years.',

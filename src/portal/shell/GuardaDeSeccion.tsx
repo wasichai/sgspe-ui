@@ -1,3 +1,4 @@
+import { ContenedorSiFalta } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Alert } from '@wasichai/ui'
 import type { ReactNode } from 'react'
@@ -20,8 +21,18 @@ export function GuardaDeSeccion({ seccion, enProyecto = false, children }: { sec
   const { permissions, permissionsError } = useAuth()
   const oferta = useOferta()
   // permisos que no se pudieron leer no son permisos que faltan: no se afirma que la cuenta no pueda abrirla
-  if (!permissions && permissionsError) return <Alert tone="warning">{t('shell.sinPermisos')}</Alert>
-  if (!permissions) return <p className="text-sm text-sg-text-muted">{t('shell.leyendoPermisos')}</p>
+  if (!permissions && permissionsError)
+    return (
+      <ContenedorSiFalta>
+        <Alert tone="warning">{t('shell.sinPermisos')}</Alert>
+      </ContenedorSiFalta>
+    )
+  if (!permissions)
+    return (
+      <ContenedorSiFalta>
+        <p className="text-sm text-sg-text-muted">{t('shell.leyendoPermisos')}</p>
+      </ContenedorSiFalta>
+    )
   if (estadoDe(seccion, oferta) === 'disponible') return children
   if (enProyecto) return <SinAccesoEnProyecto que={t(`secciones.${seccion.clave}`)} />
   return <EstadoSinAcceso que={t(`secciones.${seccion.clave}`)} aQuien={null} volver={{ etiqueta: t('comun.sinAcceso.volverAlInicio'), a: '/' }} />

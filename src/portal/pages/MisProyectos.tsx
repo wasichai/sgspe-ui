@@ -16,7 +16,7 @@ import { NS, numeroPe } from '../i18n'
 // asignación vigente, con su jefatura (ASM-080), su estado si no está activo y lo que pide acción, que lleva a su lista: compromisos
 // vencidos, QCS vencidas y riesgos altos o críticos, en danger. un cero es un cero apagado y sin enlace; una columna que la cuenta no
 // lee no se dibuja (DD-38: no es un dato que falte) y una cifra que no llegó es «—», nunca cero, con su nota al pie. con más de seis, los seis con más pendientes y
-// «Ver todos». sin subrayados (U-05). los riesgos llevan a su lista ya filtrada por nivel (tercera pasada de UX, 3.11)
+// «Ver todos». sin subrayados (U-05). en el teléfono las columnas de cifras se angostan para que la tabla quepa en 390 px. los riesgos llevan a su lista ya filtrada por nivel (tercera pasada de UX, 3.11)
 const MAXIMO = 6
 const QCS = ['grievance', 'inquiry', 'stakeholder_request']
 type Cifra = 'compromisos' | 'qcs' | 'riesgos'
@@ -70,7 +70,7 @@ export function MisProyectos() {
                   {t('miDia.proyectos.proyecto')}
                 </Th>
                 {legibles.map(({ cifra: c }) => (
-                  <Th key={c} scope="col" className={`${ENCABEZADO} text-right`}>
+                  <Th key={c} scope="col" className={`${ENCABEZADO} text-right max-sm:px-2 max-sm:leading-tight max-sm:whitespace-normal`}>
                     <abbr title={t(`miDia.proyectos.nombres.${c}`)} aria-hidden className="no-underline">
                       {t(`miDia.proyectos.cortos.${c}`)}
                     </abbr>
@@ -110,7 +110,7 @@ export function MisProyectos() {
                     {legibles.map(({ cifra: c, resto }) => {
                       const n = cifra(p, c)
                       return (
-                        <Td key={c} className={`${CELDA} text-right tabular-nums`}>
+                        <Td key={c} className={`${CELDA} text-right tabular-nums max-sm:px-2`}>
                           {n === null ? (
                             <span className="text-sg-text-muted">—</span>
                           ) : n === 0 ? (

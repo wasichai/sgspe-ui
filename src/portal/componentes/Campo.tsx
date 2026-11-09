@@ -15,6 +15,7 @@ export function Campo({
   ayuda,
   id: idPropio,
   requerido = false,
+  enLinea = false,
   children
 }: {
   etiqueta: string
@@ -23,6 +24,9 @@ export function Campo({
   id?: string
   // obligatorio: lo dice al lector de pantalla (aria-required); la etiqueta lo dice con su texto donde la pantalla lo pone
   requerido?: boolean
+  // la etiqueta junto al control, en una franja de filtros de una línea (el periodo del mapa): la ayuda queda para el lector de
+  // pantalla y el error, debajo
+  enLinea?: boolean
   children: (props: { id: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean; 'aria-required'?: boolean }) => ReactNode
 }) {
   const generado = useId()
@@ -30,12 +34,12 @@ export function Campo({
   // con error, el control lo describe el error, que dice cómo corregir; la ayuda sigue a la vista. sin error, la ayuda
   const descripcion = error ? `${id}-error` : ayuda ? `${id}-ayuda` : undefined
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={enLinea ? 'flex flex-wrap items-center gap-x-2 gap-y-1' : 'flex flex-col gap-1.5'}>
       <label htmlFor={id} className="block text-sg-label font-bold text-sg-text">
         {etiqueta}
       </label>
       {ayuda ? (
-        <p id={`${id}-ayuda`} className="text-sg-body-sm text-sg-text-secondary">
+        <p id={`${id}-ayuda`} className={enLinea ? 'sr-only' : 'text-sg-body-sm text-sg-text-secondary'}>
           {ayuda}
         </p>
       ) : null}

@@ -1,3 +1,4 @@
+import { ContenedorSiFalta } from '../componentes/Pagina'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
@@ -115,20 +116,44 @@ export function NuevoProyectoPage() {
   // una vez abierto el asistente se queda: al crear el borrador la URL recoge su id (?draft=) y eso no debe recargarlo
   const abierto = useRef(false)
   if (!abierto.current) {
-    if (!borrador && !can('project', 'CREATE')) return <Alert tone="warning">{t('proyectos.asistente.sinCrear')}</Alert>
+    if (!borrador && !can('project', 'CREATE'))
+      return (
+        <ContenedorSiFalta>
+          <Alert tone="warning">{t('proyectos.asistente.sinCrear')}</Alert>
+        </ContenedorSiFalta>
+      )
     if (borrador) {
-      if (existente.isPending || definicion.isPending) return <Cargando />
+      if (existente.isPending || definicion.isPending)
+        return (
+          <ContenedorSiFalta>
+            <Cargando />
+          </ContenedorSiFalta>
+        )
       if (existente.isError)
         return existente.error instanceof ApiError && existente.error.status === 404 ? (
           <Alert tone="warning">{t('p360.asistente.noEncontrado')}</Alert>
         ) : (
           <ErrorDeCarga error={existente.error} alReintentar={() => void existente.refetch()} />
         )
-      if (definicion.isError) return <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} />
-      if (existente.data?.state !== 'draft') return <Alert tone="warning">{t('p360.asistente.noEsBorrador')}</Alert>
+      if (definicion.isError)
+        return (
+          <ContenedorSiFalta>
+            <ErrorDeCarga error={definicion.error} alReintentar={() => void definicion.refetch()} />
+          </ContenedorSiFalta>
+        )
+      if (existente.data?.state !== 'draft')
+        return (
+          <ContenedorSiFalta>
+            <Alert tone="warning">{t('p360.asistente.noEsBorrador')}</Alert>
+          </ContenedorSiFalta>
+        )
       // completar un borrador pide UPDATE y algún campo escribible: un rol con "u" sobre project no tiene ninguno
       if (!(can('project', 'UPDATE') && escribeAlgunCampo('project', definicion.data)))
-        return <Alert tone="warning">{t('proyectos.asistente.sinEditar')}</Alert>
+        return (
+          <ContenedorSiFalta>
+            <Alert tone="warning">{t('proyectos.asistente.sinEditar')}</Alert>
+          </ContenedorSiFalta>
+        )
     }
     abierto.current = true
   }

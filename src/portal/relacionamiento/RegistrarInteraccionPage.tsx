@@ -1,3 +1,4 @@
+import { ContenedorSiFalta } from '../componentes/Pagina'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
@@ -93,11 +94,31 @@ export function RegistrarInteraccionPage() {
   const modo = busqueda.get('mode')
   const rapido = modo === 'quick' || (modo !== 'full' && typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches)
   // sin permiso para crear, o sin asignación vigente (el servidor rechazaría el alta), no hay formulario que llenar en vano
-  if (!can('engagement', 'CREATE')) return <NoDisponible />
+  if (!can('engagement', 'CREATE'))
+    return (
+      <ContenedorSiFalta>
+        <NoDisponible />
+      </ContenedorSiFalta>
+    )
   if (!isAdmin) {
-    if (asignaciones.isPending) return <Cargando />
-    if (asignaciones.isError && !asignaciones.data) return <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
-    if (!asignado) return <NoDisponible motivo="NOT_ASSIGNED" />
+    if (asignaciones.isPending)
+      return (
+        <ContenedorSiFalta>
+          <Cargando />
+        </ContenedorSiFalta>
+      )
+    if (asignaciones.isError && !asignaciones.data)
+      return (
+        <ContenedorSiFalta>
+          <FalloDeLectura error={asignaciones.error} alReintentar={() => void asignaciones.refetch()} />
+        </ContenedorSiFalta>
+      )
+    if (!asignado)
+      return (
+        <ContenedorSiFalta>
+          <NoDisponible motivo="NOT_ASSIGNED" />
+        </ContenedorSiFalta>
+      )
   }
   return (
     <ConDefiniciones definiciones={[definicion, definicionDeParticipante]}>

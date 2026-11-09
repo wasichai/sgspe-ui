@@ -46,6 +46,8 @@ export const ES_FICHA_APORTE = {
     congeladosAlBorrar: 'Otra persona aprobó el aporte mientras tanto: sus ítems ya no cambian.'
   },
   tipo: 'Aporte',
+  // la vista previa acoplada de un aporte (fase 13a de Civic Modern)
+  previa: { total: 'Total', sinMonto: 'Sin monto registrado' },
   trazabilidad: {
     titulo: 'Trazabilidad',
     solicitud: 'Solicitud de origen',
@@ -169,6 +171,7 @@ export const EN_FICHA_APORTE: typeof ES_FICHA_APORTE = {
     congeladosAlBorrar: 'Someone else approved the contribution meanwhile: its items no longer change.'
   },
   tipo: 'Contribution',
+  previa: { total: 'Total', sinMonto: 'No amount recorded' },
   trazabilidad: {
     titulo: 'Traceability',
     acuerdo: 'Agreement',

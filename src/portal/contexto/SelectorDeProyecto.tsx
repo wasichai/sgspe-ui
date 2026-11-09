@@ -161,6 +161,8 @@ function Selector({ siempre }: { siempre: boolean }) {
           setAbierto(true)
         }}
         onKeyDown={alTeclear}
+        // blanco sobre la cabecera en claro; en oscuro, hundido con el borde de control (theme/componentes.css)
+        data-campo-de-cabecera={!siempre && (abierto || actual) ? '' : undefined}
         className={cn(
           'w-full truncate rounded-sg-md text-sg-text placeholder:text-sg-text-muted',
           siempre

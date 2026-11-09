@@ -25,6 +25,7 @@ import {
 import { KpiCard, RejillaDeKpi } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
+import { ContenedorDePagina } from './Pagina'
 import { Pasos } from './Pasos'
 import { Seccion } from './Seccion'
 
@@ -85,6 +86,16 @@ describe('estados comunes', () => {
     expect(panel).not.toHaveClass('text-center')
     expect(within(panel).getByText('Hay 13 compromisos abiertos en el proyecto.')).toBeInTheDocument()
     expect(within(panel).getByRole('button', { name: 'Quitar los filtros' })).toBeInTheDocument()
+  })
+
+  // E18 (fase 13a de Civic Modern): el vacío lleva arriba su ícono de 20 px en text-secondary, solo de adorno
+  it('el vacío lleva su ícono de adorno sobre el título', () => {
+    montar(<Vacio titulo="No hay tareas" />)
+    const panel = screen.getByText('No hay tareas').closest('[data-vacio]') as HTMLElement
+    const icono = panel.querySelector('svg')!
+    expect(icono).toHaveAttribute('aria-hidden', 'true')
+    expect(icono).toHaveClass('size-5', 'text-sg-text-secondary')
+    expect(panel.firstElementChild).toBe(icono)
   })
 
   it('un 409 muestra el detail del dominio, no el código', async () => {
@@ -315,6 +326,23 @@ describe('Consulta (revisión final, I1)', () => {
     expect(await screen.findByText('El registro no existe o no es de sus proyectos.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
     expect(screen.queryByText(/does not exist/)).not.toBeInTheDocument()
+  })
+
+  // la fase 13a de Civic Modern retira los márgenes de respaldo del shell: la carga y el error de una ficha leída con Consulta
+  // llevan los de la página, salvo que ya estén dentro de un contenedor
+  it('la carga y el error sueltos van en un contenedor de página; dentro de uno, no lo repiten', async () => {
+    const cargando = { isPending: true, isError: false, data: undefined, error: null, refetch: vi.fn() } as unknown as UseQueryResult<string>
+    const { unmount } = montar(<Consulta consulta={cargando}>{() => null}</Consulta>)
+    expect(screen.getByRole('status').closest('[data-ancho]')).toHaveClass('px-4', 'pt-6')
+    unmount()
+    montar(
+      <ContenedorDePagina>
+        <Consulta consulta={consulta(undefined, new ErrorDeSgspe(500, 'x', [], null))}>{() => null}</Consulta>
+      </ContenedorDePagina>
+    )
+    const alerta = await screen.findByRole('button', { name: 'Reintentar' })
+    expect(document.querySelectorAll('[data-ancho]')).toHaveLength(1)
+    expect(alerta.closest('[data-ancho]')).toHaveClass('px-4')
   })
 
   it('esIlegible es un 404 de la API y nada más', () => {

@@ -3,7 +3,7 @@ import { Alert, Button, cn, Input, Table, Td, Th } from '@wasichai/ui'
 import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina, ContenedorSiFalta } from '../componentes/Pagina'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Campo, SelectNativo } from '../componentes/Campo'
 import { useMensajeDeError } from '../componentes/errores'
@@ -162,10 +162,20 @@ function Preparar() {
   const faltaTipo = destino === 'environmental_feature' && !columnas.featureType && !tipoFijo
   const faltaCapa = capasDelArchivo.length > 1 && !capaElegida
 
-  if (formatosDelServidor.isPending) return <Cargando />
+  if (formatosDelServidor.isPending)
+    return (
+      <ContenedorSiFalta>
+        <Cargando />
+      </ContenedorSiFalta>
+    )
   // sin destinos solo porque la organización no tiene el modelo de F6 (la cuenta importa solo a esos): se dice eso, no un
   // permiso que falta
-  if (destinos.length === 0) return <Alert tone="warning">{sinModeloDeF6 ? t('importacion.sinModeloDeF6') : t('importacion.sinDestinos')}</Alert>
+  if (destinos.length === 0)
+    return (
+      <ContenedorSiFalta>
+        <Alert tone="warning">{sinModeloDeF6 ? t('importacion.sinModeloDeF6') : t('importacion.sinDestinos')}</Alert>
+      </ContenedorSiFalta>
+    )
 
   const verPrevia = () => {
     if (!archivo || !destino || !proyecto || !crsPropuesto || !confirmado || faltaTipo || faltaCapa) return

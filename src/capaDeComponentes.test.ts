@@ -22,6 +22,14 @@ describe('capa de componentes de Civic Modern', () => {
     expect(importa.indexOf('./theme/componentes.css')).toBe(importa.indexOf('./theme/wasichai.css') + 1)
   })
 
+  // fase 13a de Civic Modern: en oscuro, el campo de búsqueda de la cabecera es hundido con el borde de control (en claro, blanco)
+  it('la búsqueda y el proyecto elegido de la cabecera en oscuro van en surface-sunken con border-control', () => {
+    const oscuro = reglas(":root[data-theme='dark'] [data-campo-de-cabecera]")
+    expect(oscuro).toContain('background-color: var(--sg-surface-sunken)')
+    expect(oscuro).toContain('border-color: var(--sg-border-control)')
+    expect(capa).toMatch(/:root:not\(\[data-theme\]\) \[data-campo-de-cabecera\]/)
+  })
+
   it('solo lee tokens: ningún color suelto', () => {
     const sinComentarios = capa.replace(/\/\*[\s\S]*?\*\//g, '')
     expect(sinComentarios).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(|oklch\(/i)

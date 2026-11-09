@@ -1,3 +1,4 @@
+import { ContenedorSiFalta } from '../componentes/Pagina'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { useQueries } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
@@ -35,7 +36,12 @@ export function TrabajarEnProyecto({ tipo, id }: { tipo: TerritoryKind; id: stri
         </Link>
       </Button>
     )
-  if (proyectos.isError && !proyectos.data) return <ErrorDeCarga error={proyectos.error} alReintentar={() => void proyectos.refetch()} />
+  if (proyectos.isError && !proyectos.data)
+    return (
+      <ContenedorSiFalta>
+        <ErrorDeCarga error={proyectos.error} alReintentar={() => void proyectos.refetch()} />
+      </ContenedorSiFalta>
+    )
   // mientras llegan los proyectos y las asignaciones no se ofrece una lista a medias: las asignaciones solo acotan la lista
   // (una comodidad, no un control de acceso), así que si no se pueden leer se ofrecen todos los proyectos
   if (!proyectos.data || (asignaciones.isPending && !asignaciones.isError)) {

@@ -25,16 +25,11 @@ import { NavegacionDeOrigen } from './NavegacionDeOrigen'
 // el ancho único de las pantallas; «lectura», más angosto, solo para textos largos (un acta, un entregable). es la .pg del
 // lienzo de Civic Modern (design-system.md §5.3): una columna con 20 px entre bloques, en flujo de bloque (space-y) y no en
 // flex, para que un hijo en línea (un botón, un enlace) no se estire a todo el ancho. pone los márgenes de la página
-// (design-system.md §3.5: 16 px en el teléfono, 24 en tableta y 32 desde lg; 24 arriba): <main> del shell ya no los pone y
-// solo los da como respaldo a una pantalla que todavía no usa este contenedor (MARGENES_DE_RESPALDO). uno dentro de otro no
-// los repite. elemento: la sección de una lista o el artículo de una ficha, como lo eran a mano
+// (design-system.md §3.5: 16 px en el teléfono, 24 en tableta y 32 desde lg; 24 arriba): <main> del shell no los pone. uno
+// dentro de otro no los repite. elemento: la sección de una lista o el artículo de una ficha, como lo eran a mano
 const DentroDeContenedor = createContext(false)
 
 export const MARGENES_DE_PAGINA = 'px-4 pt-6 md:px-6 lg:px-8'
-// el respaldo de <main> del shell y del contenido de un proyecto: los márgenes solo si dentro no hay un ContenedorDePagina
-// (data-ancho), para que una pantalla que no lo usa no quede pegada al borde
-export const MARGENES_DE_RESPALDO = 'not-has-[[data-ancho]]:px-4 not-has-[[data-ancho]]:pt-6 md:not-has-[[data-ancho]]:px-6 lg:not-has-[[data-ancho]]:px-8'
-
 export function ContenedorDePagina({
   variante = 'pagina',
   elemento: Elemento = 'div',
@@ -61,6 +56,12 @@ export function ContenedorDePagina({
       <DentroDeContenedor.Provider value={true}>{children}</DentroDeContenedor.Provider>
     </Elemento>
   )
+}
+
+// lo que se dibuja antes que la pantalla (la carga, el error, el «no existe» de Consulta): dentro de un contenedor va tal cual;
+// suelto en <main> o en el contenido de un proyecto, en un contenedor que le da los márgenes de la página
+export function ContenedorSiFalta({ children }: { children: ReactNode }) {
+  return useContext(DentroDeContenedor) ? <>{children}</> : <ContenedorDePagina>{children}</ContenedorDePagina>
 }
 
 // «Título · Proyecto · SGSPE»: el historial, las pestañas del navegador y los marcadores dicen dónde se estaba (D7). el proyecto
@@ -186,13 +187,31 @@ export function EncabezadoDePagina({
           className={cn(
             'flex flex-wrap items-center gap-2',
             ficha &&
-              'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-16 max-sm:z-20 max-sm:justify-end max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2'
+              'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-16 max-sm:z-20 max-sm:justify-stretch max-sm:border-t max-sm:border-sg-border max-sm:bg-sg-surface max-sm:px-4 max-sm:py-2'
           )}
         >
           {vistas}
-          {secundarias}
+          {/* en el teléfono (M17b), la primaria va arriba a todo el ancho y las secundarias se reparten la fila de abajo; desde sm,
+              los envoltorios no cuentan (contents) */}
+          {ficha && secundarias ? (
+            <div className="contents max-sm:flex max-sm:flex-1 max-sm:gap-2 max-sm:[&>*]:flex-1 max-sm:[&_[data-slot=button]]:w-full">{secundarias}</div>
+          ) : (
+            secundarias
+          )}
           {mas ? <MasAcciones>{mas}</MasAcciones> : null}
-          {primaria}
+          {/* sin secundarias, «Más» queda al lado de la primaria */}
+          {ficha && primaria ? (
+            <div
+              className={cn(
+                'contents max-sm:order-first max-sm:block max-sm:[&>*]:w-full max-sm:[&_[data-slot=button]]:w-full',
+                secundarias ? 'max-sm:basis-full' : 'max-sm:flex-1'
+              )}
+            >
+              {primaria}
+            </div>
+          ) : (
+            primaria
+          )}
           {pieDeAcciones ? <div className="basis-full space-y-1 sm:text-right">{pieDeAcciones}</div> : null}
         </div>
       ) : null}

@@ -38,7 +38,7 @@ export function PanelDeTrazabilidad({
             <section
               key={grupo}
               aria-label={titulo}
-              className="-mr-px -mb-px grid min-w-0 grid-cols-[150px_minmax(0,1fr)] gap-x-4 gap-y-1 border-r border-b border-sg-border px-3.5 py-2.5 @2xl:flex @2xl:flex-col"
+              className="-mr-px -mb-px grid min-w-0 grid-cols-1 gap-x-4 @md:grid-cols-[150px_minmax(0,1fr)] [&_a]:no-underline [&_a:focus-visible]:underline [&_a:hover]:underline gap-y-1 border-r border-b border-sg-border px-3.5 py-2.5 @2xl:flex @2xl:flex-col"
             >
               <h2 className="text-sm font-bold text-sg-text">{titulo}</h2>
               <div className="min-w-0 space-y-2">

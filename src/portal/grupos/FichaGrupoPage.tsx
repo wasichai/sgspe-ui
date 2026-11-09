@@ -1,3 +1,4 @@
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { CamposPlegables } from '../componentes/CamposPlegables'
@@ -120,7 +121,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
   // el nombre del grupo en las migas del proyecto (revisión de UX, etapa 4)
   useMigaDelRegistro(nombre)
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t('grupos.ficha.tipo'), opcion(grupo, 'stakeholder_type')].filter(Boolean).join(' · ')}
         titulo={nombre}
@@ -349,7 +350,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
           alCancelar={() => setEditando(false)}
         />
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

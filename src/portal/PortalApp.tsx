@@ -1,3 +1,4 @@
+import { ContenedorDePagina } from './componentes/Pagina'
 import { QueryClient } from '@tanstack/react-query'
 import { ApiError, createRegistry, resolveConfig, WasichaiProviders } from '@wasichai/core'
 import { useState } from 'react'
@@ -28,7 +29,11 @@ const retry = (count: number, error: unknown) => !(error instanceof ApiError && 
 // design-system.md §6.5: la sección que aún no llega lo dice, sin un error técnico; llega en la primera de sus fases
 function SeccionPorLlegar({ seccion }: { seccion: SeccionNav }) {
   const { t } = useTranslation(NS)
-  return <Vacio titulo={t('seccionPorLlegar', { fase: seccion.fases[0] })} />
+  return (
+    <ContenedorDePagina>
+      <Vacio titulo={t('seccionPorLlegar', { fase: seccion.fases[0] })} />
+    </ContenedorDePagina>
+  )
 }
 
 // el Dashboard es la ruta índice; cada otra sección tiene ruta solo con su pantalla (PANTALLAS), y la pantalla se guarda

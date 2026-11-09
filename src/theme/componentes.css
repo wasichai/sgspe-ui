@@ -197,3 +197,18 @@
     color: var(--sg-primary-text);
     font-weight: 800;
 }
+
+/* los campos blancos de la cabecera (la búsqueda de BotonBuscar y el proyecto elegido de SelectorDeProyecto): en claro, un campo blanco sobre el azul; en oscuro, hundido con el borde de control,
+   para que no se pierda en la cabecera oscura. desde md, donde es un campo (en el teléfono es solo el ícono) */
+@media (min-width: 48rem) {
+    :root[data-theme='dark'] [data-campo-de-cabecera] {
+        background-color: var(--sg-surface-sunken);
+        border-color: var(--sg-border-control);
+    }
+}
+@media (min-width: 48rem) and (prefers-color-scheme: dark) {
+    :root:not([data-theme]) [data-campo-de-cabecera] {
+        background-color: var(--sg-surface-sunken);
+        border-color: var(--sg-border-control);
+    }
+}

@@ -123,20 +123,27 @@ export function useAcopleDeVistaPrevia(claves: readonly string[] | null) {
 // la trazabilidad y los candidatos de IA). lo anota la pantalla que lo ofrece mientras está montada, como las tablas anotan sus
 // filas: componentes/ no conoce los módulos. con él, el panel dice arriba el tipo y el código, y el título del registro; sin él,
 // el resumen común (Resumen)
+// tituloDe: el título del panel cuando el registro no tiene title (el nombre de un programa, el propósito de un aporte)
 export type CuerpoDeVistaPrevia = ComponentType<{ registro: Registro }>
-const cuerpos = new Map<string, { objeto: string; Cuerpo: CuerpoDeVistaPrevia }>()
-export function useCuerpoDeVistaPrevia(objeto: string, Cuerpo: CuerpoDeVistaPrevia) {
+type TituloDeVistaPrevia = (registro: Registro) => string
+interface CuerpoAnotado {
+  objeto: string
+  Cuerpo: CuerpoDeVistaPrevia
+  tituloDe?: TituloDeVistaPrevia
+}
+const cuerpos = new Map<string, CuerpoAnotado>()
+export function useCuerpoDeVistaPrevia(objeto: string, Cuerpo: CuerpoDeVistaPrevia, tituloDe?: TituloDeVistaPrevia) {
   const pantalla = useId()
   useLayoutEffect(() => {
-    cuerpos.set(pantalla, { objeto, Cuerpo })
+    cuerpos.set(pantalla, { objeto, Cuerpo, tituloDe })
     avisarAcople()
     return () => {
       cuerpos.delete(pantalla)
       avisarAcople()
     }
-  }, [pantalla, objeto, Cuerpo])
+  }, [pantalla, objeto, Cuerpo, tituloDe])
 }
-const cuerpoDe = (objeto: string): CuerpoDeVistaPrevia | undefined => [...cuerpos.values()].find((c) => c.objeto === objeto)?.Cuerpo
+const cuerpoDe = (objeto: string): CuerpoAnotado | undefined => [...cuerpos.values()].find((c) => c.objeto === objeto)
 const useCuerpoPropio = (objeto: string) => useSyncExternalStore(suscribirAcople, () => cuerpoDe(objeto))
 
 const useEstaAcoplada = (peek: string | null) => useSyncExternalStore(suscribirAcople, () => (peek ? estaAcoplada(peek) : false))
@@ -177,7 +184,8 @@ function useVistaPreviaDe(objeto: string, id: string): { antetitulo?: string; ti
   // un grupo de interés no tiene nombre propio: es el de su persona u organización, como en su ficha
   const nombreDelGrupo = useNombreDelGrupo(objeto === 'stakeholder' ? registro.data : undefined)
   const paso = useSiguientePaso()
-  const Propio = useCuerpoPropio(objeto)
+  const anotado = useCuerpoPropio(objeto)
+  const Propio = anotado?.Cuerpo
   const ruta = registro.data ? rutaDeFicha(objeto, registro.data) : null
   const conPropio = Boolean(Propio && registro.data)
   return {
@@ -186,7 +194,7 @@ function useVistaPreviaDe(objeto: string, id: string): { antetitulo?: string; ti
       ? objeto === 'stakeholder'
         ? nombreDelGrupo
         : conPropio
-          ? texto(registro.data, 'title') || rotulo(registro.data)
+          ? anotado?.tituloDe?.(registro.data) || texto(registro.data, 'title') || rotulo(registro.data)
           : rotulo(registro.data)
       : t('paginas.vistaPrevia.titulo'),
     pie: ruta ? (
