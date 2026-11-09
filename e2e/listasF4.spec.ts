@@ -274,4 +274,51 @@ test.describe('a 390 px', () => {
       await page.goto(ruta)
       await selectorDeVistasSinDesborde(page)
     })
+
+  // #117: el presupuesto de programas del año se lee sin desplazamiento horizontal: una tarjeta por moneda, sin tabla
+  test('el presupuesto de programas del año no se desplaza en horizontal', async ({ page }) => {
+    const anio = Number(new Intl.DateTimeFormat('en', { timeZone: 'America/Lima', year: 'numeric' }).format(new Date()))
+    const fila = (program: string, currency: string, allocated: string, executed: string) => ({
+      key: `${program}:${anio}:${currency}`,
+      program,
+      label: program,
+      year: anio,
+      currency,
+      allocated,
+      executed,
+      state: 'executing'
+    })
+    await page.route(/\/api\/sgspe\/dashboards\/investment(\?|$)/, (r) =>
+      r.fulfill({
+        json: {
+          dashboard: 'investment',
+          computedAt: new Date().toISOString(),
+          filters: { project: ['p1'] },
+          indicators: [
+            {
+              code: 'KPI-INV-02',
+              label: 'Programas',
+              available: true,
+              value: null,
+              breakdowns: [{ by: 'program', rows: [fila('sp1', 'PEN', '160000', '54000'), fila('sp2', 'USD', '35000', '3200')] }]
+            }
+          ]
+        }
+      })
+    )
+    await page.route(/\/api\/sgspe\/dashboards\/indicators(\?|$)/, (r) =>
+      r.fulfill({ json: [{ code: 'KPI-INV-02', label: 'Programas', dashboard: 'investment', available: true }] })
+    )
+    await page.goto('/projects/p1/programs')
+    const presupuesto = page.getByRole('list', { name: `Presupuesto de programas ${anio}` })
+    await expect(presupuesto.getByRole('listitem', { name: 'PEN' })).toContainText('S/ 160,000.00')
+    await expect(presupuesto.getByRole('listitem', { name: 'USD' })).toContainText('USD 35,000.00')
+    await expect(page.getByRole('table', { name: `Presupuesto de programas ${anio}` })).toHaveCount(0)
+    // nada dentro del bloque se desplaza ni sale de la ventana
+    const desbordes = await presupuesto.evaluate(
+      (lista) =>
+        [lista, ...lista.querySelectorAll('*')].filter((e) => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > window.innerWidth).length
+    )
+    expect(desbordes).toBe(0)
+  })
 })

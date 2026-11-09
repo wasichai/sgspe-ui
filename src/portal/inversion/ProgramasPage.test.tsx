@@ -156,6 +156,36 @@ describe('S42 · programas e inversión', () => {
     expect(screen.queryByRole('region', { name: 'Presupuesto de programas 2026' })).not.toBeInTheDocument()
   })
 
+  // #117: en el teléfono (por debajo de sm) el presupuesto del año no es una tabla que se desplaza: una tarjeta por moneda, con
+  // un monto por línea, nunca sumados entre monedas; «—» y las notas se conservan
+  it('en el teléfono el presupuesto del año es una tarjeta por moneda, sin tabla', async () => {
+    const original = window.matchMedia
+    window.matchMedia = ((consulta: string) => ({
+      matches: true,
+      media: consulta,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    })) as unknown as typeof window.matchMedia
+    try {
+      fetch = mockFetch(rutas())
+      abrir()
+      const presupuesto = await screen.findByRole('list', { name: 'Presupuesto de programas 2026' })
+      expect(screen.queryByRole('table', { name: 'Presupuesto de programas 2026' })).not.toBeInTheDocument()
+      const pen = within(presupuesto).getByRole('listitem', { name: 'PEN' })
+      expect(within(pen).getByRole('heading', { name: 'PEN' })).toBeInTheDocument()
+      const cifra = (tarjeta: HTMLElement, rotulo: string) => within(tarjeta).getByText(rotulo, { selector: 'dt' }).nextElementSibling?.textContent
+      expect(cifra(pen, 'Asignado')).toBe('S/ 80,000.00')
+      expect(cifra(pen, 'Ejecutado')).toBe('S/ 20,000.00')
+      expect(cifra(pen, 'Avance')).toBe('25 %')
+      // lo ejecutado en USD no vino: «—», nunca cero; el año siguiente no se suma al de hoy
+      const usd = within(presupuesto).getByRole('listitem', { name: 'USD' })
+      expect(cifra(usd, 'Ejecutado')).toBe('—')
+      expect(within(presupuesto).queryByText(/90,000/)).not.toBeInTheDocument()
+    } finally {
+      window.matchMedia = original
+    }
+  })
+
   // U-35: sin barras vacías ni «S/ 0.00» antes de la lista; una cifra sin datos no se dibuja
   it('una campaña sin ejecución no dibuja la barra ni «S/ 0.00», y una zona sin datos no se dibuja', async () => {
     const vacio = {
