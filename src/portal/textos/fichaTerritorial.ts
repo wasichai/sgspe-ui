@@ -4,6 +4,8 @@ import { EN_CIFRAS, ES_CIFRAS } from './tableros'
 export const ES_FICHA_TERRITORIAL = {
   titulo: 'Ficha del lugar',
   tipos: { locality: 'Localidad', community: 'Comunidad' },
+  dentroDe: 'Dentro de {{area}}',
+  periodo: 'Del {{desde}} al {{hasta}}',
   cerrar: 'Cerrar la ficha del lugar',
   filtrarProyecto: 'Filtrar el proyecto por este lugar',
   verResumen: 'Ver resumen de {{nombre}}',
@@ -64,6 +66,8 @@ export const ES_FICHA_TERRITORIAL = {
 export const EN_FICHA_TERRITORIAL: typeof ES_FICHA_TERRITORIAL = {
   titulo: 'Place summary',
   tipos: { locality: 'Locality', community: 'Community' },
+  dentroDe: 'Within {{area}}',
+  periodo: 'From {{desde}} to {{hasta}}',
   cerrar: 'Close the place summary',
   filtrarProyecto: 'Filter the project by this place',
   verResumen: 'Show summary of {{nombre}}',

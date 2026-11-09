@@ -26,8 +26,11 @@ export const ES_GRUPOS = {
     sinEvaluar: 'Sin evaluar',
     sinContacto: 'Sin contacto en {{dias}} días',
     todos: 'Todos',
-    retirados: 'Retirados'
+    retirados: 'Retirados',
+    // la vista «Lista + mapa» (design-system.md §5.3): los vigentes, en su localidad
+    mapa: 'En el mapa'
   },
+  abrirFicha: 'Abrir la ficha de {{nombre}}',
   filtros: {
     influence_group: 'Grupo de influencia',
     stance: 'Postura',
@@ -249,8 +252,10 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     sinEvaluar: 'Not assessed',
     sinContacto: 'No contact in {{dias}} days',
     todos: 'All',
-    retirados: 'Retired'
+    retirados: 'Retired',
+    mapa: 'On the map'
   },
+  abrirFicha: 'Open the record of {{nombre}}',
   filtros: {
     influence_group: 'Influence group',
     stance: 'Stance',

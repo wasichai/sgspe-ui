@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { jsonResponse, mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { baseDeCompromisos, C1, EQUIPO_DE_COMPROMISOS, GESTORA, P1 } from '../../test/compromisos'
 import { montar, pagina, registro, ubicacion, workflow } from '../../test/montar'
 import type { Registro } from '../datos/registros'
@@ -10,6 +10,8 @@ import { listaDelServidor } from '../../test/listaDelServidor'
 import { espiarRed, problema, type Red, type RutaEspecial } from '../../test/red'
 import { conEstado } from '../datos/registros'
 import { CompromisosPage, consultaDeVista, enVista } from './CompromisosPage'
+
+vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
 // S28 (screens.md §7, flujo 7): las vistas de lo vencido, por vencer y bloqueado, el alta solo con asignación, y los candidatos
 // decididos por una persona con IK, IM y CR; un código de error se dice con su texto
@@ -669,5 +671,64 @@ describe('S28 · candidatos', () => {
     const panel = await screen.findByRole('dialog')
     expect(within(panel).queryByRole('button', { name: 'Aceptar y crear borrador' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Registrar candidato' })).not.toBeInTheDocument()
+  })
+})
+
+// la vista «Lista + mapa» (design-system.md §5.3): una vista más del selector, nunca la de entrada, solo si la lista trae algún
+// compromiso con ubicación (su punto, su localidad o su comunidad); la lista y el mapa se eligen juntos
+describe('S28 · lista + mapa', () => {
+  const CON_LUGAR = registro('c5', { ...C1.attributes, code: 'C-005', title: 'Canal de Huallpa', community: 'cc1' }, { state: 'approved' })
+  const LYR_19 = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        id: 'c5:location',
+        geometry: { type: 'Point', coordinates: [-78.5, -7.9] },
+        properties: { __id: 'c5', __object: 'commitment', name: 'Canal' }
+      }
+    ]
+  }
+
+  it('sin compromisos con ubicación no se ofrece', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto()
+    await screen.findByRole('table', { name: 'Compromisos' })
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    expect(screen.queryByRole('button', { name: 'Abiertos en el mapa' })).not.toBeInTheDocument()
+  })
+
+  it('con uno, se ofrece en el selector; elegirla deja ?view=mapa y muestra los abiertos junto al mapa, sincronizados', async () => {
+    fetch = mockFetch(rutas([{ path: '/sgspe/territory/layers/LYR-19', body: LYR_19 }]))
+    red = conServidor([], [C1, C2, C3, C4, CON_LUGAR])
+    enProyecto()
+    await screen.findByRole('table', { name: 'Compromisos' })
+    await userEvent.click(screen.getByRole('button', { name: 'Más vistas' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Abiertos en el mapa' }))
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=mapa')
+    const lista = await screen.findByRole('listbox', { name: 'Compromisos' })
+    // los abiertos, como la vista de entrada: el cerrado no está
+    expect(within(lista).getAllByRole('option')).toHaveLength(4)
+    expect(within(lista).queryByText(/Botiquín comunal/)).not.toBeInTheDocument()
+    expect(within(lista).getByRole('option', { name: /Reservorio de agua/ })).toHaveTextContent('Sin ubicación')
+    expect(screen.queryByRole('table', { name: 'Compromisos' })).not.toBeInTheDocument()
+    // elegir el punto marca su fila y deja las acciones del elegido: su ficha y su vista previa
+    const mapa = screen.getByRole('list', { name: 'Mapa de Compromisos' })
+    await userEvent.click(await within(mapa).findByRole('button', { name: 'Canal' }))
+    expect(within(lista).getByRole('option', { name: /Canal de Huallpa/ })).toHaveAttribute('aria-selected', 'true')
+    expect(ubicacion.actual).toBe('/projects/p1/commitments?view=mapa&selected=commitment%3Ac5')
+    const acciones = screen.getByRole('group', { name: /^Acciones de C-005/ })
+    expect(within(acciones).getByRole('link', { name: 'Canal de Huallpa' })).toHaveAttribute('href', '/projects/p1/commitments/c5')
+    // la capa se pidió con el proyecto
+    expect(fetch.calls.find((l) => l.path.startsWith('/sgspe/territory/layers/LYR-19'))!.path).toContain('project=p1')
+  })
+
+  it('abierta por la URL sin compromisos con ubicación, lo dice y deja la tabla', async () => {
+    fetch = mockFetch(rutas())
+    red = conServidor()
+    enProyecto(EQUIPO_DE_COMPROMISOS, '/projects/p1/commitments?view=mapa')
+    expect(await screen.findByText('Ningún registro de esta página trae ubicación: no hay nada que mostrar en el mapa.')).toBeInTheDocument()
+    expect(filasDe(screen.getByRole('table', { name: 'Compromisos' }))).toHaveLength(3)
   })
 })

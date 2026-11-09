@@ -236,3 +236,45 @@ test.describe('a 1440 px', () => {
     await expect(capas).toBeVisible()
   })
 })
+
+// S09 con MapLibre de verdad (fase 9 de Civic Modern): el panel del lugar mide 380 px y va pegado al borde derecho del lienzo;
+// acercar y alejar son botones de 36 px a la izquierda del panel, con el norte aparte, y en oscuro los controles toman la
+// superficie del tema, no el blanco de MapLibre
+test.describe('S09 a 1440 px', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  for (const tema of ['light', 'dark'] as const)
+    test(`los controles del mapa miden 36 px y siguen el tema (${tema}), a la izquierda del panel del lugar`, async ({ page }) => {
+      await prepararF6(page)
+      await page.goto('/territory?project=p1')
+      const mapa = page.getByRole('region', { name: 'Mapa territorial' })
+      await expect(mapa.locator('canvas')).toBeVisible()
+      // el tema, como lo deja el menú de apariencia: el atributo de <html>
+      await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), tema)
+      const lienzo = (await mapa.boundingBox())!
+      const panel = (await page.locator('#panel-de-lugares').locator('..').boundingBox())!
+      expect(panel.width).toBeCloseTo(380, 0)
+      // el borde de 1 px del marco del mapa queda bajo el panel
+      expect(Math.abs(panel.x + panel.width - (lienzo.x + lienzo.width))).toBeLessThanOrEqual(1)
+      const acercar = mapa.locator('.maplibregl-ctrl-zoom-in')
+      const caja = (await acercar.boundingBox())!
+      expect(caja.width).toBe(36)
+      expect(caja.height).toBe(36)
+      expect(caja.x + caja.width).toBeLessThanOrEqual(panel.x)
+      await expect(mapa.locator('.maplibregl-ctrl-compass')).toBeVisible()
+      const fondo = await mapa
+        .locator('.maplibregl-ctrl-group')
+        .first()
+        .evaluate((e) => getComputedStyle(e).backgroundColor)
+      const superficie = await page.evaluate(() => {
+        const prueba = document.createElement('div')
+        prueba.style.backgroundColor = 'var(--sg-surface)'
+        document.body.append(prueba)
+        const color = getComputedStyle(prueba).backgroundColor
+        prueba.remove()
+        return color
+      })
+      expect(fondo).toBe(superficie)
+      if (tema === 'dark') expect(fondo).not.toBe('rgb(255, 255, 255)')
+    })
+})

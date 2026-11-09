@@ -2,6 +2,8 @@
 // autenticado por GET /api/sgspe/territory/layers/{layer} (api.md §4.2). el grupo es el del control de capas de S09
 // (Referencia, Proyecto, Tenencia) y el color, el de la paleta compartida. las de gestión (LYR-17 a LYR-24, F6) van aparte, en
 // CAPAS_DE_GESTION: solo S12 las ofrece (decisión 10 del plan 6.3)
+import type { Coleccion } from './api'
+import type { ColorPorAtributo } from './Mapa'
 import { estiloDeCapa } from './paleta'
 
 export type GrupoDeCapa = 'referencia' | 'proyecto' | 'tenencia' | 'gestion'
@@ -73,12 +75,55 @@ export const capa = (id: string): Capa | undefined => CAPAS.find((c) => c.id ===
 // un elemento agregado por localidad (LYR-17 y los aportes de LYR-23): un punto con sus conteos, que lleva a la ficha del lugar
 export const esAgregado = (propiedades: Record<string, unknown> | null | undefined): boolean => typeof propiedades?.__aggregate === 'string'
 
-// el relleno y el trazo de la capa en el mapa, de la paleta
-export const dibujoDe = (id: string): { relleno: number; colorDeRelleno?: string; trazo?: number[] } => {
+// las formas finas de las capas de gestión que MapLibre dibuja con un círculo (design-system.md §3.3): LYR-21 con el relleno del
+// nivel del riesgo y LYR-17 con un anillo del color de la postura que más pesa en la localidad (__postura, que pone conPostura).
+// el rombo de los riesgos, el cuadrado con su conteo de los compromisos y los rótulos con halo piden íconos y tipografías de
+// teselas que el portal no carga: el color sigue a la entidad igual
+export const COLORES_POR_ATRIBUTO: Readonly<Record<string, ColorPorAtributo>> = {
+  'LYR-21': {
+    campo: 'risk_level',
+    colores: { BAJO: '--sg-risk-low', MEDIO: '--sg-risk-medium', ALTO: '--sg-risk-high', CRITICO: '--sg-risk-critical' }
+  },
+  'LYR-17': {
+    campo: '__postura',
+    colores: {
+      'A FAVOR': '--sg-stance-favor',
+      NEUTRAL: '--sg-stance-neutral',
+      'EN CONTRA PERO ABIERTO A ESCUCHAR': '--sg-stance-open',
+      'EN CONTRA': '--sg-stance-against'
+    },
+    anillo: true
+  }
+}
+
+// el relleno y el trazo de la capa en el mapa, de la paleta, y su color por atributo
+export const dibujoDe = (id: string): { relleno: number; colorDeRelleno?: string; trazo?: number[]; colorPor?: ColorPorAtributo } => {
   const estilo = estiloDeCapa(id)
   return {
     relleno: estilo.fillOpacity,
     ...(estilo.colorDeRelleno ? { colorDeRelleno: estilo.colorDeRelleno } : {}),
-    ...(estilo.trazo ? { trazo: estilo.trazo } : {})
+    ...(estilo.trazo ? { trazo: estilo.trazo } : {}),
+    ...(COLORES_POR_ATRIBUTO[id] ? { colorPor: COLORES_POR_ATRIBUTO[id] } : {})
   }
+}
+
+// LYR-17 trae los conteos por postura en un objeto (byStance), que MapLibre no lee en sus expresiones: cada localidad lleva además
+// la postura que más pesa (__postura; sin postura conocida o empatadas, ninguna). la misma colección devuelve la misma copia, para
+// que el mapa no vuelva a poner sus datos en cada dibujo
+const conPosturas = new WeakMap<Coleccion, Coleccion>()
+export function conPostura(id: string, datos: Coleccion): Coleccion {
+  if (id !== 'LYR-17') return datos
+  const guardada = conPosturas.get(datos)
+  if (guardada) return guardada
+  const copia: Coleccion = {
+    ...datos,
+    features: datos.features.map((f) => {
+      const conteos = Object.entries((f.properties.byStance as Record<string, number> | null | undefined) ?? {}).filter(([postura]) => postura !== 'SIN DATO')
+      const mayor = Math.max(0, ...conteos.map(([, n]) => n))
+      const primeras = conteos.filter(([, n]) => n === mayor && n > 0)
+      return primeras.length === 1 ? { ...f, properties: { ...f.properties, __postura: primeras[0][0] } } : f
+    })
+  }
+  conPosturas.set(datos, copia)
+  return copia
 }

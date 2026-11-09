@@ -34,11 +34,14 @@ import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { Persona } from '../componentes/Persona'
+import { ListaConMapa, ofreceMapa, VISTA_MAPA } from '../mapa/ListaConMapa'
 
 // S16 · lista de grupos de interés (screens.md §5): la misma página con alcance global (agrega la columna Proyecto) o de un
 // proyecto (ASM-076). vistas del sistema, filtros en la URL, selección para registrar una interacción con varios y el chip
 // de territorio. sin permiso para leer stance la columna dice "Restringido" y no se filtra por ella (security.md §7.9)
-const VISTAS = ['prioridad', 'mios', 'sinEvaluar', 'sinContacto', 'todos', 'retirados'] as const
+// «En el mapa» (VISTA_MAPA) es la vista «Lista + mapa» (design-system.md §5.3): los vigentes junto al mapa, cada uno en su localidad;
+// nunca la de entrada y solo si algún grupo de la lista tiene localidad
+const VISTAS = ['prioridad', 'mios', 'sinEvaluar', 'sinContacto', 'todos', 'retirados', VISTA_MAPA] as const
 const FILTROS = ['influence_group', 'stance', 'stakeholder_scope', 'relationship_status', 'stakeholder_type'] as const
 // los tres a la vista en la barra (DD-04); el ámbito y el tipo, en «Más filtros»
 const FRECUENTES: readonly string[] = ['influence_group', 'stance', 'relationship_status']
@@ -124,6 +127,10 @@ export function GruposPage() {
   const conteoDe = (vista: string) => (grupos.data ? grupos.data.filter((g) => enVistaLa(vista, g) && conFiltros(g)).length : null)
   const vigentes = (grupos.data ?? []).filter((g) => g.state !== 'retired').length
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
+  // «Lista + mapa»: se ofrece si algún grupo de la lista tiene localidad; en ella, sin ninguno, se dice y queda la tabla
+  const enMapa = lista.vista === VISTA_MAPA
+  const conUbicacion = ofreceMapa('stakeholder', filtrados)
+  const nombresEnElMapa = useNombresDeGrupos(enMapa ? pagina : [])
   // la selección es de lo que se ve: al cambiar de vista, de filtro o de página se reinicia, y nunca viaja una fila oculta
   const claveDeVista = [lista.vista, lista.pagina, busqueda, ...FILTROS.map((f) => lista.filtro(f))].join('|')
   const [claveVista, setClaveVista] = useState(claveDeVista)
@@ -283,7 +290,11 @@ export function GruposPage() {
             vista={
               <SelectorDeVista
                 etiqueta={t('comun.vistas')}
-                vistas={VISTAS.map((id) => ({ id, etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }), n: conteoDe(id) }))}
+                vistas={VISTAS.filter((id) => id !== VISTA_MAPA || conUbicacion || enMapa).map((id) => ({
+                  id,
+                  etiqueta: t(`grupos.vistas.${id}`, { dias: inactividad }),
+                  n: id === VISTA_MAPA ? undefined : conteoDe(id)
+                }))}
                 actual={lista.vista}
                 alElegir={(id) => lista.cambiar({ view: id })}
                 // cinco a la vista: solo «Retirados» va en «Más vistas»
@@ -329,7 +340,31 @@ export function GruposPage() {
             </VacioDeLista>
           ) : (
             <>
-              {telefono ? (
+              {enMapa && !conUbicacion ? <Alert tone="notice">{t('mapa.listaConMapa.sinUbicaciones')}</Alert> : null}
+              {enMapa && conUbicacion ? (
+                <ListaConMapa
+                  objeto="stakeholder"
+                  etiqueta={t('grupos.titulo')}
+                  registros={pagina}
+                  proyecto={proyecto}
+                  nombreDe={(g) => nombresEnElMapa.get(g.id) || '…'}
+                  detalleDe={(g) => (
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {[opcion(g, 'stakeholder_type'), opcion(g, 'influence_group')].filter(Boolean).join(' · ')}
+                      {leePostura && atributo(g, 'stance') ? <Postura valor={atributo(g, 'stance')} /> : null}
+                    </span>
+                  )}
+                  accionesDe={(g) => (
+                    <>
+                      <Link to={rutaDelGrupo(g)} state={paso()} className="font-semibold text-sg-primary-text underline">
+                        {t('grupos.abrirFicha', { nombre: nombresEnElMapa.get(g.id) ?? '' })}
+                      </Link>
+                      <BotonDeVistaPrevia objeto="stakeholder" id={g.id} nombre={nombresEnElMapa.get(g.id) ?? ''} />
+                    </>
+                  )}
+                  alAbrir={(g) => navegar(rutaDelGrupo(g), { state: paso() })}
+                />
+              ) : telefono ? (
                 // en el teléfono, tarjetas con el nombre, su vista previa, el estado y el proyecto (revisión de UX, etapa 8); en un
                 // proyecto, cada una con su casilla para registrar una interacción con los elegidos
                 <ListaEnTarjetas

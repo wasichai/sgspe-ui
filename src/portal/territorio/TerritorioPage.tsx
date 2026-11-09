@@ -1,7 +1,7 @@
 import { useAuth } from '@wasichai/core'
 import { Alert, Button } from '@wasichai/ui'
-import { Layers, List, PanelRightOpen } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { Layers, List, PanelRightOpen, TableProperties } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { AtajosDePeriodo } from '../componentes/AtajosDePeriodo'
@@ -20,7 +20,7 @@ import { NS } from '../i18n'
 import { useTableroDisponible } from '../tableros/comunes'
 import { destinoDe, encuadreDeGeometrias, idDeElemento, useCapas, useCapasDisponibles, type Encuadre } from '../mapa/api'
 import { avisoDelMapa } from '../mapa/avisos'
-import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, dibujoDe } from '../mapa/capas'
+import { CAPAS_DE_GESTION, CAPAS_TERRITORIALES, capa, conPostura, dibujoDe } from '../mapa/capas'
 import { capaDeCalor, SelectorDeCalor, TablaDeCalor } from '../mapa/Calor'
 import { Mapa } from '../mapa/Mapa'
 import { useWms } from '../mapa/wms'
@@ -172,9 +172,23 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
   const idDeCapas = 'panel-de-capas'
   const idDeLugares = 'panel-de-lugares'
   // los paneles flotan sobre el mapa desde md; en el teléfono van debajo, a todo el ancho (02 §7)
-  const PANEL = 'rounded-sg-lg border border-sg-border bg-sg-surface-raised p-3 text-sm shadow-sg-md md:absolute md:z-10 md:overflow-y-auto'
+  const PANEL = 'flex flex-col rounded-sg-lg border border-sg-border bg-sg-surface text-sm shadow-sg-overlay md:absolute md:z-10 md:overflow-hidden'
+  // la cabecera de cada panel es su botón: «Capas (N)» y «Lugares (N)» lo pliegan y lo despliegan sin mover el foco
   const BOTON_DE_PANEL =
-    'inline-flex h-8 items-center gap-1.5 rounded-sg-md border border-sg-border bg-sg-surface px-2.5 text-sm text-sg-text hover:bg-sg-surface-hover aria-expanded:border-sg-primary aria-expanded:text-sg-primary-text'
+    'inline-flex h-8 items-center gap-1.5 rounded-sg-md px-2 text-sg-body font-bold text-sg-text hover:bg-sg-surface-hover aria-[expanded=false]:text-sg-primary-text'
+  // «Ver como lista» lleva el foco a la lista de lugares, su alternativa accesible, y abre su panel si estaba plegado
+  const listaDeLugares = useRef<HTMLElement>(null)
+  const [aLaLista, setALaLista] = useState(false)
+  const verComoLista = () => {
+    if (!lugaresAbiertos) alternar('places')
+    setALaLista(true)
+  }
+  useEffect(() => {
+    if (!aLaLista || !listaDeLugares.current) return
+    listaDeLugares.current.focus()
+    listaDeLugares.current.scrollIntoView?.({ block: 'nearest' })
+    setALaLista(false)
+  }, [aLaLista, lugaresAbiertos])
   const exporta = capasExportables(can).length > 0
   const importa = DESTINOS.some((d) => importaA(can, d))
 
@@ -223,7 +237,6 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
           ) : undefined
         }
       />
-      <FiltrosDelMapa />
       {servicio.caido ? (
         <Alert tone="warning">
           <span className="flex flex-wrap items-center gap-2">
@@ -234,38 +247,27 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
           </span>
         </Alert>
       ) : null}
-      <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          className={BOTON_DE_PANEL}
-          aria-expanded={capasAbiertas}
-          aria-controls={capasAbiertas ? idDeCapas : undefined}
-          onClick={() => alternar('layers')}
-        >
-          <Layers aria-hidden className="size-4" />
-          {t('mapa.paneles.capas', { n: encendidas.size })}
-        </button>
-        <button
-          type="button"
-          className={BOTON_DE_PANEL}
-          aria-expanded={lugaresAbiertos}
-          aria-controls={lugaresAbiertos ? idDeLugares : undefined}
-          onClick={() => alternar('places')}
-        >
-          <List aria-hidden className="size-4" />
-          {t('mapa.paneles.lugares', { n: lugares.size })}
-        </button>
-      </div>
-      {/* el lienzo a todo el ancho útil; las capas (con su leyenda) y los lugares flotan encima, plegables (DD-11, P-06) */}
-      <div className="relative space-y-3 md:space-y-0">
+      {/* S09 (design-system.md §6.7): el lienzo a todo el ancho y el alto útil, con las capas flotando a la izquierda (300 px) y el
+          lugar con la lista sincronizada en el panel de 380 px de la derecha, que también flota: plegarlo no mueve el lienzo. los
+          controles del mapa se corren a la izquierda del panel abierto (--sg-mapa-derecha). en el teléfono los paneles van debajo */}
+      <div
+        className="relative space-y-3 md:space-y-0"
+        style={
+          {
+            '--sg-mapa-izquierda': capasAbiertas ? '19.5rem' : '0px',
+            '--sg-mapa-derecha': lugaresAbiertos ? '23.75rem' : '0px',
+            '--sg-mapa-arriba': lugaresAbiertos ? '0px' : '3rem'
+          } as CSSProperties
+        }
+      >
         <Mapa
-          className="relative h-[70vh] max-h-[760px] min-h-[420px] w-full overflow-hidden rounded-sg-lg border border-sg-border bg-sg-surface-sunken"
+          className="relative h-[clamp(420px,calc(100dvh-16rem),760px)] w-full overflow-hidden rounded-sg-lg border border-sg-border bg-sg-surface-sunken"
           etiqueta={t('mapa.mapaTerritorial')}
           capas={estados
             .filter((e) => e.datos)
             .map((e) => ({
               id: e.id,
-              datos: e.datos!,
+              datos: conPostura(e.id, e.datos!),
               color: capa(e.id)!.color,
               ...dibujoDe(e.id),
               seleccionable: Boolean(FICHA[capa(e.id)!.objeto]) || capa(e.id)!.grupo === 'gestion',
@@ -280,83 +282,145 @@ export function TerritorioPage({ modo = 'mapa' }: { modo?: 'mapa' | 'tablero' } 
           vistaInicial={vistaInicial}
           alCapturar={(f) => (capturar.current = f)}
         />
-        {capasAbiertas ? (
-          <PanelDeCapas
-            id={idDeCapas}
-            className={`${PANEL} md:top-3 md:left-3 md:max-h-[calc(100%-5.5rem)] md:w-72`}
-            ids={ids}
-            encendidas={encendidas}
-            estados={estados}
-            gestion={<SelectorDeCalor valor={objetoDeCalor} alCambiar={elegirCalor} />}
-            alCambiar={(id, si) => {
-              const siguiente = new Set(encendidas)
-              if (si) siguiente.add(id)
-              else siguiente.delete(id)
-              setEncendidas(siguiente)
-            }}
-          />
-        ) : null}
-        {lugaresAbiertos ? (
-          // a la izquierda del zoom de MapLibre, que va arriba a la derecha
-          <div id={idDeLugares} className={`${PANEL} space-y-3 md:top-3 md:right-12 md:max-h-[calc(100%-3rem)] md:w-80`}>
-            {elegido ? (
-              <FichaContextual
-                key={`${elegido.objeto}:${elegido.id}`}
-                objeto={elegido.objeto}
-                id={elegido.id}
-                proyecto={proyecto}
-                periodo={periodo}
-                alCerrar={() => elegir('', null)}
-              />
-            ) : null}
-            <nav aria-label={t('mapa.lugares')} className="space-y-2">
-              <h2 className="font-medium">{t('mapa.lugares')}</h2>
-              <p className="text-sg-caption text-sg-text-muted">{t('mapa.elegirLugar')}</p>
-              {/* sin lugares, la lista dice por qué: cargando, una capa que falló (la lista estaría incompleta) o, solo si todo
-                  respondió, que no hay lugares en la vista */}
-              {lugares.size === 0 && cargando ? (
-                <p>
-                  <Cargando compacto />
-                </p>
-              ) : null}
-              {conError ? (
-                <p role="alert" className="text-sg-caption text-sg-danger">
-                  {t('mapa.errorDeCapa')}
-                </p>
-              ) : null}
-              {bloqueadas ? <p className="text-sg-caption text-sg-text-muted">{t('territorio.capasBloqueadas')}</p> : null}
-              {lugares.size === 0 && !cargando && !conError && !bloqueadas && (aviso === null || aviso === 'vistaVacia') ? (
-                <p className="text-sg-caption text-sg-text-muted">{t('mapa.sinLugares')}</p>
-              ) : null}
-              {conBusqueda ? <CajaDeBusqueda etiqueta={t('mapa.buscarLugar')} valor={buscado} alCambiar={setBuscado} /> : null}
-              {conBusqueda && buscado.trim() && enLaLista.length === 0 ? (
-                <p className="text-sg-caption text-sg-text-muted">{t('mapa.ningunLugar', { texto: buscado.trim() })}</p>
-              ) : null}
-              <ul className="space-y-1">
-                {enLaLista.map((l) => (
-                  <li key={`${l.objeto}-${l.id}`}>
-                    <Link to={rutaDe(l.objeto, l.id)!} state={paso(t('mapa.mapaTerritorial'))} className="text-sg-primary-text underline">
-                      {l.nombre || t('territorio.sinNombre')}
-                    </Link>
-                    {/* la alternativa de teclado del clic en el mapa: abre la ficha contextual */}
-                    {/* un ícono y no «Ver resumen» repetido en cada fila; el nombre accesible y el title dicen de qué lugar */}
-                    <button
-                      type="button"
-                      className="ml-2 inline-flex size-6 items-center justify-center rounded-sg-sm align-middle text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
-                      aria-label={t('fichaTerritorial.verResumen', { nombre: l.nombre || t('territorio.sinNombre') })}
-                      title={t('fichaTerritorial.verResumenCorto')}
-                      onClick={() => elegir(l.objeto, l.id)}
-                    >
-                      <PanelRightOpen aria-hidden className="size-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-            <AgregadosDelMapa estados={estadosDeGestion} />
+        {/* las capas: un panel sólido de 300 px con sombra overlay; su cabecera pliega y despliega la lista */}
+        <div className={`${PANEL} md:top-3 md:left-3 md:max-h-[calc(100%-5.5rem)] ${capasAbiertas ? 'md:w-[300px]' : ''}`}>
+          <div className="flex items-center justify-between gap-2 border-b border-sg-border px-3 py-2">
+            <button
+              type="button"
+              className={BOTON_DE_PANEL}
+              aria-expanded={capasAbiertas}
+              aria-controls={capasAbiertas ? idDeCapas : undefined}
+              onClick={() => alternar('layers')}
+            >
+              <Layers aria-hidden className="size-4" />
+              {t('mapa.paneles.capas', { n: encendidas.size })}
+            </button>
           </div>
-        ) : null}
+          {capasAbiertas ? (
+            <PanelDeCapas
+              id={idDeCapas}
+              className="overflow-y-auto px-3 py-2 md:max-h-[calc(100dvh-24rem)]"
+              ids={ids}
+              encendidas={encendidas}
+              estados={estados}
+              gestion={<SelectorDeCalor valor={objetoDeCalor} alCambiar={elegirCalor} />}
+              alCambiar={(id, si) => {
+                const siguiente = new Set(encendidas)
+                if (si) siguiente.add(id)
+                else siguiente.delete(id)
+                setEncendidas(siguiente)
+              }}
+            />
+          ) : null}
+        </div>
+        {/* el lugar elegido y la lista de lugares sincronizada: 380 px con borde izquierdo de 2 px border-strong, a todo el alto */}
+        <div
+          className={
+            lugaresAbiertos
+              ? 'border-sg-border-strong bg-sg-surface text-sm max-md:rounded-sg-lg max-md:border md:absolute md:inset-y-0 md:right-0 md:z-10 md:flex md:w-[380px] md:flex-col md:overflow-hidden md:rounded-r-sg-lg md:border-l-2'
+              : 'rounded-sg-lg border border-sg-border bg-sg-surface shadow-sg-overlay md:absolute md:top-3 md:right-3 md:z-10'
+          }
+        >
+          <div className={`flex items-center justify-between gap-2 ${lugaresAbiertos ? 'border-b border-sg-border px-3 py-2' : ''}`}>
+            <button
+              type="button"
+              className={BOTON_DE_PANEL}
+              aria-expanded={lugaresAbiertos}
+              aria-controls={lugaresAbiertos ? idDeLugares : undefined}
+              onClick={() => alternar('places')}
+            >
+              <List aria-hidden className="size-4" />
+              {t('mapa.paneles.lugares', { n: lugares.size })}
+            </button>
+            {lugaresAbiertos ? <span className="text-sg-caption text-sg-text-muted">{t('mapa.paneles.sincronizada')}</span> : null}
+          </div>
+          {lugaresAbiertos ? (
+            <div id={idDeLugares} className="space-y-3 md:min-h-0 md:flex-1 md:overflow-y-auto">
+              {elegido ? (
+                <div className="border-b border-sg-border p-4">
+                  <FichaContextual
+                    key={`${elegido.objeto}:${elegido.id}`}
+                    objeto={elegido.objeto}
+                    id={elegido.id}
+                    proyecto={proyecto}
+                    periodo={periodo}
+                    alCerrar={() => elegir('', null)}
+                  />
+                </div>
+              ) : null}
+              <nav ref={listaDeLugares} tabIndex={-1} aria-label={t('mapa.lugares')} className="space-y-2 px-3 pb-3 focus-visible:outline-none">
+                <p className="pt-1 text-sg-caption text-sg-text-muted">{t('mapa.elegirLugar')}</p>
+                {/* sin lugares, la lista dice por qué: cargando, una capa que falló (la lista estaría incompleta) o, solo si todo
+                    respondió, que no hay lugares en la vista */}
+                {lugares.size === 0 && cargando ? (
+                  <p>
+                    <Cargando compacto />
+                  </p>
+                ) : null}
+                {conError ? (
+                  <p role="alert" className="text-sg-caption text-sg-danger">
+                    {t('mapa.errorDeCapa')}
+                  </p>
+                ) : null}
+                {bloqueadas ? <p className="text-sg-caption text-sg-text-muted">{t('territorio.capasBloqueadas')}</p> : null}
+                {lugares.size === 0 && !cargando && !conError && !bloqueadas && (aviso === null || aviso === 'vistaVacia') ? (
+                  <p className="text-sg-caption text-sg-text-muted">{t('mapa.sinLugares')}</p>
+                ) : null}
+                {conBusqueda ? <CajaDeBusqueda etiqueta={t('mapa.buscarLugar')} valor={buscado} alCambiar={setBuscado} /> : null}
+                {conBusqueda && buscado.trim() && enLaLista.length === 0 ? (
+                  <p className="text-sg-caption text-sg-text-muted">{t('mapa.ningunLugar', { texto: buscado.trim() })}</p>
+                ) : null}
+                <ul className="-mx-3 divide-y divide-sg-border-subtle border-y border-sg-border-subtle">
+                  {enLaLista.map((l) => {
+                    const esElegido = elegido?.objeto === l.objeto && elegido.id === l.id
+                    return (
+                      <li
+                        key={`${l.objeto}-${l.id}`}
+                        aria-current={esElegido ? 'true' : undefined}
+                        className={`flex items-center gap-2 border-l-4 px-3 py-2 ${esElegido ? 'border-sg-primary bg-sg-primary-soft font-semibold' : 'border-transparent'}`}
+                      >
+                        <Link
+                          to={rutaDe(l.objeto, l.id)!}
+                          state={paso(t('mapa.mapaTerritorial'))}
+                          className="min-w-0 flex-1 truncate text-sg-primary-text underline"
+                        >
+                          {l.nombre || t('territorio.sinNombre')}
+                        </Link>
+                        <span className="shrink-0 text-sg-caption text-sg-text-muted">{t(`fichaTerritorial.tipos.${l.objeto}`)}</span>
+                        {/* la alternativa de teclado del clic en el mapa: abre la ficha contextual */}
+                        {/* un ícono y no «Ver resumen» repetido en cada fila; el nombre accesible y el title dicen de qué lugar */}
+                        <button
+                          type="button"
+                          className="inline-flex size-6 shrink-0 items-center justify-center rounded-sg-sm align-middle text-sg-text-secondary hover:bg-sg-surface-hover hover:text-sg-text"
+                          aria-label={t('fichaTerritorial.verResumen', { nombre: l.nombre || t('territorio.sinNombre') })}
+                          title={t('fichaTerritorial.verResumenCorto')}
+                          onClick={() => elegir(l.objeto, l.id)}
+                        >
+                          <PanelRightOpen aria-hidden className="size-4" />
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </nav>
+              <div className="px-3 pb-3">
+                <AgregadosDelMapa estados={estadosDeGestion} />
+              </div>
+            </div>
+          ) : null}
+        </div>
+        {/* «Ver como lista»: la alternativa accesible del mapa, la lista de lugares sincronizada (abre su panel si estaba plegado) */}
+        <button
+          type="button"
+          onClick={verComoLista}
+          className="inline-flex h-9 items-center gap-1.5 rounded-sg-md border-2 border-sg-primary bg-sg-surface px-3 text-sm font-semibold text-sg-primary-text shadow-sg-md hover:bg-sg-primary-soft max-md:hidden md:absolute md:bottom-8 md:right-[calc(var(--sg-mapa-derecha)+0.75rem)] md:z-10"
+        >
+          <TableProperties aria-hidden className="size-4" />
+          {t('mapa.verComoLista')}
+        </button>
       </div>
+      {/* el periodo, abajo y compacto (S09): lo leen las capas de gestión, el calor, la ficha y los registros de la zona */}
+      <FiltrosDelMapa compacto />
       {aviso ? (
         <p role="status" className="text-sm text-sg-text-muted">
           {t(`mapa.avisos.${aviso}`)}
@@ -415,7 +479,7 @@ export function problemaDelPeriodo(desde: string, hasta: string, hoy: string = h
 // de la zona (las de referencia no tienen fecha: enmienda 5.2 del plan 6.3). un periodo que el servidor rechazaría (OUT_OF_RANGE)
 // se dice aquí y no llega a la URL (enmienda 5.3). el proyecto del mapa (?project=, que acota las capas de proyecto y marca sus
 // concesiones) lo elige el selector de la barra, que en Territorio es el lente (A24): la pantalla no tiene uno propio
-export function FiltrosDelMapa() {
+export function FiltrosDelMapa({ compacto = false }: { compacto?: boolean } = {}) {
   const { t } = useTranslation(NS)
   const [busqueda, fijar] = useSearchParams()
   // las fechas tecleadas que no forman un periodo válido: se muestran y se dicen, sin escribirlas en la URL. valen mientras el
@@ -444,8 +508,13 @@ export function FiltrosDelMapa() {
     escribir(periodo)
   }
   return (
-    <div role="group" aria-label={t('sig.filtros')} className="space-y-1 text-sm">
+    <div
+      role="group"
+      aria-label={t('sig.filtros')}
+      className={compacto ? 'space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface px-3 py-2 text-sm' : 'space-y-1 text-sm'}
+    >
       <div className="flex flex-wrap items-end gap-3">
+        {compacto ? <span className="self-center text-sg-overline font-semibold uppercase text-sg-text-muted">{t('sig.periodo')}</span> : null}
         <CampoFecha
           etiqueta={t('sig.desde')}
           valor={fecha('periodStart') || null}

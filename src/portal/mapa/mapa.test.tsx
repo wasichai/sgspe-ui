@@ -323,6 +323,58 @@ describe('MapaImpl', () => {
     expect(colorDe('#5f5a6b')).toBe('#5f5a6b')
   })
 
+  it('un color por atributo pinta cada punto con el token de su valor y, con anillo, deja el punto hueco con el color en el borde', async () => {
+    document.documentElement.style.setProperty('--sg-risk-high', '#f5a66b')
+    document.documentElement.style.setProperty('--sg-stance-favor', '#1d6fb8')
+    document.documentElement.style.setProperty('--sg-surface', '#ffffff')
+    render(
+      <MapaImpl
+        etiqueta="Mapa"
+        capas={[
+          {
+            id: 'LYR-21',
+            datos: localidades,
+            color: '--sg-data-1',
+            seleccionable: true,
+            colorPor: { campo: 'risk_level', colores: { ALTO: '--sg-risk-high' } }
+          },
+          {
+            id: 'LYR-17',
+            datos: localidades,
+            color: '--sg-data-2',
+            seleccionable: true,
+            colorPor: { campo: '__postura', colores: { 'A FAVOR': '--sg-stance-favor' }, anillo: true }
+          }
+        ]}
+      />
+    )
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    const riesgos = mapa.capas.find((c) => c.id === 'LYR-21-punto')!
+    expect(riesgos.paint['circle-color']).toEqual(['match', ['to-string', ['get', 'risk_level']], 'ALTO', '#f5a66b', '#2b5f8f'])
+    expect(riesgos.paint['circle-stroke-color']).toBe('#ffffff')
+    const grupos = mapa.capas.find((c) => c.id === 'LYR-17-punto')!
+    expect(grupos.paint['circle-color']).toBe('#ffffff')
+    expect(grupos.paint['circle-stroke-color']).toEqual(['match', ['to-string', ['get', '__postura']], 'A FAVOR', '#1d6fb8', '#c9772b'])
+    expect(grupos.paint['circle-stroke-width']).toBe(4)
+  })
+
+  it('encuadra lo elegido hasta el acercamiento de la pantalla: 16 por omisión y el que pida una lista junto al mapa', async () => {
+    const capas = [{ id: 'LYR-02', datos: localidades, color: '--sg-data-1', seleccionable: true }]
+    const { rerender } = render(<MapaImpl etiqueta="Mapa" capas={capas} seleccion="l1" />)
+    await act(async () => cargarMapas())
+    const [mapa] = Falso.todos
+    expect(mapa.fitBounds).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ maxZoom: 16, duration: 300 }))
+    rerender(<MapaImpl etiqueta="Mapa" capas={capas} seleccion="l2" zoomAlElegir={12} />)
+    expect(mapa.fitBounds).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ maxZoom: 12, duration: 300 }))
+  })
+
+  it('suma el norte aparte del acercar y alejar', () => {
+    render(<MapaImpl etiqueta="Mapa" capas={[]} />)
+    const opciones = Falso.todos[0].controles.map((c) => (c.control as { opciones: Record<string, unknown> }).opciones)
+    expect(opciones).toEqual([{ showCompass: false }, { showZoom: false, visualizePitch: false }, { unit: 'metric' }])
+  })
+
   const URL_WMS = 'https://sgspe.example/api/sgspe/territory/wms?service=WMS&version=1.1.1&request=GetMap&layers=t_c&styles=sgspe-lyr-05'
 
   it('una capa WMS es un ráster de wmsTileUrl debajo de las capas GeoJSON, y se quita al apagarla', async () => {

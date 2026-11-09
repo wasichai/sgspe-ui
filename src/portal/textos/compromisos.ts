@@ -60,7 +60,9 @@ export const ES_COMPROMISOS = {
     bloqueados: 'Bloqueados',
     mios: 'Míos',
     cerrados: 'Cerrados y cancelados',
-    candidatos: 'Candidatos'
+    candidatos: 'Candidatos',
+    // la vista «Lista + mapa» (design-system.md §5.3): los abiertos, con su lugar
+    mapa: 'Abiertos en el mapa'
   },
   columnas: {
     compromiso: 'Compromiso',
@@ -190,7 +192,8 @@ export const EN_COMPROMISOS: typeof ES_COMPROMISOS = {
     bloqueados: 'Blocked',
     mios: 'Mine',
     cerrados: 'Closed and cancelled',
-    candidatos: 'Candidates'
+    candidatos: 'Candidates',
+    mapa: 'Open on the map'
   },
   columnas: {
     compromiso: 'Commitment',

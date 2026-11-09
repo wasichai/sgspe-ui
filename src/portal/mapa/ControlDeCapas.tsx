@@ -60,23 +60,29 @@ export function ControlDeCapas({
               const truncada = encendidas.has(c.id) && (estado(c.id)?.truncada ?? false)
               return (
                 <div key={c.id}>
-                  <label className="flex items-center gap-2" title={bloqueada ? t('mapa.bloqueada') : undefined}>
-                    <input
-                      type="checkbox"
-                      disabled={bloqueada}
-                      checked={encendidas.has(c.id) && !bloqueada}
-                      onChange={(e) => alCambiar(c.id, e.target.checked)}
-                    />
-                    {conLeyenda ? (
-                      <MuestraDeCapa id={c.id} />
-                    ) : (
-                      <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: colorCss(c.color) }} aria-hidden />
-                    )}
-                    <span>{t(`mapa.capasNombre.${c.id}`)}</span>
-                    {bloqueada || c.sensible ? (
-                      <Lock aria-label={bloqueada ? t('mapa.bloqueada') : t('mapa.sensible')} className="size-3.5 text-sg-text-muted" />
-                    ) : null}
-                  </label>
+                  {/* la fila de §5.3 «Mapa»: la casilla, la muestra de la paleta, el nombre, el candado si es sensible y el código */}
+                  <span className="flex min-h-8 items-center gap-2">
+                    <label className="flex min-w-0 flex-1 items-center gap-2" title={bloqueada ? t('mapa.bloqueada') : undefined}>
+                      <input
+                        type="checkbox"
+                        disabled={bloqueada}
+                        checked={encendidas.has(c.id) && !bloqueada}
+                        onChange={(e) => alCambiar(c.id, e.target.checked)}
+                      />
+                      {conLeyenda ? (
+                        <MuestraDeCapa id={c.id} />
+                      ) : (
+                        <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: colorCss(c.color) }} aria-hidden />
+                      )}
+                      <span className="min-w-0">{t(`mapa.capasNombre.${c.id}`)}</span>
+                      {bloqueada || c.sensible ? (
+                        <Lock aria-label={bloqueada ? t('mapa.bloqueada') : t('mapa.sensible')} className="size-3.5 shrink-0 text-sg-text-muted" />
+                      ) : null}
+                    </label>
+                    <span aria-hidden className="shrink-0 font-sg-mono text-sg-caption text-sg-text-muted">
+                      {c.id}
+                    </span>
+                  </span>
                   {encendidas.has(c.id) && !bloqueada && estado(c.id)?.cargando ? (
                     <p role="status" className="ml-6 text-sg-caption text-sg-text-muted">
                       {t('mapa.cargandoCapa')}
