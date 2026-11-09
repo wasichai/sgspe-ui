@@ -50,15 +50,16 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
   it('sin acceso a la postura muestra candados y no ofrece evaluar', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders/s1', RELACIONISTA, LEE, base())
     expect(await screen.findByRole('heading', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
-    const decidir = screen.getByRole('region', { name: 'Para decidir' })
+    const decidir = screen.getByRole('region', { name: 'Evaluación vigente' })
     expect(within(decidir).getByText('Estratégico')).toBeInTheDocument()
-    expect(await within(decidir).findByText('Restringido')).toBeInTheDocument()
+    expect(await within(decidir).findByText('Restringida')).toBeInTheDocument()
     // la postura y la confianza del grupo de interés son el último valor informado (ASM-087)
     expect(within(decidir).getByText('Postura vigente')).toHaveAttribute('title', 'El último valor informado en una evaluación')
-    expect(within(decidir).getByText('Confianza vigente')).toBeInTheDocument()
-    expect(within(decidir).getByText('2 de 5')).toBeInTheDocument()
+    // la confianza, con su barra de puntaje (S06)
+    expect(within(decidir).getByRole('meter', { name: 'Confianza vigente' })).toHaveAttribute('aria-valuenow', '2')
+    expect(within(decidir).getByText('2/5')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nueva evaluación' })).not.toBeInTheDocument()
-    expect(within(screen.getByRole('complementary', { name: 'Qué generó' })).getByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute(
+    expect(within(screen.getByRole('region', { name: 'Qué generó' })).getByRole('link', { name: 'Asamblea de agosto' })).toHaveAttribute(
       'href',
       '/projects/p1/engagements/e1'
     )
@@ -70,7 +71,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     const sinIndices = { ...S1, attributes: { ...S1.attributes, interest_index: undefined, power_index: undefined, owner_user_id: undefined } }
     fetch = abrirPortal('/projects/p1/stakeholders/s1', RELACIONISTA, LEE, [{ path: '/objects/stakeholder/records/s1', body: sinIndices }, ...base()])
     expect(await screen.findByRole('heading', { name: 'Ronda campesina Tunas', level: 1 })).toBeInTheDocument()
-    const decidir = screen.getByRole('region', { name: 'Para decidir' })
+    const decidir = screen.getByRole('region', { name: 'Evaluación vigente' })
     expect(within(decidir).queryByText(/NaN/)).not.toBeInTheDocument()
     expect(within(decidir).getByText('Interés — · Poder —')).toBeInTheDocument()
     expect(screen.queryByText(/^—\s*Ver el actor/)).not.toBeInTheDocument()
@@ -109,13 +110,13 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
         ])
       }
     ])
-    const decidir = await screen.findByRole('region', { name: 'Para decidir' })
+    const decidir = await screen.findByRole('region', { name: 'Evaluación vigente' })
     // las cifras llevan a su lista con el grupo como filtro (revisión de UX, etapa 6)
     const compromisos = await within(decidir).findByRole('link', { name: '1 compromiso abierto' })
     expect(compromisos).toHaveAttribute('href', '/projects/p1/commitments?stakeholder=s1')
     expect(await within(decidir).findByRole('link', { name: '1 QCS abierta' })).toHaveAttribute('href', '/projects/p1/attention?stakeholder=s1')
     expect(within(decidir).queryByText(/llegan en F3/)).not.toBeInTheDocument()
-    const genero = screen.getByRole('complementary', { name: 'Qué generó' })
+    const genero = screen.getByRole('region', { name: 'Qué generó' })
     expect(await within(genero).findByRole('link', { name: 'C-001 · Mejora del canal' })).toHaveAttribute('href', '/projects/p1/commitments/c1')
     expect(within(genero).queryByText(/desde F3/)).not.toBeInTheDocument()
     await userEvent.click(compromisos)
@@ -131,7 +132,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     red = espiarRed()
     expect(await screen.findByRole('heading', { name: 'Ronda campesina Tunas' })).toBeInTheDocument()
     await waitFor(() => expect(red!.a('GET', '/metadata/objects/stakeholder').length).toBeGreaterThan(0))
-    expect(await within(screen.getByRole('region', { name: 'Para decidir' })).findByText('Restringido')).toBeInTheDocument()
+    expect(await within(screen.getByRole('region', { name: 'Evaluación vigente' })).findByText('Restringida')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar la caracterización' })).not.toBeInTheDocument()
   })
 
@@ -142,7 +143,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(await within(historia).findByText(/^1 mar\. 2026 · Inferida/)).toHaveTextContent('(línea base)')
     expect(within(historia).queryByText(/2026-03-01/)).not.toBeInTheDocument()
     expect(within(historia).getByText(/ajustado a mano/)).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Para decidir' })).getByText('Cambió frente a la línea base')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Evaluación vigente' })).getByText('Cambió frente a la línea base')).toBeInTheDocument()
   })
 
   it('evaluar: pide la vista previa al completar los indicadores, exige motivo y guarda con clave, versión y motivo', async () => {
@@ -401,7 +402,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
       },
       ...base(GERENCIA_SOCIAL, true)
     ])
-    const cola = await screen.findByRole('complementary', { name: 'Qué generó' })
+    const cola = await screen.findByRole('region', { name: 'Qué generó' })
     expect(await within(cola).findByText('20 ago. 2026')).toBeInTheDocument()
   })
 
@@ -424,7 +425,7 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
     expect(await within(historia).findByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(within(historia).queryByText(/Aún no tiene evaluación/)).not.toBeInTheDocument()
     // un 403 en lo que generó es "no disponible", no una lista vacía
-    const cola = screen.getByRole('complementary', { name: 'Qué generó' })
+    const cola = screen.getByRole('region', { name: 'Qué generó' })
     expect(await within(cola).findByText('No disponible')).toBeInTheDocument()
     expect(within(cola).queryByText(/Aún no participó/)).not.toBeInTheDocument()
   })
@@ -639,14 +640,14 @@ describe('S17 · ficha de grupo de interés y S20 · nueva evaluación', () => {
       { path: '/objects/stakeholder/records/s1/related/engagement_stakeholder', body: pagina([registro('e1', { title: 'Asamblea de agosto' })]) },
       ...base(GERENCIA_SOCIAL, true)
     ])
-    const cola = await screen.findByRole('complementary', { name: 'Qué generó' })
+    const cola = await screen.findByRole('region', { name: 'Qué generó' })
     const fila = (await within(cola).findByRole('link', { name: 'Asamblea de agosto' })).closest('li')
     expect(fila).toHaveTextContent(/^Asamblea de agosto$/)
   })
 })
 
 // P-09 del rediseño de UX (DD-02 y DD-06; U-02, U-03, U-25, U-26 y U-27): la cabecera dice qué es en la letra del texto y sin
-// el estado del flujo, que se dice una sola vez en «Para decidir»; una sola primaria, retirar en «Más acciones» y la
+// el estado del flujo, que se dice una sola vez en el panel de decisión; una sola primaria, retirar en «Más acciones» y la
 // caracterización en su sección, con los campos sin dato plegados
 describe('S17 · cabecera y cuerpo de la ficha (P-09)', () => {
   const conRetiro = {
@@ -669,10 +670,24 @@ describe('S17 · cabecera y cuerpo de la ficha (P-09)', () => {
     expect(within(acciones).queryByRole('button', { name: /^Retirar/ })).not.toBeInTheDocument()
     await userEvent.click(within(acciones).getByRole('button', { name: 'Más acciones' }))
     expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: /^Retirar/ })).toBeInTheDocument()
-    // el estado, una sola vez: en «Para decidir»
+    // el estado, una sola vez: en el panel de decisión (design-system.md §6.1)
     const estados = await screen.findAllByText('Evaluado', { selector: '[data-estado]' })
     expect(estados).toHaveLength(1)
-    expect(within(screen.getByRole('region', { name: 'Para decidir' })).getByText('Evaluado')).toBe(estados[0])
+    expect(within(screen.getByRole('region', { name: 'Situación' })).getByText('Evaluado')).toBe(estados[0])
+  })
+
+  // la anatomía de ficha de E (design-system.md §6.1) con la evaluación de S06
+  it('el panel de decisión, la evaluación vigente con barras de puntaje y la trazabilidad con el actor detrás del grupo', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/s1', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    expect(await screen.findByRole('heading', { name: 'Ronda campesina Tunas', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Situación' })).toBeInTheDocument()
+    const evaluacion = screen.getByRole('region', { name: 'Evaluación vigente' })
+    expect(within(evaluacion).getByRole('meter', { name: 'Interés' })).toHaveAttribute('aria-valuenow', '4')
+    expect(within(evaluacion).getByRole('meter', { name: 'Poder' })).toHaveAttribute('aria-valuenow', '3.5')
+    expect(within(evaluacion).getByText('En contra').closest('[data-postura]')).toBeInTheDocument()
+    expect(within(evaluacion).getByText('Muy alta').closest('[data-nivel]')).toHaveAttribute('data-nivel', 'MUY ALTA')
+    const origen = screen.getByRole('region', { name: 'De dónde viene' })
+    expect(await within(origen).findByRole('link', { name: 'Ronda campesina Tunas' })).toHaveAttribute('href', '/actors/o1?project=p1')
   })
 
   it('la caracterización en su sección, con los campos sin dato plegados tras su conteo', async () => {

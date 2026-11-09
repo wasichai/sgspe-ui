@@ -24,7 +24,11 @@ test('del mapa territorial a la interacción, con el chip de territorio y el ras
 
   await page.goto('/projects/p1/stakeholders/s1')
   await expect(page.getByRole('heading', { name: 'Junta directiva comunal', level: 1 })).toBeVisible()
-  await page.getByRole('complementary', { name: 'Qué generó' }).getByRole('link', { name: 'Asamblea de agosto' }).click()
+  await page
+    .getByRole('complementary', { name: 'Trazabilidad' })
+    .getByRole('region', { name: 'Qué generó' })
+    .getByRole('link', { name: 'Asamblea de agosto' })
+    .click()
   await expect(page).toHaveURL(/\/projects\/p1\/engagements\/e1$/)
   await expect(page.getByRole('heading', { name: 'Asamblea de agosto', level: 1 })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Contexto' }).getByText('Proyecto · PRJ-01')).toBeVisible()
@@ -80,7 +84,11 @@ test('del mapa a la evidencia en el drawer y de vuelta por el rastro, con el pro
   await page.getByRole('table', { name: 'Grupos de interés' }).getByRole('link', { name: 'Junta directiva comunal', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Junta directiva comunal', level: 1 })).toBeVisible()
   // 3. la interacción
-  await page.getByRole('complementary', { name: 'Qué generó' }).getByRole('link', { name: 'Asamblea de agosto' }).click()
+  await page
+    .getByRole('complementary', { name: 'Trazabilidad' })
+    .getByRole('region', { name: 'Qué generó' })
+    .getByRole('link', { name: 'Asamblea de agosto' })
+    .click()
   await expect(page.getByRole('heading', { name: 'Asamblea de agosto', level: 1 })).toBeVisible()
   // 4. el compromiso que generó
   await page.getByRole('complementary', { name: 'Trazabilidad' }).getByRole('region', { name: 'Qué generó' }).getByRole('link', { name: /C-001/ }).click()

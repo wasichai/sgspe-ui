@@ -65,6 +65,19 @@ describe('S19 · matriz y tablero de grupos de interés', () => {
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/stakeholders/s1'))
   })
 
+  // S05 y S19: los cuadrantes con cuántos grupos tiene cada uno, en el orden del gráfico (el poder arriba, el interés a la derecha)
+  it('la matriz dice cuántos grupos hay en cada cuadrante, con el título de página y «Ver como tabla»', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders/matrix', RELACIONISTA, LEE, [...base(), { path: '/sgspe/dashboards/indicators/KPI-STK-03', body: STK03 }])
+    expect(await screen.findByRole('heading', { name: 'Matriz interés × poder', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver como tabla' })).toHaveAttribute('href', '/projects/p1/stakeholders')
+    const cuadrantes = await screen.findByRole('region', { name: 'Grupos por cuadrante' })
+    expect(
+      within(cuadrantes)
+        .getAllByRole('listitem')
+        .map((c) => c.textContent)
+    ).toEqual(['Político1', 'Estratégico1', 'Vulnerable0', 'Para monitoreo0'])
+  })
+
   it('el tablero pide stakeholders con los filtros y dice "no disponible" donde no hay permiso', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders/dashboard?periodStart=2026-09-01', RELACIONISTA, LEE, [
       ...base(),

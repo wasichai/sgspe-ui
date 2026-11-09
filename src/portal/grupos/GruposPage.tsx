@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
+import { Nivel, Postura } from '../componentes/Nivel'
 import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
 import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
@@ -22,8 +23,9 @@ import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
+import { desglose, useIndicador } from '../datos/indicadores'
 import { atributo, puedeLeer, texto, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
-import { NS } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
@@ -71,6 +73,16 @@ export function GruposPage() {
   const leePostura = definicion.isSuccess && puedeLeer(definicion.data, 'stance')
   const inactividad = Number(atributo(registroDelProyecto.data, 'inactivity_days') ?? 90)
   const filtros = FILTROS.filter((f) => f !== 'stance' || leePostura)
+  // los grupos cuyo grupo de influencia se ajustó a mano en su evaluación vigente: lo dice la matriz del proyecto (KPI-STK-03, el
+  // mismo desglose que S19), la única fuente que lo trae por grupo. en el alcance global no hay matriz: no se marca
+  const matriz = useIndicador('KPI-STK-03', { project: proyecto ? [proyecto] : [] }, Boolean(proyecto))
+  const ajustados = new Set(
+    matriz.data
+      ? desglose(matriz.data, 'stakeholder')
+          .filter((p) => p.overridden === true)
+          .map((p) => p.key)
+      : []
+  )
 
   const hoy = hoyEnLima()
   const enVistaLa = (vista: string, g: Registro) => {
@@ -110,6 +122,7 @@ export function GruposPage() {
   )
   // la etapa 3 de la revisión de UX: cada vista dice cuántos tiene con los filtros puestos
   const conteoDe = (vista: string) => (grupos.data ? grupos.data.filter((g) => enVistaLa(vista, g) && conFiltros(g)).length : null)
+  const vigentes = (grupos.data ?? []).filter((g) => g.state !== 'retired').length
   const pagina = filtrados.slice(lista.pagina * POR_PAGINA, (lista.pagina + 1) * POR_PAGINA)
   // la selección es de lo que se ve: al cambiar de vista, de filtro o de página se reinicia, y nunca viaja una fila oculta
   const claveDeVista = [lista.vista, lista.pagina, busqueda, ...FILTROS.map((f) => lista.filtro(f))].join('|')
@@ -143,25 +156,26 @@ export function GruposPage() {
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
   const paso = useSiguientePaso()
 
-  // la tabla de escritorio con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px cabe sin desplazar. esenciales lo que
-  // decide (quién, su grupo de influencia, su postura, su prioridad y su estado); secundarias, desde xl, el territorio, el
-  // responsable y el último contacto; la relación y la fecha de la evaluación son opcionales: desde 1536 px, hasta que las elija
+  // la tabla de escritorio de S06 con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px cabe sin desplazar y junto a la vista
+  // previa acoplada. cuatro esenciales, como el lienzo: el grupo con su tipo, su lugar y su grupo de influencia en la línea de
+  // metadatos (y «ajustado» si se ajustó a mano); su postura; su prioridad con barras; y su estado con el último contacto debajo.
+  // el responsable, secundaria desde xl; la relación y la fecha de la evaluación, opcionales: desde 1536 px, hasta que las elija
   // «Columnas». en «Míos» el responsable es siempre quien mira: no se dibuja
   const columnas: ColumnaPriorizada[] = [
     ...(proyecto ? [{ id: 'seleccionar', encabezado: t('comun.seleccionar'), prioridad: 'esencial' as const, encabezadoOculto: true }] : []),
-    { id: 'grupo', encabezado: t('grupos.columnas.grupo'), prioridad: 'esencial', titulo: true },
+    { id: 'grupo', encabezado: t('grupos.columnas.grupoEInfluencia'), prioridad: 'esencial', titulo: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('grupos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'territorio', encabezado: t('grupos.columnas.territorio'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    { id: 'influencia', encabezado: t('grupos.columnas.influencia'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
     {
       id: 'postura',
       encabezado: t('grupos.columnas.postura'),
       prioridad: 'esencial',
-      claseDeCelda: 'text-sm',
+      // la postura larga («En contra pero abierto a escuchar») se parte en líneas, como en S06
+      claseDeCelda: 'min-w-32 max-w-44 whitespace-normal',
       explicacion: leePostura ? undefined : { id: idDeLaPostura, tipo: 'restringido' }
     },
     { id: 'prioridad', encabezado: t('grupos.columnas.prioridad'), prioridad: 'esencial', claseDeCelda: 'text-sm', ordenable: true },
-    { id: 'estado', encabezado: t('grupos.columnas.estado'), prioridad: 'esencial' },
+    // el último contacto se parte antes de la fecha si la vista previa acoplada deja la tabla angosta
+    { id: 'estado', encabezado: t('grupos.columnas.estadoYContacto'), prioridad: 'esencial', claseDeCelda: 'min-w-40 whitespace-normal' },
     { id: 'relacion', encabezado: t('grupos.columnas.relacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
     ...(lista.vista === 'mios'
       ? []
@@ -174,8 +188,7 @@ export function GruposPage() {
             claseDeCelda: 'text-sm'
           }
         ]),
-    { id: 'evaluacion', encabezado: t('grupos.columnas.evaluacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
-    { id: 'contacto', encabezado: t('grupos.columnas.contacto'), prioridad: 'secundaria', claseDeCelda: 'text-sm' }
+    { id: 'evaluacion', encabezado: t('grupos.columnas.evaluacion'), prioridad: 'opcional', claseDeCelda: 'text-sm' }
   ]
   const celdaDe = (g: Registro, columna: string): ReactNode => {
     const evaluado = g.state === 'assessed' || Boolean(atributo(g, 'influence_group'))
@@ -183,38 +196,37 @@ export function GruposPage() {
       case 'seleccionar':
         return <CasillaDeGrupo grupo={g} seleccionado={seleccion.has(g.id)} alSeleccionar={(si) => alternar(g.id, si)} />
       case 'grupo':
-        return <CeldaDelGrupo grupo={g} />
+        return <CeldaDelGrupo grupo={g} evaluado={evaluado} ajustado={ajustados.has(g.id)} />
       case 'proyecto':
         return <ProyectoDelGrupo grupo={g} />
-      case 'territorio':
-        return <LocalidadDelGrupo grupo={g} />
-      case 'influencia':
-        return evaluado ? opcion(g, 'influence_group') || '—' : t('grupos.sinEvaluarValor')
       case 'postura':
-        return leePostura ? opcion(g, 'stance') || '—' : <Restringido describedPor={idDeLaPostura} />
+        return leePostura ? <Postura valor={atributo(g, 'stance')} /> : <Restringido femenina describedPor={idDeLaPostura} />
       case 'prioridad':
-        return evaluado ? opcion(g, 'information_priority') || '—' : t('grupos.sinEvaluarValor')
+        return evaluado ? (
+          <Nivel valor={atributo(g, 'information_priority')} escala="prioridad" nombre={t('grupos.columnas.prioridad')} />
+        ) : (
+          t('grupos.sinEvaluarValor')
+        )
       case 'estado':
-        return <EstadoChip objeto="stakeholder" estado={g.state} />
+        return (
+          <div className="flex flex-col items-start gap-1.25">
+            <EstadoChip objeto="stakeholder" estado={g.state} />
+            <UltimoContacto dia={texto(g, 'last_contact_date')} />
+          </div>
+        )
       case 'relacion':
         return opcion(g, 'relationship_status') || '—'
       case 'responsable':
         return <Persona correo={texto(g, 'owner_user_email')} />
-      case 'evaluacion':
-        return <Dia valor={texto(g, 'last_assessment_date')} />
       default:
-        return <Dia valor={texto(g, 'last_contact_date')} />
+        return <Dia valor={texto(g, 'last_assessment_date')} />
     }
   }
   // lo que decide si una columna no esencial dice lo mismo en toda la página: el dato guardado, no su rótulo
   const valorPlano = (g: Registro, columna: string): string => {
     switch (columna) {
-      case 'territorio':
-        return String(atributo(g, 'locality') ?? '')
       case 'responsable':
         return texto(g, 'owner_user_email').toLowerCase()
-      case 'contacto':
-        return texto(g, 'last_contact_date')
       default:
         return g.id
     }
@@ -225,7 +237,12 @@ export function GruposPage() {
       <EncabezadoDePagina
         vistas={<VistasDelModulo modulo="stakeholders" actual="lista" conTablero={conTablero} />}
         titulo={t('grupos.titulo')}
-        conteo={t('grupos.conteo', { n: filtrados.length, count: filtrados.length })}
+        conteo={
+          // «85 en total · esta vista muestra 23» (S06): el total sin retirados y lo que la vista y los filtros dejan
+          grupos.data && filtrados.length !== vigentes
+            ? t('grupos.conteoDeVista', { total: numeroPe(vigentes), n: numeroPe(filtrados.length) })
+            : t('grupos.conteo', { n: filtrados.length, count: filtrados.length })
+        }
         primaria={
           proyecto && escribeEnElProyecto && can('stakeholder', 'CREATE') ? (
             <Button size="sm" onClick={() => setCreando(true)}>
@@ -359,26 +376,64 @@ export function GruposPage() {
   )
 }
 
-// las celdas de la tabla de escritorio: las que leen otro registro (la localidad, el proyecto, el nombre) son componentes
-function CeldaDelGrupo({ grupo }: { grupo: Registro }) {
+// las celdas de la tabla de escritorio: las que leen otro registro (la localidad, el proyecto, el nombre) son componentes. el grupo va
+// en dos líneas (S06): su nombre, que lleva a la ficha, con el ojo de la vista previa; y debajo su tipo, su lugar y su grupo de
+// influencia («Sin evaluar» si aún no lo tiene), con «ajustado» si el grupo se fijó a mano
+function CeldaDelGrupo({ grupo, evaluado, ajustado }: { grupo: Registro; evaluado: boolean; ajustado: boolean }) {
+  const { t } = useTranslation(NS)
   const nombre = useNombreDelGrupo(grupo)
   // la lista (con su territorio y sus filtros) queda en el rastro (revisión de UX, etapa 6)
   const paso = useSiguientePaso()
+  // el lugar, si se lee: mientras llega o sin acceso no deja un hueco en la línea
+  const localidad = useRegistro('locality', atributo<string>(grupo, 'locality'))
+  const piezas = [
+    opcion(grupo, 'stakeholder_type'),
+    texto(localidad.data, 'name'),
+    evaluado ? opcion(grupo, 'influence_group') : t('grupos.sinEvaluarValor')
+  ].filter(Boolean)
   return (
     <>
-      <Link to={rutaDelGrupo(grupo)} state={paso()} className="font-medium text-sg-primary-text underline">
+      <Link to={rutaDelGrupo(grupo)} state={paso()} className="font-semibold text-sg-text hover:text-sg-primary-text hover:underline">
         <NombreDelGrupo grupo={grupo} />
       </Link>{' '}
       {/* la vista previa sin dejar la lista (ux-architecture.md §8.3, paso 2; revisión de UX, etapa 6) */}
       <BotonDeVistaPrevia objeto="stakeholder" id={grupo.id} nombre={nombre} enFila />
-      <p className="text-sg-caption text-sg-text-muted">{opcion(grupo, 'stakeholder_type')}</p>
+      {piezas.length > 0 || ajustado ? (
+        <p className="text-sg-caption text-sg-text-secondary">
+          {piezas.map((p, i) => (
+            <span key={i}>
+              {i > 0 ? ' · ' : null}
+              <span>{p}</span>
+            </span>
+          ))}
+          {ajustado ? (
+            <span
+              title={t('grupos.ajustadoAyuda')}
+              className="ml-1.5 rounded-sg-xs border border-sg-border-strong px-1 text-sg-caption font-semibold text-sg-text-secondary"
+            >
+              {t('grupos.ajustado')}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
     </>
   )
 }
 
-function LocalidadDelGrupo({ grupo }: { grupo: Registro }) {
-  const localidad = useRegistro('locality', atributo<string>(grupo, 'locality'))
-  return <>{texto(localidad.data, 'name') || '—'}</>
+// el último contacto bajo el estado (S06): el día, o que no se registró ninguno
+function UltimoContacto({ dia }: { dia: string }) {
+  const { t } = useTranslation(NS)
+  return (
+    <span className="text-sg-caption text-sg-text-secondary">
+      {dia ? (
+        <>
+          {t('grupos.ultimoContacto')}: <Dia valor={dia} />
+        </>
+      ) : (
+        t('grupos.nuncaContactado')
+      )}
+    </span>
+  )
 }
 
 // la casilla de un grupo en la tabla: se anuncia con su nombre, como la de la tarjeta del teléfono, nunca con su id (tercera pasada

@@ -105,7 +105,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
-          <section aria-label={t('grupos.actor.cargos')} className="space-y-2">
+          <Seccion titulo={t('grupos.actor.cargos')}>
             <Table aria-label={t('grupos.actor.tablaCargos')}>
               <thead>
                 <tr>
@@ -123,8 +123,8 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
               </tbody>
             </Table>
             <EstadoDeLista consultas={[cargos]} vacio={t('grupos.actor.sinCargos')} />
-          </section>
-          <section aria-label={t('grupos.actor.relaciones')} className="space-y-2">
+          </Seccion>
+          <Seccion titulo={t('grupos.actor.relaciones')}>
             <Table aria-label={t('grupos.actor.tablaRelaciones')}>
               <thead>
                 <tr>
@@ -144,7 +144,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
               </tbody>
             </Table>
             <EstadoDeLista consultas={[desde, hacia]} vacio={t('grupos.actor.sinRelaciones')} />
-          </section>
+          </Seccion>
         </div>
         <aside className="space-y-4 text-sm">
           <Seccion titulo={t('grupos.actor.proyectos')} className="space-y-1">

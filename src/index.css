@@ -143,3 +143,9 @@ table th[scope='row'] {
         animation-timeline: scroll(self inline);
     }
 }
+
+/* la banda de una festividad local en el calendario de relacionamiento (S07): el rayado de E a 135° en warning-soft sobre surface,
+   que se lee distinto de una interacción sin depender solo del color (lleva su nombre y un borde discontinuo) */
+.sg-rayado-festivo {
+    background: repeating-linear-gradient(135deg, var(--sg-warning-soft) 0 6px, var(--sg-surface) 6px 12px);
+}

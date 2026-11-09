@@ -14,6 +14,7 @@ import { useContextFilters } from '../shell/context'
 import { ErrorDeGuardado } from './ErrorDeGuardado'
 import { GuardadoParcial, useGuardarInteraccion, type Participante } from './guardarInteraccion'
 import { ConmutadorDeModo } from './ConmutadorDeModo'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { LugaresDelPunto } from '../territorio/LugaresDelPunto'
 import { useUbicacionDelTelefono, type Punto } from './ubicacion'
 import { rotuloDeOpcion, rotuloEnIdioma } from '../datos/opciones'
@@ -141,121 +142,124 @@ export function RegistroRapido({ definicion, definicionDeParticipante }: { defin
   }
 
   return (
-    <section className="mx-auto max-w-md space-y-4" aria-label={t('relacionamiento.registro.rapido')}>
-      <div className="flex items-center justify-between">
-        <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.registro.rapido')}</h1>
-        <ConmutadorDeModo rapido traspaso={{ tipo, grupos: presentes, conteos, punto: ubicacion }} />
-      </div>
-      {avisoDeBorrador && recuperado ? (
-        <AvisoDeBorrador
-          guardado={recuperado.guardado}
-          alDescartar={() => {
-            borrador.descartar()
-            limpiar()
-            setAvisoDeBorrador(false)
-          }}
+    // el ancho de lectura de las páginas y su encabezado común: el título y, a su derecha, el conmutador del modo (F-D)
+    <ContenedorDePagina variante="lectura">
+      <section className="space-y-4" aria-label={t('relacionamiento.registro.rapido')}>
+        <EncabezadoDePagina
+          titulo={t('relacionamiento.registro.rapido')}
+          secundarias={<ConmutadorDeModo rapido traspaso={{ tipo, grupos: presentes, conteos, punto: ubicacion }} />}
         />
-      ) : null}
-      <Campo etiqueta={t('relacionamiento.registro.tipo')}>
-        {(p) => (
-          <SelectNativo
-            {...p}
-            className="h-11"
-            opciones={definicion.fields.find((f) => f.name === 'engagement_type')?.enumOptions ?? []}
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value)}
+        {avisoDeBorrador && recuperado ? (
+          <AvisoDeBorrador
+            guardado={recuperado.guardado}
+            alDescartar={() => {
+              borrador.descartar()
+              limpiar()
+              setAvisoDeBorrador(false)
+            }}
           />
-        )}
-      </Campo>
-      <div className="space-y-1">
+        ) : null}
+        <Campo etiqueta={t('relacionamiento.registro.tipo')}>
+          {(p) => (
+            <SelectNativo
+              {...p}
+              className="h-11"
+              opciones={definicion.fields.find((f) => f.name === 'engagement_type')?.enumOptions ?? []}
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+            />
+          )}
+        </Campo>
+        <div className="space-y-1">
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-11 w-full"
+            disabled={telefono.ubicando}
+            aria-busy={telefono.ubicando}
+            onClick={() => telefono.leer(setUbicacion)}
+          >
+            {t('relacionamiento.registro.usarUbicacion')}
+          </Button>
+          {telefono.ubicando ? (
+            <p role="status" className="text-sg-caption text-sg-text-muted">
+              {t('relacionamiento.visita.obteniendoUbicacion')}
+            </p>
+          ) : null}
+          {ubicacion ? (
+            <p className="text-sg-caption">{t('relacionamiento.registro.ubicacion', { lat: ubicacion[1].toFixed(5), lon: ubicacion[0].toFixed(5) })}</p>
+          ) : null}
+          <LugaresDelPunto punto={ubicacion} alUsar={({ locality, community }) => setLugares({ locality: locality?.id, community: community?.id })} />
+          {telefono.sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
+        </div>
+        <DeLista consulta={grupos}>
+          {(todos) => <EleccionDeGrupos etiqueta={t('relacionamiento.registro.grupos')} grupos={todos} elegidos={presentes} alCambiar={setPresentes} grande />}
+        </DeLista>
+        <fieldset className="space-y-2">
+          <legend className="text-sg-label font-medium">{t('relacionamiento.ficha.asistentes')}</legend>
+          {sexos.flatMap((sexo) =>
+            ambitos.map((ambito) => {
+              const clave: Clave = `${sexo}|${ambito}`
+              const etiqueta = `${rotuloDeOpcion(sexo)} · ${rotuloDeOpcion(ambito)}`
+              return (
+                <div key={clave} className="flex items-center justify-between gap-2 text-sm">
+                  <span>{etiqueta}</span>
+                  <span className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="size-11"
+                      aria-label={t('relacionamiento.registro.menos', { etiqueta })}
+                      onClick={() => sumar(clave, -1)}
+                    >
+                      −
+                    </Button>
+                    <span className="w-8 text-center tabular-nums" aria-label={etiqueta}>
+                      {conteos[clave] ?? 0}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="size-11"
+                      aria-label={t('relacionamiento.registro.mas', { etiqueta })}
+                      onClick={() => sumar(clave, 1)}
+                    >
+                      +
+                    </Button>
+                  </span>
+                </div>
+              )
+            })
+          )}
+          <p role="status" className="font-medium">
+            {t('relacionamiento.registro.totales', {
+              total: numeroPe(total),
+              f: numeroPe(
+                Object.entries(conteos)
+                  .filter(([k]) => k.startsWith('FEMENINO'))
+                  .reduce((s, [, n]) => s + n, 0)
+              ),
+              m: numeroPe(
+                Object.entries(conteos)
+                  .filter(([k]) => k.startsWith('MASCULINO'))
+                  .reduce((s, [, n]) => s + n, 0)
+              )
+            })}
+          </p>
+        </fieldset>
+        <Campo etiqueta={t('relacionamiento.registro.nota')}>{(p) => <Textarea {...p} value={nota} onChange={(e) => setNota(e.target.value)} />}</Campo>
+        <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.fotoDespues')}</p>
+        {guardar.isError ? <ErrorDeGuardado error={guardar.error} proyecto={projectId} /> : null}
         <Button
           type="button"
-          variant="secondary"
           className="h-11 w-full"
-          disabled={telefono.ubicando}
-          aria-busy={telefono.ubicando}
-          onClick={() => telefono.leer(setUbicacion)}
+          disabled={!tipo || total === 0 || guardar.isPending || guardar.error instanceof GuardadoParcial}
+          onClick={enviar}
         >
-          {t('relacionamiento.registro.usarUbicacion')}
+          {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.guardarRealizada')}
         </Button>
-        {telefono.ubicando ? (
-          <p role="status" className="text-sg-caption text-sg-text-muted">
-            {t('relacionamiento.visita.obteniendoUbicacion')}
-          </p>
-        ) : null}
-        {ubicacion ? (
-          <p className="text-sg-caption">{t('relacionamiento.registro.ubicacion', { lat: ubicacion[1].toFixed(5), lon: ubicacion[0].toFixed(5) })}</p>
-        ) : null}
-        <LugaresDelPunto punto={ubicacion} alUsar={({ locality, community }) => setLugares({ locality: locality?.id, community: community?.id })} />
-        {telefono.sinUbicacion ? <p className="text-sg-caption text-sg-warning">{t('relacionamiento.registro.sinUbicacion')}</p> : null}
-      </div>
-      <DeLista consulta={grupos}>
-        {(todos) => <EleccionDeGrupos etiqueta={t('relacionamiento.registro.grupos')} grupos={todos} elegidos={presentes} alCambiar={setPresentes} grande />}
-      </DeLista>
-      <fieldset className="space-y-2">
-        <legend className="text-sg-label font-medium">{t('relacionamiento.ficha.asistentes')}</legend>
-        {sexos.flatMap((sexo) =>
-          ambitos.map((ambito) => {
-            const clave: Clave = `${sexo}|${ambito}`
-            const etiqueta = `${rotuloDeOpcion(sexo)} · ${rotuloDeOpcion(ambito)}`
-            return (
-              <div key={clave} className="flex items-center justify-between gap-2 text-sm">
-                <span>{etiqueta}</span>
-                <span className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="size-11"
-                    aria-label={t('relacionamiento.registro.menos', { etiqueta })}
-                    onClick={() => sumar(clave, -1)}
-                  >
-                    −
-                  </Button>
-                  <span className="w-8 text-center tabular-nums" aria-label={etiqueta}>
-                    {conteos[clave] ?? 0}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="size-11"
-                    aria-label={t('relacionamiento.registro.mas', { etiqueta })}
-                    onClick={() => sumar(clave, 1)}
-                  >
-                    +
-                  </Button>
-                </span>
-              </div>
-            )
-          })
-        )}
-        <p role="status" className="font-medium">
-          {t('relacionamiento.registro.totales', {
-            total: numeroPe(total),
-            f: numeroPe(
-              Object.entries(conteos)
-                .filter(([k]) => k.startsWith('FEMENINO'))
-                .reduce((s, [, n]) => s + n, 0)
-            ),
-            m: numeroPe(
-              Object.entries(conteos)
-                .filter(([k]) => k.startsWith('MASCULINO'))
-                .reduce((s, [, n]) => s + n, 0)
-            )
-          })}
-        </p>
-      </fieldset>
-      <Campo etiqueta={t('relacionamiento.registro.nota')}>{(p) => <Textarea {...p} value={nota} onChange={(e) => setNota(e.target.value)} />}</Campo>
-      <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.fotoDespues')}</p>
-      {guardar.isError ? <ErrorDeGuardado error={guardar.error} proyecto={projectId} /> : null}
-      <Button
-        type="button"
-        className="h-11 w-full"
-        disabled={!tipo || total === 0 || guardar.isPending || guardar.error instanceof GuardadoParcial}
-        onClick={enviar}
-      >
-        {guardar.isPending ? t('relacionamiento.registro.guardando') : t('relacionamiento.registro.guardarRealizada')}
-      </Button>
-      <AvisoAlSalir conCambios={conCambios} conBorrador salidaPermitida={salida} />
-    </section>
+        <AvisoAlSalir conCambios={conCambios} conBorrador salidaPermitida={salida} />
+      </section>
+    </ContenedorDePagina>
   )
 }

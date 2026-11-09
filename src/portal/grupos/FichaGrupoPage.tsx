@@ -2,13 +2,17 @@ import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
 import { CamposPlegables } from '../componentes/CamposPlegables'
 import { Seccion } from '../componentes/Seccion'
+import { Nivel, Postura } from '../componentes/Nivel'
+import { PanelDeDecision } from '../componentes/PanelDeDecision'
+import { PanelDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
+import { BarraDePuntaje } from '../componentes/Puntaje'
+import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Drawer } from '../componentes/Drawer'
-import { EstadoChip } from '../componentes/EstadoChip'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { Cargando, Consulta, NoDisponible, Restringido, NoEsDeSusProyectos } from '../componentes/Estados'
 import { FormularioDeRegistro } from '../componentes/FormularioDeRegistro'
@@ -97,6 +101,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
   const [advertencias, setAdvertencias] = useState<Advertencia[]>([])
   const [editando, setEditando] = useState(false)
   const paso = useSiguientePaso()
+  const siguiente = useSiguienteAccion('stakeholder', grupo)
   const ultima = evaluaciones.data?.[0]
   const leePostura = puedeLeer(definicion.data, 'stance')
   const leePosturaDeEvaluacion = puedeLeer(definicionDeEvaluacion.data, 'stance')
@@ -158,53 +163,85 @@ function Ficha({ grupo }: { grupo: Registro }) {
         }
       />
       <Advertencias advertencias={advertencias} />
-      {/* S17 no tiene panel de decisión: «Para decidir» hace sus veces y es el único lugar del estado (U-25) */}
-      <section aria-label={t('grupos.ficha.paraDecidir')} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Tarjeta titulo={t('grupos.ficha.estado')}>
-          <EstadoChip objeto="stakeholder" estado={grupo.state} />
-        </Tarjeta>
-        <Tarjeta titulo={t('grupos.ficha.influencia')}>
-          {evaluado ? (
-            <>
-              <p className="font-semibold">{opcion(grupo, 'influence_group')}</p>
-              <p className="text-sg-caption">
-                {t('grupos.ficha.indices', {
-                  interes: indice(atributo(grupo, 'interest_index')),
-                  poder: indice(atributo(grupo, 'power_index'))
-                })}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-sg-text-muted">{t('grupos.ficha.sinEvaluar')}</p>
-          )}
-        </Tarjeta>
-        <Tarjeta titulo={t('grupos.ficha.postura')} ayuda={t('grupos.ficha.vigenteAyuda')}>
-          {definicion.isPending ? (
-            <Cargando compacto />
-          ) : definicion.isError && !definicion.data ? (
-            <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
-          ) : leePostura ? (
-            <>
-              <p className="font-semibold">{opcion(grupo, 'stance') || '—'}</p>
-              {ultima && atributo(ultima, 'stance_changed') ? <p className="text-sg-caption text-sg-warning">{t('grupos.ficha.cambio')}</p> : null}
-            </>
-          ) : (
-            <Restringido />
-          )}
-        </Tarjeta>
-        <Tarjeta titulo={t('grupos.ficha.confianza')} ayuda={t('grupos.ficha.vigenteAyuda')}>
-          <p className="font-semibold">
-            {atributo(grupo, 'trust_score') === null || atributo(grupo, 'trust_score') === undefined
-              ? '—'
-              : t('grupos.ficha.confianzaValor', { n: Number(atributo(grupo, 'trust_score')) })}
-          </p>
-        </Tarjeta>
-        <Tarjeta titulo={t('grupos.ficha.pendientes')}>
-          <Pendientes grupo={grupo} />
-        </Tarjeta>
-      </section>
+      {/* la anatomía de ficha de E (design-system.md §6.1): el panel de decisión es el único lugar del estado (U-25), con quién
+          responde por el grupo; debajo, la evaluación vigente con sus barras de puntaje (S06) */}
+      <PanelDeDecision
+        objeto="stakeholder"
+        proyecto={proyecto}
+        estado={grupo.state}
+        desde={texto(grupo, 'state_changed_at') || null}
+        por={texto(grupo, 'state_changed_by') || null}
+        siguiente={siguiente}
+        responsable={puedeLeer(definicion.data, 'owner_user_email') ? texto(grupo, 'owner_user_email') || null : undefined}
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
+          <Seccion
+            titulo={t('grupos.previa.evaluacion')}
+            descripcion={
+              evaluado && texto(grupo, 'last_assessment_date')
+                ? t('grupos.previa.evaluacionDel', { fecha: diaPe(texto(grupo, 'last_assessment_date')) })
+                : undefined
+            }
+          >
+            <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
+              <div className="space-y-2.5">
+                {evaluado ? (
+                  <>
+                    <BarraDePuntaje etiqueta={t('grupos.matriz.interes')} valor={atributo(grupo, 'interest_index')} />
+                    <BarraDePuntaje etiqueta={t('grupos.matriz.poder')} valor={atributo(grupo, 'power_index')} />
+                  </>
+                ) : (
+                  <p className="text-sm text-sg-text-muted">{t('grupos.ficha.sinEvaluar')}</p>
+                )}
+                {/* la confianza vigente: el último valor informado, aunque la última evaluación no la traiga (ASM-087) */}
+                <div title={t('grupos.ficha.vigenteAyuda')}>
+                  <BarraDePuntaje etiqueta={t('grupos.ficha.confianza')} valor={atributo(grupo, 'trust_score')} />
+                </div>
+              </div>
+              <dl className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)] items-start gap-x-3 gap-y-2 text-sm">
+                <dt className="text-sg-text-secondary">{t('grupos.ficha.influencia')}</dt>
+                <dd>
+                  {evaluado ? (
+                    <>
+                      <span className="font-semibold">{opcion(grupo, 'influence_group') || '—'}</span>
+                      <span className="block text-sg-caption text-sg-text-secondary">
+                        {t('grupos.ficha.indices', {
+                          interes: indice(atributo(grupo, 'interest_index')),
+                          poder: indice(atributo(grupo, 'power_index'))
+                        })}
+                      </span>
+                    </>
+                  ) : (
+                    t('grupos.sinEvaluarValor')
+                  )}
+                </dd>
+                <dt className="text-sg-text-secondary" title={t('grupos.ficha.vigenteAyuda')}>
+                  {t('grupos.ficha.postura')}
+                </dt>
+                <dd>
+                  {definicion.isPending ? (
+                    <Cargando compacto />
+                  ) : definicion.isError && !definicion.data ? (
+                    <FalloDeLectura error={definicion.error} alReintentar={() => void definicion.refetch()} />
+                  ) : leePostura ? (
+                    <>
+                      <Postura valor={atributo(grupo, 'stance')} />
+                      {ultima && atributo(ultima, 'stance_changed') ? <p className="text-sg-caption text-sg-warning">{t('grupos.ficha.cambio')}</p> : null}
+                    </>
+                  ) : (
+                    <Restringido femenina />
+                  )}
+                </dd>
+                <dt className="text-sg-text-secondary">{t('grupos.columnas.prioridad')}</dt>
+                <dd>{evaluado ? <Nivel valor={atributo(grupo, 'information_priority')} escala="prioridad" /> : t('grupos.sinEvaluarValor')}</dd>
+                <dt className="text-sg-text-secondary">{t('grupos.ficha.pendientes')}</dt>
+                <dd>
+                  <Pendientes grupo={grupo} />
+                </dd>
+              </dl>
+            </div>
+          </Seccion>
           {ultima && definicionDeEvaluacion.data ? (
             <Seccion etiqueta={t('grupos.ficha.preocupaciones')} className="grid gap-3 space-y-0 text-sm sm:grid-cols-2">
               {(['concerns', 'expectations'] as const).map((c) => (
@@ -291,7 +328,7 @@ function Ficha({ grupo }: { grupo: Registro }) {
             />
           </Seccion>
         </div>
-        <Trazabilidad grupo={grupo} />
+        <Trazabilidad grupo={grupo} ultima={ultima} />
       </div>
       <EvaluacionDrawer
         grupo={grupo}
@@ -313,17 +350,6 @@ function Ficha({ grupo }: { grupo: Registro }) {
         />
       </Drawer>
     </article>
-  )
-}
-
-function Tarjeta({ titulo, ayuda, children }: { titulo: string; ayuda?: string; children: React.ReactNode }) {
-  return (
-    <Seccion etiqueta={titulo} className="space-y-1">
-      <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted" title={ayuda}>
-        {titulo}
-      </h3>
-      {children}
-    </Seccion>
   )
 }
 
@@ -398,63 +424,104 @@ function Pendientes({ grupo }: { grupo: Registro }) {
   )
 }
 
-// "Qué generó" (ux-architecture.md §8.2): las interacciones del grupo de interés (engagement_stakeholder) y los compromisos que
-// pidió (commitment_stakeholder)
-function Trazabilidad({ grupo }: { grupo: Registro }) {
+// la trazabilidad con los grupos fijos (ux-architecture.md §8.2, design-system.md §6.1): de dónde viene (la persona u organización
+// detrás del grupo y sus evaluaciones), qué generó (las interacciones en que participó, engagement_stakeholder, y los compromisos que
+// pidió, commitment_stakeholder) y lo que lo sustenta (la evaluación vigente y su base)
+function Trazabilidad({ grupo, ultima }: { grupo: Registro; ultima?: Registro }) {
   const { t } = useTranslation(NS)
   const { can } = useAuth()
   const interacciones = useRelacionados('stakeholder', grupo.id, 'engagement_stakeholder')
   const paso = useSiguientePaso()
   const compromisos = useCompromisosDelGrupo(grupo)
+  const actor = useActorDelGrupo(grupo)
+  const nombre = useNombreDelGrupo(grupo)
   const proyecto = String(atributo(grupo, 'project'))
   const dia = (e: Registro) => diaEnLima(texto(e, 'held_at') || texto(e, 'scheduled_at'))
+  const cargaOFalla = (consulta: typeof interacciones) =>
+    consulta.isPending ? (
+      <Cargando compacto />
+    ) : consulta.isError && !consulta.data ? (
+      <FalloDeLectura error={consulta.error} alReintentar={() => void consulta.refetch()} />
+    ) : null
   return (
-    <Seccion elemento="aside" etiqueta={t('grupos.ficha.trazabilidad')} className="text-sm">
-      <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('grupos.ficha.trazabilidad')}</h2>
-      <h3 className="font-medium">{t('grupos.ficha.interacciones')}</h3>
-      {interacciones.isPending ? <Cargando compacto /> : null}
-      {interacciones.isError && !interacciones.data ? <FalloDeLectura error={interacciones.error} alReintentar={() => void interacciones.refetch()} /> : null}
-      {interacciones.data?.content.length === 0 ? <p className="text-sg-text-muted">{t('grupos.ficha.sinInteracciones')}</p> : null}
-      <ul>
-        {(interacciones.data?.content ?? []).map((e) => (
-          <li key={e.id}>
+    <PanelDeTrazabilidad
+      deDondeViene={[
+        {
+          clave: 'actor',
+          titulo: t(actor.objeto === 'person' ? 'grupos.actor.persona' : 'grupos.actor.organizacion'),
+          contenido: actor.id ? (
             <Link
-              to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`}
-              state={paso()}
+              to={`/actors/${encodeURIComponent(actor.id)}?project=${encodeURIComponent(proyecto)}`}
+              state={paso(nombre)}
               className="text-sg-primary-text underline"
             >
-              {texto(e, 'title')}
+              {nombre}
             </Link>
-            {dia(e) ? (
-              <>
-                {' · '}
-                <Dia valor={dia(e)} />
-              </>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-      {can('commitment', 'READ') ? (
-        <>
-          <h3 className="font-medium">{t('grupos.ficha.compromisos')}</h3>
-          {compromisos.isPending ? <Cargando compacto /> : null}
-          {compromisos.isError && !compromisos.data ? <FalloDeLectura error={compromisos.error} alReintentar={() => void compromisos.refetch()} /> : null}
-          {compromisos.data?.content.length === 0 ? <p className="text-sg-text-muted">{t('grupos.ficha.sinCompromisos')}</p> : null}
-          <ul>
-            {(compromisos.data?.content ?? []).map((c) => (
-              <li key={c.id}>
-                <Link
-                  to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`}
-                  state={paso()}
-                  className="text-sg-primary-text underline"
-                >
-                  {[texto(c, 'code'), texto(c, 'title')].filter(Boolean).join(' · ')}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
-    </Seccion>
+          ) : null
+        }
+      ]}
+      queGenero={[
+        {
+          clave: 'interacciones',
+          titulo: t('grupos.ficha.interacciones'),
+          contenido:
+            cargaOFalla(interacciones) ??
+            (interacciones.data?.content.length ? (
+              <ul>
+                {interacciones.data.content.map((e) => (
+                  <li key={e.id}>
+                    <Link
+                      to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(e.id)}`}
+                      state={paso()}
+                      className="text-sg-primary-text underline"
+                    >
+                      {texto(e, 'title')}
+                    </Link>
+                    {dia(e) ? (
+                      <>
+                        {' · '}
+                        <Dia valor={dia(e)} />
+                      </>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null)
+        },
+        ...(can('commitment', 'READ')
+          ? [
+              {
+                clave: 'compromisos',
+                titulo: t('grupos.ficha.compromisos'),
+                contenido:
+                  cargaOFalla(compromisos) ??
+                  (compromisos.data?.content.length ? (
+                    <ul>
+                      {compromisos.data.content.map((c) => (
+                        <li key={c.id}>
+                          <Link
+                            to={`/projects/${encodeURIComponent(proyecto)}/commitments/${encodeURIComponent(c.id)}`}
+                            state={paso()}
+                            className="text-sg-primary-text underline"
+                          >
+                            {[texto(c, 'code'), texto(c, 'title')].filter(Boolean).join(' · ')}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null)
+              }
+            ]
+          : [])
+      ]}
+      loSustenta={[
+        {
+          clave: 'evaluacion',
+          titulo: t('grupos.previa.evaluacion'),
+          contenido: ultima ? [diaPe(texto(ultima, 'assessment_date')), opcion(ultima, 'basis')].filter(Boolean).join(' · ') : null
+        }
+      ]}
+      vacios={{ queGenero: t('grupos.ficha.sinInteracciones') }}
+    />
   )
 }

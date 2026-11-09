@@ -2,6 +2,9 @@ import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
+import { Button } from '@wasichai/ui'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { Seccion } from '../componentes/Seccion'
 import { NoDisponible } from '../componentes/Estados'
 import { useProyecto } from '../contexto/proyectos'
 import { desglose, useIndicador, type Indicador } from '../datos/indicadores'
@@ -46,13 +49,15 @@ export function MatrizPage() {
   const filtros = useFiltrosDeTablero()
   const indicador = useIndicador('KPI-STK-03', { ...filtros, project: [projectId] })
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h2 font-semibold">{t('grupos.matriz.titulo')}</h1>
-        <Link to={`/projects/${encodeURIComponent(projectId)}/stakeholders`} className="text-sm text-sg-primary-text underline">
-          {t('grupos.matriz.verTabla')}
-        </Link>
-      </div>
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina
+        titulo={t('grupos.matriz.titulo')}
+        secundarias={
+          <Button asChild size="sm" variant="secondary">
+            <Link to={`/projects/${encodeURIComponent(projectId)}/stakeholders`}>{t('grupos.matriz.verTabla')}</Link>
+          </Button>
+        }
+      />
       <FiltrosDeTablero alActualizar={() => void indicador.refetch()} />
       <ConsultaDeTablero consulta={proyecto}>
         {(p) => (
@@ -80,7 +85,7 @@ export function MatrizPage() {
           </ConsultaDeTablero>
         )}
       </ConsultaDeTablero>
-    </section>
+    </ContenedorDePagina>
   )
 }
 
@@ -129,7 +134,8 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
                 },
                 markArea: {
                   silent: true,
-                  itemStyle: { color: 'transparent' },
+                  // las zonas de los cuadrantes, en damero sobre el fondo (S05 y S19): se leen sin competir con los puntos
+                  itemStyle: { color: colorDe('--sg-surface-sunken') },
                   // cada rótulo en la esquina exterior de su cuadrante y con fondo: en el centro lo tapaban los puntos
                   label: {
                     color: colorDe('--sg-text-secondary'),
@@ -144,11 +150,21 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
                       { coord: [umbrales.interes, 5] }
                     ],
                     [
-                      { name: t('grupos.matriz.cuadrantes.ESTRATEGICO'), coord: [umbrales.interes, umbrales.poder], label: { position: 'insideTopRight' } },
+                      {
+                        name: t('grupos.matriz.cuadrantes.ESTRATEGICO'),
+                        coord: [umbrales.interes, umbrales.poder],
+                        label: { position: 'insideTopRight' },
+                        itemStyle: { color: 'transparent' }
+                      },
                       { coord: [5, 5] }
                     ],
                     [
-                      { name: t('grupos.matriz.cuadrantes.VULNERABLE'), coord: [1, 1], label: { position: 'insideBottomLeft' } },
+                      {
+                        name: t('grupos.matriz.cuadrantes.VULNERABLE'),
+                        coord: [1, 1],
+                        label: { position: 'insideBottomLeft' },
+                        itemStyle: { color: 'transparent' }
+                      },
                       { coord: [umbrales.interes, umbrales.poder] }
                     ],
                     [
@@ -180,31 +196,64 @@ function Matriz({ filas, sinEvaluar, umbrales, proyecto }: { filas: Punto[]; sin
           }}
         />
       </div>
-      <nav aria-label={t('grupos.matriz.puntos')} className="space-y-1 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
-        <h2 className="font-medium">
-          {t('grupos.matriz.puntos')} <span className="font-normal text-sg-text-muted">({numeroPe(puntos.length)})</span>
-        </h2>
-        <ul className="max-h-[420px] overflow-y-auto">
-          {puntos.map((p) => (
-            <li key={p.key}>
-              <EnlaceConRastro
-                to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(p.key)}`}
-                className="text-sg-primary-text underline"
-              >
-                {nombre(p)}
-              </EnlaceConRastro>{' '}
-              · {rotuloDeOpcion(p.influenceGroup ?? '')} ({numeroPe(p.interest!)}, {numeroPe(p.power!)})
-              {p.overridden ? (
-                <span className="text-sg-caption text-sg-text-muted" title={p.overrideReason}>
-                  {' '}
-                  · {t('grupos.matriz.ajustado')}
-                </span>
-              ) : null}
-              {p.stance ? <span className="text-sg-caption text-sg-text-muted"> · {rotuloDeOpcion(p.stance)}</span> : null}
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="space-y-4">
+        <Cuadrantes puntos={puntos} />
+        <nav aria-label={t('grupos.matriz.puntos')} className="space-y-1 rounded-sg-md border border-sg-border bg-sg-surface p-3 text-sm">
+          <h2 className="font-medium">
+            {t('grupos.matriz.puntos')} <span className="font-normal text-sg-text-muted">({numeroPe(puntos.length)})</span>
+          </h2>
+          <ul className="max-h-[420px] overflow-y-auto">
+            {puntos.map((p) => (
+              <li key={p.key}>
+                <EnlaceConRastro
+                  to={`/projects/${encodeURIComponent(proyecto)}/stakeholders/${encodeURIComponent(p.key)}`}
+                  className="text-sg-primary-text underline"
+                >
+                  {nombre(p)}
+                </EnlaceConRastro>{' '}
+                · {rotuloDeOpcion(p.influenceGroup ?? '')} ({numeroPe(p.interest!)}, {numeroPe(p.power!)})
+                {p.overridden ? (
+                  <span className="text-sg-caption text-sg-text-muted" title={p.overrideReason}>
+                    {' '}
+                    · {t('grupos.matriz.ajustado')}
+                  </span>
+                ) : null}
+                {p.stance ? <span className="text-sg-caption text-sg-text-muted"> · {rotuloDeOpcion(p.stance)}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
     </div>
+  )
+}
+
+// los cuatro cuadrantes con cuántos grupos tiene cada uno (S05 y S19): el poder crece hacia arriba y el interés hacia la derecha,
+// como en el gráfico. el grupo es el que asignó el servidor, también el ajustado a mano
+const CUADRANTES = ['POLITICO', 'ESTRATEGICO', 'VULNERABLE', 'PARA MONITOREO'] as const
+function Cuadrantes({ puntos }: { puntos: Punto[] }) {
+  const { t } = useTranslation(NS)
+  const cuantos = (grupo: string) => puntos.filter((p) => p.influenceGroup === grupo).length
+  return (
+    <Seccion titulo={t('grupos.matriz.cuadrantesTitulo')}>
+      <div className="grid grid-cols-[24px_minmax(0,1fr)] gap-2">
+        <span aria-hidden className="text-center text-sg-caption text-sg-text-muted [writing-mode:vertical-rl] rotate-180">
+          {t('grupos.matriz.poder')} →
+        </span>
+        <div className="space-y-1">
+          <ul className="grid grid-cols-2 gap-0.5 overflow-hidden rounded-sg-md border border-sg-border bg-sg-border">
+            {CUADRANTES.map((c) => (
+              <li key={c} data-cuadrante={c} className="flex flex-col bg-sg-surface px-3 py-2.5">
+                <span className="text-sm text-sg-text-secondary">{t(`grupos.matriz.cuadrantes.${c}`)}</span>
+                <b className="text-sg-kpi-sm font-extrabold tabular-nums text-sg-text">{numeroPe(cuantos(c))}</b>
+              </li>
+            ))}
+          </ul>
+          <p aria-hidden className="text-center text-sg-caption text-sg-text-muted">
+            {t('grupos.matriz.interes')} →
+          </p>
+        </div>
+      </div>
+    </Seccion>
   )
 }

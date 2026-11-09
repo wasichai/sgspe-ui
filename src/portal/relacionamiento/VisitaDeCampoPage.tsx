@@ -35,6 +35,7 @@ import {
   type Registro
 } from '../datos/registros'
 import { PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
+import { CAJA_DE_TABLA } from '../componentes/TablaPriorizada'
 import { diaPe, fechaPe, NS, numeroPe } from '../i18n'
 import type { Elemento } from '../mapa/api'
 import { Mapa } from '../mapa/Mapa'
@@ -100,8 +101,8 @@ function NuevaVisita() {
     if (!asignado) return <NoDisponible motivo="NOT_ASSIGNED" />
   }
   return (
-    <section className="max-w-2xl space-y-3">
-      <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.visita.nueva')}</h1>
+    <ContenedorDePagina elemento="section" variante="lectura">
+      <EncabezadoDePagina titulo={t('relacionamiento.visita.nueva')} />
       <LiderDeLaVisita proyecto={projectId} alElegir={setLider} />
       <FormularioDeRegistro
         objeto="field_visit"
@@ -109,7 +110,7 @@ function NuevaVisita() {
         campos={CAMPOS_DE_LA_VISITA}
         alGuardar={(v) => navegar(`/projects/${encodeURIComponent(projectId)}/field-visits/${encodeURIComponent(v.id)}`)}
       />
-    </section>
+    </ContenedorDePagina>
   )
 }
 
@@ -545,6 +546,8 @@ function NuevaObservacion({ visita, alGuardar }: { visita: string; alGuardar: ()
 export function VisitasPage() {
   const { t } = useTranslation(NS)
   const { projectId } = useParams()
+  const { can } = useAuth()
+  const escribe = useEscribeEnProyecto(projectId)
   const idDeProyecto = useId()
   // la página la da el servidor con su total (D10 de la revisión de UX)
   const lista = useParametrosDeLista('todas')
@@ -557,11 +560,21 @@ export function VisitasPage() {
   })
   const visitas = { ...pagina, data: pagina.data?.content, truncado: false }
   return (
-    <ContenedorDePagina elemento="section" className="space-y-3">
-      <h1 className="text-sg-h1 font-semibold">{t('relacionamiento.visitas')}</h1>
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina
+        titulo={t('relacionamiento.visitas')}
+        conteo={pagina.data?.totalElements != null ? t('relacionamiento.visita.conteo', { count: pagina.data.totalElements }) : undefined}
+        primaria={
+          projectId && escribe && can('field_visit', 'CREATE') ? (
+            <Button asChild size="sm">
+              <Link to={`/projects/${encodeURIComponent(projectId)}/field-visits/new`}>{t('relacionamiento.nuevaVisita')}</Link>
+            </Button>
+          ) : undefined
+        }
+      />
       <CuerpoDeLista lectura={visitas} vacio={t('relacionamiento.visita.sinVisitas')}>
         {(lista) => (
-          <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+          <div className={CAJA_DE_TABLA}>
             <Table aria-label={t('relacionamiento.visitas')}>
               <thead>
                 <tr>

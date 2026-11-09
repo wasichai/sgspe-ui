@@ -390,6 +390,33 @@ describe('S23 · ficha de interacción', () => {
     expect(screen.queryByText(/Asistentes: 0/)).not.toBeInTheDocument()
   })
 
+  // S07: los asistentes por sexo en una barra de dos tramos (data-1 y data-2) con su leyenda en texto
+  it('los asistentes por sexo van en una barra de dos tramos con su leyenda en texto', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, [
+      {
+        path: '/objects/engagement/records/e1',
+        body: registro(
+          'e1',
+          {
+            project: 'p1',
+            title: 'Asamblea comunal',
+            held_at: '2026-10-02T03:00:00Z',
+            attendees_total_count: 38,
+            attendees_female_count: 21,
+            attendees_male_count: 17
+          },
+          { state: 'held' }
+        )
+      },
+      ...rutas()
+    ])
+    const porSexo = await screen.findByRole('region', { name: 'Por sexo' })
+    expect(within(porSexo).getByText('21 mujeres, 17 hombres')).toBeInTheDocument()
+    const barra = within(porSexo).getByRole('img', { name: '21 mujeres, 17 hombres' })
+    expect(barra.querySelector('[data-tramo="mujeres"]')).toHaveClass('bg-sg-data-1')
+    expect(barra.querySelector('[data-tramo="hombres"]')).toHaveClass('bg-sg-data-2')
+  })
+
   it('agregar un participante escribe con el alta, relee la interacción (los conteos son derivados) y el siguiente formulario sale limpio', async () => {
     fetch = abrirPortal('/projects/p1/engagements/e1', RELACIONISTA, EQUIPO, [
       {

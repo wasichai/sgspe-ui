@@ -50,6 +50,7 @@ import {
 } from '../datos/registros'
 import { fechaPe, fechaYHoraPe, NS, numeroPe } from '../i18n'
 import { Barras } from '../tableros/comunes'
+import { BarraPorSexo } from '../componentes/Puntaje'
 import { ESTADOS_DE_ACTA_EDITABLE } from './fechas'
 import { VistaMarkdown } from './markdown'
 import { opcion } from '../datos/opciones'
@@ -270,13 +271,20 @@ function Resumen({ interaccion }: { interaccion: Registro }) {
       </p>
       <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.ficha.conteosCalculados')}</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <Barras
-          titulo={t('relacionamiento.ficha.porSexo')}
-          filas={[
-            { nombre: t('relacionamiento.ficha.femenino'), valor: n('attendees_female_count') },
-            { nombre: t('relacionamiento.ficha.masculino'), valor: n('attendees_male_count') }
-          ]}
-        />
+        {/* por sexo, una barra de dos tramos (data-1 y data-2) con su leyenda en texto (S07) */}
+        <section aria-label={t('relacionamiento.ficha.porSexo')} className="space-y-1 text-sm">
+          <h3 className="font-semibold text-sg-text">{t('relacionamiento.ficha.porSexo')}</h3>
+          {n('attendees_female_count') !== null && n('attendees_male_count') !== null ? (
+            <>
+              <p className="text-sg-text-secondary">
+                {t('comun.porSexo', { mujeres: numeroPe(n('attendees_female_count')!), hombres: numeroPe(n('attendees_male_count')!) })}
+              </p>
+              <BarraPorSexo mujeres={n('attendees_female_count')} hombres={n('attendees_male_count')} />
+            </>
+          ) : (
+            <p className="text-sg-text-muted">—</p>
+          )}
+        </section>
         <Barras
           titulo={t('relacionamiento.ficha.porAmbito')}
           filas={[

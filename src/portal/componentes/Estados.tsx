@@ -154,12 +154,13 @@ function ConMotivo({ icono, etiqueta, motivo, describedPor }: { icono: ReactNode
   )
 }
 
-export function Restringido({ describedPor }: { describedPor?: string }) {
+// femenina: el dato es una postura o una confianza («Restringida», como en S06)
+export function Restringido({ describedPor, femenina = false }: { describedPor?: string; femenina?: boolean }) {
   const { t } = useTranslation(NS)
   return (
     <ConMotivo
       icono={<Lock aria-hidden className="size-3.5" />}
-      etiqueta={t('comun.restringido')}
+      etiqueta={t(femenina ? 'comun.restringida' : 'comun.restringido')}
       motivo={t('comun.restringidoAyuda')}
       describedPor={describedPor}
     />

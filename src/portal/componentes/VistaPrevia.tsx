@@ -1,6 +1,6 @@
 import { Button, cn } from '@wasichai/ui'
 import { Eye, X } from 'lucide-react'
-import { useId, useLayoutEffect, useSyncExternalStore, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useSiguientePaso } from '../contexto/Rastro'
@@ -16,6 +16,9 @@ import { FalloDeLectura } from './LecturaConEstados'
 import { useCoincide } from './ListaEnTarjetas'
 import { PanelDeDecision } from './PanelDeDecision'
 import { useRotuloDeRegistro } from './RegistroVinculado'
+import { useNombreDelGrupo } from './NombreDeActor'
+import { PreviaDeGrupo } from '../grupos/PreviaDeGrupo'
+import { PreviaDeInteraccion } from '../relacionamiento/PreviaDeInteraccion'
 
 // la vista previa de ux-architecture.md §8.1 (revisión de UX, etapa 6): un registro relacionado en un drawer, sin salir de la
 // lista, el mapa o la ficha. vive en la consulta (?peek=objeto:id), así que una vista previa reemplaza a otra y nunca se apilan;
@@ -70,6 +73,15 @@ const DATOS: Record<string, string[]> = {
   social_program: ['program_type'],
   social_contribution: ['contribution_type']
 }
+
+// lo que dicen de más la vista previa de un grupo de interés (S06: la evaluación con barras, las definiciones y la trazabilidad) y
+// la de una interacción (S07: fecha, lugar, asistentes por sexo y trazabilidad), en lugar de sus DATOS
+const DETALLES: Record<string, ComponentType<{ registro: Registro }>> = {
+  stakeholder: PreviaDeGrupo,
+  engagement: PreviaDeInteraccion
+}
+// su tipo va en el antetítulo («Grupo de interés · Organización comunal»), como en la ficha
+const TIPO_EN_ANTETITULO: Record<string, string> = { stakeholder: 'stakeholder_type', engagement: 'engagement_type' }
 
 // la vista previa acoplada (design-system.md §5.3, préstamo de D): desde xl (1280 px), el ?peek= de una fila de una tabla de
 // lista es un panel lateral de 420 px junto a la tabla, no modal, que no la tapa; por debajo, el cajón de siempre. la monta la
@@ -141,10 +153,12 @@ function useVistaPreviaDe(objeto: string, id: string): { titulo: string; pie: Re
   const { t } = useTranslation(NS)
   const registro = useRegistro(objeto, id)
   const rotulo = useRotuloDeRegistro()
+  // un grupo de interés no tiene nombre propio: es el de su persona u organización, como en su ficha
+  const nombreDelGrupo = useNombreDelGrupo(objeto === 'stakeholder' ? registro.data : undefined)
   const paso = useSiguientePaso()
   const ruta = registro.data ? rutaDeFicha(objeto, registro.data) : null
   return {
-    titulo: registro.data ? rotulo(registro.data) : t('paginas.vistaPrevia.titulo'),
+    titulo: registro.data ? (objeto === 'stakeholder' ? nombreDelGrupo : rotulo(registro.data)) : t('paginas.vistaPrevia.titulo'),
     pie: ruta ? (
       <Button asChild size="sm">
         <Link to={ruta} state={paso(undefined, ruta)}>
@@ -219,7 +233,10 @@ function Resumen({ objeto, registro }: { objeto: string; registro: Registro }) {
   const definicion = useDefinicion(objeto)
   const siguiente = useSiguienteAccion(objeto, registro)
   const tipo = definicion.data?.label ?? ''
-  const antetitulo = [tipo, texto(registro, 'code')].filter(Boolean).join(' · ')
+  const antetitulo = [tipo, texto(registro, 'code'), Object.hasOwn(TIPO_EN_ANTETITULO, objeto) ? opcion(registro, TIPO_EN_ANTETITULO[objeto]) : '']
+    .filter(Boolean)
+    .join(' · ')
+  const Detalle = Object.hasOwn(DETALLES, objeto) ? DETALLES[objeto] : undefined
   const dato = (campo: string) =>
     opcion(registro, campo) ? (
       <div key={campo}>
@@ -230,10 +247,11 @@ function Resumen({ objeto, registro }: { objeto: string; registro: Registro }) {
   return (
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        {antetitulo ? <span className="font-sg-mono text-sg-caption text-sg-text-muted">{antetitulo}</span> : null}
+        {/* el antetítulo en versalitas de la letra del texto, como el de una ficha (S06 y S07) */}
+        {antetitulo ? <span className="basis-full text-sg-overline uppercase text-sg-text-secondary">{antetitulo}</span> : null}
         <EstadoChip objeto={objeto} estado={registro.state} />
       </div>
-      {DATOS[objeto] ? <dl className="grid gap-2 sm:grid-cols-2">{DATOS[objeto].map(dato)}</dl> : null}
+      {DETALLES[objeto] || !DATOS[objeto] ? null : <dl className="grid gap-2 sm:grid-cols-2">{DATOS[objeto].map(dato)}</dl>}
       {registro.state ? (
         <PanelDeDecision
           objeto={objeto}
@@ -246,6 +264,7 @@ function Resumen({ objeto, registro }: { objeto: string; registro: Registro }) {
           situacion={texto(registro, 'deadline_status') || undefined}
         />
       ) : null}
+      {Detalle ? <Detalle registro={registro} /> : null}
     </div>
   )
 }
