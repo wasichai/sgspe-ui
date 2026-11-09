@@ -60,6 +60,13 @@ describe('la ubicación de un registro', () => {
     expect(lugarDe('grievance', registro('q2', { area_of_influence: 'a1' }) as Registro)).toBeNull()
     expect(lugarDe('stakeholder', registro('s1', { locality: 'l1' }) as Registro)).toBe('l1')
     expect(lugarDe('stakeholder', registro('s2', {}) as Registro)).toBeNull()
+    // un proyecto (LYR-09) se ubica por su punto de referencia o su área de interés
+    expect(lugarDe('project', { ...registro('p1', {}), geometries: { location: { type: 'Point', coordinates: [-78, -8] } } } as Registro)).toBe('p1')
+    expect(
+      lugarDe('project', { ...registro('p2', {}), geometries: { location: null, interest_area: { type: 'MultiPolygon', coordinates: [] } } } as Registro)
+    ).toBe('p2')
+    expect(lugarDe('project', { ...registro('p3', {}), geometries: { location: null } } as Registro)).toBeNull()
+    expect(lugarDe('project', registro('p4', {}) as Registro)).toBeNull()
     // un objeto sin capa de gestión que lo ubique no tiene lugar
     expect(lugarDe('engagement', COMPROMISOS[0])).toBeNull()
   })
@@ -165,6 +172,51 @@ describe('ListaConMapa', () => {
     montarLista()
     expect(await screen.findByText('No se pudo leer la capa «Compromisos»: la lista sigue completa, sin el mapa.')).toBeInTheDocument()
     expect(screen.getAllByRole('option')).toHaveLength(3)
+  })
+
+  it('un proyecto se dibuja una sola vez, en su punto si lo tiene, aunque LYR-09 traiga también su área de interés', async () => {
+    const proyectos = [
+      { ...registro('p1', { name: 'Pukaqaqa' }), geometries: { location: { type: 'Point', coordinates: [-78.5, -7.9] } } },
+      { ...registro('p2', { name: 'Qorihuasi' }), geometries: { interest_area: { type: 'MultiPolygon', coordinates: [] } } }
+    ] as Registro[]
+    const area = (id: string, name: string) => ({
+      type: 'Feature',
+      id: `${id}:interest_area`,
+      geometry: {
+        type: 'MultiPolygon',
+        coordinates: [
+          [
+            [
+              [-78, -8],
+              [-77.9, -8],
+              [-77.9, -7.9],
+              [-78, -8]
+            ]
+          ]
+        ]
+      },
+      properties: { __id: id, __object: 'project', name: `Área de ${name}` }
+    })
+    fetch = mockFetch([
+      {
+        path: '/sgspe/territory/layers/LYR-09',
+        body: { type: 'FeatureCollection', features: [punto('p1', 'project', 'Pukaqaqa'), area('p1', 'Pukaqaqa'), area('p2', 'Qorihuasi')] }
+      }
+    ])
+    montar(<ListaConMapa objeto="project" etiqueta="Proyectos" registros={proyectos} nombreDe={(r) => String(r.attributes.name)} />, {
+      ruta: '/projects?view=mapa'
+    })
+    const mapa = await screen.findByRole('list', { name: 'Mapa de Proyectos' })
+    await waitFor(() =>
+      expect(
+        within(mapa)
+          .getAllByRole('button')
+          .map((b) => b.textContent)
+      ).toEqual(['Pukaqaqa', 'Área de Qorihuasi'])
+    )
+    // el portafolio no es de un proyecto: la capa se pide sin él
+    expect(fetch.calls.find((l) => l.path.startsWith('/sgspe/territory/layers/LYR-09'))!.path).not.toContain('project=')
+    expect(screen.getByText('Capa «Proyecto: ubicación y área de interés»: 2 en el mapa.')).toBeInTheDocument()
   })
 
   it('un grupo de interés se dibuja en su localidad: elegir la localidad marca la primera fila que está en ella', async () => {

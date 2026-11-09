@@ -3,6 +3,7 @@ import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
+import { useDensidad } from '../shell/densidad'
 import { CONTROL } from './Campo'
 import { Drawer } from './Drawer'
 import { FormaDelFiltro } from './FiltroDeLista'
@@ -30,7 +31,8 @@ export function BarraDeFiltros({
   frecuentes,
   todos,
   aplicados,
-  alLimpiar
+  alLimpiar,
+  vistaCompacta = false
 }: {
   vista?: ReactNode
   busqueda?: { etiqueta: string; valor: string; alCambiar: (valor: string) => void }
@@ -38,6 +40,8 @@ export function BarraDeFiltros({
   todos?: ReactNode
   aplicados: FiltroAplicado[]
   alLimpiar?: () => void
+  // la casilla «Vista compacta» a la derecha (design-system.md §3.5 y §5.3): solo donde el lienzo la pone, el portafolio (S04)
+  vistaCompacta?: boolean
 }) {
   const { t } = useTranslation(NS)
   // desde dónde se abrió el drawer: en el teléfono lleva también los frecuentes, que no caben en la barra
@@ -108,6 +112,7 @@ export function BarraDeFiltros({
           {t('comun.barraDeFiltros.limpiar')}
         </button>
       ) : null}
+      {vistaCompacta ? <CasillaDeVistaCompacta /> : null}
       <Drawer
         titulo={enTelefono ? t('comun.filtros') : t('comun.barraDeFiltros.masFiltros')}
         abierto={abierto !== null}
@@ -122,6 +127,24 @@ export function BarraDeFiltros({
         {todos ? <div className="flex flex-col gap-4">{todos}</div> : null}
       </Drawer>
     </div>
+  )
+}
+
+// «Vista compacta»: la misma preferencia de cada persona que «Densidad: Normal · Compacta» del menú de la cuenta (useDensidad), así
+// que una sigue a la otra. desde md: en el teléfono la densidad no cambia los objetivos táctiles y la barra no tiene sitio
+function CasillaDeVistaCompacta() {
+  const { t } = useTranslation(NS)
+  const [densidad, setDensidad] = useDensidad()
+  return (
+    <label className="ml-auto hidden h-8 cursor-pointer items-center gap-2 text-sm text-sg-text md:flex">
+      <input
+        type="checkbox"
+        checked={densidad === 'compacta'}
+        onChange={(e) => setDensidad(e.target.checked ? 'compacta' : 'normal')}
+        className="size-5 accent-sg-primary"
+      />
+      {t('comun.barraDeFiltros.vistaCompacta')}
+    </label>
   )
 }
 

@@ -1046,6 +1046,28 @@ const PROYECTO_CON_LUGAR = {
   ...registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa', inactivity_days: 90 }, 'active'),
   geometries: { location: { type: 'Point', coordinates: cerca(0.01, 0.01) }, interest_area: caja(-0.12, 0.09, 0.16, -0.13) }
 }
+// el portafolio en el mapa (wasichai/sgspe-ui#123): Pukaqaqa con su punto y su área de interés, Qorihuasi solo con su área (LYR-09
+// da los puntos antes que las áreas, como Layers.kt)
+const AREA_DE_QORIHUASI = caja(0.24, 0.2, 0.38, 0.07)
+const PROYECTOS_CON_LUGAR = [
+  PROYECTO_CON_LUGAR,
+  { ...registro('p2', { code: 'PRJ-02', name: 'Qorihuasi' }, 'draft'), geometries: { location: null, interest_area: AREA_DE_QORIHUASI } }
+]
+const areaDe = (id: string, name: string, geometry: unknown) => ({
+  type: 'Feature',
+  id: `${id}:interest_area`,
+  geometry,
+  properties: { __id: id, __object: 'project', name }
+})
+const CAPA_LYR_09 = {
+  type: 'FeatureCollection',
+  truncated: false,
+  features: [
+    puntoEn('p1', 'project', 'Pukaqaqa', cerca(0.01, 0.01)),
+    areaDe('p1', 'Pukaqaqa', PROYECTO_CON_LUGAR.geometries.interest_area),
+    areaDe('p2', 'Qorihuasi', AREA_DE_QORIHUASI)
+  ]
+}
 const FICHA_DEL_LUGAR = {
   locality: registro('l1', { name: 'Caserío Llamapampa', locality_type: 'CASERIO' }),
   geometry: { location: { type: 'Point', coordinates: CENTRO }, boundary: null },
@@ -1103,6 +1125,8 @@ const RESUMEN_DEL_LUGAR = {
 type Cuerpo = unknown | ((url: URL) => unknown)
 const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
   [/^\/objects\/project\/records\/p1$/, PROYECTO_CON_LUGAR],
+  [/^\/objects\/project\/records$/, pagina(PROYECTOS_CON_LUGAR)],
+  [/^\/sgspe\/territory\/layers\/LYR-09$/, CAPA_LYR_09],
   [/^\/sgspe\/territory\/layers\/LYR-02$/, CAPA_LYR_02],
   [/^\/sgspe\/territory\/layers\/LYR-05$/, CAPA_LYR_05],
   [/^\/sgspe\/territory\/layers\/LYR-19$/, (u: URL) => (u.searchParams.get('bbox') === '0,0,0,0' ? { type: 'FeatureCollection', features: [] } : CAPA_LYR_19)],

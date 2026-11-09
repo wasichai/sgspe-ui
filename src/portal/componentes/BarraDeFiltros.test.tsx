@@ -2,6 +2,7 @@ import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { montar, ubicacion } from '../../test/montar'
+import { guardarDensidad, SelectorDeDensidad } from '../shell/densidad'
 import { BarraDeFiltros } from './BarraDeFiltros'
 import { FiltroDeLista } from './FiltroDeLista'
 import { useParametrosDeLista } from './Lista'
@@ -212,6 +213,55 @@ describe('BarraDeFiltros', () => {
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Filtros/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Más filtros' })).not.toBeInTheDocument()
+  })
+
+  // design-system.md §3.5: la casilla «Vista compacta» cambia la misma preferencia de densidad que el menú de la cuenta
+  describe('«Vista compacta»', () => {
+    afterEach(() => {
+      guardarDensidad('normal')
+      localStorage.clear()
+    })
+
+    it('solo la barra que la pide la dibuja', () => {
+      montar(<BarraDeFiltros vista={<p>Selector de vista</p>} aplicados={[]} />)
+      expect(screen.queryByRole('checkbox', { name: 'Vista compacta' })).not.toBeInTheDocument()
+    })
+
+    it('es una casilla con su nombre que guarda la densidad compacta y la quita', async () => {
+      montar(<BarraDeFiltros vistaCompacta aplicados={[]} />)
+      const casilla = screen.getByRole('checkbox', { name: 'Vista compacta' })
+      expect(casilla).not.toBeChecked()
+      await userEvent.click(casilla)
+      expect(casilla).toBeChecked()
+      expect(localStorage.getItem('sgspe.densidad')).toBe('compacta')
+      expect(document.documentElement.dataset.density).toBe('compact')
+      await userEvent.click(casilla)
+      expect(casilla).not.toBeChecked()
+      expect(localStorage.getItem('sgspe.densidad')).toBe('normal')
+      expect(document.documentElement).not.toHaveAttribute('data-density')
+    })
+
+    it('marca la guardada y sigue al selector del menú de la cuenta, y el selector a ella', async () => {
+      localStorage.setItem('sgspe.densidad', 'compacta')
+      montar(
+        <>
+          <BarraDeFiltros vistaCompacta aplicados={[]} />
+          <SelectorDeDensidad />
+        </>
+      )
+      const casilla = screen.getByRole('checkbox', { name: 'Vista compacta' })
+      expect(casilla).toBeChecked()
+      await userEvent.click(screen.getByRole('radio', { name: 'Normal' }))
+      expect(casilla).not.toBeChecked()
+      await userEvent.click(casilla)
+      expect(screen.getByRole('radio', { name: 'Compacta' })).toBeChecked()
+    })
+
+    it('en inglés', () => {
+      localStorage.setItem('sgspe.lang', 'en')
+      montar(<BarraDeFiltros vistaCompacta aplicados={[]} />)
+      expect(screen.getByRole('checkbox', { name: 'Compact view' })).toBeInTheDocument()
+    })
   })
 
   it('en inglés', async () => {
