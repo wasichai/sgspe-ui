@@ -158,7 +158,7 @@ describe('ContenedorDePagina', () => {
     expect(screen.getByText('Texto largo')).toHaveAttribute('data-ancho', 'lectura')
   })
 
-  // .pg del lienzo (design-system.md §5.3): una columna con 20 px entre bloques; el relleno lateral lo pone <main> del shell
+  // .pg del lienzo (design-system.md §5.3): una columna con 20 px entre bloques
   it('apila los bloques en una columna con 20 px entre ellos y puede ser la sección o el artículo de la página', () => {
     const { unmount } = montar(<ContenedorDePagina>Contenido</ContenedorDePagina>)
     const contenedor = screen.getByText('Contenido')
@@ -167,6 +167,31 @@ describe('ContenedorDePagina', () => {
     unmount()
     montar(<ContenedorDePagina elemento="article">Ficha</ContenedorDePagina>)
     expect(screen.getByText('Ficha').tagName).toBe('ARTICLE')
+  })
+
+  // los márgenes de página de design-system.md §3.5 (16 en el teléfono, 24 en tableta, 32 desde lg) y los 24 de arriba los pone
+  // el contenedor, no el <main> del shell; uno dentro de otro no los repite
+  it('pone los márgenes de la página una sola vez', () => {
+    montar(
+      <ContenedorDePagina>
+        <ContenedorDePagina variante="lectura">Dentro</ContenedorDePagina>
+      </ContenedorDePagina>
+    )
+    const dentro = screen.getByText('Dentro')
+    expect(dentro.parentElement).toHaveClass('px-4', 'md:px-6', 'lg:px-8', 'pt-6')
+    expect(dentro).not.toHaveClass('px-4')
+    expect(dentro).not.toHaveClass('pt-6')
+  })
+})
+
+describe('la barra de acciones de una ficha en el teléfono', () => {
+  // va sobre la barra inferior de 64 px (design-system.md §5.2): su borde inferior a 64 px del pie
+  it('queda fija a 64 px del pie', () => {
+    montar(<EncabezadoDePagina titulo="Reservorio" ficha primaria={<button type="button">Registrar avance</button>} />)
+    const barra = screen.getByRole('button', { name: 'Registrar avance' }).parentElement!
+    expect(barra).toHaveAttribute('data-barra-de-acciones')
+    expect(barra).toHaveClass('max-sm:fixed', 'max-sm:bottom-16')
+    expect(barra).not.toHaveClass('max-sm:bottom-12')
   })
 })
 

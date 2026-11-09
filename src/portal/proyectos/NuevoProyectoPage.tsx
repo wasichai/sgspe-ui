@@ -18,6 +18,7 @@ import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
 import { atributo, campoDe, escribeAlgunCampo, texto, useActualizar, useCrear, useDefinicion, useRegistro, useTodos, type Registro } from '../datos/registros'
+import { opcion } from '../datos/opciones'
 import { NS } from '../i18n'
 import { useAplicarTransicion } from '../transiciones/api'
 import { CampanaDelProyecto, EquipoDelProyecto, PartesDelProyecto } from './EquipoYPartes'
@@ -414,7 +415,7 @@ function Asistente({ inicial }: { inicial?: Registro }) {
           </ul>
         </form>
       ) : null}
-      {!faltaAsignarse && paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} /> : null}
+      {!faltaAsignarse && paso === PASO_REVISION && proyecto ? <Revision proyecto={proyecto} pasos={pasos} alCambiar={(i) => void moverA(i, true)()} /> : null}
       {sinGuardar ? <Alert tone="notice">{t('proyectos.asistente.sinGuardar')}</Alert> : null}
       {fallo ? <AvisoDeConflicto error={fallo} releer={releerBorrador} alRecargar={() => setFallo(null)} /> : null}
       {enviarARevision.isError ? <AvisoDeConflicto error={enviarARevision.error} releer={releerBorrador} alRecargar={() => enviarARevision.reset()} /> : null}
@@ -457,30 +458,52 @@ function AsignacionPropia({ proyecto, asignaciones }: { proyecto: string; asigna
   )
 }
 
-function Revision({ proyecto }: { proyecto: Registro }) {
+// «Revise sus respuestas» de Civic Modern (design-system.md §6.3 y la hoja de identidad): lo escrito en cada paso, agrupado por
+// paso, con «Cambiar», que vuelve a ese paso; lo que falta se dice con «—». después, las precondiciones para activar y qué pasará
+const GRUPOS_DE_REVISION: { paso: number; campos: readonly (typeof CAMPOS_DEL_PROYECTO)[number][] }[] = [
+  { paso: PASO_IDENTIFICACION, campos: ['code', 'name', 'project_type', 'stage', 'exploration_phase', 'start_date', 'description'] },
+  { paso: PASO_UBICACION, campos: ['working_crs'] }
+]
+
+function Revision({ proyecto, pasos, alCambiar }: { proyecto: Registro; pasos: string[]; alCambiar: (paso: number) => void }) {
   const { t } = useTranslation(NS)
   const partes = useTodos('project_party', { project: proyecto.id })
   const conParte = (partes.data ?? []).some((p) => ['CLIENTE', 'OPERADOR'].includes(texto(p, 'party_role')))
   const conCrs = Boolean(atributo(proyecto, 'working_crs'))
   const definicion = useDefinicion('project')
   return (
-    <section className="space-y-3">
-      <h3 className="font-medium">{t('proyectos.asistente.revisar')}</h3>
-      <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
-        {CAMPOS_DEL_PROYECTO.map((c) => (
-          <div key={c} className="contents">
-            <dt className="text-sg-text-muted">{campoDe(definicion.data, c)?.label ?? c}</dt>
-            <dd>{texto(proyecto, c) || '—'}</dd>
+    <section className="space-y-4">
+      <h2 className="text-sg-h2 text-sg-text">{t('proyectos.asistente.revisar')}</h2>
+      {GRUPOS_DE_REVISION.map((grupo) => (
+        <div key={grupo.paso} className="rounded-sg-md border border-sg-border bg-sg-surface">
+          <div className="flex items-center justify-between gap-3 border-b border-sg-border px-4 py-2.5">
+            <h3 className="text-sg-h3 text-sg-text">{pasos[grupo.paso]}</h3>
+            <button
+              type="button"
+              onClick={() => alCambiar(grupo.paso)}
+              className="inline-flex min-h-8 items-center text-sg-body-sm font-bold text-sg-primary-text underline underline-offset-2"
+            >
+              {t('proyectos.asistente.cambiar')}
+              <span className="sr-only">: {pasos[grupo.paso]}</span>
+            </button>
           </div>
-        ))}
-      </dl>
-      <h3 className="font-medium">{t('proyectos.asistente.precondiciones')}</h3>
-      <ul className="text-sm">
-        <li data-cumple={conCrs}>
-          {conCrs ? '✓' : '✗'} {t('proyectos.asistente.preCrs')}
+          <dl className="divide-y divide-sg-border-subtle text-sg-body">
+            {grupo.campos.map((c) => (
+              <div key={c} className="grid gap-1 px-4 py-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:gap-4">
+                <dt className="font-semibold text-sg-text-secondary">{campoDe(definicion.data, c)?.label ?? c}</dt>
+                <dd className="min-w-0 break-words text-sg-text">{opcion(proyecto, c) || texto(proyecto, c) || '—'}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+      <h3 className="text-sg-h3 text-sg-text">{t('proyectos.asistente.precondiciones')}</h3>
+      <ul className="space-y-1 text-sg-body">
+        <li data-cumple={conCrs} className={conCrs ? 'text-sg-success' : 'text-sg-danger'}>
+          {conCrs ? '✓' : '✗'} <span className="text-sg-text">{t('proyectos.asistente.preCrs')}</span>
         </li>
-        <li data-cumple={conParte}>
-          {conParte ? '✓' : '✗'} {t('proyectos.asistente.preParte')}
+        <li data-cumple={conParte} className={conParte ? 'text-sg-success' : 'text-sg-danger'}>
+          {conParte ? '✓' : '✗'} <span className="text-sg-text">{t('proyectos.asistente.preParte')}</span>
         </li>
       </ul>
       <Alert tone="notice" title={t('proyectos.asistente.quePasara')}>

@@ -22,6 +22,8 @@ export interface ColumnaPriorizada {
   encabezado: string
   prioridad: PrioridadDeColumna
   numerica?: boolean
+  // el encabezado de una columna de cifras partido en dos líneas («Comp. / vencidos», S04): la columna queda angosta
+  enDosLineas?: boolean
   // el encabezado solo para lectores de pantalla (la columna de las casillas de selección)
   encabezadoOculto?: boolean
   // la explicación única de una columna con celdas restringidas o no disponibles (como ThConExplicacion): su id es el que
@@ -296,7 +298,12 @@ export function TablaPriorizada<T>({
                     return c.explicacion ? (
                       <ThExplicado key={c.id} columna={c} visibilidad={visibilidad(c)} ariaSort={ariaSort} sentido={sentido} alOrdenar={ordenar} />
                     ) : (
-                      <Th key={c.id} scope="col" aria-sort={ariaSort} className={cn(ENCABEZADO, visibilidad(c), c.numerica && 'text-right')}>
+                      <Th
+                        key={c.id}
+                        scope="col"
+                        aria-sort={ariaSort}
+                        className={cn(ENCABEZADO, visibilidad(c), c.numerica && 'text-right', c.enDosLineas && 'w-20 py-1 leading-tight whitespace-normal')}
+                      >
                         {ordenar ? (
                           <BotonDeOrden sentido={sentido} alPulsar={ordenar}>
                             {c.encabezado}

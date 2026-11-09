@@ -1,8 +1,9 @@
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
+import { ListaEnTarjetas, useCoincide, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
+import { ChevronRight, Map as MapaIcono, Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
@@ -21,12 +22,24 @@ import { NS } from '../i18n'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { Persona } from '../componentes/Persona'
+import { KpiCard } from '../componentes/KpiCard'
+import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
+import { DESDE_XL, useAcopleDeVistaPrevia, usePeek, useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { montoPe } from '../componentes/Monto'
+import { hoyEnLima } from '../datos/fechas'
+import { diaPe, numeroPe } from '../i18n'
+import { useCifrasDelPortafolio } from './cifrasDelPortafolio'
+import { useIndicadoresDelProyecto } from './TableroDelProyecto'
 
 // S06 · lista de proyectos (screens.md §3): vistas "Mis proyectos", "Activos", "En revisión" y "Todos"; filtros por tipo,
 // etapa y fase en la URL; la jefatura son las asignaciones activas con el rol de jefatura (ASM-080) y la campaña en curso,
 // la que está EN EJECUCION. los proyectos de un tenant son pocos: se leen todos y se filtran aquí. desde la tercera pasada de UX
 // (3.8), con el patrón común de las listas: las vistas en el selector, la búsqueda por código o nombre y los filtros en la barra,
-// y la tabla priorizada con el orden en la URL
+// y la tabla priorizada con el orden en la URL. con Civic Modern es el portafolio de S04 (design-system.md §6.7): el antetítulo
+// «Portafolio», las cifras de atención de cada proyecto (compromisos vencidos, QCS vencidas, riesgos altos) con sus encabezados
+// en dos líneas, en danger cuando pasan de cero y atenuadas en cero, «—» con su nota al pie si la cuenta no las lee, y la vista
+// previa del proyecto elegido (?peek=project:id) bajo la tabla desde xl, con «Ver en el mapa» y «Abrir Proyecto 360»; por debajo
+// de xl, la vista previa es el cajón del shell. en el teléfono, tarjetas
 const VISTAS = ['mine', 'active', 'in_review', 'all'] as const
 const CAMPO_DE_ORDEN: Record<string, string> = { codigo: 'code', nombre: 'name' }
 const ORDEN_INICIAL: OrdenDeTabla = { columna: 'nombre', dir: 'asc' }
@@ -82,6 +95,9 @@ export function ProyectosPage() {
     ) : (
       vacio
     )
+  const desdeXl = useCoincide(DESDE_XL)
+  const peek = usePeek()
+  const rutaDePrevia = useRutaDeVistaPrevia()
   const lasMias = lista.vista === 'mine'
   const cargando = proyectos.isPending || (lasMias && asignaciones.isPending)
   // el error de carga reemplaza la lista solo si no hay lista: un refetch fallido deja la ya cargada
@@ -103,6 +119,10 @@ export function ProyectosPage() {
     orden,
     (p, columna) => texto(p, CAMPO_DE_ORDEN[columna])
   )
+  const cifras = useCifrasDelPortafolio(filtrados.map((p) => p.id))
+  // desde xl la vista previa de un proyecto de la tabla va debajo de ella (S04), no en el cajón del shell
+  useAcopleDeVistaPrevia(telefono ? null : filtrados.map((p) => `project:${p.id}`))
+  const elegido = peek?.objeto === 'project' ? filtrados.find((p) => p.id === peek.id) : undefined
   // cada vista dice cuántos tiene con los filtros puestos (revisión de UX, etapa 3)
   const conteoDe = (vista: string) => (proyectos.data ?? []).filter((p) => enLaVista(vista, p)).length
   const chips = [
@@ -121,14 +141,26 @@ export function ProyectosPage() {
     { id: 'etapa', encabezado: t('proyectos.columnas.etapa'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('proyectos.columnas.estado'), prioridad: 'esencial' },
     { id: 'jefatura', encabezado: t('proyectos.columnas.jefatura'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
-    { id: 'campana', encabezado: t('proyectos.columnas.campana'), prioridad: 'secundaria', claseDeCelda: 'text-sm' }
+    { id: 'campana', encabezado: t('proyectos.columnas.campana'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
+    { id: 'vencidos', encabezado: t('proyectos.columnas.vencidos'), prioridad: 'esencial', numerica: true, enDosLineas: true },
+    { id: 'qcs', encabezado: t('proyectos.columnas.qcs'), prioridad: 'esencial', numerica: true, enDosLineas: true },
+    { id: 'riesgos', encabezado: t('proyectos.columnas.riesgos'), prioridad: 'esencial', numerica: true, enDosLineas: true }
   ]
   const celdaDeTabla = (p: Registro, columna: string): ReactNode => {
     switch (columna) {
       case 'codigo':
         return texto(p, 'code')
       case 'nombre':
-        return <EnlaceDeRegistro codigoAparte codigo={texto(p, 'code')} titulo={texto(p, 'name')} ruta={ruta(p)} desde={t('proyectos.titulo')} />
+        return (
+          <EnlaceDeRegistro
+            codigoAparte
+            codigo={texto(p, 'code')}
+            titulo={texto(p, 'name')}
+            ruta={ruta(p)}
+            desde={t('proyectos.titulo')}
+            previa={{ objeto: 'project', id: p.id }}
+          />
+        )
       case 'tipo':
         return opcion(p, 'project_type')
       case 'etapa':
@@ -136,7 +168,8 @@ export function ProyectosPage() {
       case 'estado':
         return <EstadoChip objeto="project" estado={p.state} />
       case 'jefatura':
-        return celda(jefaturas, jefes.get(p.id), <span className="text-sg-warning">{t('proyectos.sinJefatura')}</span>, (correos) =>
+        // sin jefatura, un aviso que se lee (S04): en cursiva y text-secondary, no un color de alerta
+        return celda(jefaturas, jefes.get(p.id), <span className="text-sg-text-secondary italic">{t('proyectos.sinJefatura')}</span>, (correos) =>
           [...correos].map((c, i) => (
             <span key={c}>
               {i ? ', ' : ''}
@@ -144,21 +177,41 @@ export function ProyectosPage() {
             </span>
           ))
         )
+      case 'vencidos':
+        return <CifraDeAtencion valor={cifras[p.id]?.compromisos} />
+      case 'qcs':
+        return <CifraDeAtencion valor={cifras[p.id]?.qcs} />
+      case 'riesgos':
+        return <CifraDeAtencion valor={cifras[p.id]?.riesgos} />
       default:
         return celda(campanas, enCurso.get(p.id), '—')
     }
   }
+  const conConfidenciales = filtrados.some((p) => cifras[p.id]?.confidenciales)
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
 
   return (
     <ContenedorDePagina>
       <EncabezadoDePagina
+        antetitulo={t('proyectos.antetitulo')}
+        antetituloEnSans
         titulo={t('proyectos.titulo')}
-        conteo={cargando || fallo || sinProyectos ? undefined : t('proyectos.conteo', { count: filtrados.length })}
+        conteo={
+          cargando || fallo || sinProyectos ? undefined : (
+            <>
+              <span>{t('proyectos.conteo', { count: filtrados.length })}</span>
+              {' · '}
+              <span>{t('proyectos.cifrasDeHoy', { fecha: diaPe(hoyEnLima()) })}</span>
+            </>
+          )
+        }
         primaria={
           can('project', 'CREATE') ? (
-            <Button asChild size="sm">
-              <Link to="/projects/new">{t('proyectos.nuevo')}</Link>
+            <Button asChild>
+              <Link to="/projects/new">
+                <Plus aria-hidden className="size-4" />
+                {t('proyectos.nuevo')}
+              </Link>
             </Button>
           ) : undefined
         }
@@ -219,8 +272,142 @@ export function ProyectosPage() {
           orden={orden}
           alOrdenar={ordenar}
           alAbrir={(p) => navegar(ruta(p))}
+          alPrevisualizar={(p) => navegar(rutaDePrevia('project', p.id))}
+          seleccionada={(p) => p.id === elegido?.id}
+          notaAlPie={
+            <div className="space-y-1">
+              <p>{t('proyectos.notaAlPie')}</p>
+              <NotaDeConfidenciales oculta={conConfidenciales} />
+            </div>
+          }
         />
       )}
+      {elegido && desdeXl && !telefono && peek ? (
+        <VistaPreviaDelProyecto
+          key={elegido.id}
+          proyecto={elegido}
+          jefatura={celda(jefaturas, jefes.get(elegido.id), <span className="text-sg-text-secondary italic">{t('proyectos.sinJefatura')}</span>, (correos) =>
+            [...correos].map((c, i) => (
+              <span key={c}>
+                {i ? ', ' : ''}
+                <Persona correo={c} />
+              </span>
+            ))
+          )}
+          campana={campanas.data?.find((c) => String(atributo(c, 'project')) === elegido.id)}
+          alCerrar={peek.cerrar}
+        />
+      ) : null}
     </ContenedorDePagina>
+  )
+}
+
+// una cifra de atención de una fila (S04): en danger y 700 cuando pasa de cero, atenuada en cero; «—» cuando la cuenta no la lee
+// o no se pudo leer (la nota al pie lo dice), «…» mientras carga. nunca un cero que no se contó
+function CifraDeAtencion({ valor }: { valor: number | null | undefined }) {
+  if (valor === undefined) return <span className="text-sg-text-muted">…</span>
+  if (valor === null) return <span className="text-sg-text-muted">—</span>
+  return <span className={valor > 0 ? 'font-bold text-sg-danger' : 'text-sg-text-muted'}>{numeroPe(valor)}</span>
+}
+
+// la vista previa del proyecto elegido bajo la tabla (S04): el panel fuerte con el antetítulo, el nombre con su estado y las dos
+// acciones, «Ver en el mapa» (el mapa del proyecto) y «Abrir Proyecto 360»; debajo, en columnas, sus datos (tipo, etapa, fase,
+// jefatura y la campaña en curso con su tope) y dos cifras del tablero del proyecto (grupos vigentes e interacciones del mes),
+// que se leen solo al elegirlo. «Cerrar» la quita de la URL
+function VistaPreviaDelProyecto({
+  proyecto,
+  jefatura,
+  campana,
+  alCerrar
+}: {
+  proyecto: Registro
+  jefatura: ReactNode
+  campana: Registro | undefined
+  alCerrar: () => void
+}) {
+  const { t } = useTranslation(NS)
+  const { de } = useIndicadoresDelProyecto(proyecto.id)
+  const base = `/projects/${encodeURIComponent(proyecto.id)}`
+  const nombre = texto(proyecto, 'name')
+  const reuniones = de('KPI-ENG-02').data
+  const meta = reuniones?.available && reuniones.denominator ? reuniones : null
+  const tope = campana ? atributo(campana, 'social_support_cap') : null
+  const moneda = campana ? texto(campana, 'currency') || 'PEN' : 'PEN'
+  const datos: [string, ReactNode][] = [
+    [t('proyectos.columnas.tipo'), opcion(proyecto, 'project_type')],
+    [t('proyectos.columnas.etapa'), opcion(proyecto, 'stage')],
+    [t('proyectos.filtros.fase'), opcion(proyecto, 'exploration_phase')],
+    [t('proyectos.columnas.jefatura'), jefatura],
+    [
+      t('proyectos.columnas.campana'),
+      campana
+        ? [texto(campana, 'name'), tope !== null && tope !== undefined && tope !== '' ? t('proyectos.previa.tope', { tope: montoPe(tope, moneda) }) : '']
+            .filter(Boolean)
+            .join(' · ')
+        : ''
+    ]
+  ]
+  const lectura = (code: string) => {
+    const l = de(code)
+    return { indicador: l.data, error: l.isError ? l.error : undefined, cargando: l.isPending }
+  }
+  return (
+    <section aria-label={t('proyectos.previa.titulo', { nombre })} className="mt-5 rounded-sg-md border-2 border-sg-border-strong bg-sg-surface">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-sg-border px-5 py-3.5">
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-sg-overline tracking-wide text-sg-text-muted uppercase">
+            {t('contexto.selloProyecto', { codigo: texto(proyecto, 'code') || proyecto.id })}
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-sg-h2 text-sg-text">{nombre}</h2>
+            <EstadoChip objeto="project" estado={proyecto.state} />
+          </div>
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button asChild variant="secondary">
+            <Link to={`${base}/map`}>
+              <MapaIcono aria-hidden className="size-4" />
+              {t('proyectos.previa.verMapa')}
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link to={`${base}/overview`}>
+              {t('proyectos.previa.abrir')}
+              <ChevronRight aria-hidden className="size-4" />
+            </Link>
+          </Button>
+          <button
+            type="button"
+            onClick={alCerrar}
+            aria-label={t('paginas.vistaPrevia.cerrar')}
+            title={t('paginas.vistaPrevia.cerrar')}
+            className="inline-flex size-8 items-center justify-center rounded-sg-md text-sg-text-secondary hover:bg-sg-surface-hover"
+          >
+            <X aria-hidden className="size-4" />
+          </button>
+        </div>
+      </div>
+      <div className="grid gap-5 px-5 py-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1.5 text-sg-body">
+          {datos
+            .filter(([, valor]) => valor !== '' && valor !== null && valor !== undefined)
+            .map(([rotulo, valor]) => (
+              <div key={rotulo} className="contents">
+                <dt className="font-semibold text-sg-text-secondary">{rotulo}</dt>
+                <dd className="min-w-0 text-sg-text">{valor}</dd>
+              </div>
+            ))}
+        </dl>
+        <KpiCard titulo={t('p360.resumen.kpis.gruposVigentes')} {...lectura('KPI-STK-01')} anidada detalle={() => null} />
+        <KpiCard
+          titulo={t('p360.resumen.kpis.interacciones')}
+          {...lectura('KPI-ENG-01')}
+          anidada
+          detalle={() =>
+            meta ? t('p360.resumen.reunionesFrenteAMeta', { n: numeroPe(meta.numerator ?? meta.value ?? 0), meta: numeroPe(meta.denominator as number) }) : null
+          }
+        />
+      </div>
+    </section>
   )
 }

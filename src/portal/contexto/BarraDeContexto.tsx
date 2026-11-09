@@ -24,19 +24,26 @@ export function BarraDeContexto() {
   const { pathname } = useLocation()
   const registro = useRegistroDeLasMigas() ?? undefined
   const territorial = esTerritorio(pathname) || territory !== null
+  // en el resumen del proyecto la banda crece (design-system.md §5.2, S05): sigue en la banda del proyecto (CabeceraDelProyecto),
+  // en surface y sin su borde, y el sello del proyecto no se repite, porque la banda dice el código y el estado
+  const enElResumen = esResumenDelProyecto(pathname) && !territorial
   return (
     <div
       className={cn(
         'flex min-h-11 shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2 md:px-6 lg:px-8',
-        territorial ? 'border-b-2 border-sg-territory-border bg-sg-territory-soft' : 'border-b border-sg-border bg-sg-bg'
+        territorial ? 'border-b-2 border-sg-territory-border bg-sg-territory-soft' : enElResumen ? 'bg-sg-surface' : 'border-b border-sg-border bg-sg-bg'
       )}
     >
       <Rastro />
       <div className="min-w-0 flex-1">{scope.kind === 'project' ? <MigasEnElProyecto registro={registro} /> : <MigasGlobales registro={registro} />}</div>
-      <Contexto />
+      {enElResumen ? null : <Contexto />}
     </div>
   )
 }
+
+// /projects/:projectId/overview (o la raíz del proyecto, que lleva ahí)
+export const esResumenDelProyecto = (pathname: string): boolean =>
+  /^\/projects\/[^/]+(\/overview)?\/?$/.test(pathname) && !/^\/projects\/new\/?$/.test(pathname)
 
 // en Acuerdos se marca Compromisos, como en la navegación local: las migas dicen la misma pestaña
 function MigasEnElProyecto({ registro }: { registro?: string }) {

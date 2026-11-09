@@ -30,8 +30,9 @@ interface Entrada {
 
 const esCambioDeEstado = (c: Cambio): boolean => c.field === 'state' && typeof c.before === 'string' && typeof c.after === 'string'
 
-// la clave lleva el límite: el editor de actas pide la misma historia con otro (500) y no deben compartir la caché
-export function Historia({ objeto, id, limite = 50, vacio }: { objeto: string; id: string; limite?: number; vacio: string }) {
+// la clave lleva el límite: el editor de actas pide la misma historia con otro (500) y no deben compartir la caché. enColumnas:
+// la «Actividad reciente» de S05, con la fecha y la hora en su columna (86 px) y la frase al lado
+export function Historia({ objeto, id, limite = 50, vacio, enColumnas }: { objeto: string; id: string; limite?: number; vacio: string; enColumnas?: boolean }) {
   const { t } = useTranslation(NS)
   const pedir = usePedir()
   const definicion = useDefinicion(objeto)
@@ -47,17 +48,20 @@ export function Historia({ objeto, id, limite = 50, vacio }: { objeto: string; i
   if (historia.isError && !historia.data) return <FalloDeLectura error={historia.error} alReintentar={() => void historia.refetch()} />
   if (historia.data.length === 0) return <p className="text-sm text-sg-text-muted">{vacio}</p>
   return (
-    <ol className="divide-y divide-sg-border-subtle text-sm">
+    <ol className={enColumnas ? 'divide-y divide-sg-border-subtle text-sg-body-sm' : 'divide-y divide-sg-border-subtle text-sm'}>
       {historia.data.map((e) => {
         const deEstado = e.changes?.find(esCambioDeEstado)
         const otros = (e.changes ?? []).filter((c) => c !== deEstado)
         return (
-          <li key={e.id} className="py-1.5">
-            <span className="text-sg-text-muted">{fechaYHoraPe(new Date(e.occurredAt))}</span> · <Persona correo={e.userEmail} /> ·{' '}
-            {t(`comun.actividad.operaciones.${e.operation}`, { defaultValue: e.operation })}
-            {deEstado ? ` ${t('comun.actividad.cambioDeEstado', { de: estado(deEstado.before), a: estado(deEstado.after) })}` : null}
-            {otros.length ? <span className="text-sg-text-secondary"> ({otros.map((c) => campo(c.field)).join(', ')})</span> : null}
-            {e.reason ? <span className="text-sg-text-secondary"> — {e.reason}</span> : null}
+          <li key={e.id} className={enColumnas ? 'grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2.5 py-2' : 'py-1.5'}>
+            <span className="text-sg-text-muted">{fechaYHoraPe(new Date(e.occurredAt))}</span>
+            {enColumnas ? null : ' · '}
+            <span>
+              <Persona correo={e.userEmail} /> · {t(`comun.actividad.operaciones.${e.operation}`, { defaultValue: e.operation })}
+              {deEstado ? ` ${t('comun.actividad.cambioDeEstado', { de: estado(deEstado.before), a: estado(deEstado.after) })}` : null}
+              {otros.length ? <span className="text-sg-text-secondary"> ({otros.map((c) => campo(c.field)).join(', ')})</span> : null}
+              {e.reason ? <span className="text-sg-text-secondary"> — {e.reason}</span> : null}
+            </span>
           </li>
         )
       })}

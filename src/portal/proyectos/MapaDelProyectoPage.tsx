@@ -1,4 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Button, cn, Table, Tabs, Td, Th } from '@wasichai/ui'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
@@ -112,26 +113,28 @@ export function MapaDelProyectoPage() {
   }
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h2 font-semibold">{t('mapa.mapaDelProyecto')}</h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={descargar}>
-            {t('mapa.capturar')}
-          </Button>
-          {capasExportables(can).length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={() => setExportando(true)}>
-              {t('exportacionGeografica.abrir')}
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina
+        titulo={t('mapa.mapaDelProyecto')}
+        secundarias={
+          <>
+            <Button variant="secondary" onClick={descargar}>
+              {t('mapa.capturar')}
             </Button>
-          ) : null}
-          {importaA(can, 'project_component') ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/territory/imports/new?project=${encodeURIComponent(projectId)}`}>{t('mapa.importar')}</Link>
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      <div className="grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
+            {capasExportables(can).length > 0 ? (
+              <Button variant="secondary" onClick={() => setExportando(true)}>
+                {t('exportacionGeografica.abrir')}
+              </Button>
+            ) : null}
+            {importaA(can, 'project_component') ? (
+              <Button asChild variant="secondary">
+                <Link to={`/territory/imports/new?project=${encodeURIComponent(projectId)}`}>{t('mapa.importar')}</Link>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="space-y-3">
           <ControlDeCapas
             ids={IDS}
@@ -210,7 +213,7 @@ export function MapaDelProyectoPage() {
       />
       <AnalisisDelProyecto proyecto={projectId} alResaltar={resaltar} />
       <DialogoDeExportacion abierto={exportando} alCerrar={() => setExportando(false)} proyecto={projectId} capaInicial="LYR-10" />
-    </section>
+    </ContenedorDePagina>
   )
 }
 

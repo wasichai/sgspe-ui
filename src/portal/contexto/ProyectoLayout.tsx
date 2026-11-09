@@ -6,7 +6,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { ErrorDeCarga, esIlegible, NoEsDeSusProyectos } from '../componentes/Estados'
 import { pestanaDeSegmento } from '../componentes/Migas'
-import { useTituloDeDocumento } from '../componentes/Pagina'
+import { MARGENES_DE_PAGINA, MARGENES_DE_RESPALDO, useTituloDeDocumento } from '../componentes/Pagina'
+import { CabeceraDelProyecto } from '../proyectos/CabeceraDelProyecto'
 import { PestanasDesplazables } from '../componentes/PestanasDesplazables'
 import { NS } from '../i18n'
 import { LEE_ACUERDOS } from '../shell/leeAcuerdos'
@@ -114,13 +115,21 @@ export function ProyectoLayout() {
       </div>
     )
   return (
-    // desde lg, la navegación local de 248 px pegada al borde izquierdo del contenido, a toda su altura (el shell da los márgenes
-    // de la página: aquí se recuperan para el panel)
-    <div className="flex flex-col gap-4 lg:-my-6 lg:-ml-8 lg:min-h-[calc(100%+3rem)] lg:flex-row lg:gap-0">
-      <NavegacionLocal projectId={projectId ?? ''} pestanas={pestanas} marcada={marcada} />
-      <div className="min-w-0 flex-1 space-y-4 lg:py-6 lg:pl-8">
-        {asignaciones.isSuccess && !escribe ? <Alert tone="notice">{t('contexto.soloLectura')}</Alert> : null}
-        <Outlet />
+    // el proyecto ocupa todo el ancho de <main> (data-ancho: el shell no le pone márgenes): en el resumen, la banda del proyecto
+    // arriba (CabeceraDelProyecto, S05 y T17); debajo, desde lg, la navegación local de 248 px pegada al borde izquierdo y a toda
+    // la altura, y el contenido, que pone sus márgenes con ContenedorDePagina o, si la pantalla aún no lo usa, con el respaldo
+    <div data-ancho="proyecto" className="flex min-h-full flex-col">
+      {marcada === 'overview' && proyecto.data ? <CabeceraDelProyecto proyecto={proyecto.data} /> : null}
+      <div className="flex flex-1 flex-col lg:flex-row">
+        <NavegacionLocal projectId={projectId ?? ''} pestanas={pestanas} marcada={marcada} />
+        <div className={cn('min-w-0 flex-1', MARGENES_DE_RESPALDO)}>
+          {asignaciones.isSuccess && !escribe ? (
+            <div className={MARGENES_DE_PAGINA}>
+              <Alert tone="notice">{t('contexto.soloLectura')}</Alert>
+            </div>
+          ) : null}
+          <Outlet />
+        </div>
       </div>
     </div>
   )
@@ -169,7 +178,11 @@ function NavegacionLocal({ projectId, pestanas, marcada }: { projectId: string; 
   }
   const nombreDe = (p: string) => t(`contexto.pestanas.${p}`, { defaultValue: '' }) || p
   return (
-    <nav aria-label={t('contexto.subnav')} className="shrink-0 text-sg-body lg:w-62 lg:border-r lg:border-sg-border lg:bg-sg-surface lg:pt-4">
+    // por debajo de lg, los márgenes de la página: en tableta la fila de pestañas va pegada a la banda; en el teléfono, el botón
+    <nav
+      aria-label={t('contexto.subnav')}
+      className="shrink-0 px-4 pt-4 text-sg-body md:px-6 md:pt-0 lg:w-62 lg:border-r lg:border-sg-border lg:bg-sg-surface lg:px-0 lg:pt-4"
+    >
       <div className="lg:sticky lg:top-0">
         {/* el teléfono: la sección abierta, y la lista entera a pedido */}
         <button

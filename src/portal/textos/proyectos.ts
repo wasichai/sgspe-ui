@@ -1,12 +1,32 @@
 // S06 lista de proyectos y S07 crear proyecto (screens.md §3)
 export const ES_PROYECTOS = {
+  antetitulo: 'Portafolio',
   titulo: 'Proyectos',
   conteo_one: '{{count}} proyecto',
   conteo_other: '{{count}} proyectos',
+  cifrasDeHoy: 'Las cifras de vencidos son de hoy, {{fecha}}.',
   nuevo: 'Nuevo proyecto',
   vistas: { mine: 'Mis proyectos', active: 'Activos', in_review: 'En revisión', all: 'Todos' },
   buscar: 'Buscar por código o nombre',
-  columnas: { codigo: 'Código', nombre: 'Nombre', tipo: 'Tipo', etapa: 'Etapa', estado: 'Estado', jefatura: 'Jefatura', campana: 'Campaña en curso' },
+  columnas: {
+    codigo: 'Código',
+    nombre: 'Nombre',
+    tipo: 'Tipo',
+    etapa: 'Etapa',
+    estado: 'Estado',
+    jefatura: 'Jefatura',
+    campana: 'Campaña en curso',
+    vencidos: 'Comp. vencidos',
+    qcs: 'QCS vencidas',
+    riesgos: 'Riesgos altos'
+  },
+  notaAlPie: '«—» en «Campaña en curso»: sin una campaña en ejecución. «—» en una cifra: su cuenta no la lee o no se pudo leer.',
+  previa: {
+    titulo: 'Vista previa de {{nombre}}',
+    verMapa: 'Ver en el mapa',
+    abrir: 'Abrir Proyecto 360',
+    tope: 'tope {{tope}}'
+  },
   filtros: { tipo: 'Tipo', etapa: 'Etapa', fase: 'Fase de exploración' },
   sinJefatura: 'Sin jefatura asignada',
   vacio: 'Un proyecto nace con «Nuevo proyecto»; después se completa su equipo, sus partes y su campaña.',
@@ -34,7 +54,8 @@ export const ES_PROYECTOS = {
     equipo: 'Equipo del proyecto',
     porDefecto: 'por defecto',
     cambiado: 'cambiado',
-    revisar: 'Revise antes de enviar',
+    revisar: 'Revise sus respuestas',
+    cambiar: 'Cambiar',
     precondiciones: 'Precondiciones para activar',
     preCrs: 'CRS de trabajo informado',
     preParte: 'Una parte «Cliente» u «Operador»',
@@ -57,13 +78,33 @@ export const ES_PROYECTOS = {
 }
 
 export const EN_PROYECTOS: typeof ES_PROYECTOS = {
+  antetitulo: 'Portfolio',
   titulo: 'Projects',
   conteo_one: '{{count}} project',
   conteo_other: '{{count}} projects',
+  cifrasDeHoy: 'Overdue figures are as of today, {{fecha}}.',
   nuevo: 'New project',
   vistas: { mine: 'My projects', active: 'Active', in_review: 'In review', all: 'All' },
   buscar: 'Search by code or name',
-  columnas: { codigo: 'Code', nombre: 'Name', tipo: 'Type', etapa: 'Stage', estado: 'Status', jefatura: 'Project lead', campana: 'Current campaign' },
+  columnas: {
+    codigo: 'Code',
+    nombre: 'Name',
+    tipo: 'Type',
+    etapa: 'Stage',
+    estado: 'Status',
+    jefatura: 'Project lead',
+    campana: 'Current campaign',
+    vencidos: 'Overdue commit.',
+    qcs: 'Overdue GIR',
+    riesgos: 'High risks'
+  },
+  notaAlPie: '“—” in “Current campaign”: no campaign in progress. “—” in a figure: your account cannot read it or it could not be read.',
+  previa: {
+    titulo: 'Preview of {{nombre}}',
+    verMapa: 'View on the map',
+    abrir: 'Open Project 360',
+    tope: 'cap {{tope}}'
+  },
   filtros: { tipo: 'Type', etapa: 'Stage', fase: 'Exploration phase' },
   sinJefatura: 'No project lead assigned',
   vacio: 'A project starts with “New project”; then its team, parties and campaign are completed.',
@@ -91,7 +132,8 @@ export const EN_PROYECTOS: typeof ES_PROYECTOS = {
     equipo: 'Project team',
     porDefecto: 'default',
     cambiado: 'changed',
-    revisar: 'Review before submitting',
+    revisar: 'Check your answers',
+    cambiar: 'Change',
     precondiciones: 'Preconditions to activate',
     preCrs: 'Working CRS set',
     preParte: 'A CLIENT or OPERATOR party',

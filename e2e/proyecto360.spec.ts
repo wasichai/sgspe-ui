@@ -33,7 +33,8 @@ test.beforeEach(async ({ page }) => {
 test('la franja lleva las cinco cifras en una fila y tiñe solo la que pide acción', async ({ page }) => {
   await page.goto('/projects/p1/overview')
   const franja = page.getByRole('region', { name: 'Salud del proyecto' })
-  const cifras = franja.getByRole('group')
+  // Civic Modern (S05): cada cifra es una celda con nombre de la RejillaDeKpi
+  const cifras = franja.getByRole('region')
   await expect(cifras).toHaveCount(5)
   await expect(franja.getByRole('link', { name: 'Compromisos vencidos: 3' })).toBeVisible()
   const filas = new Set(await cifras.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top))))
@@ -48,8 +49,9 @@ test('la franja lleva las cinco cifras en una fila y tiñe solo la que pide acci
 
 test('ningún enlace de las listas ni de los accesos del resumen se dibuja subrayado', async ({ page }) => {
   await page.goto('/projects/p1/overview')
-  const areas = page.getByRole('region', { name: 'Áreas de influencia vigentes' })
-  await expect(areas.getByRole('listitem')).toHaveCount(4)
+  // S05: las áreas en una tabla compacta con su estado
+  const areas = page.getByRole('region', { name: 'Áreas de influencia' })
+  await expect(areas.getByRole('row')).toHaveCount(4)
   await expect(page.getByRole('link', { name: 'Ver el tablero de compromisos' })).toBeVisible()
   const subrayados = await page
     .locator('main section a')
