@@ -52,6 +52,9 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'alertas', ruta: '/projects/p1/risks/warnings?view=todas' },
   { nombre: 'alerta-ficha', ruta: '/projects/p1/risks/warnings/w1' },
   { nombre: 'qcs', ruta: '/projects/p1/attention' },
+  // fase 9: la vista «Lista + mapa» de Riesgos y QCS
+  { nombre: 'riesgos-mapa', ruta: '/projects/p1/risks/register?view=mapa&selected=social_risk%3Ar1' },
+  { nombre: 'qcs-mapa', ruta: '/projects/p1/attention?view=mapa&selected=inquiry%3Ai1' },
   { nombre: 'qcs-fila', ruta: '/projects/p1/attention', abrir: 'Ver el ciclo de vida de Q-001' },
   { nombre: 'programas', ruta: '/projects/p1/programs' },
   { nombre: 'entregables', ruta: '/projects/p1/reports' },

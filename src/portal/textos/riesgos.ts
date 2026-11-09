@@ -56,7 +56,7 @@ export const ES_RIESGOS = {
   nivel: 'Nivel de riesgo',
   nivelResidual: 'Nivel residual',
   sinEvaluar: 'Sin evaluar',
-  vistas: { registro: 'Vigentes', revision: 'Revisión pendiente', mios: 'Mis riesgos', cerrados: 'Cerrados' },
+  vistas: { registro: 'Vigentes', revision: 'Revisión pendiente', mios: 'Mis riesgos', cerrados: 'Cerrados', mapa: 'Vigentes en el mapa' },
   columnas: {
     riesgo: 'Riesgo · categoría',
     proyecto: 'Proyecto',
@@ -146,7 +146,7 @@ export const EN_RIESGOS: typeof ES_RIESGOS = {
   nivel: 'Risk level',
   nivelResidual: 'Residual level',
   sinEvaluar: 'Not assessed',
-  vistas: { registro: 'Current', revision: 'Review due', mios: 'My risks', cerrados: 'Closed' },
+  vistas: { registro: 'Current', revision: 'Review due', mios: 'My risks', cerrados: 'Closed', mapa: 'Current on the map' },
   columnas: {
     riesgo: 'Risk · category',
     proyecto: 'Project',

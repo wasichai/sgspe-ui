@@ -14,6 +14,7 @@ import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
+import { ListaConMapa, ofreceMapa, VISTA_MAPA } from '../mapa/ListaConMapa'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente, posicionEn, type ValorDeOrden } from '../componentes/ordenEnCliente'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
@@ -47,7 +48,9 @@ import { comparable } from '../componentes/FiltroDeGrupo'
 // no residual); uno sin revisión no entra al mapa y se cuenta aparte. elegir una celda filtra la tabla. «Identificar riesgo» crea
 // el riesgo en identified con motivo (social_risk es requiresReason); ?nuevo=1 lo abre, y ?origin_incident= lo crea desde un
 // incidente
-const VISTAS = ['registro', 'revision', 'mios', 'cerrados'] as const
+// «Vigentes en el mapa» (VISTA_MAPA) es la vista «Lista + mapa» (design-system.md §5.3): los vigentes junto al mapa; nunca la de
+// entrada y solo si algún riesgo de la lista trae ubicación
+const VISTAS = ['registro', 'revision', 'mios', 'cerrados', VISTA_MAPA] as const
 const CAMPOS_DEL_ALTA = [
   'code',
   'title',
@@ -134,6 +137,9 @@ export function RiesgosPage() {
     orden,
     valorDeOrden
   )
+  // «Lista + mapa»: se ofrece si algún riesgo de la lista trae ubicación; en ella, sin ninguno, se dice y queda la tabla
+  const enMapa = lista.vista === VISTA_MAPA
+  const conUbicacion = ofreceMapa('social_risk', filtrados)
   const enLaVistaSinFiltros = (riesgos.data ?? []).filter((r) => enVista(lista.vista, r, user?.id)).length
   const sinEvaluar = enLaVista.filter((r) => celdaDe(r) === null).length
   // la matriz cuenta los riesgos de la vista por su celda P-I (los sin revisión no entran)
@@ -254,10 +260,10 @@ export function RiesgosPage() {
         vista={
           <SelectorDeVista
             etiqueta={t('comun.vistas')}
-            vistas={VISTAS.map((v) => ({
+            vistas={VISTAS.filter((v) => v !== VISTA_MAPA || conUbicacion || enMapa).map((v) => ({
               id: v,
               etiqueta: t(`riesgos.vistas.${v}`),
-              n: riesgos.data ? riesgos.data.filter((r) => enVista(v, r, user?.id)).length : null
+              n: v === VISTA_MAPA ? undefined : riesgos.data ? riesgos.data.filter((r) => enVista(v, r, user?.id)).length : null
             }))}
             actual={lista.vista}
             alElegir={(vista) => lista.cambiar({ view: vista, cell: null })}
@@ -299,6 +305,7 @@ export function RiesgosPage() {
             </Seccion>
             {conAlertas ? <AlertasActivas proyecto={proyecto} /> : null}
           </div>
+          {enMapa && !conUbicacion && filtrados.length > 0 ? <Alert tone="notice">{t('mapa.listaConMapa.sinUbicaciones')}</Alert> : null}
           {filtrados.length === 0 ? (
             // con la celda o el nivel puestos, el vacío los quita (rediseño de UX, 2026-10-20); sin ellos, la vista está vacía
             celda || soloAltos || buscado ? (
@@ -306,6 +313,25 @@ export function RiesgosPage() {
             ) : (
               <Vacio titulo={t('riesgos.vacio')} />
             )
+          ) : enMapa && conUbicacion ? (
+            <ListaConMapa
+              objeto="social_risk"
+              etiqueta={t('riesgos.tabla')}
+              registros={filtrados}
+              proyecto={proyecto}
+              nombreDe={(r) => [texto(r, 'code'), texto(r, 'title')].filter(Boolean).join(' · ')}
+              detalleDe={(r) => (
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <NivelDeRiesgo valor={atributo(r, 'risk_level')} />
+                  <EstadoChip objeto="social_risk" estado={r.state} />
+                </span>
+              )}
+              accionesDe={(r) => enlaceDe(r)}
+              alAbrir={(r) => {
+                const ruta = rutaDeFicha('social_risk', r)
+                if (ruta) navegar(ruta, { state: paso(t('riesgos.titulo'), ruta) })
+              }}
+            />
           ) : telefono ? (
             <ListaEnTarjetas
               etiqueta={t('riesgos.tabla')}

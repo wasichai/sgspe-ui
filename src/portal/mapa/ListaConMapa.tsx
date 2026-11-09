@@ -42,13 +42,15 @@ export const DE_LA_LISTA: Readonly<Record<string, DeLaLista>> = {
 export const lugarDe = (objeto: string, r: Registro): string | null => DE_LA_LISTA[objeto]?.lugar(r) ?? null
 
 // la vista se ofrece solo si la lista trae algún registro con ubicación
-export const ofreceMapa = (objeto: string, registros: readonly Registro[]): boolean => registros.some((r) => lugarDe(objeto, r) !== null)
+export const ofreceMapa = (objeto: string | ((r: Registro) => string), registros: readonly Registro[]): boolean =>
+  registros.some((r) => lugarDe(typeof objeto === 'string' ? objeto : objeto(r), r) !== null)
 
 // la vista del selector que la ofrece: nunca la de entrada
 export const VISTA_MAPA = 'mapa'
 
 export function ListaConMapa({
   objeto,
+  objetoDe,
   etiqueta,
   registros,
   proyecto,
@@ -57,7 +59,10 @@ export function ListaConMapa({
   accionesDe,
   alAbrir
 }: {
+  // el objeto de la lista, que dice la capa que la ubica; una lista de varios objetos con la misma capa (la cola de QCS: quejas,
+  // consultas y solicitudes en LYR-20) da además el de cada registro, que decide su ubicación y su ?selected=
   objeto: string
+  objetoDe?: (r: Registro) => string
   etiqueta: string
   registros: readonly Registro[]
   proyecto?: string
@@ -75,8 +80,11 @@ export function ListaConMapa({
   const idDeCapa = definicion?.capa ?? ''
   // la capa entera del proyecto, acotada al Perú: el mapa se encuadra a lo que dibuja, no pide por la vista
   const [estado] = useCapas(definicion ? [idDeCapa] : [], { project: proyecto, bbox: PERU })
-  const lugares = useMemo(() => new Map(registros.map((r) => [r.id, lugarDe(objeto, r)])), [registros, objeto])
-  const enLaLista = useMemo(() => new Set([...lugares.values()].filter((l): l is string => l !== null)), [lugares])
+  const deCadaUno = (r: Registro) => objetoDe?.(r) ?? objeto
+  const lugares = new Map(registros.map((r) => [r.id, lugarDe(deCadaUno(r), r)]))
+  const claveDeLugares = [...lugares].map(([id, l]) => `${id}:${l ?? ''}`).join('|')
+  // la clave resume los lugares: la misma lista da el mismo conjunto, y el mapa no vuelve a poner sus datos
+  const enLaLista = useMemo(() => new Set([...lugares.values()].filter((l): l is string => l !== null)), [claveDeLugares])
   // solo los elementos de los registros de la lista: el mapa no muestra lo que la lista no tiene
   const datos = estado?.datos
   const filtrados = useMemo<Coleccion | null>(
@@ -88,10 +96,10 @@ export function ListaConMapa({
     filtrados && definicion ? [{ id: idDeCapa, datos: filtrados, color: capa(idDeCapa)!.color, ...dibujoDe(idDeCapa), seleccionable: true }] : []
 
   const [objetoElegido, idElegido] = busqueda.get('selected')?.split(':') ?? []
-  const elegido = objetoElegido === objeto ? registros.find((r) => r.id === idElegido) : undefined
+  const elegido = registros.find((r) => r.id === idElegido && deCadaUno(r) === objetoElegido)
   const elegir = (r: Registro | undefined) => {
     const siguiente = new URLSearchParams(busqueda)
-    if (r) siguiente.set('selected', `${objeto}:${r.id}`)
+    if (r) siguiente.set('selected', `${deCadaUno(r)}:${r.id}`)
     else siguiente.delete('selected')
     fijar(siguiente, { replace: true })
   }

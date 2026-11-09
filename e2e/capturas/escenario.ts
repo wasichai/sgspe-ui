@@ -222,7 +222,7 @@ const QUEJA = registro(
 )
 // la cola de S11: dos vencidas, una por vencer y tres al día, de los tres tipos
 const qcs = (id: string, campos: Record<string, unknown>, estado: string) =>
-  registro(id, { project: 'p1', owner_user_email: 'gvm@sgspe.test', anonymous: false, ...campos }, estado)
+  registro(id, { project: 'p1', owner_user_email: 'gvm@sgspe.test', anonymous: false, community: 'c1', ...campos }, estado)
 const VENCIDA = qcs(
   'g3',
   {
@@ -301,7 +301,7 @@ const COLA = {
   readable: ['grievance', 'inquiry', 'stakeholder_request']
 }
 const riesgo = (id: string, campos: Record<string, unknown>, estado: string) =>
-  registro(id, { project: 'p1', owner_user_email: 'srm@sgspe.test', ...campos }, estado)
+  registro(id, { project: 'p1', owner_user_email: 'srm@sgspe.test', community: 'c1', ...campos }, estado)
 const RIESGOS = [
   riesgo(
     'r1',
@@ -863,6 +863,25 @@ const CAPA_LYR_17 = {
     })
   ]
 }
+// las QCS (LYR-20) y los riesgos (LYR-21) con su punto, para la vista «Lista + mapa» de Riesgos y QCS
+const CAPA_LYR_20 = {
+  type: 'FeatureCollection',
+  features: [
+    puntoEn('g3', 'grievance', 'Q-003', cerca(-0.05, 0.02)),
+    puntoEn('g5', 'grievance', 'Q-005', cerca(0.07, 0.03)),
+    puntoEn('i1', 'inquiry', 'C-001', cerca(0.0, -0.01)),
+    puntoEn('g4', 'grievance', 'Q-004', cerca(0.1, -0.05))
+  ]
+}
+const CAPA_LYR_21 = {
+  type: 'FeatureCollection',
+  features: [
+    puntoEn('r1', 'social_risk', 'R-001', cerca(0.02, 0.01), { risk_level: 'CRITICO' }),
+    puntoEn('r3', 'social_risk', 'R-003', cerca(-0.06, -0.04), { risk_level: 'ALTO' }),
+    puntoEn('r5', 'social_risk', 'R-005', cerca(0.09, 0.05), { risk_level: 'ALTO' }),
+    puntoEn('r2', 'social_risk', 'R-002', cerca(0.12, -0.02), { risk_level: 'MEDIO' })
+  ]
+}
 const PROYECTO_CON_LUGAR = {
   ...registro('p1', { code: 'PRJ-01', name: 'Pukaqaqa', inactivity_days: 90 }, 'active'),
   geometries: { location: { type: 'Point', coordinates: cerca(0.01, 0.01) }, interest_area: caja(-0.12, 0.09, 0.16, -0.13) }
@@ -928,6 +947,8 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
   [/^\/sgspe\/territory\/layers\/LYR-05$/, CAPA_LYR_05],
   [/^\/sgspe\/territory\/layers\/LYR-19$/, (u: URL) => (u.searchParams.get('bbox') === '0,0,0,0' ? { type: 'FeatureCollection', features: [] } : CAPA_LYR_19)],
   [/^\/sgspe\/territory\/layers\/LYR-17$/, CAPA_LYR_17],
+  [/^\/sgspe\/territory\/layers\/LYR-20$/, CAPA_LYR_20],
+  [/^\/sgspe\/territory\/layers\/LYR-21$/, CAPA_LYR_21],
   [/^\/sgspe\/territory\/localities\/l1\/card$/, FICHA_DEL_LUGAR],
   [/^\/sgspe\/dashboards\/indicators\/KPI-TER-01$/, RESUMEN_DEL_LUGAR],
   [/^\/auth\/me\/permissions$/, permisos(admin)],
