@@ -28,6 +28,8 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'revision-ejecutiva', ruta: '/dashboards/executive' },
   { nombre: 'proyectos', ruta: '/projects' },
   { nombre: 'proyectos-previa', ruta: '/projects?view=all&peek=project%3Ap1' },
+  // «Tabla · Mapa» del portafolio (wasichai/sgspe-ui#123): la lista junto al mapa con Pukaqaqa elegido y su vista previa
+  { nombre: 'proyectos-mapa', ruta: '/projects?view=mapa&selected=project%3Ap1' },
   { nombre: 'p360-resumen', ruta: '/projects/p1/overview' },
   { nombre: 'grupos', ruta: '/projects/p1/stakeholders' },
   { nombre: 'grupos-previa', ruta: '/projects/p1/stakeholders?peek=stakeholder%3As1' },
@@ -95,6 +97,7 @@ const PRINCIPALES = [
   'inicio',
   'revision-ejecutiva',
   'proyectos',
+  'proyectos-mapa',
   'p360-resumen',
   'grupos',
   'relacionamiento',

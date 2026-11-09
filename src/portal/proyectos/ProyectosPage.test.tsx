@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { definicion, montar, pagina, registro, workflow } from '../../test/montar'
 import { ROL_DE_JEFATURA } from '../config'
 import { useMisAsignaciones } from '../contexto/proyectos'
@@ -9,6 +9,9 @@ import { useTodos } from '../datos/registros'
 import { abrirPortal, rutaActual } from '../../test/pantalla'
 import { ProyectosPage } from './ProyectosPage'
 import { ADMINISTRACION_DE_PROYECTO, AUDITORA, permisos, RELACIONISTA } from '../../test/portal'
+import { guardarDensidad } from '../shell/densidad'
+
+vi.mock('../mapa/Mapa', () => import('../../test/mapaFalso'))
 
 let fetch: FetchMock | null = null
 beforeEach(() => {
@@ -414,5 +417,110 @@ describe('S04 · portafolio', () => {
     await userEvent.click(within(previa).getByRole('button', { name: 'Cerrar la vista previa' }))
     expect(screen.queryByRole('region', { name: 'Vista previa de Pukaqaqa' })).not.toBeInTheDocument()
     expect(rutaActual()).toBe('/projects')
+  })
+})
+
+// S04 · «Tabla · Mapa» (wasichai/sgspe-ui#123, design-system.md §5.3 y §6.7): el portafolio en la vista «Lista + mapa», cada
+// proyecto en su punto o su área de interés (LYR-09), ofrecida solo si algún proyecto trae ubicación; y «Vista compacta» en la
+// barra de filtros, la misma preferencia del menú de la cuenta
+describe('S04 · portafolio en el mapa', () => {
+  const conLugar = (r: ReturnType<typeof registro>, geometries: Record<string, unknown>) => ({ ...r, geometries })
+  const UBICADOS = [
+    conLugar(P1, { location: { type: 'Point', coordinates: [-78.5, -7.9] }, interest_area: null }),
+    conLugar(P2, { location: null, interest_area: { type: 'MultiPolygon', coordinates: [] } }),
+    conLugar(P3, { location: null, interest_area: null })
+  ]
+  const punto = (id: string, name: string) => ({
+    type: 'Feature',
+    id: `${id}:location`,
+    geometry: { type: 'Point', coordinates: [-78.5, -7.9] },
+    properties: { __id: id, __object: 'project', name }
+  })
+  const LYR_09 = { type: 'FeatureCollection', truncated: false, features: [punto('p1', 'Pukaqaqa'), punto('p2', 'Qorihuasi')] }
+  const conMapa = (proyectos = UBICADOS) => [
+    { path: '/objects/project/records', body: pagina(proyectos) },
+    { path: '/sgspe/territory/layers/LYR-09', body: LYR_09 },
+    {
+      path: '/sgspe/dashboards/project',
+      body: { dashboard: 'project', computedAt: '2026-10-16T15:00:00Z', filters: {}, indicators: [] }
+    },
+    ...rutas()
+  ]
+  const presentacion = () => screen.getByRole('group', { name: 'Presentación del portafolio' })
+  afterEach(() => guardarDensidad('normal'))
+
+  it('sin ningún proyecto con ubicación no ofrece el mapa', async () => {
+    fetch = abrirPortal('/projects', RELACIONISTA, LECTOR, rutas())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(screen.queryByRole('group', { name: 'Presentación del portafolio' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mapa' })).not.toBeInTheDocument()
+  })
+
+  it('con algún proyecto ubicado ofrece «Tabla · Mapa»; «Mapa» lleva la lista junto al mapa con ?view=mapa', async () => {
+    fetch = abrirPortal('/projects', RELACIONISTA, LECTOR, conMapa())
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(within(presentacion()).getByRole('button', { name: 'Tabla' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(within(presentacion()).getByRole('button', { name: 'Mapa' }))
+    expect(rutaActual()).toBe('/projects?view=mapa')
+    expect(within(presentacion()).getByRole('button', { name: 'Mapa' })).toHaveAttribute('aria-pressed', 'true')
+    // el portafolio entero en el mapa (lo que la cuenta lee, con la búsqueda y los filtros): sin las vistas de la tabla
+    const lista = await screen.findByRole('listbox', { name: 'Proyectos' })
+    expect(within(lista).getAllByRole('option')).toHaveLength(3)
+    expect(screen.queryByRole('radio', { name: /^Mis proyectos/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Proyectos' })).not.toBeInTheDocument()
+    expect(within(lista).getByRole('option', { name: /Sondor/ })).toHaveTextContent('Sin ubicación')
+    const mapa = await screen.findByRole('list', { name: 'Mapa de Proyectos' })
+    await waitFor(() => expect(within(mapa).getAllByRole('button')).toHaveLength(2))
+    const pedido = fetch.calls.find((l) => l.path.startsWith('/sgspe/territory/layers/LYR-09'))!
+    expect(pedido.path).not.toContain('project=')
+    // «Tabla» vuelve a la tabla
+    await userEvent.click(within(presentacion()).getByRole('button', { name: 'Tabla' }))
+    expect(rutaActual()).toBe('/projects')
+    await waitFor(() => expect(filas()).toHaveLength(2))
+  })
+
+  it('la lista y el mapa se siguen por ?selected=, y el elegido trae su vista previa', async () => {
+    fetch = abrirPortal('/projects?view=mapa', RELACIONISTA, LECTOR, conMapa())
+    const mapa = await screen.findByRole('list', { name: 'Mapa de Proyectos' })
+    await userEvent.click(await screen.findByRole('option', { name: /Qorihuasi/ }))
+    expect(rutaActual()).toBe('/projects?view=mapa&selected=project%3Ap2')
+    expect(mapa).toHaveAttribute('data-seleccion', 'p2')
+    const previa = await screen.findByRole('region', { name: 'Vista previa de Qorihuasi' })
+    expect(within(previa).getByRole('link', { name: 'Abrir Proyecto 360' })).toHaveAttribute('href', '/projects/p2/overview')
+    // elegir un punto marca su fila y cambia la vista previa
+    await userEvent.click(await within(mapa).findByRole('button', { name: 'Pukaqaqa' }))
+    expect(screen.getByRole('option', { name: /Pukaqaqa/ })).toHaveAttribute('aria-selected', 'true')
+    expect(rutaActual()).toBe('/projects?view=mapa&selected=project%3Ap1')
+    expect(await screen.findByRole('region', { name: 'Vista previa de Pukaqaqa' })).toBeInTheDocument()
+    // «Cerrar» la quita de la URL
+    await userEvent.click(within(screen.getByRole('region', { name: 'Vista previa de Pukaqaqa' })).getByRole('button', { name: 'Cerrar la vista previa' }))
+    expect(rutaActual()).toBe('/projects?view=mapa')
+    expect(screen.queryByRole('region', { name: /^Vista previa de/ })).not.toBeInTheDocument()
+  })
+
+  it('en el mapa siguen la búsqueda y los filtros', async () => {
+    fetch = abrirPortal('/projects?view=mapa&stage=FACTIBILIDAD', RELACIONISTA, LECTOR, conMapa())
+    const lista = await screen.findByRole('listbox', { name: 'Proyectos' })
+    expect(
+      within(lista)
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+    ).toEqual([expect.stringContaining('Qorihuasi')])
+  })
+
+  it('con ?view=mapa y ningún proyecto ubicado, lo dice y deja la tabla', async () => {
+    fetch = abrirPortal('/projects?view=mapa', RELACIONISTA, LECTOR, rutas())
+    expect(await screen.findByText('Ningún proyecto trae ubicación: no hay nada que mostrar en el mapa.')).toBeInTheDocument()
+    await waitFor(() => expect(filas()).toHaveLength(3))
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('«Vista compacta» en la barra de filtros cambia la densidad de la persona', async () => {
+    fetch = abrirPortal('/projects', RELACIONISTA, LECTOR, rutas())
+    const casilla = within(await screen.findByRole('group', { name: 'Filtros' })).getByRole('checkbox', { name: 'Vista compacta' })
+    expect(casilla).not.toBeChecked()
+    await userEvent.click(casilla)
+    expect(localStorage.getItem('sgspe.densidad')).toBe('compacta')
+    expect(document.documentElement.dataset.density).toBe('compact')
   })
 })

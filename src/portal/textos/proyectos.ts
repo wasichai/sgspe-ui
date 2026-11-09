@@ -28,6 +28,13 @@ export const ES_PROYECTOS = {
     tope: 'tope {{tope}}'
   },
   filtros: { tipo: 'Tipo', etapa: 'Etapa', fase: 'Fase de exploración' },
+  // «Tabla · Mapa» (S04): el portafolio en la tabla o junto al mapa, cada proyecto en su punto o su área de interés
+  presentacion: {
+    titulo: 'Presentación del portafolio',
+    tabla: 'Tabla',
+    mapa: 'Mapa',
+    sinUbicaciones: 'Ningún proyecto trae ubicación: no hay nada que mostrar en el mapa.'
+  },
   sinJefatura: 'Sin jefatura asignada',
   vacio: 'Un proyecto nace con «Nuevo proyecto»; después se completa su equipo, sus partes y su campaña.',
   asistente: {
@@ -106,6 +113,12 @@ export const EN_PROYECTOS: typeof ES_PROYECTOS = {
     tope: 'cap {{tope}}'
   },
   filtros: { tipo: 'Type', etapa: 'Stage', fase: 'Exploration phase' },
+  presentacion: {
+    titulo: 'Portfolio presentation',
+    tabla: 'Table',
+    mapa: 'Map',
+    sinUbicaciones: 'No project has a location: there is nothing to show on the map.'
+  },
   sinJefatura: 'No project lead assigned',
   vacio: 'A project starts with “New project”; then its team, parties and campaign are completed.',
   asistente: {

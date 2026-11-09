@@ -36,10 +36,24 @@ export const DE_LA_LISTA: Readonly<Record<string, DeLaLista>> = {
   inquiry: { capa: 'LYR-20', lugar: conLugarPropio(['locality', 'community']) },
   stakeholder_request: { capa: 'LYR-20', lugar: conLugarPropio(['locality', 'community']) },
   social_risk: { capa: 'LYR-21', lugar: conLugarPropio(['locality', 'community', 'area_of_influence']) },
-  stakeholder: { capa: 'LYR-17', lugar: (r) => texto(r, 'locality') || null }
+  stakeholder: { capa: 'LYR-17', lugar: (r) => texto(r, 'locality') || null },
+  // un proyecto (el portafolio, S04) se dibuja en LYR-09: su punto de referencia o, sin él, su área de interés
+  project: { capa: 'LYR-09', lugar: (r) => (r.geometries?.location || r.geometries?.interest_area ? r.id : null) }
 }
 
 export const lugarDe = (objeto: string, r: Registro): string | null => DE_LA_LISTA[objeto]?.lugar(r) ?? null
+
+// un solo elemento por registro: una capa con más de una geometría por registro (LYR-09: el punto del proyecto y su área de
+// interés) da primero la primera, y el mapa marca y centra un lugar, no dos
+const unoPorRegistro = (elementos: Coleccion['features']): Coleccion['features'] => {
+  const vistos = new Set<string>()
+  return elementos.filter((e) => {
+    const id = String(e.properties.__id ?? '')
+    if (vistos.has(id)) return false
+    vistos.add(id)
+    return true
+  })
+}
 
 // la vista se ofrece solo si la lista trae algún registro con ubicación
 export const ofreceMapa = (objeto: string | ((r: Registro) => string), registros: readonly Registro[]): boolean =>
@@ -88,7 +102,8 @@ export function ListaConMapa({
   // solo los elementos de los registros de la lista: el mapa no muestra lo que la lista no tiene
   const datos = estado?.datos
   const filtrados = useMemo<Coleccion | null>(
-    () => (datos ? conPostura(idDeCapa, { ...datos, features: datos.features.filter((f) => enLaLista.has(String(f.properties.__id ?? ''))) }) : null),
+    () =>
+      datos ? conPostura(idDeCapa, { ...datos, features: unoPorRegistro(datos.features.filter((f) => enLaLista.has(String(f.properties.__id ?? '')))) }) : null,
     [datos, enLaLista, idDeCapa]
   )
   const dibujados = new Set((filtrados?.features ?? []).map((f) => String(f.properties.__id)))

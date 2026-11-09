@@ -2,11 +2,11 @@ import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { ListaEnTarjetas, useCoincide, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
-import { Button } from '@wasichai/ui'
-import { ChevronRight, Map as MapaIcono, Plus, X } from 'lucide-react'
+import { Alert, Button, cn } from '@wasichai/ui'
+import { ChevronRight, Map as MapaIcono, Plus, Table2, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { comparable } from '../componentes/FiltroDeGrupo'
 import { ordenarEnCliente } from '../componentes/ordenEnCliente'
@@ -28,6 +28,7 @@ import { DESDE_XL, useAcopleDeVistaPrevia, usePeek, useRutaDeVistaPrevia } from 
 import { montoPe } from '../componentes/Monto'
 import { hoyEnLima } from '../datos/fechas'
 import { diaPe, numeroPe } from '../i18n'
+import { ListaConMapa, ofreceMapa, VISTA_MAPA } from '../mapa/ListaConMapa'
 import { useCifrasDelPortafolio } from './cifrasDelPortafolio'
 import { useIndicadoresDelProyecto } from './TableroDelProyecto'
 
@@ -39,7 +40,11 @@ import { useIndicadoresDelProyecto } from './TableroDelProyecto'
 // «Portafolio», las cifras de atención de cada proyecto (compromisos vencidos, QCS vencidas, riesgos altos) con sus encabezados
 // en dos líneas, en danger cuando pasan de cero y atenuadas en cero, «—» con su nota al pie si la cuenta no las lee, y la vista
 // previa del proyecto elegido (?peek=project:id) bajo la tabla desde xl, con «Ver en el mapa» y «Abrir Proyecto 360»; por debajo
-// de xl, la vista previa es el cajón del shell. en el teléfono, tarjetas
+// de xl, la vista previa es el cajón del shell. en el teléfono, tarjetas. «Tabla · Mapa» en la cabecera (wasichai/sgspe-ui#123): el
+// mapa (?view=mapa) es la vista «Lista + mapa» (design-system.md §5.3) del portafolio entero que la cuenta lee, con la búsqueda y
+// los filtros y sin las vistas de la tabla, cada proyecto en su punto o su área de interés (LYR-09); se ofrece solo si algún
+// proyecto trae ubicación, y el elegido (?selected=project:id) trae la misma vista previa bajo la lista y el mapa. la barra de
+// filtros lleva «Vista compacta», como en el lienzo
 const VISTAS = ['mine', 'active', 'in_review', 'all'] as const
 const CAMPO_DE_ORDEN: Record<string, string> = { codigo: 'code', nombre: 'name' }
 const ORDEN_INICIAL: OrdenDeTabla = { columna: 'nombre', dir: 'asc' }
@@ -95,9 +100,20 @@ export function ProyectosPage() {
     ) : (
       vacio
     )
+  // sin jefatura, un aviso que se lee (S04): en cursiva y text-secondary, no un color de alerta
+  const jefaturaDe = (p: Registro) =>
+    celda(jefaturas, jefes.get(p.id), <span className="text-sg-text-secondary italic">{t('proyectos.sinJefatura')}</span>, (correos) =>
+      [...correos].map((c, i) => (
+        <span key={c}>
+          {i ? ', ' : ''}
+          <Persona correo={c} />
+        </span>
+      ))
+    )
   const desdeXl = useCoincide(DESDE_XL)
   const peek = usePeek()
   const rutaDePrevia = useRutaDeVistaPrevia()
+  const enMapa = lista.vista === VISTA_MAPA
   const lasMias = lista.vista === 'mine'
   const cargando = proyectos.isPending || (lasMias && asignaciones.isPending)
   // el error de carga reemplaza la lista solo si no hay lista: un refetch fallido deja la ya cargada
@@ -119,10 +135,20 @@ export function ProyectosPage() {
     orden,
     (p, columna) => texto(p, CAMPO_DE_ORDEN[columna])
   )
-  const cifras = useCifrasDelPortafolio(filtrados.map((p) => p.id))
+  // el mapa se ofrece si algún proyecto que la cuenta lee trae ubicación (no solo los filtrados: filtrar no lo esconde); en él, sin
+  // ninguno entre los filtrados, se dice y queda la tabla
+  const ofrece = ofreceMapa('project', proyectos.data ?? [])
+  const conUbicacion = enMapa && ofreceMapa('project', filtrados)
+  const [busqueda] = useSearchParams()
+  const [objetoElegido, idElegido] = busqueda.get('selected')?.split(':') ?? []
+  const enElMapa = conUbicacion && objetoElegido === 'project' ? filtrados.find((p) => p.id === idElegido) : undefined
+  const cifras = useCifrasDelPortafolio(enMapa ? [] : filtrados.map((p) => p.id))
   // desde xl la vista previa de un proyecto de la tabla va debajo de ella (S04), no en el cajón del shell
-  useAcopleDeVistaPrevia(telefono ? null : filtrados.map((p) => `project:${p.id}`))
+  useAcopleDeVistaPrevia(telefono || conUbicacion ? null : filtrados.map((p) => `project:${p.id}`))
   const elegido = peek?.objeto === 'project' ? filtrados.find((p) => p.id === peek.id) : undefined
+  // «Tabla · Mapa»: el mapa sigue con el proyecto de la vista previa; la tabla vuelve a su vista por defecto
+  const presentar = (mapa: boolean) =>
+    lista.cambiar(mapa ? { view: VISTA_MAPA, peek: null, selected: elegido ? `project:${elegido.id}` : null } : { view: null, selected: null })
   // cada vista dice cuántos tiene con los filtros puestos (revisión de UX, etapa 3)
   const conteoDe = (vista: string) => (proyectos.data ?? []).filter((p) => enLaVista(vista, p)).length
   const chips = [
@@ -168,15 +194,7 @@ export function ProyectosPage() {
       case 'estado':
         return <EstadoChip objeto="project" estado={p.state} />
       case 'jefatura':
-        // sin jefatura, un aviso que se lee (S04): en cursiva y text-secondary, no un color de alerta
-        return celda(jefaturas, jefes.get(p.id), <span className="text-sg-text-secondary italic">{t('proyectos.sinJefatura')}</span>, (correos) =>
-          [...correos].map((c, i) => (
-            <span key={c}>
-              {i ? ', ' : ''}
-              <Persona correo={c} />
-            </span>
-          ))
-        )
+        return jefaturaDe(p)
       case 'vencidos':
         return <CifraDeAtencion valor={cifras[p.id]?.compromisos} />
       case 'qcs':
@@ -205,6 +223,7 @@ export function ProyectosPage() {
             </>
           )
         }
+        vistas={ofrece || enMapa ? <TablaOMapa mapa={enMapa} alElegir={presentar} /> : undefined}
         primaria={
           can('project', 'CREATE') ? (
             <Button asChild>
@@ -217,13 +236,16 @@ export function ProyectosPage() {
         }
       />
       <BarraDeFiltros
+        vistaCompacta
         vista={
-          <SelectorDeVista
-            etiqueta={t('comun.vistas')}
-            vistas={VISTAS.map((id) => ({ id, etiqueta: t(`proyectos.vistas.${id}`), n: cargando || fallo ? null : conteoDe(id) }))}
-            actual={lista.vista}
-            alElegir={(id) => lista.cambiar({ view: id })}
-          />
+          enMapa ? undefined : (
+            <SelectorDeVista
+              etiqueta={t('comun.vistas')}
+              vistas={VISTAS.map((id) => ({ id, etiqueta: t(`proyectos.vistas.${id}`), n: cargando || fallo ? null : conteoDe(id) }))}
+              actual={lista.vista}
+              alElegir={(id) => lista.cambiar({ view: id })}
+            />
+          )
         }
         busqueda={{ etiqueta: t('proyectos.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
         frecuentes={FILTROS.filter(([campo]) => opciones(campo).length > 0).map(([campo, clave]) => (
@@ -238,6 +260,9 @@ export function ProyectosPage() {
         aplicados={chips.map((chip) => ({ ...chip, alQuitar: () => lista.cambiar({ [chip.clave]: null }) }))}
         alLimpiar={() => lista.cambiar(sinFiltros)}
       />
+      {enMapa && !cargando && !fallo && !sinProyectos && filtrados.length > 0 && !conUbicacion ? (
+        <Alert tone="notice">{t('proyectos.presentacion.sinUbicaciones')}</Alert>
+      ) : null}
       {cargando ? (
         <Cargando />
       ) : fallo ? (
@@ -249,6 +274,31 @@ export function ProyectosPage() {
           {/* «Nuevo proyecto» solo se le sugiere a quien puede crearlo, no a quien solo lee todos */}
           {can('project', 'CREATE') ? t('proyectos.vacio') : null}
         </VacioDeLista>
+      ) : conUbicacion ? (
+        <>
+          <ListaConMapa
+            objeto="project"
+            etiqueta={t('proyectos.titulo')}
+            registros={filtrados}
+            nombreDe={(p) => [texto(p, 'code'), texto(p, 'name')].filter(Boolean).join(' · ')}
+            detalleDe={(p) => (
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <EstadoChip objeto="project" estado={p.state} />
+                {[opcion(p, 'project_type'), opcion(p, 'stage')].filter(Boolean).join(' · ')}
+              </span>
+            )}
+            alAbrir={(p) => navegar(ruta(p))}
+          />
+          {enElMapa ? (
+            <VistaPreviaDelProyecto
+              key={enElMapa.id}
+              proyecto={enElMapa}
+              jefatura={jefaturaDe(enElMapa)}
+              campana={campanas.data?.find((c) => String(atributo(c, 'project')) === enElMapa.id)}
+              alCerrar={() => lista.cambiar({ selected: null })}
+            />
+          ) : null}
+        </>
       ) : telefono ? (
         // en el teléfono, tarjetas (revisión de UX, etapa 8)
         <ListaEnTarjetas
@@ -282,23 +332,52 @@ export function ProyectosPage() {
           }
         />
       )}
-      {elegido && desdeXl && !telefono && peek ? (
+      {elegido && desdeXl && !telefono && peek && !conUbicacion ? (
         <VistaPreviaDelProyecto
           key={elegido.id}
           proyecto={elegido}
-          jefatura={celda(jefaturas, jefes.get(elegido.id), <span className="text-sg-text-secondary italic">{t('proyectos.sinJefatura')}</span>, (correos) =>
-            [...correos].map((c, i) => (
-              <span key={c}>
-                {i ? ', ' : ''}
-                <Persona correo={c} />
-              </span>
-            ))
-          )}
+          jefatura={jefaturaDe(elegido)}
           campana={campanas.data?.find((c) => String(atributo(c, 'project')) === elegido.id)}
           alCerrar={peek.cerrar}
         />
       ) : null}
     </ContenedorDePagina>
+  )
+}
+
+// «Tabla · Mapa» (S04): un control segmentado en la cabecera, dos botones con aria-pressed en un grupo con nombre; el elegido en
+// primary con on-primary, como el selector de vista (design-system.md §5.3; el tamaño del texto va en el grupo, porque cn confunde
+// text-sm con un color), de 36 px con su borde
+function TablaOMapa({ mapa, alElegir }: { mapa: boolean; alElegir: (mapa: boolean) => void }) {
+  const { t } = useTranslation(NS)
+  const opciones = [
+    { mapa: false, etiqueta: t('proyectos.presentacion.tabla'), Icono: Table2 },
+    { mapa: true, etiqueta: t('proyectos.presentacion.mapa'), Icono: MapaIcono }
+  ]
+  return (
+    <div
+      role="group"
+      aria-label={t('proyectos.presentacion.titulo')}
+      className="inline-flex divide-x-2 divide-sg-primary overflow-hidden rounded-sg-md border-2 border-sg-primary text-sm"
+    >
+      {opciones.map(({ mapa: esMapa, etiqueta, Icono }) => (
+        <button
+          key={etiqueta}
+          type="button"
+          aria-pressed={mapa === esMapa}
+          onClick={() => {
+            if (mapa !== esMapa) alElegir(esMapa)
+          }}
+          className={cn(
+            'inline-flex h-8 items-center gap-2 px-3.5 font-semibold',
+            mapa === esMapa ? 'bg-sg-primary text-sg-on-primary' : 'bg-sg-surface text-sg-primary-text hover:bg-sg-surface-hover'
+          )}
+        >
+          <Icono aria-hidden className="size-4" />
+          {etiqueta}
+        </button>
+      ))}
+    </div>
   )
 }
 

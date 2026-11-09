@@ -71,7 +71,8 @@ export const ES_COMUN = {
     aplicados: 'Filtros aplicados',
     quitar: 'Quitar el filtro {{etiqueta}}',
     limpiar: 'Limpiar filtros',
-    cerrar: 'Ver resultados'
+    cerrar: 'Ver resultados',
+    vistaCompacta: 'Vista compacta'
   },
   // el resumen de errores arriba de un formulario enviado con más de un error (design-system.md §5.3)
   resumenDeErrores: {
@@ -554,7 +555,8 @@ export const EN_COMUN: typeof ES_COMUN = {
     aplicados: 'Applied filters',
     quitar: 'Remove the filter {{etiqueta}}',
     limpiar: 'Clear filters',
-    cerrar: 'Show results'
+    cerrar: 'Show results',
+    vistaCompacta: 'Compact view'
   },
   resumenDeErrores: {
     titulo_one: 'There is {{count}} problem to fix',
