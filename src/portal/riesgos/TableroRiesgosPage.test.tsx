@@ -9,8 +9,8 @@ import { TableroRiesgosPage } from './TableroRiesgosPage'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
 
-// S62 (dashboards.md §5.8): una llamada al tablero risks, los cinco KPI-RSK en el orden 02, 01, 03, 04 y 05, el mapa de calor como
-// tabla de verdad con su valoración vigente y residual, lo que no entra al mapa dicho, «no disponible» en lugar de cero y «acote
+// S62 (dashboards.md §5.8): una llamada al tablero risks, las cifras de KPI-RSK-01 y 05 arriba (S03) y las zonas 02, 03, 04 y 05, el
+// mapa de calor como tabla de verdad con su valoración vigente y residual, lo que no entra al mapa dicho, «no disponible» en lugar de cero y «acote
 // los filtros» ante el tope. sin nota de confidenciales: los riesgos no tienen alcance por registro
 let fetch: FetchMock | null = null
 let red: Red | null = null
@@ -99,12 +99,20 @@ describe('S62 · tablero de riesgos', () => {
       .getAllByRole('region')
       // el nombre de una Seccion con título sale de su encabezado (aria-labelledby), el de las demás de aria-label
       .map((r) => r.getAttribute('aria-label') ?? document.getElementById(r.getAttribute('aria-labelledby') ?? '')?.textContent)
+    // S03: las dos cifras (KPI-RSK-01 y KPI-RSK-05) arriba, en una rejilla; después las zonas en su orden, y la lista de las
+    // medidas atrasadas en su propia zona
+    expect(
+      within(screen.getByRole('group', { name: 'Cifras principales' }))
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label'))
+    ).toEqual(['Riesgos activos', 'Medidas de mitigación atrasadas'])
     expect(zonas.filter((z) => z !== 'Filtros')).toEqual([
-      'Mapa de calor de riesgos',
       'Riesgos activos',
+      'Medidas de mitigación atrasadas',
+      'Mapa de calor de riesgos',
       'Riesgos por territorio',
       'Niveles de riesgo semana a semana',
-      'Medidas de mitigación atrasadas'
+      'Detalle de las medidas atrasadas'
     ])
     expect(screen.getByRole('region', { name: 'Riesgos activos' })).toHaveTextContent('7')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()

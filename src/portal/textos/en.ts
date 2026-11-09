@@ -149,6 +149,20 @@ export const EN: Textos = {
     correo: 'Email',
     contrasena: 'Password',
     ingresar: 'Sign in',
+    antetitulo: 'Staff access',
+    titulo: 'Sign in to {{app}}',
+    ayuda: 'Use the email and password your organization’s administration gave you.',
+    mostrar: 'Show',
+    avisoTitulo: 'Access for authorized staff only. Every sign-in is recorded.',
+    avisoTexto: 'If you share this computer, sign out when you finish.',
+    queEncontrara: 'What you will find after signing in',
+    encontrara: [
+      'What is yours today: approvals, alerts to triage and minutes to review.',
+      'Your projects, with the status of commitments, grievances and risks.',
+      'The territory of each project: areas of influence, settlements and stakeholder groups.'
+    ],
+    sinCuenta: 'No account? Ask your organization’s SGSPE administration for one. Field accounts also work on a phone.',
+    version: 'Version {{version}}',
     ingresando: 'Signing in…',
     incorrectas: 'Wrong email or password',
     fallo: 'Could not sign in. Please try again.'
@@ -216,7 +230,6 @@ export const EN: Textos = {
   },
   inicio: {
     titulo: 'Home',
-    bienvenida: 'Welcome, {{nombre}}.',
     cuenta: 'Your account',
     usuario: 'User',
     organizacion: 'Organization',

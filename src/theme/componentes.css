@@ -141,9 +141,13 @@
 
 /* Campos: 44 px (--sg-field, 36 en la compacta), borde de 2 px --sg-border-control y radio 4; con error, 3 px de peligro. los
    campos de 32 px de wasichai (el tamaño de página de una tabla) conservan su alto */
-[data-slot='input']:not(.h-8),
+[data-slot='input']:not(.h-8, .h-12),
 [data-slot='select-trigger']:not(.h-8) {
     height: var(--sg-field);
+}
+/* el campo de 48 px del ingreso y del teléfono, con body-lg (design-system.md §5.3 «Campos») */
+[data-slot='input'].h-12 {
+    font-size: 16px;
 }
 [data-slot='input'],
 [data-slot='textarea'],

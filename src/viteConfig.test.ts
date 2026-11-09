@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import paquete from '../package.json'
 
 // la configuración se evalúa al importarla: cada caso fija WASICHAI_API_URL antes de cargarla, de modo que la prueba no
 // depende de lo que haya en el shell de quien la corre
@@ -33,7 +34,7 @@ describe('vite.config', () => {
     vi.stubEnv('SGSPE_ROL_JEFATURA', undefined)
     vi.stubEnv('SGSPE_MAPA_BASE', undefined)
     const config = await cargar(undefined)
-    expect(config.define).toEqual({ __SGSPE_ROL_JEFATURA__: JSON.stringify('PROJECT_MANAGER') })
+    expect(config.define).toEqual({ __SGSPE_ROL_JEFATURA__: JSON.stringify('PROJECT_MANAGER'), __SGSPE_VERSION__: JSON.stringify(paquete.version) })
   })
 
   it('SGSPE_ROL_JEFATURA lo cambia y SGSPE_MAPA_BASE abre la CSP', async () => {

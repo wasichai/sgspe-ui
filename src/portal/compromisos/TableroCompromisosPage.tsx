@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { VistasGuardadas } from '../componentes/Lista'
 import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando } from '../componentes/Estados'
-import { KpiCard, RejillaDeKpi } from '../componentes/KpiCard'
+import { KpiCard, metaDelPeriodo, RejillaDeKpi } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { montoPe } from '../componentes/Monto'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
@@ -21,7 +21,9 @@ import {
   ConsultaDeTablero,
   diezYOtros,
   FiltrosDeTablero,
+  HoraDeCalculo,
   indicadorDe,
+  NotaAlPie,
   NotasDeIndicador,
   SerieConMeta,
   useFiltrosDeTablero,
@@ -71,8 +73,12 @@ export function TableroCompromisosPage() {
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
     <ContenedorDePagina elemento="section">
-      <EncabezadoDePagina titulo={t('tableroCompromisos.titulo')} vistas={<VistasDelModulo modulo="commitments" actual="tablero" />} />
-      <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} conCampana conResponsable />
+      <EncabezadoDePagina
+        titulo={t('tableroCompromisos.titulo')}
+        descripcion={tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : undefined}
+        vistas={<VistasDelModulo modulo="commitments" actual="tablero" />}
+      />
+      <FiltrosDeTablero alActualizar={() => void tablero.refetch()} conCampana conResponsable />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {
           const ind = (code: string) => indicadorDe(datos.indicators, code)
@@ -89,6 +95,7 @@ export function TableroCompromisosPage() {
                         key={code}
                         titulo={titulo}
                         indicador={i}
+                        meta={metaDelPeriodo(i)}
                         notas={i.available ? <NotasDeIndicador indicador={i} /> : null}
                         a={VISTA_DE_TARJETA[nombre] ? `${base}/commitments?view=${encodeURIComponent(VISTA_DE_TARJETA[nombre])}` : undefined}
                         tono={TONO_DE_TARJETA[nombre]}
@@ -188,6 +195,7 @@ function Desgloses({ indicador }: { indicador: Indicador }) {
           ))}
         </tbody>
       </Table>
+      {filas.some((f) => f.value === null || typeof f.overdue !== 'number') ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
     </div>
   )
 }
@@ -252,6 +260,8 @@ function Montos({ indicador }: { indicador: Indicador }) {
           filas: filas.map((f) => [f.key, montoPe(f.committed ?? f.value, f.key), montoPe(f.executed, f.key)])
         }}
       />
+      {/* la tabla «Ver datos» dice los montos de cada moneda: su nota al pie, siempre (design-system.md §5.3 «Tablas») */}
+      <NotaAlPie>{t('tableroCompromisos.notaDeMontos')}</NotaAlPie>
     </div>
   )
 }

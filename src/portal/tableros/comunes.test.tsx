@@ -11,6 +11,7 @@ import {
   diezYOtros,
   FiltrosDeTablero,
   FiltrosIgnorados,
+  HoraDeCalculo,
   SerieConMeta,
   useFiltrosDeTablero,
   useTableroDisponible,
@@ -368,5 +369,26 @@ describe('diezYOtros, Barras y SerieConMeta', () => {
     )
     expect(screen.getByRole('columnheader', { name: 'Meta' })).toBeInTheDocument()
     expect(screen.getAllByText('—')).toHaveLength(2)
+  })
+})
+
+// la hora de cálculo visible bajo el título de un tablero (design-system.md §5.3 «KPI», préstamo de D): «Calculado hoy 07:40»;
+// de otro día, con su fecha; sin instante válido, nada
+describe('HoraDeCalculo', () => {
+  it('dice la hora de Lima de hoy, o el día y la hora si no es de hoy, y nada sin instante', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-09T15:00:00Z'))
+    try {
+      const { unmount } = montar(<HoraDeCalculo instante="2026-11-09T12:40:00Z" />)
+      expect(screen.getByText('Calculado hoy 07:40')).toBeInTheDocument()
+      unmount()
+      const otro = montar(<HoraDeCalculo instante="2026-10-16T12:40:00Z" alcance="con los datos de todos sus proyectos" />)
+      expect(screen.getByText('Calculado el 16 oct. 2026 a las 07:40 con los datos de todos sus proyectos')).toBeInTheDocument()
+      otro.unmount()
+      const { container } = montar(<HoraDeCalculo instante={undefined} />)
+      expect(container).toBeEmptyDOMElement()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -149,6 +149,21 @@ export const ES = {
     correo: 'Correo',
     contrasena: 'Contraseña',
     ingresar: 'Ingresar',
+    // S01: el ingreso a dos columnas
+    antetitulo: 'Acceso del personal',
+    titulo: 'Ingrese a {{app}}',
+    ayuda: 'Use el correo y la contraseña que le dio la administración de su organización.',
+    mostrar: 'Mostrar',
+    avisoTitulo: 'Acceso solo para personal autorizado. Se registra cada ingreso.',
+    avisoTexto: 'Si comparte esta computadora, cierre la sesión al terminar.',
+    queEncontrara: 'Qué encontrará al ingresar',
+    encontrara: [
+      'Lo que le toca hoy: aprobaciones, alertas por triar y actas por revisar.',
+      'Sus proyectos, con el estado de compromisos, quejas y riesgos.',
+      'El territorio de cada proyecto: áreas de influencia, centros poblados y grupos de interés.'
+    ],
+    sinCuenta: '¿No tiene cuenta? Pídala a la administración de SGSPE de su organización. Las cuentas de campo funcionan también en el celular.',
+    version: 'Versión {{version}}',
     ingresando: 'Ingresando…',
     incorrectas: 'Correo o contraseña incorrectos',
     fallo: 'No se pudo iniciar sesión. Inténtelo de nuevo.'
@@ -223,7 +238,6 @@ export const ES = {
   },
   inicio: {
     titulo: 'Inicio',
-    bienvenida: 'Le damos la bienvenida, {{nombre}}.',
     cuenta: 'Su cuenta',
     usuario: 'Usuario',
     organizacion: 'Organización',

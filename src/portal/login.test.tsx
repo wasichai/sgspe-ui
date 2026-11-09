@@ -48,6 +48,8 @@ describe('login', () => {
     start('/?vista=modulos', [login(), ...rutasDeSesion(RELACIONISTA, SIN_PERMISOS)])
     await ingresar('relacionista@sgspe.test', 'secreta')
 
+    // el ingreso también tiene su cabecera (S01): se espera a que el formulario se vaya y quede el marco del portal
+    await waitFor(() => expect(screen.queryByLabelText('Contraseña')).not.toBeInTheDocument())
     expect(await screen.findByRole('banner')).toBeInTheDocument()
     expect(aqui()).toBe('/?vista=modulos')
     const post = fetch!.calls.find((call) => call.method === 'POST' && call.path === '/auth/login')
@@ -67,7 +69,41 @@ describe('login', () => {
     start('/login', [])
     const principal = await screen.findByRole('main')
     expect(within(principal).getByLabelText('Correo')).toBeInTheDocument()
-    expect(within(principal).getByRole('heading', { level: 1, name: 'SGSPE' })).toBeInTheDocument()
+    // S01: el título dice qué se hace aquí, con el nombre de la aplicación
+    expect(within(principal).getByRole('heading', { level: 1, name: 'Ingrese a SGSPE' })).toBeInTheDocument()
+  })
+
+  // S01 (design-system.md §6.7): la cabecera con la marca y el idioma, el aviso de acceso autorizado, lo que encontrará al ingresar
+  // y el pie con la versión; sin enlaces que no lleven a nada
+  it('compone el ingreso de S01: marca, idioma, aviso, qué encontrará y la versión al pie', async () => {
+    start('/login', [])
+    const cabecera = await screen.findByRole('banner')
+    expect(within(cabecera).getByText('SGSPE')).toBeInTheDocument()
+    expect(within(cabecera).getByRole('combobox', { name: 'Idioma' })).toBeInTheDocument()
+    const principal = screen.getByRole('main')
+    expect(within(principal).getByText('Acceso del personal')).toBeInTheDocument()
+    expect(within(principal).getByRole('status')).toHaveTextContent('Acceso solo para personal autorizado. Se registra cada ingreso.')
+    const panel = within(principal).getByRole('complementary', { name: 'Qué encontrará al ingresar' })
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(3)
+    const pie = screen.getByRole('contentinfo')
+    expect(pie).toHaveTextContent(/Versión \d+\.\d+\.\d+/)
+    expect(within(pie).queryAllByRole('link')).toHaveLength(0)
+    // los campos de 48 px del ingreso (design-system.md §5.3 «Campos»)
+    expect(screen.getByLabelText('Correo')).toHaveClass('h-12')
+  })
+
+  // «Mostrar» pegado a la contraseña: cambia el campo a texto y lo dice con aria-pressed, y vuelve a ocultarla
+  it('«Mostrar» deja ver la contraseña y la vuelve a ocultar', async () => {
+    start('/login', [])
+    const contrasena = await screen.findByLabelText('Contraseña')
+    expect(contrasena).toHaveAttribute('type', 'password')
+    const mostrar = screen.getByRole('button', { name: 'Mostrar' })
+    expect(mostrar).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(mostrar)
+    expect(contrasena).toHaveAttribute('type', 'text')
+    expect(mostrar).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(mostrar)
+    expect(contrasena).toHaveAttribute('type', 'password')
   })
 
   // quien aún no tiene sesión también puede elegir el idioma (sin sesión no hay preferencias que guardar en el servidor)
@@ -100,6 +136,8 @@ describe('login', () => {
   it.each(['//otro.example', '/\\otro.example', '/\t/otro.example'])('va al inicio en lugar de a otro sitio: %j', async (next) => {
     start(`/login?next=${encodeURIComponent(next)}`, [login(), ...rutasDeSesion(RELACIONISTA, SIN_PERMISOS)])
     await ingresar('relacionista@sgspe.test', 'secreta')
+    // el ingreso también tiene su cabecera (S01): se espera a que el formulario se vaya y quede el marco del portal
+    await waitFor(() => expect(screen.queryByLabelText('Contraseña')).not.toBeInTheDocument())
     expect(await screen.findByRole('banner')).toBeInTheDocument()
     expect(aqui()).toBe('/')
   })

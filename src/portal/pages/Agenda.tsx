@@ -100,23 +100,25 @@ export function Agenda() {
   const diaDe = (cuando: string) => new Date(`${cuando.slice(0, 10)}T12:00:00-05:00`)
   return (
     <Seccion titulo={t('miDia.agenda.titulo')} descripcion={t('miDia.agenda.descripcion')}>
-      <ul className="space-y-3">
+      {/* S02: cada cita con el día en una caja de fecha (el día de la semana arriba y el número grande), el título y, debajo, qué es,
+          a qué hora y dónde */}
+      <ul className="divide-y divide-sg-border-subtle">
         {citas.map((c) => (
-          <li key={c.clave} className="flex gap-3">
-            <span className="w-14 shrink-0 text-center">
-              <span className="block text-sg-caption uppercase text-sg-text-muted">{formato({ weekday: 'short' }).format(diaDe(c.cuando))}</span>
-              <span className="block text-sg-h3 font-semibold tabular-nums">{formato({ day: 'numeric' }).format(diaDe(c.cuando))}</span>
+          <li key={c.clave} className="flex items-start gap-3.5 py-3 first:pt-1 last:pb-1">
+            <span className="flex w-13 shrink-0 flex-col items-center rounded-sg-md border-2 border-sg-border-strong bg-sg-surface py-1 leading-none">
+              <span className="text-sg-caption font-semibold text-sg-text-secondary uppercase">{formato({ weekday: 'short' }).format(diaDe(c.cuando))}</span>
+              <span className="text-sg-kpi-sm text-sg-text tabular-nums">{formato({ day: 'numeric' }).format(diaDe(c.cuando))}</span>
             </span>
             <div className="min-w-0">
               {c.ruta ? (
                 <Link
                   to={c.ruta}
-                  className="block text-sg-body font-medium text-sg-text no-underline hover:text-sg-primary-text hover:underline focus-visible:underline"
+                  className="block text-sg-body font-bold text-sg-text no-underline hover:text-sg-primary-text hover:underline focus-visible:underline"
                 >
                   {c.titulo}
                 </Link>
               ) : (
-                <span className="block text-sg-body font-medium">{c.titulo}</span>
+                <span className="block text-sg-body font-bold">{c.titulo}</span>
               )}
               <p className="text-sg-body-sm text-sg-text-secondary">
                 {[t(`miDia.agenda.${c.tipo === 'visita' ? 'visita' : 'interaccion'}`), c.hora, c.lugar].filter(Boolean).join(' · ')}

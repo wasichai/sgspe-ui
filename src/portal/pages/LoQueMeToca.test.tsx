@@ -30,10 +30,12 @@ const sinAsignaciones: MockRoute[] = [
 ]
 const region = () => screen.getByRole('region', { name: 'Lo que me toca hoy' })
 const grupo = (nombre: RegExp) => within(region()).getByRole('region', { name: nombre })
-const entradas = (nombre: RegExp) =>
-  within(grupo(nombre))
-    .getAllByRole('listitem')
-    .map((li) => li.textContent)
+// una fila de S02 se lee por partes: su título, sus chips (estado y situación) y su motivo con la fecha
+const leer = (li: HTMLElement) =>
+  [li.querySelector('a')?.textContent, li.querySelector('[data-parte="chips"]')?.textContent, li.querySelector('[data-parte="motivo"]')?.textContent]
+    .filter(Boolean)
+    .join(' | ')
+const entradas = (nombre: RegExp) => within(grupo(nombre)).getAllByRole('listitem').map(leer)
 
 describe('Lo que me toca hoy', () => {
   // tercera pasada de UX, 4.8: la sección dice cuánto hace que se leyó, se relee al volver a la pestaña tras un minuto y ofrece
@@ -94,17 +96,23 @@ describe('Lo que me toca hoy', () => {
     expect(within(grupo(/^A su cargo/)).getByRole('heading')).toHaveTextContent('6')
     // las fechas se leen como en el resto del portal, no en el formato de escritura del campo (tercera pasada de UX)
     expect(entradas(/^A su cargo/)).toEqual([
-      'C-001 · Mejora del canalCompromiso · Vencido · venció el 10 oct. 2026',
-      'Visitar Tunas PampaTarea · Vencido · venció el 17 oct. 2026',
-      'Preparar el tallerTarea · Por vencer · vence el 23 oct. 2026',
-      'Redactar el actaTarea · Al día · vence el 30 oct. 2026',
-      'Llamar a la juntaTarea · Al día · vence el 4 nov. 2026'
+      'C-001 · Mejora del canal | Vencido | Compromiso · venció el 10 oct. 2026',
+      'Visitar Tunas Pampa | Vencido | Tarea · venció el 17 oct. 2026',
+      'Preparar el taller | Por vencer | Tarea · vence el 23 oct. 2026',
+      'Redactar el acta | Al día | Tarea · vence el 30 oct. 2026',
+      'Llamar a la junta | Al día | Tarea · vence el 4 nov. 2026'
     ])
     expect(within(grupo(/^A su cargo/)).getByRole('link', { name: 'Visitar Tunas Pampa' })).toHaveAttribute('href', '/projects/p1/tasks?task=t2')
+    // S02: un verbo por fila, que abre la entrada; solo el de la primera es la primaria de la pantalla
+    const primero = within(grupo(/^A su cargo/)).getByRole('link', { name: 'Revisar el compromiso: C-001 · Mejora del canal' })
+    expect(primero).toHaveAttribute('data-variant', 'primary')
+    const segundo = within(grupo(/^A su cargo/)).getByRole('link', { name: 'Abrir la tarea: Visitar Tunas Pampa' })
+    expect(segundo).toHaveAttribute('data-variant', 'secondary')
+    expect(segundo).toHaveAttribute('href', '/projects/p1/tasks?task=t2')
     // ninguna entrada queda sin forma de verse: el resto se despliega en el lugar
     await userEvent.click(within(grupo(/^A su cargo/)).getByRole('button', { name: 'Mostrar 1 más' }))
     expect(entradas(/^A su cargo/)).toHaveLength(6)
-    expect(entradas(/^A su cargo/)[5]).toBe('Sin fechaTarea')
+    expect(entradas(/^A su cargo/)[5]).toBe('Sin fecha | Tarea')
     // el título no se subraya (U-05) y «Ver mis tareas» lleva a la lista completa
     expect(within(grupo(/^A su cargo/)).getByRole('link', { name: 'Visitar Tunas Pampa' })).toHaveClass('no-underline')
     expect(within(region()).getByRole('link', { name: 'Ver mis tareas' })).toHaveAttribute('href', '/tasks')
@@ -140,7 +148,7 @@ describe('Lo que me toca hoy', () => {
       usuario: RELACIONISTA,
       permisos: permisos({ task: ['READ', 'UPDATE'], grievance: ['READ'], project: ['READ'], project_assignment: ['READ'] })
     })
-    await waitFor(() => expect(entradas(/^A su cargo/)).toEqual(['Q-005 · Polvo en la vía de accesoQueja · PRJ-01 · Proyecto Ejemplo A · En atención']))
+    await waitFor(() => expect(entradas(/^A su cargo/)).toEqual(['Q-005 · Polvo en la vía de acceso | En atención | Queja · PRJ-01 · Proyecto Ejemplo A']))
     const cola = await screen.findByRole('region', { name: /^Para tomar en sus proyectos/ })
     await userEvent.click(await within(cola).findByRole('button', { name: 'Tomar «Registrar la asistencia»' }))
     await waitFor(() => expect(red!.a('PUT', '/objects/task/records/q1')).toHaveLength(1))
@@ -171,14 +179,10 @@ describe('Lo que me toca hoy', () => {
     const cola = await screen.findByRole('region', { name: /^Para tomar en sus proyectos/ })
     expect(within(cola).getByRole('heading')).toHaveTextContent('3')
     await waitFor(() =>
-      expect(
-        within(cola)
-          .getAllByRole('listitem')
-          .map((li) => li.textContent)
-      ).toEqual([
-        'Registrar la asistenciaSin asignar · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19 oct. 2026',
-        'Georreferenciar la captaciónSin asignar · PRJ-02 · Proyecto Ejemplo B · Al día · vence el 28 oct. 2026',
-        'Fotografiar el tramoSin asignar · PRJ-01 · Proyecto Ejemplo A'
+      expect(within(cola).getAllByRole('listitem').map(leer)).toEqual([
+        'Registrar la asistencia | Vencido | Sin asignar · PRJ-01 · Proyecto Ejemplo A · venció el 19 oct. 2026',
+        'Georreferenciar la captación | Al día | Sin asignar · PRJ-02 · Proyecto Ejemplo B · vence el 28 oct. 2026',
+        'Fotografiar el tramo | Sin asignar · PRJ-01 · Proyecto Ejemplo A'
       ])
     )
     expect(within(cola).getByRole('link', { name: 'Georreferenciar la captación' })).toHaveAttribute('href', '/projects/p2/tasks?task=q2')
@@ -234,13 +238,9 @@ describe('Lo que me toca hoy', () => {
     const cola = await screen.findByRole('region', { name: /^Para tomar en sus proyectos/ })
     expect(within(cola).getByRole('heading')).toHaveTextContent('7')
     await waitFor(() =>
-      expect(
-        within(cola)
-          .getAllByRole('listitem')
-          .map((li) => li.textContent)
-      ).toEqual([
-        'Registrar la asistenciaSin asignar · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19 oct. 2026',
-        'Georreferenciar la captaciónSin asignar · PRJ-02 · Proyecto Ejemplo B'
+      expect(within(cola).getAllByRole('listitem').map(leer)).toEqual([
+        'Registrar la asistencia | Vencido | Sin asignar · PRJ-01 · Proyecto Ejemplo A · venció el 19 oct. 2026',
+        'Georreferenciar la captación | Sin asignar · PRJ-02 · Proyecto Ejemplo B'
       ])
     )
     expect(within(cola).getByRole('link', { name: 'Ver los 7' })).toHaveAttribute('href', '/tasks')
@@ -290,14 +290,10 @@ describe('Lo que me toca hoy', () => {
     })
     const cola = await screen.findByRole('region', { name: /^Para tomar en PRJ-01 · Proyecto Ejemplo A/ })
     expect(within(cola).getByRole('heading')).toHaveTextContent('4')
-    expect(
-      within(cola)
-        .getAllByRole('listitem')
-        .map((li) => li.textContent)
-    ).toEqual([
-      'Registrar la asistenciaSin asignar · Vencido · venció el 19 oct. 2026',
-      'Georreferenciar la captaciónSin asignar · Al día · vence el 28 oct. 2026',
-      'Fotografiar el tramoSin asignar'
+    expect(within(cola).getAllByRole('listitem').map(leer)).toEqual([
+      'Registrar la asistencia | Vencido | Sin asignar · venció el 19 oct. 2026',
+      'Georreferenciar la captación | Al día | Sin asignar · vence el 28 oct. 2026',
+      'Fotografiar el tramo | Sin asignar'
     ])
     expect(within(cola).getByRole('link', { name: 'Registrar la asistencia' })).toHaveAttribute('href', '/projects/p1/tasks?task=q1')
     expect(within(cola).getByRole('link', { name: 'Ver los 4' })).toHaveAttribute('href', '/projects/p1/tasks')

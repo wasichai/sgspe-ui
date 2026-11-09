@@ -45,6 +45,8 @@ const grupo = (nombre: RegExp) => within(region()).getByRole('region', { name: n
 const enlaces = (nombre: RegExp) =>
   within(grupo(nombre))
     .getAllByRole('link')
+    // S02: cada fila lleva además su verbo (un botón-enlace al mismo destino); aquí se leen los títulos
+    .filter((a) => a.getAttribute('data-slot') !== 'button')
     .map((a) => `${a.textContent} → ${a.getAttribute('href')}`)
 
 describe('Esperan su decisión', () => {
@@ -63,6 +65,11 @@ describe('Esperan su decisión', () => {
     ).toEqual(['Aprobaciones1', 'Alertas por triar2', 'Avisos que piden acción2'])
     expect(enlaces(/^Aprobaciones/)).toEqual(['Aprobar el aporte de apoyo en especie → /r/social_contribution/ap1'])
     expect(within(grupo(/^Aprobaciones/)).getByText('Campaña de perforación')).toBeInTheDocument()
+    // un verbo por fila, secundario: la primaria de la pantalla es la de «Lo que me toca hoy»
+    const verbo = within(grupo(/^Aprobaciones/)).getByRole('link', { name: 'Revisar y aprobar: Aprobar el aporte de apoyo en especie' })
+    expect(verbo).toHaveAttribute('href', '/r/social_contribution/ap1')
+    expect(verbo).toHaveAttribute('data-variant', 'secondary')
+    expect(within(grupo(/^Alertas por triar/)).getAllByRole('link', { name: /^Triar alerta: / })).toHaveLength(2)
     expect(enlaces(/^Alertas por triar/)).toEqual([
       'Convocatoria a bloqueo de la trocha → /projects/p1/risks/warnings/w1',
       'Reclamo por polvo → /projects/p1/risks/warnings/w2'

@@ -96,6 +96,17 @@ describe('tablero de relacionamiento', () => {
         .map((c) => c.textContent)
     ).toEqual(['oct. 2026', '3', '2'])
     expect(screen.getByText('3 de 4')).toBeInTheDocument()
+    // S03: las cifras arriba, en una rejilla; las reuniones con la meta del último mes de su serie
+    const cifras = screen.getByRole('group', { name: 'Cifras principales' })
+    expect(
+      within(cifras)
+        .getAllByRole('region')
+        .map((r) => r.getAttribute('aria-label'))
+    ).toEqual(['Interacciones realizadas', 'Reuniones', 'Inquietudes resueltas'])
+    const reuniones = within(cifras).getByRole('region', { name: 'Reuniones' })
+    expect(within(reuniones).getByText('de 2 (meta)')).toBeInTheDocument()
+    expect(within(reuniones).getByText('150 % de la meta · 1 sobre la meta')).toBeInTheDocument()
+    expect(within(within(cifras).getByRole('region', { name: 'Interacciones realizadas' })).queryByText(/\(meta\)/)).not.toBeInTheDocument()
     // F4: las preguntas derivadas a QCS confidenciales que la cuenta no lee no cuentan, y la cifra lo dice
     expect(within(screen.getAllByRole('region', { name: 'Inquietudes resueltas' }).at(-1)!).getByRole('note')).toHaveTextContent(
       'no incluye las QCS confidenciales'
@@ -143,6 +154,11 @@ describe('tablero de relacionamiento', () => {
     const informativas = await screen.findByRole('table', { name: 'Reuniones informativas' })
     expect(within(informativas).getAllByRole('cell', { name: '—' })).toHaveLength(4)
     expect(within(informativas).queryByRole('cell', { name: '0' })).not.toBeInTheDocument()
+    // el «—» de una columna numérica va con su nota al pie (design-system.md §5.3 «Tablas»)
+    expect(within(screen.getByRole('region', { name: 'Reuniones informativas' })).getByText('— = sin cifra.')).toHaveClass(
+      'text-sg-caption',
+      'text-sg-text-secondary'
+    )
     expect(screen.getByText(/Esta cifra no aplica el filtro de/)).toBeInTheDocument()
   })
 

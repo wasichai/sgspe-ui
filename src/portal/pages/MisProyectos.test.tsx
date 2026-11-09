@@ -5,7 +5,7 @@ import { montar, pagina, registro, workflow } from '../../test/montar'
 import { permisos, RELACIONISTA } from '../../test/portal'
 import { MisProyectos } from './MisProyectos'
 
-// S02 «Mi día» (revisión de UX, etapa 2; P-01 del rediseño): una tarjeta por proyecto asignado con su estado, su jefatura y lo
+// S02 «Mi día» (revisión de UX, etapa 2; P-01 del rediseño): una fila de la tabla compacta por proyecto asignado con su estado, su jefatura y lo
 // que pide acción, enlazado a su lista; los de más pendientes primero; lo que la cuenta no lee no se dibuja (DD-38), nunca cero
 let fetch: FetchMock | null = null
 afterEach(() => {
@@ -36,31 +36,52 @@ const rutas = () => [
 ]
 
 describe('Mis proyectos', () => {
+  // S02: una tabla compacta, una fila por proyecto, y una columna por cifra que la cuenta lee
   it('sus proyectos vigentes, los de más pendientes primero, con jefatura y cifras enlazadas', async () => {
     fetch = mockFetch(rutas())
     montar(<MisProyectos />, { usuario: RELACIONISTA, permisos: LEE })
     const region = await screen.findByRole('region', { name: 'Mis proyectos' })
     await waitFor(() => expect(within(region).getByRole('link', { name: '3 compromisos vencidos' })).toBeInTheDocument())
-    const tarjetas = within(region)
-      .getAllByRole('listitem')
-      .filter((li) => li.parentElement?.parentElement === region)
-    expect(tarjetas.map((li) => within(li).getAllByRole('link')[0].textContent)).toEqual(['PRJ-02 · Proyecto Ejemplo B', 'PRJ-01 · Proyecto Ejemplo A'])
-    const p2 = tarjetas[0]
+    const tabla = within(region).getByRole('table', { name: 'Mis proyectos' })
+    // no lee riesgos: su columna no se dibuja (DD-38), ni «—» ni cero
+    // los encabezados abreviados de la columna de 440 px se nombran enteros para los lectores de pantalla
+    expect(within(tabla).getAllByRole('columnheader')).toHaveLength(3)
+    for (const nombre of ['Proyecto', 'Compromisos vencidos', 'QCS vencidas'])
+      expect(within(tabla).getByRole('columnheader', { name: nombre })).toBeInTheDocument()
+    expect(within(tabla).getByText('Comp. venc.')).toHaveAttribute('title', 'Compromisos vencidos')
+    const filas = within(tabla).getAllByRole('row').slice(1)
+    expect(filas.map((f) => within(f).getAllByRole('link')[0].textContent)).toEqual(['PRJ-02 Proyecto Ejemplo B', 'PRJ-01 Proyecto Ejemplo A'])
+    const [p2, p1] = filas
     expect(within(p2).getByRole('link', { name: '3 compromisos vencidos' })).toHaveAttribute('href', '/projects/p2/commitments?view=vencidos')
+    expect(within(p2).getByRole('link', { name: '3 compromisos vencidos' })).toHaveTextContent('3')
     expect(within(p2).getByRole('link', { name: '1 QCS vencida' })).toHaveAttribute('href', '/projects/p2/attention?view=atencion')
-    // no lee riesgos: la línea no se dibuja (DD-38), ni «—» ni cero
-    expect(within(p2).queryByText(/^Riesgos altos o críticos/)).not.toBeInTheDocument()
+    expect(within(p2).getByRole('link', { name: 'PRJ-02 Proyecto Ejemplo B' })).toHaveAttribute('href', '/projects/p2/overview')
     expect(within(p2).getByText(/jefa/)).toBeInTheDocument()
-    expect(within(tarjetas[1]).getByText('Jefatura: Sin jefatura asignada')).toBeInTheDocument()
-    // lo que pide acción: una cifra en cero no se dibuja (U-11) y, sin ninguna, se dice; lo que no lee no se dibuja
-    expect(within(tarjetas[1]).queryByText(/^0 /)).not.toBeInTheDocument()
-    expect(within(tarjetas[1]).getByText('Nada pide acción')).toBeInTheDocument()
-    expect(within(tarjetas[1]).queryByText(/^Riesgos altos o críticos/)).not.toBeInTheDocument()
-    expect(within(p2).queryByText('Nada pide acción')).not.toBeInTheDocument()
+    expect(within(p1).getByText('Jefatura: Sin jefatura asignada')).toBeInTheDocument()
+    // un cero es un cero apagado, sin enlace (nada pide acción); nunca «—»
+    expect(
+      within(p1)
+        .getAllByRole('cell')
+        .slice(1)
+        .map((c) => c.textContent)
+    ).toEqual(['0', '0'])
+    expect(within(p1).getAllByRole('link')).toHaveLength(1)
+    expect(within(region).queryByText('—')).not.toBeInTheDocument()
     // las cifras y el nombre no van subrayados (U-05)
     expect(within(p2).getByRole('link', { name: '3 compromisos vencidos' })).not.toHaveClass('underline')
-    expect(within(p2).getByRole('link', { name: 'PRJ-02 · Proyecto Ejemplo B' })).not.toHaveClass('underline')
-    expect(within(region).queryByText('PRJ-03 · Proyecto ajeno')).not.toBeInTheDocument()
+    expect(within(p2).getByRole('link', { name: 'PRJ-02 Proyecto Ejemplo B' })).not.toHaveClass('underline')
+    expect(within(region).queryByText('Proyecto ajeno')).not.toBeInTheDocument()
+  })
+
+  it('una cifra que no llegó es «—» con su nota al pie, nunca cero', async () => {
+    fetch = mockFetch([
+      { path: /^\/objects\/grievance\/records/, status: 500, body: { title: 'x', status: 500 } },
+      ...rutas().filter((r) => !String(r.path).includes('grievance'))
+    ])
+    montar(<MisProyectos />, { usuario: RELACIONISTA, permisos: LEE })
+    const region = await screen.findByRole('region', { name: 'Mis proyectos' })
+    await waitFor(() => expect(within(region).getAllByText('—').length).toBeGreaterThan(0))
+    expect(within(region).getByText('Cada cifra lleva a su lista. — = la cifra no se pudo leer.')).toBeInTheDocument()
   })
 
   it('sin proyectos asignados, no se dibuja', async () => {
@@ -85,5 +106,6 @@ describe('Mis proyectos', () => {
     const region = await screen.findByRole('region', { name: 'Mis proyectos' })
     expect(within(region).getByRole('link', { name: 'Ver todos sus proyectos (8)' })).toHaveAttribute('href', '/projects')
     expect(within(region).getAllByRole('link', { name: /^PRJ-1/ })).toHaveLength(6)
+    expect(within(region).getAllByRole('row')).toHaveLength(7)
   })
 })

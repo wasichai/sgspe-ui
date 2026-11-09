@@ -62,6 +62,22 @@ describe('Monitoreo del plan de relaciones comunitarias', () => {
     )
   })
 
+  // S03 (design-system.md §5.3 «KPI» y «Tablas»): el encabezado de página con la hora de cálculo bajo el título, el catálogo como
+  // acción, y el «—» de la tabla con su nota al pie
+  it('dice la hora de cálculo bajo el título y el «—» de la tabla con su nota', async () => {
+    abrir()
+    await fila('1')
+    const titulo = screen.getByRole('heading', { level: 1, name: 'Monitoreo del plan de relaciones comunitarias' })
+    expect(titulo.parentElement).toHaveTextContent('Calculado hoy 10:00')
+    expect(screen.getByRole('group', { name: 'Filtros del tablero' })).not.toHaveTextContent(/Calculado/)
+    expect(screen.getByRole('link', { name: 'Catálogo de indicadores' })).toHaveAttribute('href', '/dashboards/indicators')
+    const nota = screen.getByText('— = sin cifra.')
+    expect(nota).toHaveClass('text-sg-caption', 'text-sg-text-secondary')
+    expect(
+      screen.getByRole('table', { name: 'Monitoreo del plan de relaciones comunitarias' }).compareDocumentPosition(nota) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
   it('un ?month= mal formado cae en el mes anterior en Lima', async () => {
     abrir('/dashboards/monitoring?month=abc')
     await fila('1')

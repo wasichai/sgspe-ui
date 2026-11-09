@@ -195,6 +195,25 @@ describe('tablero de inversión social', () => {
     expect(red.a('GET', '/sgspe/dashboards/investment')).toHaveLength(1)
   })
 
+  // S03 (design-system.md §5.3 «KPI» y «Tablas»): la hora de cálculo bajo el título y no en la fila de filtros; cada tabla de
+  // montos con su nota al pie (las monedas no se suman, «—» es sin monto)
+  it('dice la hora de cálculo bajo el título y las tablas de montos llevan su nota al pie', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const titulo = await screen.findByRole('heading', { name: 'Tablero de inversión social', level: 1 })
+    await waitFor(() => expect(titulo.parentElement).toHaveTextContent('Calculado hoy 10:00'))
+    expect(screen.getByRole('group', { name: 'Filtros del tablero' })).not.toHaveTextContent(/Calculado/)
+    const consolidado = await screen.findByRole('table', { name: 'Inversión ejecutada por proyecto y moneda' })
+    const nota = within(screen.getByRole('region', { name: 'Inversión social ejecutada' })).getByText(
+      'Montos en la moneda de cada fila; las monedas no se suman. — = sin monto.'
+    )
+    expect(nota).toHaveClass('text-sg-caption', 'text-sg-text-secondary')
+    expect(consolidado.compareDocumentPosition(nota) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const programas = screen.getByRole('region', { name: 'Ejecución de programas frente a presupuesto' })
+    expect(within(programas).getByText('Montos en PEN; — = sin monto.')).toHaveClass('text-sg-caption', 'text-sg-text-secondary')
+    expect(within(programas).getByText('Montos en USD; — = sin monto.')).toBeInTheDocument()
+  })
+
   it('un programa por aprobar no muestra ejecución', async () => {
     fetch = mockFetch(rutas())
     abrir()

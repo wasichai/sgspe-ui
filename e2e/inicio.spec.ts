@@ -67,11 +67,13 @@ test.beforeEach(async ({ page }) => {
 test('el agente de campo ve lo que le toca, lo que puede tomar y sus visitas, sin ningún «No disponible»', async ({ page }) => {
   await prepararAgente(page)
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Inicio', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Buen(os|as) (días|tardes|noches), /, level: 1 })).toBeVisible()
   const hoy = page.getByRole('region', { name: 'Lo que me toca hoy' })
-  await expect(hoy.getByRole('link', { name: 'Levantar fotos del tramo con sedimento' })).toBeVisible()
+  await expect(hoy.getByRole('link', { name: 'Levantar fotos del tramo con sedimento', exact: true })).toBeVisible()
   // la línea dice qué es, de qué proyecto, su estado si se lee y su plazo (tercera pasada de UX, 3.2)
-  await expect(hoy.getByText(/^Tarea · PRJ-01 · Pukaqaqa · (?:.+ · )?Vencido$/)).toBeVisible()
+  // S02: el estado y la situación como chips junto al título
+  await expect(hoy.getByText(/^Tarea · PRJ-01 · Pukaqaqa/).first()).toBeVisible()
+  await expect(hoy.getByLabel('Situación de plazo: Vencido').first()).toBeVisible()
   // la cola compartida de sus proyectos, sin elegir uno en el selector (U-13), en una sola lectura con el proyecto de cada tarea (B-04)
   const cola = hoy.getByRole('region', { name: /^Para tomar en sus proyectos/ })
   await expect(cola.getByText(/Sin asignar · PRJ-01 · Pukaqaqa/)).toBeVisible()
@@ -79,6 +81,6 @@ test('el agente de campo ve lo que le toca, lo que puede tomar y sus visitas, si
   await expect(page.getByRole('region', { name: 'Agenda de la semana' }).getByRole('link', { name: 'Encuesta de línea base en Rumichaca' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Mis proyectos' })).toBeVisible()
   // sin lectura de las cifras ejecutivas: ni el bloque ni un «No disponible»
-  await expect(page.getByRole('region', { name: 'Visión ejecutiva' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Qué es crítico y dónde se atiende' })).toHaveCount(0)
   await expect(page.getByText('No disponible')).toHaveCount(0)
 })

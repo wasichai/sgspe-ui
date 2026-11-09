@@ -7,6 +7,8 @@ import { contentSecurityPolicy } from './csp.ts'
 const api = process.env.WASICHAI_API_URL ?? 'http://localhost:8094'
 // configuración por despliegue (no código de src/): el rol de la jefatura del proyecto (ASM-080). el rol se lee de aquí para que ningún fuente del portal nombre un rol (RQ-SEC-005, boundaries.test.ts)
 const rolJefatura = process.env.SGSPE_ROL_JEFATURA ?? 'PROJECT_MANAGER'
+// la versión del portal (la de package.json, que escribe release-please): el pie del ingreso la dice (S01)
+const version = (JSON.parse(readFileSync('package.json', 'utf8')) as { version: string }).version
 // el mapa base ya no se compila (spec F6 elección 9: llega por /map/settings); SGSPE_MAPA_BASE es la lista de URL del estilo y de
 // los hosts que nombra, que solo abre la CSP
 const mapaBase = process.env.SGSPE_MAPA_BASE ?? ''
@@ -26,7 +28,8 @@ export function partirEnChunks(id: string): string | undefined {
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
-    __SGSPE_ROL_JEFATURA__: JSON.stringify(rolJefatura)
+    __SGSPE_ROL_JEFATURA__: JSON.stringify(rolJefatura),
+    __SGSPE_VERSION__: JSON.stringify(version)
   },
   // @wasichai/sgspe-slides llega como TypeScript sin compilar y carga sus fuentes con new URL('../fonts/…', import.meta.url): en
   // desarrollo no se preempaqueta, para que esas URL sigan apuntando a los archivos del paquete (el build las emite como assets).

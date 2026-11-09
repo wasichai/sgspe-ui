@@ -15,6 +15,7 @@ import { Grafico } from '../graficos/Grafico'
 import { escapar, useVersionDeTema } from '../graficos/tema'
 import { colorDe } from '../mapa/colores'
 import { fechaPe, NS, numeroPe, periodoPe } from '../i18n'
+import { hoyEnLima } from '../datos/fechas'
 import { useContextFilters } from '../shell/context'
 import { rotuloDeFila, rotuloDeOpcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
@@ -148,6 +149,31 @@ export function FiltrosDeTablero({
       ) : null}
     </div>
   )
+}
+
+// «07:40», la hora de Lima de 24 h
+const horaPe = (valor: Date): string =>
+  new Intl.DateTimeFormat('es-PE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Lima' }).format(valor)
+
+// cuándo se calcularon las cifras, legible (préstamo de D): «Calculado hoy 07:40» si es de hoy en Lima; si no, «Calculado el 16 oct.
+// 2026 a las 07:40». sin un instante válido, null
+export function useTextoDeCalculo(): (instante: string | undefined | null) => string | null {
+  const { t } = useTranslation(NS)
+  return (instante) => {
+    const fecha = instante ? new Date(instante) : null
+    if (!fecha || Number.isNaN(fecha.getTime())) return null
+    return hoyEnLima(fecha) === hoyEnLima()
+      ? t('tableros.calculadoHoy', { hora: horaPe(fecha) })
+      : t('tableros.calculadoElDia', { fecha: fechaPe(fecha), hora: horaPe(fecha) })
+  }
+}
+
+// la hora de cálculo visible bajo el título de un tablero (design-system.md §5.3 «KPI»), con lo que abarca si se dice
+// («con los datos de los 4 proyectos de su alcance»)
+export function HoraDeCalculo({ instante, alcance }: { instante: string | undefined | null; alcance?: string }) {
+  const texto = useTextoDeCalculo()(instante)
+  if (!texto) return null
+  return <span className="text-sg-body-sm text-sg-text-secondary">{alcance ? `${texto} ${alcance}` : texto}</span>
 }
 
 // un tablero se ofrece si la cuenta puede leer al menos uno de sus indicadores (api.md §4.11, RF-IAM-002)
@@ -356,4 +382,10 @@ export function SerieConMeta({
       }}
     />
   )
+}
+
+// la nota al pie de una tabla de un tablero (design-system.md §5.3 «Tablas», préstamo de C): bajo la tabla, en caption
+// text-secondary, lo que la tabla necesita para leerse («Montos en la moneda de cada fila…», «— = sin cifra.»)
+export function NotaAlPie({ children }: { children: ReactNode }) {
+  return <p className="text-sg-caption text-sg-text-secondary">{children}</p>
 }

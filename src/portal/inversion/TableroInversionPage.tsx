@@ -13,7 +13,7 @@ import { descripcionDeDatos } from '../graficos/descripcion'
 import { Grafico } from '../graficos/Grafico'
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import { ConsultaDeTablero, FiltrosDeTablero, HoraDeCalculo, indicadorDe, NotaAlPie, useFiltrosDeTablero, Zona } from '../tableros/comunes'
 import { BeneficiariosPorFuente, CampanasFrenteAlTope, cifraDe, programaPorAprobar } from './cifras'
 import { rotuloDeFila } from '../datos/opciones'
 
@@ -46,8 +46,12 @@ export function TableroInversionPage() {
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   return (
     <ContenedorDePagina elemento="section">
-      <EncabezadoDePagina titulo={t('tableroInversion.titulo')} vistas={<VistasDelModulo modulo="programs" actual="tablero" />} />
-      <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} conCampana />
+      <EncabezadoDePagina
+        titulo={t('tableroInversion.titulo')}
+        descripcion={tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : undefined}
+        vistas={<VistasDelModulo modulo="programs" actual="tablero" />}
+      />
+      <FiltrosDeTablero alActualizar={() => void tablero.refetch()} conCampana />
       <FiltrosDeInversion proyecto={proyecto} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {
@@ -201,6 +205,8 @@ function ProgramasDeUnaMoneda({ moneda: enMoneda, filas }: { moneda: string; fil
           })}
         </tbody>
       </Table>
+      {/* la nota al pie de una tabla de montos (design-system.md §5.3 «Tablas») */}
+      <NotaAlPie>{enMoneda ? t('tableroInversion.programas.notaDeMoneda', { moneda: enMoneda }) : t('tableroInversion.programas.notaSinMoneda')}</NotaAlPie>
     </div>
   )
 }
@@ -222,32 +228,36 @@ export function Consolidado({ indicador }: { indicador: Indicador }) {
     cap: 'tope'
   } as const
   return (
-    <Table aria-label={t('tableroInversion.consolidado.tabla')}>
-      <thead>
-        <tr>
-          <Th scope="col">{t('tableroInversion.consolidado.proyecto')}</Th>
-          <Th scope="col">{t('tableroInversion.consolidado.moneda')}</Th>
-          {columnas.map((c) => (
-            <Th key={c} scope="col">
-              {t(`tableroInversion.consolidado.${encabezado[c]}`)}
-            </Th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {filas.map((f) => (
-          <tr key={f.key}>
-            <Th scope="row">{f.label ?? String(f.project ?? f.key)}</Th>
-            <Td>{moneda(f) || t('inversion.cifras.monedaFaltante')}</Td>
+    <div className="space-y-2">
+      <Table aria-label={t('tableroInversion.consolidado.tabla')}>
+        <thead>
+          <tr>
+            <Th scope="col">{t('tableroInversion.consolidado.proyecto')}</Th>
+            <Th scope="col">{t('tableroInversion.consolidado.moneda')}</Th>
             {columnas.map((c) => (
-              <Td key={c} className="tabular-nums">
-                {montoPe(f[c], moneda(f) || null)}
-              </Td>
+              <Th key={c} scope="col">
+                {t(`tableroInversion.consolidado.${encabezado[c]}`)}
+              </Th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </Table>
+        </thead>
+        <tbody>
+          {filas.map((f) => (
+            <tr key={f.key}>
+              <Th scope="row">{f.label ?? String(f.project ?? f.key)}</Th>
+              <Td>{moneda(f) || t('inversion.cifras.monedaFaltante')}</Td>
+              {columnas.map((c) => (
+                <Td key={c} className="tabular-nums">
+                  {montoPe(f[c], moneda(f) || null)}
+                </Td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+      {/* cada fila en su moneda, nunca sumadas (ASM-063): la nota al pie lo dice (design-system.md §5.3 «Tablas») */}
+      <NotaAlPie>{t('tableroInversion.consolidado.nota')}</NotaAlPie>
+    </div>
   )
 }
 
@@ -281,6 +291,7 @@ export function BeneficiariosPorPrograma({ indicador }: { indicador: Indicador }
           </tbody>
         </Table>
       ) : null}
+      {filas.some((f) => cifraDe(f.target) === null || cifraDe(f.reached) === null) ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
       <BeneficiariosPorFuente indicador={indicador} />
     </div>
   )

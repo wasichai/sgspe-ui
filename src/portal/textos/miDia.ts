@@ -1,6 +1,23 @@
 // el inicio «Mi trabajo» (S02; P-01 y DD-01 del rediseño de UX): lo que le toca hoy, lo que espera su decisión, su agenda, los
 // atajos de creación y los proyectos de la persona
 export const ES_MI_DIA = {
+  // S02: la sobrelínea, el saludo por la hora de Lima y el resumen de lo vencido o por vencer a su cargo
+  antetitulo: 'Mi trabajo',
+  saludo: { manana: 'Buenos días, {{nombre}}', tarde: 'Buenas tardes, {{nombre}}', noche: 'Buenas noches, {{nombre}}' },
+  resumen_one: 'Tiene {{count}} pendiente vencido o por vencer a su cargo.',
+  resumen_other: 'Tiene {{count}} pendientes vencidos o por vencer a su cargo.',
+  resumenNada: 'Nada vencido ni por vencer a su cargo.',
+  // un verbo por fila (S02): lo que hace quien abre la entrada
+  verbos: {
+    task: 'Abrir la tarea',
+    commitment: 'Revisar el compromiso',
+    grievance: 'Atender la queja',
+    inquiry: 'Atender la consulta',
+    stakeholder_request: 'Atender la solicitud',
+    aprobacion: 'Revisar y aprobar',
+    alerta: 'Triar alerta',
+    aviso: 'Abrir el aviso'
+  },
   hoy: {
     titulo: 'Lo que me toca hoy',
     descripcion: 'Lo vencido primero, con su motivo y su fecha.',
@@ -42,7 +59,6 @@ export const ES_MI_DIA = {
     interaccion: 'Interacción'
   },
   vision: {
-    titulo: 'Visión ejecutiva',
     ver: 'Ver la revisión ejecutiva'
   },
   atajos: {
@@ -69,8 +85,10 @@ export const ES_MI_DIA = {
     riesgos_one: '{{count}} riesgo alto o crítico',
     riesgos_other: '{{count}} riesgos altos o críticos',
     nombres: { compromisos: 'Compromisos vencidos', qcs: 'QCS vencidas', riesgos: 'Riesgos altos o críticos' },
-    sinDato: '{{cifra}}: —',
-    nadaPideAccion: 'Nada pide acción',
+    // los encabezados de la tabla compacta de 440 px (S02); el nombre entero va para los lectores de pantalla
+    cortos: { compromisos: 'Comp. venc.', qcs: 'QCS venc.', riesgos: 'R. altos' },
+    proyecto: 'Proyecto',
+    notaAlPie: 'Cada cifra lleva a su lista. — = la cifra no se pudo leer.',
     verTodos: 'Ver todos sus proyectos ({{count}})'
   },
   tipos: {
@@ -91,6 +109,21 @@ export const ES_MI_DIA = {
 }
 
 export const EN_MI_DIA: typeof ES_MI_DIA = {
+  antetitulo: 'My work',
+  saludo: { manana: 'Good morning, {{nombre}}', tarde: 'Good afternoon, {{nombre}}', noche: 'Good evening, {{nombre}}' },
+  resumen_one: 'You have {{count}} item overdue or due soon in your charge.',
+  resumen_other: 'You have {{count}} items overdue or due soon in your charge.',
+  resumenNada: 'Nothing overdue or due soon in your charge.',
+  verbos: {
+    task: 'Open the task',
+    commitment: 'Review the commitment',
+    grievance: 'Handle the grievance',
+    inquiry: 'Handle the inquiry',
+    stakeholder_request: 'Handle the request',
+    aprobacion: 'Review and approve',
+    alerta: 'Triage alert',
+    aviso: 'Open the notification'
+  },
   hoy: {
     titulo: 'My work today',
     descripcion: 'Overdue first, with its reason and date.',
@@ -132,7 +165,6 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     interaccion: 'Engagement'
   },
   vision: {
-    titulo: 'Executive overview',
     ver: 'See the executive review'
   },
   atajos: {
@@ -158,8 +190,9 @@ export const EN_MI_DIA: typeof ES_MI_DIA = {
     riesgos_one: '{{count}} high or critical risk',
     riesgos_other: '{{count}} high or critical risks',
     nombres: { compromisos: 'Overdue commitments', qcs: 'Overdue grievances, inquiries or requests', riesgos: 'High or critical risks' },
-    sinDato: '{{cifra}}: —',
-    nadaPideAccion: 'Nothing needs action',
+    cortos: { compromisos: 'Overdue comm.', qcs: 'Overdue GIR', riesgos: 'High risks' },
+    proyecto: 'Project',
+    notaAlPie: 'Each figure leads to its list. — = the figure could not be read.',
     verTodos: 'See all your projects ({{count}})'
   },
   tipos: {

@@ -4,13 +4,23 @@ import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NoDisponible } from '../componentes/Estados'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, metaDelPeriodo, RejillaDeKpi } from '../componentes/KpiCard'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { OBJETOS_DE_QCS } from '../datos/atencion'
 import { desglose, useTablero, type Indicador } from '../datos/indicadores'
 import { Grafico } from '../graficos/Grafico'
 import { NS, numeroPe, periodoPe } from '../i18n'
-import { Barras, ConsultaDeTablero, FiltrosDeTablero, indicadorDe, NotasDeIndicador, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import {
+  Barras,
+  ConsultaDeTablero,
+  FiltrosDeTablero,
+  HoraDeCalculo,
+  indicadorDe,
+  NotaAlPie,
+  NotasDeIndicador,
+  useFiltrosDeTablero,
+  Zona
+} from '../tableros/comunes'
 import { rotuloDeFila } from '../datos/opciones'
 
 // S34 · tablero de QCS (dashboards.md §5.7, screens.md §12): GET /api/sgspe/dashboards/attention en una llamada, con los filtros de
@@ -18,7 +28,8 @@ import { rotuloDeFila } from '../datos/opciones'
 // N»), el tiempo de atención (KPI-GRV-10: mediana de días y dentro de plazo, por tipo; las solicitudes no tienen plazo), los
 // desgloses (KPI-GRV-08: severidad, categoría, territorio, grupo de interés y canal, los 10 primeros y «Otros») y la tendencia de
 // recibidas frente a cerradas (KPI-GRV-09). el tablero lee como quien llama: si excluye QCS confidenciales que la cuenta no lee
-// lo dice (confidentialHidden), nunca cuántas. cada planteamiento cuenta una vez, aunque se haya reclasificado
+// lo dice (confidentialHidden), nunca cuántas. cada planteamiento cuenta una vez, aunque se haya reclasificado. como S03, la hora
+// de cálculo va bajo el título y las cifras sueltas (las absueltas y el tiempo de atención) arriba, en una rejilla
 const FLUJO = ['KPI-GRV-01', 'KPI-GRV-02', 'KPI-GRV-03', 'KPI-GRV-04', 'KPI-GRV-05', 'KPI-GRV-06'] as const
 const DIMENSIONES = ['severity', 'category', 'territory', 'stakeholder', 'channel'] as const
 
@@ -28,14 +39,32 @@ export function TableroAtencionPage() {
   const tablero = useTablero('attention', filtros)
   return (
     <ContenedorDePagina elemento="section">
-      <EncabezadoDePagina titulo={t('tableroAtencion.titulo')} vistas={<VistasDelModulo modulo="attention" actual="tablero" />} />
-      <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
+      <EncabezadoDePagina
+        titulo={t('tableroAtencion.titulo')}
+        descripcion={tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : undefined}
+        vistas={<VistasDelModulo modulo="attention" actual="tablero" />}
+      />
+      <FiltrosDeTablero alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {
           const ind = (code: string) => indicadorDe(datos.indicators, code)
           const oculta = datos.confidentialHidden === true || datos.indicators.some((i) => i.confidentialHidden === true)
+          // una cifra que el servidor no devolvió dice «no disponible» en su celda, nunca cero
+          const cifra = (code: string, zona: 'absueltas' | 'tiempos') => ind(code) ?? { code, label: t(`tableroAtencion.zonas.${zona}`), available: false }
+          const absueltas = cifra('KPI-GRV-07', 'absueltas')
+          const tiempo = cifra('KPI-GRV-10', 'tiempos')
           return (
             <div className="space-y-4">
+              <RejillaDeKpi etiqueta={t('tableros.cifrasPrincipales')}>
+                <KpiCard
+                  titulo={absueltas.label}
+                  indicador={absueltas}
+                  meta={metaDelPeriodo(absueltas)}
+                  notas={absueltas.available ? <NotasDeIndicador indicador={absueltas} /> : null}
+                />
+                {/* las notas del tiempo de atención van en su zona, con la tabla por tipo: aquí se dirían dos veces */}
+                <KpiCard titulo={tiempo.label} indicador={tiempo} meta={metaDelPeriodo(tiempo)} />
+              </RejillaDeKpi>
               <NotaDeConfidenciales oculta={oculta} />
               <p className="text-sg-caption text-sg-text-muted">
                 {t('tableroAtencion.unaVez')} {t('tableroAtencion.sinPersona')}
@@ -46,14 +75,9 @@ export function TableroAtencionPage() {
                     mismas seis cifras salían también en tarjetas) */}
                 <Flujo indicadores={FLUJO.map((code) => ind(code))} />
               </section>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <Zona titulo={t('tableroAtencion.zonas.absueltas')} indicador={ind('KPI-GRV-07')}>
-                  {(i) => <KpiCard titulo={i.label} indicador={i} />}
-                </Zona>
-                <Zona titulo={t('tableroAtencion.zonas.tiempos')} indicador={ind('KPI-GRV-10')}>
-                  {(i) => <Tiempos indicador={i} />}
-                </Zona>
-              </div>
+              <Zona titulo={t('tableroAtencion.zonas.tiempos')} indicador={ind('KPI-GRV-10')}>
+                {(i) => <Tiempos indicador={i} />}
+              </Zona>
               <Zona titulo={t('tableroAtencion.zonas.desgloses')} indicador={ind('KPI-GRV-08')}>
                 {(i) => (
                   <div className="grid gap-4 lg:grid-cols-2">
@@ -86,48 +110,55 @@ export function TableroAtencionPage() {
 function Flujo({ indicadores }: { indicadores: (Indicador | undefined)[] }) {
   const { t } = useTranslation(NS)
   const cifra = (v: unknown) => (typeof v === 'number' ? numeroPe(v) : '—')
+  // un «—» va con su nota al pie (design-system.md §5.3 «Tablas»)
+  const conVacios = indicadores.some(
+    (i) => i?.available && (typeof i.value !== 'number' || OBJETOS_DE_QCS.some((o) => typeof desglose(i, 'type').find((f) => f.key === o)?.value !== 'number'))
+  )
   return (
-    <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
-      <Table aria-label={t('tableroAtencion.flujo')}>
-        <thead>
-          <tr>
-            <Th scope="col">{t('tableroAtencion.indicador')}</Th>
-            {OBJETOS_DE_QCS.map((o) => (
-              <Th key={o} scope="col">
-                {t(`comun.qcs.plural.${o}`)}
-              </Th>
-            ))}
-            <Th scope="col">{t('tableroAtencion.total')}</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {indicadores.map((i, n) =>
-            i === undefined ? null : (
-              <tr key={i.code ?? n}>
-                <Th scope="row" className="text-sm font-normal">
-                  {i.label}
-                  {i.available ? <NotasDeIndicador indicador={i} /> : null}
+    <>
+      <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+        <Table aria-label={t('tableroAtencion.flujo')}>
+          <thead>
+            <tr>
+              <Th scope="col">{t('tableroAtencion.indicador')}</Th>
+              {OBJETOS_DE_QCS.map((o) => (
+                <Th key={o} scope="col">
+                  {t(`comun.qcs.plural.${o}`)}
                 </Th>
-                {i.available ? (
-                  <>
-                    {OBJETOS_DE_QCS.map((o) => (
-                      <Td key={o} className="text-sm tabular-nums">
-                        {cifra(desglose(i, 'type').find((f) => f.key === o)?.value)}
-                      </Td>
-                    ))}
-                    <Td className="text-sm font-semibold tabular-nums">{cifra(i.value)}</Td>
-                  </>
-                ) : (
-                  <Td colSpan={OBJETOS_DE_QCS.length + 1} className="text-sm">
-                    <NoDisponible motivo={i.unavailableReason} />
-                  </Td>
-                )}
-              </tr>
-            )
-          )}
-        </tbody>
-      </Table>
-    </div>
+              ))}
+              <Th scope="col">{t('tableroAtencion.total')}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {indicadores.map((i, n) =>
+              i === undefined ? null : (
+                <tr key={i.code ?? n}>
+                  <Th scope="row" className="text-sm font-normal">
+                    {i.label}
+                    {i.available ? <NotasDeIndicador indicador={i} /> : null}
+                  </Th>
+                  {i.available ? (
+                    <>
+                      {OBJETOS_DE_QCS.map((o) => (
+                        <Td key={o} className="text-sm tabular-nums">
+                          {cifra(desglose(i, 'type').find((f) => f.key === o)?.value)}
+                        </Td>
+                      ))}
+                      <Td className="text-sm font-semibold tabular-nums">{cifra(i.value)}</Td>
+                    </>
+                  ) : (
+                    <Td colSpan={OBJETOS_DE_QCS.length + 1} className="text-sm">
+                      <NoDisponible motivo={i.unavailableReason} />
+                    </Td>
+                  )}
+                </tr>
+              )
+            )}
+          </tbody>
+        </Table>
+      </div>
+      {conVacios ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
+    </>
   )
 }
 
@@ -135,9 +166,13 @@ function Flujo({ indicadores }: { indicadores: (Indicador | undefined)[] }) {
 function Tiempos({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
   const cifra = (v: unknown, unidad = '') => (typeof v === 'number' ? `${numeroPe(v)}${unidad}` : '—')
+  const filas = desglose(indicador, 'type')
+  const conVacios = filas.some(
+    (f) => typeof f.value !== 'number' || typeof f.attended !== 'number' || (f.key !== 'stakeholder_request' && typeof f.onTime !== 'number')
+  )
+  // la cifra de todas va arriba, en la rejilla (S03); aquí, el detalle por tipo
   return (
     <div className="space-y-2">
-      <KpiCard titulo={indicador.label} indicador={indicador} />
       <Table aria-label={t('tableroAtencion.tiempos')}>
         <thead>
           <tr>
@@ -149,7 +184,7 @@ function Tiempos({ indicador }: { indicador: Indicador }) {
           </tr>
         </thead>
         <tbody>
-          {desglose(indicador, 'type').map((f) => (
+          {filas.map((f) => (
             <tr key={f.key}>
               <Td className="text-sm">{t(`comun.qcs.plural.${f.key}`, { defaultValue: rotuloDeFila(f) })}</Td>
               <Td className="text-sm tabular-nums">{cifra(f.value)}</Td>
@@ -159,6 +194,7 @@ function Tiempos({ indicador }: { indicador: Indicador }) {
           ))}
         </tbody>
       </Table>
+      {conVacios ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
     </div>
   )
 }

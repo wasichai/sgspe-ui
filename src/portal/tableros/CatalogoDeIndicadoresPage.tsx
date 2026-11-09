@@ -8,7 +8,7 @@ import { DeLista } from '../componentes/LecturaConEstados'
 import { esMontoValido, normalizarMonto } from '../componentes/Monto'
 import { atributo, texto, useActualizar, usePuedeEditar, useTodos, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 
 // el catálogo indicator (dashboards.md §10): cada KPI con su frecuencia, su meta y su medio de verificación, cargado por
 // load_indicators.py. quien tiene UPDATE (usePuedeEditar) edita la meta y la frecuencia; el código no cambia (IndicatorWriteGuard)
@@ -32,8 +32,8 @@ export function CatalogoDeIndicadoresPage() {
       <Link to="/dashboards/monitoring" className="text-sm text-sg-primary-text underline">
         {t('tablerosF8.catalogo.volver')}
       </Link>
-      <h1 className="text-sg-h1 font-semibold">{titulo}</h1>
-      <p className="text-sm text-sg-text-secondary">{t('tablerosF8.catalogo.ayuda')}</p>
+      {/* el encabezado común de las pantallas; el catálogo es una lista de registros, sin hora de cálculo */}
+      <EncabezadoDePagina titulo={titulo} descripcion={t('tablerosF8.catalogo.ayuda')} />
       {guardado ? (
         <p role="status" className="text-sm text-sg-success">
           {t('tablerosF8.catalogo.guardado')}

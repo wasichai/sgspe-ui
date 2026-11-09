@@ -4,12 +4,12 @@ import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CONTROL } from '../componentes/Campo'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, metaDelPeriodo, RejillaDeKpi } from '../componentes/KpiCard'
 import { desglose, useTablero, type FilaDeDesglose, type Indicador } from '../datos/indicadores'
 import { Grafico } from '../graficos/Grafico'
 import { diaPe, NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
-import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, NotasDeIndicador, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import { ConsultaDeTablero, FiltrosDeTablero, HoraDeCalculo, indicadorDe, NotaAlPie, NotasDeIndicador, useFiltrosDeTablero, Zona } from '../tableros/comunes'
 import { rotuloDeFila } from '../datos/opciones'
 
 // S62 · tablero de riesgos (dashboards.md §5.8, screens.md §12): GET /api/sgspe/dashboards/risks en una llamada con los filtros de
@@ -17,7 +17,8 @@ import { rotuloDeFila } from '../datos/opciones'
 // tabla de verdad con el nivel de cada celda cuando hay un solo proyecto, y los riesgos sin revisión dichos aparte), los activos
 // (KPI-RSK-01), la distribución por territorio (KPI-RSK-03), los niveles semana a semana (KPI-RSK-04) y las medidas atrasadas
 // (KPI-RSK-05). los riesgos no tienen alcance por registro: este tablero no lleva confidentialHidden. un indicador que la cuenta
-// no lee dice «no disponible», nunca cero; 400 TOO_MANY_RECORDS es «acote los filtros»
+// no lee dice «no disponible», nunca cero; 400 TOO_MANY_RECORDS es «acote los filtros». como S03, la hora de cálculo va bajo el
+// título y las dos cifras (los activos y las medidas atrasadas) arriba, en una rejilla; la lista de las atrasadas, en su zona
 const NIVELES = ['BAJO', 'MEDIO', 'ALTO', 'CRITICO'] as const
 const TENDENCIAS = ['AUMENTA', 'SE MANTIENE', 'DISMINUYE'] as const
 const DIMENSIONES = ['locality', 'community', 'areaOfInfluence', 'project'] as const
@@ -31,8 +32,12 @@ export function TableroRiesgosPage() {
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
     <ContenedorDePagina elemento="section">
-      <EncabezadoDePagina titulo={t('tableroRiesgos.titulo')} vistas={<VistasDelModulo modulo="risks" actual="tablero" />} />
-      <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
+      <EncabezadoDePagina
+        titulo={t('tableroRiesgos.titulo')}
+        descripcion={tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : undefined}
+        vistas={<VistasDelModulo modulo="risks" actual="tablero" />}
+      />
+      <FiltrosDeTablero alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {
           const ind = (code: string) => indicadorDe(datos.indicators, code)
@@ -40,26 +45,29 @@ export function TableroRiesgosPage() {
           const tarjeta = (code: string, zona: keyof typeof ZONAS) => ind(code) ?? { code, label: titulo(code, zona), available: false }
           return (
             <div className="space-y-4">
+              <RejillaDeKpi etiqueta={t('tableros.cifrasPrincipales')}>
+                <KpiCard
+                  titulo={titulo('KPI-RSK-01', 'activos')}
+                  indicador={tarjeta('KPI-RSK-01', 'activos')}
+                  meta={metaDelPeriodo(ind('KPI-RSK-01'))}
+                  notas={ind('KPI-RSK-01')?.available ? <NotasDeIndicador indicador={ind('KPI-RSK-01')} /> : null}
+                  a={`${base}/risks?level=alto`}
+                />
+                {/* las notas de las medidas atrasadas van en su zona, con la lista: aquí se dirían dos veces */}
+                <KpiCard titulo={titulo('KPI-RSK-05', 'atrasadas')} indicador={tarjeta('KPI-RSK-05', 'atrasadas')} meta={metaDelPeriodo(ind('KPI-RSK-05'))} />
+              </RejillaDeKpi>
               <Zona titulo={titulo('KPI-RSK-02', 'matriz')} indicador={ind('KPI-RSK-02')}>
                 {(i) => <MapaDeCalor indicador={i} />}
               </Zona>
-              <KpiCard
-                titulo={titulo('KPI-RSK-01', 'activos')}
-                indicador={tarjeta('KPI-RSK-01', 'activos')}
-                notas={ind('KPI-RSK-01')?.available ? <NotasDeIndicador indicador={ind('KPI-RSK-01')} /> : null}
-                a={`${base}/risks?level=alto`}
-              />
               <Zona titulo={titulo('KPI-RSK-03', 'territorio')} indicador={ind('KPI-RSK-03')}>
                 {(i) => <PorTerritorio indicador={i} />}
               </Zona>
               <Zona titulo={titulo('KPI-RSK-04', 'semanas')} indicador={ind('KPI-RSK-04')}>
                 {(i) => <Semanas indicador={i} titulo={titulo('KPI-RSK-04', 'semanas')} />}
               </Zona>
-              <KpiCard
-                titulo={titulo('KPI-RSK-05', 'atrasadas')}
-                indicador={tarjeta('KPI-RSK-05', 'atrasadas')}
-                notas={ind('KPI-RSK-05')?.available ? <Atrasadas indicador={tarjeta('KPI-RSK-05', 'atrasadas')} /> : null}
-              />
+              <Zona titulo={t('tableroRiesgos.zonas.detalleAtrasadas')} indicador={ind('KPI-RSK-05')}>
+                {(i) => <Atrasadas indicador={i} />}
+              </Zona>
             </div>
           )
         }}
@@ -124,6 +132,8 @@ export function MapaDeCalor({ indicador }: { indicador: Indicador }) {
           </tbody>
         </Table>
       </div>
+      {/* un «—» va con su nota al pie (design-system.md §5.3 «Tablas») */}
+      {ESCALA.some((p) => ESCALA.some((i) => typeof celda(p, i)?.value !== 'number')) ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
       {typeof sinEvaluar === 'number' && sinEvaluar > 0 ? (
         <p className="text-sg-caption text-sg-text-muted">{t('tableroRiesgos.sinEvaluar', { n: numeroPe(sinEvaluar) })}</p>
       ) : null}
@@ -196,6 +206,7 @@ function PorTerritorio({ indicador }: { indicador: Indicador }) {
           </Table>
         </div>
       )}
+      {filas.some((f) => [...NIVELES, 'SIN NIVEL', 'value'].some((c) => typeof f[c] !== 'number')) ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
     </div>
   )
 }
@@ -235,12 +246,12 @@ function Atrasadas({ indicador }: { indicador: Indicador }) {
   const [elegida, setDimension] = useState<string>(disponibles[0] ?? 'risk')
   // la elegida solo si llegó; si no, la primera
   const dimension = disponibles.includes(elegida as (typeof disponibles)[number]) ? elegida : disponibles[0]
-  if (!dimension) return <NotasDeIndicador indicador={indicador} />
+  // los filtros que no aplica y los avisos los dice su zona
+  if (!dimension) return null
   const filas = desglose(indicador, dimension)
   const nombre = t(`tableroRiesgos.atrasadasDimensiones.${dimension}`)
   return (
-    <div className="space-y-2 pt-2">
-      <NotasDeIndicador indicador={indicador} />
+    <div className="space-y-2">
       {disponibles.length > 1 ? (
         <label className="flex items-center gap-2 text-sm">
           {t('tableroRiesgos.atrasadasPor')}
@@ -271,6 +282,7 @@ function Atrasadas({ indicador }: { indicador: Indicador }) {
           </tbody>
         </Table>
       )}
+      {filas.some((f) => f.value === null) ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
     </div>
   )
 }
