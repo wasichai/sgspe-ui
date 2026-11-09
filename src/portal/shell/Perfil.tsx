@@ -82,7 +82,8 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
         boton.current?.focus()
       }}
     >
-      {/* el avatar de 36 px con las iniciales (design-system.md §5.2); el nombre y los roles por su rótulo, en title y en el menú */}
+      {/* el avatar de 36 px con las iniciales (design-system.md §5.2), con el borde blanco al 55 % de los botones de la cabecera:
+          en claro se funde con el relleno y en oscuro marca el límite del control (1.4.11); el nombre y los roles por su rótulo, en title y en el menú */}
       <button
         ref={boton}
         type="button"
@@ -93,7 +94,10 @@ export function MenuDePerfil({ rotulosDeRol }: { rotulosDeRol: string }) {
         onClick={() => setAbierto((a) => !a)}
         className="flex size-12 items-center justify-center rounded-full md:size-10"
       >
-        <span aria-hidden className="flex size-9 items-center justify-center rounded-full bg-sg-surface text-sg-body-sm font-extrabold text-sg-primary-text">
+        <span
+          aria-hidden
+          className="flex size-9 items-center justify-center rounded-full border-2 border-sg-header-text/55 bg-sg-surface text-sg-body-sm font-extrabold text-sg-primary-text"
+        >
           {iniciales(user?.displayName ?? user?.email ?? '')}
         </span>
       </button>
