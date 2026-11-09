@@ -58,3 +58,54 @@ test('ningún enlace de las listas ni de los accesos del resumen se dibuja subra
     .evaluateAll((els) => els.filter((e) => getComputedStyle(e).textDecorationLine.includes('underline')).map((e) => e.textContent))
   expect(subrayados).toEqual([])
 })
+
+// #118: a 1440 px las dos columnas del resumen terminan a la misma altura: la actividad reciente ocupa el alto que deja la
+// columna derecha, sin mover nada de sitio. el orden del DOM (y del foco) sigue siendo el de lectura: la columna izquierda entera y
+// después la derecha; a 1024 px, una sola columna, cada panel con su alto
+const PANELES = ['Qué requiere atención', 'Actividad reciente', 'Paisaje de grupos de interés', 'Reuniones al mes frente a la meta', 'Áreas de influencia']
+const columnas = (page: import('@playwright/test').Page) =>
+  page.locator('main').evaluate((main, nombres) => {
+    const secciones = [...main.querySelectorAll('section')].filter((s) => nombres.some((n) => s.querySelector('h2')?.textContent?.startsWith(n)))
+    return secciones.map((s) => {
+      const caja = s.getBoundingClientRect()
+      return {
+        titulo: nombres.find((n) => s.querySelector('h2')!.textContent!.startsWith(n))!,
+        x: Math.round(caja.left),
+        arriba: caja.top,
+        abajo: caja.bottom,
+        alto: caja.height
+      }
+    })
+  }, PANELES)
+
+test('a 1440 px las dos columnas del resumen terminan a la misma altura, en el orden de lectura', async ({ page }) => {
+  await page.goto('/projects/p1/overview')
+  await expect(page.getByRole('region', { name: 'Áreas de influencia' }).getByRole('row')).toHaveCount(4)
+  await page.waitForLoadState('networkidle')
+  const paneles = await columnas(page)
+  expect(paneles.map((p) => p.titulo)).toEqual(PANELES)
+  const [izquierda, derecha] = [paneles.filter((p) => p.x === paneles[0].x), paneles.filter((p) => p.x !== paneles[0].x)]
+  expect(izquierda.map((p) => p.titulo)).toEqual(PANELES.slice(0, 2))
+  expect(derecha.map((p) => p.titulo)).toEqual(PANELES.slice(2))
+  expect(Math.abs(izquierda.at(-1)!.abajo - derecha.at(-1)!.abajo)).toBeLessThanOrEqual(2)
+})
+
+test.describe('a 1024 px', () => {
+  test.use({ viewport: { width: 1024, height: 768 } })
+  test('el resumen es una sola columna y la actividad conserva su alto', async ({ page }) => {
+    await page.goto('/projects/p1/overview')
+    await expect(page.getByRole('region', { name: 'Áreas de influencia' }).getByRole('row')).toHaveCount(4)
+    await page.waitForLoadState('networkidle')
+    const paneles = await columnas(page)
+    expect(paneles.map((p) => p.titulo)).toEqual(PANELES)
+    expect(new Set(paneles.map((p) => p.x)).size).toBe(1)
+    for (let i = 1; i < paneles.length; i++) expect(paneles[i].arriba).toBeGreaterThan(paneles[i - 1].abajo)
+    const actividad = page.getByRole('region', { name: 'Actividad reciente' })
+    // sin estirar: el panel mide lo que su cabecera y su cuerpo, más el borde
+    const { alto, contenido } = await actividad.evaluate((s) => ({
+      alto: s.getBoundingClientRect().height,
+      contenido: [...s.children].reduce((suma, h) => suma + h.getBoundingClientRect().height, 0)
+    }))
+    expect(alto - contenido).toBeLessThanOrEqual(2)
+  })
+})

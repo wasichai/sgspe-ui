@@ -71,14 +71,16 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
         qcsVencidas={de('KPI-GRV-06')}
         riesgos={de('KPI-RSK-01')}
       />
-      <div className="grid items-start gap-5 xl:grid-cols-2">
-        <div className="min-w-0 space-y-5">
+      {/* desde xl, dos columnas que terminan a la misma altura (#118): la actividad reciente ocupa el alto que deja la derecha,
+          sin mover ningún panel; el orden del DOM y del foco sigue siendo el de lectura */}
+      <div className="grid items-start gap-5 xl:grid-cols-2 xl:items-stretch">
+        <div className="flex min-w-0 flex-col gap-5">
           <Atencion proyecto={proyecto} inactividad={parametro('inactivity_days')} revision={parametro('stakeholder_review_days')} />
           <ResumenEjecutivo proyecto={proyecto} />
           <AccionesDeIa objeto="project" registro={proyecto} proyecto={proyecto.id} rotulo={texto(proyecto, 'name')} casos={['AI-07']} />
           <Actividad proyecto={proyecto.id} />
         </div>
-        <div className="min-w-0 space-y-5">
+        <div className="flex min-w-0 flex-col gap-5">
           <Paisaje
             base={base}
             posturas={de('KPI-STK-02')}
@@ -178,10 +180,22 @@ function CifrasDelProyecto({
 
 // un panel de S05 (.panel y .panel-h del lienzo): la cabecera con su título en h2 y, a la derecha, su acceso; el cuerpo va a
 // todo el ancho del panel (las filas de «Qué requiere atención», la tabla de las áreas)
-function Panel({ titulo, nombre, acciones, children }: { titulo: ReactNode; nombre?: string; acciones?: ReactNode; children: ReactNode }) {
+function Panel({
+  titulo,
+  nombre,
+  acciones,
+  className,
+  children
+}: {
+  titulo: ReactNode
+  nombre?: string
+  acciones?: ReactNode
+  className?: string
+  children: ReactNode
+}) {
   const id = useId()
   return (
-    <section aria-labelledby={nombre ? undefined : id} aria-label={nombre} className="rounded-sg-md border border-sg-border bg-sg-surface">
+    <section aria-labelledby={nombre ? undefined : id} aria-label={nombre} className={cn('rounded-sg-md border border-sg-border bg-sg-surface', className)}>
       <div className="flex flex-wrap items-center gap-3 border-b border-sg-border px-5 py-3.5">
         <h2 id={id} className="text-sg-h3 text-sg-text">
           {titulo}
@@ -359,7 +373,7 @@ function NombreDeGrupo({ grupo }: { grupo: Registro }) {
 function Actividad({ proyecto }: { proyecto: string }) {
   const { t } = useTranslation(NS)
   return (
-    <Panel titulo={t('p360.resumen.actividad')}>
+    <Panel titulo={t('p360.resumen.actividad')} className="xl:flex-1">
       <div className="px-5 py-1">
         <Historia objeto="project" id={proyecto} limite={10} vacio={t('p360.resumen.sinActividad')} enColumnas />
       </div>
