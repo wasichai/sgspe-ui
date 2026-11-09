@@ -119,4 +119,38 @@ describe('ListaPriorizada', () => {
     localStorage.removeItem('sgspe.lang')
     expect(screen.getByRole('link', { name: 'Show all 16' })).toBeInTheDocument()
   })
+
+  // S02 (design-system.md §6.7): en el inicio, cada entrada es una fila con el ícono de su tono, el título en negrita con sus chips,
+  // el motivo debajo y UN verbo a la derecha; solo el de la primera fila es la primaria. sin bordes izquierdos de color
+  describe('como filas de trabajo', () => {
+    const conVerbo = (n: number): EntradaPriorizada[] => entradas(n).map((e, i) => ({ ...e, verbo: 'Revisar', chips: <span>{`chip ${i + 1}`}</span> }))
+
+    it('cada fila lleva su ícono, sus chips, su motivo y un verbo; solo el primero es primario', () => {
+      montar(<ListaPriorizada titulo="Compromisos vencidos" total={3} entradas={conVerbo(3)} variante="filas" primeraPrimaria />)
+      const items = within(grupo()).getAllByRole('listitem')
+      expect(items).toHaveLength(3)
+      for (const [i, item] of items.entries()) {
+        expect(item).not.toHaveClass('border-l-4')
+        expect(item.querySelector('svg[data-tono]')).not.toBeNull()
+        expect(within(item).getByText(`chip ${i + 1}`)).toBeInTheDocument()
+        expect(within(item).getByText(`Vencido hace ${i + 1} días`)).toBeInTheDocument()
+        // el verbo nombra también la entrada, para que tres «Revisar» no se confundan
+        const verbo = within(item).getByRole('link', { name: `Revisar: Compromiso ${i + 1}` })
+        expect(verbo).toHaveAttribute('href', `/commitments/c${i}`)
+        expect(verbo).toHaveAttribute('data-variant', i === 0 ? 'primary' : 'secondary')
+      }
+      // el título sigue siendo el enlace de la entrada, en negrita y sin subrayado
+      expect(within(items[0]).getByRole('link', { name: 'Compromiso 1' })).toHaveClass('font-bold', 'no-underline')
+    })
+
+    it('sin primeraPrimaria todos los verbos son secundarios, y una acción propia (Tomar) reemplaza al verbo', () => {
+      const lista = conVerbo(2)
+      lista[1] = { ...lista[1], accion: <button type="button">Tomar</button> }
+      montar(<ListaPriorizada titulo="Compromisos vencidos" total={2} entradas={lista} variante="filas" />)
+      const items = within(grupo()).getAllByRole('listitem')
+      expect(within(items[0]).getByRole('link', { name: 'Revisar: Compromiso 1' })).toHaveAttribute('data-variant', 'secondary')
+      expect(within(items[1]).queryByRole('link', { name: /^Revisar/ })).not.toBeInTheDocument()
+      expect(within(items[1]).getByRole('button', { name: 'Tomar' })).toBeInTheDocument()
+    })
+  })
 })

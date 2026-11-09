@@ -1,44 +1,50 @@
+import { Button } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { KpiCard, RejillaDeKpi } from '../componentes/KpiCard'
 import { Seccion } from '../componentes/Seccion'
 import { useCatalogoDeIndicadores, useTablero } from '../datos/indicadores'
-import { fechaPe, NS } from '../i18n'
-import { CODIGOS_DE_LAS_TILES, type TableroEjecutivo } from '../tableros/contratoF8'
-import { useFiltrosDeTablero } from '../tableros/comunes'
+import { NS } from '../i18n'
+import { itemsDeAtencion, ORDEN_DE_ATENCION } from '../tableros/atencionEjecutiva'
+import { HoraDeCalculo, useFiltrosDeTablero } from '../tableros/comunes'
+import type { TableroEjecutivo } from '../tableros/contratoF8'
+import { ListaDeLoCritico } from '../tableros/LoCritico'
 
-// la visión ejecutiva del inicio (rediseño de UX, DD-01): las cifras de la revisión ejecutiva (S51) que la cuenta lee, con su
-// fecha de cálculo y el enlace a la revisión completa. solo se pide el tablero si el catálogo del tenant lo ofrece, y una cifra
-// que la cuenta no lee no se muestra: sin ninguna, el bloque no se dibuja (el inicio nunca es un tablero de «No disponible»)
-export function VisionEjecutiva() {
-  const { t } = useTranslation(NS)
+// lo ejecutivo del inicio (S02; rediseño de UX, DD-01): «Qué es crítico y dónde se atiende», la misma lista de la revisión
+// ejecutiva (S51) con su hora de cálculo, y «Ver la revisión ejecutiva» en el encabezado. solo se pide el tablero si el catálogo
+// del tenant lo ofrece, y la lista sale de las cifras de atención que la cuenta lee: sin ninguna, el bloque no se dibuja (el
+// inicio nunca es un tablero de «No disponible»)
+function useOfreceLaRevision(): boolean {
   const catalogo = useCatalogoDeIndicadores()
-  const ofrecido = (catalogo.data ?? []).some((i) => i.dashboard === 'executive' && i.available)
-  if (!ofrecido) return null
-  return <CifrasEjecutivas titulo={t('miDia.vision.titulo')} />
+  return (catalogo.data ?? []).some((i) => i.dashboard === 'executive' && i.available)
 }
 
-function CifrasEjecutivas({ titulo }: { titulo: string }) {
+// «Ver la revisión ejecutiva», secundaria en el encabezado del inicio, a quien el catálogo se la ofrece
+export function EnlaceARevisionEjecutiva() {
+  const { t } = useTranslation(NS)
+  if (!useOfreceLaRevision()) return null
+  return (
+    <Button asChild variant="secondary">
+      <Link to="/dashboards/executive">{t('miDia.vision.ver')}</Link>
+    </Button>
+  )
+}
+
+export function VisionEjecutiva() {
+  if (!useOfreceLaRevision()) return null
+  return <LoCriticoDelInicio />
+}
+
+function LoCriticoDelInicio() {
   const { t } = useTranslation(NS)
   const filtros = useFiltrosDeTablero()
   const tablero = useTablero<TableroEjecutivo>('executive', filtros)
-  const legibles = CODIGOS_DE_LAS_TILES.flatMap((code) => tablero.data?.indicators.find((i) => i.code === code && i.available) ?? [])
-  if (!tablero.data || legibles.length === 0) return null
+  const datos = tablero.data
+  const legible = (ORDEN_DE_ATENCION as readonly string[]).some((code) => datos?.indicators.some((i) => i.code === code && i.available))
+  if (!datos || !legible) return null
+  const items = itemsDeAtencion(datos)
   return (
-    <Seccion
-      titulo={titulo}
-      descripcion={t('tableros.calculado', { fecha: fechaPe(new Date(tablero.data.computedAt)) })}
-      acciones={
-        <Link to="/dashboards/executive" className="text-sg-body-sm font-medium text-sg-primary-text no-underline hover:underline focus-visible:underline">
-          {t('miDia.vision.ver')}
-        </Link>
-      }
-    >
-      <RejillaDeKpi>
-        {legibles.map((indicador) => (
-          <KpiCard key={indicador.code} titulo={indicador.label} indicador={indicador} />
-        ))}
-      </RejillaDeKpi>
+    <Seccion titulo={t('tablerosF8.ejecutivo.critico')} acciones={<HoraDeCalculo instante={datos.computedAt} />}>
+      {items.length === 0 ? <p className="text-sg-body-sm text-sg-text-muted">{t('tablerosF8.ejecutivo.sinAtencion')}</p> : <ListaDeLoCritico items={items} />}
     </Seccion>
   )
 }

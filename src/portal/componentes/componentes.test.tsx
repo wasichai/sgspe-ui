@@ -494,6 +494,42 @@ describe('KpiCard', () => {
     expect(enPagina.querySelector('[data-esqueleto]')).not.toBeNull()
   })
 
+  // S03 (design-system.md §5.3 «KPI»): la cifra con su meta y lo que falta para llegar, y el código del indicador junto al rótulo
+  it('con meta dice «de N (meta)» junto a la cifra, el avance y lo que falta, y el código va junto al rótulo', async () => {
+    montar(<KpiCard titulo="Interacciones" codigo="KPI-ENG-01" meta={70} indicador={{ code: 'KPI-ENG-01', label: 'x', available: true, value: 63 }} />)
+    const tarjeta = await screen.findByRole('region', { name: 'Interacciones' })
+    expect(within(tarjeta).getByText('de 70 (meta)')).toBeInTheDocument()
+    expect(within(tarjeta).getByText('90 % de la meta · faltan 7')).toBeInTheDocument()
+    expect(within(tarjeta).getByRole('progressbar', { name: '90 % de la meta' })).toHaveAttribute('aria-valuenow', '90')
+    // el código en la monoespaciada, en la cabecera de la celda y fuera del nombre del rótulo
+    expect(within(tarjeta).getByText('KPI-ENG-01')).toHaveClass('font-sg-mono')
+    expect(within(tarjeta).getByRole('heading', { name: 'Interacciones' })).toBeInTheDocument()
+  })
+
+  it('sin meta, o con la cifra no disponible, no dice meta', async () => {
+    montar(
+      <>
+        <KpiCard titulo="Sin meta" meta={null} indicador={{ code: 'KPI-ENG-01', label: 'x', available: true, value: 63 }} />
+        <KpiCard titulo="Reservada" meta={70} indicador={{ code: 'KPI-ENG-01', label: 'x', available: false, unavailableReason: 'OBJECT_NOT_READABLE' }} />
+      </>
+    )
+    await screen.findByRole('region', { name: 'Sin meta' })
+    expect(screen.queryByText(/\(meta\)/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  })
+
+  // S03: ocho cifras en dos filas de cuatro
+  it('una rejilla de cuatro columnas reparte las celdas en cuartos desde xl', () => {
+    montar(
+      <RejillaDeKpi etiqueta="Cartera" columnas={4}>
+        <KpiCard titulo="Uno" indicador={{ code: 'A', label: 'x', available: true, value: 1 }} />
+        <KpiCard titulo="Dos" indicador={{ code: 'B', label: 'x', available: true, value: 2 }} />
+      </RejillaDeKpi>
+    )
+    for (const celda of within(screen.getByRole('group', { name: 'Cartera' })).getAllByRole('region'))
+      expect(celda).toHaveClass('basis-full', 'sm:basis-1/2', 'xl:basis-1/4')
+  })
+
   // design-system.md §5.3 «KPI»: una fila de cifras en una sola caja con borde de 1 px y separadores, no tarjetas sueltas
   it('en una rejilla, las cifras van en una sola caja y cada una es una celda sin caja propia', async () => {
     montar(

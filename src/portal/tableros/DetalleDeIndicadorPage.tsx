@@ -1,14 +1,14 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, metaDelPeriodo } from '../componentes/KpiCard'
 import { useIndicador, type Desglose, type Indicador } from '../datos/indicadores'
 import { NS } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { esMes } from './contratoF8'
 import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, FiltrosIgnorados, SerieConMeta, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
 import { Seccion } from '../componentes/Seccion'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 
 // los desgloses de cada indicador que son categorías y se dibujan en barras (api.md §4.11). los demás no lo son: los
 // puntos y los umbrales de la matriz (stakeholder y thresholds de KPI-STK-03), la cobertura de KPI-STK-06 (coverage) y
@@ -67,17 +67,19 @@ export function DetalleDeIndicadorPage() {
     return q ? `/dashboards/monitoring?${q}` : '/dashboards/monitoring'
   }
   return (
-    <ContenedorDePagina elemento="section" className="max-w-[1100px]">
+    <ContenedorDePagina elemento="section">
       <Link to={volver()} className="text-sm text-sg-primary-text underline">
         {t('tableros.volverAlTablero')}
       </Link>
-      {/* el título dice la cifra por su nombre; su código técnico vive en el catálogo de indicadores (tercera pasada de UX, 4.7) */}
-      <h1 className="text-sg-h1 font-semibold">{indicador.data ? rotulo(indicador.data) : t('tableros.indicador')}</h1>
+      {/* el título dice la cifra por su nombre; su código técnico vive en el catálogo de indicadores (tercera pasada de UX, 4.7). el
+          detalle de un indicador no trae hora de cálculo (computedAt es del tablero), así que no la dice */}
+      <EncabezadoDePagina titulo={indicador.data ? rotulo(indicador.data) : t('tableros.indicador')} />
       <FiltrosDeTablero alActualizar={() => void indicador.refetch()} />
       <ConsultaDeTablero consulta={indicador}>
         {(i) => (
           <div className="space-y-4">
-            <KpiCard titulo={rotulo(i)} indicador={i} />
+            {/* la cifra con la meta del último mes de su serie, si la trae (S03) */}
+            <KpiCard titulo={rotulo(i)} indicador={i} meta={metaDelPeriodo(i)} />
             {i.available ? (
               <>
                 <FiltrosIgnorados indicador={i} />

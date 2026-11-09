@@ -22,7 +22,10 @@ export const ES_TABLERO_INVERSION = {
     ejecutado: 'Ejecutado registrado',
     avance: 'Avance',
     porAprobar: 'Por aprobar',
-    sinFilas: 'No hay presupuestos de programas para estos filtros.'
+    sinFilas: 'No hay presupuestos de programas para estos filtros.',
+    // la nota al pie de cada tabla de montos (design-system.md §5.3 «Tablas»)
+    notaDeMoneda: 'Montos en {{moneda}}; — = sin monto.',
+    notaSinMoneda: 'Montos sin moneda registrada; — = sin monto.'
   },
   consolidado: {
     tabla: 'Inversión ejecutada por proyecto y moneda',
@@ -34,7 +37,8 @@ export const ES_TABLERO_INVERSION = {
     programas: 'Programas',
     presupuesto: 'Presupuesto',
     tope: 'Tope de campaña',
-    sinFilas: 'No hay inversión ejecutada para estos filtros.'
+    sinFilas: 'No hay inversión ejecutada para estos filtros.',
+    nota: 'Montos en la moneda de cada fila; las monedas no se suman. — = sin monto.'
   },
   beneficiarios: {
     tabla: 'Beneficiarios por programa',
@@ -67,7 +71,9 @@ export const EN_TABLERO_INVERSION: typeof ES_TABLERO_INVERSION = {
     ejecutado: 'Recorded executed',
     avance: 'Progress',
     porAprobar: 'Pending approval',
-    sinFilas: 'There are no program budgets for these filters.'
+    sinFilas: 'There are no program budgets for these filters.',
+    notaDeMoneda: 'Amounts in {{moneda}}; — = no amount.',
+    notaSinMoneda: 'Amounts with no recorded currency; — = no amount.'
   },
   consolidado: {
     tabla: 'Executed investment by project and currency',
@@ -79,7 +85,8 @@ export const EN_TABLERO_INVERSION: typeof ES_TABLERO_INVERSION = {
     programas: 'Programs',
     presupuesto: 'Budget',
     tope: 'Campaign cap',
-    sinFilas: 'There is no executed investment for these filters.'
+    sinFilas: 'There is no executed investment for these filters.',
+    nota: 'Amounts in the currency of each row; currencies are not added together. — = no amount.'
   },
   beneficiarios: {
     tabla: 'Beneficiaries by program',

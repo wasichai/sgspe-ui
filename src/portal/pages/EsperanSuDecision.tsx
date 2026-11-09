@@ -1,4 +1,5 @@
 import { useAuth } from '@wasichai/core'
+import { Bell, FileCheck, TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ListaPriorizada, type EntradaPriorizada } from '../componentes/ListaPriorizada'
 import { Seccion } from '../componentes/Seccion'
@@ -40,7 +41,9 @@ export function EsperanSuDecision() {
     a: rutaDeDecision(a) ?? destinoDeAviso(a.link) ?? '/tasks/approvals',
     motivo: a.body || t('miDia.decision.aprobacionPendiente'),
     cuando: desde(a),
-    tono: a.overdue ? 'danger' : 'warning'
+    tono: a.overdue ? 'danger' : 'warning',
+    icono: FileCheck,
+    verbo: t('miDia.verbos.aprobacion')
   }))
   const porTriar: EntradaPriorizada[] = (alertas.data ?? []).map((r) => {
     const severidad = texto(r, 'severity')
@@ -51,7 +54,9 @@ export function EsperanSuDecision() {
       a: rutaDeFicha('early_warning', r) ?? '/notifications',
       motivo: severidad ? t('miDia.decision.severidad', { valor: rotuloDeOpcion(severidad) }) : t('miDia.decision.sinSeveridad'),
       cuando: detectada ? t('miDia.decision.detectada', { fecha: detectada }) : undefined,
-      tono: SEVERIDADES_GRAVES.includes(severidad) ? 'danger' : 'warning'
+      tono: SEVERIDADES_GRAVES.includes(severidad) ? 'danger' : 'warning',
+      icono: TriangleAlert,
+      verbo: t('miDia.verbos.alerta')
     }
   })
   const otros: EntradaPriorizada[] = (avisos.data?.content ?? [])
@@ -62,21 +67,31 @@ export function EsperanSuDecision() {
       a: destinoDeAviso(a.link) ?? '/notifications',
       motivo: [a.body || t('miDia.decision.pideAccion'), a.read ? '' : t('avisos.sinLeer')].filter(Boolean).join(' · '),
       cuando: desde(a),
-      tono: a.overdue ? 'danger' : 'warning'
+      tono: a.overdue ? 'danger' : 'warning',
+      icono: Bell,
+      verbo: t('miDia.verbos.aviso')
     }))
   if (aprobaciones.length + porTriar.length + otros.length === 0) return null
   return (
     <Seccion titulo={t('miDia.decision.titulo')}>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {/* S02: cada grupo en filas de trabajo con su verbo; la primaria de la pantalla es la primera de «Lo que me toca hoy» */}
+      <div className="space-y-4">
         {/* las aprobaciones y los avisos se leen de los primeros de la bandeja: si tiene más, su total no se afirma */}
         <ListaPriorizada
+          variante="filas"
           titulo={t('miDia.decision.aprobaciones')}
           total={truncado ? null : aprobaciones.length}
           entradas={aprobaciones}
           verTodos={{ a: '/tasks/approvals' }}
         />
-        <ListaPriorizada titulo={t('miDia.decision.alertas')} total={porTriar.length} entradas={porTriar} />
-        <ListaPriorizada titulo={t('miDia.decision.avisos')} total={truncado ? null : otros.length} entradas={otros} verTodos={{ a: '/notifications' }} />
+        <ListaPriorizada variante="filas" titulo={t('miDia.decision.alertas')} total={porTriar.length} entradas={porTriar} />
+        <ListaPriorizada
+          variante="filas"
+          titulo={t('miDia.decision.avisos')}
+          total={truncado ? null : otros.length}
+          entradas={otros}
+          verTodos={{ a: '/notifications' }}
+        />
       </div>
     </Seccion>
   )

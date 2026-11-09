@@ -254,6 +254,26 @@ describe('S27 · tablero de compromisos', () => {
     expect(document.body).not.toHaveTextContent(/KPI-COM/)
   })
 
+  // S03 (design-system.md §5.3 «KPI» y «Tablas»): la hora de cálculo bajo el título (de otro día, con su fecha) y no en la fila
+  // de filtros; los montos por moneda con su nota al pie, debajo de su tabla
+  it('dice la hora de cálculo bajo el título y los montos llevan su nota al pie', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-12T15:00:00Z'))
+    try {
+      iniciar()
+      abrir()
+      const montos = await screen.findByRole('region', { name: 'Comprometido frente a ejecutado' })
+      const titulo = screen.getByRole('heading', { level: 1, name: 'Tablero de compromisos' })
+      expect(titulo.parentElement).toHaveTextContent('Calculado el 9 oct. 2026 a las 10:00')
+      expect(screen.getByRole('group', { name: 'Filtros del tablero' })).not.toHaveTextContent(/Calculado/)
+      const nota = within(montos).getByText('Montos en la moneda de cada fila; las monedas no se suman. — = sin monto.')
+      expect(nota).toHaveClass('text-sg-caption', 'text-sg-text-secondary')
+      expect(within(montos).getByRole('table').compareDocumentPosition(nota) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('montos sin compromisos con monto lo dicen en lugar de un gráfico vacío', async () => {
     iniciar(conIndicadores({ 'KPI-COM-10': { value: null, breakdowns: [{ by: 'currency', rows: [] }] } }))
     abrir()

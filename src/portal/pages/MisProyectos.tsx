@@ -1,19 +1,21 @@
 import { useAuth } from '@wasichai/core'
 import { useTranslation } from 'react-i18next'
+import { Table, Td, Th } from '@wasichai/ui'
 import { Link } from 'react-router'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Persona } from '../componentes/Persona'
 import { Seccion } from '../componentes/Seccion'
+import { CAJA_DE_TABLA, CELDA, ENCABEZADO, FILA, NOTA_AL_PIE } from '../componentes/TablaPriorizada'
 import { ROL_DE_JEFATURA } from '../config'
-import { nombreDeProyecto, useMisAsignaciones, useProyectos, vigenciaDeAsignacion } from '../contexto/proyectos'
+import { useMisAsignaciones, useProyectos, vigenciaDeAsignacion } from '../contexto/proyectos'
 import { useSumasDeConteos, type PedidoDeConteo } from '../datos/conteos'
 import { atributo, texto, useTodos, type Registro } from '../datos/registros'
-import { NS } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 
-// «Mis proyectos» del inicio (S02, revisión de UX, etapa 2; P-01 del rediseño): una tarjeta por proyecto con asignación vigente,
-// con su estado, su jefatura (ASM-080) y lo que pide acción, que lleva a su lista: compromisos vencidos, QCS vencidas y riesgos
-// altos o críticos. una cifra en cero no se dibuja (U-11) y, sin ninguna, «Nada pide acción»; una que la cuenta no lee no se
-// dibuja (DD-38: no es un dato que falte) y una que no llegó es «—», nunca cero. con más de seis, los seis con más pendientes y
+// «Mis proyectos» del inicio (S02, revisión de UX, etapa 2; P-01 del rediseño): una tabla compacta, una fila por proyecto con
+// asignación vigente, con su jefatura (ASM-080), su estado si no está activo y lo que pide acción, que lleva a su lista: compromisos
+// vencidos, QCS vencidas y riesgos altos o críticos, en danger. un cero es un cero apagado y sin enlace; una columna que la cuenta no
+// lee no se dibuja (DD-38: no es un dato que falte) y una cifra que no llegó es «—», nunca cero, con su nota al pie. con más de seis, los seis con más pendientes y
 // «Ver todos». sin subrayados (U-05). los riesgos llevan a su lista ya filtrada por nivel (tercera pasada de UX, 3.11)
 const MAXIMO = 6
 const QCS = ['grievance', 'inquiry', 'stakeholder_request']
@@ -45,6 +47,7 @@ export function MisProyectos() {
   const visibles = [...mios].sort((a, b) => pendientes(b) - pendientes(a)).slice(0, MAXIMO)
   const jefes = (p: Registro) => (jefaturas.data ?? []).filter((j) => atributo(j, 'project') === p.id).map((j) => texto(j, 'member_user_email'))
   const enlace = 'no-underline hover:underline focus-visible:underline'
+  const sinDato = visibles.some((p) => legibles.some(({ cifra: c }) => cifra(p, c) === null))
   return (
     <Seccion
       titulo={t('miDia.proyectos.titulo')}
@@ -56,53 +59,78 @@ export function MisProyectos() {
         ) : undefined
       }
     >
-      <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {visibles.map((p) => {
-          const base = `/projects/${encodeURIComponent(p.id)}`
-          const suyos = jefes(p)
-          return (
-            <li key={p.id} className="space-y-2 rounded-sg-md border border-sg-border-subtle p-3 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Link to={`${base}/overview`} className={`font-medium text-sg-text ${enlace}`}>
-                  {nombreDeProyecto(p)}
-                </Link>
-                <EstadoChip objeto="project" estado={p.state} />
-              </div>
-              <p className="text-sg-text-secondary">
-                {t('miDia.proyectos.jefatura')}:{' '}
-                {suyos.length
-                  ? suyos.map((correo, i) => (
-                      <span key={correo}>
-                        {i > 0 ? ', ' : null}
-                        <Persona correo={correo} />
-                      </span>
-                    ))
-                  : t('miDia.proyectos.sinJefatura')}
-              </p>
-              <ul className="space-y-0.5">
-                {legibles.map(({ cifra: c, resto }) => {
-                  const n = cifra(p, c)
-                  if (n === 0) return null
-                  return (
-                    <li key={c}>
-                      {n === null ? (
-                        <span className="text-sg-text-muted">{t('miDia.proyectos.sinDato', { cifra: t(`miDia.proyectos.nombres.${c}`) })}</span>
-                      ) : (
-                        <Link to={`${base}/${resto}`} className={`font-medium text-sg-danger ${enlace}`}>
-                          {t(`miDia.proyectos.${c}`, { count: n })}
-                        </Link>
-                      )}
-                    </li>
-                  )
-                })}
-                {legibles.length === 0 || !legibles.every(({ cifra: c }) => cifra(p, c) === 0) ? null : (
-                  <li className="text-sg-text-secondary">{t('miDia.proyectos.nadaPideAccion')}</li>
-                )}
-              </ul>
-            </li>
-          )
-        })}
-      </ul>
+      {/* la tabla compacta de S02: el proyecto con su código en la monoespaciada, su jefatura y, si no está activo, su estado; y una
+          columna por cifra que la cuenta lee, a la derecha, en danger y enlazada cuando pide acción */}
+      <div className={CAJA_DE_TABLA}>
+        <div className="overflow-x-auto">
+          <Table aria-label={t('miDia.proyectos.titulo')}>
+            <thead>
+              <tr>
+                <Th scope="col" className={ENCABEZADO}>
+                  {t('miDia.proyectos.proyecto')}
+                </Th>
+                {legibles.map(({ cifra: c }) => (
+                  <Th key={c} scope="col" className={`${ENCABEZADO} text-right`}>
+                    <abbr title={t(`miDia.proyectos.nombres.${c}`)} aria-hidden className="no-underline">
+                      {t(`miDia.proyectos.cortos.${c}`)}
+                    </abbr>
+                    <span className="sr-only">{t(`miDia.proyectos.nombres.${c}`)}</span>
+                  </Th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visibles.map((p) => {
+                const base = `/projects/${encodeURIComponent(p.id)}`
+                const suyos = jefes(p)
+                return (
+                  <tr key={p.id} className={FILA}>
+                    <Td className={`${CELDA} w-full whitespace-normal`}>
+                      <Link to={`${base}/overview`} className={`text-sg-text ${enlace}`}>
+                        <span className="font-sg-mono text-sg-body-sm text-sg-text-secondary">{texto(p, 'code')}</span>{' '}
+                        <span className="font-semibold">{texto(p, 'name')}</span>
+                      </Link>
+                      {p.state && p.state !== 'active' ? (
+                        <div className="mt-1">
+                          <EstadoChip objeto="project" estado={p.state} />
+                        </div>
+                      ) : null}
+                      <p className="text-sg-caption text-sg-text-secondary">
+                        {t('miDia.proyectos.jefatura')}:{' '}
+                        {suyos.length
+                          ? suyos.map((correo, i) => (
+                              <span key={correo}>
+                                {i > 0 ? ', ' : null}
+                                <Persona correo={correo} />
+                              </span>
+                            ))
+                          : t('miDia.proyectos.sinJefatura')}
+                      </p>
+                    </Td>
+                    {legibles.map(({ cifra: c, resto }) => {
+                      const n = cifra(p, c)
+                      return (
+                        <Td key={c} className={`${CELDA} text-right tabular-nums`}>
+                          {n === null ? (
+                            <span className="text-sg-text-muted">—</span>
+                          ) : n === 0 ? (
+                            <span className="text-sg-text-muted">0</span>
+                          ) : (
+                            <Link to={`${base}/${resto}`} aria-label={t(`miDia.proyectos.${c}`, { count: n })} className={`font-bold text-sg-danger ${enlace}`}>
+                              {numeroPe(n)}
+                            </Link>
+                          )}
+                        </Td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </Table>
+        </div>
+        {sinDato ? <p className={NOTA_AL_PIE}>{t('miDia.proyectos.notaAlPie')}</p> : null}
+      </div>
     </Seccion>
   )
 }

@@ -1,9 +1,11 @@
 import { Alert, Button, Table, Td, Th } from '@wasichai/ui'
+import { CONTROL } from '../componentes/Campo'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useId, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 import { NoDisponible, Vacio } from '../componentes/Estados'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, metaDelPeriodo, RejillaDeKpi } from '../componentes/KpiCard'
 import { montoPe } from '../componentes/Monto'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { useProyectos } from '../contexto/proyectos'
@@ -15,7 +17,8 @@ import { texto } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
 import { diaPe, fechaPe, mesPe, NS, numeroPe, periodoPe } from '../i18n'
 import { itemsDeAtencion, rutaDeCifra } from './atencionEjecutiva'
-import { ConsultaDeTablero, FiltrosDeTablero, indicadorDe, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
+import { ConsultaDeTablero, FiltrosDeTablero, HoraDeCalculo, indicadorDe, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
+import { ListaDeLoCritico } from './LoCritico'
 import { CODIGOS_DE_LAS_TILES, mesesDeTendencia, TOPE_DE_PROYECTOS, type MesDeTendencia, type TableroEjecutivo } from './contratoF8'
 import { Seccion } from '../componentes/Seccion'
 
@@ -72,6 +75,63 @@ function Pie({ children }: { children: ReactNode }) {
   return <p className="text-sg-caption text-sg-text-muted">{children}</p>
 }
 
+// el mes en curso de Lima (AAAA-MM) y los once anteriores, para el selector de periodo
+const ultimosDoceMeses = (hoy: string): string[] => {
+  const [anio, mes] = hoy.split('-').map(Number)
+  return Array.from({ length: 12 }, (_, i) => {
+    const fecha = new Date(Date.UTC(anio, mes - 1 - i, 15))
+    return `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}`
+  })
+}
+
+// el periodo como selector (S03): uno de los últimos doce meses, que escribe periodStart y periodEnd en la URL (el mes en curso, sin
+// fechas: dashboards.md §3.1). un periodo que no es un mes entero se elige con «Cambiar el periodo y los filtros» y aquí se dice
+function SelectorDePeriodo({ periodo }: { periodo: string }) {
+  const { t } = useTranslation(NS)
+  const [busqueda, fijar] = useSearchParams()
+  const id = useId()
+  const hoy = hoyEnLima().slice(0, 7)
+  const meses = ultimosDoceMeses(hoy)
+  const desde = busqueda.get('periodStart')
+  const hasta = busqueda.get('periodEnd')
+  const elegido =
+    !desde && !hasta
+      ? hoy
+      : desde && hasta && desde.endsWith('-01') && hasta === ultimoDiaDelMes(desde) && meses.includes(desde.slice(0, 7))
+        ? desde.slice(0, 7)
+        : 'otro'
+  const elegir = (mes: string) => {
+    const siguiente = new URLSearchParams(busqueda)
+    if (mes === hoy) {
+      siguiente.delete('periodStart')
+      siguiente.delete('periodEnd')
+    } else {
+      siguiente.set('periodStart', `${mes}-01`)
+      siguiente.set('periodEnd', ultimoDiaDelMes(`${mes}-01`))
+    }
+    fijar(siguiente, { replace: true })
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sg-label text-sg-text">
+        {t('tablerosF8.ejecutivo.periodo')}
+      </label>
+      <select id={id} className={`${CONTROL} min-w-55`} value={elegido} onChange={(e) => elegir(e.target.value)}>
+        {elegido === 'otro' ? (
+          <option value="otro" disabled>
+            {t('tablerosF8.ejecutivo.otroPeriodo', { periodo })}
+          </option>
+        ) : null}
+        {meses.map((m) => (
+          <option key={m} value={m}>
+            {conMayuscula(mesPe(m))}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export function RevisionEjecutivaPage() {
   const { t } = useTranslation(NS)
   const filtros = useFiltrosEjecutivos()
@@ -83,29 +143,37 @@ export function RevisionEjecutivaPage() {
   const panel = useId()
   const periodo = usePeriodo()
   const calculo = useCalculo(tablero.data?.computedAt)
-  const proyectos = elegidos ? t('tablerosF8.ejecutivo.proyectosElegidos', { count: elegidos }) : t('tablerosF8.ejecutivo.todosSusProyectos')
   const pie = t('tablerosF8.ejecutivo.pie', { periodo, calculado: calculo.texto })
+  const alcance = elegidos ? t('tablerosF8.ejecutivo.alcanceElegidos', { count: elegidos }) : t('tablerosF8.ejecutivo.alcanceTodos')
   return (
-    <div className="mx-auto max-w-[1440px] space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-sg-h1 font-semibold">{t('tablerosF8.ejecutivo.titulo')}</h1>
-          <p className="text-sm text-sg-text-secondary">{t('tablerosF8.ejecutivo.resumen', { periodo, proyectos, calculado: calculo.texto })}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="secondary" size="sm" aria-expanded={abierto} aria-controls={panel} onClick={() => fijarAbierto((x) => !x)}>
-            {t('tablerosF8.ejecutivo.cambiarFiltros')}
-          </Button>
-          <Link to="/dashboards/monitoring" className="text-sm text-sg-primary-text underline">
-            {t('tablerosF8.ejecutivo.monitoreo')}
-          </Link>
-        </div>
-      </header>
+    <ContenedorDePagina>
+      {/* S03: la sobrelínea «Revisión ejecutiva», el periodo como título y la hora de cálculo visible con su alcance (préstamo de
+          D); a la derecha, el periodo como selector y los demás filtros plegados */}
+      <EncabezadoDePagina
+        antetitulo={t('tablerosF8.ejecutivo.titulo')}
+        antetituloEnSans
+        titulo={periodo}
+        tituloDelDocumento={t('tablerosF8.ejecutivo.titulo')}
+        descripcion={
+          tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} alcance={alcance} /> : <span className="text-sg-body-sm">{calculo.texto}</span>
+        }
+        secundarias={
+          <div className="flex flex-wrap items-end gap-3">
+            <SelectorDePeriodo periodo={periodo} />
+            <Button variant="secondary" aria-expanded={abierto} aria-controls={panel} onClick={() => fijarAbierto((x) => !x)}>
+              {t('tablerosF8.ejecutivo.cambiarFiltros')}
+            </Button>
+            <Link to="/dashboards/monitoring" className="inline-flex min-h-10 items-center text-sg-body-sm font-semibold text-sg-primary-text underline">
+              {t('tablerosF8.ejecutivo.monitoreo')}
+            </Link>
+          </div>
+        }
+      />
       {calculo.antiguo ? (
         <div
           role="note"
           aria-label={t('tablerosF8.ejecutivo.antiguo.titulo')}
-          className="flex flex-wrap items-center gap-3 rounded-sg-md border border-sg-border bg-sg-surface p-3 text-sm text-sg-warning"
+          className="flex flex-wrap items-center gap-3 rounded-sg-md border-2 border-sg-warning-border bg-sg-warning-soft px-4 py-3 text-sg-body-sm text-sg-text"
         >
           <span>{t('tablerosF8.ejecutivo.antiguo.texto')}</span>
           <Button variant="secondary" size="sm" onClick={() => void tablero.refetch()}>
@@ -114,7 +182,7 @@ export function RevisionEjecutivaPage() {
         </div>
       ) : null}
       {abierto ? (
-        <div id={panel} className="space-y-3 rounded-sg-lg border border-sg-border bg-sg-surface p-4">
+        <div id={panel} className="space-y-3 rounded-sg-md border border-sg-border bg-sg-surface p-4 sm:px-5">
           <FiltrosDeTablero alActualizar={() => void tablero.refetch()} />
           <ProyectosDeLaRevision />
         </div>
@@ -122,7 +190,7 @@ export function RevisionEjecutivaPage() {
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => <Revision datos={datos} pie={pie} calculado={calculo.texto} alElegirProyectos={() => fijarAbierto(true)} />}
       </ConsultaDeTablero>
-    </div>
+    </ContenedorDePagina>
   )
 }
 
@@ -189,31 +257,38 @@ function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: Tablero
   )
   const inversion = indicador('KPI-INV-03')
   const tendencia = indicador('KPI-EXE-03')
-  const zonas = disponiblesPrimero(
-    [
-      { disponible: inversion.available, zona: <InversionPorMoneda key="inversion" indicador={inversion} pie={pie} /> },
-      { disponible: tendencia.available, zona: <Tendencia key="tendencia" indicador={tendencia} calculado={calculado} /> }
-    ],
-    (z) => z.disponible
-  )
+  const zonas = [{ disponible: tendencia.available, zona: <Tendencia key="tendencia" indicador={tendencia} calculado={calculado} /> }]
   return (
     <div className="space-y-5">
-      <LoCritico datos={datos} pie={pie} />
-      <section aria-label={t('tablerosF8.ejecutivo.tiles')} className="space-y-2">
+      {/* ocho cifras en dos filas de cuatro (S03), cada una con su código y su meta si la trae; la postura, que esta revisión no
+          muestra, al final y sin protagonismo */}
+      <section aria-label={t('tablerosF8.ejecutivo.tiles')}>
         <h2 className="sr-only">{t('tablerosF8.ejecutivo.tiles')}</h2>
-        <Pie>{pie}</Pie>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <RejillaDeKpi columnas={4}>
           {tiles.map((i) => (
-            <KpiCard key={i.code} titulo={rotulo(i)} indicador={i} a={enlaceDe(i.code)} notas={<NotaDeConfidenciales oculta={i.confidentialHidden} />} />
+            <KpiCard
+              key={i.code}
+              titulo={rotulo(i)}
+              codigo={i.code}
+              indicador={i}
+              meta={metaDelPeriodo(i)}
+              tono={i.code === 'KPI-COM-03' ? 'danger' : undefined}
+              a={enlaceDe(i.code)}
+              notas={<NotaDeConfidenciales oculta={i.confidentialHidden} />}
+            />
           ))}
-          <Seccion etiqueta={t('tablerosF8.ejecutivo.postura')} className="space-y-1">
-            <h3 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('tablerosF8.ejecutivo.postura')}</h3>
-            <NoDisponible />
-            <p className="text-sg-caption text-sg-text-muted">{t('tablerosF8.ejecutivo.posturaAyuda')}</p>
-          </Seccion>
-        </div>
+          <KpiCard
+            titulo={t('tablerosF8.ejecutivo.postura')}
+            indicador={{ code: 'postura', label: t('tablerosF8.ejecutivo.postura'), available: false }}
+            notas={<p className="text-sg-caption text-sg-text-muted">{t('tablerosF8.ejecutivo.posturaAyuda')}</p>}
+          />
+        </RejillaDeKpi>
       </section>
-      <div className="grid items-start gap-4 lg:grid-cols-2">{zonas.map((z) => z.zona)}</div>
+      {zonas.map((z) => z.zona)}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_440px]">
+        <LoCritico datos={datos} pie={pie} />
+        <InversionPorMoneda indicador={inversion} pie={pie} />
+      </div>
       <PorProyecto datos={datos} pie={pie} alElegirProyectos={alElegirProyectos} />
     </div>
   )
@@ -223,43 +298,14 @@ function Revision({ datos, pie, calculado, alElegirProyectos }: { datos: Tablero
 // cifra. el contrato no trae a la persona responsable: la fila dice el proyecto y enlaza la lista de su equipo
 function LoCritico({ datos, pie }: { datos: TableroEjecutivo; pie: string }) {
   const { t } = useTranslation(NS)
-  const titulo = t('tablerosF8.ejecutivo.critico')
   const items = itemsDeAtencion(datos)
   return (
-    <Seccion titulo={titulo}>
+    <Seccion
+      titulo={t('tablerosF8.ejecutivo.critico')}
+      acciones={<span className="text-sg-body-sm text-sg-text-secondary">{t('tablerosF8.ejecutivo.ordenado')}</span>}
+    >
       <Pie>{pie}</Pie>
-      {items.length === 0 ? (
-        <p className="text-sm text-sg-text-muted">{t('tablerosF8.ejecutivo.sinAtencion')}</p>
-      ) : (
-        <Table aria-label={titulo}>
-          <thead>
-            <tr>
-              <Th scope="col">{t('tablerosF8.ejecutivo.columnas.asunto')}</Th>
-              <Th scope="col">{t('tablerosF8.ejecutivo.columnas.proyecto')}</Th>
-              <Th scope="col" className="text-right">
-                {t('tablerosF8.ejecutivo.columnas.cifra')}
-              </Th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((i) => {
-              const asunto = t(`tableros.cifras.${i.code}`)
-              const proyecto = i.nombre ?? t('tablerosF8.ejecutivo.todaLaCartera')
-              return (
-                <tr key={`${i.code}-${i.proyecto ?? 'cartera'}`}>
-                  <Td className="text-sm">
-                    <Link to={i.ruta} aria-label={t('tablerosF8.ejecutivo.enlaceDeAsunto', { asunto, proyecto })} className="text-sg-primary-text underline">
-                      {asunto}
-                    </Link>
-                  </Td>
-                  <Td className="text-sm text-sg-text-secondary">{proyecto}</Td>
-                  <Td className="text-right text-sm tabular-nums">{numeroPe(i.valor)}</Td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </Table>
-      )}
+      {items.length === 0 ? <p className="text-sm text-sg-text-muted">{t('tablerosF8.ejecutivo.sinAtencion')}</p> : <ListaDeLoCritico items={items} />}
       <p className="text-sg-caption text-sg-text-muted">{t('tablerosF8.ejecutivo.criticoAyuda')}</p>
     </Seccion>
   )
@@ -295,42 +341,55 @@ export function inversionPorMoneda(indicador: Indicador): CifrasDeUnaMoneda[] {
   return [...porMoneda.values()].sort((a, b) => a.moneda.localeCompare(b.moneda))
 }
 
+// un medidor por moneda (S03, design-system.md §5.3 «Medidores»): la moneda y su avance arriba, la barra de 16 px y «S/ 15,000.00
+// de S/ 40,000.00» con los topes debajo; y la nota al pie: las monedas no se suman (ASM-063)
 function InversionPorMoneda({ indicador, pie }: { indicador: Indicador; pie: string }) {
   const { t } = useTranslation(NS)
   const titulo = t('tablerosF8.ejecutivo.inversion')
   const monedas = indicador.available ? inversionPorMoneda(indicador) : []
   const texto_ = (n: bigint | null) => (n === null ? null : deDiezmilesimos(n))
   return (
-    <Seccion titulo={titulo} className="space-y-3">
+    <Seccion titulo={titulo} acciones={<span className="font-sg-mono text-[11.5px] text-sg-text-muted">{indicador.code}</span>} className="space-y-3">
       <Pie>{pie}</Pie>
       {!indicador.available ? (
         <NoDisponible motivo={indicador.unavailableReason} />
       ) : monedas.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{t('tablerosF8.ejecutivo.sinInversion')}</p>
       ) : (
-        <ul className="space-y-3">
-          {monedas.map((m) => {
-            const avance = porcentaje(texto_(m.ejecutado), texto_(m.presupuesto))
-            return (
-              <li key={m.moneda} role="group" aria-label={m.moneda} className="space-y-1 text-sm">
-                <div
-                  role="progressbar"
-                  aria-label={t('tablerosF8.ejecutivo.ejecutadoDe', { moneda: m.moneda })}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={avance ?? undefined}
-                  aria-valuetext={avance === null ? '—' : `${numeroPe(avance)} %`}
-                  className="h-2 rounded-full bg-sg-surface-sunken"
-                >
-                  <div className="h-2 rounded-full bg-sg-primary" style={{ width: `${Math.min(100, avance ?? 0)}%` }} />
-                </div>
-                <p>{t('tablerosF8.ejecutivo.ejecutado', { monto: montoPe(texto_(m.ejecutado), m.moneda) })}</p>
-                <p>{t('tablerosF8.ejecutivo.presupuesto', { monto: montoPe(texto_(m.presupuesto), m.moneda) })}</p>
-                <p>{t('tablerosF8.ejecutivo.tope', { monto: montoPe(texto_(m.tope), m.moneda) })}</p>
-              </li>
-            )
-          })}
-        </ul>
+        <>
+          <ul className="space-y-4">
+            {monedas.map((m) => {
+              const avance = porcentaje(texto_(m.ejecutado), texto_(m.presupuesto))
+              return (
+                <li key={m.moneda} role="group" aria-label={m.moneda} className="space-y-1.5 text-sg-body-sm">
+                  <div className="flex items-baseline justify-between gap-3 text-sg-body font-bold">
+                    <span>{m.moneda}</span>
+                    <span className="tabular-nums">{avance === null ? '—' : `${numeroPe(avance)} %`}</span>
+                  </div>
+                  <div
+                    role="progressbar"
+                    aria-label={t('tablerosF8.ejecutivo.ejecutadoDe', { moneda: m.moneda })}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={avance ?? undefined}
+                    aria-valuetext={avance === null ? '—' : `${numeroPe(avance)} %`}
+                    className="h-4 overflow-hidden rounded-sg-xs border border-sg-border-strong bg-sg-surface-sunken"
+                  >
+                    <div className="h-full bg-sg-primary" style={{ width: `${Math.min(100, avance ?? 0)}%` }} />
+                  </div>
+                  <p className="tabular-nums text-sg-text">
+                    {t('tablerosF8.ejecutivo.ejecutadoDePresupuesto', {
+                      ejecutado: montoPe(texto_(m.ejecutado), m.moneda),
+                      presupuesto: montoPe(texto_(m.presupuesto), m.moneda)
+                    })}
+                  </p>
+                  <p className="tabular-nums text-sg-text-secondary">{t('tablerosF8.ejecutivo.tope', { monto: montoPe(texto_(m.tope), m.moneda) })}</p>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="text-sg-caption text-sg-text-secondary">{t('tablerosF8.ejecutivo.monedasNoSeSuman')}</p>
+        </>
       )}
     </Seccion>
   )
@@ -345,17 +404,16 @@ interface SerieDeTendencia {
 function SerieMensual({ titulo, meses, series, tipo }: { titulo: string; meses: MesDeTendencia[]; series: SerieDeTendencia[]; tipo: 'bar' | 'line' }) {
   const { t } = useTranslation(NS)
   const opciones = {
-    grid: { left: 32, right: 12, top: 16, bottom: 24 },
+    grid: { left: 32, right: 12, top: series.length > 1 ? 36 : 24, bottom: 24 },
     xAxis: { type: 'category', data: meses.map((m) => periodoPe(m.period)) },
     yAxis: { type: 'value', minInterval: 1 },
     tooltip: { trigger: 'axis' },
-    legend: series.length > 1 ? { bottom: 0 } : undefined,
+    legend: series.length > 1 ? { top: 0, left: 0 } : undefined,
     series: series.map((s) => ({ type: tipo, name: s.nombre, data: meses.map(s.valor) }))
   }
-  // cada serie con su título a la vista: tres gráficos sin nombre no se distinguen
+  // cada gráfico en su panel con su título (S03): tres gráficos sin nombre no se distinguen
   return (
-    <div className="space-y-1">
-      <h3 className="text-sm font-medium">{titulo}</h3>
+    <Seccion titulo={titulo} nivel={3} className="min-w-0">
       <Grafico
         etiqueta={titulo}
         alto={series.length > 1 ? 190 : 160}
@@ -365,7 +423,7 @@ function SerieMensual({ titulo, meses, series, tipo }: { titulo: string; meses: 
           filas: meses.map((m) => [periodoPe(m.period), ...series.map((s) => numeroPe(s.valor(m)))])
         }}
       />
-    </div>
+    </Seccion>
   )
 }
 
@@ -378,14 +436,19 @@ function Tendencia({ indicador, calculado }: { indicador: Indicador; calculado: 
   const ultimo = meses.at(-1)?.period
   const periodo = primero && ultimo ? t('tablerosF8.ejecutivo.meses', { desde: periodoPe(primero), hasta: periodoPe(ultimo) }) : titulo
   return (
-    <Seccion titulo={titulo} className="space-y-3">
-      <Pie>{t('tablerosF8.ejecutivo.pie', { periodo, calculado })}</Pie>
+    <section aria-labelledby="revision-tendencia" className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="revision-tendencia" className="text-sg-h3 text-sg-text">
+          {titulo}
+        </h2>
+        <Pie>{t('tablerosF8.ejecutivo.pie', { periodo, calculado })}</Pie>
+      </div>
       {!indicador.available ? (
         <NoDisponible motivo={indicador.unavailableReason} />
       ) : meses.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{t('tableros.sinDatos')}</p>
       ) : (
-        <div className="space-y-3">
+        <div className="grid items-start gap-5 lg:grid-cols-3">
           <SerieMensual
             tipo="bar"
             titulo={t('tablerosF8.ejecutivo.series.engagements')}
@@ -409,7 +472,7 @@ function Tendencia({ indicador, calculado }: { indicador: Indicador; calculado: 
           />
         </div>
       )}
-    </Seccion>
+    </section>
   )
 }
 
@@ -421,8 +484,7 @@ function PorProyecto({ datos, pie, alElegirProyectos }: { datos: TableroEjecutiv
   const rotulo = useRotuloDeCifra()
   const columnas = filas[0]?.indicators.map((i) => ({ code: i.code, label: rotulo(i) })) ?? []
   return (
-    <section aria-label={titulo} className="space-y-2">
-      <h2 className="text-sg-h3 font-semibold">{titulo}</h2>
+    <Seccion titulo={titulo}>
       <Pie>{pie}</Pie>
       {datos.byProjectOmitted ? (
         <Alert tone="notice">
@@ -436,7 +498,7 @@ function PorProyecto({ datos, pie, alElegirProyectos }: { datos: TableroEjecutiv
       ) : filas.length === 0 ? (
         <p className="text-sm text-sg-text-muted">{t('tableros.sinDatos')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+        <div className="overflow-x-auto rounded-sg-md border border-sg-border bg-sg-surface">
           <Table aria-label={titulo}>
             <thead>
               <tr>
@@ -476,6 +538,6 @@ function PorProyecto({ datos, pie, alElegirProyectos }: { datos: TableroEjecutiv
           </Table>
         </div>
       )}
-    </section>
+    </Seccion>
   )
 }

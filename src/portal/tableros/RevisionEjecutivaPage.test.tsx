@@ -32,25 +32,24 @@ const abrir = (tablero: unknown = TABLERO_EJECUTIVO, ruta = '/') => {
 }
 
 describe('S51 · revisión ejecutiva', () => {
-  // 4.8 (P-07, U-11): lo crítico es una tabla corta, cada fila con su asunto, el proyecto y la cifra, en el orden de la regla fija
-  it('dice qué es crítico en una tabla corta por regla fija, las tiles y que la postura no se muestra', async () => {
+  // 4.8 (P-07, U-11) y S03: lo crítico es una lista corta, cada fila con el código del proyecto, el asunto con su cifra, el proyecto
+  // y el módulo donde se atiende, en el orden de la regla fija
+  it('dice qué es crítico en una lista corta por regla fija, las tiles y que la postura no se muestra', async () => {
     abrir()
     const critico = await screen.findByRole('region', { name: 'Qué es crítico y dónde se atiende' })
-    const tabla = within(critico).getByRole('table', { name: 'Qué es crítico y dónde se atiende' })
-    const filas = within(tabla).getAllByRole('row').slice(1)
+    const filas = within(critico).getAllByRole('listitem')
     expect(
-      filas.map((f) =>
-        within(f)
-          .getAllByRole('cell')
-          .map((c) => c.textContent)
-      )
+      filas.map((f) => [f.querySelector('.font-sg-mono')?.textContent, f.querySelector('p')?.textContent, within(f).getByRole('link').textContent])
     ).toEqual([
-      ['Alertas activas', 'Proyecto Ejemplo A', '2'],
-      ['Riesgos altos', 'Proyecto Ejemplo A', '1'],
-      ['Compromisos vencidos', 'Proyecto Ejemplo A', '3'],
-      ['QCS abiertas', 'Proyecto Ejemplo B', '3'],
-      ['QCS abiertas', 'Proyecto Ejemplo A', '1']
+      ['PRJ-01', '2 alertas activas', 'Alerta temprana'],
+      ['PRJ-01', '1 riesgo alto o crítico', 'Gestión de riesgos'],
+      ['PRJ-01', '3 compromisos vencidos', 'Compromisos'],
+      ['PRJ-02', '3 QCS abiertas', 'QCS · Atención'],
+      ['PRJ-01', '1 QCS abierta', 'QCS · Atención']
     ])
+    expect(filas[3]).toHaveTextContent('Proyecto Ejemplo B')
+    // lo vencido lleva su situación
+    expect(within(filas[2]).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
     expect(within(filas[0]).getByRole('link', { name: 'Alertas activas · Proyecto Ejemplo A' })).toHaveAttribute(
       'href',
       '/projects/p1/risks/warnings?view=activas'
@@ -60,16 +59,23 @@ describe('S51 · revisión ejecutiva', () => {
     expect(within(within(tiles).getByRole('region', { name: 'Alertas activas' })).getByText('2')).toBeInTheDocument()
     const postura = within(tiles).getByRole('region', { name: 'Postura de los grupos de interés' })
     expect(within(postura).getByText('No disponible')).toBeInTheDocument()
+    // S03: ocho celdas en dos filas de cuatro, cada cifra con su código
+    expect(within(tiles).getAllByRole('region')).toHaveLength(8)
+    expect(within(within(tiles).getByRole('region', { name: 'Proyectos activos' })).getByText('KPI-EXE-01')).toHaveClass('font-sg-mono')
     expect(red!.a('GET', '/sgspe/dashboards/executive')).toHaveLength(1)
   })
 
-  // U-11: la página abre con las cifras, no con los filtros; el periodo y la fecha de cálculo van bajo el título (U-23)
+  // U-11: la página abre con las cifras, no con los filtros; S03: el periodo es el título y la hora de cálculo va bajo él, con lo que
+  // abarca (préstamo de D, U-23); el periodo se elige en un selector
   it('abre con el periodo y la fecha de cálculo bajo el título y los filtros plegados', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-16T18:00:00Z'))
     try {
       abrir()
-      expect(await screen.findByText('Octubre de 2026 · todos sus proyectos · calculado hace 3 h')).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { level: 1, name: 'Octubre de 2026' })).toBeInTheDocument()
+      expect(screen.getByText('Revisión ejecutiva')).toBeInTheDocument()
+      expect(await screen.findByText('Calculado hoy 10:00 con los datos de todos sus proyectos')).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: 'Periodo' })).toHaveDisplayValue('Octubre de 2026')
       expect(screen.queryByRole('group', { name: 'Filtros del tablero' })).not.toBeInTheDocument()
       expect(screen.queryByLabelText('Desde')).not.toBeInTheDocument()
       expect(screen.queryByText(/más de 24 horas/)).not.toBeInTheDocument()
@@ -87,7 +93,9 @@ describe('S51 · revisión ejecutiva', () => {
   it('el periodo se escribe dd/mm/aaaa y se pide con periodStart y periodEnd; un mes entero se dice por su nombre', async () => {
     abrir(TABLERO_EJECUTIVO, '/?periodEnd=2026-09-30')
     await screen.findByRole('table', { name: 'Por proyecto' })
-    expect(screen.getByText(/^Hasta el 30 set\. 2026 · todos sus proyectos · calculado/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Hasta el 30 set. 2026' })).toBeInTheDocument()
+    // el selector dice que el periodo no es un mes entero
+    expect(screen.getByRole('combobox', { name: 'Periodo' })).toHaveDisplayValue('Otro periodo: Hasta el 30 set. 2026')
     await userEvent.click(screen.getByRole('button', { name: 'Cambiar el periodo y los filtros' }))
     expect(screen.getByLabelText('Hasta')).toHaveValue('30/09/2026')
     const desde = screen.getByLabelText('Desde')
@@ -98,7 +106,31 @@ describe('S51 · revisión ejecutiva', () => {
         red!.a('GET', '/sgspe/dashboards/executive').some((l) => l.ruta.includes('periodStart=2026-09-01') && l.ruta.includes('periodEnd=2026-09-30'))
       ).toBe(true)
     )
-    expect(await screen.findByText(/^Setiembre de 2026 · todos sus proyectos · calculado/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Setiembre de 2026' })).toBeInTheDocument()
+  })
+
+  // S03: el periodo como selector de los últimos doce meses; el mes en curso es sin fechas (dashboards.md §3.1)
+  it('elegir un mes en el selector pide ese mes entero, y el mes en curso vuelve a pedir sin fechas', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-16T18:00:00Z'))
+    try {
+      abrir()
+      const periodo = await screen.findByRole('combobox', { name: 'Periodo' })
+      expect(within(periodo).getAllByRole('option')).toHaveLength(12)
+      await userEvent.selectOptions(periodo, 'Agosto de 2026')
+      await waitFor(() =>
+        expect(
+          red!.a('GET', '/sgspe/dashboards/executive').some((l) => l.ruta.includes('periodStart=2026-08-01') && l.ruta.includes('periodEnd=2026-08-31'))
+        ).toBe(true)
+      )
+      expect(await screen.findByRole('heading', { level: 1, name: 'Agosto de 2026' })).toBeInTheDocument()
+      await userEvent.selectOptions(periodo, 'Octubre de 2026')
+      expect(await screen.findByRole('heading', { level: 1, name: 'Octubre de 2026' })).toBeInTheDocument()
+      // el mes en curso es la lectura sin fechas: la misma que abrió la página, ya en caché
+      expect(periodo).toHaveDisplayValue('Octubre de 2026')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   // U-23: un cálculo de más de 24 horas se dice, con la forma de rehacerlo
@@ -107,7 +139,7 @@ describe('S51 · revisión ejecutiva', () => {
     vi.setSystemTime(new Date('2026-10-18T15:00:00Z'))
     try {
       abrir()
-      expect(await screen.findByText('Octubre de 2026 · todos sus proyectos · calculado el 16 oct. 2026')).toBeInTheDocument()
+      expect(await screen.findByText('Calculado el 16 oct. 2026 a las 10:00 con los datos de todos sus proyectos')).toBeInTheDocument()
       expect(screen.getByRole('note', { name: 'Cálculo antiguo' })).toHaveTextContent('Estas cifras se calcularon hace más de 24 horas')
       await userEvent.click(screen.getByRole('button', { name: 'Actualizar ahora' }))
       await waitFor(() => expect(red!.a('GET', '/sgspe/dashboards/executive')).toHaveLength(2))
@@ -124,7 +156,10 @@ describe('S51 · revisión ejecutiva', () => {
     try {
       abrir()
       await screen.findByRole('table', { name: 'Por proyecto' })
-      for (const zona of ['Qué es crítico y dónde se atiende', 'Indicadores de la cartera', 'Inversión ejecutada frente a presupuesto y topes', 'Por proyecto'])
+      // las cifras de arriba van bajo el encabezado, que dice el periodo (el título) y la hora de cálculo
+      expect(screen.getByRole('heading', { level: 1, name: 'Octubre de 2026' })).toBeInTheDocument()
+      expect(screen.getByText('Calculado hoy 10:00 con los datos de todos sus proyectos')).toBeInTheDocument()
+      for (const zona of ['Qué es crítico y dónde se atiende', 'Inversión ejecutada frente a presupuesto y topes', 'Por proyecto'])
         expect(within(screen.getByRole('region', { name: zona })).getByText(/^Octubre de 2026 · calculado (hace|el) /)).toBeInTheDocument()
       const tendencia = screen.getByRole('region', { name: 'Tendencia de 12 meses' })
       expect(within(tendencia).getByText(/^set\. 2026 a oct\. 2026 · calculado (hace|el) /)).toBeInTheDocument()
@@ -231,13 +266,15 @@ describe('S51 · revisión ejecutiva', () => {
     abrir()
     const inversion = await screen.findByRole('region', { name: 'Inversión ejecutada frente a presupuesto y topes' })
     const pen = within(inversion).getByRole('group', { name: 'PEN' })
-    expect(within(pen).getByText('Ejecutado: S/ 15,000.00')).toBeInTheDocument()
-    expect(within(pen).getByText('Presupuesto: S/ 40,000.00')).toBeInTheDocument()
+    expect(within(pen).getByText('S/ 15,000.00 de S/ 40,000.00')).toBeInTheDocument()
+    expect(within(pen).getByText('37.5 %')).toBeInTheDocument()
     expect(within(pen).getByText('Topes de campaña: S/ 50,000.00')).toBeInTheDocument()
     expect(within(pen).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '37.5')
     const usd = within(inversion).getByRole('group', { name: 'USD' })
     expect(within(usd).getByText(/500\.00/)).toBeInTheDocument()
-    expect(within(usd).getByText('Presupuesto: —')).toBeInTheDocument()
+    expect(within(usd).getByText(/500\.00 de —$/)).toBeInTheDocument()
+    // la nota al pie (préstamo de C): las monedas no se suman, y qué es «—»
+    expect(within(inversion).getByText(/^Las monedas no se suman/)).toHaveTextContent('— = sin presupuesto registrado.')
     const tendencia = screen.getByRole('region', { name: 'Tendencia de 12 meses' })
     expect(within(tendencia).getByRole('table', { name: 'Interacciones realizadas' })).toHaveTextContent('oct. 2026')
     expect(within(tendencia).getByRole('table', { name: 'Quejas recibidas y cerradas' })).toHaveTextContent('Cerradas')
@@ -285,14 +322,17 @@ describe('S51 · revisión ejecutiva', () => {
       { path: '/sgspe/dashboards/executive', body: TABLERO_EJECUTIVO },
       ...baseDeF8(EJECUTIVA)
     ])
-    expect(await screen.findByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).toBeInTheDocument()
+    // S03: «Revisión ejecutiva» es la sobrelínea y el nombre del documento; el título es el periodo
+    expect(await screen.findByRole('heading', { level: 1, name: /^[A-Z][a-z]+ de \d{4}$/ })).toBeInTheDocument()
+    expect(screen.getByText('Revisión ejecutiva', { selector: 'main p' })).toBeInTheDocument()
+    await waitFor(() => expect(document.title).toMatch(/^Revisión ejecutiva/))
     expect(screen.getByRole('link', { name: 'Monitoreo del plan de relaciones comunitarias' })).toHaveAttribute('href', '/dashboards/monitoring')
   })
 
   it('/ ya no es la revisión ejecutiva aunque el catálogo la ofrezca: es «Mi día» con su visión ejecutiva', async () => {
     fetch = abrirPortal('/', EJECUTIVA, SOLO_LECTURA_F8, [{ path: '/sgspe/dashboards/executive', body: TABLERO_EJECUTIVO }, ...baseDeF8(EJECUTIVA)])
-    expect(await screen.findByRole('heading', { level: 1, name: 'Inicio' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { level: 1, name: 'Revisión ejecutiva' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Buen(os|as) (días|tardes|noches), / })).toBeInTheDocument()
+    expect(screen.queryByText('Revisión ejecutiva', { selector: 'main p' })).not.toBeInTheDocument()
     expect(await screen.findByRole('link', { name: 'Ver la revisión ejecutiva' })).toHaveAttribute('href', '/dashboards/executive')
   })
 })

@@ -36,8 +36,8 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'entregable', ruta: '/reports/deliverables/d1' },
   { nombre: 'administracion', ruta: '/administration', admin: true }
 ]
-const PRINCIPALES = ['inicio', 'revision-ejecutiva', 'p360-resumen', 'compromisos', 'territorio', 'riesgos']
-const ANGOSTAS = ['inicio', 'p360-resumen', 'compromisos']
+const PRINCIPALES = ['login', 'inicio', 'revision-ejecutiva', 'p360-resumen', 'compromisos', 'territorio', 'riesgos']
+const ANGOSTAS = ['login', 'inicio', 'revision-ejecutiva', 'p360-resumen', 'compromisos']
 
 interface Variante {
   ancho: number

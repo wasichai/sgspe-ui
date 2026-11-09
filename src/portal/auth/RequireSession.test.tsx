@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockFetch, type FetchMock } from '@wasichai/testing'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -69,7 +69,9 @@ describe('RequireSession', () => {
     expect(await screen.findByLabelText('Contraseña')).toBeInTheDocument()
     expect(window.location.pathname).toBe('/login')
     expect(new URLSearchParams(window.location.search).get('next')).toBe('/?vista=modulos')
-    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
+    // sin el marco del portal: el ingreso tiene su propia cabecera (S01), pero no la navegación ni la cuenta
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Su cuenta' })).not.toBeInTheDocument()
   })
 
   // Review Focus 4: un 401 a mitad de sesión borra el token, vuelve al login y, al entrar, regresa a donde estaba
@@ -93,6 +95,7 @@ describe('RequireSession', () => {
     await userEvent.type(screen.getByLabelText('Correo'), RELACIONISTA.email)
     await userEvent.type(screen.getByLabelText('Contraseña'), 'secreta')
     await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
+    await waitFor(() => expect(screen.queryByLabelText('Contraseña')).not.toBeInTheDocument())
     expect(await screen.findByRole('banner')).toBeInTheDocument()
     expect(aqui()).toBe('/?vista=modulos')
     expect(localStorage.getItem('sgspe.token')).toBe('t2')

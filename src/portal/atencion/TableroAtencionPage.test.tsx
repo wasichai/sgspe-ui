@@ -86,10 +86,34 @@ const abrir = () =>
   })
 
 describe('S34 · tablero de QCS', () => {
+  // S03 (design-system.md §5.3 «KPI»): la hora de cálculo bajo el título y no en la fila de filtros; las cifras sueltas, arriba
+  it('dice la hora de cálculo bajo el título y sube las cifras a una rejilla al principio', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-09T20:00:00Z'))
+    try {
+      fetch = mockFetch([{ path: '/sgspe/dashboards/attention', body: TABLERO }])
+      abrir()
+      const cifras = await screen.findByRole('group', { name: 'Cifras principales' })
+      expect(
+        within(cifras)
+          .getAllByRole('region')
+          .map((r) => r.getAttribute('aria-label'))
+      ).toEqual(['QCS absueltas', 'Tiempo de atención'])
+      expect(within(cifras).getByText('3 de 5')).toBeInTheDocument()
+      const titulo = screen.getByRole('heading', { level: 1, name: 'Tablero de quejas, consultas y solicitudes' })
+      expect(titulo.parentElement).toHaveTextContent('Calculado hoy 10:00')
+      expect(screen.getByRole('group', { name: 'Filtros del tablero' })).not.toHaveTextContent(/Calculado/)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('dibuja el flujo por tipo, con «No disponible» en lo que no se lee y «—» en un tipo sin cifra', async () => {
     fetch = mockFetch([{ path: '/sgspe/dashboards/attention', body: TABLERO }])
     abrir()
     const flujo = await screen.findByRole('table', { name: 'Flujo de quejas, consultas y solicitudes por tipo' })
+    // un «—» en una columna numérica va con su nota al pie (design-system.md §5.3 «Tablas»)
+    expect(within(screen.getByRole('region', { name: 'Flujo por tipo' })).getByText('— = sin cifra.')).toHaveClass('text-sg-caption', 'text-sg-text-secondary')
     const recibidas = within(flujo).getByRole('row', { name: /QCS recibidas/ })
     expect(
       within(recibidas)

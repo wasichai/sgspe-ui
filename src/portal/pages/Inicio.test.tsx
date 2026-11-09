@@ -85,6 +85,10 @@ const accesos = () =>
     .queryAllByRole('link')
     .map((a) => a.textContent)
 
+// S02: el h1 del inicio es el saludo por la hora de Lima, con el nombre de la cuenta
+const SALUDO = /^Buen(os|as) (días|tardes|noches), /
+const saludo = (nombre: string) => new RegExp(`^Buen(os|as) (días|tardes|noches), ${nombre}$`)
+
 function InicioDePrueba() {
   return <h1>Inicio de prueba</h1>
 }
@@ -92,8 +96,10 @@ function InicioDePrueba() {
 describe('inicio de F1', () => {
   it('a quien administra le muestra «Mi día» sin la grilla, y la cuenta, la organización y los roles por su rótulo en el menú del perfil', async () => {
     start(ADMINISTRACION, ADMIN_PERMISOS, [{ path: '/roles', body: [{ name: 'ADMIN', label: 'Administración de la organización' }] }])
-    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
-    expect(pagina().getByText('Le damos la bienvenida, Administración de prueba.')).toBeInTheDocument()
+    // S02: «Mi trabajo» sobre el saludo; el documento sigue llamándose «Inicio»
+    expect(await screen.findByRole('heading', { name: saludo('Administración de prueba'), level: 1 })).toBeInTheDocument()
+    expect(pagina().getByText('Mi trabajo')).toBeInTheDocument()
+    await waitFor(() => expect(document.title).toMatch(/^Inicio/))
     // quien administra crea y lee: ve «Mi día» (los atajos) y no la grilla de secciones, que repetiría la barra lateral
     expect(await pagina().findByRole('region', { name: 'Registrar' })).toBeInTheDocument()
     expect(pagina().queryByRole('region', { name: 'Sus secciones' })).not.toBeInTheDocument()
@@ -192,71 +198,75 @@ describe('enlaces a los indicadores', () => {
 describe('inicio por rol', () => {
   it('sin variantes registradas, toda cuenta ve la bienvenida', async () => {
     start(RELACIONISTA, SIN_PERMISOS)
-    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
-    expect(pagina().getByText('Le damos la bienvenida, Relacionista de prueba.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: saludo('Relacionista de prueba'), level: 1 })).toBeInTheDocument()
   })
 
   it('una variante registrada se ofrece a quien tiene sus permisos, y solo a quien los tiene', async () => {
     variantes.push({ clave: 'prueba', seOfreceCon: [[{ objeto: 'project', accion: 'READ' }]], Pantalla: InicioDePrueba })
     start(RELACIONISTA, { admin: false, objects: { project: ['READ'] } })
     expect(await screen.findByRole('heading', { name: 'Inicio de prueba' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Inicio', level: 1 })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: SALUDO, level: 1 })).not.toBeInTheDocument()
   })
 
   it('sin los permisos de ninguna variante, la bienvenida', async () => {
     variantes.push({ clave: 'prueba', seOfreceCon: [[{ objeto: 'project', accion: 'READ' }]], Pantalla: InicioDePrueba })
     start(RELACIONISTA, SIN_PERMISOS)
-    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: SALUDO, level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Inicio de prueba' })).not.toBeInTheDocument()
   })
 })
 
-// U-01 del rediseño (DD-01): el inicio es «Mi día» para toda cuenta, aunque el catálogo ofrezca la revisión ejecutiva; la
-// visión ejecutiva es un bloque con las cifras que la cuenta lee, su fecha de cálculo y el enlace a la revisión completa
-describe('visión ejecutiva en el inicio', () => {
+// U-01 del rediseño (DD-01): el inicio es «Mi día» para toda cuenta, aunque el catálogo ofrezca la revisión ejecutiva. de ella, el
+// inicio de S02 muestra «Qué es crítico y dónde se atiende» con las cifras de atención que la cuenta lee y su hora de cálculo, y
+// «Ver la revisión ejecutiva» en el encabezado
+describe('lo crítico de la revisión ejecutiva en el inicio', () => {
   const CATALOGO = { path: '/sgspe/dashboards/indicators', body: [{ code: 'KPI-EXE-01', label: 'Proyectos activos', dashboard: 'executive', available: true }] }
   const tablero = (indicators: unknown[]) => ({
     path: '/sgspe/dashboards/executive',
     body: { dashboard: 'executive', computedAt: '2026-10-20T15:00:00Z', filters: {}, indicators }
   })
   const pidioElTablero = () => fetch?.calls.some((c) => c.url.includes('/sgspe/dashboards/executive')) ?? false
+  const CRITICO = 'Qué es crítico y dónde se atiende'
 
-  it('a quien no lee ninguna cifra ejecutiva le muestra «Mi día» sin ningún «No disponible»', async () => {
-    start(RELACIONISTA, SIN_PERMISOS, [
-      CATALOGO,
-      tablero([
-        { code: 'KPI-EXE-01', label: 'Proyectos activos', available: false, unavailableReason: 'FORBIDDEN' },
-        { code: 'KPI-COM-02', label: 'Compromisos vencidos', available: false, unavailableReason: 'FORBIDDEN' }
-      ])
-    ])
-    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
-    await waitFor(() => expect(pidioElTablero()).toBe(true))
-    expect(screen.queryByRole('heading', { name: 'Revisión ejecutiva', level: 1 })).not.toBeInTheDocument()
-    expect(pagina().queryByRole('region', { name: 'Visión ejecutiva' })).not.toBeInTheDocument()
-    expect(pagina().queryByText('No disponible')).not.toBeInTheDocument()
-  })
-
-  it('a quien lee alguna, el bloque con esas cifras, su fecha de cálculo y el enlace a la revisión completa', async () => {
+  it('a quien no lee ninguna cifra de atención le muestra «Mi día» sin ningún «No disponible»', async () => {
     start(RELACIONISTA, SIN_PERMISOS, [
       CATALOGO,
       tablero([
         { code: 'KPI-EXE-01', label: 'Proyectos activos', available: true, value: 3 },
-        { code: 'KPI-COM-02', label: 'Compromisos vencidos', available: false, unavailableReason: 'FORBIDDEN' }
+        { code: 'KPI-COM-03', label: 'Compromisos vencidos', available: false, unavailableReason: 'FORBIDDEN' }
       ])
     ])
-    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
-    const bloque = within(await pagina().findByRole('region', { name: 'Visión ejecutiva' }))
-    expect(bloque.getByText('Proyectos activos')).toBeInTheDocument()
-    expect(bloque.queryByText('Compromisos vencidos')).not.toBeInTheDocument()
-    expect(bloque.getByText(/^Calculado el /)).toBeInTheDocument()
-    expect(bloque.getByRole('link', { name: 'Ver la revisión ejecutiva' })).toHaveAttribute('href', '/dashboards/executive')
+    expect(await screen.findByRole('heading', { name: SALUDO, level: 1 })).toBeInTheDocument()
+    await waitFor(() => expect(pidioElTablero()).toBe(true))
+    expect(screen.queryByRole('heading', { name: 'Revisión ejecutiva', level: 1 })).not.toBeInTheDocument()
+    expect(pagina().queryByRole('region', { name: CRITICO })).not.toBeInTheDocument()
+    expect(pagina().queryByText('No disponible')).not.toBeInTheDocument()
   })
 
-  it('sin la revisión ejecutiva en el catálogo, no pide el tablero', async () => {
+  it('a quien lee alguna, lo crítico con su cifra, su hora de cálculo y el enlace a la revisión completa', async () => {
+    start(RELACIONISTA, SIN_PERMISOS, [
+      CATALOGO,
+      tablero([
+        { code: 'KPI-COM-03', label: 'Compromisos vencidos', available: true, value: 3 },
+        { code: 'KPI-RSK-01', label: 'Riesgos altos', available: false, unavailableReason: 'FORBIDDEN' }
+      ])
+    ])
+    expect(await screen.findByRole('heading', { name: SALUDO, level: 1 })).toBeInTheDocument()
+    const bloque = within(await pagina().findByRole('region', { name: CRITICO }))
+    expect(bloque.getByText('3 compromisos vencidos')).toBeInTheDocument()
+    expect(bloque.getByRole('link', { name: 'Compromisos vencidos · Toda la cartera' })).toHaveAttribute('href', '/commitments?view=vencidos')
+    expect(bloque.queryByText(/riesgo/)).not.toBeInTheDocument()
+    // la hora de cálculo visible (préstamo de D), en la hora de Lima
+    expect(bloque.getByText(/^Calculado (hoy 10:00|el 20 oct\. 2026 a las 10:00)$/)).toBeInTheDocument()
+    expect(await pagina().findByRole('link', { name: 'Ver la revisión ejecutiva' })).toHaveAttribute('href', '/dashboards/executive')
+  })
+
+  it('sin la revisión ejecutiva en el catálogo, no pide el tablero ni la ofrece', async () => {
     start(RELACIONISTA, SIN_PERMISOS, [{ path: '/sgspe/dashboards/indicators', body: [] }])
-    expect(await screen.findByRole('heading', { name: 'Inicio', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: SALUDO, level: 1 })).toBeInTheDocument()
     await waitFor(() => expect(fetch?.calls.some((c) => c.url.includes('/sgspe/dashboards/indicators'))).toBe(true))
     expect(pidioElTablero()).toBe(false)
+    expect(pagina().queryByRole('link', { name: 'Ver la revisión ejecutiva' })).not.toBeInTheDocument()
   })
 })
 
@@ -302,17 +312,18 @@ describe('Mi trabajo', () => {
       dashboard: 'executive',
       computedAt: '2026-10-20T15:00:00Z',
       filters: {},
-      indicators: [{ code: 'KPI-EXE-01', label: 'Proyectos activos', available, ...(available ? { value: 3 } : { unavailableReason: 'FORBIDDEN' }) }]
+      indicators: [{ code: 'KPI-COM-03', label: 'Compromisos vencidos', available, ...(available ? { value: 3 } : { unavailableReason: 'FORBIDDEN' }) }]
     }
   })
-  const BLOQUES = ['Lo que me toca hoy', 'Esperan su decisión', 'Agenda de la semana', 'Registrar', 'Mis proyectos', 'Visión ejecutiva']
+  // S02: la columna principal (lo de hoy, las decisiones y lo crítico) y, al costado, la agenda, los proyectos y registrar
+  const BLOQUES = ['Lo que me toca hoy', 'Esperan su decisión', 'Qué es crítico y dónde se atiende', 'Agenda de la semana', 'Mis proyectos', 'Registrar']
   const bloquesDibujados = () =>
     pagina()
       .getAllByRole('region')
       .map((r) => r.getAttribute('aria-labelledby') && document.getElementById(r.getAttribute('aria-labelledby') ?? '')?.textContent)
       .filter((nombre): nombre is string => BLOQUES.includes(nombre ?? ''))
 
-  it('los bloques van por urgencia: lo de hoy, las decisiones, la agenda, registrar, los proyectos y la visión ejecutiva', async () => {
+  it('los bloques van por urgencia: lo de hoy, las decisiones y lo crítico; al costado, la agenda, los proyectos y registrar', async () => {
     start(
       RELACIONISTA,
       {
@@ -358,7 +369,7 @@ describe('Mi trabajo', () => {
         ...comunes(RELACIONISTA)
       ]
     )
-    await pagina().findByRole('region', { name: 'Visión ejecutiva' })
+    await pagina().findByRole('region', { name: 'Qué es crítico y dónde se atiende' })
     await pagina().findByRole('region', { name: 'Esperan su decisión' })
     await pagina().findByRole('region', { name: 'Agenda de la semana' })
     await pagina().findByRole('region', { name: 'Mis proyectos' })
@@ -367,7 +378,10 @@ describe('Mi trabajo', () => {
     const hoy = within(pagina().getByRole('region', { name: 'Lo que me toca hoy' }))
     const vencida = (await hoy.findByRole('link', { name: 'Levantar fotos del tramo' })).closest('li')
     // con su proyecto (tercera pasada de UX, 3.2)
-    await waitFor(() => expect(vencida).toHaveTextContent('Levantar fotos del tramoTarea · PRJ-01 · Proyecto Ejemplo A · Vencido · venció el 19 oct. 2026'))
+    await waitFor(() => expect(vencida).toHaveTextContent('Tarea · PRJ-01 · Proyecto Ejemplo A · venció el 19 oct. 2026'))
+    expect(within(vencida!).getByLabelText('Situación de plazo: Vencido')).toBeInTheDocument()
+    // el resumen bajo el saludo cuenta lo vencido o por vencer a su cargo
+    expect(pagina().getByText('Tiene 1 pendiente vencido o por vencer a su cargo.')).toBeInTheDocument()
     expect(await hoy.findByRole('link', { name: 'Registrar la asistencia de la asamblea' })).toHaveAttribute('href', '/projects/p1/tasks?task=q1')
     expect(pagina().queryByRole('region', { name: 'Su trabajo' })).not.toBeInTheDocument()
   })
@@ -391,13 +405,13 @@ describe('Mi trabajo', () => {
     expect(await hoy.findByRole('link', { name: 'Levantar fotos del tramo' })).toBeInTheDocument()
     // la cola de sus proyectos en una sola lectura (B-04), y cada tarea dice su proyecto
     const cola = await hoy.findByRole('region', { name: /^Para tomar en sus proyectos/ })
-    expect((await within(cola).findByRole('link', { name: 'Registrar la asistencia de la asamblea' })).closest('li')).toHaveTextContent(
-      'Sin asignar · PRJ-01 · Proyecto Ejemplo A · Al día'
-    )
+    const tarea = (await within(cola).findByRole('link', { name: 'Registrar la asistencia de la asamblea' })).closest('li')
+    expect(tarea).toHaveTextContent('Sin asignar · PRJ-01 · Proyecto Ejemplo A')
+    expect(within(tarea!).getByLabelText('Situación de plazo: Al día')).toBeInTheDocument()
     const agenda = within(await pagina().findByRole('region', { name: 'Agenda de la semana' }))
     expect(await agenda.findByRole('link', { name: 'Encuesta de línea base en Rumichaca' })).toBeInTheDocument()
     await waitFor(() => expect(fetch?.calls.some((c) => c.url.includes('/sgspe/dashboards/executive'))).toBe(true))
-    expect(pagina().queryByRole('region', { name: 'Visión ejecutiva' })).not.toBeInTheDocument()
+    expect(pagina().queryByRole('region', { name: 'Qué es crítico y dónde se atiende' })).not.toBeInTheDocument()
     expect(pagina().queryByText('No disponible')).not.toBeInTheDocument()
     // sin lectura de compromisos ni QCS, nada se pide ni se cuenta de ellos
     expect(fetch?.calls.some((c) => /\/objects\/(commitment|grievance|inquiry|stakeholder_request)\//.test(c.path))).toBe(false)

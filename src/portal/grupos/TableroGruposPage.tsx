@@ -15,7 +15,17 @@ import { rotuloDeOpcion } from '../datos/opciones'
 import { NS, numeroPe } from '../i18n'
 import { colorDe } from '../mapa/colores'
 import { useContextFilters } from '../shell/context'
-import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, indicadorDe, SerieConMeta, useFiltrosDeTablero, Zona } from '../tableros/comunes'
+import {
+  Barras,
+  ConsultaDeTablero,
+  diezYOtros,
+  FiltrosDeTablero,
+  HoraDeCalculo,
+  indicadorDe,
+  SerieConMeta,
+  useFiltrosDeTablero,
+  Zona
+} from '../tableros/comunes'
 import { Seccion } from '../componentes/Seccion'
 
 // el tablero de grupos de interés (dashboards.md §5.3, RF-DSH-007), con GET /api/sgspe/dashboards/stakeholders: la
@@ -31,8 +41,13 @@ export function TableroGruposPage() {
   const tablero = useTablero('stakeholders', filtros)
   return (
     <ContenedorDePagina elemento="section">
-      <EncabezadoDePagina titulo={t('grupos.tableroTitulo')} vistas={<VistasDelModulo modulo="stakeholders" actual="tablero" />} />
-      <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
+      {/* como S03, la hora de cálculo bajo el título y no en la fila de filtros */}
+      <EncabezadoDePagina
+        titulo={t('grupos.tableroTitulo')}
+        descripcion={tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : undefined}
+        vistas={<VistasDelModulo modulo="stakeholders" actual="tablero" />}
+      />
+      <FiltrosDeTablero alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {
           const ind = (code: string) => indicadorDe(datos.indicators, code)

@@ -1,10 +1,12 @@
 import { useQueries } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
+import { ClipboardCheck, ListChecks, MessageSquareWarning, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { tituloQueDiceQueEs } from '../componentes/CabeceraDeFicha'
-import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
+import { ChipDeEstado, useEtiquetasDeEstado } from '../componentes/EstadoChip'
+import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { Cargando } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { ListaPriorizada, type EntradaPriorizada, type TonoDeEntrada } from '../componentes/ListaPriorizada'
@@ -14,7 +16,6 @@ import { esQcs, plazoQueCorre } from '../datos/atencion'
 import { hoyEnLima } from '../datos/fechas'
 import { rutaDeFicha } from '../datos/fichas'
 import { usePedir } from '../datos/http'
-import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, consulta, estados, texto, useRegistros, type Pagina, type Parametros, type Registro } from '../datos/registros'
 import { diaPe, NS } from '../i18n'
 import { sinFiltroDeAsignados, soloAsignados } from '../tareas/paraTomar'
@@ -38,6 +39,14 @@ const TOPE_DE_PROYECTOS = 6
 const TAREA_ABIERTA = ['open', 'in_progress', 'blocked']
 const URGENCIA: Record<string, number> = { VENCIDO: 0, 'POR VENCER': 1 }
 const TONO: Record<string, TonoDeEntrada> = { VENCIDO: 'danger', 'POR VENCER': 'warning' }
+// el ícono de cada fila dice qué es (S02): una tarea, un compromiso o una QCS
+const ICONOS: Record<string, LucideIcon> = {
+  task: ListChecks,
+  commitment: ClipboardCheck,
+  grievance: MessageSquareWarning,
+  inquiry: MessageSquareWarning,
+  stakeholder_request: MessageSquareWarning
+}
 
 interface DeSuCargo {
   objeto: string
@@ -144,9 +153,20 @@ export function LoQueMeToca() {
       clave: `${item.objeto}-${item.registro.id}`,
       titulo: nombreDe(item),
       a: rutaDeFicha(item.objeto, item.registro) ?? '/tasks',
-      motivo: [tipo, proyecto ?? '', estado, situacion ? rotuloDeOpcion(situacion) : ''].filter(Boolean).join(' · '),
+      // S02: el estado y la situación de plazo como chips junto al título; debajo, qué es, de qué proyecto y cuándo vence
+      chips:
+        estado || situacion ? (
+          <>
+            {estado && item.registro.state ? <ChipDeEstado objeto={item.objeto} estado={item.registro.state} etiqueta={estado} /> : null}
+            <SituacionDePlazo valor={situacion} />
+          </>
+        ) : undefined,
+      motivo: [tipo, proyecto ?? ''].filter(Boolean).join(' · '),
       cuando: fecha ? t(situacion === 'VENCIDO' ? 'miDia.hoy.vencio' : 'miDia.hoy.vence', { fecha: diaLegible(fecha) }) : undefined,
       tono: TONO[situacion] ?? 'neutral',
+      icono: ICONOS[item.objeto],
+      // un verbo por fila (S02): lo que hace quien la abre; una tarea para tomar se toma en la línea
+      verbo: paraTomar ? undefined : t(`miDia.verbos.${item.objeto}`),
       accion: paraTomar ? <TomarTarea tarea={item.registro} alTomar={(r) => setTomada(texto(r, 'title'))} /> : undefined
     }
   }
@@ -226,6 +246,8 @@ export function LoQueMeToca() {
               </div>
             ))}
             <ListaPriorizada
+              variante="filas"
+              primeraPrimaria
               titulo={t('miDia.hoy.aCargo')}
               total={aCargo.length}
               limite={A_LA_VISTA}
@@ -241,9 +263,17 @@ export function LoQueMeToca() {
         </p>
       ) : null}
       {paraTomar.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-4">
           {paraTomar.map(({ clave, titulo, pagina, limite, a, entradas }) => (
-            <ListaPriorizada key={clave} titulo={titulo} total={pagina.totalElements ?? null} limite={limite} entradas={entradas} verTodos={{ a }} />
+            <ListaPriorizada
+              key={clave}
+              variante="filas"
+              titulo={titulo}
+              total={pagina.totalElements ?? null}
+              limite={limite}
+              entradas={entradas}
+              verTodos={{ a }}
+            />
           ))}
         </div>
       ) : null}

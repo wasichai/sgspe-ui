@@ -12,6 +12,8 @@ export interface ItemDeAtencion {
   code: CodigoDeAtencion
   proyecto: string | null
   nombre: string | null
+  // el código del proyecto (byProject), en la monoespaciada de la lista; null para toda la cartera
+  codigo: string | null
   valor: number
   ruta: string
 }
@@ -62,8 +64,8 @@ export function itemsDeAtencion(tablero: TableroEjecutivo): ItemDeAtencion[] {
   const filas = tablero.byProject
   const items = ORDEN_DE_ATENCION.flatMap((code) =>
     (filas
-      ? filas.map((f) => ({ code, proyecto: f.project, nombre: f.name ?? f.code, valor: cifra(f.indicators, code) }))
-      : [{ code, proyecto: null, nombre: null, valor: cifra(tablero.indicators, code) }]
+      ? filas.map((f) => ({ code, proyecto: f.project, nombre: f.name ?? f.code, codigo: f.code, valor: cifra(f.indicators, code) }))
+      : [{ code, proyecto: null, nombre: null, codigo: null, valor: cifra(tablero.indicators, code) }]
     )
       .filter((i) => i.valor > 0)
       .sort((a, b) => b.valor - a.valor)

@@ -37,6 +37,8 @@ export const ES_TABLERO_COMPROMISOS = {
   comprometido: 'Comprometido',
   ejecutado: 'Ejecutado',
   sinMontos: 'No hay compromisos con monto para estos filtros.',
+  // la nota al pie de la tabla de montos (design-system.md §5.3 «Tablas»)
+  notaDeMontos: 'Montos en la moneda de cada fila; las monedas no se suman. — = sin monto.',
   sinBase: 'Sin base de comparación: ningún compromiso tiene monto en la moneda principal.',
   historiaAproximada: 'La historia anterior a la puesta en marcha es aproximada: el sistema no guarda la fecha de aprobación.',
   sinPendientes: 'No hay compromisos vencidos ni por vencer.',
@@ -82,6 +84,7 @@ export const EN_TABLERO_COMPROMISOS: typeof ES_TABLERO_COMPROMISOS = {
   comprometido: 'Committed',
   ejecutado: 'Executed',
   sinMontos: 'There are no commitments with an amount for these filters.',
+  notaDeMontos: 'Amounts in the currency of each row; currencies are not added together. — = no amount.',
   sinBase: 'No basis for comparison: no commitment has an amount in the main currency.',
   historiaAproximada: 'History before go-live is approximate: the system does not keep the approval date.',
   sinPendientes: 'There are no overdue or due-soon commitments.',

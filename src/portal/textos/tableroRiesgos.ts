@@ -7,7 +7,9 @@ export const ES_TABLERO_RIESGOS = {
     activos: 'Riesgos activos',
     territorio: 'Riesgos por territorio',
     semanas: 'Niveles de riesgo semana a semana',
-    atrasadas: 'Medidas de mitigación atrasadas'
+    atrasadas: 'Medidas de mitigación atrasadas',
+    // la lista de las medidas atrasadas, en su zona bajo la cifra de arriba (S03)
+    detalleAtrasadas: 'Detalle de las medidas atrasadas'
   },
   vigente: 'Vigente',
   residual: 'Residual',
@@ -47,7 +49,8 @@ export const EN_TABLERO_RIESGOS: typeof ES_TABLERO_RIESGOS = {
     activos: 'Active risks',
     territorio: 'Risks by territory',
     semanas: 'Risk levels week by week',
-    atrasadas: 'Overdue mitigation measures'
+    atrasadas: 'Overdue mitigation measures',
+    detalleAtrasadas: 'Overdue measures in detail'
   },
   vigente: 'Current',
   residual: 'Residual',

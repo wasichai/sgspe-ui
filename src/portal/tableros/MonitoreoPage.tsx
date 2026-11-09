@@ -12,9 +12,9 @@ import { useTablero } from '../datos/indicadores'
 import { texto } from '../datos/registros'
 import { fechaPe, NS, numeroPe } from '../i18n'
 import { CerrarPeriodo } from './CerrarPeriodo'
-import { ConsultaDeTablero } from './comunes'
+import { ConsultaDeTablero, HoraDeCalculo, NotaAlPie } from './comunes'
 import { esMes, mesAnterior, periodoDelMes, type FilaDeMonitoreo, type TableroDeMonitoreo } from './contratoF8'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 
 // el monitoreo de la Tabla 9.5 (screens.md, dashboards.md §5.5): el mes (?month=AAAA-MM; por defecto el anterior en Lima, el
 // que ya se puede cerrar) y el proyecto (?project=; sin él, mis proyectos o todos) gobiernan el pedido. la cifra oficial sale solo
@@ -55,15 +55,21 @@ export function MonitoreoPage() {
   }
   return (
     <ContenedorDePagina elemento="section">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-sg-h1 font-semibold">{t('tablerosF8.monitoreo.titulo')}</h1>
-          <p className="text-sm text-sg-text-secondary">{t('tablerosF8.monitoreo.ayuda')}</p>
-        </div>
-        <Link to="/dashboards/indicators" className="text-sm text-sg-primary-text underline">
-          {t('tablerosF8.monitoreo.catalogo')}
-        </Link>
-      </header>
+      {/* el encabezado común (S03): la ayuda y, debajo, la hora de cálculo; el catálogo como acción secundaria */}
+      <EncabezadoDePagina
+        titulo={t('tablerosF8.monitoreo.titulo')}
+        descripcion={
+          <>
+            <span className="block">{t('tablerosF8.monitoreo.ayuda')}</span>
+            {tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : null}
+          </>
+        }
+        secundarias={
+          <Link to="/dashboards/indicators" className="text-sm text-sg-primary-text underline">
+            {t('tablerosF8.monitoreo.catalogo')}
+          </Link>
+        }
+      />
       <div role="group" aria-label={t('tableros.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
         <CampoMes etiqueta={t('tablerosF8.monitoreo.mes')} claseDeEtiqueta="block text-sg-label" valor={mes} alCambiar={(valor) => cambiar('month', valor)} />
         <label className="space-y-1">
@@ -161,6 +167,8 @@ export function MonitoreoPage() {
                 </tbody>
               </Table>
             </div>
+            {/* un «—» (sin cifra o sin meta) va con su nota al pie (design-system.md §5.3 «Tablas») */}
+            {datos.rows.some((f) => (f.available && f.value === null) || f.target === null) ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
           </div>
         )}
       </ConsultaDeTablero>
