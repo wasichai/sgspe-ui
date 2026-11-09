@@ -196,8 +196,31 @@ const COMPROMISOS = [
     deadline_status: 'AL DIA',
     amount: 7300,
     owner_user_email: 'cmm@sgspe.test'
-  })
+  }),
+  // cinco más al día (S08: «Al día (7)» con «Mostrar 5 compromisos más al día», wasichai/sgspe-ui#124)
+  ...[
+    ['k8', 'C-008', 'Contratación rotativa de mano de obra local', '2026-12-31'],
+    ['k9', 'C-009', 'Señalización de la trocha de acceso', '2027-01-15'],
+    ['k10', 'C-010', 'Botiquín para el puesto de salud', '2027-01-31'],
+    ['k11', 'C-011', 'Charlas sobre el monitoreo de agua', '2027-02-15'],
+    ['k12', 'C-012', 'Reparación del local comunal', '2027-02-28']
+  ].map(([id, code, title, due_date]) =>
+    compromiso(id, code, title, 'in_progress', { due_date, deadline_status: 'AL DIA', owner_user_email: 'rel@sgspe.test' })
+  )
 ]
+// la lista de compromisos con lo que el portal filtra en el servidor: la situación y los estados (los conteos de cada grupo)
+const compromisosDe = (u: URL) => {
+  if (u.searchParams.get('q') === 'sin-resultados') return pagina([])
+  const situacion = u.searchParams.get('deadline_status')
+  const dentro = (u.searchParams.get('state') ?? '').split(',').filter(Boolean)
+  const fuera = (u.searchParams.get('state_not') ?? '').split(',').filter(Boolean)
+  return pagina(
+    COMPROMISOS.filter(
+      (c) =>
+        (!situacion || c.attributes.deadline_status === situacion) && (dentro.length === 0 || dentro.includes(c.state ?? '')) && !fuera.includes(c.state ?? '')
+    )
+  )
+}
 // el bloqueado de la vista previa: su motivo está en la actividad, y lo pidió la junta directiva
 const BLOQUEO = [
   {
@@ -1166,7 +1189,7 @@ const RUTAS = (admin: boolean): [RegExp, Cuerpo][] => [
     ])
   ],
   [/^\/objects\/task\/records$/, pagina(TAREAS)],
-  [/^\/objects\/commitment\/records$/, (u: URL) => pagina(u.searchParams.get('q') === 'sin-resultados' ? [] : COMPROMISOS)],
+  [/^\/objects\/commitment\/records$/, compromisosDe],
   [/^\/objects\/commitment\/records\/k4$/, COMPROMISOS[0]],
   [
     /^\/objects\/commitment\/records\/k4\/transitions$/,
