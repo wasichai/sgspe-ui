@@ -30,6 +30,21 @@ describe('capa de componentes de Civic Modern', () => {
     expect(capa).toMatch(/:root:not\(\[data-theme\]\) \[data-campo-de-cabecera\]/)
   })
 
+  // S03 (#122): «Imprimir o guardar en PDF» imprime la pantalla sin el shell ni los controles, entera y en claro, y solo cuando
+  // la pide Impresion.ts (data-impresion): la hoja A4 de los documentos emitidos no cambia
+  it('la versión imprimible quita el shell y los controles y deja correr la página, solo con data-impresion', () => {
+    const impresion = capa.slice(capa.indexOf('@media print {'))
+    expect(impresion).toContain(
+      ':root[data-impresion] :has(> #content) > :not(#content),\n    :root[data-impresion] #content > aside,\n    :root[data-impresion] #content button,\n    :root[data-impresion] [data-sin-imprimir] {\n        display: none;'
+    )
+    expect(impresion).toMatch(/:root\[data-impresion\] #content \{\s+overflow: visible;/)
+    expect(impresion).toContain('background-color: var(--sg-surface)')
+    // cada selector de la hoja de impresión exige data-impresion
+    const selectores = [...impresion.matchAll(/^ {4}(\S[^\n]*?)\s*[,{]$/gm)].map((m) => m[1])
+    expect(selectores.length).toBeGreaterThan(0)
+    for (const s of selectores) expect(s).toMatch(/^:root\[data-impresion\]/)
+  })
+
   it('solo lee tokens: ningún color suelto', () => {
     const sinComentarios = capa.replace(/\/\*[\s\S]*?\*\//g, '')
     expect(sinComentarios).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(|oklch\(/i)

@@ -170,10 +170,26 @@ export function useTextoDeCalculo(): (instante: string | undefined | null) => st
 
 // la hora de cálculo visible bajo el título de un tablero (design-system.md §5.3 «KPI»), con lo que abarca si se dice
 // («con los datos de los 4 proyectos de su alcance»)
-export function HoraDeCalculo({ instante, alcance }: { instante: string | undefined | null; alcance?: string }) {
+export function HoraDeCalculo({ instante, alcance, imprimible }: { instante: string | undefined | null; alcance?: string; imprimible?: boolean }) {
+  const { t } = useTranslation(NS)
   const texto = useTextoDeCalculo()(instante)
   if (!texto) return null
-  return <span className="text-sg-body-sm text-sg-text-secondary">{alcance ? `${texto} ${alcance}` : texto}</span>
+  const clase = 'text-sg-body-sm text-sg-text-secondary'
+  const conAlcance = (x: string) => (alcance ? `${x} ${alcance}` : x)
+  // en la versión imprimible (Impresion.ts), la fecha entera: en papel, «hoy» no dice qué día
+  const fecha = new Date(instante ?? '')
+  const fijo = t('tableros.calculadoElDia', { fecha: fechaPe(fecha), hora: horaPe(fecha) })
+  if (!imprimible || fijo === texto) return <span className={clase}>{conAlcance(texto)}</span>
+  return (
+    <>
+      <span className={clase} data-sin-imprimir="">
+        {conAlcance(texto)}
+      </span>
+      <span className={`hidden ${clase}`} data-solo-impresion="">
+        {conAlcance(fijo)}
+      </span>
+    </>
+  )
 }
 
 // un tablero se ofrece si la cuenta puede leer al menos uno de sus indicadores (api.md §4.11, RF-IAM-002)

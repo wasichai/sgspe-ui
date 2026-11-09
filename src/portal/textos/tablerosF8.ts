@@ -21,6 +21,16 @@ export const ES_TABLEROS_F8 = {
       actualizar: 'Actualizar ahora'
     },
     cambiarFiltros: 'Cambiar el periodo y los filtros',
+    // impresión del navegador (componentes/Impresion.ts): desde su diálogo se guarda en PDF
+    imprimir: 'Imprimir o guardar en PDF',
+    // KPI-COM-03 por días de atraso (daysOverdue); sin días en las etiquetas (umbrales distintos entre proyectos), por umbral
+    tramos: {
+      rango: '{{desde}}–{{hasta}} días: {{n}}',
+      masDe: 'más de {{dias}} días: {{n}}',
+      OVERDUE_FIRST: 'hasta el primer umbral: {{n}}',
+      OVERDUE_SECOND: 'entre el primer y el segundo umbral: {{n}}',
+      OVERDUE_OVER: 'más allá del segundo umbral: {{n}}'
+    },
     elegirProyectos: 'Proyectos que compara la tabla «Por proyecto»: {{elegidos}}',
     elegidos_one: '{{count}} elegido',
     elegidos_other: '{{count}} elegidos',
@@ -174,6 +184,14 @@ export const EN_TABLEROS_F8: typeof ES_TABLEROS_F8 = {
       actualizar: 'Refresh now'
     },
     cambiarFiltros: 'Change the period and filters',
+    imprimir: 'Print or save as PDF',
+    tramos: {
+      rango: '{{desde}}–{{hasta}} days: {{n}}',
+      masDe: 'over {{dias}} days: {{n}}',
+      OVERDUE_FIRST: 'up to the first threshold: {{n}}',
+      OVERDUE_SECOND: 'between the first and second thresholds: {{n}}',
+      OVERDUE_OVER: 'beyond the second threshold: {{n}}'
+    },
     elegirProyectos: 'Projects compared in the “By project” table: {{elegidos}}',
     elegidos_one: '{{count}} chosen',
     elegidos_other: '{{count}} chosen',

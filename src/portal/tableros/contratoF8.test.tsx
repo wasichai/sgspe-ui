@@ -7,7 +7,7 @@ import { montar } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
 import { ErrorDeSgspe } from '../datos/http'
 import type { Indicador } from '../datos/indicadores'
-import { mesAnterior, mesesDeTendencia, periodoDelMes, razonDeCierre, useCerrarPeriodo } from './contratoF8'
+import { mesAnterior, mesesDeTendencia, periodoDelMes, razonDeCierre, tramosDeVencidos, useCerrarPeriodo } from './contratoF8'
 
 // el contrato de los tableros de F8 (api.md §4.11): la tendencia de KPI-EXE-03, el periodo de un mes en Lima y el cierre con su
 // clave, su cuerpo y la razón de un 409
@@ -33,6 +33,42 @@ describe('contrato de los tableros de F8', () => {
       { period: '2026-10', engagements: 7, grievancesReceived: 1, grievancesClosed: 2, overdueCommitments: 3 }
     ])
     expect(mesesDeTendencia(undefined)).toEqual([])
+  })
+
+  // KPI-COM-03 (dashboards.md §4.4, AggregateKpis.overdueCommitments): el desglose daysOverdue trae solo los tramos con
+  // vencidos; los tres salen siempre, en su orden, con cero donde no vino, y sus días si las etiquetas los dicen
+  it('los vencidos por tramo de antigüedad salen en su orden, con sus días y cero en el que falta', () => {
+    const vencidos = (filas: { key: string; label: string; value: number }[], value = 3): Indicador => ({
+      code: 'KPI-COM-03',
+      label: 'Compromisos vencidos',
+      available: true,
+      value,
+      breakdowns: [{ by: 'daysOverdue', rows: filas }]
+    })
+    expect(
+      tramosDeVencidos(
+        vencidos([
+          { key: 'OVERDUE_OVER', label: 'más de 15', value: 2 },
+          { key: 'OVERDUE_FIRST', label: '1-7', value: 1 }
+        ])
+      )
+    ).toEqual([
+      { clave: 'OVERDUE_FIRST', valor: 1, desde: 1, hasta: 7 },
+      { clave: 'OVERDUE_SECOND', valor: 0, desde: 8, hasta: 15 },
+      { clave: 'OVERDUE_OVER', valor: 2, desde: 16, hasta: null }
+    ])
+    // umbrales distintos entre proyectos: el servidor no dice días, y aquí tampoco
+    expect(tramosDeVencidos(vencidos([{ key: 'OVERDUE_SECOND', label: 'Hasta el segundo umbral', value: 3 }]))).toEqual([
+      { clave: 'OVERDUE_FIRST', valor: 0, desde: null, hasta: null },
+      { clave: 'OVERDUE_SECOND', valor: 3, desde: null, hasta: null },
+      { clave: 'OVERDUE_OVER', valor: 0, desde: null, hasta: null }
+    ])
+    // sin vencidos, sin desglose o no disponible: no hay tramos que dibujar (nunca tres ceros inventados)
+    expect(tramosDeVencidos(vencidos([], 0))).toBeNull()
+    expect(tramosDeVencidos({ code: 'KPI-COM-03', label: 'Compromisos vencidos', available: true, value: 3 })).toBeNull()
+    expect(tramosDeVencidos({ code: 'KPI-COM-03', label: 'Compromisos vencidos', available: false })).toBeNull()
+    // un desglose que no suma la cifra (filas que no se entienden) no se dibuja
+    expect(tramosDeVencidos(vencidos([{ key: 'OVERDUE_FIRST', label: '1-7', value: 1 }]))).toBeNull()
   })
 
   it('el mes anterior y el periodo de un mes, también en febrero y en enero', () => {
