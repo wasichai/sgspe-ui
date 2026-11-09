@@ -2,15 +2,16 @@ import { EnlaceConRastro } from '../contexto/Rastro'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { BotonCrear } from '../componentes/BotonCrear'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, cn } from '@wasichai/ui'
 import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, useLocation, useSearchParams } from 'react-router'
-import { EstadoChip } from '../componentes/EstadoChip'
+import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, esProhibido } from '../componentes/Estados'
 import { ordenEnUrl, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
@@ -31,6 +32,8 @@ import { diaDe, diaSiguiente, esDia, esFormal, esMes, mesActual, semanaDe, seman
 import { opcion } from '../datos/opciones'
 import { Dia } from '../componentes/Dia'
 import { ListaPlegable } from '../componentes/ListaPlegable'
+import { Seccion } from '../componentes/Seccion'
+import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
 
 // S21 y S22 · calendario y lista de interacciones (screens.md §6, flujo 4): el mes frente a la meta (KPI-ENG-02), las
 // festividades de la línea base como contexto y "Te toca". la misma consulta se ve como mes, semana o lista; el alcance es
@@ -39,6 +42,9 @@ import { ListaPlegable } from '../componentes/ListaPlegable'
 type Vista = 'mes' | 'semana' | 'lista'
 const VISTAS: readonly Vista[] = ['mes', 'semana', 'lista']
 const CINCO_MINUTOS = 300_000
+// el paso de mes o de semana (S07): un botón de ícono de 32 px con el contorno de la secundaria
+const PASO_DE_CALENDARIO =
+  'inline-flex size-8 items-center justify-center rounded-sg-md border-2 border-sg-primary bg-sg-surface text-sg-primary-text hover:bg-sg-surface-hover'
 const POR_PAGINA = 25
 // las columnas de la lista que el servidor ordena: el título y la fecha programada (la que la lista ya pedía, de la más reciente a
 // la más antigua). el tipo y el estado no: su código no dice su orden
@@ -126,7 +132,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
   const mesesVisibles = [...new Set(semanas.flat().map((d) => Number(d.slice(5, 7))))]
 
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         vistas={<VistasDelModulo modulo="engagements" actual="lista" conTablero={conTablero} />}
         titulo={t('relacionamiento.titulo')}
@@ -162,22 +168,42 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
             />
             {vista === 'mes' ? (
               <div className="flex items-center gap-2 text-sm">
-                <button type="button" aria-label={t('relacionamiento.mesAnterior')} onClick={() => cambiar({ month: sumarMeses(mes, -1) })} className="px-2">
-                  ‹
+                <button
+                  type="button"
+                  aria-label={t('relacionamiento.mesAnterior')}
+                  onClick={() => cambiar({ month: sumarMeses(mes, -1) })}
+                  className={PASO_DE_CALENDARIO}
+                >
+                  <ChevronLeft aria-hidden className="size-4" />
                 </button>
-                <span className="min-w-32 text-center font-medium">{mesPe(mes)}</span>
-                <button type="button" aria-label={t('relacionamiento.mesSiguiente')} onClick={() => cambiar({ month: sumarMeses(mes, 1) })} className="px-2">
-                  ›
+                <span className="min-w-32 text-center font-bold text-sg-text">{mesPe(mes)}</span>
+                <button
+                  type="button"
+                  aria-label={t('relacionamiento.mesSiguiente')}
+                  onClick={() => cambiar({ month: sumarMeses(mes, 1) })}
+                  className={PASO_DE_CALENDARIO}
+                >
+                  <ChevronRight aria-hidden className="size-4" />
                 </button>
               </div>
             ) : vista === 'semana' ? (
               <div className="flex items-center gap-2 text-sm">
-                <button type="button" aria-label={t('relacionamiento.semanaAnterior')} onClick={() => cambiar(moverSemana(dia, -7))} className="px-2">
-                  ‹
+                <button
+                  type="button"
+                  aria-label={t('relacionamiento.semanaAnterior')}
+                  onClick={() => cambiar(moverSemana(dia, -7))}
+                  className={PASO_DE_CALENDARIO}
+                >
+                  <ChevronLeft aria-hidden className="size-4" />
                 </button>
-                <span className="min-w-32 text-center font-medium">{diaPe(semanas[0][0])}</span>
-                <button type="button" aria-label={t('relacionamiento.semanaSiguiente')} onClick={() => cambiar(moverSemana(dia, 7))} className="px-2">
-                  ›
+                <span className="min-w-32 text-center font-bold text-sg-text">{diaPe(semanas[0][0])}</span>
+                <button
+                  type="button"
+                  aria-label={t('relacionamiento.semanaSiguiente')}
+                  onClick={() => cambiar(moverSemana(dia, 7))}
+                  className={PASO_DE_CALENDARIO}
+                >
+                  <ChevronRight aria-hidden className="size-4" />
                 </button>
               </div>
             ) : null}
@@ -187,7 +213,7 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
         aplicados={q ? [{ clave: 'q', etiqueta: t('comun.contiene', { texto: q }), alQuitar: () => buscar('') }] : []}
         alLimpiar={() => buscar('')}
       />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div>
         <div className="space-y-3">
           {interacciones.truncado ? <Alert tone="warning">{t('relacionamiento.truncado', { n: numeroPe(interacciones.data?.length ?? 0) })}</Alert> : null}
           {vista !== 'lista' && sinFecha > 0 ? <Alert tone="notice">{t('relacionamiento.sinFecha', { n: numeroPe(sinFecha) })}</Alert> : null}
@@ -219,22 +245,34 @@ export function InteraccionesPage({ vista: porDefecto }: { vista?: Vista }) {
               />
             </>
           ) : (
-            <Calendario mes={mesVisible} meses={mesesVisibles} interacciones={enPantalla} semanas={semanas} proyecto={proyecto} />
+            <Calendario mes={mesVisible} meses={mesesVisibles} interacciones={enPantalla} semanas={semanas} proyecto={proyecto} semanal={vista === 'semana'} />
           )}
         </div>
-        <PanelLateral proyecto={proyecto} mes={mesVisible} alcance={alcance} />
       </div>
-    </section>
+      {/* la meta del mes, lo que toca y las festividades, en una fila bajo la lista (S07): la tabla toma el ancho, con la vista
+          previa de la interacción acoplada a su derecha desde 1280 px */}
+      <PanelLateral proyecto={proyecto} mes={mesVisible} alcance={alcance} />
+    </ContenedorDePagina>
   )
 }
 
-// en la lista el motivo de una cancelada se ve siempre; en la celda del calendario no hay sitio y aparece al enfocar el enlace
+// la hora de Lima de una interacción («10:00»), para su tarjeta en el calendario
+const HORA = new Intl.DateTimeFormat('es-PE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Lima' })
+const horaDe = (interaccion: Registro): string => {
+  const instante = texto(interaccion, 'held_at') || texto(interaccion, 'scheduled_at')
+  const fecha = instante ? new Date(instante) : null
+  return fecha && !Number.isNaN(fecha.getTime()) ? HORA.format(fecha) : ''
+}
+
+// en la lista el motivo de una cancelada se ve siempre; en la tarjeta del calendario no hay sitio y aparece al enfocar el enlace
 // (el title no se ve con el teclado) además de leerse como descripción
-// en el calendario, un chip que se trunca en su celda; en la lista (enLista), un enlace como el de toda lista, con el motivo de
-// una cancelada a la vista
-function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boolean }) {
+// en el calendario, una tarjeta de evento (S07): la hora y el título en negrita, y en la semana su estado debajo; en el mes, en una
+// línea que se corta. en la lista (enLista), un enlace como el de toda lista, con el tipo y el lugar debajo y el motivo de una
+// cancelada a la vista
+function Evento({ interaccion, enLista, enTarjeta, semanal }: { interaccion: Registro; enLista?: boolean; enTarjeta?: boolean; semanal?: boolean }) {
   const { t } = useTranslation(NS)
   const idMotivo = useId()
+  const estados = useEtiquetasDeEstado(enLista || !semanal ? undefined : 'engagement')
   const cancelada = interaccion.state === 'cancelled'
   const sinActa = interaccion.state === 'held' && esFormal(interaccion)
   const motivo = cancelada
@@ -242,23 +280,48 @@ function Evento({ interaccion, enLista }: { interaccion: Registro; enLista?: boo
       ? t('relacionamiento.cancelada', { motivo: texto(interaccion, 'cancel_reason') })
       : t('relacionamiento.canceladaSinMotivo')
     : undefined
+  const ruta = `/projects/${encodeURIComponent(texto(interaccion, 'project'))}/engagements/${encodeURIComponent(interaccion.id)}`
+  if (enLista) {
+    const detalle = [opcion(interaccion, 'engagement_type'), texto(interaccion, 'place')].filter(Boolean).join(' · ')
+    return (
+      <span className="group block">
+        <EnlaceConRastro
+          to={ruta}
+          aria-describedby={motivo ? idMotivo : undefined}
+          className={cn('font-semibold text-sg-text hover:text-sg-primary-text hover:underline', cancelada && 'line-through')}
+        >
+          {texto(interaccion, 'title')}
+          {sinActa ? <span className="ml-1 font-normal text-sg-warning">· {t('relacionamiento.sinActa')}</span> : null}
+        </EnlaceConRastro>{' '}
+        <BotonDeVistaPrevia objeto="engagement" id={interaccion.id} nombre={texto(interaccion, 'title')} enFila={!enTarjeta} />
+        {/* en la tarjeta del teléfono el tipo y el lugar van en su detalle */}
+        {detalle && !enTarjeta ? <span className="block text-sg-caption text-sg-text-secondary">{detalle}</span> : null}
+        {motivo ? (
+          <span id={idMotivo} className="block text-sg-caption text-sg-text-muted">
+            {motivo}
+          </span>
+        ) : null}
+      </span>
+    )
+  }
+  const hora = horaDe(interaccion)
   return (
-    <span className="group block">
-      <EnlaceConRastro
-        to={`/projects/${encodeURIComponent(texto(interaccion, 'project'))}/engagements/${encodeURIComponent(interaccion.id)}`}
-        // en la lista, el título va en una línea (P-02) y dice el texto completo al pasar; el motivo ya está a la vista debajo
-        title={enLista ? texto(interaccion, 'title') : motivo}
-        aria-describedby={motivo ? idMotivo : undefined}
-        className={cn(
-          enLista ? 'block truncate text-sm text-sg-primary-text underline' : 'block truncate rounded-sg-sm bg-sg-surface-sunken px-1 text-sg-caption',
-          cancelada && 'line-through'
-        )}
-      >
-        {texto(interaccion, 'title')}
-        {sinActa ? <span className="ml-1 text-sg-warning">· {t('relacionamiento.sinActa')}</span> : null}
-      </EnlaceConRastro>
+    <span className="group block rounded-sg-sm border border-sg-border-strong bg-sg-surface px-1.5 py-1 text-sg-caption leading-4 hover:bg-sg-surface-hover">
+      <span className={cn('block font-bold text-sg-text', !semanal && 'truncate')}>
+        {hora ? <span className="tabular-nums">{hora} </span> : null}
+        <EnlaceConRastro
+          to={ruta}
+          title={motivo}
+          aria-describedby={motivo ? idMotivo : undefined}
+          className={cn('text-sg-text hover:text-sg-primary-text hover:underline', cancelada && 'line-through')}
+        >
+          {texto(interaccion, 'title')}
+          {sinActa ? <span className="ml-1 font-normal text-sg-warning">· {t('relacionamiento.sinActa')}</span> : null}
+        </EnlaceConRastro>
+      </span>
+      {semanal && interaccion.state ? <span className="block text-sg-text-secondary">{estados[interaccion.state] ?? interaccion.state}</span> : null}
       {motivo ? (
-        <span id={idMotivo} className={cn('block text-sg-caption text-sg-text-muted', !enLista && 'sr-only group-focus-within:not-sr-only')}>
+        <span id={idMotivo} className="sr-only block text-sg-caption text-sg-text-muted group-focus-within:not-sr-only">
           {motivo}
         </span>
       ) : null}
@@ -271,17 +334,21 @@ function Calendario({
   meses,
   semanas,
   interacciones,
-  proyecto
+  proyecto,
+  semanal = false
 }: {
   mes: string
   meses: number[]
   semanas: string[][]
   interacciones: Registro[]
   proyecto?: string
+  // la vista Semana: la tira de siete días de S07, con las tarjetas completas y su estado
+  semanal?: boolean
 }) {
   const { t } = useTranslation(NS)
   const festividades = useFestividades(proyecto, meses)
   const dias = t('relacionamiento.dias', { returnObjects: true }) as string[]
+  const hoy = hoyEnLima()
   const delDia = (dia: string) => interacciones.filter((i) => diaDe(i) === dia)
   // la franja de contexto: las festividades del mes de cada día, también en una semana que cruza de mes
   const festivas = (dia: string) =>
@@ -293,16 +360,30 @@ function Calendario({
     )
   return (
     <div className="space-y-2">
-      {festividades.pendiente ? (
-        <Cargando compacto etiqueta={t('relacionamiento.festividadesCargando')} />
-      ) : festividades.error ? (
-        <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.festividadesFallo')}</p>
-      ) : null}
-      <table aria-label={t('relacionamiento.calendario')} className="w-full table-fixed border-collapse text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {festividades.pendiente ? (
+          <Cargando compacto etiqueta={t('relacionamiento.festividadesCargando')} />
+        ) : festividades.error ? (
+          <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.festividadesFallo')}</p>
+        ) : (
+          <span />
+        )}
+        {/* la leyenda de la banda de festividades: el rayado se explica con palabras */}
+        <span className="inline-flex items-center gap-1.5 text-sg-caption text-sg-text-secondary">
+          <i aria-hidden className="sg-rayado-festivo inline-block size-3 rounded-sg-xs border border-dashed border-sg-warning-border" />
+          {t('relacionamiento.festividadLocal')}
+        </span>
+      </div>
+      {/* la tira de la semana o la grilla del mes (S07): días como columnas, el de hoy marcado en primario suave, cada interacción
+          como tarjeta y cada festividad local como una banda rayada */}
+      <table
+        aria-label={t('relacionamiento.calendario')}
+        className="w-full table-fixed border-separate border-spacing-0 overflow-hidden rounded-sg-md border border-sg-border bg-sg-surface text-sm"
+      >
         <thead>
           <tr>
             {dias.map((d) => (
-              <th key={d} scope="col" className="border-b border-sg-border py-1 text-sg-caption text-sg-text-muted">
+              <th key={d} scope="col" className="border-b border-sg-border bg-sg-surface-sunken py-1.5 text-sg-caption font-bold text-sg-text-secondary">
                 {d}
               </th>
             ))}
@@ -311,27 +392,46 @@ function Calendario({
         <tbody>
           {semanas.map((semana) => (
             <tr key={semana[0]}>
-              {semana.map((dia) => (
-                <td
-                  key={dia}
-                  aria-label={dia}
-                  className={cn('h-24 border border-sg-border-subtle p-1 align-top', !dia.startsWith(mes) && 'bg-sg-surface-sunken text-sg-text-muted')}
-                >
-                  <span className="text-sg-caption tabular-nums">{Number(dia.slice(8))}</span>
-                  {festivas(dia).map((f) => (
-                    <span key={f.id} className="block truncate rounded-sg-xs bg-sg-territory-soft px-1 text-sg-caption text-sg-territory">
-                      {texto(f, 'name')}
+              {semana.map((dia) => {
+                const esHoy = dia === hoy
+                return (
+                  <td
+                    key={dia}
+                    aria-label={dia}
+                    aria-current={esHoy ? 'date' : undefined}
+                    className={cn(
+                      'border-r border-b border-sg-border-subtle p-2 align-top last:border-r-0',
+                      semanal ? 'h-30' : 'h-24',
+                      esHoy ? 'bg-sg-primary-soft' : !dia.startsWith(mes) && 'bg-sg-surface-sunken text-sg-text-muted'
+                    )}
+                  >
+                    <span className={cn('block text-sg-caption font-bold tabular-nums', esHoy ? 'text-sg-primary-text' : 'text-sg-text-secondary')}>
+                      {Number(dia.slice(8))}
+                      {esHoy ? ` · ${t('relacionamiento.hoy')}` : ''}
                     </span>
-                  ))}
-                  <ul className="space-y-0.5">
-                    {delDia(dia).map((i) => (
-                      <li key={i.id}>
-                        <Evento interaccion={i} />
-                      </li>
-                    ))}
-                  </ul>
-                </td>
-              ))}
+                    <div className="mt-1.5 space-y-1.5">
+                      {festivas(dia).map((f) => (
+                        <span
+                          key={f.id}
+                          className={cn(
+                            'sg-rayado-festivo block rounded-sg-sm border border-dashed border-sg-warning-border px-1.5 py-0.5 text-sg-caption leading-4 font-bold text-sg-warning',
+                            !semanal && 'truncate'
+                          )}
+                        >
+                          {texto(f, 'name')}
+                        </span>
+                      ))}
+                      <ul className="space-y-1.5">
+                        {delDia(dia).map((i) => (
+                          <li key={i.id}>
+                            <Evento interaccion={i} semanal={semanal} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </td>
+                )
+              })}
             </tr>
           ))}
         </tbody>
@@ -375,7 +475,7 @@ function Lista({
         etiqueta={t('relacionamiento.titulo')}
         tarjetas={ordenadas.map((i) => ({
           id: i.id,
-          titulo: <Evento interaccion={i} enLista />,
+          titulo: <Evento interaccion={i} enLista enTarjeta />,
           estado: <EstadoChip objeto="engagement" estado={i.state} />,
           plazo: <Dia valor={diaDe(i)} />,
           proyecto: global ? <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} /> : undefined,
@@ -383,13 +483,13 @@ function Lista({
         }))}
       />
     )
-  // la tabla de escritorio con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px, junto al panel, cabe sin desplazar.
-  // esenciales la interacción, el proyecto (en lo global), el estado y la fecha; secundaria, desde xl, el tipo; el lugar y los
-  // asistentes son opcionales: desde 1536 px, hasta que los elija «Columnas». una no esencial que dice lo mismo en toda la
-  // página sale a la nota. el título toma el ancho que queda (w-full con max-w-0) y se corta en una línea. no se sabe de
-  // antemano qué proyectos no se podrán leer: la explicación única va en el encabezado, solo para los lectores de pantalla
+  // la tabla de escritorio de S07 con prioridad de columnas (hallazgo U-06, DD-05): a 1440 px cabe sin desplazar y junto a la vista
+  // previa acoplada. esenciales la fecha con su hora, la interacción (su título y, debajo, su tipo y su lugar), el proyecto (en lo
+  // global), el estado y los asistentes con su reparto por sexo. no se sabe de antemano qué proyectos no se podrán leer: la
+  // explicación única va en el encabezado, solo para los lectores de pantalla
   const columnas: ColumnaPriorizada[] = [
-    { id: 'titulo', encabezado: t('relacionamiento.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'w-full max-w-0', ordenable: true },
+    { id: 'fecha', encabezado: t('relacionamiento.columnas.fecha'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap', ordenable: true },
+    { id: 'titulo', encabezado: t('relacionamiento.columnas.titulo'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(global
       ? [
           {
@@ -401,37 +501,24 @@ function Lista({
           }
         ]
       : []),
-    { id: 'tipo', encabezado: t('relacionamiento.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('relacionamiento.columnas.estado'), prioridad: 'esencial' },
-    { id: 'fecha', encabezado: t('relacionamiento.columnas.fecha'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap', ordenable: true },
-    { id: 'lugar', encabezado: t('relacionamiento.columnas.lugar'), prioridad: 'opcional', claseDeCelda: 'text-sm' },
-    { id: 'asistentes', encabezado: t('relacionamiento.columnas.asistentes'), prioridad: 'opcional', numerica: true, claseDeCelda: 'text-sm' }
+    { id: 'asistentes', encabezado: t('relacionamiento.columnas.asistentes'), prioridad: 'esencial', numerica: true, claseDeCelda: 'text-sm whitespace-nowrap' }
   ]
-  const asistentes = (i: Registro) => {
-    const n = atributo(i, 'attendees_total_count')
-    return n === null || n === undefined ? '—' : numeroPe(Number(n))
-  }
   const celda = (i: Registro, columna: string): ReactNode => {
     switch (columna) {
       case 'titulo':
         return <Evento interaccion={i} enLista />
       case 'proyecto':
         return <CodigoDeProyecto id={texto(i, 'project')} describedPor={idDeProyecto} />
-      case 'tipo':
-        return opcion(i, 'engagement_type')
       case 'estado':
         return <EstadoChip objeto="engagement" estado={i.state} />
       case 'fecha':
-        return <Dia valor={diaDe(i)} />
-      case 'lugar':
-        return texto(i, 'place') || '—'
+        return <FechaYHora interaccion={i} />
       default:
-        return asistentes(i)
+        // sin el total, la columna numérica dice «—» con su nota (vacioNumerico de la tabla)
+        return atributo(i, 'attendees_total_count') === null || atributo(i, 'attendees_total_count') === undefined ? null : <Asistentes interaccion={i} />
     }
   }
-  // lo que decide si una secundaria dice lo mismo en toda la página: el dato guardado, no su rótulo
-  const valorPlano = (i: Registro, columna: string): string =>
-    columna === 'tipo' ? texto(i, 'engagement_type') : columna === 'lugar' ? texto(i, 'place') : columna === 'asistentes' ? asistentes(i) : i.id
   return (
     <TablaPriorizada<Registro>
       etiqueta={t('relacionamiento.titulo')}
@@ -440,11 +527,48 @@ function Lista({
       filas={ordenadas}
       clave={(i) => i.id}
       celda={celda}
-      valorPlano={valorPlano}
-      ocultarUniformes
       orden={orden}
       alOrdenar={alOrdenar}
+      // Espacio o el ojo de la fila abren la vista previa de la interacción, acoplada a la tabla desde 1280 px (S07)
+      previaDe={(i) => ({ objeto: 'engagement', id: i.id })}
     />
+  )
+}
+
+// la fecha de la lista con su hora de Lima («9 nov. 2026 10:00»); sin fecha, «—»
+function FechaYHora({ interaccion }: { interaccion: Registro }) {
+  const dia = diaDe(interaccion)
+  if (!dia) return <span className="text-sg-text-muted">—</span>
+  const hora = horaDe(interaccion)
+  return (
+    <span>
+      <Dia valor={dia} />
+      {hora ? <span className="tabular-nums"> {hora}</span> : null}
+    </span>
+  )
+}
+
+// los asistentes de la lista: el total y, si llegaron, «(21 M, 17 H)» (S07); un conteo que no llegó es «—», nunca un cero
+function Asistentes({ interaccion }: { interaccion: Registro }) {
+  const { t } = useTranslation(NS)
+  const n = (campo: string) => {
+    const valor = atributo(interaccion, campo)
+    return valor === null || valor === undefined || valor === '' ? null : Number(valor)
+  }
+  const total = n('attendees_total_count')
+  const mujeres = n('attendees_female_count')
+  const hombres = n('attendees_male_count')
+  if (total === null) return null
+  return (
+    <>
+      {numeroPe(total)}
+      {mujeres !== null && hombres !== null ? (
+        <span className="text-sg-caption text-sg-text-secondary">
+          {' '}
+          {t('relacionamiento.porSexoCorto', { mujeres: numeroPe(mujeres), hombres: numeroPe(hombres) })}
+        </span>
+      ) : null}
+    </>
   )
 }
 
@@ -515,9 +639,9 @@ function PanelLateral({ proyecto, mes, alcance }: { proyecto?: string; mes: stri
   const interacciones = useTodosConTope('engagement', { ...alcance, state: 'held,postponed', sort: 'scheduled_at', dir: 'desc' })
   const pendientes = (interacciones.data ?? []).filter((i) => (i.state === 'held' && esFormal(i)) || i.state === 'postponed')
   return (
-    <aside className="space-y-3 text-sm">
-      <section aria-label={t('relacionamiento.meta')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
-        <h2 className="font-medium">{t('relacionamiento.meta')}</h2>
+    <aside className="grid items-start gap-4 text-sm lg:grid-cols-3">
+      <Seccion etiqueta={t('relacionamiento.meta')} className="space-y-2">
+        <h2 className="text-sg-h3 font-bold text-sg-text">{t('relacionamiento.meta')}</h2>
         {eng02.isPending ? (
           <Cargando compacto />
         ) : eng02.isError && !eng02.data ? (
@@ -537,9 +661,9 @@ function PanelLateral({ proyecto, mes, alcance }: { proyecto?: string; mes: stri
         ) : (
           <p className="text-sg-text-muted">—</p>
         )}
-      </section>
-      <section aria-label={t('relacionamiento.teToca')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
-        <h2 className="font-medium">{t('relacionamiento.teToca')}</h2>
+      </Seccion>
+      <Seccion etiqueta={t('relacionamiento.teToca')} className="space-y-2">
+        <h2 className="text-sg-h3 font-bold text-sg-text">{t('relacionamiento.teToca')}</h2>
         {interacciones.isPending ? (
           <Cargando compacto />
         ) : interacciones.isError && !interacciones.data ? (
@@ -574,9 +698,9 @@ function PanelLateral({ proyecto, mes, alcance }: { proyecto?: string; mes: stri
             {pendientes.length === 0 ? <p className="text-sm text-sg-text-muted">{t('relacionamiento.nadaPendiente')}</p> : null}
           </div>
         )}
-      </section>
-      <section aria-label={t('relacionamiento.festividades')} className="rounded-sg-lg border border-sg-border bg-sg-surface p-3">
-        <h2 className="font-medium">{t('relacionamiento.festividades')}</h2>
+      </Seccion>
+      <Seccion etiqueta={t('relacionamiento.festividades')} className="space-y-2">
+        <h2 className="text-sg-h3 font-bold text-sg-text">{t('relacionamiento.festividades')}</h2>
         {festividades.pendiente ? (
           <Cargando compacto />
         ) : festividades.error ? (
@@ -594,7 +718,7 @@ function PanelLateral({ proyecto, mes, alcance }: { proyecto?: string; mes: stri
             ))}
           </ul>
         )}
-      </section>
+      </Seccion>
     </aside>
   )
 }

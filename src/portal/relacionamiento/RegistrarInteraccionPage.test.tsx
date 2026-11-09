@@ -444,6 +444,24 @@ describe('S24 · registrar interacción', () => {
     })
   })
 
+  // design-system.md §6.3: la revisión es «Revise sus respuestas», cada dato con «Cambiar» que vuelve a su paso
+  it('la revisión dice cada respuesta con «Cambiar», que vuelve a su paso sin perder lo escrito', async () => {
+    fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
+    await screen.findByRole('option', { name: 'Asamblea' })
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo de interacción' }), 'ASAMBLEA')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Asamblea de prueba')
+    await userEvent.click(screen.getByRole('radio', { name: 'Sí, ya se realizó' }))
+    await escribirRealizada('06/10/2026', '10:00')
+    for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
+    for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    const revision = await screen.findByRole('region', { name: 'Revise sus respuestas' })
+    expect(within(revision).getByText('Asamblea · Asamblea de prueba')).toBeInTheDocument()
+    await userEvent.click(within(revision).getByRole('button', { name: 'Cambiar Tipo y fecha' }))
+    expect(await screen.findByRole('heading', { name: 'Tipo y fecha' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('Asamblea de prueba')
+  })
+
   it('la fecha que se teclea viaja en UTC, también cerca de la medianoche', async () => {
     fetch = abrirPortal('/projects/p1/engagements/new', RELACIONISTA, EQUIPO, rutas())
     red = espiarRed()
@@ -455,8 +473,11 @@ describe('S24 · registrar interacción', () => {
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Agregar persona' }))
     for (let i = 0; i < 2; i++) await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
-    // la revisión dice la fecha tecleada en es-PE, no el valor crudo del control (revisión final, M12)
-    expect(await screen.findByText(/: 6 oct\. 2026, 11:30/)).toBeInTheDocument()
+    // la revisión («Revise sus respuestas», un término y su valor) dice la fecha tecleada en es-PE, no el valor crudo del control
+    // (revisión final, M12)
+    const fecha = await screen.findByText(/^6 oct\. 2026, 11:30/)
+    expect(fecha.tagName).toBe('DD')
+    expect(fecha.previousElementSibling).toHaveTextContent('Fecha y hora en que se realizó')
     expect(screen.queryByText(/2026-10-06T23:30/)).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Guardar como realizada' }))
     await waitFor(() => expect(rutaActual()).toBe('/projects/p1/engagements/e9'))

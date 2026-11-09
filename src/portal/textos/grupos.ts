@@ -4,8 +4,21 @@ export const ES_GRUPOS = {
   titulo: 'Grupos de interés',
   conteo_one: '{{n}} grupo de interés',
   conteo_other: '{{n}} grupos de interés',
-  nuevo: 'Nuevo grupo de interés',
-  verMatriz: 'Ver como matriz',
+  conteoDeVista: '{{total}} en total · esta vista muestra {{n}}',
+  nuevo: 'Registrar grupo de interés',
+  verMatriz: 'Ver matriz interés × poder',
+  ajustado: 'ajustado',
+  ajustadoAyuda: 'El grupo de influencia se ajustó a mano en la evaluación vigente',
+  ultimoContacto: 'Último contacto',
+  nuncaContactado: 'Sin contacto registrado',
+  previa: {
+    evaluacion: 'Evaluación vigente',
+    evaluacionDel: 'Evaluación del {{fecha}}',
+    confianza: 'Confianza',
+    territorio: 'Territorio',
+    evaluaciones_one: '{{count}} evaluación',
+    evaluaciones_other: '{{count}} evaluaciones'
+  },
   exportar: 'Exportar',
   vistas: {
     prioridad: 'Prioridad muy alta y alta',
@@ -33,7 +46,9 @@ export const ES_GRUPOS = {
     relacion: 'Relación',
     responsable: 'Responsable',
     evaluacion: 'Evaluación',
-    contacto: 'Último contacto'
+    contacto: 'Último contacto',
+    grupoEInfluencia: 'Grupo de interés · influencia',
+    estadoYContacto: 'Estado y último contacto'
   },
   sinEvaluarValor: 'Sin evaluar',
   registrarConEllos: 'Registrar una interacción con ellos',
@@ -130,7 +145,8 @@ export const ES_GRUPOS = {
     poder: 'Poder',
     cuadrantes: { ESTRATEGICO: 'Estratégico', POLITICO: 'Político', 'PARA MONITOREO': 'Para monitoreo', VULNERABLE: 'Vulnerable' },
     ajustado: 'grupo ajustado a mano',
-    unSoloProyecto: 'La matriz usa los umbrales de un proyecto: elija uno.'
+    unSoloProyecto: 'La matriz usa los umbrales de un proyecto: elija uno.',
+    cuadrantesTitulo: 'Grupos por cuadrante'
   },
   evaluacion: {
     titulo: 'Nueva evaluación',
@@ -211,8 +227,21 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
   titulo: 'Stakeholders',
   conteo_one: '{{n}} stakeholder',
   conteo_other: '{{n}} stakeholders',
-  nuevo: 'New stakeholder',
-  verMatriz: 'View as matrix',
+  conteoDeVista: '{{total}} in total · this view shows {{n}}',
+  nuevo: 'Register stakeholder',
+  verMatriz: 'View interest × power matrix',
+  ajustado: 'adjusted',
+  ajustadoAyuda: 'The influence group was adjusted by hand in the current assessment',
+  ultimoContacto: 'Last contact',
+  nuncaContactado: 'No contact recorded',
+  previa: {
+    evaluacion: 'Current assessment',
+    evaluacionDel: 'Assessment of {{fecha}}',
+    confianza: 'Trust',
+    territorio: 'Territory',
+    evaluaciones_one: '{{count}} assessment',
+    evaluaciones_other: '{{count}} assessments'
+  },
   exportar: 'Export',
   vistas: {
     prioridad: 'Priority very high and high',
@@ -240,7 +269,9 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     relacion: 'Relationship',
     responsable: 'Owner',
     evaluacion: 'Assessment',
-    contacto: 'Last contact'
+    contacto: 'Last contact',
+    grupoEInfluencia: 'Stakeholder · influence',
+    estadoYContacto: 'Status and last contact'
   },
   sinEvaluarValor: 'Not assessed',
   registrarConEllos: 'Register an engagement with them',
@@ -335,7 +366,8 @@ export const EN_GRUPOS: typeof ES_GRUPOS = {
     poder: 'Power',
     cuadrantes: { ESTRATEGICO: 'Estratégico', POLITICO: 'Político', 'PARA MONITOREO': 'Para monitoreo', VULNERABLE: 'Vulnerable' },
     ajustado: 'group manually adjusted',
-    unSoloProyecto: 'The matrix uses the thresholds of one project: pick one.'
+    unSoloProyecto: 'The matrix uses the thresholds of one project: pick one.',
+    cuadrantesTitulo: 'Stakeholders by quadrant'
   },
   evaluacion: {
     titulo: 'New assessment',

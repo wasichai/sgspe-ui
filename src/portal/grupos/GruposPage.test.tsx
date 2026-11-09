@@ -41,7 +41,7 @@ describe('S16 · lista de grupos de interés', () => {
   it('sin acceso a la postura, la columna dice Restringida y no hay filtro por ella; los retirados no salen en "Todos"', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, base())
     await waitFor(() => expect(filas()).toHaveLength(2))
-    expect(within(filas()[0]).getByText('Restringido')).toBeInTheDocument()
+    expect(within(filas()[0]).getByText('Restringida')).toBeInTheDocument()
     expect(within(filas()[1]).getAllByText('Sin evaluar')).toHaveLength(2)
     expect(screen.queryByRole('combobox', { name: 'Postura' })).not.toBeInTheDocument()
     expect(await within(filas()[0]).findByText('Ronda campesina Tunas')).toBeInTheDocument()
@@ -148,18 +148,21 @@ describe('S16 · lista de grupos de interés', () => {
     ])
     await waitFor(() => expect(filas()).toHaveLength(2))
     const tabla = within(screen.getByRole('table', { name: 'Grupos de interés' }))
-    // esenciales, siempre
-    for (const c of ['Grupo de interés', 'Grupo de influencia', 'Postura', 'Prioridad', 'Estado'])
+    // esenciales, siempre: las cuatro de S06 (el grupo con su influencia, la postura, la prioridad, y el estado con el último contacto)
+    for (const c of ['Grupo de interés · influencia', 'Postura', 'Prioridad', 'Estado y último contacto'])
       expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
-    // secundarias, desde xl
-    for (const c of ['Territorio', 'Último contacto']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'xl:table-cell')
+    // el territorio, el grupo de influencia y el último contacto ya no son columnas: van en la celda del grupo y bajo el estado
+    for (const c of ['Territorio', 'Grupo de influencia', 'Último contacto']) expect(tabla.queryByRole('columnheader', { name: c })).not.toBeInTheDocument()
     // opcionales, desde 1536 px mientras no se elijan en «Columnas»
     for (const c of ['Relación', 'Evaluación']) expect(tabla.getByRole('columnheader', { name: c })).toHaveClass('hidden', 'min-[96rem]:table-cell')
     // el mismo responsable en toda la página: sale de la tabla y queda en la nota, con su nombre
     expect(tabla.queryByRole('columnheader', { name: 'Responsable' })).not.toBeInTheDocument()
     const nota = screen.getByRole('list', { name: 'Igual en todas las filas' })
     await waitFor(() => expect(within(nota).getByRole('listitem')).toHaveTextContent('Responsable: Gestión de compromisos (demo)'))
+    // la línea de metadatos del grupo: su lugar y su grupo de influencia; y el último contacto, bajo el estado
     expect(await within(filas()[0]).findByText('Tunas')).toBeInTheDocument()
+    expect(within(filas()[0]).getByText('Estratégico')).toBeInTheDocument()
+    expect(within(filas()[0]).getByText(/^Último contacto:/)).toBeInTheDocument()
   })
 
   // 05-especificacion §1.6: «Columnas» muestra u oculta las opcionales en todos los anchos y se recuerda en este navegador
@@ -247,8 +250,8 @@ describe('S16 · lista de grupos de interés', () => {
     // un solo botón de ayuda para toda la columna, en el encabezado
     const ayuda = within(encabezado).getByRole('button', { name: 'Por qué no se muestra' })
     expect(within(tabla).getAllByRole('button', { name: 'Por qué no se muestra' })).toEqual([ayuda])
-    // la celda sigue diciendo Restringido y su motivo (sr-only, en el encabezado) la describe
-    const celda = within(filas()[0]).getByText('Restringido')
+    // la celda sigue diciendo Restringida y su motivo (sr-only, en el encabezado) la describe
+    const celda = within(filas()[0]).getByText('Restringida')
     const motivo = document.getElementById(celda.getAttribute('aria-describedby')!)!
     expect(encabezado).toContainElement(motivo)
     expect(motivo).toHaveTextContent('Su rol no puede leer este dato')
@@ -284,6 +287,57 @@ describe('S16 · lista de grupos de interés', () => {
     expect(postura).toHaveDisplayValue('Todos')
     await userEvent.selectOptions(postura, 'EN CONTRA')
     await waitFor(() => expect(filas()).toHaveLength(1))
+  })
+
+  // S06: la postura con su color y su palabra, la prioridad con barras, y el estado con el último contacto debajo
+  it('la postura va con su círculo de color y su palabra, la prioridad con barras y el último contacto bajo el estado', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', GERENCIA_SOCIAL, LEE, base(GERENCIA_SOCIAL, true))
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(within(filas()[0]).getByText('En contra').closest('[data-postura]')).toHaveAttribute('data-postura', 'EN CONTRA')
+    const prioridad = within(filas()[0]).getByLabelText('Prioridad: Muy alta')
+    expect(prioridad).toHaveAttribute('data-nivel', 'MUY ALTA')
+    expect(prioridad.querySelectorAll('[data-barra="llena"]')).toHaveLength(4)
+    expect(within(filas()[0]).getByText(/^Último contacto:/)).toBeInTheDocument()
+  })
+
+  it('el grupo cuya influencia se ajustó a mano lo dice en su línea, según la matriz del proyecto', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
+      {
+        path: /^\/sgspe\/dashboards\/indicators\/KPI-STK-03\?/,
+        body: {
+          code: 'KPI-STK-03',
+          label: 'Matriz',
+          available: true,
+          value: 1,
+          breakdowns: [{ by: 'stakeholder', rows: [{ key: 's1', value: null, interest: 4, power: 3.5, overridden: true }] }]
+        }
+      },
+      ...base()
+    ])
+    await waitFor(() => expect(filas()).toHaveLength(2))
+    expect(await within(filas()[0]).findByText('ajustado')).toHaveAttribute('title', 'El grupo de influencia se ajustó a mano en la evaluación vigente')
+    expect(within(filas()[1]).queryByText('ajustado')).not.toBeInTheDocument()
+  })
+
+  it('con una vista que no muestra todos, el encabezado dice el total y lo que la vista muestra', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders?view=prioridad', RELACIONISTA, LEE, base())
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    expect(screen.getByText('2 en total · esta vista muestra 1')).toBeInTheDocument()
+  })
+
+  it('la vista previa de un grupo dice su evaluación vigente con barras, sus definiciones y su trazabilidad', async () => {
+    fetch = abrirPortal('/projects/p1/stakeholders?peek=stakeholder%3As1', RELACIONISTA, LEE, base())
+    const previa = await screen.findByRole('dialog')
+    expect(await within(previa).findByRole('meter', { name: 'Interés' })).toHaveAttribute('aria-valuenow', '4')
+    expect(within(previa).getByRole('meter', { name: 'Poder' })).toHaveAttribute('aria-valuenow', '3.5')
+    expect(within(previa).getByRole('meter', { name: 'Confianza' })).toHaveAttribute('aria-valuenow', '2')
+    // sin acceso a la postura, «Restringida»; la prioridad con barras y el grupo de influencia
+    expect(await within(previa).findByText('Restringida')).toBeInTheDocument()
+    expect(within(previa).getByText('Muy alta').closest('[data-nivel]')).toHaveAttribute('data-nivel', 'MUY ALTA')
+    expect(within(previa).getByText('Estratégico')).toBeInTheDocument()
+    expect(within(previa).getByRole('complementary', { name: 'Trazabilidad' })).toBeInTheDocument()
+    // el tipo va en el antetítulo, como en la ficha
+    expect(within(previa).getByText(/Organización comunal$/)).toBeInTheDocument()
   })
 
   it.each([
@@ -342,7 +396,7 @@ describe('S16 · lista de grupos de interés', () => {
     await waitFor(() => expect(filas()).toHaveLength(2))
     expect(screen.getByRole('columnheader', { name: 'Proyecto' })).toBeInTheDocument()
     expect(await within(filas()[0]).findByText('PRJ-01')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Ver como matriz' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Ver matriz interés × poder' })).not.toBeInTheDocument()
     // con la columna Proyecto, el responsable pasa a opcional (desde 1536 px) para que a 1440 px la tabla quepa (CA-1.6.2)
     const responsable = screen.queryByRole('columnheader', { name: 'Responsable' })
     if (responsable) expect(responsable).toHaveClass('hidden', 'min-[96rem]:table-cell')
@@ -400,7 +454,7 @@ describe('S16 · lista de grupos de interés', () => {
     expect(await screen.findByText('Falló la definición')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+    expect(screen.queryByText('Restringida')).not.toBeInTheDocument()
   })
 
   it('un 403 al leer la definición dice "No disponible", no un error con reintento', async () => {
@@ -528,11 +582,11 @@ describe('S16 · lista de grupos de interés', () => {
       }
     ])
     expect(await screen.findByRole('status')).toBeInTheDocument()
-    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+    expect(screen.queryByText('Restringida')).not.toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'Grupos de interés' })).not.toBeInTheDocument()
     entregar()
     await waitFor(() => expect(filas()).toHaveLength(2))
-    expect(screen.queryByText('Restringido')).not.toBeInTheDocument()
+    expect(screen.queryByText('Restringida')).not.toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Postura' })).toBeInTheDocument()
   })
 })
@@ -564,7 +618,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
     // una definición que sí tiene la postura: que el alta no la mande es una garantía y no un vacío
     fetch = alta(GERENCIA_SOCIAL, true)
     red = espiarRed()
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo grupo de interés' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar grupo de interés' }))
     await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar antes de crear' }), 'Ronda')
     await userEvent.click(await screen.findByRole('button', { name: 'Ronda campesina Tunas' }))
     expect(await screen.findByText('Actor: Ronda campesina Tunas')).toBeInTheDocument()
@@ -582,7 +636,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
   it('el alta de una persona manda person y deja organization sin valor: la relación opcional oculta pasa la validación', async () => {
     fetch = alta(GERENCIA_SOCIAL, true, { person: PERSONA })
     red = espiarRed()
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo grupo de interés' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar grupo de interés' }))
     await userEvent.click(screen.getByRole('radio', { name: 'Persona' }))
     await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar antes de crear' }), 'Ana')
     await userEvent.click(await screen.findByRole('button', { name: 'Persona registrada' }))
@@ -597,7 +651,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
 
   it('una persona sin los nombres legibles se ofrece como Persona registrada', async () => {
     fetch = alta()
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo grupo de interés' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar grupo de interés' }))
     await userEvent.click(screen.getByRole('radio', { name: 'Persona' }))
     await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar antes de crear' }), 'Ana')
     expect(await screen.findByRole('button', { name: 'Persona registrada' })).toBeInTheDocument()
@@ -612,7 +666,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
         responder: () => problema(403, 'sin asignación', [{ field: 'project', message: 'NOT_ASSIGNED' }])
       }
     ])
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo grupo de interés' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar grupo de interés' }))
     await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar antes de crear' }), 'Ronda')
     await userEvent.click(await screen.findByRole('button', { name: 'Ronda campesina Tunas' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Guardar' }))
@@ -628,7 +682,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
       base()
     )
     await screen.findByRole('table', { name: 'Grupos de interés' })
-    expect(screen.queryByRole('button', { name: 'Nuevo grupo de interés' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar grupo de interés' })).not.toBeInTheDocument()
     fetch.restore()
     document.body.innerHTML = ''
     fetch = abrirPortal('/projects/p1/stakeholders', RELACIONISTA, LEE, [
@@ -636,7 +690,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
       ...base()
     ])
     await screen.findByRole('table', { name: 'Grupos de interés' })
-    expect(screen.queryByRole('button', { name: 'Nuevo grupo de interés' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar grupo de interés' })).not.toBeInTheDocument()
   })
 
   it('en el alcance global no se ofrece crear: el grupo es de un proyecto', async () => {
@@ -646,7 +700,7 @@ describe('flujo 3 · registrar un grupo de interés', () => {
       { path: '/objects/project_assignment/records', body: pagina([]) }
     ])
     await screen.findByRole('table', { name: 'Grupos de interés' })
-    expect(screen.queryByRole('button', { name: 'Nuevo grupo de interés' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar grupo de interés' })).not.toBeInTheDocument()
   })
 })
 
@@ -662,12 +716,12 @@ describe('la ruta de los grupos de interés', () => {
 
 // P38: solo ADMIN escribe sin asignación (revisión final, I3)
 describe('S16 · escritura sin asignación', () => {
-  it('ADMIN sin asignación ve «Nuevo grupo de interés»', async () => {
+  it('ADMIN sin asignación ve «Registrar grupo de interés»', async () => {
     fetch = abrirPortal('/projects/p1/stakeholders', ADMINISTRACION, { admin: true, objects: LEE.objects }, [
       { path: /^\/objects\/project_assignment\/records\?.*member_user_id/, body: pagina([]) },
       ...base(ADMINISTRACION)
     ])
-    expect(await screen.findByText('Nuevo grupo de interés')).toBeInTheDocument()
+    expect(await screen.findByText('Registrar grupo de interés')).toBeInTheDocument()
   })
 
   it('otra cuenta sin asignación no lo ve', async () => {
@@ -676,6 +730,6 @@ describe('S16 · escritura sin asignación', () => {
       ...base()
     ])
     await screen.findByText(/No está asignado a este proyecto/)
-    expect(screen.queryByText('Nuevo grupo de interés')).not.toBeInTheDocument()
+    expect(screen.queryByText('Registrar grupo de interés')).not.toBeInTheDocument()
   })
 })

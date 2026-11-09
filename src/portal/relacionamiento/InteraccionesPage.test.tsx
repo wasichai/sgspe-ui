@@ -173,34 +173,80 @@ describe('S21 y S22 · calendario y lista de interacciones', () => {
   })
 
   // hallazgo U-06 (DD-05): la tabla cabe a 1440 px por la prioridad de sus columnas; el título va en una línea
-  it('la lista va por prioridad de columnas: el tipo desde xl, el lugar y los asistentes desde 1536 px, y lo igual en todas, a la nota', async () => {
+  // S07: la fecha con su hora, la interacción en dos líneas (su título y, debajo, su tipo y su lugar), el estado y los asistentes con
+  // su reparto por sexo; el tipo y el lugar ya no son columnas
+  it('la lista de S07: fecha y hora, la interacción con su tipo y lugar debajo, el estado y los asistentes por sexo', async () => {
     const otra = registro(
       'e5',
-      { project: 'p1', title: 'Asamblea extraordinaria', engagement_type: 'ASAMBLEA', place: 'Local comunal', held_at: '2026-10-09T15:00:00Z' },
+      {
+        project: 'p1',
+        title: 'Asamblea extraordinaria',
+        engagement_type: 'ASAMBLEA',
+        place: 'Local comunal',
+        held_at: '2026-10-09T15:00:00Z',
+        attendees_total_count: 38,
+        attendees_female_count: 21,
+        attendees_male_count: 17
+      },
       { state: 'held' }
     )
-    const conLugar = { ...E1, attributes: { ...E1.attributes, place: 'Local comunal' } }
     fetch = abrirPortal('/projects/p1/engagements?view=lista', RELACIONISTA, EQUIPO, [
       ...base(),
-      { path: '/objects/engagement/records', body: pagina([conLugar, otra]) }
+      { path: '/objects/engagement/records', body: pagina([E2, otra]) }
     ])
     const tabla = within(await screen.findByRole('table', { name: 'Relacionamiento' }))
-    for (const c of ['Interacción', 'Estado', 'Fecha']) expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
-    expect(tabla.getByRole('columnheader', { name: 'Asistentes' })).toHaveClass('hidden', 'min-[96rem]:table-cell')
-    // el tipo y el lugar son los mismos en las dos filas: salen de la tabla y quedan en la nota
+    expect(tabla.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Fecha', 'Interacción', 'Estado', 'Asistentes'])
+    for (const c of ['Interacción', 'Estado', 'Fecha', 'Asistentes']) expect(tabla.getByRole('columnheader', { name: c })).not.toHaveClass('hidden')
     expect(tabla.queryByRole('columnheader', { name: 'Tipo' })).not.toBeInTheDocument()
-    const nota = screen.getByRole('list', { name: 'Igual en todas las filas' })
-    expect(
-      within(nota)
-        .getAllByRole('listitem')
-        .map((n) => n.textContent)
-    ).toEqual(['Tipo: Asamblea', 'Lugar: Local comunal'])
-    // el título toma el ancho que queda y va en una línea, con su texto completo al pasar
-    expect(tabla.getByRole('columnheader', { name: 'Interacción' })).not.toHaveClass('w-full')
-    expect(tabla.getAllByRole('cell')[0]).toHaveClass('w-full', 'max-w-0')
-    const enlace = tabla.getByRole('link', { name: /^Asamblea extraordinaria/ })
-    expect(enlace).toHaveClass('truncate')
-    expect(enlace).toHaveAttribute('title', 'Asamblea extraordinaria')
+    expect(tabla.queryByRole('columnheader', { name: 'Lugar' })).not.toBeInTheDocument()
+    const fila = tabla.getByRole('link', { name: /^Asamblea extraordinaria/ }).closest('tr')!
+    // la interacción es la columna de título: toma el ancho que queda y su texto se parte en líneas
+    expect(tabla.getByRole('link', { name: /^Asamblea extraordinaria/ }).closest('td')).toHaveClass('w-full', 'whitespace-normal')
+    expect(within(fila).getByText('Asamblea · Local comunal')).toBeInTheDocument()
+    // la fecha con la hora de Lima (15:00Z son las 10:00)
+    expect(within(fila).getByText(/10:00/)).toBeInTheDocument()
+    expect(within(fila).getByText('(21 M, 17 H)')).toBeInTheDocument()
+    // sin asistentes contados, «—» y nunca un cero
+    const cancelada = tabla.getByRole('link', { name: 'Reunión con la junta' }).closest('tr')!
+    expect(within(cancelada).getAllByRole('cell').at(-1)).toHaveTextContent('—')
+  })
+
+  it('el ojo de una fila abre la vista previa de la interacción con sus asistentes por sexo', async () => {
+    const conAsistentes = {
+      ...E1,
+      attributes: { ...E1.attributes, place: 'Local comunal', attendees_total_count: 38, attendees_female_count: 21, attendees_male_count: 17 }
+    }
+    fetch = abrirPortal('/projects/p1/engagements?view=lista', RELACIONISTA, EQUIPO, [
+      ...base(),
+      { path: '/objects/engagement/records/e1', body: conAsistentes },
+      { path: '/objects/engagement/records', body: pagina([conAsistentes]) }
+    ])
+    const tabla = within(await screen.findByRole('table', { name: 'Relacionamiento' }))
+    await userEvent.click(tabla.getByRole('link', { name: 'Vista previa de Asamblea comunal' }))
+    expect(rutaActual()).toMatch(/[?&]peek=engagement%3Ae1/)
+    const previa = await screen.findByRole('dialog')
+    expect(await within(previa).findByRole('img', { name: '21 mujeres, 17 hombres' })).toBeInTheDocument()
+    expect(within(previa).getByText('Local comunal')).toBeInTheDocument()
+    expect(within(previa).getByRole('complementary', { name: 'Trazabilidad' })).toBeInTheDocument()
+  })
+
+  it('la semana es una tira de siete días con hoy marcado, tarjetas con la hora y el estado, y las festividades rayadas', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-01T15:00:00Z'))
+    fetch = abrirPortal('/projects/p1/engagements/calendar?view=semana&day=2026-10-01', RELACIONISTA, EQUIPO, [
+      ...base(),
+      { path: '/objects/engagement/records', body: pagina([E1]) }
+    ])
+    const calendario = await screen.findByRole('table', { name: 'Calendario de interacciones' })
+    const hoy = within(calendario).getByRole('cell', { name: '2026-10-01' })
+    expect(hoy).toHaveAttribute('aria-current', 'date')
+    expect(hoy).toHaveClass('bg-sg-primary-soft')
+    expect(within(hoy).getByText('1 · hoy')).toBeInTheDocument()
+    // la tarjeta: la hora de Lima (03:00Z del 2 son las 22:00 del 1), el título que enlaza y el estado debajo
+    const enlace = within(hoy).getByRole('link', { name: /Asamblea comunal/ })
+    expect(enlace.parentElement).toHaveTextContent(/^22:00 Asamblea comunal/)
+    expect(await within(hoy).findByText('Fiesta patronal')).toHaveClass('sg-rayado-festivo')
+    expect(screen.getByText('Festividad local')).toBeInTheDocument()
   })
 
   it('si el tope de lectura corta la lista, lo dice, lee en orden descendente y no calla la truncación', async () => {

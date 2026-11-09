@@ -26,7 +26,13 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'proyectos-previa', ruta: '/projects?view=all&peek=project%3Ap1' },
   { nombre: 'p360-resumen', ruta: '/projects/p1/overview' },
   { nombre: 'grupos', ruta: '/projects/p1/stakeholders' },
+  { nombre: 'grupos-previa', ruta: '/projects/p1/stakeholders?peek=stakeholder%3As1' },
+  { nombre: 'grupo-ficha', ruta: '/projects/p1/stakeholders/s1' },
+  { nombre: 'grupos-matriz', ruta: '/projects/p1/stakeholders/matrix' },
   { nombre: 'relacionamiento', ruta: '/projects/p1/engagements' },
+  { nombre: 'relacionamiento-previa', ruta: '/projects/p1/engagements?peek=engagement%3Ae1' },
+  { nombre: 'relacionamiento-semana', ruta: '/projects/p1/engagements?view=semana&day=2026-10-16' },
+  { nombre: 'interaccion-ficha', ruta: '/projects/p1/engagements/e1' },
   { nombre: 'compromisos', ruta: '/projects/p1/commitments' },
   { nombre: 'compromiso-ficha', ruta: '/projects/p1/commitments/k1' },
   { nombre: 'territorio', ruta: '/territory?project=p1' },
@@ -37,8 +43,8 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'entregable', ruta: '/reports/deliverables/d1' },
   { nombre: 'administracion', ruta: '/administration', admin: true }
 ]
-const PRINCIPALES = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'compromisos', 'territorio', 'riesgos']
-const ANGOSTAS = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'compromisos']
+const PRINCIPALES = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'grupos', 'relacionamiento', 'compromisos', 'territorio', 'riesgos']
+const ANGOSTAS = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'grupos', 'relacionamiento', 'compromisos']
 
 interface Variante {
   ancho: number

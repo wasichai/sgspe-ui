@@ -267,13 +267,22 @@ export function EvaluacionDrawer({
           </Campo>
         </div>
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium" aria-live="polite">
+          {/* el avance con la forma de los pasos de E (design-system.md §5.3 «Pasos»): un segmento por tema con su borde de 4 px,
+              hecho en progress, el abierto en primary y pendiente en border; «N de 5 temas» arriba, en voz alta al cambiar */}
+          <div className="space-y-1.5">
+            <p className="text-sg-body-sm font-bold text-sg-text-secondary" aria-live="polite">
               {t('grupos.evaluacion.avance', { hechos: temasHechos, total: TEMAS.length })}
             </p>
-            <span aria-hidden className="flex w-24 gap-1">
-              {TEMAS.map((tema) => (
-                <span key={tema.clave} className={cn('h-1.5 flex-1 rounded-full', completo(tema, indicadores) ? 'bg-sg-primary' : 'bg-sg-border')} />
+            <span aria-hidden className="flex gap-1">
+              {TEMAS.map((tema, i) => (
+                <span
+                  key={tema.clave}
+                  data-tema={completo(tema, indicadores) ? 'hecho' : temaAbierto === i ? 'actual' : 'pendiente'}
+                  className={cn(
+                    'h-1 flex-1 rounded-sg-xs',
+                    completo(tema, indicadores) ? 'bg-sg-progress' : temaAbierto === i ? 'bg-sg-primary' : 'bg-sg-border'
+                  )}
+                />
               ))}
             </span>
           </div>

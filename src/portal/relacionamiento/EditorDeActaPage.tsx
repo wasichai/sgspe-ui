@@ -1,3 +1,4 @@
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth, type ObjectDefinition } from '@wasichai/core'
@@ -207,48 +208,58 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
     `\n## ${secciones[4]}\n${(preguntas.data ?? []).map((q) => `- ${texto(q, 'question_text')}${texto(q, 'answer') ? ` — ${texto(q, 'answer')}` : ''}`).join('\n')}\n`
 
   return (
-    <section className="space-y-3">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-sg-h2 font-semibold">{t('relacionamiento.acta.titulo')}</h1>
-          <EstadoChip objeto="engagement" estado={interaccion.state} />
-          <span role="status" className="text-sg-caption text-sg-text-muted">
-            {actualizar.isPending ? t('relacionamiento.acta.guardando') : sucio ? t('relacionamiento.acta.sinGuardar') : t('relacionamiento.acta.guardado')}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <ContenedorDePagina elemento="section">
+      {/* el encabezado común de las páginas (design-system.md §6.1): el título, la interacción a la que pertenece, su estado y si lo
+          escrito ya se guardó; las transiciones del acta a la derecha, con la vista previa como secundaria */}
+      <EncabezadoDePagina
+        titulo={t('relacionamiento.acta.titulo')}
+        descripcion={
           <EnlaceConRastro
             to={`/projects/${encodeURIComponent(proyecto)}/engagements/${encodeURIComponent(interaccion.id)}`}
-            className="text-sm text-sg-primary-text underline"
+            className="text-sg-primary-text underline"
           >
             {texto(interaccion, 'title')}
           </EnlaceConRastro>
-          {leeActa ? (
+        }
+        chips={
+          <>
+            <EstadoChip objeto="engagement" estado={interaccion.state} />
+            <span role="status" className="text-sg-caption text-sg-text-muted">
+              {actualizar.isPending ? t('relacionamiento.acta.guardando') : sucio ? t('relacionamiento.acta.sinGuardar') : t('relacionamiento.acta.guardado')}
+            </span>
+          </>
+        }
+        secundarias={
+          leeActa ? (
             <Button variant="secondary" size="sm" onClick={() => setPrevia(!previa)}>
               {previa ? t('relacionamiento.acta.editar') : t('relacionamiento.acta.vistaPrevia')}
             </Button>
-          ) : null}
-          {sucio ? null : (
-            <BotonesDeTransicion
-              objeto="engagement"
-              registro={interaccion}
-              proyecto={proyecto}
-              ocultar={[
-                'close',
-                'close_light',
-                'cancel_planned',
-                'cancel_scheduled',
-                'cancel_postponed',
-                'postpone',
-                'reschedule',
-                'schedule',
-                'register_held',
-                'register_held_unplanned'
-              ]}
-            />
-          )}
-        </div>
-      </header>
+          ) : undefined
+        }
+        primaria={
+          <>
+            {sucio ? null : (
+              <BotonesDeTransicion
+                objeto="engagement"
+                registro={interaccion}
+                proyecto={proyecto}
+                ocultar={[
+                  'close',
+                  'close_light',
+                  'cancel_planned',
+                  'cancel_scheduled',
+                  'cancel_postponed',
+                  'postpone',
+                  'reschedule',
+                  'schedule',
+                  'register_held',
+                  'register_held_unplanned'
+                ]}
+              />
+            )}
+          </>
+        }
+      />
       {devolucion.motivo ? <Alert tone="warning">{t('relacionamiento.acta.devuelta', { motivo: devolucion.motivo })}</Alert> : null}
       {devolucion.noLeido ? <Alert tone="notice">{t('relacionamiento.acta.motivoNoLeido')}</Alert> : null}
       {!leeActa ? <Alert tone="notice">{t('relacionamiento.acta.restringida')}</Alert> : null}
@@ -396,7 +407,7 @@ function Editor({ interaccion, definicion }: { interaccion: Registro; definicion
           </aside>
         </div>
       ) : null}
-    </section>
+    </ContenedorDePagina>
   )
 }
 
