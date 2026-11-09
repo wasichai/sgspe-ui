@@ -1,5 +1,7 @@
 import { Table, Td, Th } from '@wasichai/ui'
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { montoPe } from '../componentes/Monto'
 import { aDiezmilesimos, deDiezmilesimos } from '../datos/decimales'
 import { desglose, type FilaDeDesglose, type Indicador } from '../datos/indicadores'
@@ -88,6 +90,8 @@ const esIlegible = (valor: unknown): boolean => valor !== null && valor !== unde
 // solo contra lo asignado de los programas que ejecutan. un monto ilegible se omite y se cuenta aparte
 export function PresupuestoPorMoneda({ indicador, anio }: { indicador: Indicador; anio: number }) {
   const { t } = useTranslation(NS)
+  const telefono = useEsTelefono()
+  const id = useId()
   const porMoneda = new Map<string, { asignado: bigint; asignadoQueEjecuta: bigint; ejecutado: bigint | null }>()
   let ilegibles = 0
   let hayPorAprobar = false
@@ -121,9 +125,44 @@ export function PresupuestoPorMoneda({ indicador, anio }: { indicador: Indicador
         {notas}
       </div>
     )
+  const filas = [...porMoneda].map(([m, { asignado, asignadoQueEjecuta, ejecutado }]) => {
+    const avance = ejecutado === null ? null : porcentaje(deDiezmilesimos(ejecutado), deDiezmilesimos(asignadoQueEjecuta))
+    return {
+      clave: m,
+      moneda: m || t('inversion.cifras.monedaFaltante'),
+      asignado: montoPe(deDiezmilesimos(asignado), m || null),
+      ejecutado: ejecutado === null ? '—' : montoPe(deDiezmilesimos(ejecutado), m || null),
+      avance: avance === null ? '—' : `${numeroPe(avance)} %`
+    }
+  })
+  const titulo = t('inversion.cifras.presupuesto', { anio })
+  // en el teléfono (#117), una tarjeta por moneda con un monto por línea, en lugar de una tabla que se desplaza en su caja
+  if (telefono)
+    return (
+      <div className="space-y-1">
+        <ul aria-label={titulo} className="space-y-2">
+          {filas.map((f) => (
+            <li key={f.clave} aria-labelledby={`${id}-${f.clave}`} className="rounded-sg-md border border-sg-border p-3">
+              <h3 id={`${id}-${f.clave}`} className="text-sg-body-sm font-semibold text-sg-text-secondary">
+                {f.moneda}
+              </h3>
+              <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-sg-table">
+                <dt className="text-sg-text-secondary">{t('inversion.cifras.asignado')}</dt>
+                <dd className="text-right tabular-nums">{f.asignado}</dd>
+                <dt className="text-sg-text-secondary">{t('inversion.cifras.ejecutadoColumna')}</dt>
+                <dd className="text-right tabular-nums">{f.ejecutado}</dd>
+                <dt className="text-sg-text-secondary">{t('inversion.cifras.avance')}</dt>
+                <dd className="text-right tabular-nums">{f.avance}</dd>
+              </dl>
+            </li>
+          ))}
+        </ul>
+        {notas}
+      </div>
+    )
   return (
     <div className="space-y-1">
-      <Table aria-label={t('inversion.cifras.presupuesto', { anio })}>
+      <Table aria-label={titulo}>
         <thead>
           <tr>
             <Th scope="col">{t('inversion.cifras.moneda')}</Th>
@@ -133,17 +172,14 @@ export function PresupuestoPorMoneda({ indicador, anio }: { indicador: Indicador
           </tr>
         </thead>
         <tbody>
-          {[...porMoneda].map(([m, { asignado, asignadoQueEjecuta, ejecutado }]) => {
-            const avance = ejecutado === null ? null : porcentaje(deDiezmilesimos(ejecutado), deDiezmilesimos(asignadoQueEjecuta))
-            return (
-              <tr key={m}>
-                <Th scope="row">{m || t('inversion.cifras.monedaFaltante')}</Th>
-                <Td className="tabular-nums">{montoPe(deDiezmilesimos(asignado), m || null)}</Td>
-                <Td className="tabular-nums">{ejecutado === null ? '—' : montoPe(deDiezmilesimos(ejecutado), m || null)}</Td>
-                <Td className="tabular-nums">{avance === null ? '—' : `${numeroPe(avance)} %`}</Td>
-              </tr>
-            )
-          })}
+          {filas.map((f) => (
+            <tr key={f.clave}>
+              <Th scope="row">{f.moneda}</Th>
+              <Td className="tabular-nums">{f.asignado}</Td>
+              <Td className="tabular-nums">{f.ejecutado}</Td>
+              <Td className="tabular-nums">{f.avance}</Td>
+            </tr>
+          ))}
         </tbody>
       </Table>
       {notas}
