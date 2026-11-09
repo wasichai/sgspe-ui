@@ -5,7 +5,8 @@ import { Link } from 'react-router'
 import { afterEach, describe, expect, it } from 'vitest'
 import { TablaPriorizada } from './TablaPriorizada'
 import { definicion, montar, registro, ubicacion, workflow } from '../../test/montar'
-import { useRutaDeVistaPrevia, VistaPrevia } from './VistaPrevia'
+import { useCuerpoDeVistaPrevia, useRutaDeVistaPrevia, VistaPrevia } from './VistaPrevia'
+import type { Registro } from '../datos/registros'
 
 // la revisión de UX, etapa 6 (ux-architecture.md §8.1): un registro relacionado en un drawer sin salir de la pantalla; vive en
 // ?peek=, una vista previa reemplaza a otra y «Abrir ficha» lleva a la ficha
@@ -163,5 +164,29 @@ describe('VistaPrevia acoplada', () => {
     await userEvent.keyboard(' ')
     expect(await screen.findByRole('dialog', { name: 'Acta firmada' })).toBeInTheDocument()
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+  })
+
+  // S08: una pantalla anota el cuerpo propio de la vista previa de su objeto mientras está montada; el panel dice entonces el
+  // antetítulo (tipo y código) sobre el título del registro, y el cuerpo es el suyo. el cajón, por debajo de xl, también
+  function CuerpoPropio({ registro }: { registro: Registro }) {
+    return <p>Cuerpo propio de {registro.id}</p>
+  }
+  function ConCuerpo() {
+    useCuerpoDeVistaPrevia('evidence', CuerpoPropio)
+    return <Lista />
+  }
+  it('con un cuerpo propio anotado, el panel dice el antetítulo y ese cuerpo; al desmontar la pantalla vuelve el común', async () => {
+    conAncho(true)
+    fetch = mockFetch(rutas())
+    const { unmount } = montar(<ConCuerpo />, { ruta: '/projects/p1/documents?peek=evidence:ev1' })
+    const panel = await screen.findByRole('complementary', { name: 'Acta firmada' })
+    expect(await within(panel).findByText('Cuerpo propio de ev1')).toBeInTheDocument()
+    expect(within(panel).getByText('Evidencia')).toHaveClass('uppercase')
+    expect(within(panel).queryByText('Clasificación')).not.toBeInTheDocument()
+    unmount()
+    conAncho(false)
+    montar(<Lista />, { ruta: '/projects/p1/documents?peek=evidence:ev1' })
+    const drawer = await screen.findByRole('dialog', { name: 'Acta firmada' })
+    expect(await within(drawer).findByText('Clasificación')).toBeInTheDocument()
   })
 })

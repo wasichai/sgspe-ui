@@ -8,12 +8,13 @@ import { Cargando, ErrorDeCarga, NoDisponible } from './Estados'
 
 // un 403 es «no disponible» (la cuenta no lee eso); cualquier otro error, la alerta con su correlación y reintento. nunca
 // un vacío: una consulta que carga o falla no se dibuja como una lista sin elementos
-export function FalloDeLectura({ error, alReintentar }: { error: unknown; alReintentar: () => void }) {
+// titulo: qué no se pudo leer, si la pantalla lo precisa (E18: «No se pudieron cargar los compromisos»)
+export function FalloDeLectura({ error, alReintentar, titulo }: { error: unknown; alReintentar: () => void; titulo?: string }) {
   // un 403 con código (NOT_ASSIGNED…) dice su motivo; sin código, el texto neutro
   return error instanceof ApiError && error.status === 403 ? (
     <NoDisponible motivo={codigoDelError(error)} enLista />
   ) : (
-    <ErrorDeCarga error={error} alReintentar={alReintentar} />
+    <ErrorDeCarga error={error} alReintentar={alReintentar} titulo={titulo} />
   )
 }
 

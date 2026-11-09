@@ -75,6 +75,40 @@ describe('S29 · ficha de compromiso', () => {
     expect(within(screen.getByRole('group', { name: 'Más acciones' })).getByRole('button', { name: 'Bloquear' })).toBeEnabled()
   })
 
+  // S08 y M17b: bloqueado, la ficha dice el motivo con que se bloqueó (el de la actividad), en la alerta de peligro bajo la
+  // cabecera; vencido, la situación dice sus días
+  it('bloqueado y vencido, dice el motivo del bloqueo y los días de la situación', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-12-05T12:00:00-05:00'))
+    try {
+      const bloqueado = registro('c1', { ...C1.attributes, deadline_status: 'VENCIDO' }, { state: 'blocked', updatedAt: C1.updatedAt })
+      fetch = mockFetch(
+        rutas(bloqueado, [
+          {
+            path: /^\/objects\/commitment\/records\/c1\/history/,
+            body: [
+              {
+                id: 'h2',
+                userEmail: 'cmm@sgspe.test',
+                operation: 'TRANSITION',
+                occurredAt: '2026-11-20T15:00:00Z',
+                reason: 'Falta la autorización de uso de agua',
+                changes: [{ field: 'state', before: 'in_progress', after: 'blocked' }]
+              },
+              { id: 'h1', userEmail: 'cmm@sgspe.test', operation: 'UPDATE', occurredAt: '2026-11-01T15:00:00Z', reason: 'Otro motivo', changes: [] }
+            ]
+          }
+        ])
+      )
+      abrir()
+      expect(await screen.findByText('«Falta la autorización de uso de agua»')).toBeInTheDocument()
+      expect(screen.getByText('Motivo del bloqueo').closest('[data-slot="alert"]')).toHaveAttribute('data-tone', 'danger')
+      expect(screen.getAllByLabelText('Situación de plazo: Vencido · 5 días')[0]).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   // U-25 y U-27 del rediseño (DD-06): la cabecera dice tipo, código y categoría en la letra del texto, y el estado del flujo
   // no va en sus chips (lo dicen el panel de decisión y el camino); lo que falta para la siguiente acción, bajo las acciones
   it('la cabecera lleva el antetítulo en sans, sin el estado, y dice lo que falta para la primaria', async () => {

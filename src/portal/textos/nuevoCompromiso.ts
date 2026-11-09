@@ -70,6 +70,8 @@ export const ES_NUEVO_COMPROMISO = {
     sinMonto_other: '{{count}} registros sin monto legible no se suman.'
   },
   revision: {
+    revisar: 'Revise sus respuestas',
+    cambiar: 'Cambiar',
     lista: 'Lo que pide el envío a aprobación',
     falta: 'Falta: {{campo}}',
     irAlPaso: 'Ir al paso',
@@ -157,6 +159,8 @@ export const EN_NUEVO_COMPROMISO: typeof ES_NUEVO_COMPROMISO = {
     sinMonto_other: '{{count}} records without a readable amount are not added.'
   },
   revision: {
+    revisar: 'Check your answers',
+    cambiar: 'Change',
     lista: 'What submitting for approval needs',
     falta: 'Missing: {{campo}}',
     irAlPaso: 'Go to the step',

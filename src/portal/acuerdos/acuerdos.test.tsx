@@ -188,8 +188,9 @@ describe('S33 · acuerdos', () => {
     await screen.findByRole('table', { name: 'Acuerdos' })
     expect(within(tabla()).getByRole('columnheader', { name: 'Acuerdo' })).toHaveAttribute('aria-sort', 'ascending')
     // el tipo, desde xl (DD-05); el estado y la vigencia no se ordenan
-    expect(within(tabla()).getByRole('columnheader', { name: 'Tipo' })).toHaveClass('hidden', 'xl:table-cell')
-    for (const c of ['Estado', 'Vigencia']) expect(within(tabla()).queryByRole('button', { name: c })).not.toBeInTheDocument()
+    // el lenguaje de S08: el tipo bajo el título y «Estado y vigencia» apilados, que no se ordenan
+    expect(within(tabla()).queryByRole('columnheader', { name: 'Tipo' })).not.toBeInTheDocument()
+    expect(within(tabla()).queryByRole('button', { name: 'Estado y vigencia' })).not.toBeInTheDocument()
     const rutasPedidas = () => red!.a('GET', '/objects/agreement/records').map((l) => l.ruta)
     await userEvent.click(within(tabla()).getByRole('button', { name: 'Vence' }))
     await waitFor(() => expect(rutasPedidas()).toContain('/objects/agreement/records?sort=expiry_date&dir=asc&page=0&size=25'))
@@ -210,6 +211,8 @@ describe('S33 · acuerdos', () => {
     montar(<AcuerdosPage />, { ruta: '/projects/p1/agreements', camino: '/projects/:projectId/agreements', usuario: GERENCIA_SOCIAL, permisos: EQUIPO })
     const tabla = await screen.findByRole('table', { name: 'Acuerdos' })
     expect(within(tabla).getByLabelText('Situación de vigencia: Vigente')).toBeInTheDocument()
+    // el tipo bajo el título, en la celda del acuerdo (el lenguaje de S08)
+    expect(within(tabla).getByRole('link', { name: 'Servidumbre del acceso norte' }).closest('td')).toHaveTextContent(/Servidumbre$/)
     expect(within(tabla).getByRole('link', { name: 'Servidumbre del acceso norte' })).toHaveAttribute('href', '/projects/p1/agreements/ag1')
     await userEvent.click(screen.getByRole('button', { name: 'Nuevo acuerdo' }))
     const panel = await screen.findByRole('dialog')

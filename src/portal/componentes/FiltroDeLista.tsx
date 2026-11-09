@@ -18,7 +18,8 @@ export function FiltroDeLista({ etiqueta, className, ...select }: { etiqueta: st
   const { t } = useTranslation(NS)
   const forma = useContext(FormaDelFiltro)
   if (forma === 'chip') {
-    const aplicado = select.value != null && select.value !== ''
+    // sin opción vacía (vacio={false}: el orden de una lista) siempre hay un valor y no es un filtro aplicado
+    const aplicado = select.vacio !== false && select.value != null && select.value !== ''
     return (
       <label
         className={cn(

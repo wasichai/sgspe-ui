@@ -20,6 +20,7 @@ export const ES_ACUERDOS = {
     tipo: 'Tipo',
     estado: 'Estado',
     vigencia: 'Vigencia',
+    estadoYVigencia: 'Estado y vigencia',
     vence: 'Vence'
   },
   motivo: 'Motivo del registro o del cambio (obligatorio)',
@@ -97,6 +98,7 @@ export const EN_ACUERDOS: typeof ES_ACUERDOS = {
     tipo: 'Type',
     estado: 'Status',
     vigencia: 'Validity',
+    estadoYVigencia: 'Status and validity',
     vence: 'Expires'
   },
   motivo: 'Reason for the record or the change (required)',

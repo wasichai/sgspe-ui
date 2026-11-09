@@ -12,16 +12,16 @@ import { FiltroDeLista } from '../componentes/FiltroDeLista'
 import { EstadoChip, useEtiquetasDeEstado } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
-import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista } from '../componentes/Lista'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
-import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { TablaPriorizada, type ColumnaPriorizada, type GrupoDeFilas, type OrdenDeTabla } from '../componentes/TablaPriorizada'
+import { useCuerpoDeVistaPrevia } from '../componentes/VistaPrevia'
 import { ordenarEnCliente } from '../componentes/ordenEnCliente'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { montoPe } from '../componentes/Monto'
-import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { ResultadoDeLista } from '../contexto/Origen'
 import { useProyectos } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
@@ -30,7 +30,9 @@ import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { useTableroDisponible } from '../tableros/comunes'
 import { Candidatos } from './Candidatos'
-import { FechaDePlazo } from '../componentes/CuandoVence'
+import { Dia } from '../componentes/Dia'
+import { SituacionDelCompromiso } from './SituacionDelCompromiso'
+import { VistaPreviaDeCompromiso } from './VistaPreviaDeCompromiso'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
 
@@ -45,10 +47,20 @@ type VistaDeCompromisos = (typeof VISTAS)[number]
 const DE_LA_LISTA = VISTAS.filter((v) => v !== 'candidatos')
 const CERRADOS = ['closed', 'cancelled']
 const POR_PAGINA = 25
-// las columnas que se ordenan (05-especificacion §1.6): el código, el título y el vencimiento (el orden que la lista ya pedía). el
-// estado y la situación no: su código no dice su orden; el monto tampoco, porque mezcla monedas (ASM-063)
+// los órdenes (05-especificacion §1.6): el vencimiento (el que la lista ya pedía), el código y el título, en los dos sentidos. el
+// estado y la situación no: su código no dice su orden; el monto tampoco, porque mezcla monedas (ASM-063). con la columna
+// «Compromiso» de S08 (el código, el título y el responsable con la fecha en una celda) el orden se elige en la barra de filtros
 const CAMPO_DE_ORDEN: Record<string, string> = { codigo: 'code', compromiso: 'title', vence: 'due_date' }
 const ORDEN_INICIAL: OrdenDeTabla = { columna: 'vence', dir: 'asc' }
+const ORDENES = ['vence:asc', 'vence:desc', 'codigo:asc', 'codigo:desc', 'compromiso:asc', 'compromiso:desc'] as const
+// los grupos por situación de S08, en este orden; lo que no corre plazo (sin vencimiento, cerrado) va al final
+const GRUPOS: [string, string | null][] = [
+  ['vencidos', 'VENCIDO'],
+  ['porVencer', 'POR VENCER'],
+  ['alDia', 'AL DIA'],
+  ['sinPlazo', null]
+]
+const grupoDe = (c: Registro): string => GRUPOS.find(([, valor]) => valor !== null && atributo(c, 'deadline_status') === valor)?.[0] ?? 'sinPlazo'
 
 export function enVista(vista: string, c: Registro, usuario: string | undefined): boolean {
   switch (vista as VistaDeCompromisos) {
@@ -94,6 +106,8 @@ export function CompromisosPage() {
   const territorio = filtroDeTerritorio(territory, { locality: 'locality', community: 'community' })
   const proyectos = useProyectos()
   const etiquetas = useEtiquetasDeEstado('commitment')
+  // la vista previa de una fila con la anatomía de S08 (panel acoplado desde xl, cajón por debajo)
+  useCuerpoDeVistaPrevia('commitment', VistaPreviaDeCompromiso)
   const conTablero = useTableroDisponible('commitments')
   const telefono = useEsTelefono()
   const base = proyecto ? `/projects/${encodeURIComponent(proyecto)}` : ''
@@ -160,56 +174,90 @@ export function CompromisosPage() {
   const truncado = Boolean(grupo && delGrupo.data && (delGrupo.data.totalElements ?? 0) > delGrupo.data.content.length)
   const nombreDelProyecto = (id: string) => <ProyectoEnLista proyecto={proyectos.data?.find((x) => x.id === id)} />
   const rutaDe = (c: Registro) => `/projects/${encodeURIComponent(texto(c, 'project'))}/commitments/${encodeURIComponent(c.id)}`
-  // en la tabla el código va en su columna (se ordena aparte del título); en la tarjeta del teléfono, junto al título
-  const enlace = (c: Registro, codigoAparte = false) => (
+  // el código en mono arriba del título, en la tabla y en la tarjeta del teléfono (S08 y M17b)
+  const enlace = (c: Registro) => (
     <EnlaceDeRegistro
       codigo={texto(c, 'code')}
-      codigoAparte={codigoAparte}
       titulo={texto(c, 'title')}
       ruta={rutaDe(c)}
       desde={t('compromisos.titulo')}
       previa={{ objeto: 'commitment', id: c.id }}
     />
   )
-  // la tabla con prioridad de columnas (hallazgo U-06, DD-05): esenciales el código, el compromiso, el proyecto (en lo global), el
-  // estado, la situación y el vencimiento; secundario, desde xl, el responsable; el monto es secundario en un proyecto y, en lo
-  // global, donde la columna Proyecto ocupa su lugar, opcional (desde 1536 px o elegido en «Columnas»)
+  // en la tarjeta, el monto solo si se registró (con su moneda); sin monto, nada: la tarjeta no tiene la nota al pie del «—»
+  const montoDeTarjeta = (c: Registro) => {
+    const monto = montoPe(atributo(c, 'amount'), atributo(c, 'currency'))
+    return monto === '—' ? undefined : <span className="tabular-nums">{t('compromisos.montoEnTarjeta', { monto })}</span>
+  }
+  // la tabla de S08 (hallazgo U-06, DD-05): «Compromiso» con el código en mono arriba, el título en dos líneas como mucho y
+  // «responsable · fecha» debajo; el proyecto (en lo global); «Estado y situación» apilados (el chip del flujo y, debajo, la
+  // situación derivada con su reloj y sus días, sin caja: no compiten); y el monto a la derecha, con «—» y su nota al pie
   const columnas: ColumnaPriorizada[] = [
-    {
-      id: 'codigo',
-      encabezado: t('compromisos.columnas.codigo'),
-      prioridad: 'esencial',
-      claseDeCelda: 'font-sg-mono text-sg-caption whitespace-nowrap',
-      ordenable: true
-    },
-    { id: 'compromiso', encabezado: t('compromisos.columnas.compromiso'), prioridad: 'esencial', titulo: true, ordenable: true },
+    { id: 'compromiso', encabezado: t('compromisos.columnas.compromiso'), prioridad: 'esencial', titulo: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('compromisos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
-    { id: 'estado', encabezado: t('compromisos.columnas.estado'), prioridad: 'esencial' },
-    { id: 'situacion', encabezado: t('compromisos.columnas.situacion'), prioridad: 'esencial' },
-    { id: 'vence', encabezado: t('compromisos.columnas.vence'), prioridad: 'esencial', claseDeCelda: 'text-sm whitespace-nowrap', ordenable: true },
-    { id: 'responsable', encabezado: t('compromisos.columnas.responsable'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
-    { id: 'monto', encabezado: t('compromisos.columnas.monto'), prioridad: proyecto ? 'secundaria' : 'opcional', numerica: true, claseDeCelda: 'text-sm' }
+    { id: 'estado', encabezado: t('compromisos.columnas.estadoYSituacion'), prioridad: 'esencial' },
+    { id: 'monto', encabezado: t('compromisos.columnas.monto'), prioridad: 'esencial', numerica: true }
   ]
+  const responsableYFecha = (c: Registro) => {
+    const correo = texto(c, 'owner_user_email')
+    const dia = texto(c, 'due_date')
+    if (!correo && !dia) return null
+    return (
+      <span className="mt-0.5 block text-sg-caption text-sg-text-secondary">
+        {correo ? <Persona correo={correo} /> : t('compromisos.sinResponsable')}
+        {dia ? (
+          <>
+            {' · '}
+            <Dia valor={dia} />
+          </>
+        ) : null}
+      </span>
+    )
+  }
+  const estadoYSituacion = (c: Registro) => (
+    <span className="flex flex-col items-start gap-1.5">
+      <EstadoChip objeto="commitment" estado={c.state} />
+      <SituacionDelCompromiso compromiso={c} />
+    </span>
+  )
   const celda = (c: Registro, columna: string): ReactNode => {
     switch (columna) {
-      case 'codigo':
-        return texto(c, 'code') || '—'
       case 'compromiso':
-        return enlace(c, true)
+        return (
+          <>
+            {enlace(c)}
+            {responsableYFecha(c)}
+          </>
+        )
       case 'proyecto':
         return nombreDelProyecto(texto(c, 'project'))
       case 'estado':
-        return <EstadoChip objeto="commitment" estado={c.state} />
-      case 'situacion':
-        return <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
-      case 'vence':
-        return <FechaDePlazo dia={texto(c, 'due_date')} situacion={atributo(c, 'deadline_status')} />
-      case 'responsable':
-        return <Persona correo={texto(c, 'owner_user_email')} />
+        return estadoYSituacion(c)
       default:
         return montoPe(atributo(c, 'amount'), atributo(c, 'currency'))
     }
   }
+  // agrupados por situación (S08) solo con el orden por vencimiento: la página la da el servidor, así que se agrupan las filas de
+  // esta página por la situación que ya trae cada una, sin conteos que el servidor no da (el de cada grupo es el de la página, y la
+  // nota al pie lo dice). con otro orden, la lista sin grupos
+  const agrupada = orden.columna === 'vence'
+  const grupos: GrupoDeFilas<Registro>[] | undefined = agrupada
+    ? GRUPOS.map(([clave]) => ({ clave, titulo: t(`compromisos.grupos.${clave}`), filas: filas.filter((c) => grupoDe(c) === clave) })).filter(
+        (g) => g.filas.length > 0
+      )
+    : undefined
+  const vacioPorFiltros = (
+    <Vacio
+      titulo={t('compromisos.vacioPorFiltros', { count: chips.length })}
+      accion={
+        <Button variant="secondary" onClick={limpiar}>
+          {t('compromisos.quitarFiltros')}
+        </Button>
+      }
+    >
+      {sinFiltros ? <p>{t('comun.sinFiltrosHay', { count: sinFiltros })}</p> : null}
+    </Vacio>
+  )
   return (
     <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
@@ -220,7 +268,14 @@ export function CompromisosPage() {
           </>
         }
         titulo={t('compromisos.titulo')}
-        conteo={!enCandidatos && total !== null ? t('compromisos.conteo', { count: total }) : undefined}
+        conteo={
+          !enCandidatos && total !== null
+            ? t('compromisos.conteoDeLaVista', {
+                vista: t(`compromisos.vistas.${lista.vista}`, { defaultValue: '' }),
+                conteo: t('compromisos.conteo', { count: total })
+              })
+            : undefined
+        }
         primaria={<BotonCrear objeto="commitment" etiqueta={t('compromisos.nuevo')} resto="commitments/new" />}
         secundarias={
           <>
@@ -247,12 +302,25 @@ export function CompromisosPage() {
         busqueda={enCandidatos ? undefined : { etiqueta: t('compromisos.buscar'), valor: lista.filtro('q'), alCambiar: (q) => lista.cambiar({ q }) }}
         frecuentes={
           enCandidatos ? undefined : (
-            <FiltroDeLista
-              etiqueta={t('compromisos.estado')}
-              value={estado}
-              onChange={(e) => lista.cambiar({ state: e.target.value })}
-              opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}
-            />
+            <>
+              <FiltroDeLista
+                etiqueta={t('compromisos.estado')}
+                value={estado}
+                onChange={(e) => lista.cambiar({ state: e.target.value })}
+                opciones={Object.entries(etiquetas).map(([valor, etiqueta]) => ({ valor, etiqueta }))}
+              />
+              {/* el orden (S08: «Agrupar por situación»): por vencimiento, la tabla se agrupa por situación */}
+              <FiltroDeLista
+                etiqueta={t('compromisos.orden.etiqueta')}
+                vacio={false}
+                value={`${orden.columna}:${orden.dir}`}
+                onChange={(e) => {
+                  const [columna, dir] = e.target.value.split(':')
+                  ordenar({ columna, dir: dir === 'desc' ? 'desc' : 'asc' })
+                }}
+                opciones={ORDENES.map((o) => ({ valor: o, etiqueta: t(`compromisos.orden.${o.replace(':', '_')}`) }))}
+              />
+            </>
           )
         }
         // «Más filtros» (flujo F-C): el grupo de interés, con su búsqueda; escribe el mismo ?stakeholder= que las cifras de la ficha
@@ -282,13 +350,14 @@ export function CompromisosPage() {
         <>
           {territorio === null ? <Alert tone="notice">{t('compromisos.territorioNoAplica')}</Alert> : null}
           {truncado ? <Alert tone="warning">{t('compromisos.truncado', { n: numeroPe(delGrupo.data?.content.length ?? 0) })}</Alert> : null}
+          {/* los estados de E18: el título y los filtros no se mueven; solo cambia la zona de resultados */}
           {cargando ? (
-            <Cargando />
+            <Cargando etiqueta={t('compromisos.cargando')} />
           ) : fallo ? (
-            <FalloDeLectura error={lectura.error} alReintentar={() => void lectura.refetch()} />
+            <FalloDeLectura titulo={t('compromisos.errorDeCarga')} error={lectura.error} alReintentar={() => void lectura.refetch()} />
           ) : filas.length === 0 ? (
             chips.length > 0 ? (
-              <VacioDeLista conFiltros alLimpiar={limpiar} sinFiltros={sinFiltros} />
+              vacioPorFiltros
             ) : (
               // cómo se empieza, sin otro botón: «Nuevo compromiso» ya está en la cabecera (tercera pasada de UX, 3.12)
               <Vacio titulo={t('compromisos.vacio')}>{t('compromisos.comoEmpezar')}</Vacio>
@@ -299,17 +368,19 @@ export function CompromisosPage() {
               {telefono ? (
                 <ListaEnTarjetas
                   etiqueta={t('compromisos.tabla')}
+                  total={total}
                   tarjetas={filas.map((c) => ({
                     id: c.id,
-                    titulo: enlace(c),
-                    estado: <EstadoChip objeto="commitment" estado={c.state} />,
-                    plazo: (
+                    titulo: (
                       <>
-                        <SituacionDePlazo valor={atributo(c, 'deadline_status')} />
-                        <FechaDePlazo dia={texto(c, 'due_date')} situacion={atributo(c, 'deadline_status')} />
+                        {enlace(c)}
+                        {responsableYFecha(c)}
                       </>
                     ),
-                    proyecto: proyecto ? undefined : nombreDelProyecto(texto(c, 'project'))
+                    estado: <EstadoChip objeto="commitment" estado={c.state} />,
+                    plazo: <SituacionDelCompromiso compromiso={c} />,
+                    proyecto: proyecto ? undefined : nombreDelProyecto(texto(c, 'project')),
+                    detalle: montoDeTarjeta(c)
                   }))}
                 />
               ) : (
@@ -317,13 +388,18 @@ export function CompromisosPage() {
                   etiqueta={t('compromisos.tabla')}
                   total={total}
                   columnas={columnas}
-                  filas={filas}
+                  filas={grupos ? undefined : filas}
+                  grupos={grupos}
                   clave={(c) => c.id}
                   celda={celda}
-                  orden={orden}
-                  alOrdenar={ordenar}
                   alAbrir={(c) => navegar(rutaDe(c), { state: paso(t('compromisos.titulo'), rutaDe(c)) })}
                   previaDe={(c) => ({ objeto: 'commitment', id: c.id })}
+                  notaAlPie={
+                    <>
+                      <span>{t('compromisos.notaAlPie')}</span>
+                      {grupos ? <span> {t('compromisos.agrupadosEnLaPagina')}</span> : null}
+                    </>
+                  }
                 />
               )}
               {total !== null && total > POR_PAGINA ? (

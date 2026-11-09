@@ -119,6 +119,26 @@ export function useAcopleDeVistaPrevia(claves: readonly string[] | null) {
   }, [tabla, juntas])
 }
 
+// el cuerpo propio de la vista previa de un objeto (S08: la de un compromiso, con su primaria, el motivo del bloqueo, sus datos,
+// la trazabilidad y los candidatos de IA). lo anota la pantalla que lo ofrece mientras está montada, como las tablas anotan sus
+// filas: componentes/ no conoce los módulos. con él, el panel dice arriba el tipo y el código, y el título del registro; sin él,
+// el resumen común (Resumen)
+export type CuerpoDeVistaPrevia = ComponentType<{ registro: Registro }>
+const cuerpos = new Map<string, { objeto: string; Cuerpo: CuerpoDeVistaPrevia }>()
+export function useCuerpoDeVistaPrevia(objeto: string, Cuerpo: CuerpoDeVistaPrevia) {
+  const pantalla = useId()
+  useLayoutEffect(() => {
+    cuerpos.set(pantalla, { objeto, Cuerpo })
+    avisarAcople()
+    return () => {
+      cuerpos.delete(pantalla)
+      avisarAcople()
+    }
+  }, [pantalla, objeto, Cuerpo])
+}
+const cuerpoDe = (objeto: string): CuerpoDeVistaPrevia | undefined => [...cuerpos.values()].find((c) => c.objeto === objeto)?.Cuerpo
+const useCuerpoPropio = (objeto: string) => useSyncExternalStore(suscribirAcople, () => cuerpoDe(objeto))
+
 const useEstaAcoplada = (peek: string | null) => useSyncExternalStore(suscribirAcople, () => (peek ? estaAcoplada(peek) : false))
 
 // el ?peek= válido de la consulta y cómo cerrarlo: la quita de la consulta con el resto de la búsqueda y el rastro intactos
@@ -148,19 +168,29 @@ export function VistaPrevia() {
   return <ContenidoDeVistaPrevia key={peek.clave} objeto={peek.objeto} id={peek.id} alCerrar={peek.cerrar} />
 }
 
-// lo que dicen el cajón y el panel: el título, «Abrir ficha» y el cuerpo
-function useVistaPreviaDe(objeto: string, id: string): { titulo: string; pie: ReactNode; cuerpo: ReactNode } {
+// lo que dicen el cajón y el panel: el antetítulo (con cuerpo propio), el título, «Abrir ficha» y el cuerpo
+function useVistaPreviaDe(objeto: string, id: string): { antetitulo?: string; titulo: string; pie: ReactNode; cuerpo: ReactNode } {
   const { t } = useTranslation(NS)
   const registro = useRegistro(objeto, id)
+  const definicion = useDefinicion(objeto)
   const rotulo = useRotuloDeRegistro()
   // un grupo de interés no tiene nombre propio: es el de su persona u organización, como en su ficha
   const nombreDelGrupo = useNombreDelGrupo(objeto === 'stakeholder' ? registro.data : undefined)
   const paso = useSiguientePaso()
+  const Propio = useCuerpoPropio(objeto)
   const ruta = registro.data ? rutaDeFicha(objeto, registro.data) : null
+  const conPropio = Boolean(Propio && registro.data)
   return {
-    titulo: registro.data ? (objeto === 'stakeholder' ? nombreDelGrupo : rotulo(registro.data)) : t('paginas.vistaPrevia.titulo'),
+    antetitulo: conPropio ? [definicion.data?.label, texto(registro.data as Registro, 'code')].filter(Boolean).join(' · ') || undefined : undefined,
+    titulo: registro.data
+      ? objeto === 'stakeholder'
+        ? nombreDelGrupo
+        : conPropio
+          ? texto(registro.data, 'title') || rotulo(registro.data)
+          : rotulo(registro.data)
+      : t('paginas.vistaPrevia.titulo'),
     pie: ruta ? (
-      <Button asChild size="sm">
+      <Button asChild size="sm" variant={conPropio ? 'secondary' : 'primary'}>
         <Link to={ruta} state={paso(undefined, ruta)}>
           {t('paginas.vistaPrevia.abrirFicha')}
         </Link>
@@ -176,6 +206,8 @@ function useVistaPreviaDe(objeto: string, id: string): { titulo: string; pie: Re
       ) : (
         <FalloDeLectura error={registro.error} alReintentar={() => void registro.refetch()} />
       )
+    ) : Propio ? (
+      <Propio registro={registro.data as Registro} />
     ) : (
       <Resumen objeto={objeto} registro={registro.data as Registro} />
     )
@@ -183,9 +215,9 @@ function useVistaPreviaDe(objeto: string, id: string): { titulo: string; pie: Re
 }
 
 function ContenidoDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; id: string; alCerrar: () => void }) {
-  const { titulo, pie, cuerpo } = useVistaPreviaDe(objeto, id)
+  const { antetitulo, titulo, pie, cuerpo } = useVistaPreviaDe(objeto, id)
   return (
-    <Drawer titulo={titulo} abierto alCerrar={alCerrar} pie={pie}>
+    <Drawer titulo={titulo} descripcion={antetitulo} abierto alCerrar={alCerrar} pie={pie}>
       {cuerpo}
     </Drawer>
   )
@@ -196,7 +228,7 @@ function ContenidoDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; id: 
 // filas); quien lo monta devuelve el foco a la fila
 export function PanelDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; id: string; alCerrar: () => void }) {
   const { t } = useTranslation(NS)
-  const { titulo, pie, cuerpo } = useVistaPreviaDe(objeto, id)
+  const { antetitulo, titulo, pie, cuerpo } = useVistaPreviaDe(objeto, id)
   const encabezado = useId()
   return (
     <aside
@@ -209,9 +241,13 @@ export function PanelDeVistaPrevia({ objeto, id, alCerrar }: { objeto: string; i
       className="sticky top-0 flex max-h-[calc(100dvh-8rem)] flex-col rounded-sg-md border-2 border-sg-border-strong bg-sg-surface"
     >
       <div className="flex items-start gap-2 border-b border-sg-border px-5 py-4">
-        <h2 id={encabezado} className="min-w-0 flex-1 text-[1.1875rem] leading-6.5 font-bold text-sg-text">
-          {titulo}
-        </h2>
+        <div className="min-w-0 flex-1 space-y-1">
+          {/* el antetítulo de S08 («COMPROMISO · DEMO-C-04»), en versalitas; fuera del nombre de la región */}
+          {antetitulo ? <p className="text-sg-overline text-sg-text-secondary uppercase">{antetitulo}</p> : null}
+          <h2 id={encabezado} className="text-[1.1875rem] leading-6.5 font-bold text-sg-text">
+            {titulo}
+          </h2>
+        </div>
         <button
           type="button"
           onClick={alCerrar}

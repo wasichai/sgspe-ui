@@ -41,7 +41,8 @@ const abrir = () =>
     permisos: EQUIPO_DE_COMPROMISOS
   })
 const JUSTIFICACION = 'Un compromiso que nace de un taller o de una reunión informativa exige la justificación de su origen'
-const alPaso = async (nombre: string) => userEvent.click(await screen.findByRole('button', { name: new RegExp(nombre) }))
+// el botón del paso en la barra de pasos, no el «Cambiar: <paso>» de «Revise sus respuestas»
+const alPaso = async (nombre: string) => userEvent.click(await screen.findByRole('button', { name: new RegExp(`^(?!Cambiar).*${nombre}`) }))
 const pasoActual = () => screen.getByRole('heading', { level: 2 })
 const siguiente = async () => userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
 const escribir = async (etiqueta: string, valor: string) => userEvent.type(await screen.findByLabelText(etiqueta), valor)
@@ -394,6 +395,29 @@ describe('S30 · crear compromiso', () => {
     expect(screen.getByRole('button', { name: 'Enviar a aprobación' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Guardar borrador' })).toBeEnabled()
     await userEvent.click(within(lista).getAllByRole('button', { name: 'Ir al paso' })[0])
+    expect(screen.getByRole('heading', { name: 'Qué se compromete', level: 2 })).toBeInTheDocument()
+  })
+
+  // «Revise sus respuestas» (design-system.md §6.3): lo escrito en cada paso, con «Cambiar», que vuelve a ese paso; lo que no se
+  // escribió es «—»; el tope de la campaña también se ve antes de registrar
+  it('la revisión dice lo escrito por paso con «Cambiar» y el tope de la campaña', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    await llenarHastaLaRevision()
+    const revision = await screen.findByRole('region', { name: 'Revise sus respuestas' })
+    const que = within(revision).getByRole('heading', { name: 'Qué se compromete', level: 4 }).closest('div')!.parentElement!
+    expect(within(que).getByText('Canal de riego')).toBeInTheDocument()
+    expect(within(que).getByText('Material')).toBeInTheDocument()
+    const monto = within(revision).getByRole('heading', { name: 'Monto y campaña', level: 4 }).closest('div')!.parentElement!
+    expect(within(monto).getByText('S/ 15,000.00')).toBeInTheDocument()
+    expect(within(monto).getByText('Campaña 2026')).toBeInTheDocument()
+    expect(await within(revision).findByText('Junta de regantes')).toBeInTheDocument()
+    expect(within(revision).getByText('20 dic. 2026')).toBeInTheDocument()
+    // el verificador no se eligió: «—», nunca vacío
+    const plazo = within(revision).getByRole('heading', { name: 'Plazo y responsable', level: 4 }).closest('div')!.parentElement!
+    expect(within(plazo).getAllByText('—').length).toBeGreaterThan(0)
+    expect(within(revision).getByRole('region', { name: 'Tope de apoyo social de la campaña' })).toBeInTheDocument()
+    await userEvent.click(within(revision).getByRole('button', { name: 'Cambiar: Qué se compromete' }))
     expect(screen.getByRole('heading', { name: 'Qué se compromete', level: 2 })).toBeInTheDocument()
   })
 

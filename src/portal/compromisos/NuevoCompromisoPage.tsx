@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@wasichai/core'
 import { Alert, Button, Input, Textarea } from '@wasichai/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
@@ -15,7 +15,8 @@ import { CampoFecha } from '../componentes/CampoFecha'
 import { esConflictoDeVersion, useErroresDeCampo, useMensajeDeError } from '../componentes/errores'
 import { Cargando } from '../componentes/Estados'
 import { ConDefiniciones, FalloDeLectura } from '../componentes/LecturaConEstados'
-import { esMontoValido, normalizarMonto } from '../componentes/Monto'
+import { esMontoValido, montoPe, normalizarMonto } from '../componentes/Monto'
+import { NombreDelGrupo } from '../componentes/NombreDeActor'
 import { EleccionDeGrupos } from '../componentes/EleccionDeGrupos'
 import { FormularioPorPasos, useSalidaPermitida } from '../componentes/FormularioPorPasos'
 import { RegistroVinculado } from '../componentes/RegistroVinculado'
@@ -25,9 +26,9 @@ import { useMisAsignaciones } from '../contexto/proyectos'
 import { usePedir } from '../datos/http'
 import { campoDe, puedeEscribir, texto, useCrear, useDefinicion, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { hoyEnLima } from '../datos/fechas'
-import { NS } from '../i18n'
+import { diaPe, NS } from '../i18n'
 import { BarraDelTope } from './BarraDelTope'
-import { opcion } from '../datos/opciones'
+import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { conHecho } from '../componentes/AvisoDeExito'
 import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
 import { leerBorrador, useBorradorLocal, useClaveDelBorrador } from '../datos/borrador'
@@ -312,6 +313,65 @@ function Asistente() {
     ...D1.filter((c) => !String(valores[c] ?? '').trim()).map((c) => ({ etiqueta: nombreDeCampo(c), paso: pasoDe(c) ?? 'que' })),
     ...(solicitantes.size === 0 ? [{ etiqueta: t('nuevoCompromiso.revision.solicitantes'), paso: 'solicitantes' as Paso }] : []),
     ...(!responsable ? [{ etiqueta: nombreDeCampo('owner'), paso: 'plazo' as Paso }] : [])
+  ]
+
+  // lo escrito en cada paso, para «Revise sus respuestas»: las opciones con su rótulo, las fechas en es-PE, el monto con su moneda
+  const escrito = (campo: keyof Valores): string => String(valores[campo] ?? '').trim()
+  const respuestaDe = (campo: keyof Valores): string => {
+    const v = escrito(campo)
+    if (!v) return ''
+    if (opciones(campo).length > 0) return rotuloDeOpcion(v)
+    if (campo === 'agreed_date' || campo === 'due_date') return diaPe(v)
+    return v
+  }
+  const fila = (campo: keyof Valores | 'origin_engagement' | 'owner' | 'verifier' | 'solicitantes', valor: string) => ({
+    clave: campo,
+    termino: campo === 'solicitantes' ? t('nuevoCompromiso.pasos.solicitantes') : nombreDeCampo(campo),
+    valor
+  })
+  const filasDe = (campos: (keyof Valores)[]) => campos.filter((c) => escribible(c)).map((c) => fila(c, respuestaDe(c)))
+  const nombresDeSolicitantes = (grupos.data ?? []).filter((g) => solicitantes.has(g.id))
+  const respuestas: { paso: Paso; filas: { clave: string; termino: string; valor: string | ReactNode }[] }[] = [
+    {
+      paso: 'origen',
+      filas: [
+        fila('origin_engagement', origen ? `${texto(origen, 'title')} · ${opcion(origen, 'engagement_type')}` : ''),
+        ...filasDe(requiereJustificacion ? ['origin_justification', 'request_medium', 'agreed_date'] : ['request_medium', 'agreed_date'])
+      ]
+    },
+    { paso: 'que', filas: filasDe(CAMPOS.que) },
+    {
+      paso: 'solicitantes',
+      filas: [
+        {
+          ...fila('solicitantes', ''),
+          valor:
+            nombresDeSolicitantes.length > 0 ? (
+              <ul>
+                {nombresDeSolicitantes.map((g) => (
+                  <li key={g.id}>
+                    <NombreDelGrupo grupo={g} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              ''
+            )
+        }
+      ]
+    },
+    { paso: 'beneficiarios', filas: filasDe(CAMPOS.beneficiarios) },
+    {
+      paso: 'monto',
+      filas: [
+        fila('amount', monto ? montoPe(monto, valores.currency) : ''),
+        ...(escribible('exploration_campaign') ? [fila('exploration_campaign', campana ? texto(campana, 'name') : '')] : [])
+      ]
+    },
+    {
+      paso: 'plazo',
+      filas: [...filasDe(['due_date']), fila('owner', responsable?.email ?? ''), fila('verifier', verificador?.email ?? ''), ...filasDe(['priority'])]
+    }
   ]
 
   const atributos = (v: Valores): Record<string, unknown> => {
@@ -634,6 +694,37 @@ function Asistente() {
       </fieldset>
       {paso === 'revision' ? (
         <>
+          {/* «Revise sus respuestas» de Civic Modern (design-system.md §6.3): lo escrito en cada paso, con «Cambiar», que vuelve a
+              ese paso; lo que no se escribió es «—». el tope de la campaña se ve también aquí, antes de registrar */}
+          <section aria-labelledby="revise-sus-respuestas" className="space-y-3">
+            <h3 id="revise-sus-respuestas" className="text-sg-h2 text-sg-text">
+              {t('nuevoCompromiso.revision.revisar')}
+            </h3>
+            {respuestas.map((grupo) => (
+              <div key={grupo.paso} className="rounded-sg-md border border-sg-border bg-sg-surface">
+                <div className="flex items-center justify-between gap-3 border-b border-sg-border px-4 py-2.5">
+                  <h4 className="text-sg-h3 text-sg-text">{t(`nuevoCompromiso.pasos.${grupo.paso}`)}</h4>
+                  <button
+                    type="button"
+                    onClick={() => setActual(PASOS.indexOf(grupo.paso))}
+                    className="inline-flex min-h-8 items-center text-sg-body-sm font-bold text-sg-primary-text underline underline-offset-2"
+                  >
+                    {t('nuevoCompromiso.revision.cambiar')}
+                    <span className="sr-only">: {t(`nuevoCompromiso.pasos.${grupo.paso}`)}</span>
+                  </button>
+                </div>
+                <dl className="divide-y divide-sg-border-subtle text-sg-body">
+                  {grupo.filas.map((f) => (
+                    <div key={f.clave} className="grid gap-1 px-4 py-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:gap-4">
+                      <dt className="font-semibold text-sg-text-secondary">{f.termino}</dt>
+                      <dd className="min-w-0 break-words text-sg-text">{f.valor || <span className="text-sg-text-muted">—</span>}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+            {campana ? <BarraDelTope campana={campana} monto={monto} moneda={valores.currency ?? 'PEN'} /> : null}
+          </section>
           <section aria-label={t('nuevoCompromiso.revision.lista')} className="space-y-2 rounded-sg-md border border-sg-border p-3 text-sm">
             <h3 className="font-medium">{t('nuevoCompromiso.revision.lista')}</h3>
             {faltantes.length === 0 ? (

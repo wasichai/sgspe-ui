@@ -34,7 +34,12 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'relacionamiento-semana', ruta: '/projects/p1/engagements?view=semana&day=2026-10-16' },
   { nombre: 'interaccion-ficha', ruta: '/projects/p1/engagements/e1' },
   { nombre: 'compromisos', ruta: '/projects/p1/commitments' },
+  { nombre: 'compromisos-previa', ruta: '/projects/p1/commitments?peek=commitment%3Ak4' },
   { nombre: 'compromiso-ficha', ruta: '/projects/p1/commitments/k1' },
+  { nombre: 'compromiso-bloqueado', ruta: '/projects/p1/commitments/k4' },
+  // los estados de E18 sobre Compromisos: el vacío por filtros y el error al cargar (la carga se ve en las pruebas)
+  { nombre: 'compromisos-vacio', ruta: '/projects/p1/commitments?q=sin-resultados&view=vencidos' },
+  { nombre: 'compromisos-error', ruta: '/projects/p1/commitments?q=falla-de-prueba' },
   { nombre: 'territorio', ruta: '/territory?project=p1' },
   { nombre: 'riesgos', ruta: '/projects/p1/risks' },
   { nombre: 'qcs', ruta: '/attention' },
@@ -43,8 +48,37 @@ const PANTALLAS: Pantalla[] = [
   { nombre: 'entregable', ruta: '/reports/deliverables/d1' },
   { nombre: 'administracion', ruta: '/administration', admin: true }
 ]
-const PRINCIPALES = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'grupos', 'relacionamiento', 'compromisos', 'territorio', 'riesgos']
-const ANGOSTAS = ['login', 'inicio', 'revision-ejecutiva', 'proyectos', 'p360-resumen', 'grupos', 'relacionamiento', 'compromisos']
+const PRINCIPALES = [
+  'login',
+  'inicio',
+  'revision-ejecutiva',
+  'proyectos',
+  'p360-resumen',
+  'grupos',
+  'relacionamiento',
+  'compromisos',
+  'compromisos-previa',
+  'compromiso-ficha',
+  'compromiso-bloqueado',
+  'compromisos-vacio',
+  'compromisos-error',
+  'territorio',
+  'riesgos'
+]
+const ANGOSTAS = [
+  'login',
+  'inicio',
+  'revision-ejecutiva',
+  'proyectos',
+  'p360-resumen',
+  'grupos',
+  'relacionamiento',
+  'compromisos',
+  'compromiso-ficha',
+  'compromiso-bloqueado',
+  'compromisos-vacio',
+  'compromisos-error'
+]
 
 interface Variante {
   ancho: number
