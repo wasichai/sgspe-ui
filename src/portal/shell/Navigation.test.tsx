@@ -2,6 +2,8 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import type { AuthUser } from '@wasichai/core'
 import { mockFetch, type FetchMock, type MockRoute } from '@wasichai/testing'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { ComponentType } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { abrirSesion, ADMIN_PERMISOS, ADMINISTRACION, AUDITORA, permisosConCapacidades, RELACIONISTA, rutasDeSesion, SIN_PERMISOS, yo } from '../../test/portal'
@@ -145,6 +147,47 @@ describe('navegación del portal', () => {
     const otra = within(screen.getByRole('banner')).getByRole('button', { name: 'Su cuenta' })
     await waitFor(() => expect(otra.getAttribute('title')).toMatch(/· Administración de la organización$/))
     expect(screen.getByRole('banner')).not.toHaveTextContent(ADMINISTRACION.roles.join(', '))
+  })
+
+  // WCAG 2.2, 1.4.11: el límite del avatar contrasta 3:1 con la cabecera en los dos temas; en claro el borde se funde con el
+  // relleno blanco (el avatar no cambia) y en oscuro es el blanco al 55 % de los demás botones de la cabecera
+  it('el avatar se distingue de la cabecera en claro y en oscuro', async () => {
+    start(RELACIONISTA, rutasDeSesion(RELACIONISTA, permisosConCapacidades({ project: ['READ'] }, [])))
+    await screen.findByRole('navigation', { name: 'Secciones' })
+    const avatar = within(screen.getByRole('banner')).getByRole('button', { name: 'Su cuenta' }).querySelector('span')!
+    const clases = avatar.className.split(/\s+/)
+    const relleno = clases.find((c) => /^bg-sg-[a-z-]+$/.test(c))?.slice(3)
+    const borde = clases.map((c) => /^border-sg-([a-z-]+)(?:\/(\d+))?$/.exec(c)).find(Boolean)
+    expect(clases).toEqual(expect.arrayContaining([expect.stringMatching(/^border(-2)?$/)]))
+    expect(relleno && borde).toBeTruthy()
+    const tokens = readFileSync(join(import.meta.dirname, '../../theme/tokens.css'), 'utf8')
+    const tema = (selector: string) => {
+      const inicio = tokens.indexOf(selector)
+      const cuerpo = tokens.slice(tokens.indexOf('{', inicio) + 1, tokens.indexOf('}', inicio))
+      return (nombre: string) => new RegExp(`--${nombre}:\\s*(#[0-9a-f]{6});`).exec(cuerpo)![1]
+    }
+    const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+    const sobre = (frente: string, alfa: number, fondo: string) => rgb(frente).map((c, i) => Math.round(c * alfa + rgb(fondo)[i] * (1 - alfa)))
+    const luminancia = (c: number[]) =>
+      c
+        .map((v) => v / 255)
+        .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+        .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0)
+    const contraste = (a: number[], b: number[]) => {
+      const [x, y] = [luminancia(a), luminancia(b)].sort((m, n) => n - m)
+      return (x + 0.05) / (y + 0.05)
+    }
+    const alfa = borde![2] ? Number(borde![2]) / 100 : 1
+    for (const [selector, claro] of [
+      [':root {', true],
+      [':root[data-theme="dark"] {', false]
+    ] as const) {
+      const de = tema(selector)
+      // el borde se pinta sobre el relleno del propio avatar
+      const limite = sobre(de(`sg-${borde![1]}`), alfa, de(relleno!))
+      expect(contraste(limite, rgb(de('sg-header'))), selector).toBeGreaterThanOrEqual(3)
+      if (claro) expect(limite).toEqual(rgb(de(relleno!)))
+    }
   })
 
   // S53: Administración lleva a su pantalla del portal, que enlaza la consola de /admin (AdministracionPage.test.tsx)
