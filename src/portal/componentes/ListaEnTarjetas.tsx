@@ -6,17 +6,21 @@ import { ResultadoDeLista } from '../contexto/Origen'
 // la tabla de siempre. sin matchMedia (las pruebas), la tabla
 const CONSULTA = '(max-width: 639.98px)'
 
-export function useEsTelefono(): boolean {
+// si la ventana cumple una consulta de medios, al día con sus cambios; sin matchMedia (las pruebas), no la cumple. la usan el
+// teléfono de las listas, la columna opcional de las pantallas anchas y la vista previa acoplada desde xl
+export function useCoincide(consulta: string): boolean {
   return useSyncExternalStore(
     (oyente) => {
       if (typeof window.matchMedia !== 'function') return () => undefined
-      const consulta = window.matchMedia(CONSULTA)
-      consulta.addEventListener('change', oyente)
-      return () => consulta.removeEventListener('change', oyente)
+      const medios = window.matchMedia(consulta)
+      medios.addEventListener('change', oyente)
+      return () => medios.removeEventListener('change', oyente)
     },
-    () => typeof window.matchMedia === 'function' && window.matchMedia(CONSULTA).matches
+    () => typeof window.matchMedia === 'function' && window.matchMedia(consulta).matches
   )
 }
+
+export const useEsTelefono = (): boolean => useCoincide(CONSULTA)
 
 export interface TarjetaDeLista {
   id: string
@@ -35,7 +39,7 @@ export function ListaEnTarjetas({ etiqueta, tarjetas, total }: { etiqueta: strin
     <ResultadoDeLista total={total}>
       <ul aria-label={etiqueta} className="space-y-2">
         {tarjetas.map((t) => (
-          <li key={t.id} className="space-y-1.5 rounded-sg-lg border border-sg-border bg-sg-surface p-3 text-sm">
+          <li key={t.id} className="space-y-1.5 rounded-sg-md border border-sg-border bg-sg-surface p-3 text-sg-table">
             <div className="min-w-0">{t.titulo}</div>
             {t.estado || t.plazo ? (
               <div className="flex flex-wrap items-center gap-2">

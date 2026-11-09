@@ -1,17 +1,19 @@
 import { Button, ConfirmDialog } from '@wasichai/ui'
-import { useContext, useEffect, useRef, type FormEvent, type MutableRefObject, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, useState, type FormEvent, type MutableRefObject, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UNSAFE_DataRouterContext, useBlocker } from 'react-router'
 import { NS } from '../i18n'
-import { EncabezadoDePagina } from './Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from './Pagina'
 import { Pasos } from './Pasos'
+import { ResumenDeErrores, type ErrorDelResumen } from './ResumenDeErrores'
 
 // el formulario por pasos de design-system.md §6.3 (revisión de UX, etapa 5): la misma forma para toda alta larga. título y
 // descripción arriba; los pasos a la izquierda (arriba en el teléfono); el paso actual con su título; y abajo, siempre en el mismo
 // lugar, «Cancelar» y «Anterior» a la izquierda y «Guardar y salir» y la acción del paso a la derecha. con cambios sin guardar,
 // salir avisa: por un enlace del portal (useBlocker, solo bajo un router de datos) y al cerrar o recargar la pestaña. la lógica
 // del alta (validar, el borrador, el comando) sigue en cada pantalla: esta pieza solo le da la forma. el foco (tercera pasada de UX,
-// 2.3): al cambiar de paso va a su título, y si un intento de avanzar o de registrar deja errores, al primer control inválido
+// 2.3): al cambiar de paso va a su título, y si un intento de avanzar o de registrar deja errores, al primer control inválido.
+// con más de un error, el resumen de errores (design-system.md §5.3) arriba del paso, con un enlace a cada campo, y el foco va a él
 export interface PropsDeFormularioPorPasos {
   titulo: string
   descripcion?: ReactNode
@@ -81,17 +83,32 @@ export function FormularioPorPasos({
     pasoAnterior.current = actual
     tituloDelPaso.current?.focus()
   }, [actual])
-  // después de que la pantalla validó y dibujó sus errores (o cambió de paso, incluso al que tiene la falta)
-  const enfocarElPrimerError = () => setTimeout(() => contenedor.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0)
+  // el resumen de errores del último intento; se va al cambiar de paso
+  const [resumen, setResumen] = useState<ErrorDelResumen[]>([])
+  const [pasoDelResumen, setPasoDelResumen] = useState(actual)
+  if (pasoDelResumen !== actual) {
+    setPasoDelResumen(actual)
+    setResumen([])
+  }
+  // después de que la pantalla validó y dibujó sus errores (o cambió de paso, incluso al que tiene la falta): con uno, el foco va a
+  // su control; con más, al resumen (que lo toma al aparecer)
+  const enfocarElPrimerError = () =>
+    setTimeout(() => {
+      const invalidos = [...(contenedor.current?.querySelectorAll<HTMLElement>('[aria-invalid="true"]') ?? [])]
+      const errores = invalidos.map(errorDelControl)
+      setResumen(errores)
+      if (errores.length <= 1) invalidos[0]?.focus()
+    }, 0)
   const contenido = (
     <>
       {encabezadoDelPaso ?? (
-        <h2 ref={tituloDelPaso} tabIndex={-1} className="text-sg-h2 font-semibold focus:outline-none">
+        <h2 ref={tituloDelPaso} tabIndex={-1} className="text-sg-h2 font-bold focus:outline-none">
           {pasos[actual]}
         </h2>
       )}
+      <ResumenDeErrores errores={resumen} />
       {children}
-      <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-3">
+      <div className="flex flex-wrap justify-between gap-2 border-t border-sg-border pt-4">
         <div className="flex flex-wrap gap-2">
           {alCancelar ? (
             <Button type="button" variant="ghost" data-navegacion disabled={ocupado} onClick={alCancelar}>
@@ -114,16 +131,16 @@ export function FormularioPorPasos({
     </>
   )
   return (
-    <section className="mx-auto max-w-[1100px] space-y-4">
+    <ContenedorDePagina elemento="section" className="max-w-[1100px]">
       <EncabezadoDePagina titulo={titulo} descripcion={descripcion} secundarias={accionesDeCabecera} />
       {avisos}
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="space-y-5">
         <Pasos pasos={pasos} actual={actual} visitados={visitados} alIr={alIr} />
         {alEnviar ? (
           // cada pantalla valida con su esquema y lo dice junto al control: la validación nativa no detiene el paso
           <form
             ref={contenedor}
-            className="space-y-3"
+            className="space-y-4"
             aria-label={etiquetaDelPaso ?? pasos[actual]}
             onSubmit={(e) => {
               alEnviar(e)
@@ -138,14 +155,28 @@ export function FormularioPorPasos({
             {contenido}
           </form>
         ) : (
-          <div ref={contenedor} role="group" className="space-y-3" aria-label={etiquetaDelPaso ?? pasos[actual]}>
+          // sin <form> propio, los de la pantalla envían igual: su submit sube hasta aquí
+          <div ref={contenedor} role="group" className="space-y-4" aria-label={etiquetaDelPaso ?? pasos[actual]} onSubmit={enfocarElPrimerError}>
             {contenido}
           </div>
         )}
       </div>
       <AvisoAlSalir conCambios={conCambios} conBorrador={conBorrador} salidaPermitida={salidaPermitida} />
-    </section>
+    </ContenedorDePagina>
   )
+}
+
+// un control inválido como error del resumen: el rótulo de su campo y su error (lo que dice su aria-describedby), «Rótulo: error»
+function errorDelControl(control: HTMLElement): ErrorDelResumen {
+  const rotulo = ((control as HTMLInputElement).labels?.[0]?.textContent ?? control.getAttribute('aria-label') ?? '').trim()
+  const descripcion = (control.getAttribute('aria-describedby') ?? '')
+    .split(/\s+/)
+    .filter((id) => id.endsWith('-error'))
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+    .filter(Boolean)
+    .join(' ')
+  const texto = rotulo && descripcion ? `${rotulo}: ${descripcion}` : rotulo || descripcion
+  return { id: control.id || undefined, texto }
 }
 
 // salir con cambios sin guardar pide confirmar: por un enlace del portal (solo bajo un router de datos, que es el del portal) y

@@ -157,4 +157,24 @@ describe('ContenedorDePagina', () => {
     montar(<ContenedorDePagina variante="lectura">Texto largo</ContenedorDePagina>)
     expect(screen.getByText('Texto largo')).toHaveAttribute('data-ancho', 'lectura')
   })
+
+  // .pg del lienzo (design-system.md §5.3): una columna con 20 px entre bloques; el relleno lateral lo pone <main> del shell
+  it('apila los bloques en una columna con 20 px entre ellos y puede ser la sección o el artículo de la página', () => {
+    const { unmount } = montar(<ContenedorDePagina>Contenido</ContenedorDePagina>)
+    const contenedor = screen.getByText('Contenido')
+    expect(contenedor).toHaveClass('space-y-5', 'mx-auto', 'max-w-[1440px]')
+    expect(contenedor.tagName).toBe('DIV')
+    unmount()
+    montar(<ContenedorDePagina elemento="article">Ficha</ContenedorDePagina>)
+    expect(screen.getByText('Ficha').tagName).toBe('ARTICLE')
+  })
+})
+
+describe('EncabezadoDePagina en Civic Modern', () => {
+  it('el antetítulo es un overline, el título un h1 de 28/36 y la descripción va en text-secondary', () => {
+    montar(<EncabezadoDePagina titulo="Compromisos" antetitulo="Proyecto · DEMO-T1" antetituloEnSans descripcion="Lo prometido." />)
+    expect(screen.getByText('Proyecto · DEMO-T1')).toHaveClass('text-sg-overline', 'uppercase', 'text-sg-text-secondary')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveClass('text-sg-h1', 'text-sg-text')
+    expect(screen.getByText('Lo prometido.')).toHaveClass('text-sg-body', 'text-sg-text-secondary')
+  })
 })

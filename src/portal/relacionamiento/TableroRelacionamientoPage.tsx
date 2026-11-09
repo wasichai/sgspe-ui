@@ -1,4 +1,4 @@
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +19,7 @@ export function TableroRelacionamientoPage() {
   const filtros = useFiltrosDeTablero()
   const tablero = useTablero('engagement', filtros)
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina titulo={t('relacionamiento.tableroTitulo')} vistas={<VistasDelModulo modulo="engagements" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
@@ -79,6 +79,6 @@ export function TableroRelacionamientoPage() {
           )
         }}
       </ConsultaDeTablero>
-    </section>
+    </ContenedorDePagina>
   )
 }

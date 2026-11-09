@@ -6,9 +6,7 @@ import { Alert, Button, cn } from '@wasichai/ui'
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
-import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
-import { CLASE_DE_TONO } from '../componentes/apariencias'
 import { Drawer } from '../componentes/Drawer'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, Vacio } from '../componentes/Estados'
@@ -22,7 +20,7 @@ import { ordenarEnCliente, posicionEn, type ValorDeOrden } from '../componentes/
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { rutaDeFicha } from '../datos/fichas'
 import { useEscribeEnProyecto } from '../contexto/ProyectoLayout'
 import { useProyecto, useProyectos } from '../contexto/proyectos'
@@ -30,7 +28,7 @@ import { atributo, texto, useTodosSinTope, type Registro } from '../datos/regist
 import { NS, numeroPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { NivelDeRiesgo } from './NivelDeRiesgo'
-import { NIVELES, nivelDePuntaje, TONO_DE_NIVEL, umbralesDe } from './niveles'
+import { CLASE_DE_ZONA, NIVELES, nivelDePuntaje, umbralesDe } from './niveles'
 import { opcion } from '../datos/opciones'
 import { FechaDePlazo } from '../componentes/CuandoVence'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
@@ -111,7 +109,6 @@ export function RiesgosPage() {
   const telefono = useEsTelefono()
   // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
   const navegar = useNavigate()
-  const previa = useRutaDeVistaPrevia()
   const paso = useSiguientePaso()
   const [busqueda, fijar] = useSearchParams()
   // todos los riesgos del alcance, sin tope: la matriz de calor cuenta cada celda con el conjunto entero (D10 de la revisión de UX)
@@ -160,7 +157,7 @@ export function RiesgosPage() {
   // revisión; secundarias, desde xl, la categoría, P × I y el responsable. una columna no esencial que dice lo mismo en todas las
   // filas sale a una nota encima, y en «Mis riesgos» el responsable es quien mira: no se dibuja
   const columnas: ColumnaPriorizada[] = [
-    { id: 'riesgo', encabezado: t('riesgos.columnas.riesgo'), prioridad: 'esencial', claseDeCelda: 'min-w-64 text-sm', ordenable: true },
+    { id: 'riesgo', encabezado: t('riesgos.columnas.riesgo'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('riesgos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'categoria', encabezado: t('riesgos.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'puntaje', encabezado: t('riesgos.columnas.puntaje'), prioridad: 'secundaria', claseDeCelda: 'text-sm tabular-nums', ordenable: true },
@@ -217,7 +214,7 @@ export function RiesgosPage() {
     }
   }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       {/* la sección aterriza en el registro y la matriz (decisión 7 de la revisión de UX): el tablero es una vista más, y las
           demás páginas de riesgos van en su selector, en la cabecera (DD-03, U-20) */}
       <EncabezadoDePagina
@@ -332,13 +329,13 @@ export function RiesgosPage() {
                 const ruta = rutaDeFicha('social_risk', r)
                 if (ruta) navegar(ruta, { state: paso(t('riesgos.titulo'), ruta) })
               }}
-              alPrevisualizar={(r) => navegar(previa('social_risk', r.id))}
+              previaDe={(r) => ({ objeto: 'social_risk', id: r.id })}
             />
           )}
         </div>
       )}
       {crea ? <AltaDeRiesgo proyecto={proyecto} incidente={incidente} abierto={nuevo} alCerrar={() => abrirAlta(false)} /> : null}
-    </section>
+    </ContenedorDePagina>
   )
 }
 
@@ -395,7 +392,8 @@ function MapaDeCalor({
                     onClick={() => alElegir(clave)}
                     className={cn(
                       'h-12 w-full rounded-sg-sm',
-                      CLASE_DE_TONO[TONO_DE_NIVEL[nivel]],
+                      CLASE_DE_ZONA[nivel],
+                      'text-sg-text',
                       elegida === clave && 'outline-2 outline-offset-1 outline-sg-focus'
                     )}
                   >

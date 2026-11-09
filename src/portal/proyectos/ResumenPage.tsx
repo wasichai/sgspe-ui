@@ -87,7 +87,7 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
             <span>
               {t('p360.resumen.jefatura')}:{' '}
               {jefatura.isPending ? (
-                t('comun.cargando')
+                <Cargando compacto />
               ) : jefatura.isError ? (
                 esProhibido(jefatura.error) ? (
                   <NoDisponible />
@@ -138,9 +138,9 @@ function Resumen({ proyecto }: { proyecto: Registro }) {
           { titulo: t('p360.resumen.kpis.gruposVigentes'), lectura: stk01, a: `${base}/stakeholders?view=todos` },
           { titulo: t('p360.resumen.kpis.interacciones'), lectura: eng01, a: `${base}/engagements` },
           // pide acción: un compromiso vencido y un riesgo alto; las QCS abiertas son el trabajo corriente
-          { titulo: t('p360.resumen.kpis.compromisos'), lectura: com03, a: `${base}/commitments?view=vencidos`, tono: 'aviso' },
+          { titulo: t('p360.resumen.kpis.compromisos'), lectura: com03, a: `${base}/commitments?view=vencidos`, tono: 'warning' },
           { titulo: t('p360.resumen.kpis.qcs'), lectura: grv02, a: `${base}/attention` },
-          { titulo: t('p360.resumen.kpis.riesgos'), lectura: rsk01, a: `${base}/risks?level=alto`, tono: 'peligro' }
+          { titulo: t('p360.resumen.kpis.riesgos'), lectura: rsk01, a: `${base}/risks?level=alto`, tono: 'danger' }
         ]}
       />
       <ResumenEjecutivo proyecto={proyecto} />
@@ -282,7 +282,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
       titulo: texto(e, 'title'),
       a: `${base}/engagements/${encodeURIComponent(e.id)}`,
       motivo: t('p360.resumen.motivos.acta'),
-      tono: 'aviso'
+      tono: 'warning'
     }))
   // primero quien nunca tuvo contacto y luego quien lleva más días sin él
   const sinContacto: EntradaPriorizada[] = (grupos.data ?? [])
@@ -298,7 +298,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
       titulo: <NombreDeGrupo grupo={g} />,
       a: aGrupo(g),
       motivo: dias === null ? t('p360.resumen.motivos.nuncaContactado') : t('p360.resumen.motivos.sinContacto', { count: dias }),
-      tono: dias === null ? 'peligro' : 'aviso'
+      tono: dias === null ? 'danger' : 'warning'
     }))
   const evaluaciones: EntradaPriorizada[] = (grupos.data ?? [])
     .flatMap((g) => {
@@ -311,7 +311,7 @@ function Atencion({ proyecto, inactividad, revision }: { proyecto: Registro; ina
       titulo: <NombreDeGrupo grupo={g} />,
       a: aGrupo(g),
       motivo: t('p360.resumen.motivos.evaluacion', { count: dias }),
-      tono: 'aviso'
+      tono: 'warning'
     }))
   // por tipo, con su conteo: las tres más urgentes y «Ver los N» hacia la lista filtrada, si la hay (hallazgo U-05, DD-13). las
   // actas por redactar y las evaluaciones viejas no tienen una vista propia en sus listas: dicen cuántas quedan, sin enlace
@@ -368,7 +368,7 @@ function Actividad({ proyecto }: { proyecto: string }) {
   )
 }
 
-type Tono = 'aviso' | 'peligro'
+type Tono = 'warning' | 'danger'
 interface CifraDeFranja {
   titulo: string
   lectura: LecturaDeIndicador
@@ -377,7 +377,7 @@ interface CifraDeFranja {
   tono?: Tono
 }
 
-const COLOR: Record<Tono, string> = { aviso: 'text-sg-warning', peligro: 'text-sg-danger' }
+const COLOR: Record<Tono, string> = { warning: 'text-sg-warning', danger: 'text-sg-danger' }
 
 // la franja de cifras de P-03: una sola superficie con las cifras sin caja propia (nunca tarjetas dentro de tarjetas, U-34). una
 // cifra que pide acción se tiñe y lo dice con un ícono y un texto, nunca solo con el color. una cifra de QCS que no cuenta las

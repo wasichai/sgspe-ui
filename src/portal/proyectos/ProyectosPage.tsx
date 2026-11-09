@@ -1,6 +1,6 @@
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
 import type { ReactNode } from 'react'
@@ -116,7 +116,7 @@ export function ProyectosPage() {
   const ruta = (p: Registro) => `/projects/${encodeURIComponent(p.id)}/overview`
   const columnas: ColumnaPriorizada[] = [
     { id: 'codigo', encabezado: t('proyectos.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'font-sg-mono text-sg-caption', ordenable: true },
-    { id: 'nombre', encabezado: t('proyectos.columnas.nombre'), prioridad: 'esencial', ordenable: true },
+    { id: 'nombre', encabezado: t('proyectos.columnas.nombre'), prioridad: 'esencial', titulo: true, ordenable: true },
     { id: 'tipo', encabezado: t('proyectos.columnas.tipo'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'etapa', encabezado: t('proyectos.columnas.etapa'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('proyectos.columnas.estado'), prioridad: 'esencial' },
@@ -151,7 +151,7 @@ export function ProyectosPage() {
   const opciones = (campo: string) => definicion.data?.fields.find((f) => f.name === campo)?.enumOptions ?? []
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina>
       <EncabezadoDePagina
         titulo={t('proyectos.titulo')}
         conteo={cargando || fallo || sinProyectos ? undefined : t('proyectos.conteo', { count: filtrados.length })}
@@ -221,6 +221,6 @@ export function ProyectosPage() {
           alAbrir={(p) => navegar(ruta(p))}
         />
       )}
-    </div>
+    </ContenedorDePagina>
   )
 }

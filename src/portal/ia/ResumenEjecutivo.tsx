@@ -11,7 +11,7 @@ import { fechaYHoraPe, NS } from '../i18n'
 import { useAsistente } from './Asistente'
 import { useCorrida, useEstadoDeIa } from './contrato'
 import { FalloDeCorrida } from './FalloDeCorrida'
-import { MarcaDeIa } from './MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from './MarcaDeIa'
 import { partirMarcadores, personasCitadas } from './marcadores'
 import { TextoDeIa, useNombresDePersonas } from './TextoDeIa'
 
@@ -54,7 +54,7 @@ export function ResumenEjecutivo({ proyecto }: { proyecto: Registro }) {
     }
   }
   return (
-    <section aria-label={t('accionesIa.resumen.titulo')} className="space-y-2 rounded-sg-lg border border-dashed border-sg-ai-border bg-sg-ai-soft p-4 text-sm">
+    <section aria-label={t('accionesIa.resumen.titulo')} className={`space-y-2 text-sm ${CAJA_DE_IA}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <MarcaDeIa clase="resumen" />

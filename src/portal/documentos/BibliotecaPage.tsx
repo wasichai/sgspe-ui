@@ -1,5 +1,5 @@
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
 import { Button } from '@wasichai/ui'
@@ -105,7 +105,7 @@ export function BibliotecaPage() {
     }
   ]
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         titulo={t('documentos.titulo')}
         descripcion={t('documentos.ayuda')}
@@ -182,6 +182,6 @@ export function BibliotecaPage() {
           alCancelar={() => setSubiendo(false)}
         />
       </Drawer>
-    </section>
+    </ContenedorDePagina>
   )
 }

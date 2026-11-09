@@ -121,6 +121,27 @@ describe('BarraDeFiltros', () => {
     })
   })
 
+  // design-system.md §5.3: una sola fila; la búsqueda sin rótulo encima (lupa y marcador), los frecuentes como chips «Estado: Todos»
+  // con su select nativo dentro y, aplicados, en primary
+  it('en la barra, la búsqueda lleva su nombre por marcador y el frecuente es un chip con su rótulo y «Todos» dentro', () => {
+    enLista('?view=vencidos')
+    expect(screen.getByRole('searchbox', { name: 'Buscar' })).toHaveAttribute('placeholder', 'Buscar')
+    const estado = screen.getByRole('combobox', { name: 'Estado' })
+    expect(estado).toHaveDisplayValue('Todos')
+    const chip = estado.closest('label')!
+    expect(chip).toHaveTextContent(/^EstadoTodos/)
+    expect(chip).toHaveClass('h-8', 'border-sg-border-strong')
+    expect(chip).not.toHaveClass('border-sg-primary')
+  })
+
+  it('un frecuente aplicado se marca en primary y su valor va en 700', () => {
+    enLista('?view=vencidos&state=blocked')
+    const estado = screen.getByRole('combobox', { name: 'Estado' })
+    expect(estado).toHaveDisplayValue('Bloqueado')
+    expect(estado).toHaveClass('font-bold')
+    expect(estado.closest('label')).toHaveClass('border-2', 'border-sg-primary', 'bg-sg-primary-soft')
+  })
+
   it('«Más filtros» abre un drawer con los demás filtros', async () => {
     enLista('?view=vencidos')
     expect(screen.queryByLabelText('Campaña')).not.toBeInTheDocument()

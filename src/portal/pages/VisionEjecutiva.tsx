@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, RejillaDeKpi } from '../componentes/KpiCard'
 import { Seccion } from '../componentes/Seccion'
 import { useCatalogoDeIndicadores, useTablero } from '../datos/indicadores'
 import { fechaPe, NS } from '../i18n'
@@ -34,11 +34,11 @@ function CifrasEjecutivas({ titulo }: { titulo: string }) {
         </Link>
       }
     >
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <RejillaDeKpi>
         {legibles.map((indicador) => (
           <KpiCard key={indicador.code} titulo={indicador.label} indicador={indicador} />
         ))}
-      </div>
+      </RejillaDeKpi>
     </Seccion>
   )
 }

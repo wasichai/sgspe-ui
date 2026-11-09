@@ -1,15 +1,15 @@
 import { ListaEnTarjetas, useEsTelefono } from './ListaEnTarjetas'
-import { Pagination, Table, Td, Th, cn } from '@wasichai/ui'
-import { X } from 'lucide-react'
+import { Table, Td, Th, cn } from '@wasichai/ui'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Fragment, useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useSearchParams } from 'react-router'
 import { texto, type Pagina, type Registro } from '../datos/registros'
 import { ResultadoDeLista } from '../contexto/Origen'
-import { NS } from '../i18n'
+import { NS, numeroPe } from '../i18n'
 import { Cargando, ErrorDeCarga, Vacio } from './Estados'
 import type { UseQueryResult } from '@tanstack/react-query'
-import type { OrdenDeTabla } from './TablaPriorizada'
+import { CAJA_DE_TABLA, CELDA, CELDA_DE_TITULO, ENCABEZADO, FILA, NOTA_AL_PIE, type OrdenDeTabla } from './TablaPriorizada'
 
 // el patrón de lista de design-system.md §6.4: vistas guardadas en pestañas, filtros como chips en la URL, tabla real con
 // encabezados, selección para acciones masivas y paginación. las vistas personales (ASM-079) se guardan en el navegador
@@ -18,6 +18,9 @@ export interface Columna {
   id: string
   encabezado: string
   celda: (registro: Registro) => ReactNode
+  // la del título toma el ancho sobrante y es la única que se parte en líneas; una numérica va a la derecha con cifras tabulares
+  titulo?: boolean
+  numerica?: boolean
 }
 
 export interface Vista {
@@ -148,7 +151,8 @@ export function TablaDeRegistros({
   alPagina,
   seleccion,
   alSeleccionar,
-  alAbrir
+  alAbrir,
+  notaAlPie
 }: {
   consulta: UseQueryResult<Pagina>
   columnas: Columna[]
@@ -158,6 +162,7 @@ export function TablaDeRegistros({
   seleccion?: ReadonlySet<string>
   alSeleccionar?: (id: string, marcado: boolean) => void
   alAbrir?: (registro: Registro) => void
+  notaAlPie?: ReactNode
 }) {
   const { t } = useTranslation(NS)
   const telefono = useEsTelefono()
@@ -201,17 +206,17 @@ export function TablaDeRegistros({
             }))}
           />
         ) : (
-          <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+          <div className={CAJA_DE_TABLA}>
             <Table aria-label={etiqueta}>
               <thead>
                 <tr>
                   {alSeleccionar ? (
-                    <Th className="w-8">
+                    <Th className={cn(ENCABEZADO, 'w-8')}>
                       <span className="sr-only">{t('comun.seleccionar')}</span>
                     </Th>
                   ) : null}
                   {columnas.map((c) => (
-                    <Th key={c.id} scope="col">
+                    <Th key={c.id} scope="col" className={cn(ENCABEZADO, c.numerica && 'text-right')}>
                       {c.encabezado}
                     </Th>
                   ))}
@@ -221,7 +226,7 @@ export function TablaDeRegistros({
                 {pagina.content.map((registro) => (
                   <tr
                     key={registro.id}
-                    className={alAbrir ? 'cursor-pointer hover:bg-sg-surface-hover' : undefined}
+                    className={alAbrir ? cn(FILA, 'cursor-pointer') : FILA}
                     onClick={alAbrir ? () => alAbrir(registro) : undefined}
                     // la fila se abre también con el teclado (Enter o Espacio); una tecla pulsada dentro de un control de la
                     // fila (la casilla, un enlace) es de ese control. la fila conserva su rol de fila de la tabla
@@ -237,7 +242,7 @@ export function TablaDeRegistros({
                     }
                   >
                     {alSeleccionar ? (
-                      <Td onClick={(e) => e.stopPropagation()}>
+                      <Td className={CELDA} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           aria-label={t('comun.seleccionarA', { nombre: nombreDeFila(registro) || t('comun.esteRegistro') })}
@@ -247,7 +252,7 @@ export function TablaDeRegistros({
                       </Td>
                     ) : null}
                     {columnas.map((c) => (
-                      <Td key={c.id} className="text-sm">
+                      <Td key={c.id} className={cn(CELDA, c.titulo && CELDA_DE_TITULO, c.numerica && 'text-right tabular-nums')}>
                         {c.celda(registro)}
                       </Td>
                     ))}
@@ -255,26 +260,101 @@ export function TablaDeRegistros({
                 ))}
               </tbody>
             </Table>
+            {notaAlPie ? <div className={NOTA_AL_PIE}>{notaAlPie}</div> : null}
+            <Paginador pagina={pagina} alPagina={alPagina} />
           </div>
         )}
-        {pagina.totalPages && pagina.totalPages > 1 ? (
-          <Pagination page={pagina.page} totalPages={pagina.totalPages} totalElements={pagina.totalElements ?? 0} onPage={alPagina} />
-        ) : null}
+        {telefono ? <Paginador pagina={pagina} alPagina={alPagina} suelto /> : null}
       </div>
     </ResultadoDeLista>
   )
 }
-
 // la paginación de una lista que pagina el servidor (D10 de la revisión de UX): el total y las páginas son los de su conteo
 export function PaginacionDelServidor({
   datos,
   alPagina
 }: {
-  datos: Pick<Pagina<unknown>, 'page' | 'totalPages' | 'totalElements'> | undefined
+  datos: (Pick<Pagina<unknown>, 'page' | 'totalPages' | 'totalElements'> & { size?: number }) | undefined
   alPagina: (pagina: number) => void
 }) {
-  if (!datos?.totalPages || datos.totalPages <= 1) return null
-  return <Pagination page={datos.page} totalPages={datos.totalPages} totalElements={datos.totalElements ?? 0} onPage={alPagina} />
+  if (!datos) return null
+  return <Paginador pagina={datos} alPagina={alPagina} suelto />
+}
+
+// el paginador de Civic Modern (design-system.md §5.3): «Mostrando 1–8 de 23» y botones de 32 px con borde, el actual en primary.
+// dentro de la caja de una tabla va en su barra al pie; suelto (bajo una tabla de otro componente), en su propia caja. con una sola
+// página no se dibuja. size: cuántas filas trae cada página (sin él no se dice el rango)
+export function Paginador({
+  pagina: { page, totalPages, totalElements, size },
+  alPagina,
+  suelto = false
+}: {
+  pagina: Pick<Pagina<unknown>, 'page' | 'totalPages' | 'totalElements'> & { size?: number }
+  alPagina: (pagina: number) => void
+  suelto?: boolean
+}) {
+  const { t } = useTranslation(NS)
+  if (!totalPages || totalPages <= 1) return null
+  const desde = size ? page * size + 1 : null
+  const hasta = size && totalElements != null ? Math.min(totalElements, (page + 1) * size) : null
+  const boton = 'inline-flex h-8 min-w-8 items-center justify-center rounded-sg-md border border-sg-border-strong font-semibold tabular-nums'
+  return (
+    <nav
+      aria-label={t('comun.paginador.etiqueta')}
+      className={cn(
+        'flex flex-wrap items-center gap-2 border-t border-sg-border px-3 py-2.5 text-sm text-sg-text-secondary',
+        suelto && 'rounded-sg-md border bg-sg-surface'
+      )}
+    >
+      {desde !== null && hasta !== null && totalElements != null ? (
+        <span className="mr-auto">{t('comun.paginador.mostrando', { desde: numeroPe(desde), hasta: numeroPe(hasta), total: numeroPe(totalElements) })}</span>
+      ) : (
+        <span className="mr-auto" />
+      )}
+      <button
+        type="button"
+        aria-label={t('comun.paginador.anterior')}
+        disabled={page === 0}
+        onClick={() => alPagina(page - 1)}
+        className={cn(boton, 'text-sg-text disabled:text-sg-text-muted disabled:opacity-60')}
+      >
+        <ChevronLeft aria-hidden className="size-4" />
+      </button>
+      {paginasVisibles(page, totalPages).map((n, i) =>
+        n === null ? (
+          <span key={`salto-${i}`} aria-hidden className="px-1">
+            …
+          </span>
+        ) : (
+          <button
+            key={n}
+            type="button"
+            aria-label={t('comun.paginador.pagina', { n: numeroPe(n + 1) })}
+            aria-current={n === page ? 'page' : undefined}
+            onClick={() => alPagina(n)}
+            className={cn(boton, 'px-1.5', n === page ? 'border-sg-primary bg-sg-primary text-sg-on-primary' : 'text-sg-text hover:bg-sg-surface-hover')}
+          >
+            {numeroPe(n + 1)}
+          </button>
+        )
+      )}
+      <button
+        type="button"
+        aria-label={t('comun.paginador.siguiente')}
+        disabled={page + 1 >= totalPages}
+        onClick={() => alPagina(page + 1)}
+        className={cn(boton, 'text-sg-text disabled:text-sg-text-muted disabled:opacity-60')}
+      >
+        <ChevronRight aria-hidden className="size-4" />
+      </button>
+    </nav>
+  )
+}
+
+// las páginas que se ofrecen: la primera, la última y las vecinas de la actual; null es un salto («…»)
+export function paginasVisibles(actual: number, total: number): (number | null)[] {
+  const elegidas = [...new Set([0, actual - 1, actual, actual + 1, total - 1])].filter((n) => n >= 0 && n < total).sort((a, b) => a - b)
+  return elegidas.flatMap((n, i) => (i > 0 && n - elegidas[i - 1] > 1 ? [null, n] : [n]))
 }
 
 // sinFiltros: cuántos habría sin los filtros (revisión de UX, etapa 3: «Sin los filtros hay 3»); así se sabe que no es la lista

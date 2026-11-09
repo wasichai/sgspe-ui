@@ -1,10 +1,10 @@
 import { ListaEnTarjetas, useEsTelefono } from '../componentes/ListaEnTarjetas'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { useSiguientePaso } from '../contexto/Rastro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { useAuth } from '@wasichai/core'
-import { Alert, Button, Pagination } from '@wasichai/ui'
+import { Alert, Button } from '@wasichai/ui'
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
@@ -12,13 +12,13 @@ import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, NoDisponible, Restringido, esProhibido } from '../componentes/Estados'
 import { TablaPriorizada, type ColumnaPriorizada } from '../componentes/TablaPriorizada'
 import { ordenarEnCliente, posicionEn } from '../componentes/ordenEnCliente'
-import { ordenEnUrl, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
+import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { BarraDeSeleccion } from '../componentes/BarraDeSeleccion'
 import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { NombreDelGrupo, useNombreDelGrupo, useNombresDeGrupos } from '../componentes/NombreDeActor'
 import { comparable } from '../componentes/FiltroDeGrupo'
-import { BotonDeVistaPrevia, useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
+import { BotonDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useProyecto } from '../contexto/proyectos'
 import { filtroDeTerritorio } from '../contexto/rutas'
 import { diasEntre, hoyEnLima } from '../datos/fechas'
@@ -50,7 +50,6 @@ export function GruposPage() {
   const { t } = useTranslation(NS)
   const { user, can } = useAuth()
   const navegar = useNavigate()
-  const previa = useRutaDeVistaPrevia()
   const { scope, territory } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   const registroDelProyecto = useProyecto(proyecto)
@@ -150,7 +149,7 @@ export function GruposPage() {
   // «Columnas». en «Míos» el responsable es siempre quien mira: no se dibuja
   const columnas: ColumnaPriorizada[] = [
     ...(proyecto ? [{ id: 'seleccionar', encabezado: t('comun.seleccionar'), prioridad: 'esencial' as const, encabezadoOculto: true }] : []),
-    { id: 'grupo', encabezado: t('grupos.columnas.grupo'), prioridad: 'esencial', claseDeCelda: 'min-w-48' },
+    { id: 'grupo', encabezado: t('grupos.columnas.grupo'), prioridad: 'esencial', titulo: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('grupos.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'territorio', encabezado: t('grupos.columnas.territorio'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'influencia', encabezado: t('grupos.columnas.influencia'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
@@ -222,7 +221,7 @@ export function GruposPage() {
   }
 
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         vistas={<VistasDelModulo modulo="stakeholders" actual="lista" conTablero={conTablero} />}
         titulo={t('grupos.titulo')}
@@ -342,15 +341,13 @@ export function GruposPage() {
                   alOrdenar={ordenar}
                   alAbrir={(g) => navegar(rutaDelGrupo(g), { state: paso() })}
                   // Espacio abre la vista previa, como el ojo de la fila
-                  alPrevisualizar={(g) => navegar(previa('stakeholder', g.id))}
+                  previaDe={(g) => ({ objeto: 'stakeholder', id: g.id })}
                 />
               )}
               {filtrados.length > POR_PAGINA ? (
-                <Pagination
-                  page={lista.pagina}
-                  totalPages={Math.ceil(filtrados.length / POR_PAGINA)}
-                  totalElements={filtrados.length}
-                  onPage={(p) => lista.cambiar({ page: String(p) })}
+                <PaginacionDelServidor
+                  datos={{ page: lista.pagina, size: POR_PAGINA, totalPages: Math.ceil(filtrados.length / POR_PAGINA), totalElements: filtrados.length }}
+                  alPagina={(p) => lista.cambiar({ page: String(p) })}
                 />
               ) : null}
             </>
@@ -358,7 +355,7 @@ export function GruposPage() {
         </>
       )}
       {proyecto ? <NuevoGrupo proyecto={proyecto} abierto={creando} alCerrar={() => setCreando(false)} /> : null}
-    </section>
+    </ContenedorDePagina>
   )
 }
 

@@ -36,6 +36,8 @@ describe('AvisoDeExito', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: 'Registrar' }))
     expect(await screen.findByRole('status')).toHaveTextContent('Se registró la queja Q-005.')
+    // la alerta de éxito de design-system.md §5.3 (borde de 2 px success sobre success-soft e ícono, de la capa de componentes)
+    expect(screen.getByRole('status')).toHaveAttribute('data-tone', 'success')
     // volver a esta entrada del historial no lo repetiría: el estado ya no lo trae, y el aviso sigue a la vista
     expect(await screen.findByText('estado: {"rastro":"lista"}')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Se registró la queja Q-005.')

@@ -8,8 +8,13 @@ import { describe, expect, it } from 'vitest'
 // elemento de lista, una lista de datos sin título o un panel desplegable. escanea cada cadena de clases, sin comentarios
 const PORTAL = import.meta.dirname
 
-// las clases de la caja, en cualquier orden y con cualquier otra clase al lado
-const CAJA = ['rounded-sg-lg', 'border', 'border-sg-border', 'bg-sg-surface', 'p-4']
+// las clases de la caja, en cualquier orden y con cualquier otra clase al lado: la del panel de Civic Modern (radio 4 y el
+// relleno de un panel, de 16 o 20 px; design-system.md §5.3) y la de antes (radio 6), que sigue igual de vigilada
+const CAJAS = [
+  ['rounded-sg-md', 'border', 'border-sg-border', 'bg-sg-surface', 'p-4'],
+  ['rounded-sg-md', 'border', 'border-sg-border', 'bg-sg-surface', 'p-5'],
+  ['rounded-sg-lg', 'border', 'border-sg-border', 'bg-sg-surface', 'p-4']
+]
 
 // las fuentes que pueden llevarla, cuántas veces y por qué no son una Seccion
 const EXCEPCIONES: Record<string, { veces: number; porque: string }> = {
@@ -46,7 +51,7 @@ const sinComentario = (linea: string) => {
 const conCaja = (linea: string) =>
   [...linea.matchAll(/'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|`((?:\\.|[^`\\])*)`/g)].some((m) => {
     const clases = new Set((m[1] ?? m[2] ?? m[3] ?? '').split(/\s+/))
-    return CAJA.every((c) => clases.has(c))
+    return CAJAS.some((caja) => caja.every((c) => clases.has(c)))
   })
 
 // cuántas veces aparece la caja en cada fuente
@@ -74,13 +79,16 @@ describe('superficies del portal (CA-1.1.3)', () => {
     for (const prohibido of [
       '<section aria-label={x} className="space-y-2 rounded-sg-lg border border-sg-border bg-sg-surface p-4 text-sm">',
       "<div className='p-4 bg-sg-surface border-sg-border border rounded-sg-lg'>",
-      'className={cn(`rounded-sg-lg border border-sg-border bg-sg-surface p-4`, clase)}'
+      'className={cn(`rounded-sg-lg border border-sg-border bg-sg-surface p-4`, clase)}',
+      '<section className="space-y-2 rounded-sg-md border border-sg-border bg-sg-surface p-4 sm:px-5">',
+      "<div className='p-5 bg-sg-surface rounded-sg-md border-sg-border border'>"
     ])
       expect(conCaja(sinComentario(prohibido))).toBe(true)
     for (const permitido of [
       '<div className="rounded-sg-md border border-sg-border bg-sg-surface p-3 text-sm">',
       '<section className="space-y-3 rounded-sg-lg border border-dashed border-sg-ai-border bg-sg-ai-soft p-4">',
-      '<div className="rounded-sg-lg border border-sg-border p-4">'
+      '<div className="rounded-sg-lg border border-sg-border p-4">',
+      '<div className="rounded-sg-md border-2 border-sg-border-strong bg-sg-surface p-4">'
     ])
       expect(conCaja(sinComentario(permitido))).toBe(false)
     expect(sinComentario('// la caja «rounded-sg-lg border border-sg-border bg-sg-surface p-4» la pone Seccion')).toBe('')

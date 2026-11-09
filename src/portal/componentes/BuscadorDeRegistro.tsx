@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useRegistros, type Parametros, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { CONTROL } from './Campo'
+import { Cargando } from './Estados'
 
 // buscar antes de crear (flows.md, flujo 3): un texto que consulta la API genérica con q (búsqueda en los campos de texto)
 // y una lista de resultados; elegir uno devuelve el registro. sirve para organizaciones, personas, localidades, grupos de
@@ -30,7 +31,7 @@ export function BuscadorDeRegistro({
   const resultados = useRegistros(objeto, { ...filtros, q, size: 10 }, q.trim().length >= 2)
   const lista = resultados.data?.content ?? []
   return (
-    <div className="space-y-1">
+    <div className="flex flex-col gap-1.5">
       <input
         type="search"
         aria-label={etiqueta}
@@ -43,7 +44,7 @@ export function BuscadorDeRegistro({
       />
       {q.trim().length >= 2 ? (
         lista.length === 0 ? (
-          <p className="text-sg-caption text-sg-text-muted">{resultados.isPending ? t('comun.cargando') : t('comun.sinResultados')}</p>
+          <p className="text-sg-caption text-sg-text-muted">{resultados.isPending ? <Cargando compacto /> : t('comun.sinResultados')}</p>
         ) : (
           <ul aria-label={`${etiqueta}: ${t('comun.seleccionar')}`} className="max-h-48 overflow-y-auto rounded-sg-md border border-sg-border">
             {lista.map((r) => (

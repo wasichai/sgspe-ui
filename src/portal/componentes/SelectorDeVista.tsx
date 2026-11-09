@@ -62,11 +62,7 @@ export function SelectorDeVista({
 
   return (
     <div className="flex max-w-full items-center gap-2">
-      <div
-        role="radiogroup"
-        aria-label={etiqueta}
-        className="inline-flex max-w-full overflow-x-auto rounded-sg-md border border-sg-border bg-sg-surface p-0.5 text-sm"
-      >
+      <div role="radiogroup" aria-label={etiqueta} className={SEGMENTADO}>
         {aLaVista.map((v, i) => {
           const elegida = v.id === actual
           return (
@@ -83,13 +79,10 @@ export function SelectorDeVista({
               tabIndex={v.id === enfocable ? 0 : -1}
               onClick={() => alElegir(v.id)}
               onKeyDown={(e) => alTeclear(e, i)}
-              className={cn(
-                'flex items-center gap-1.5 whitespace-nowrap rounded-sg-sm px-2.5 py-1',
-                elegida ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : 'text-sg-text-secondary hover:bg-sg-surface-hover'
-              )}
+              className={segmento(elegida)}
             >
               {v.etiqueta}
-              {v.n != null ? <Conteo n={v.n} /> : null}
+              {v.n != null ? <Conteo n={v.n} elegida={elegida} /> : null}
             </button>
           )
         })}
@@ -141,22 +134,13 @@ export function SelectorDePagina({
   const nombre = (p: PaginaDelSelector) => (p.n != null ? t('comun.selectorDeVista.conConteo', { etiqueta: p.etiqueta, n: numeroPe(p.n) }) : undefined)
   return (
     <nav aria-label={etiqueta} className="flex max-w-full items-center gap-2">
-      <div className="inline-flex max-w-full overflow-x-auto rounded-sg-md border border-sg-border bg-sg-surface p-0.5 text-sm">
+      <div className={SEGMENTADO}>
         {aLaVista.map((p) => {
           const elegida = p.id === actual
           return (
-            <Link
-              key={p.id}
-              to={p.a}
-              aria-current={elegida ? 'page' : undefined}
-              aria-label={nombre(p)}
-              className={cn(
-                'flex items-center gap-1.5 whitespace-nowrap rounded-sg-sm px-2.5 py-1',
-                elegida ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : 'text-sg-text-secondary hover:bg-sg-surface-hover'
-              )}
-            >
+            <Link key={p.id} to={p.a} aria-current={elegida ? 'page' : undefined} aria-label={nombre(p)} className={segmento(elegida)}>
               {p.etiqueta}
-              {p.n != null ? <Conteo n={p.n} /> : null}
+              {p.n != null ? <Conteo n={p.n} elegida={elegida} /> : null}
             </Link>
           )
         })}
@@ -180,10 +164,25 @@ export function SelectorDePagina({
   )
 }
 
-// el conteo se ve; el nombre accesible del radio ya lo dice
-function Conteo({ n }: { n: number }) {
+// el control segmentado de design-system.md §5.3 («Barra de filtros y chips»): borde de 2 px primary, radio 4, segmentos de 30 px
+// en 14 px 600 primary-text sobre surface, separados por 2 px primary; el elegido en primary con on-primary
+const SEGMENTADO = 'inline-flex max-w-full overflow-x-auto rounded-sg-md divide-x-2 divide-sg-primary border-2 border-sg-primary bg-sg-surface text-sm'
+const segmento = (elegida: boolean) =>
+  cn(
+    'flex h-7.5 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 font-semibold',
+    elegida ? 'bg-sg-primary text-sg-on-primary' : 'bg-sg-surface text-sg-primary-text hover:bg-sg-primary-soft'
+  )
+
+// el conteo se ve, como una etiqueta; el nombre accesible del radio ya lo dice
+function Conteo({ n, elegida = false }: { n: number; elegida?: boolean }) {
   return (
-    <span aria-hidden className="rounded-full bg-sg-surface-sunken px-1.5 text-sg-caption tabular-nums text-sg-text-muted">
+    <span
+      aria-hidden
+      className={cn(
+        'rounded-sg-sm px-1.5 text-sg-caption font-bold tabular-nums',
+        elegida ? 'bg-sg-surface text-sg-primary-text' : 'bg-sg-primary-soft text-sg-primary-text'
+      )}
+    >
       {numeroPe(n)}
     </span>
   )

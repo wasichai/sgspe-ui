@@ -18,6 +18,7 @@ import {
 } from './comunes'
 
 vi.mock('../graficos/Grafico', () => import('../../test/graficoFalso'))
+import { opcionesRecibidas } from '../../test/graficoFalso'
 
 let fetch: FetchMock | null = null
 beforeEach(() => localStorage.clear())
@@ -303,6 +304,52 @@ describe('diezYOtros, Barras y SerieConMeta', () => {
     const tabla = screen.getByRole('table', { name: 'Por tipo' })
     expect(tabla).toHaveTextContent('Taller')
     expect(tabla).toHaveTextContent(/1\D?200/)
+  })
+
+  // design-system.md §5.3 «Gráficos»: la meta es una línea discontinua de 2 px text (4 3) con su rótulo «meta N», sin leyenda
+  it('SerieConMeta con una meta fija la dibuja como línea de referencia discontinua con su rótulo, sin leyenda', () => {
+    montar(
+      <SerieConMeta
+        titulo="Reuniones"
+        tipo="bar"
+        serie={[
+          { period: '2026-09', value: 2, target: 4 },
+          { period: '2026-10', value: 3, target: 4 }
+        ]}
+      />
+    )
+    const opciones = opcionesRecibidas.get('Reuniones') as Record<string, any>
+    expect(opciones.legend).toBeUndefined()
+    expect(opciones.series).toHaveLength(1)
+    const meta = opciones.series[0].markLine
+    expect(meta.symbol).toBe('none')
+    expect(meta.data).toEqual([{ yAxis: 4 }])
+    expect(meta.lineStyle).toMatchObject({ type: [4, 3], width: 2 })
+    expect(meta.label.formatter()).toBe('meta 4')
+    // el tooltip dice el periodo en negrita y la cifra con su meta
+    const html = opciones.tooltip.formatter([{ dataIndex: 1, axisValueLabel: 'oct. 2026', value: 3, marker: '' }])
+    expect(html).toContain('<strong>oct. 2026</strong>')
+    expect(html).toContain('meta 4')
+  })
+
+  it('SerieConMeta con una meta que cambia de mes a mes la dibuja escalonada y discontinua, rotulada al final', () => {
+    montar(
+      <SerieConMeta
+        titulo="Reuniones"
+        tipo="line"
+        serie={[
+          { period: '2026-09', value: 2, target: 4 },
+          { period: '2026-10', value: 3, target: 6 }
+        ]}
+      />
+    )
+    const opciones = opcionesRecibidas.get('Reuniones') as Record<string, any>
+    expect(opciones.legend).toBeUndefined()
+    const meta = opciones.series[1]
+    expect(meta).toMatchObject({ type: 'line', step: 'middle', symbol: 'none', data: [4, 6] })
+    expect(meta.lineStyle).toMatchObject({ type: [4, 3], width: 2 })
+    expect(meta.endLabel.show).toBe(true)
+    expect(meta.endLabel.formatter({ value: 6 })).toBe('meta 6')
   })
 
   it('SerieConMeta agrega la columna Meta solo si alguna fila trae meta', () => {

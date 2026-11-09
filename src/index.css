@@ -3,6 +3,8 @@
 /* "Civic Modern" (ASM-149, ADR-0032): los tokens de docs/ux/tokens.css y, después, los de wasichai leídos de ellos */
 @import './theme/tokens.css';
 @import './theme/wasichai.css';
+/* la capa de componentes de E sobre las primitivas de wasichai: botones, avisos, campos, tablas y pestañas (design-system.md §5.3) */
+@import './theme/componentes.css';
 /* la hoja A4 de la página imprimible de un documento emitido (/admin/documents/:id/print, @wasichai/documents): css sin capa,
    para ganarle al preflight de tailwind sin !important; se importa una sola vez, aquí y no por un archivo interno en un .tsx */
 @import '@wasichai/documents/print.css';

@@ -14,6 +14,7 @@ import { fechaPe, NS, numeroPe } from '../i18n'
 import { CerrarPeriodo } from './CerrarPeriodo'
 import { ConsultaDeTablero } from './comunes'
 import { esMes, mesAnterior, periodoDelMes, type FilaDeMonitoreo, type TableroDeMonitoreo } from './contratoF8'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // el monitoreo de la Tabla 9.5 (screens.md, dashboards.md §5.5): el mes (?month=AAAA-MM; por defecto el anterior en Lima, el
 // que ya se puede cerrar) y el proyecto (?project=; sin él, mis proyectos o todos) gobiernan el pedido. la cifra oficial sale solo
@@ -53,7 +54,7 @@ export function MonitoreoPage() {
     return `/dashboards/indicators/${encodeURIComponent(code)}?${consulta}`
   }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-sg-h1 font-semibold">{t('tablerosF8.monitoreo.titulo')}</h1>
@@ -174,6 +175,6 @@ export function MonitoreoPage() {
           alCerrar={() => setCerrando(null)}
         />
       ) : null}
-    </section>
+    </ContenedorDePagina>
   )
 }

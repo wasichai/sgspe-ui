@@ -1,11 +1,16 @@
 import { cn } from '@wasichai/ui'
 import { createContext, useContext, useId, type ReactNode } from 'react'
 
-// la superficie titulada de toda página (revisión de UX, U-34 y DD-08): reemplaza el «rounded-sg-lg border … p-4» escrito a
-// mano en cada pantalla, para que el borde, el relleno y el peso del título sean los mismos en todas
+// la superficie titulada de toda página (revisión de UX, U-34 y DD-08): reemplaza la caja escrita a mano en cada pantalla, para
+// que el borde, el relleno y el peso del título sean los mismos en todas. es el panel de Civic Modern (design-system.md §5.3,
+// .panel del lienzo): radio 4, borde de 1 px, superficie, relleno de 16 a 20 px y el título en h3 de 17/24; la variante
+// «fuerte» (.panel.strong) lleva el borde de 2 px en border-strong para el panel que manda en la pantalla
 
 // una sección dentro de otra no repite el borde (una caja dentro de otra se lee como ruido) y baja su encabezado un nivel
 const DentroDeSeccion = createContext(false)
+
+// si lo que se dibuja va dentro de una Seccion: una pieza con caja propia (una cifra) la omite ahí
+export const useDentroDeSeccion = (): boolean => useContext(DentroDeSeccion)
 
 export interface PropsDeSeccion {
   titulo?: ReactNode
@@ -21,10 +26,16 @@ export interface PropsDeSeccion {
   etiqueta?: string
   // «aside» para un panel al costado (trazabilidad, reglas, «Qué pasará»): sigue siendo un complementary con su nombre
   elemento?: 'section' | 'aside'
+  // «fuerte»: borde de 2 px en border-strong; dentro de otra sección no hay caja y no cambia nada
+  variante?: 'normal' | 'fuerte'
   children?: ReactNode
 }
 
-export function Seccion({ titulo, descripcion, acciones, anidada, nivel, className, etiqueta, elemento, children }: PropsDeSeccion) {
+// las clases enteras, para que Tailwind las vea
+const CAJA = 'rounded-sg-md border border-sg-border bg-sg-surface p-4 sm:px-5'
+const CAJA_FUERTE = 'rounded-sg-md border-2 border-sg-border-strong bg-sg-surface p-4 sm:px-5'
+
+export function Seccion({ titulo, descripcion, acciones, anidada, nivel, className, etiqueta, elemento, variante = 'normal', children }: PropsDeSeccion) {
   const dentro = useContext(DentroDeSeccion)
   const idDelTitulo = useId()
   const sinCaja = anidada || dentro
@@ -35,7 +46,7 @@ export function Seccion({ titulo, descripcion, acciones, anidada, nivel, classNa
     <Elemento
       aria-labelledby={conTitulo ? idDelTitulo : undefined}
       aria-label={conTitulo ? undefined : etiqueta}
-      className={cn('space-y-2', !sinCaja && 'rounded-sg-lg border border-sg-border bg-sg-surface p-4', className)}
+      className={cn('space-y-2', !sinCaja && (variante === 'fuerte' ? CAJA_FUERTE : CAJA), className)}
     >
       {(conTitulo || descripcion || acciones) && (
         // dentro de una sección el encabezado no es un landmark (HTML-AAM): role="none" lo dice también a las herramientas que,
@@ -43,7 +54,7 @@ export function Seccion({ titulo, descripcion, acciones, anidada, nivel, classNa
         <header role="none" className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
             {conTitulo && (
-              <Encabezado id={idDelTitulo} className="text-sg-h3 font-semibold">
+              <Encabezado id={idDelTitulo} className="text-sg-h3 font-bold text-sg-text">
                 {titulo}
               </Encabezado>
             )}

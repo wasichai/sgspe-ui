@@ -1,6 +1,6 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
 import { useMigaDelRegistro } from '../componentes/Migas'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -557,7 +557,7 @@ export function VisitasPage() {
   })
   const visitas = { ...pagina, data: pagina.data?.content, truncado: false }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-3">
+    <ContenedorDePagina elemento="section" className="space-y-3">
       <h1 className="text-sg-h1 font-semibold">{t('relacionamiento.visitas')}</h1>
       <CuerpoDeLista lectura={visitas} vacio={t('relacionamiento.visita.sinVisitas')}>
         {(lista) => (
@@ -605,6 +605,6 @@ export function VisitasPage() {
         )}
       </CuerpoDeLista>
       <PaginacionDelServidor datos={pagina.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
-    </section>
+    </ContenedorDePagina>
   )
 }

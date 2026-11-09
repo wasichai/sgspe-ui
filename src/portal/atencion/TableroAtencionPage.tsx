@@ -1,4 +1,4 @@
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo } from 'react'
@@ -27,7 +27,7 @@ export function TableroAtencionPage() {
   const filtros = useFiltrosDeTablero()
   const tablero = useTablero('attention', filtros)
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina titulo={t('tableroAtencion.titulo')} vistas={<VistasDelModulo modulo="attention" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
@@ -77,7 +77,7 @@ export function TableroAtencionPage() {
           )
         }}
       </ConsultaDeTablero>
-    </section>
+    </ContenedorDePagina>
   )
 }
 

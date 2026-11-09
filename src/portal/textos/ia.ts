@@ -4,7 +4,7 @@
 // postura, religión y proceso electoral; evidence_quote): llegan sin número ni valor, como PERSONA, y nunca se resuelven
 export const ES_IA = {
   titulo: 'Inteligencia artificial',
-  marcas: { sugerencia: 'Sugerencia de IA', resumen: 'Resumen de IA' },
+  marcas: { sugerencia: 'Sugerencia de IA', resumen: 'Resumen de IA', verifique: 'propuesta, verifique antes de usar' },
   marcadores: {
     PERSONA: 'persona',
     DOCUMENTO: 'documento reservado',
@@ -33,7 +33,7 @@ export const ES_IA = {
 
 export const EN_IA: typeof ES_IA = {
   titulo: 'Artificial intelligence',
-  marcas: { sugerencia: 'AI suggestion', resumen: 'AI summary' },
+  marcas: { sugerencia: 'AI suggestion', resumen: 'AI summary', verifique: 'a proposal, check it before use' },
   marcadores: {
     PERSONA: 'person',
     DOCUMENTO: 'withheld document',

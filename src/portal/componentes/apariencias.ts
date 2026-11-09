@@ -208,6 +208,8 @@ export const APARIENCIAS: Record<string, Record<string, Apariencia>> = {
   }
 }
 
+// el fondo suave y la tinta de cada tono (chips de estado y avisos breves); el chip le suma su borde de 1 px de la tinta. los tonos son
+// los de design-system.md §3.2: neutral, info, progress, success, warning, danger y final (contorno gris, deja de pedir atención)
 export const CLASE_DE_TONO: Record<Tono, string> = {
   neutral: 'bg-sg-neutral-soft text-sg-neutral',
   info: 'bg-sg-info-soft text-sg-info',
@@ -215,8 +217,12 @@ export const CLASE_DE_TONO: Record<Tono, string> = {
   success: 'bg-sg-success-soft text-sg-success',
   warning: 'bg-sg-warning-soft text-sg-warning',
   danger: 'bg-sg-danger-soft text-sg-danger',
-  final: 'border border-sg-border-strong text-sg-text-muted'
+  final: 'border border-sg-border-strong bg-sg-surface text-sg-text-muted'
 }
+
+// el chip de estado (design-system.md §5.3): 26 px, relleno de 8, radio 4, borde de 1 px de la tinta, 13,5/600 e ícono de 14 px
+export const CLASE_DE_CHIP =
+  'inline-flex h-6.5 items-center gap-1.5 whitespace-nowrap rounded-sg-md border border-current px-2 text-sg-body-sm leading-none font-semibold'
 
 // un estado sin apariencia propia es neutro y sin juicio: nunca el ícono de prohibido, que se lee como «rechazado»
 export const aparienciaDe = (objeto: string, estado: string | null | undefined): Apariencia =>

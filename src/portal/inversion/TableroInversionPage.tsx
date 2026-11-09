@@ -1,4 +1,4 @@
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { VistasDelModulo } from '../componentes/VistasDelModulo'
 import { Table, Td, Th } from '@wasichai/ui'
 import { useMemo } from 'react'
@@ -45,7 +45,7 @@ export function TableroInversionPage() {
   const { scope } = useContextFilters()
   const proyecto = scope.kind === 'project' ? scope.projectId : undefined
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina titulo={t('tableroInversion.titulo')} vistas={<VistasDelModulo modulo="programs" actual="tablero" />} />
       <FiltrosDeTablero calculado={tablero.data?.computedAt} alActualizar={() => void tablero.refetch()} conCampana />
       <FiltrosDeInversion proyecto={proyecto} />
@@ -72,7 +72,7 @@ export function TableroInversionPage() {
           )
         }}
       </ConsultaDeTablero>
-    </section>
+    </ContenedorDePagina>
   )
 }
 

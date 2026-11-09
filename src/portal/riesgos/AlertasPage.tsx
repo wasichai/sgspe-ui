@@ -42,6 +42,8 @@ import { fechaPe, fechaYHoraPe, NS } from '../i18n'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { Seccion } from '../componentes/Seccion'
+import { Nivel } from '../componentes/Nivel'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // S41 · centro de alerta temprana (screens.md §9, flujo 14): las alertas del proyecto por vista (por triar, confirmadas, todas,
 // cerradas, cada una una consulta del servidor con su página y su conteo, D10 de la revisión de UX), creadas por JOB-04 o a mano, y la ficha de una alerta: qué la disparó, la regla que la creó (nunca su clave de origen,
@@ -113,7 +115,7 @@ export function AlertasPage() {
   // fecha en que se detectó y su origen
   const columnas: ColumnaPriorizada[] = [
     { id: 'detectada', encabezado: t('alertas.columnas.detectada'), prioridad: 'secundaria', claseDeCelda: 'text-sm', ordenable: true },
-    { id: 'titulo', encabezado: t('alertas.columnas.titulo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm', ordenable: true },
+    { id: 'titulo', encabezado: t('alertas.columnas.titulo'), prioridad: 'esencial', titulo: true, ordenable: true },
     { id: 'severidad', encabezado: t('alertas.columnas.severidad'), prioridad: 'esencial', claseDeCelda: 'text-sm' },
     { id: 'regla', encabezado: t('alertas.columnas.regla'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'estado', encabezado: t('alertas.columnas.estado'), prioridad: 'esencial' }
@@ -125,7 +127,7 @@ export function AlertasPage() {
       case 'titulo':
         return enlace(a)
       case 'severidad':
-        return opcion(a, 'severity') || '—'
+        return <Nivel valor={texto(a, 'severity')} nombre={t('alertas.columnas.severidad')} />
       case 'regla':
         return origen(a)
       default:
@@ -133,7 +135,7 @@ export function AlertasPage() {
     }
   }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-sg-h1 font-semibold">{t('alertas.titulo')}</h1>
         <PaginasDeRiesgos actual="warnings" />
@@ -192,7 +194,7 @@ export function AlertasPage() {
         />
       )}
       <PaginacionDelServidor datos={alertas.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
-    </section>
+    </ContenedorDePagina>
   )
 }
 
@@ -232,7 +234,7 @@ function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
   const siguiente = useSiguienteAccion('early_warning', alerta, DECISIONES)
   const suya = decide || !enTriaje ? siguiente : null
   return (
-    <article className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="article">
       <Link to={volver} className="text-sm text-sg-primary-text underline">
         {t('alertas.ficha.volver')}
       </Link>
@@ -279,7 +281,7 @@ function Ficha({ alerta, volver }: { alerta: Registro; volver: string }) {
           <Riesgo alerta={alerta} escribe={escribe} />
         </div>
       </div>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

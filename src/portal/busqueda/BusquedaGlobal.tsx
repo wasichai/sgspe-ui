@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router'
 import { useEtiquetasDeEstado } from '../componentes/EstadoChip'
+import { Cargando } from '../componentes/Estados'
 import { useNombreDelGrupo } from '../componentes/NombreDeActor'
 import { useVistaActual } from '../componentes/Pagina'
 import type { EstadoDeNavegacion } from '../contexto/Origen'
@@ -214,8 +215,8 @@ function DialogoDeBusqueda({ alCerrar }: { alCerrar: () => void }) {
         {termino.trim().length < 2 ? (
           <p className="text-sm text-sg-text-muted">{t('busqueda.minimo')}</p>
         ) : cargando && resultados.length === 0 ? (
-          <p role="status" className="text-sm text-sg-text-muted">
-            {t('comun.cargando')}
+          <p>
+            <Cargando compacto />
           </p>
         ) : resultados.length === 0 ? (
           <div className="space-y-1 text-sm">

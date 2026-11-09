@@ -8,6 +8,7 @@ import { useContextFilters } from '../shell/context'
 import { esMes } from './contratoF8'
 import { Barras, ConsultaDeTablero, diezYOtros, FiltrosDeTablero, FiltrosIgnorados, SerieConMeta, useFiltrosDeTablero, useRotuloDeCifra } from './comunes'
 import { Seccion } from '../componentes/Seccion'
+import { ContenedorDePagina } from '../componentes/Pagina'
 
 // los desgloses de cada indicador que son categorías y se dibujan en barras (api.md §4.11). los demás no lo son: los
 // puntos y los umbrales de la matriz (stakeholder y thresholds de KPI-STK-03), la cobertura de KPI-STK-06 (coverage) y
@@ -66,7 +67,7 @@ export function DetalleDeIndicadorPage() {
     return q ? `/dashboards/monitoring?${q}` : '/dashboards/monitoring'
   }
   return (
-    <section className="mx-auto max-w-[1100px] space-y-4">
+    <ContenedorDePagina elemento="section" className="max-w-[1100px]">
       <Link to={volver()} className="text-sm text-sg-primary-text underline">
         {t('tableros.volverAlTablero')}
       </Link>
@@ -106,6 +107,6 @@ export function DetalleDeIndicadorPage() {
           </div>
         )}
       </ConsultaDeTablero>
-    </section>
+    </ContenedorDePagina>
   )
 }

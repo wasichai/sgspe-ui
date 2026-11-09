@@ -40,7 +40,7 @@ export function EsperanSuDecision() {
     a: rutaDeDecision(a) ?? destinoDeAviso(a.link) ?? '/tasks/approvals',
     motivo: a.body || t('miDia.decision.aprobacionPendiente'),
     cuando: desde(a),
-    tono: a.overdue ? 'peligro' : 'aviso'
+    tono: a.overdue ? 'danger' : 'warning'
   }))
   const porTriar: EntradaPriorizada[] = (alertas.data ?? []).map((r) => {
     const severidad = texto(r, 'severity')
@@ -51,7 +51,7 @@ export function EsperanSuDecision() {
       a: rutaDeFicha('early_warning', r) ?? '/notifications',
       motivo: severidad ? t('miDia.decision.severidad', { valor: rotuloDeOpcion(severidad) }) : t('miDia.decision.sinSeveridad'),
       cuando: detectada ? t('miDia.decision.detectada', { fecha: detectada }) : undefined,
-      tono: SEVERIDADES_GRAVES.includes(severidad) ? 'peligro' : 'aviso'
+      tono: SEVERIDADES_GRAVES.includes(severidad) ? 'danger' : 'warning'
     }
   })
   const otros: EntradaPriorizada[] = (avisos.data?.content ?? [])
@@ -62,7 +62,7 @@ export function EsperanSuDecision() {
       a: destinoDeAviso(a.link) ?? '/notifications',
       motivo: [a.body || t('miDia.decision.pideAccion'), a.read ? '' : t('avisos.sinLeer')].filter(Boolean).join(' · '),
       cuando: desde(a),
-      tono: a.overdue ? 'peligro' : 'aviso'
+      tono: a.overdue ? 'danger' : 'warning'
     }))
   if (aprobaciones.length + porTriar.length + otros.length === 0) return null
   return (

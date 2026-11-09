@@ -9,7 +9,7 @@ import { atributo, campoDe, texto, useDefinicion, useRegistro, type Registro } f
 import { diaPe, NS } from '../i18n'
 import { BotonesDeTransicion } from '../transiciones/BotonesDeTransicion'
 import { CitaDelCandidato, CitaDeLaSugerencia } from './Cita'
-import { MarcaDeIa } from './MarcaDeIa'
+import { CAJA_DE_IA, MarcaDeIa } from './MarcaDeIa'
 import { confianzaDe, filaDe, valorLegible, type Fila } from './sugerencias'
 import { TextoDeIa } from './TextoDeIa'
 
@@ -67,7 +67,7 @@ export function LoPropuesto({ fila, destino }: { fila: Fila; destino: string }) 
     case 'borrador':
     case 'resumen':
       return (
-        <div className="max-h-48 overflow-y-auto rounded-sg-md border border-sg-border p-2">
+        <div className="max-h-48 overflow-y-auto rounded-sg-md border border-sg-ai-border bg-sg-surface p-2 text-sg-body">
           <TextoDeIa texto={fila.texto} markdown />
         </div>
       )
@@ -109,7 +109,7 @@ export function TarjetaDeSugerencia({ sugerencia, proyecto, alAceptar }: { suger
   const version = texto(interaccion.data, 'prompt_version')
   const base = `/projects/${encodeURIComponent(proyecto)}`
   return (
-    <li className="space-y-2 rounded-sg-lg border border-dashed border-sg-ai-border bg-sg-surface p-3 text-sm">
+    <li className={cn('space-y-2 text-sm', CAJA_DE_IA)}>
       <div className="flex flex-wrap items-center gap-2">
         <MarcaDeIa clase="sugerencia" />
         <span className="font-medium">{t(`bandejaIa.tipos.${tipo}`, { defaultValue: tipo })}</span>
@@ -153,7 +153,8 @@ export function TarjetaDeCandidatoEnBandeja({ candidato, alRevisar }: { candidat
   const ia = atributo(candidato, 'ai_generated') === true
   const confianza = confianzaDe(candidato)
   return (
-    <li className={cn('space-y-2 rounded-sg-lg border bg-sg-surface p-3 text-sm', ia ? 'border-dashed border-sg-ai-border' : 'border-sg-border')}>
+    // propuesto por la IA, el bloque de IA; por una persona, la caja de un dato registrado
+    <li className={cn('space-y-2 text-sm', ia ? CAJA_DE_IA : 'rounded-sg-md border border-sg-border bg-sg-surface px-4 py-3.5')}>
       <div className="flex flex-wrap items-center gap-2">
         {ia ? <MarcaDeIa clase="sugerencia" /> : null}
         <span className="font-medium">{t('bandejaIa.tipos.candidato')}</span>

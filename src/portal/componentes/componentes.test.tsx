@@ -10,11 +10,23 @@ import type { Pagina } from '../datos/registros'
 import { Campo, SelectNativo } from './Campo'
 import { FiltroDeLista } from './FiltroDeLista'
 import { EstadoChip } from './EstadoChip'
-import { Cargando, Consulta, ErrorDeCarga, esIlegible, ExplicacionDeColumna, NoDisponible, NoEsDeSusProyectos, Restringido, ThConExplicacion } from './Estados'
-import { KpiCard } from './KpiCard'
+import {
+  Cargando,
+  Consulta,
+  ErrorDeCarga,
+  esIlegible,
+  Vacio,
+  ExplicacionDeColumna,
+  NoDisponible,
+  NoEsDeSusProyectos,
+  Restringido,
+  ThConExplicacion
+} from './Estados'
+import { KpiCard, RejillaDeKpi } from './KpiCard'
 import { TablaDeRegistros } from './Lista'
 import { NombreDelGrupo } from './NombreDeActor'
 import { Pasos } from './Pasos'
+import { Seccion } from './Seccion'
 
 let fetch: FetchMock | null = null
 beforeEach(() => localStorage.clear())
@@ -54,8 +66,25 @@ describe('estados comunes', () => {
     montar(<ErrorDeCarga error={new ErrorDeSgspe(412, 'x', [], 'corr-77')} alReintentar={reintentar} />)
     expect(await screen.findByText(/Otra persona cambió este registro/)).toBeInTheDocument()
     expect(screen.getByText('Código para soporte: corr-77')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    // una alerta (role="alert") con el código en Plex Mono y «Reintentar» dentro
+    const alerta = screen.getByRole('alert')
+    expect(within(alerta).getByText('Código para soporte: corr-77')).toHaveClass('font-sg-mono')
+    await userEvent.click(within(alerta).getByRole('button', { name: 'Reintentar' }))
     expect(reintentar).toHaveBeenCalledOnce()
+  })
+
+  it('el vacío es un panel alineado a la izquierda con su título y la acción', () => {
+    montar(
+      <Vacio titulo="Ningún compromiso coincide con estos filtros" accion={<button type="button">Quitar los filtros</button>}>
+        Hay 13 compromisos abiertos en el proyecto.
+      </Vacio>
+    )
+    const titulo = screen.getByText('Ningún compromiso coincide con estos filtros')
+    const panel = titulo.closest('[data-vacio]') as HTMLElement
+    expect(panel).toHaveClass('text-left', 'px-8', 'py-10', 'border', 'border-sg-border', 'bg-sg-surface')
+    expect(panel).not.toHaveClass('text-center')
+    expect(within(panel).getByText('Hay 13 compromisos abiertos en el proyecto.')).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'Quitar los filtros' })).toBeInTheDocument()
   })
 
   it('un 409 muestra el detail del dominio, no el código', async () => {
@@ -225,14 +254,22 @@ describe('FiltroDeLista', () => {
 })
 
 describe('Cargando', () => {
-  it('en una página es un esqueleto con la forma de la lista, que el lector de pantalla dice «Cargando…»', () => {
+  // design-system.md §5.3 «Esqueleto» y §6.5: la forma real (cabecera de tabla y filas de barras de 12 px), sin brillo ni
+  // animación, y el texto «Cargando…» a la vista y en role="status"
+  it('en una página es un esqueleto con la forma de una tabla, sin animación, y dice «Cargando…» en role="status"', () => {
     const { container } = montar(<Cargando />)
     const estado = screen.getByRole('status')
     expect(estado).toHaveAttribute('aria-busy', 'true')
-    expect(within(estado).getByText('Cargando…')).toHaveClass('sr-only')
-    expect(container.querySelectorAll('[data-esqueleto]').length).toBeGreaterThanOrEqual(3)
-    // sin animación para quien la reduce: solo se pulsa con motion-safe
-    expect(container.querySelector('[data-esqueleto]')?.className).toContain('motion-safe:animate-pulse')
+    expect(within(estado).getByText('Cargando…')).not.toHaveClass('sr-only')
+    expect(estado.querySelector('[data-esqueleto-cabecera]')).not.toBeNull()
+    expect(estado.querySelectorAll('[data-esqueleto-fila]').length).toBeGreaterThanOrEqual(3)
+    const barras = container.querySelectorAll('[data-esqueleto]')
+    expect(barras.length).toBeGreaterThanOrEqual(9)
+    for (const barra of barras) expect(barra).toHaveClass('bg-sg-surface-sunken', 'rounded-sg-sm')
+    // las barras del título miden 12 px
+    expect(container.querySelectorAll('[data-esqueleto].h-3').length).toBeGreaterThanOrEqual(3)
+    // ni brillo ni pulso
+    expect(container.innerHTML).not.toMatch(/animate-/)
   })
 
   it('compacto sigue siendo un texto en línea', () => {
@@ -455,6 +492,61 @@ describe('KpiCard', () => {
     expect(enTarjeta.querySelector('[data-esqueleto]')).toBeNull()
     expect(enPagina).toHaveTextContent('Cargando…')
     expect(enPagina.querySelector('[data-esqueleto]')).not.toBeNull()
+  })
+
+  // design-system.md §5.3 «KPI»: una fila de cifras en una sola caja con borde de 1 px y separadores, no tarjetas sueltas
+  it('en una rejilla, las cifras van en una sola caja y cada una es una celda sin caja propia', async () => {
+    montar(
+      <RejillaDeKpi etiqueta="Salud del proyecto">
+        <KpiCard titulo="Abiertas" indicador={{ code: 'KPI-GRV-01', label: 'x', available: true, value: 9 }} />
+        <KpiCard titulo="Vencidas" indicador={{ code: 'KPI-GRV-02', label: 'x', available: true, value: 2 }} tono="danger" />
+      </RejillaDeKpi>
+    )
+    const rejilla = screen.getByRole('group', { name: 'Salud del proyecto' })
+    expect(rejilla).toHaveClass('rounded-sg-md', 'border', 'border-sg-border', 'bg-sg-surface')
+    const abiertas = within(rejilla).getByRole('region', { name: 'Abiertas' })
+    const vencidas = within(rejilla).getByRole('region', { name: 'Vencidas' })
+    // las celdas se separan con 1 px y no repiten la caja
+    for (const celda of [abiertas, vencidas]) {
+      expect(celda).toHaveClass('border-r', 'border-b', 'border-sg-border')
+      expect(celda).not.toHaveClass('rounded-sg-md')
+    }
+    // el rótulo en 14 px 600 text-secondary y la cifra en kpi (30/36 800)
+    expect(within(abiertas).getByRole('heading', { name: 'Abiertas' })).toHaveClass('text-sm', 'font-semibold', 'text-sg-text-secondary')
+    expect(within(abiertas).getByText('9').closest('p')).toHaveClass('text-sg-kpi', 'text-sg-text')
+    // la cifra en danger solo si el rótulo ya dice que es lo vencido: lo decide la pantalla
+    expect(within(vencidas).getByText('2').closest('p')).toHaveClass('text-sg-kpi', 'text-sg-danger')
+  })
+
+  it('la rejilla dice la hora de cálculo al pie si la tiene, y sin ella no inventa una', () => {
+    const { unmount } = montar(
+      <RejillaDeKpi etiqueta="Cifras" calculadoEn="2026-11-09T12:40:00Z">
+        <KpiCard titulo="Uno" indicador={{ code: 'KPI-ENG-01', label: 'x', available: true, value: 1 }} />
+      </RejillaDeKpi>
+    )
+    expect(screen.getByText(/^Calculado el /)).toHaveTextContent('7:40')
+    unmount()
+    montar(
+      <RejillaDeKpi etiqueta="Cifras">
+        <KpiCard titulo="Uno" indicador={{ code: 'KPI-ENG-01', label: 'x', available: true, value: 1 }} />
+      </RejillaDeKpi>
+    )
+    expect(screen.queryByText(/Calculado/)).not.toBeInTheDocument()
+  })
+
+  it('sola es una caja de 1 px; dentro de una sección, sin caja; el código del indicador, si se pide, en la monoespaciada', async () => {
+    montar(
+      <>
+        <KpiCard titulo="Sola" codigo="KPI-GRV-07" indicador={{ code: 'KPI-GRV-07', label: 'x', available: true, value: 3 }} />
+        <Seccion titulo="Panel">
+          <KpiCard titulo="Dentro" indicador={{ code: 'KPI-GRV-01', label: 'x', available: true, value: 4 }} />
+        </Seccion>
+      </>
+    )
+    const sola = screen.getByRole('region', { name: 'Sola' })
+    expect(sola).toHaveClass('rounded-sg-md', 'border', 'border-sg-border', 'bg-sg-surface')
+    expect(within(sola).getByText('KPI-GRV-07')).toHaveClass('font-sg-mono', 'text-sg-text-muted')
+    expect(screen.getByRole('region', { name: 'Dentro' })).not.toHaveClass('border')
   })
 
   it('un módulo que no llegó dice que todavía no está disponible, sin la fase', async () => {

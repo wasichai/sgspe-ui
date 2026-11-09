@@ -1,5 +1,4 @@
 import { useContextFilters } from '../shell/context'
-import { cn } from '@wasichai/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { NS } from '../i18n'
@@ -24,7 +23,9 @@ export function VistasDelModulo({ modulo, actual, conTablero = true }: { modulo:
   if (!conTablero && actual === 'lista') return null
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
-    <nav aria-label={t('paginas.vistasDelModulo.titulo')} className="inline-flex rounded-sg-md border border-sg-border p-0.5 text-sm">
+    // como las pestañas de design-system.md §5.3: la fila con borde inferior de 2 px border; cada vista de 15 px 600
+    // text-secondary y la actual en primary-text 800 con un borde inferior de 4 px primary, montado sobre el de la fila
+    <nav aria-label={t('paginas.vistasDelModulo.titulo')} className="inline-flex border-b-2 border-sg-border">
       {(['lista', 'tablero'] as const).map((vista) => {
         const resto = RUTAS[modulo][vista]
         return (
@@ -32,10 +33,12 @@ export function VistasDelModulo({ modulo, actual, conTablero = true }: { modulo:
             key={vista}
             to={`${base}/${resto}`}
             aria-current={vista === actual ? 'page' : undefined}
-            className={cn(
-              'rounded-sg-sm px-2.5 py-1',
-              vista === actual ? 'bg-sg-primary-soft font-medium text-sg-primary-text' : 'text-sg-text-secondary hover:bg-sg-surface-hover'
-            )}
+            // sin cn: tailwind-merge confunde el tamaño text-sg-body con un color
+            className={`-mb-0.5 inline-flex min-h-8 items-center border-b-4 px-4 py-1.5 text-sg-body ${
+              vista === actual
+                ? 'border-sg-primary font-extrabold text-sg-primary-text'
+                : 'border-transparent font-semibold text-sg-text-secondary hover:text-sg-text'
+            }`}
           >
             {t(`paginas.vistasDelModulo.${vista}`)}
           </Link>

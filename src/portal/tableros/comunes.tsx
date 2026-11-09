@@ -12,6 +12,8 @@ import { sonDemasiadosRegistros, useCatalogoDeIndicadores, type FiltrosDeIndicad
 import { codigoDelError } from '../datos/http'
 import { texto, useDefinicion, useTodos } from '../datos/registros'
 import { Grafico } from '../graficos/Grafico'
+import { escapar, useVersionDeTema } from '../graficos/tema'
+import { colorDe } from '../mapa/colores'
 import { fechaPe, NS, numeroPe, periodoPe } from '../i18n'
 import { useContextFilters } from '../shell/context'
 import { rotuloDeFila, rotuloDeOpcion } from '../datos/opciones'
@@ -79,7 +81,7 @@ export function FiltrosDeTablero({
     fijar(siguiente, { replace: true })
   }
   return (
-    <div role="group" aria-label={t('tableros.filtros')} className="flex flex-wrap items-end gap-3 text-sm">
+    <div role="group" aria-label={t('tableros.filtros')} className="flex flex-wrap items-end gap-x-4 gap-y-3 text-sg-body-sm">
       {/* U-07: dd/mm/aaaa en los dos idiomas (CampoFecha), con el mismo valor AAAA-MM-DD en la URL que el <input type="date"> */}
       <CampoFecha
         etiqueta={t('tableros.desde')}
@@ -128,7 +130,7 @@ export function FiltrosDeTablero({
         </label>
       ) : null}
       {conResponsable && user ? (
-        <label className="flex items-center gap-2 pb-2">
+        <label className="flex min-h-8 items-center gap-2 pb-1 text-sg-body-sm">
           <input type="checkbox" checked={busqueda.get('owner') === user.id} onChange={(e) => cambiar('owner', e.target.checked ? user.id : '')} />
           {t('tableros.soloMios')}
         </label>
@@ -136,7 +138,10 @@ export function FiltrosDeTablero({
       <Button variant="secondary" size="sm" onClick={alActualizar}>
         {t('tableros.actualizar')}
       </Button>
-      {calculado ? <span className="text-sg-caption text-sg-text-muted">{t('tableros.calculado', { fecha: fechaPe(new Date(calculado)) })}</span> : null}
+      {/* la hora de cálculo del tablero (design-system.md §5.3 «KPI», préstamo de D), legible y no como nota al margen */}
+      {calculado ? (
+        <span className="pb-2 text-sg-body-sm text-sg-text-secondary">{t('tableros.calculado', { fecha: fechaPe(new Date(calculado)) })}</span>
+      ) : null}
       {/* dashboards.md §3.1: sin fechas, el mes en curso; las series, los 12 meses que terminan hoy */}
       {!busqueda.get('periodStart') && !busqueda.get('periodEnd') ? (
         <p className="basis-full text-sg-caption text-sg-text-muted">{t('tableros.periodoPorDefecto')}</p>
@@ -246,7 +251,8 @@ export function Barras({ titulo, filas }: { titulo: string; filas: { nombre: str
   const { t } = useTranslation(NS)
   const opciones = useMemo(
     () => ({
-      grid: { left: 160, right: 24, top: 8, bottom: 24 },
+      // a la derecha, la franja del valor rotulado de cada barra (§5.3 «Gráficos»)
+      grid: { left: 160, right: 56, top: 8, bottom: 24 },
       xAxis: { type: 'value' },
       yAxis: { type: 'category', data: filas.map((f) => f.nombre).reverse(), axisLabel: { width: 150, overflow: 'truncate' } },
       tooltip: {},
@@ -264,7 +270,10 @@ export function Barras({ titulo, filas }: { titulo: string; filas: { nombre: str
   )
 }
 
-// una serie mensual con la meta como línea de referencia en el mismo eje (dashboards.md §9.2)
+// una serie mensual con la meta en el mismo eje (dashboards.md §9.2): una línea discontinua de 2 px text (4 3) con su rótulo
+// «meta N» (design-system.md §5.3 «Gráficos»). si la meta es la misma todo el periodo, una línea de referencia; si cambia de
+// mes a mes, una línea escalonada rotulada al final. sin leyenda: la serie es la del título y la meta lleva su rótulo. el tooltip
+// dice el periodo en negrita y la cifra con su meta
 export function SerieConMeta({
   titulo,
   serie,
@@ -275,32 +284,64 @@ export function SerieConMeta({
   tipo: 'bar' | 'line'
 }) {
   const { t } = useTranslation(NS)
-  const conMeta = serie.some((s) => s.target !== undefined && s.target !== null)
-  const opciones = useMemo(
-    () => ({
-      grid: { left: 40, right: 16, top: 24, bottom: 32 },
+  const metas = serie.map((s) => s.target ?? null)
+  const conMeta = metas.some((m) => m !== null)
+  const metaFija = conMeta && metas.every((m) => m === metas[0]) ? metas[0] : null
+  const version = useVersionDeTema()
+  const opciones = useMemo(() => {
+    const rotulo = (valor: unknown) => t('tableros.metaDe', { valor: typeof valor === 'number' ? numeroPe(valor) : '—' })
+    const trazo = { color: colorDe('--sg-text'), type: [4, 3], width: 2 }
+    const texto = { color: colorDe('--sg-text'), fontWeight: 700, fontSize: 13 }
+    const valor = (v: number | null | undefined) => (v === null || v === undefined ? '—' : numeroPe(v))
+    return {
+      grid: { left: 40, right: conMeta ? 72 : 16, top: 24, bottom: 32 },
       xAxis: { type: 'category', data: serie.map((s) => periodoPe(s.period)) },
       yAxis: { type: 'value' },
-      tooltip: { trigger: 'axis' },
-      legend: conMeta ? {} : undefined,
+      tooltip: {
+        trigger: 'axis',
+        formatter: (parametros: { dataIndex: number; axisValueLabel?: string; marker?: string }[]) => {
+          const p = parametros[0]
+          if (!p) return ''
+          const punto = serie[p.dataIndex]
+          const meta = conMeta ? ` · ${escapar(rotulo(punto?.target ?? null))}` : ''
+          return `<strong>${escapar(String(p.axisValueLabel ?? ''))}</strong><br>${p.marker ?? ''}${escapar(t('tableros.valor'))}: ${valor(punto?.value)}${meta}`
+        }
+      },
       series: [
-        { type: tipo, name: t('tableros.valor'), data: serie.map((s) => s.value) },
-        ...(conMeta
+        {
+          type: tipo,
+          name: t('tableros.valor'),
+          data: serie.map((s) => s.value),
+          ...(metaFija !== null
+            ? {
+                markLine: {
+                  silent: true,
+                  symbol: 'none',
+                  lineStyle: trazo,
+                  label: { position: 'insideEndTop', ...texto, formatter: () => rotulo(metaFija) },
+                  data: [{ yAxis: metaFija }]
+                }
+              }
+            : {})
+        },
+        ...(conMeta && metaFija === null
           ? [
               {
                 type: 'line',
                 name: t('tableros.meta'),
                 step: 'middle',
                 symbol: 'none',
-                lineStyle: { type: 'dashed' },
-                data: serie.map((s) => s.target ?? null)
+                color: colorDe('--sg-text'),
+                lineStyle: trazo,
+                endLabel: { show: true, ...texto, formatter: (p: { value?: unknown }) => rotulo(p.value) },
+                data: metas
               }
             ]
           : [])
       ]
-    }),
-    [JSON.stringify(serie), tipo, conMeta, t]
-  )
+    }
+    // version: los colores resueltos de los tokens se recalculan al cambiar de tema
+  }, [JSON.stringify(serie), tipo, conMeta, metaFija, t, version])
   return (
     <Grafico
       etiqueta={titulo}

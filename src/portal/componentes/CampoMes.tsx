@@ -54,8 +54,8 @@ export function CampoMes({ valor, alCambiar, etiqueta, min, max, deshabilitado, 
     if (nuevo !== valor) alCambiar(nuevo)
   }
   return (
-    <fieldset className="m-0 min-w-0 space-y-1 border-0 p-0" disabled={deshabilitado}>
-      <legend className={claseDeEtiqueta ?? 'block text-sg-body-sm font-medium text-sg-text'}>{etiqueta}</legend>
+    <fieldset className="m-0 flex min-w-0 flex-col gap-1.5 border-0 p-0" disabled={deshabilitado}>
+      <legend className={claseDeEtiqueta ?? 'block text-sg-label font-bold text-sg-text'}>{etiqueta}</legend>
       <div className="flex gap-2">
         <select aria-label={t('comun.campoMes.mes')} className={cn(CONTROL, 'w-36')} value={mes} onChange={(e) => cambiar(anio, e.target.value)}>
           {MESES.map((m) => (

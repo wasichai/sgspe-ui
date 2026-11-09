@@ -7,7 +7,6 @@ import { Alert, Button } from '@wasichai/ui'
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
-import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { useSiguientePaso } from '../contexto/Rastro'
 import { BarraDeFiltros } from '../componentes/BarraDeFiltros'
 import { FiltroDeLista } from '../componentes/FiltroDeLista'
@@ -15,12 +14,12 @@ import { SelectorDeVista } from '../componentes/SelectorDeVista'
 import { TablaPriorizada, type ColumnaPriorizada, type OrdenDeTabla } from '../componentes/TablaPriorizada'
 import { EstadoChip } from '../componentes/EstadoChip'
 import { Cargando, ErrorDeCarga, Vacio } from '../componentes/Estados'
-import { KpiCard } from '../componentes/KpiCard'
+import { KpiCard, RejillaDeKpi } from '../componentes/KpiCard'
 import { FalloDeLectura } from '../componentes/LecturaConEstados'
 import { BotonCrear } from '../componentes/BotonCrear'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { ordenEnUrl, PaginacionDelServidor, useParametrosDeLista, VacioDeLista } from '../componentes/Lista'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { NotaDeConfidenciales } from '../componentes/NotaDeConfidenciales'
 import { SituacionDePlazo } from '../componentes/SituacionDePlazo'
 import { useProyectos } from '../contexto/proyectos'
@@ -32,6 +31,7 @@ import { useContextFilters } from '../shell/context'
 import { opcion, rotuloDeOpcion } from '../datos/opciones'
 import { ProyectoEnLista } from '../componentes/ProyectoEnLista'
 import { Persona } from '../componentes/Persona'
+import { Nivel } from '../componentes/Nivel'
 
 // S35 · lista unificada de QCS (screens.md §8): ¿qué QCS vence primero y quién la tiene? tres objetos con ciclos distintos (WF-E1,
 // WF-E2, WF-E3) en una sola cola para atender por plazo, sin mezclar sus estados: cada fila lleva el estado de su workflow y el plazo
@@ -77,7 +77,6 @@ export function AtencionPage() {
   const lista = useParametrosDeLista('atencion')
   // Enter en una fila abre su ficha y Espacio su vista previa (05-especificacion §1.6), como el enlace y el ojo de la fila
   const navegar = useNavigate()
-  const previa = useRutaDeVistaPrevia()
   const paso = useSiguientePaso()
   const telefono = useEsTelefono()
   const legibles = OBJETOS_DE_QCS.filter((o) => can(o, 'READ'))
@@ -143,7 +142,7 @@ export function AtencionPage() {
   const tarjeta = (
     titulo: string,
     consulta: { data?: Indicador; error: unknown; isPending: boolean; refetch: () => unknown },
-    textos: Pick<Parameters<typeof KpiCard>[0], 'cifra' | 'detalle'>
+    textos: Pick<Parameters<typeof KpiCard>[0], 'cifra' | 'detalle' | 'tono'>
   ) => (
     <KpiCard
       titulo={titulo}
@@ -167,7 +166,7 @@ export function AtencionPage() {
   // opcional, quien la plantea. una columna no esencial que dice lo mismo en todo el grupo sale a una nota encima, y en «Mis
   // QCS» el responsable es siempre quien mira: no se dibuja
   const columnas: ColumnaPriorizada[] = [
-    { id: 'codigo', encabezado: t('atencion.columnas.codigo'), prioridad: 'esencial', claseDeCelda: 'min-w-56 text-sm', ordenable: true },
+    { id: 'codigo', encabezado: t('atencion.columnas.codigo'), prioridad: 'esencial', titulo: true, ordenable: true },
     ...(proyecto ? [] : [{ id: 'proyecto', encabezado: t('atencion.columnas.proyecto'), prioridad: 'esencial' as const, claseDeCelda: 'text-sm' }]),
     { id: 'canal', encabezado: t('atencion.columnas.canal'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
     { id: 'categoria', encabezado: t('atencion.columnas.categoria'), prioridad: 'secundaria', claseDeCelda: 'text-sm' },
@@ -203,7 +202,7 @@ export function AtencionPage() {
       case 'categoria':
         return opcion(registro, 'category') || '—'
       case 'severidad':
-        return opcion(registro, 'severity') || '—'
+        return <Nivel valor={texto(registro, 'severity')} nombre={t('atencion.columnas.severidad')} />
       case 'estado':
         return <EstadoChip objeto={objeto} estado={registro.state} />
       case 'plazo':
@@ -232,7 +231,7 @@ export function AtencionPage() {
     }
   }
   return (
-    <section className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="section">
       <EncabezadoDePagina
         vistas={<VistasDelModulo modulo="attention" actual="lista" />}
         titulo={t('atencion.titulo')}
@@ -248,11 +247,13 @@ export function AtencionPage() {
       />
       <section aria-label={t('atencion.indicadores')} className="space-y-2">
         {fallanTodos ? <ErrorDeCarga error={abiertas.error} alReintentar={reintentarTodos} /> : null}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <RejillaDeKpi>
           {tarjeta(t('atencion.tarjetas.abiertas'), abiertas, { detalle: () => t('atencion.tarjetas.abiertasDetalle') })}
-          {tarjeta(t('atencion.tarjetas.vencidas'), vencidas, { detalle: () => t('atencion.tarjetas.vencidasDetalle') })}
+          {/* la cifra en danger o warning: el rótulo ya dice que es lo vencido o lo por vencer (design-system.md §5.3) */}
+          {tarjeta(t('atencion.tarjetas.vencidas'), vencidas, { detalle: () => t('atencion.tarjetas.vencidasDetalle'), tono: 'danger' })}
           <KpiCard
             titulo={t('atencion.tarjetas.porVencer')}
+            tono="warning"
             detalle={() => t('atencion.tarjetas.porVencerDetalle')}
             cargando={legibles.length > 0 && cargando}
             indicador={
@@ -266,7 +267,7 @@ export function AtencionPage() {
             error={fallida?.error}
           />
           {tarjeta(t('atencion.tarjetas.absueltas'), absueltas, respondidas)}
-        </div>
+        </RejillaDeKpi>
         <NotaDeConfidenciales oculta={conConfidencialesOcultas} />
       </section>
       {/* la barra de filtros (P-02; hallazgos U-18 y U-22): las vistas en una sola fila con su conteo, la búsqueda, los tres filtros
@@ -374,7 +375,7 @@ export function AtencionPage() {
                       const ruta = rutaDeQcs(texto(f.registro, 'project'), f.objeto, f.registro.id)
                       navegar(ruta, { state: paso(t('atencion.titulo'), ruta) })
                     }}
-                    alPrevisualizar={(f) => navegar(previa(f.objeto, f.registro.id))}
+                    previaDe={(f) => ({ objeto: f.objeto, id: f.registro.id })}
                   />
                 )}
               </section>
@@ -383,7 +384,7 @@ export function AtencionPage() {
           <PaginacionDelServidor datos={cola.data} alPagina={(p) => lista.cambiar({ page: String(p) })} />
         </>
       )}
-    </section>
+    </ContenedorDePagina>
   )
 }
 

@@ -135,7 +135,8 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
   }
 
   return (
-    <Campo etiqueta={etiqueta} error={propio ?? error} ayuda={ayuda} id={id}>
+    // design-system.md §5.3: el formato va en la ayuda («Por ejemplo, 15/12/2026») si la pantalla no da la suya
+    <Campo etiqueta={etiqueta} error={propio ?? error} ayuda={ayuda ?? t(conHora ? 'comun.campoFecha.ejemploConHora' : 'comun.campoFecha.ejemplo')} id={id}>
       {(p) => (
         <div
           ref={contenedor}
@@ -145,20 +146,24 @@ export function CampoFecha({ valor, alCambiar, etiqueta, conHora = false, id, re
             if (abierto && e.relatedTarget && !contenedor.current?.contains(e.relatedTarget)) setAbierto(false)
           }}
         >
-          <Input
-            {...p}
-            className="w-36"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder={t('comun.campoFecha.marcador')}
-            maxLength={10}
-            aria-required={requerido || undefined}
-            aria-invalid={(p['aria-invalid'] && motivo !== 'formatoHora') || invalido ? true : undefined}
-            disabled={deshabilitado}
-            value={textoDia}
-            onChange={(e) => cambiar(e.target.value, textoHora)}
-            onBlur={salirDelDia}
-          />
+          {/* el ícono del calendario a la izquierda del día (design-system.md §5.3), solo de adorno: el botón abre el calendario */}
+          <span className="relative">
+            <CalendarDays aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sg-text-secondary" />
+            <Input
+              {...p}
+              className="w-40 pl-9"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder={t('comun.campoFecha.marcador')}
+              maxLength={10}
+              aria-required={requerido || undefined}
+              aria-invalid={(p['aria-invalid'] && motivo !== 'formatoHora') || invalido ? true : undefined}
+              disabled={deshabilitado}
+              value={textoDia}
+              onChange={(e) => cambiar(e.target.value, textoHora)}
+              onBlur={salirDelDia}
+            />
+          </span>
           <Button
             ref={boton}
             type="button"

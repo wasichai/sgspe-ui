@@ -22,17 +22,17 @@ export function EstadoSinAcceso({ que, aQuien, volver }: PropsDeEstadoSinAcceso)
   const { t } = useTranslation(NS)
   const titulo = useId()
   return (
-    <section aria-labelledby={titulo} className="mx-auto max-w-xl rounded-sg-lg border border-sg-border bg-sg-surface p-6 shadow-sg-sm">
+    <section aria-labelledby={titulo} className="mx-auto max-w-xl rounded-sg-md border-2 border-sg-border-strong bg-sg-surface p-6">
       <div className="flex items-start gap-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-sg-md bg-sg-surface-sunken text-sg-text-muted">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-sg-md bg-sg-surface-sunken text-sg-text-secondary">
           <Lock aria-hidden className="size-5" />
         </span>
         <div className="min-w-0 space-y-2">
-          <h1 id={titulo} className="text-sg-h2 font-semibold text-sg-text">
+          <h1 id={titulo} className="text-sg-h2 text-sg-text">
             {t('comun.sinAcceso.titulo', { que })}
           </h1>
-          <p className="text-sm text-sg-text-secondary">{t('comun.sinAcceso.explicacion')}</p>
-          <p className="text-sm text-sg-text-secondary">{t('comun.sinAcceso.aQuien', { aQuien: aQuien ?? t('comun.sinAcceso.administracion') })}</p>
+          <p className="text-sg-body text-sg-text-secondary">{t('comun.sinAcceso.explicacion')}</p>
+          <p className="text-sg-body text-sg-text-secondary">{t('comun.sinAcceso.aQuien', { aQuien: aQuien ?? t('comun.sinAcceso.administracion') })}</p>
           <div className="pt-2">
             <Button asChild variant="secondary">
               <Link to={volver.a}>{volver.etiqueta}</Link>

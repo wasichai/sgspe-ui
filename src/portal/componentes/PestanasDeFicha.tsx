@@ -1,4 +1,3 @@
-import { cn } from '@wasichai/ui'
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useSearchParams } from 'react-router'
@@ -60,16 +59,18 @@ export function PestanasDeFicha({ etiqueta, pestanas }: { etiqueta: string; pest
               tabIndex={elegida ? 0 : -1}
               onClick={() => elegir(p.id)}
               onKeyDown={(e) => alTeclear(e, i)}
-              className={cn(
-                'flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm',
-                elegida ? 'border-sg-primary font-medium text-sg-primary-text' : 'border-transparent text-sg-text-secondary hover:text-sg-text'
-              )}
+              // la pestaña de design-system.md §5.3: 10 × 16 px, 15 px 600 text-secondary; la elegida en primary-text 800 con un
+              // borde inferior de 4 px primary (la línea de la fila la pone PestanasDesplazables). sin cn: tailwind-merge confunde
+              // el tamaño text-sg-body con un color
+              className={`flex items-center gap-1.5 whitespace-nowrap border-b-4 px-4 py-2.5 text-sg-body ${
+                elegida ? 'border-sg-primary font-extrabold text-sg-primary-text' : 'border-transparent font-semibold text-sg-text-secondary hover:text-sg-text'
+              }`}
             >
               {p.etiqueta}
               {/* el conteo se ve y va en la descripción: el nombre de la pestaña no cambia con él (como VistasGuardadas) */}
               {p.conteo != null ? (
                 <>
-                  <span aria-hidden className="rounded-full bg-sg-surface-sunken px-1.5 text-sg-caption tabular-nums text-sg-text-muted">
+                  <span aria-hidden className="rounded-sg-sm border border-sg-border px-1.5 text-sg-caption font-bold tabular-nums text-sg-text-secondary">
                     {p.conteo}
                   </span>
                   <span id={`${id}-conteo-${p.id}`} hidden>

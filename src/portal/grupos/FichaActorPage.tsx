@@ -1,5 +1,5 @@
 import { EnlaceConRastro } from '../contexto/Rastro'
-import { EncabezadoDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useQueries, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError, useAuth } from '@wasichai/core'
 import { Button, Table, Td, Th } from '@wasichai/ui'
@@ -66,7 +66,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
   const comunidad = useRegistro('community', tipo === 'organization' ? atributo<string>(actor, 'community') : undefined)
   const nombre = nombreDe(actor, tipo, t('comun.personaRegistrada'))
   return (
-    <article className="mx-auto max-w-[1440px] space-y-4">
+    <ContenedorDePagina elemento="article">
       <EncabezadoDePagina
         ficha
         antetitulo={tipo === 'organization' ? opcion(actor, 'organization_type') || t('grupos.actor.organizacion') : t('grupos.actor.persona')}
@@ -178,7 +178,7 @@ function Ficha({ actor, tipo }: { actor: Registro; tipo: Tipo }) {
           alCancelar={() => setAgregandoCargo(false)}
         />
       </Drawer>
-    </article>
+    </ContenedorDePagina>
   )
 }
 

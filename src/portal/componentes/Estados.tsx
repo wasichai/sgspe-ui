@@ -1,7 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query'
 import { ApiError } from '@wasichai/core'
 import { Alert, Button, cn, Th } from '@wasichai/ui'
-import { CircleHelp, Info, Lock } from 'lucide-react'
+import { CircleHelp, Info, Lock, RotateCw } from 'lucide-react'
 import { type ReactNode, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { codigoDelError } from '../datos/http'
@@ -12,8 +12,13 @@ import { correlacionDe, useMensajeDeError } from './errores'
 // restringido y cifra no disponible (nunca vacío ni cero, RQ-DSH-032)
 
 // compacto: en línea (un <span>) y como texto, para usarlo dentro de una tarjeta pequeña o de un párrafo, como el rótulo que
-// carga de RegistroVinculado. sin compacto, un esqueleto con la forma de una lista (design-system.md §6.5): unas barras que
-// pulsan solo para quien no reduce el movimiento, y «Cargando…» para el lector de pantalla
+// carga de RegistroVinculado. sin compacto, el esqueleto de design-system.md §5.3 y §6.5, el único patrón de carga de una zona
+// de resultados: la forma real de una tabla (la cabecera y unas filas con el código, el título, los metadatos, el chip y la
+// cifra en barras surface-sunken de 12 px, 9 px la del código, radio 3), sin brillo ni animación, y «Cargando…» a la vista y
+// en role="status"
+const FILAS_DEL_ESQUELETO = ['w-3/4', 'w-2/3', 'w-4/5', 'w-3/5']
+const BARRA = 'rounded-sg-sm bg-sg-surface-sunken'
+
 export function Cargando({ etiqueta, compacto }: { etiqueta?: string; compacto?: boolean }) {
   const { t } = useTranslation(NS)
   const texto = etiqueta ?? t('comun.cargando')
@@ -24,11 +29,22 @@ export function Cargando({ etiqueta, compacto }: { etiqueta?: string; compacto?:
       </span>
     )
   return (
-    <div role="status" aria-busy="true" className="space-y-3 py-4">
-      <span className="sr-only">{texto}</span>
-      {['w-1/3', 'w-full', 'w-11/12', 'w-4/5'].map((ancho, i) => (
-        <div key={i} data-esqueleto aria-hidden className={cn('h-4 rounded-sg-sm bg-sg-surface-sunken motion-safe:animate-pulse', ancho, i === 0 && 'h-6')} />
-      ))}
+    <div role="status" aria-busy="true" className="space-y-2">
+      <p className="text-sg-body-sm text-sg-text-secondary">{texto}</p>
+      <div aria-hidden className="overflow-hidden rounded-sg-md border border-sg-border bg-sg-surface">
+        <div data-esqueleto-cabecera className="h-sg-table-head border-b-2 border-sg-border-strong bg-sg-surface-sunken" />
+        {FILAS_DEL_ESQUELETO.map((ancho, i) => (
+          <div key={i} data-esqueleto-fila className="flex items-center gap-4 border-b border-sg-border-subtle px-3 py-2.5 last:border-b-0">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div data-esqueleto className={cn(BARRA, 'h-2.25 w-16')} />
+              <div data-esqueleto className={cn(BARRA, 'h-3', ancho)} />
+              <div data-esqueleto className={cn(BARRA, 'h-3 w-1/3')} />
+            </div>
+            <div data-esqueleto className={cn(BARRA, 'hidden h-5 w-28 sm:block')} />
+            <div data-esqueleto className={cn(BARRA, 'h-3 w-14')} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -38,11 +54,14 @@ export function ErrorDeCarga({ error, alReintentar }: { error: unknown; alReinte
   const mensaje = useMensajeDeError()
   const correlacion = correlacionDe(error)
   return (
+    // la alerta de peligro de design-system.md §5.3 (la caja, el borde de 2 px y el ícono los pone la capa de componentes): qué
+    // falló, el código de soporte en Plex Mono si el error lo trae (X-Correlation-Id) y «Reintentar»
     <Alert tone="danger" title={t('comun.errorDeCarga')}>
-      <p>{mensaje(error)}</p>
-      {correlacion ? <p className="font-sg-mono text-sg-caption">{t('comun.correlacion', { id: correlacion })}</p> : null}
+      <span className="block">{mensaje(error)}</span>
+      {correlacion ? <span className="block font-sg-mono text-sg-caption">{t('comun.correlacion', { id: correlacion })}</span> : null}
       {alReintentar ? (
         <Button variant="secondary" size="sm" className="mt-2" onClick={alReintentar}>
+          <RotateCw aria-hidden className="size-4" />
           {t('comun.reintentar')}
         </Button>
       ) : null}
@@ -50,11 +69,14 @@ export function ErrorDeCarga({ error, alReintentar }: { error: unknown; alReinte
   )
 }
 
-export function Vacio({ titulo, children }: { titulo: string; children?: ReactNode }) {
+// el vacío de design-system.md §5.3: un panel con relleno de 40 × 32 px, alineado a la izquierda, con el título, lo que sí hay
+// y la acción que saca del vacío («Quitar los filtros», «Registrar…»)
+export function Vacio({ titulo, accion, children }: { titulo: string; accion?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="rounded-sg-lg border border-dashed border-sg-border p-8 text-center">
-      <p className="text-sg-h3 font-semibold text-sg-text">{titulo}</p>
-      {children ? <div className="mt-2 text-sm text-sg-text-secondary">{children}</div> : null}
+    <div data-vacio className="space-y-2 rounded-sg-md border border-sg-border bg-sg-surface px-8 py-10 text-left">
+      <p className="text-sg-h3 text-sg-text">{titulo}</p>
+      {children ? <div className="max-w-prose text-sg-body text-sg-text-secondary">{children}</div> : null}
+      {accion ? <div className="flex flex-wrap items-center gap-3 pt-2">{accion}</div> : null}
     </div>
   )
 }

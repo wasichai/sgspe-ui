@@ -35,6 +35,26 @@ export function nivelDePuntaje(puntaje: number, umbrales: Umbrales = UMBRALES_PO
   return 'BAJO'
 }
 
-export const TONO_DE_NIVEL: Record<Nivel, Tono> = { BAJO: 'success', MEDIO: 'info', ALTO: 'warning', CRITICO: 'danger' }
+// el tono de un nivel donde hace falta uno de estado: MEDIO es ámbar (design-system.md §4.3), nunca el azul de información
+export const TONO_DE_NIVEL: Record<Nivel, Tono> = { BAJO: 'success', MEDIO: 'warning', ALTO: 'danger', CRITICO: 'danger' }
+
+// la celda del mapa de calor de probabilidad por impacto: la zona de su nivel (--sg-zone-*), no un tono de estado
+export const CLASE_DE_ZONA: Record<Nivel, string> = { BAJO: 'bg-sg-zone-1', MEDIO: 'bg-sg-zone-2', ALTO: 'bg-sg-zone-3', CRITICO: 'bg-sg-zone-4' }
+
+// el ordinal de 1 a 4 de un nivel de riesgo o de severidad de alerta (BAJO…CRITICO), de una severidad de queja (BAJA…CRITICA) o de
+// una prioridad (BAJA…MUY ALTA): las barras de la insignia (componentes/Nivel.tsx). otro valor no tiene nivel
+const ORDINALES: Record<string, 1 | 2 | 3 | 4> = {
+  BAJO: 1,
+  BAJA: 1,
+  MEDIO: 2,
+  MEDIA: 2,
+  ALTO: 3,
+  ALTA: 3,
+  CRITICO: 4,
+  CRITICA: 4,
+  'MUY ALTA': 4
+}
+export const ordinalDeNivel = (valor: unknown): 1 | 2 | 3 | 4 | undefined =>
+  typeof valor === 'string' && Object.hasOwn(ORDINALES, valor) ? ORDINALES[valor] : undefined
 
 export const esNivel = (valor: unknown): valor is Nivel => typeof valor === 'string' && (NIVELES as readonly string[]).includes(valor)
