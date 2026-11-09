@@ -91,9 +91,12 @@ describe('S62 · tablero de riesgos', () => {
     red = espiarRed()
     abrir()
     const mapa = await screen.findByRole('table', { name: 'Riesgos por probabilidad e impacto (Vigente)' })
-    const fila4 = within(mapa).getByRole('row', { name: /^4/ })
+    // la misma matriz coloreada del registro (MatrizDeRiesgo): la cifra a la vista y el nivel dicho con texto, no solo con la zona
+    const fila4 = within(mapa).getByRole('row', { name: /^Probabilidad 4/ })
     expect(within(fila4).getAllByRole('cell')[3]).toHaveTextContent('2')
-    expect(within(fila4).getAllByRole('cell')[3]).toHaveTextContent('Crítico')
+    expect(within(within(fila4).getAllByRole('cell')[3]).getByRole('img', { name: 'Probabilidad 4, impacto 4: 2 riesgos, nivel Crítico' })).toHaveClass(
+      'bg-sg-zone-4'
+    )
     expect(screen.getByText('Sin evaluar: 4 riesgos todavía no tienen revisión y no entran al mapa.')).toBeInTheDocument()
     const zonas = screen
       .getAllByRole('region')
@@ -116,7 +119,12 @@ describe('S62 · tablero de riesgos', () => {
     ])
     expect(screen.getByRole('region', { name: 'Riesgos activos' })).toHaveTextContent('7')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
-    expect(within(screen.getByRole('navigation', { name: 'Vistas del módulo' })).getByRole('link', { name: 'Lista' })).toHaveAttribute(
+    // el tablero es una página más de Riesgos, en sus pestañas
+    expect(within(screen.getByRole('navigation', { name: 'Páginas de Riesgos' })).getByRole('link', { name: 'Tablero' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    expect(within(screen.getByRole('navigation', { name: 'Páginas de Riesgos' })).getByRole('link', { name: 'Registro y matriz' })).toHaveAttribute(
       'href',
       '/projects/p1/risks'
     )
@@ -129,8 +137,8 @@ describe('S62 · tablero de riesgos', () => {
     await screen.findByRole('table', { name: 'Riesgos por probabilidad e impacto (Vigente)' })
     await userEvent.click(screen.getByRole('button', { name: 'Residual' }))
     const mapa = screen.getByRole('table', { name: 'Riesgos por probabilidad e impacto (Residual)' })
-    expect(within(within(mapa).getByRole('row', { name: /^4/ })).getAllByRole('cell')[3]).toHaveTextContent('0')
-    expect(within(within(mapa).getByRole('row', { name: /^2/ })).getAllByRole('cell')[1]).toHaveTextContent('1')
+    expect(within(within(mapa).getByRole('row', { name: /^Probabilidad 4/ })).getAllByRole('cell')[3]).toHaveTextContent('0')
+    expect(within(within(mapa).getByRole('row', { name: /^Probabilidad 2/ })).getAllByRole('cell')[1]).toHaveTextContent('1')
     expect(screen.getByRole('button', { name: 'Residual' })).toHaveAttribute('aria-pressed', 'true')
   })
 

@@ -1,5 +1,6 @@
 import { cn } from '@wasichai/ui'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import { CLASE_DE_TONO, type Tono } from '../componentes/apariencias'
@@ -67,12 +68,9 @@ export function MencionesPage() {
     { id: 'enlace', encabezado: t('registrosDeAlerta.menciones.columnas.enlace'), celda: (r: Registro) => <EnlaceDeMencion url={r.attributes.url} /> }
   ]
   return (
-    <section className="mx-auto max-w-[1200px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('registrosDeAlerta.menciones.titulo')}</h1>
-        <PaginasDeRiesgos actual="mentions" />
-      </div>
-      <p className="text-sm text-sg-text-secondary">{t('registrosDeAlerta.menciones.ayuda')}</p>
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina titulo={t('registrosDeAlerta.menciones.titulo')} descripcion={t('registrosDeAlerta.menciones.ayuda')} />
+      <PaginasDeRiesgos actual="mentions" />
       <RegistrosSimples
         objeto="media_mention"
         titulo={t('registrosDeAlerta.menciones.lista')}
@@ -91,6 +89,6 @@ export function MencionesPage() {
           <AccionesDeIa objeto="media_mention" registro={r} proyecto={projectId} rotulo={texto(r, 'headline')} casos={['AI-08']} contextual={false} />
         )}
       />
-    </section>
+    </ContenedorDePagina>
   )
 }

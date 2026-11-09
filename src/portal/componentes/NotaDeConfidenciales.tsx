@@ -1,4 +1,4 @@
-import { Info } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { NS } from '../i18n'
 
@@ -10,7 +10,7 @@ export function NotaDeConfidenciales({ oculta }: { oculta: boolean | null | unde
   if (oculta !== true) return null
   return (
     <p role="note" className="flex items-start gap-1 text-sg-caption text-sg-text-muted">
-      <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+      <Lock aria-hidden className="mt-0.5 size-3.5 shrink-0" />
       {t('comun.confidencialesOcultas')}
     </p>
   )

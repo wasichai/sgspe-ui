@@ -3,10 +3,11 @@ import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad, type SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
-import { plazoQueCorre } from '../datos/atencion'
+import { CAMINO_DE_QCS, COMPROBAR_DE_QCS, plazoQueCorre } from '../datos/atencion'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
@@ -38,20 +39,8 @@ import { Dia } from '../componentes/Dia'
 // (resolve_high_severity, decisión 8). la reclasificación es su comando; el cargo firmado se sube como evidencia FORMULARIO (ASM-098);
 // «Crear compromiso desde esta queja» abre S30 con origin_grievance. un 404 puede ser una queja confidencial que la cuenta no lee: el
 // texto no dice cuál de las dos cosas es
-const CAMINO = ['received', 'acknowledged', 'in_assessment', 'in_action', 'resolved', 'verified', 'closed']
-const COMPROBAR = [
-  'investigate',
-  'start_action',
-  'start_action_after_investigation',
-  'resolve',
-  'resolve_high_severity',
-  'reopen',
-  'close_resolved',
-  'close',
-  'reject_received',
-  'reject_acknowledged',
-  'reject_in_assessment'
-]
+const CAMINO = CAMINO_DE_QCS.grievance
+const COMPROBAR = COMPROBAR_DE_QCS.grievance
 const EDITABLES = [
   'category',
   'severity',
@@ -114,7 +103,7 @@ function Ficha({ queja }: { queja: Registro }) {
   const plazo = plazoQueCorre('grievance', queja)
   const porCodigo = t('fichaQueja.titulo', { codigo: texto(queja, 'code') })
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t('comun.qcs.grievance'), texto(queja, 'code'), opcion(queja, 'channel'), opcion(queja, 'category')].filter(Boolean).join(' · ')}
         titulo={tituloDeQcs(queja, porCodigo)}
@@ -262,7 +251,7 @@ function Ficha({ queja }: { queja: Registro }) {
       </div>
       <EditarQcs objeto="grievance" qcs={queja} campos={EDITABLES} abierto={editando} alCerrar={() => setEditando(false)} marcaConfidencial />
       {reclasificando ? <DialogoDeReclasificacion objeto="grievance" registro={queja} alCerrar={() => setReclasificando(false)} /> : null}
-    </article>
+    </ContenedorDePagina>
   )
 }
 

@@ -30,7 +30,6 @@ export const ES_NUEVA_QCS = {
     quePasara: 'Qué pasará al registrar'
   },
   revision: {
-    resumen: 'Resumen',
     quien: 'Quién la plantea'
   },
   personaRestringida: 'Dato restringido: solo lo leen quienes atienden quejas, consultas y solicitudes.',
@@ -108,7 +107,6 @@ export const EN_NUEVA_QCS: typeof ES_NUEVA_QCS = {
     quePasara: 'What happens on recording'
   },
   revision: {
-    resumen: 'Summary',
     quien: 'Who raises it'
   },
   personaRestringida: 'Restricted data: only those who handle grievances, inquiries and requests read it.',

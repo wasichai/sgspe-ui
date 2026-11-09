@@ -21,6 +21,8 @@ import { rotuloDeOpcion } from '../datos/opciones'
 import { atributo, campoDe, puedeLeer, texto, useCrear, useDefinicion, useRegistro, useRelacionados, useTodos, type Registro } from '../datos/registros'
 import { NS } from '../i18n'
 import { Seccion } from '../componentes/Seccion'
+import { RevisionDeRespuestas } from '../componentes/RevisionDeRespuestas'
+import { ContenedorDePagina } from '../componentes/Pagina'
 import { conHecho } from '../componentes/AvisoDeExito'
 import { AvisoDeBorrador } from '../componentes/AvisoDeBorrador'
 import { leerBorrador, useBorradorLocal, useClaveDelBorrador } from '../datos/borrador'
@@ -332,226 +334,233 @@ function Formulario({ tipos }: { tipos: ObjetoDeQcs[] }) {
   const nombreDelGrupo = (grupos.data ?? []).find((g) => g.id === grupo)
   const horaDeRecepcion = /T(\d{2}:\d{2})/.exec(valores.received_at)?.[1] ?? ''
   return (
-    <div className="mx-auto grid max-w-[1440px] gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <FormularioPorPasos
-        titulo={t('nuevaQcs.titulo')}
-        descripcion={t('nuevaQcs.ayuda')}
-        pasos={PASOS.map((p) => t(`nuevaQcs.pasos.${p}`))}
-        actual={actual}
-        visitados={visitados}
-        alIr={ir}
-        alEnviar={(e) => {
-          e.preventDefault()
-          if (paso === 'revision') registrar()
-          else ir(actual + 1)
-        }}
-        alAnterior={() => setActual(actual - 1)}
-        anteriorDeshabilitado={actual === 0 || crear.isPending}
-        alCancelar={() => navegar(volverA)}
-        ocupado={crear.isPending}
-        conCambios={conCambios}
-        conBorrador={!confidencial}
-        salidaPermitida={salida}
-        avisos={avisoDeBorrador && recuperado ? <AvisoDeBorrador guardado={recuperado.guardado} alDescartar={descartar} /> : null}
-        acciones={
-          paso === 'revision' ? (
-            <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>
-              {crear.isPending ? t('nuevaQcs.registrando') : t(`nuevaQcs.registrar.${tipo}`)}
-            </Button>
-          ) : undefined
-        }
-      >
-        {paso === 'que' ? (
-          <>
-            <fieldset className="space-y-2">
-              <legend className="mb-1 font-medium">{t('nuevaQcs.tipo')}</legend>
-              {tipos.map((o) => (
-                <label key={o} className="flex items-start gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="tipo"
-                    className="mt-1"
-                    checked={tipo === o}
-                    onChange={() => {
-                      setTipo(o)
-                      crear.reset()
-                    }}
-                  />
-                  <span>
-                    <span className="font-medium">{t(`comun.qcs.${o}`)}</span>
-                    <span className="block text-sg-caption text-sg-text-muted">{t(`nuevaQcs.definiciones.${o}`)}</span>
-                  </span>
-                </label>
-              ))}
-            </fieldset>
-            <Campo etiqueta={etiqueta('code')} error={errorDe('code')}>
-              {(p) => <Input {...p} value={valores.code} maxLength={60} onChange={(e) => cambiar('code', e.target.value)} />}
-            </Campo>
-            <Campo etiqueta={etiqueta('description')} error={errorDe('description')}>
-              {(p) => <Textarea {...p} value={valores.description} maxLength={4000} onChange={(e) => cambiar('description', e.target.value)} />}
-            </Campo>
-            <Campo etiqueta={etiqueta('category')} error={errorDe('category')}>
-              {(p) => <SelectNativo {...p} value={valores.category} onChange={(e) => cambiar('category', e.target.value)} opciones={opciones('category')} />}
-            </Campo>
-            {tipo === 'grievance' ? (
-              <Campo
-                etiqueta={etiqueta('severity')}
-                error={errorDe('severity')}
-                ayuda={SEVERIDADES_GRAVES.includes(valores.severity) ? t('nuevaQcs.graveAyuda') : undefined}
-              >
-                {(p) => <SelectNativo {...p} value={valores.severity} onChange={(e) => cambiar('severity', e.target.value)} opciones={opciones('severity')} />}
-              </Campo>
-            ) : null}
-            {tipo === 'stakeholder_request' ? (
-              <>
-                <Campo etiqueta={etiqueta('request_medium')} error={errorDe('request_medium')}>
-                  {(p) => (
-                    <SelectNativo
-                      {...p}
-                      value={valores.request_medium}
-                      onChange={(e) => cambiar('request_medium', e.target.value)}
-                      opciones={opciones('request_medium')}
+    <ContenedorDePagina>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <FormularioPorPasos
+          titulo={t('nuevaQcs.titulo')}
+          descripcion={t('nuevaQcs.ayuda')}
+          pasos={PASOS.map((p) => t(`nuevaQcs.pasos.${p}`))}
+          actual={actual}
+          visitados={visitados}
+          alIr={ir}
+          alEnviar={(e) => {
+            e.preventDefault()
+            if (paso === 'revision') registrar()
+            else ir(actual + 1)
+          }}
+          alAnterior={() => setActual(actual - 1)}
+          anteriorDeshabilitado={actual === 0 || crear.isPending}
+          alCancelar={() => navegar(volverA)}
+          ocupado={crear.isPending}
+          conCambios={conCambios}
+          conBorrador={!confidencial}
+          salidaPermitida={salida}
+          avisos={avisoDeBorrador && recuperado ? <AvisoDeBorrador guardado={recuperado.guardado} alDescartar={descartar} /> : null}
+          acciones={
+            paso === 'revision' ? (
+              <Button type="submit" disabled={crear.isPending} aria-busy={crear.isPending}>
+                {crear.isPending ? t('nuevaQcs.registrando') : t(`nuevaQcs.registrar.${tipo}`)}
+              </Button>
+            ) : undefined
+          }
+        >
+          {paso === 'que' ? (
+            <>
+              <fieldset className="space-y-2">
+                <legend className="mb-1 font-medium">{t('nuevaQcs.tipo')}</legend>
+                {tipos.map((o) => (
+                  <label key={o} className="flex items-start gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="tipo"
+                      className="mt-1"
+                      checked={tipo === o}
+                      onChange={() => {
+                        setTipo(o)
+                        crear.reset()
+                      }}
                     />
-                  )}
-                </Campo>
-                <Campo etiqueta={etiqueta('requested_resource')} error={errorDe('requested_resource')}>
+                    <span>
+                      <span className="font-medium">{t(`comun.qcs.${o}`)}</span>
+                      <span className="block text-sg-caption text-sg-text-muted">{t(`nuevaQcs.definiciones.${o}`)}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              <Campo etiqueta={etiqueta('code')} error={errorDe('code')}>
+                {(p) => <Input {...p} value={valores.code} maxLength={60} onChange={(e) => cambiar('code', e.target.value)} />}
+              </Campo>
+              <Campo etiqueta={etiqueta('description')} error={errorDe('description')}>
+                {(p) => <Textarea {...p} value={valores.description} maxLength={4000} onChange={(e) => cambiar('description', e.target.value)} />}
+              </Campo>
+              <Campo etiqueta={etiqueta('category')} error={errorDe('category')}>
+                {(p) => <SelectNativo {...p} value={valores.category} onChange={(e) => cambiar('category', e.target.value)} opciones={opciones('category')} />}
+              </Campo>
+              {tipo === 'grievance' ? (
+                <Campo
+                  etiqueta={etiqueta('severity')}
+                  error={errorDe('severity')}
+                  ayuda={SEVERIDADES_GRAVES.includes(valores.severity) ? t('nuevaQcs.graveAyuda') : undefined}
+                >
                   {(p) => (
-                    <Textarea {...p} value={valores.requested_resource} maxLength={4000} onChange={(e) => cambiar('requested_resource', e.target.value)} />
+                    <SelectNativo {...p} value={valores.severity} onChange={(e) => cambiar('severity', e.target.value)} opciones={opciones('severity')} />
                   )}
                 </Campo>
-              </>
-            ) : null}
-          </>
-        ) : null}
-
-        {paso === 'como' ? (
-          <>
-            <Campo etiqueta={etiqueta('channel')} error={errorDe('channel')}>
-              {(p) => <SelectNativo {...p} value={valores.channel} onChange={(e) => cambiar('channel', e.target.value)} opciones={opciones('channel')} />}
-            </Campo>
-            {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
-            <CampoFecha
-              etiqueta={etiqueta('received_at')}
-              conHora
-              requerido
-              valor={valores.received_at || null}
-              alCambiar={(v) => cambiar('received_at', v ?? '')}
-              error={errorDe('received_at')}
-            />
-            <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.recibidaPor', { correo: user?.email ?? '' })}</p>
-            {origen ? (
-              <p className="text-sg-caption text-sg-text-muted">
-                {t('nuevaQcs.origen')}
-                {valores.received_at === recepcionPropuesta && atributo(interaccion.data, 'held_at') ? ` ${t('nuevaQcs.recepcionDeOrigen')}` : ''}
-              </p>
-            ) : null}
-            <Casilla
-              etiqueta={etiqueta('anonymous')}
-              ayuda={t('nuevaQcs.anonimaAyuda')}
-              marcada={anonima}
-              alCambiar={(marcada) => {
-                setAnonima(marcada)
-                if (marcada) {
-                  setGrupo('')
-                  setPersona(null)
-                }
-              }}
-            />
-            {anonima ? null : (
-              <>
-                <Campo etiqueta={etiqueta('stakeholder')} error={errorDe('stakeholder')}>
-                  {(p) => (
-                    <select {...p} className={CONTROL} value={grupo} onChange={(e) => setGrupo(e.target.value)}>
-                      <option value="">{t('nuevaQcs.ningunGrupo')}</option>
-                      {(grupos.data ?? []).map((g) => (
-                        <OpcionDeGrupo key={g.id} grupo={g} />
-                      ))}
-                    </select>
-                  )}
-                </Campo>
-                {grupos.isError && !grupos.data ? <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} /> : null}
-                {conPersona ? (
-                  <div className="space-y-1">
-                    <p className="text-sg-body-sm font-medium">{etiqueta('person')}</p>
-                    {/* la persona es un dato restringido (P-04): se dice antes de elegirla */}
-                    <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.personaRestringida')}</p>
-                    {persona ? (
-                      <p className="text-sm">
-                        {nombreDe(persona, 'person', t('comun.personaRegistrada'))}{' '}
-                        <button type="button" className="text-sg-caption text-sg-primary-text underline" onClick={() => setPersona(null)}>
-                          {t('nuevaQcs.quitar')}
-                        </button>
-                      </p>
-                    ) : (
-                      <BuscadorDeRegistro
-                        objeto="person"
-                        etiqueta={t('nuevaQcs.buscarPersona')}
-                        rotulo={(r) => nombreDe(r, 'person', t('comun.personaRegistrada'))}
-                        alElegir={setPersona}
+              ) : null}
+              {tipo === 'stakeholder_request' ? (
+                <>
+                  <Campo etiqueta={etiqueta('request_medium')} error={errorDe('request_medium')}>
+                    {(p) => (
+                      <SelectNativo
+                        {...p}
+                        value={valores.request_medium}
+                        onChange={(e) => cambiar('request_medium', e.target.value)}
+                        opciones={opciones('request_medium')}
                       />
                     )}
-                    {errorDe('person') ? <p className="text-sg-caption text-sg-danger">{errorDe('person')}</p> : null}
-                  </div>
-                ) : null}
-              </>
-            )}
-            {/* la confidencialidad se explica junto a su casilla (P-04): quién la leerá y dónde no aparece */}
-            <Casilla etiqueta={etiqueta('confidential')} ayuda={t('nuevaQcs.confidencialAyuda')} marcada={confidencial} alCambiar={setConfidencial} />
-          </>
-        ) : null}
+                  </Campo>
+                  <Campo etiqueta={etiqueta('requested_resource')} error={errorDe('requested_resource')}>
+                    {(p) => (
+                      <Textarea {...p} value={valores.requested_resource} maxLength={4000} onChange={(e) => cambiar('requested_resource', e.target.value)} />
+                    )}
+                  </Campo>
+                </>
+              ) : null}
+            </>
+          ) : null}
 
-        {paso === 'revision' ? (
-          <>
-            <section aria-labelledby="resumen-qcs" className="space-y-2 rounded-sg-lg border border-sg-border p-4">
-              <h3 id="resumen-qcs" className="text-sg-overline font-semibold uppercase text-sg-text-muted">
-                {t('nuevaQcs.revision.resumen')}
-              </h3>
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[max-content_minmax(0,1fr)]">
-                <dt className="text-sg-text-muted">{t('nuevaQcs.tipo')}</dt>
-                <dd>{t(`comun.qcs.${tipo}`)}</dd>
-                <dt className="text-sg-text-muted">{etiqueta('code')}</dt>
-                <dd>{valores.code.trim()}</dd>
-                <dt className="text-sg-text-muted">{etiqueta('description')}</dt>
-                <dd className="whitespace-pre-line break-words">{valores.description.trim()}</dd>
-                <dt className="text-sg-text-muted">{etiqueta('channel')}</dt>
-                <dd>{valores.channel ? rotuloDeOpcion(valores.channel) : '—'}</dd>
-                <dt className="text-sg-text-muted">{etiqueta('received_at')}</dt>
-                <dd>{`${textoDeDia(valores.received_at)} ${horaDeRecepcion}`.trim()}</dd>
-                <dt className="text-sg-text-muted">{t('nuevaQcs.revision.quien')}</dt>
-                <dd>{anonima ? etiqueta('anonymous') : nombreDelGrupo ? <NombreDeGrupo grupo={nombreDelGrupo} /> : t('nuevaQcs.ningunGrupo')}</dd>
-                <dt className="text-sg-text-muted">{etiqueta('confidential')}</dt>
-                <dd>{confidencial ? t('comun.si') : t('comun.no')}</dd>
-              </dl>
-            </section>
-            <Campo etiqueta={etiqueta('priority')} error={errorDe('priority')}>
-              {(p) => <SelectNativo {...p} value={valores.priority} onChange={(e) => cambiar('priority', e.target.value)} opciones={opciones('priority')} />}
-            </Campo>
-            <SelectorDeUsuario etiqueta={etiqueta('owner')} valor={responsable} alCambiar={setResponsable} error={errorDe('owner_user_id')} />
-            <Campo etiqueta={t('comun.motivoObligatorio')} error={errorDe('motivo')}>
-              {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
-            </Campo>
-            {crear.isError && (sinControl.length > 0 || Object.keys(delServidor).length === 0) ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
-          </>
-        ) : null}
-      </FormularioPorPasos>
+          {paso === 'como' ? (
+            <>
+              <Campo etiqueta={etiqueta('channel')} error={errorDe('channel')}>
+                {(p) => <SelectNativo {...p} value={valores.channel} onChange={(e) => cambiar('channel', e.target.value)} opciones={opciones('channel')} />}
+              </Campo>
+              {/* el valor es la hora de Lima como la escribía el datetime-local: instanteDeLima la manda como antes */}
+              <CampoFecha
+                etiqueta={etiqueta('received_at')}
+                conHora
+                requerido
+                valor={valores.received_at || null}
+                alCambiar={(v) => cambiar('received_at', v ?? '')}
+                error={errorDe('received_at')}
+              />
+              <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.recibidaPor', { correo: user?.email ?? '' })}</p>
+              {origen ? (
+                <p className="text-sg-caption text-sg-text-muted">
+                  {t('nuevaQcs.origen')}
+                  {valores.received_at === recepcionPropuesta && atributo(interaccion.data, 'held_at') ? ` ${t('nuevaQcs.recepcionDeOrigen')}` : ''}
+                </p>
+              ) : null}
+              <Casilla
+                etiqueta={etiqueta('anonymous')}
+                ayuda={t('nuevaQcs.anonimaAyuda')}
+                marcada={anonima}
+                alCambiar={(marcada) => {
+                  setAnonima(marcada)
+                  if (marcada) {
+                    setGrupo('')
+                    setPersona(null)
+                  }
+                }}
+              />
+              {anonima ? null : (
+                <>
+                  <Campo etiqueta={etiqueta('stakeholder')} error={errorDe('stakeholder')}>
+                    {(p) => (
+                      <select {...p} className={CONTROL} value={grupo} onChange={(e) => setGrupo(e.target.value)}>
+                        <option value="">{t('nuevaQcs.ningunGrupo')}</option>
+                        {(grupos.data ?? []).map((g) => (
+                          <OpcionDeGrupo key={g.id} grupo={g} />
+                        ))}
+                      </select>
+                    )}
+                  </Campo>
+                  {grupos.isError && !grupos.data ? <FalloDeLectura error={grupos.error} alReintentar={() => void grupos.refetch()} /> : null}
+                  {conPersona ? (
+                    <div className="space-y-1">
+                      <p className="text-sg-body-sm font-medium">{etiqueta('person')}</p>
+                      {/* la persona es un dato restringido (P-04): se dice antes de elegirla */}
+                      <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.personaRestringida')}</p>
+                      {persona ? (
+                        <p className="text-sm">
+                          {nombreDe(persona, 'person', t('comun.personaRegistrada'))}{' '}
+                          <button type="button" className="text-sg-caption text-sg-primary-text underline" onClick={() => setPersona(null)}>
+                            {t('nuevaQcs.quitar')}
+                          </button>
+                        </p>
+                      ) : (
+                        <BuscadorDeRegistro
+                          objeto="person"
+                          etiqueta={t('nuevaQcs.buscarPersona')}
+                          rotulo={(r) => nombreDe(r, 'person', t('comun.personaRegistrada'))}
+                          alElegir={setPersona}
+                        />
+                      )}
+                      {errorDe('person') ? <p className="text-sg-caption text-sg-danger">{errorDe('person')}</p> : null}
+                    </div>
+                  ) : null}
+                </>
+              )}
+              {/* la confidencialidad se explica junto a su casilla (P-04): quién la leerá y dónde no aparece */}
+              <Casilla etiqueta={etiqueta('confidential')} ayuda={t('nuevaQcs.confidencialAyuda')} marcada={confidencial} alCambiar={setConfidencial} />
+            </>
+          ) : null}
 
-      {/* «Qué pasará al registrar» queda al costado en los tres pasos (P-04): los plazos con los parámetros del proyecto */}
-      <Seccion elemento="aside" etiqueta={t('nuevaQcs.secciones.quePasara')} className="h-fit text-sm xl:sticky xl:top-4">
-        <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('nuevaQcs.secciones.quePasara')}</h2>
-        <p>{valores.code.trim() ? t('nuevaQcs.quePasara.codigo', { codigo: valores.code.trim() }) : t('nuevaQcs.quePasara.sinCodigo')}</p>
-        <p>
-          {t(`nuevaQcs.plazos.${tipo}`, {
-            acuse: parametro('grievance_ack_days'),
-            resolucion: parametro('grievance_resolution_days'),
-            respuesta: parametro('inquiry_response_days')
-          })}
-        </p>
-        {tipo === 'stakeholder_request' ? null : <p className="text-sg-text-muted">{t('nuevaQcs.quePasara.plazoAlRegistrar')}</p>}
-        {/* la tarea de acuse de una confidencial es genérica, sin vínculo con la queja (sgspe#20, D-1) */}
-        {tipo === 'grievance' ? <p>{t(confidencial ? 'nuevaQcs.quePasara.tareaGenerica' : 'nuevaQcs.quePasara.tarea')}</p> : null}
-        {confidencial ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.confidencialAyuda')}</p> : null}
-      </Seccion>
-    </div>
+          {paso === 'revision' ? (
+            <>
+              {/* «Revise sus respuestas» (design-system.md §6.3, S37): cada dato con su paso y «Cambiar», que vuelve a él sin perder
+                nada; la prioridad, el responsable y el motivo se escriben aquí, debajo */}
+              <RevisionDeRespuestas
+                alCambiar={ir}
+                filas={[
+                  { clave: 'tipo', termino: t('nuevaQcs.tipo'), valor: t(`comun.qcs.${tipo}`), aPaso: 0 },
+                  { clave: 'code', termino: etiqueta('code'), valor: valores.code.trim() || '—', aPaso: 0 },
+                  { clave: 'description', termino: etiqueta('description'), valor: valores.description.trim() || '—', aPaso: 0 },
+                  { clave: 'channel', termino: etiqueta('channel'), valor: valores.channel ? rotuloDeOpcion(valores.channel) : '—', aPaso: 1 },
+                  {
+                    clave: 'received_at',
+                    termino: etiqueta('received_at'),
+                    valor: `${textoDeDia(valores.received_at)} ${horaDeRecepcion}`.trim() || '—',
+                    aPaso: 1
+                  },
+                  {
+                    clave: 'quien',
+                    termino: t('nuevaQcs.revision.quien'),
+                    valor: anonima ? etiqueta('anonymous') : nombreDelGrupo ? <NombreDeGrupo grupo={nombreDelGrupo} /> : t('nuevaQcs.ningunGrupo'),
+                    aPaso: 1
+                  },
+                  { clave: 'confidential', termino: etiqueta('confidential'), valor: confidencial ? t('comun.si') : t('comun.no'), aPaso: 1 }
+                ]}
+              />
+              <Campo etiqueta={etiqueta('priority')} error={errorDe('priority')}>
+                {(p) => <SelectNativo {...p} value={valores.priority} onChange={(e) => cambiar('priority', e.target.value)} opciones={opciones('priority')} />}
+              </Campo>
+              <SelectorDeUsuario etiqueta={etiqueta('owner')} valor={responsable} alCambiar={setResponsable} error={errorDe('owner_user_id')} />
+              <Campo etiqueta={t('comun.motivoObligatorio')} error={errorDe('motivo')}>
+                {(p) => <Textarea {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}
+              </Campo>
+              {crear.isError && (sinControl.length > 0 || Object.keys(delServidor).length === 0) ? <Alert tone="danger">{mensaje(crear.error)}</Alert> : null}
+            </>
+          ) : null}
+        </FormularioPorPasos>
+
+        {/* «Qué pasará al registrar» queda al costado en los tres pasos (P-04): los plazos con los parámetros del proyecto */}
+        <Seccion elemento="aside" etiqueta={t('nuevaQcs.secciones.quePasara')} className="h-fit text-sm xl:sticky xl:top-4">
+          <h2 className="text-sg-overline font-semibold uppercase text-sg-text-muted">{t('nuevaQcs.secciones.quePasara')}</h2>
+          <p>{valores.code.trim() ? t('nuevaQcs.quePasara.codigo', { codigo: valores.code.trim() }) : t('nuevaQcs.quePasara.sinCodigo')}</p>
+          <p>
+            {t(`nuevaQcs.plazos.${tipo}`, {
+              acuse: parametro('grievance_ack_days'),
+              resolucion: parametro('grievance_resolution_days'),
+              respuesta: parametro('inquiry_response_days')
+            })}
+          </p>
+          {tipo === 'stakeholder_request' ? null : <p className="text-sg-text-muted">{t('nuevaQcs.quePasara.plazoAlRegistrar')}</p>}
+          {/* la tarea de acuse de una confidencial es genérica, sin vínculo con la queja (sgspe#20, D-1) */}
+          {tipo === 'grievance' ? <p>{t(confidencial ? 'nuevaQcs.quePasara.tareaGenerica' : 'nuevaQcs.quePasara.tarea')}</p> : null}
+          {confidencial ? <p className="text-sg-caption text-sg-text-muted">{t('nuevaQcs.confidencialAyuda')}</p> : null}
+        </Seccion>
+      </div>
+    </ContenedorDePagina>
   )
 }
 

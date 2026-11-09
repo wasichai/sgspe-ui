@@ -2,6 +2,8 @@
 // la decisión del triaje
 export const ES_ALERTAS = {
   titulo: 'Alerta temprana',
+  conteo_one: '{{count}} alerta en esta vista',
+  conteo_other: '{{count}} alertas en esta vista',
   tabla: 'Alertas del proyecto',
   vacio: 'No hay alertas en esta vista',
   vistas: { triaje: 'Por triar', activas: 'Confirmadas', todas: 'Todas', cerradas: 'Cerradas' },
@@ -45,6 +47,8 @@ export const ES_ALERTAS = {
 
 export const EN_ALERTAS: typeof ES_ALERTAS = {
   titulo: 'Early warning',
+  conteo_one: '{{count}} warning in this view',
+  conteo_other: '{{count}} warnings in this view',
   tabla: 'Project alerts',
   vacio: 'There are no alerts in this view',
   vistas: { triaje: 'To triage', activas: 'Confirmed', todas: 'All', cerradas: 'Closed' },

@@ -74,26 +74,30 @@ describe('rutas de F4', () => {
     expect(await screen.findByRole('heading', { name: 'Tablero de riesgos', level: 1 })).toBeInTheDocument()
   })
 
-  // DD-03 y U-20: las páginas de Riesgos (alerta temprana, incidentes, señales, menciones, impactos y reglas) se ofrecen en el
-  // selector de páginas de cada una, con sus rutas de siempre
-  it('las páginas de Riesgos se ofrecen en su selector y llevan a sus rutas', async () => {
+  // DD-03 y U-20, fase 10 de Civic Modern: las páginas de Riesgos (alerta temprana, incidentes, señales, menciones, impactos y el
+  // tablero) son una fila de pestañas debajo del encabezado de cada una, con sus rutas de siempre; las reglas de alerta, una acción
+  // («Ver reglas de alerta», S10). el único selector de vista es el de las vistas del registro, en su barra de filtros
+  it('las páginas de Riesgos se ofrecen en sus pestañas y llevan a sus rutas; las reglas, desde su acción', async () => {
     fetch = abrirPortal('/projects/p1/risks', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
-    expect(await screen.findByRole('heading', { name: 'Riesgos', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Riesgos y alerta temprana', level: 1 })).toBeInTheDocument()
     const paginas = screen.getByRole('navigation', { name: 'Páginas de Riesgos' })
     expect(within(paginas).getByRole('link', { name: 'Registro y matriz' })).toHaveAttribute('aria-current', 'page')
-    await userEvent.click(within(paginas).getByRole('button', { name: 'Más páginas' }))
     const enlaces = within(paginas)
       .getAllByRole('link')
       .map((l) => [l.textContent, l.getAttribute('href')])
     expect(enlaces).toEqual([
       ['Registro y matriz', '/projects/p1/risks'],
       ['Alerta temprana', '/projects/p1/risks/warnings'],
+      ['Incidentes', '/projects/p1/incidents'],
       ['Señales de alerta', '/projects/p1/risks/signals'],
       ['Menciones en medios', '/projects/p1/risks/mentions'],
       ['Impactos potenciales', '/projects/p1/risks/impacts'],
-      ['Incidentes', '/projects/p1/incidents'],
-      ['Reglas de alerta', '/projects/p1/risks/rules']
+      ['Tablero', '/projects/p1/risks/dashboard']
     ])
+    // un solo selector de vista (las vistas del registro) y ninguna otra fila de vistas en la cabecera
+    expect(screen.getAllByRole('radiogroup')).toHaveLength(1)
+    expect(screen.queryByRole('navigation', { name: 'Vistas del módulo' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver reglas de alerta' })).toHaveAttribute('href', '/projects/p1/risks/rules')
     await userEvent.click(within(paginas).getByRole('link', { name: 'Señales de alerta' }))
     expect(window.location.pathname).toBe('/projects/p1/risks/signals')
     const enSenales = await screen.findByRole('navigation', { name: 'Páginas de Riesgos' })
@@ -104,14 +108,23 @@ describe('rutas de F4', () => {
       'aria-current',
       'page'
     )
-    // la pestaña del proyecto sigue siendo Riesgos, y no hay una segunda fila de pestañas
+    await userEvent.click(screen.getByRole('link', { name: 'Ver reglas de alerta' }))
+    expect(window.location.pathname).toBe('/projects/p1/risks/rules')
+    // en las reglas las pestañas siguen a mano para volver, sin ninguna elegida
+    const enReglas = await screen.findByRole('navigation', { name: 'Páginas de Riesgos' })
+    expect(
+      within(enReglas)
+        .getAllByRole('link')
+        .filter((l) => l.getAttribute('aria-current') === 'page')
+    ).toHaveLength(0)
+    // la pestaña del proyecto sigue siendo Riesgos
     expect(within(screen.getByRole('navigation', { name: 'Secciones del proyecto' })).getByRole('link', { name: 'Riesgos' })).toHaveAttribute(
       'aria-current',
       'page'
     )
   })
 
-  it('fuera de un proyecto, Riesgos ofrece el registro y las reglas de la organización', async () => {
+  it('fuera de un proyecto, Riesgos ofrece el registro y el tablero, y las reglas de la organización desde su acción', async () => {
     fetch = abrirPortal('/risks', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
     const paginas = await screen.findByRole('navigation', { name: 'Páginas de Riesgos' })
     expect(
@@ -120,13 +133,14 @@ describe('rutas de F4', () => {
         .map((l) => [l.textContent, l.getAttribute('href')])
     ).toEqual([
       ['Registro y matriz', '/risks'],
-      ['Reglas de alerta', '/risks/rules']
+      ['Tablero', '/risks/dashboard']
     ])
+    expect(screen.getByRole('link', { name: 'Ver reglas de alerta' })).toHaveAttribute('href', '/risks/rules')
   })
 
   it('el registro y la ficha de un riesgo viven bajo el proyecto', async () => {
     fetch = abrirPortal('/projects/p1/risks/register', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())
-    expect(await screen.findByRole('heading', { name: 'Riesgos', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Riesgos y alerta temprana', level: 1 })).toBeInTheDocument()
     cleanup()
     fetch.restore()
     fetch = abrirPortal('/projects/p1/risks/k1', GESTOR_DE_RIESGOS, EQUIPO_DE_RIESGOS, deRiesgos())

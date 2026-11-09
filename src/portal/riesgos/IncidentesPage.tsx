@@ -113,8 +113,8 @@ export function IncidentesPage() {
         titulo={t('incidentes.titulo')}
         conteo={total != null ? t('incidentes.conteo', { count: total }) : undefined}
         primaria={escribe && can('incident', 'CREATE') ? <Button onClick={() => setRegistrando(true)}>{t('incidentes.registrar')}</Button> : undefined}
-        vistas={<PaginasDeRiesgos actual="incidents" />}
       />
+      <PaginasDeRiesgos actual="incidents" />
       <BarraDeFiltros
         vista={
           <SelectorDeVista

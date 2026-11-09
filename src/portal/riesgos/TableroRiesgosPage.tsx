@@ -1,5 +1,8 @@
 import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
-import { VistasDelModulo } from '../componentes/VistasDelModulo'
+import { PaginasDeRiesgos } from './PaginasDeRiesgos'
+import { MatrizDeRiesgo } from './MatrizDeRiesgo'
+import { esNivel, umbralesDe } from './niveles'
+import { useProyecto } from '../contexto/proyectos'
 import { Button, Table, Td, Th } from '@wasichai/ui'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -32,11 +35,8 @@ export function TableroRiesgosPage() {
   const base = scope.kind === 'project' ? `/projects/${encodeURIComponent(scope.projectId)}` : ''
   return (
     <ContenedorDePagina elemento="section">
-      <EncabezadoDePagina
-        titulo={t('tableroRiesgos.titulo')}
-        descripcion={tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : undefined}
-        vistas={<VistasDelModulo modulo="risks" actual="tablero" />}
-      />
+      <EncabezadoDePagina titulo={t('tableroRiesgos.titulo')} descripcion={tablero.data ? <HoraDeCalculo instante={tablero.data.computedAt} /> : undefined} />
+      <PaginasDeRiesgos actual="tablero" />
       <FiltrosDeTablero alActualizar={() => void tablero.refetch()} />
       <ConsultaDeTablero consulta={tablero}>
         {(datos) => {
@@ -79,17 +79,22 @@ export function TableroRiesgosPage() {
 // el nombre de cada zona por su clave de textos
 const ZONAS = { matriz: 'matriz', activos: 'activos', territorio: 'territorio', semanas: 'semanas', atrasadas: 'atrasadas' } as const
 
-// KPI-RSK-02: la matriz de probabilidad (filas, de 5 a 1) por impacto (columnas, de 1 a 5), con el conteo de cada celda y, si el
-// servidor lo manda (un solo proyecto, sus umbrales), el nivel. vigente o residual; los riesgos sin revisión se dicen aparte
+// KPI-RSK-02: la matriz de probabilidad (filas, de 5 a 1) por impacto (columnas, de 1 a 5), con la misma pieza coloreada que el
+// registro (MatrizDeRiesgo): el conteo de cada celda y, si el servidor lo manda (un solo proyecto, sus umbrales), el nivel que da su
+// zona; sin él la celda va sin zona, porque cada proyecto tiene sus umbrales. vigente o residual; los riesgos sin revisión se dicen
+// aparte. la usan también el tablero del proyecto (Proyecto 360) y el resumen
 export function MapaDeCalor({ indicador }: { indicador: Indicador }) {
   const { t } = useTranslation(NS)
+  const { scope } = useContextFilters()
+  const proyecto = useProyecto(scope.kind === 'project' ? scope.projectId : undefined)
   const [residual, setResidual] = useState(false)
   const filas = desglose(indicador, residual ? 'residual' : 'matrix')
-  const celda = (p: number, i: number) => filas.find((f) => f.probability === p && f.impact === i) ?? filas.find((f) => f.key === `${p}-${i}`)
+  const fila = (p: number, i: number) => filas.find((f) => f.probability === p && f.impact === i) ?? filas.find((f) => f.key === `${p}-${i}`)
   const sinEvaluar = desglose(indicador, 'assessment').find((f) => f.key === 'SIN EVALUAR')?.value
   const valoracion = residual ? t('tableroRiesgos.residual') : t('tableroRiesgos.vigente')
+  const conNiveles = filas.some((f) => esNivel(f.level))
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div role="group" aria-label={t('tableroRiesgos.valoracion')} className="flex gap-2">
         {[false, true].map((r) => (
           <Button key={String(r)} size="sm" variant={residual === r ? 'primary' : 'secondary'} aria-pressed={residual === r} onClick={() => setResidual(r)}>
@@ -97,43 +102,17 @@ export function MapaDeCalor({ indicador }: { indicador: Indicador }) {
           </Button>
         ))}
       </div>
-      <div className="overflow-x-auto">
-        <Table aria-label={t('tableroRiesgos.tablaMatriz', { valoracion })}>
-          <thead>
-            <tr>
-              <Th scope="col">
-                {t('tableroRiesgos.probabilidad')} \ {t('tableroRiesgos.impacto')}
-              </Th>
-              {ESCALA.map((i) => (
-                <Th key={i} scope="col">
-                  {i}
-                </Th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {[...ESCALA].reverse().map((p) => (
-              <tr key={p}>
-                <Th scope="row">{p}</Th>
-                {ESCALA.map((i) => {
-                  const f = celda(p, i)
-                  const nivel = typeof f?.level === 'string' ? f.level : null
-                  return (
-                    <Td key={i} className="text-sm tabular-nums">
-                      {f?.value === null || f?.value === undefined ? '—' : numeroPe(f.value)}
-                      {nivel ? (
-                        <span className="block text-sg-caption text-sg-text-muted">{t(`tableroRiesgos.niveles.${nivel}`, { defaultValue: nivel })}</span>
-                      ) : null}
-                    </Td>
-                  )
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
+      <MatrizDeRiesgo
+        etiqueta={t('tableroRiesgos.tablaMatriz', { valoracion })}
+        celda={(p, i) => {
+          const f = fila(p, i)
+          return { n: typeof f?.value === 'number' ? f.value : null, nivel: esNivel(f?.level) ? f.level : null }
+        }}
+        // la leyenda con rangos solo con los niveles del servidor y los umbrales del proyecto de la barra, que son los mismos
+        umbrales={conNiveles && scope.kind === 'project' && proyecto.data ? umbralesDe(proyecto.data) : undefined}
+      />
       {/* un «—» va con su nota al pie (design-system.md §5.3 «Tablas») */}
-      {ESCALA.some((p) => ESCALA.some((i) => typeof celda(p, i)?.value !== 'number')) ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
+      {ESCALA.some((p) => ESCALA.some((i) => typeof fila(p, i)?.value !== 'number')) ? <NotaAlPie>{t('tableros.sinCifra')}</NotaAlPie> : null}
       {typeof sinEvaluar === 'number' && sinEvaluar > 0 ? (
         <p className="text-sg-caption text-sg-text-muted">{t('tableroRiesgos.sinEvaluar', { n: numeroPe(sinEvaluar) })}</p>
       ) : null}

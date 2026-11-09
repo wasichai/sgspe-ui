@@ -151,6 +151,17 @@ export const ES_COMUN = {
     pasadoHabiles_one: 'venció hace {{count}} día hábil',
     pasadoHabiles_other: 'venció hace {{count}} días hábiles'
   },
+  // «Revise sus respuestas» (RevisionDeRespuestas) y su «Cambiar»
+  revisarRespuestas: 'Revise sus respuestas',
+  cambiar: 'Cambiar',
+  // los días de un plazo junto a su situación (DiasDelPlazo: «VENCIDO · 18 DÍAS», «AL DÍA · 9 DÍAS HÁBILES»)
+  diasDelPlazo: {
+    hoy: 'hoy',
+    dias_one: '{{count}} día',
+    dias_other: '{{count}} días',
+    habiles_one: '{{count}} día hábil',
+    habiles_other: '{{count}} días hábiles'
+  },
   situacionDeVigencia: 'Situación de vigencia',
   // F4: la situación de revisión de un riesgo (review_status), los nombres de las QCS, el vínculo a un registro que quien mira
   // no lee (ADR-0029, ASM-095) y la nota de una cifra que no cuenta las confidenciales (confidentialHidden)
@@ -614,6 +625,15 @@ export const EN_COMUN: typeof ES_COMUN = {
     pasado_other: '{{count}} days overdue',
     pasadoHabiles_one: '{{count}} business day overdue',
     pasadoHabiles_other: '{{count}} business days overdue'
+  },
+  revisarRespuestas: 'Check your answers',
+  cambiar: 'Change',
+  diasDelPlazo: {
+    hoy: 'today',
+    dias_one: '{{count}} day',
+    dias_other: '{{count}} days',
+    habiles_one: '{{count}} business day',
+    habiles_other: '{{count}} business days'
   },
   situacionDeVigencia: 'Validity situation',
   situacionDeRevision: 'Review situation',

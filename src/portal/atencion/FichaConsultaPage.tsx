@@ -3,11 +3,12 @@ import { useRutaDeVistaPrevia } from '../componentes/VistaPrevia'
 import { EnlaceDeRegistro } from '../componentes/EnlaceDeRegistro'
 import { useMigaDelRegistro } from '../componentes/Migas'
 import { CabeceraDeFicha } from '../componentes/CabeceraDeFicha'
+import { ContenedorDePagina } from '../componentes/Pagina'
 import type { CampoDeFicha } from '../componentes/CamposPlegables'
 import { PanelDeDecision } from '../componentes/PanelDeDecision'
 import { PanelDeTrazabilidad, type SeccionDeTrazabilidad } from '../componentes/PanelDeTrazabilidad'
 import { PestanasDeFicha } from '../componentes/PestanasDeFicha'
-import { plazoQueCorre } from '../datos/atencion'
+import { CAMINO_DE_QCS, COMPROBAR_DE_QCS, plazoQueCorre } from '../datos/atencion'
 import { useEvidenciasDe, useNombreDeEvidencia } from '../documentos/api'
 import { useSiguienteAccion } from '../fichas/useSiguienteAccion'
 import { useAuth } from '@wasichai/core'
@@ -96,7 +97,7 @@ function FichaDeConsulta({ consulta }: { consulta: Registro }) {
       qcs={consulta}
       titulo={t('fichaConsulta.consulta.titulo', { codigo: texto(consulta, 'code') })}
       editables={EDITABLES_COMUNES}
-      comprobar={['answer', 'refer', 'close', 'close_referred']}
+      comprobar={COMPROBAR_DE_QCS.inquiry}
     />
   )
 }
@@ -152,7 +153,7 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
             ) : null
           }
         ]}
-        comprobar={['start_evaluation', 'decline', 'close_declined', 'close_unfulfilled']}
+        comprobar={COMPROBAR_DE_QCS.stakeholder_request}
         acciones={
           acepta ? (
             <Button size="sm" onClick={() => setAceptando(true)}>
@@ -188,12 +189,6 @@ function FichaDeSolicitud({ solicitud }: { solicitud: Registro }) {
       {aceptando ? <DialogoDeAceptacion solicitud={solicitud} opciones={opciones} alCerrar={() => setAceptando(false)} /> : null}
     </>
   )
-}
-
-// el camino de cada workflow sin sus excepciones (derivar una consulta, declinar una solicitud); un estado de excepción se agrega
-const CAMINO_DE_QCS: Record<Exclude<ObjetoDeQcs, 'grievance'>, string[]> = {
-  inquiry: ['received', 'answered', 'closed'],
-  stakeholder_request: ['received', 'under_evaluation', 'accepted', 'closed']
 }
 
 // la anatomía común de S57: encabezado, acciones, transiciones del rol (motivo siempre: requiresReason), pestañas y trazabilidad
@@ -239,7 +234,7 @@ function Ficha({
   const nombreDeEvidencia = useNombreDeEvidencia()
   const plazo = plazoQueCorre(objeto, qcs)
   return (
-    <article className="space-y-4">
+    <ContenedorDePagina elemento="article">
       <CabeceraDeFicha
         antetitulo={[t(`comun.qcs.${objeto}`), texto(qcs, 'code'), opcion(qcs, 'channel'), opcion(qcs, 'category')].filter(Boolean).join(' · ')}
         titulo={tituloDeQcs(qcs, titulo)}
@@ -362,7 +357,7 @@ function Ficha({
       </div>
       <EditarQcs objeto={objeto} qcs={qcs} campos={editables} abierto={editando} alCerrar={() => setEditando(false)} marcaConfidencial />
       {reclasificando ? <DialogoDeReclasificacion objeto={objeto} registro={qcs} alCerrar={() => setReclasificando(false)} /> : null}
-    </article>
+    </ContenedorDePagina>
   )
 }
 

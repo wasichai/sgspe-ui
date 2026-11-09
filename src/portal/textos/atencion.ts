@@ -23,19 +23,30 @@ export const ES_ATENCION = {
     abiertas: 'Abiertas',
     vencidas: 'Vencidas',
     porVencer: 'Por vencer',
-    absueltas: 'Respondidas',
+    absueltas: 'Absueltas en 90 días',
     abiertasDetalle: 'siguen en atención',
     vencidasDetalle: 'abiertas con el plazo vencido',
     porVencerDetalle: 'abiertas que vencen pronto',
-    respondidasDetalle: '{{n}} de {{total}} recibidas en el periodo tienen respuesta',
-    respondidasSinBase: 'de las recibidas en el periodo tienen respuesta'
+    absueltasDetalle: '{{porcentaje}} % de las {{total}} recibidas en los últimos 90 días tienen respuesta',
+    absueltasSinBase: 'recibidas en los últimos 90 días con respuesta'
   },
   grupos: {
     vencidas: 'Vencidas',
     porVencer: 'Por vencer',
     alDia: 'Al día o sin plazo'
   },
-  tabla: 'Quejas, consultas y solicitudes: {{grupo}}',
+  tabla: 'Quejas, consultas y solicitudes',
+  tablaDelGrupo: 'Quejas, consultas y solicitudes: {{grupo}}',
+  // S11: la fila abierta con el ciclo de vida de la QCS
+  fila: {
+    columna: 'Ciclo de vida',
+    abrir: 'Ver el ciclo de vida de {{codigo}}',
+    cerrar: 'Ocultar el ciclo de vida de {{codigo}}',
+    siguienteYResponsable: 'Siguiente acción · Responsable',
+    sinSiguiente: 'Sin acción pendiente',
+    abrirFicha: 'Abrir ficha'
+  },
+  notaDePlazos: 'El acuse de una queja se cuenta en días hábiles con el calendario de feriados de Perú; la respuesta y la resolución, en días calendario.',
   columnas: {
     tipo: 'Tipo',
     codigo: 'QCS',
@@ -49,7 +60,6 @@ export const ES_ATENCION = {
     planteaQuien: 'Quien la plantea'
   },
   anonima: 'Anónima',
-  identificada: 'Dio su nombre',
   sinPlazo: 'Sin plazo',
   plazoPorCalcular: 'Por calcular',
   vacio: 'No hay quejas, consultas ni solicitudes en esta vista.',
@@ -80,19 +90,29 @@ export const EN_ATENCION: typeof ES_ATENCION = {
     abiertas: 'Open',
     vencidas: 'Overdue',
     porVencer: 'Due soon',
-    absueltas: 'Answered',
+    absueltas: 'Answered in 90 days',
     abiertasDetalle: 'still being handled',
     vencidasDetalle: 'open with the deadline past',
     porVencerDetalle: 'open and due soon',
-    respondidasDetalle: '{{n}} of {{total}} received in the period have an answer',
-    respondidasSinBase: 'of those received in the period have an answer'
+    absueltasDetalle: '{{porcentaje}} % of the {{total}} received in the last 90 days have an answer',
+    absueltasSinBase: 'received in the last 90 days with an answer'
   },
   grupos: {
     vencidas: 'Overdue',
     porVencer: 'Due soon',
     alDia: 'On time or without deadline'
   },
-  tabla: 'Grievances, inquiries and requests: {{grupo}}',
+  tabla: 'Grievances, inquiries and requests',
+  tablaDelGrupo: 'Grievances, inquiries and requests: {{grupo}}',
+  fila: {
+    columna: 'Life cycle',
+    abrir: 'Show the life cycle of {{codigo}}',
+    cerrar: 'Hide the life cycle of {{codigo}}',
+    siguienteYResponsable: 'Next action · Owner',
+    sinSiguiente: 'No pending action',
+    abrirFicha: 'Open record'
+  },
+  notaDePlazos: 'A grievance acknowledgement counts business days with the Peruvian holiday calendar; answers and resolutions count calendar days.',
   columnas: {
     tipo: 'Type',
     codigo: 'Code',
@@ -106,7 +126,6 @@ export const EN_ATENCION: typeof ES_ATENCION = {
     planteaQuien: 'Raised by'
   },
   anonima: 'Anonymous',
-  identificada: 'Gave their name',
   sinPlazo: 'No deadline',
   plazoPorCalcular: 'Not computed yet',
   vacio: 'There are no grievances, inquiries or requests in this view.',

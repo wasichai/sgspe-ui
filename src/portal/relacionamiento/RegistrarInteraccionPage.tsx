@@ -5,6 +5,7 @@ import { Alert, Button, Input, Textarea } from '@wasichai/ui'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { RevisionDeRespuestas } from '../componentes/RevisionDeRespuestas'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { BuscadorDeRegistro } from '../componentes/BuscadorDeRegistro'
@@ -639,40 +640,28 @@ function Asistente({ definicion, definicionDeParticipante }: { definicion: Objec
       ) : null}
       {paso === 4 ? (
         // «Revise sus respuestas» (design-system.md §6.3): cada dato con su paso y un «Cambiar» que vuelve a él sin perder nada
-        <section className="space-y-3 text-sm" aria-label={t('relacionamiento.registro.revisar')}>
-          <h3 className="text-sg-h3 font-bold text-sg-text">{t('relacionamiento.registro.revisar')}</h3>
-          <dl className="divide-y divide-sg-border border-y border-sg-border">
-            {[
-              { clave: 'tipo', termino: pasos[0], valor: [rotuloDeOpcion(v.engagement_type ?? ''), v.title].filter(Boolean).join(' · ') || '—', aPaso: 0 },
-              {
-                clave: 'fecha',
-                termino: v.realizada ? t('relacionamiento.registro.realizadaEl') : t('relacionamiento.registro.programada'),
-                valor: instanteDicho(v.realizada ? v.held_at : v.scheduled_at) || '—',
-                aPaso: 0
-              },
-              { clave: 'lugar', termino: t('relacionamiento.registro.lugar'), valor: v.place || '—', aPaso: 1 },
-              { clave: 'grupos', termino: t('relacionamiento.registro.grupos'), valor: numeroPe((v.grupos ?? []).length), aPaso: 1 },
-              {
-                clave: 'asistentes',
-                termino: pasos[2],
-                valor: t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) }),
-                aPaso: 2
-              },
-              { clave: 'preguntas', termino: t('relacionamiento.ficha.preguntas'), valor: numeroPe((v.preguntas ?? []).length), aPaso: 3 }
-            ].map((fila) => (
-              <div key={fila.clave} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 py-2.5 sm:grid-cols-[minmax(0,200px)_minmax(0,1fr)_auto]">
-                <dt className="font-semibold text-sg-text">{fila.termino}</dt>
-                <dd className="col-start-1 text-sg-text-secondary sm:col-start-2">{fila.valor}</dd>
-                <dd className="col-start-2 row-start-1 sm:col-start-3">
-                  <button type="button" onClick={() => irA(fila.aPaso)} className="rounded-sg-sm font-semibold text-sg-primary-text underline">
-                    {t('relacionamiento.registro.cambiar')} <span className="sr-only">{fila.termino}</span>
-                  </button>
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.sinConexion')}</p>
-        </section>
+        <RevisionDeRespuestas
+          alCambiar={irA}
+          pie={<p className="text-sg-caption text-sg-text-muted">{t('relacionamiento.registro.sinConexion')}</p>}
+          filas={[
+            { clave: 'tipo', termino: pasos[0], valor: [rotuloDeOpcion(v.engagement_type ?? ''), v.title].filter(Boolean).join(' · ') || '—', aPaso: 0 },
+            {
+              clave: 'fecha',
+              termino: v.realizada ? t('relacionamiento.registro.realizadaEl') : t('relacionamiento.registro.programada'),
+              valor: instanteDicho(v.realizada ? v.held_at : v.scheduled_at) || '—',
+              aPaso: 0
+            },
+            { clave: 'lugar', termino: t('relacionamiento.registro.lugar'), valor: v.place || '—', aPaso: 1 },
+            { clave: 'grupos', termino: t('relacionamiento.registro.grupos'), valor: numeroPe((v.grupos ?? []).length), aPaso: 1 },
+            {
+              clave: 'asistentes',
+              termino: pasos[2],
+              valor: t('relacionamiento.registro.totales', { total: numeroPe(total), f: numeroPe(porSexo('FEMENINO')), m: numeroPe(porSexo('MASCULINO')) }),
+              aPaso: 2
+            },
+            { clave: 'preguntas', termino: t('relacionamiento.ficha.preguntas'), valor: numeroPe((v.preguntas ?? []).length), aPaso: 3 }
+          ]}
+        />
       ) : null}
       {conErrores !== null && Object.keys(formState.errors).length > 0 ? (
         <Alert tone="warning">{t('relacionamiento.registro.revisarPaso', { paso: pasos[conErrores] })}</Alert>

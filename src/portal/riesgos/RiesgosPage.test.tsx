@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { P1 } from '../../test/compromisos'
 import { definicion, montar, pagina, registro, ubicacion } from '../../test/montar'
 import { espiarRed, type Red } from '../../test/red'
-import { baseDeRiesgos, DEF_RIESGO, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, RELACIONES_EN_RIESGOS, RIESGO } from '../../test/riesgos'
+import { ALERTA, baseDeRiesgos, DEF_RIESGO, EQUIPO_DE_RIESGOS, GESTOR_DE_RIESGOS, RELACIONES_EN_RIESGOS, RIESGO } from '../../test/riesgos'
 import { RELACIONISTA } from '../../test/portal'
 import { nivelDePuntaje, umbralesDe } from './niveles'
 import { RiesgosPage } from './RiesgosPage'
@@ -54,7 +54,7 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
   it('el mapa cuenta los riesgos por P × I con el nivel de cada celda y deja fuera los que no tienen revisión', async () => {
     fetch = mockFetch(rutas())
     abrir()
-    const mapa = await screen.findByRole('region', { name: 'Mapa de calor' })
+    const mapa = await screen.findByRole('region', { name: 'Matriz probabilidad × impacto' })
     expect(within(mapa).getByRole('button', { name: 'Probabilidad 4, impacto 4: 1 riesgo, nivel Crítico' })).toBeInTheDocument()
     expect(within(mapa).getByRole('button', { name: 'Probabilidad 2, impacto 3: 1 riesgo, nivel Medio' })).toBeInTheDocument()
     expect(within(mapa).getByRole('button', { name: 'Probabilidad 1, impacto 1: 0 riesgos, nivel Bajo' })).toBeInTheDocument()
@@ -64,7 +64,8 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     expect(within(tabla).getByRole('link', { name: 'Bloqueo de la vía de acceso por la comunidad' })).toHaveAttribute('href', '/projects/p1/risks/k1')
     expect(within(tabla).getByText('R-001')).toHaveClass('font-sg-mono')
     expect(within(tabla).getByLabelText('Nivel de riesgo: Crítico')).toBeInTheDocument()
-    expect(within(tabla).getByText('4 × 4 = 16')).toBeInTheDocument()
+    // P × I es numérico, con el puntaje en 800 (S10)
+    expect(within(tabla).getByRole('cell', { name: '4 × 4 = 16' })).toHaveClass('text-right')
     expect(within(tabla).getByText('Sin evaluar')).toBeInTheDocument()
     expect(within(tabla).queryByText(/R-004/)).not.toBeInTheDocument()
   })
@@ -116,14 +117,14 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
         .slice(1)
         .map((f) => within(f).getByText(/^R-\d+$/).textContent)
     expect(codigos()).toEqual(['R-001', 'R-002', 'R-003', 'R-007', 'R-008'])
-    expect(within(tabla()).getByRole('columnheader', { name: 'Riesgo' })).toHaveAttribute('aria-sort', 'ascending')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Riesgo · categoría' })).toHaveAttribute('aria-sort', 'ascending')
     // el nivel por su orden (bajo, medio, alto, crítico), no alfabético; el sin evaluar, al final en los dos sentidos
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel' }))
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel y tendencia' }))
     expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
-    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel' })).toHaveAttribute('aria-sort', 'ascending')
-    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel' }))
+    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel y tendencia' })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(within(tabla()).getByRole('button', { name: 'Nivel y tendencia' }))
     expect(codigos()).toEqual(['R-001', 'R-007', 'R-003', 'R-008', 'R-002'])
-    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel' })).toHaveAttribute('aria-sort', 'descending')
+    expect(within(tabla()).getByRole('columnheader', { name: 'Nivel y tendencia' })).toHaveAttribute('aria-sort', 'descending')
     // el puntaje como número: 2, 6, 9, 16 (no «16» antes de «2»)
     await userEvent.click(within(tabla()).getByRole('button', { name: 'P × I' }))
     expect(codigos()).toEqual(['R-008', 'R-003', 'R-007', 'R-001', 'R-002'])
@@ -191,7 +192,7 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     await screen.findByRole('table', { name: 'Riesgos' })
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     const barra = screen.getByRole('group', { name: 'Filtros' })
-    expect(within(barra).getByRole('radio', { name: 'Registro y matriz, 3' })).toHaveAttribute('aria-checked', 'true')
+    expect(within(barra).getByRole('radio', { name: 'Vigentes, 3' })).toHaveAttribute('aria-checked', 'true')
     expect(within(barra).getByRole('radio', { name: 'Cerrados, 1' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Probabilidad 4, impacto 4/ }))
     const aplicados = within(barra).getByRole('list', { name: 'Filtros aplicados' })
@@ -208,7 +209,7 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     await userEvent.click(await screen.findByRole('radio', { name: /^Revisión pendiente\b/ }))
     let tabla = screen.getByRole('table', { name: 'Riesgos' })
     expect(within(tabla).getByText(/R-003/)).toBeInTheDocument()
-    expect(within(tabla).getByLabelText('Situación de revisión: Por revisar')).toBeInTheDocument()
+    expect(within(tabla).getByLabelText(/^Situación de revisión: Por revisar/)).toBeInTheDocument()
     expect(within(tabla).queryByText(/R-001/)).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('radio', { name: /^Mis riesgos\b/ }))
     tabla = screen.getByRole('table', { name: 'Riesgos' })
@@ -274,7 +275,7 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     ])
     abrir('/risks/register')
     await waitFor(() => expect(red!.a('GET', '/objects/social_risk/records')).toHaveLength(6))
-    expect(await screen.findByRole('radio', { name: `Registro y matriz, ${numeroPe(1200)}` })).toHaveAttribute('aria-checked', 'true')
+    expect(await screen.findByRole('radio', { name: `Vigentes, ${numeroPe(1200)}` })).toHaveAttribute('aria-checked', 'true')
     expect(screen.queryByText(/Se muestran los primeros/)).not.toBeInTheDocument()
   })
 
@@ -291,7 +292,96 @@ describe('S38 y S39 · registro y matriz de riesgos', () => {
     abrir()
     expect(await screen.findByText('Aún no hay riesgos registrados.')).toBeInTheDocument()
     expect(screen.getByText(/Identifique el primero con «Identificar riesgo»/)).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Mapa de calor' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Matriz probabilidad × impacto' })).not.toBeInTheDocument()
+  })
+})
+
+// S10 (fase 10 de Civic Modern): la alerta por triar como aviso con «Triar alerta», la alerta temprana junto a la matriz, la
+// leyenda de niveles con sus rangos, la tendencia bajo el nivel, la revisión con sus días y la acción de las reglas de alerta
+describe('S10 · riesgos y alerta temprana', () => {
+  const CONFIRMADA = registro(
+    'w2',
+    { project: 'p1', title: 'Mención en radio local sobre contaminación', detected_at: '2026-10-01T13:00:00Z', severity: 'MEDIO' },
+    { state: 'confirmed' }
+  )
+  const conAlertas = (porTriar: unknown[], activas: unknown[]): MockRoute[] => [
+    { path: /^\/objects\/early_warning\/records\?.*state=detected%2Cin_triage&/, body: pagina(porTriar as never[]) },
+    { path: /^\/objects\/early_warning\/records\?.*state=detected%2Cin_triage%2Cconfirmed%2Cresponding/, body: pagina(activas as never[]) },
+    { path: '/objects/social_risk/records/k1', body: RIESGO }
+  ]
+
+  it('la alerta por triar es un aviso con «Triar alerta» que abre su ficha; la alerta temprana la lista junto a la matriz', async () => {
+    fetch = mockFetch(rutas(conAlertas([ALERTA], [ALERTA, CONFIRMADA])))
+    abrir()
+    expect(await screen.findByRole('heading', { name: 'Riesgos y alerta temprana', level: 1 })).toBeInTheDocument()
+    const aviso = await screen.findByText('Alerta por triar: «Señales de conflicto: CONTEO DE SEÑALES»')
+    expect(screen.getByText(/Severidad Alto\. Se activó por una regla de alerta\./)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Triar alerta' })).toHaveAttribute('href', '/projects/p1/risks/warnings/w1')
+    expect(aviso).toBeInTheDocument()
+    const alertas = screen.getByRole('region', { name: /^Alerta temprana/ })
+    expect(await within(alertas).findByText('2 activas')).toBeInTheDocument()
+    // la que está en triaje se tria; la confirmada se ve. las dos abren su ficha
+    expect(within(alertas).getByRole('link', { name: 'Triar la alerta Señales de conflicto: CONTEO DE SEÑALES' })).toHaveAttribute(
+      'href',
+      '/projects/p1/risks/warnings/w1'
+    )
+    expect(within(alertas).getByRole('link', { name: 'Ver la alerta Mención en radio local sobre contaminación' })).toHaveAttribute(
+      'href',
+      '/projects/p1/risks/warnings/w2'
+    )
+    expect(within(alertas).getByLabelText('Severidad: Medio')).toBeInTheDocument()
+    expect(within(alertas).getByRole('link', { name: 'Todas las alertas' })).toHaveAttribute('href', '/projects/p1/risks/warnings')
+    expect(within(alertas).getByText(/no cambian el nivel del riesgo por sí solas/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver reglas de alerta' })).toHaveAttribute('href', '/projects/p1/risks/rules')
+  })
+
+  it('sin alertas por triar no hay aviso, y la alerta temprana lo dice', async () => {
+    fetch = mockFetch(rutas(conAlertas([], [])))
+    abrir()
+    expect(await screen.findByText('No hay alertas activas en el proyecto.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Triar alerta' })).not.toBeInTheDocument()
+  })
+
+  it('quien no lee las alertas ve el registro sin la alerta temprana', async () => {
+    fetch = mockFetch(rutas(conAlertas([ALERTA], [ALERTA])))
+    abrir('/projects/p1/risks/register', GESTOR_DE_RIESGOS, { ...EQUIPO_DE_RIESGOS, objects: { ...EQUIPO_DE_RIESGOS.objects, early_warning: [] } })
+    expect(await screen.findByRole('heading', { name: 'Riesgos', level: 1 })).toBeInTheDocument()
+    await screen.findByRole('table', { name: 'Riesgos' })
+    expect(screen.queryByRole('region', { name: /^Alerta temprana/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/por triar/)).not.toBeInTheDocument()
+  })
+
+  it('la matriz dice el rango de cada nivel con los umbrales del proyecto y marca la celda con riesgos', async () => {
+    fetch = mockFetch(rutas())
+    abrir()
+    const mapa = await screen.findByRole('region', { name: 'Matriz probabilidad × impacto' })
+    const leyenda = within(mapa).getByRole('list', { name: 'Niveles por puntaje P × I' })
+    expect(
+      within(leyenda)
+        .getAllByRole('listitem')
+        .map((l) => l.textContent)
+    ).toEqual(['Bajo 1–4', 'Medio 5–9', 'Alto 10–14', 'Crítico 15+'])
+    // la celda crítica con riesgos: contorno y la cifra sobre el relleno de CRITICO; un cero, en text-muted
+    const critica = within(mapa).getByRole('button', { name: 'Probabilidad 4, impacto 4: 1 riesgo, nivel Crítico' })
+    expect(critica).toHaveClass('bg-sg-zone-4', 'outline-sg-text')
+    expect(critica.querySelector('[data-cifra]')).toHaveClass('bg-sg-risk-critical')
+    expect(within(mapa).getByRole('button', { name: 'Probabilidad 1, impacto 1: 0 riesgos, nivel Bajo' })).toHaveClass('text-sg-text-muted')
+  })
+
+  it('el registro dice cuántos y cuántos críticos, la tendencia bajo el nivel y la revisión con sus días', async () => {
+    const VENCIDA = registro(
+      'k9',
+      { ...RIESGO.attributes, code: 'R-009', trend: 'AUMENTA', review_status: 'REVISION VENCIDA', next_review_date: '2026-10-30' },
+      { state: 'mitigating' }
+    )
+    fetch = mockFetch(rutas([], [VENCIDA, MEDIO]))
+    abrir()
+    expect(await screen.findByText('2 riesgos · 1 crítico')).toBeInTheDocument()
+    const fila = within(screen.getByRole('table', { name: 'Riesgos' })).getByRole('row', { name: /R-009/ })
+    expect(within(fila).getByText('Aumenta')).toBeInTheDocument()
+    // la revisión vencida con sus días desde hoy en Lima (2026-11-09 en las pruebas)
+    expect(within(fila).getByLabelText(/^Situación de revisión: Revisión vencida · \d+ días$/)).toBeInTheDocument()
+    expect(within(fila).getByText('Expectativas y beneficios')).toBeInTheDocument()
   })
 })
 

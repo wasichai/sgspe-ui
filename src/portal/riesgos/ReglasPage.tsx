@@ -16,7 +16,9 @@ import { usePedir } from '../datos/http'
 import { atributo, campoDe, texto, useActualizar, useCrear, useDefinicion, useTodosConTope, type Registro } from '../datos/registros'
 import { NS, numeroPe } from '../i18n'
 import { opcion } from '../datos/opciones'
-import { ContenedorDePagina } from '../componentes/Pagina'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
+import { CAJA_DE_TABLA, CELDA, ENCABEZADO, FILA } from '../componentes/TablaPriorizada'
+import { Nivel } from '../componentes/Nivel'
 
 // S60 · reglas de alerta (screens.md §9; workflows.md, «Tipos de regla de JOB-04»; ASM-097): las reglas del proyecto
 // (/projects/:projectId/risks/rules) o las de la organización (/risks/rules, sin proyecto). un formulario propio, no el de la
@@ -50,14 +52,20 @@ function Reglas() {
   const crea = escribe && can(OBJETO, 'CREATE')
   return (
     <ContenedorDePagina elemento="section">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{projectId ? t('reglasDeAlerta.titulo') : t('reglasDeAlerta.tituloDeLaOrganizacion')}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <PaginasDeRiesgos actual="rules" />
-          {crea ? <Button onClick={() => setAbierta('nueva')}>{t('reglasDeAlerta.nueva')}</Button> : null}
-        </div>
-      </div>
-      <p className="text-sm text-sg-text-secondary">{t('reglasDeAlerta.ayuda')}</p>
+      {/* las reglas son una acción del registro y de la alerta temprana («Ver reglas de alerta», S10): debajo del encabezado, las
+          pestañas de Riesgos siguen a mano para volver, sin ninguna elegida */}
+      <EncabezadoDePagina
+        titulo={projectId ? t('reglasDeAlerta.titulo') : t('reglasDeAlerta.tituloDeLaOrganizacion')}
+        descripcion={t('reglasDeAlerta.ayuda')}
+        primaria={
+          crea ? (
+            <Button size="sm" onClick={() => setAbierta('nueva')}>
+              {t('reglasDeAlerta.nueva')}
+            </Button>
+          ) : undefined
+        }
+      />
+      <PaginasDeRiesgos actual="rules" />
       {lectura.truncado ? <Alert tone="warning">{t('reglasDeAlerta.truncado', { n: numeroPe(lectura.data?.length ?? 0) })}</Alert> : null}
       {lectura.isPending ? (
         <Cargando />
@@ -66,12 +74,12 @@ function Reglas() {
       ) : reglas.length === 0 ? (
         <Vacio titulo={t('reglasDeAlerta.vacio')} />
       ) : (
-        <div className="overflow-x-auto rounded-sg-lg border border-sg-border bg-sg-surface">
+        <div className={CAJA_DE_TABLA}>
           <Table aria-label={t('reglasDeAlerta.tabla')}>
             <thead>
               <tr>
                 {(['nombre', 'tipo', 'umbral', 'ventana', 'severidad', 'alcance', 'estado', 'acciones'] as const).map((c) => (
-                  <Th key={c} scope="col">
+                  <Th key={c} scope="col" className={ENCABEZADO}>
                     {t(`reglasDeAlerta.columnas.${c}`)}
                   </Th>
                 ))}
@@ -107,15 +115,17 @@ function FilaDeRegla({ regla, escribe, alEditar }: { regla: Registro; escribe: b
   const edita = escribe && can(OBJETO, 'UPDATE')
   return (
     <>
-      <tr>
-        <Td className="text-sm font-medium">{texto(regla, 'name')}</Td>
-        <Td className="text-sm">{opcion(regla, 'rule_kind')}</Td>
-        <Td className="text-sm tabular-nums">{texto(regla, 'threshold') || '—'}</Td>
-        <Td className="text-sm tabular-nums">{texto(regla, 'window_days') || '7'}</Td>
-        <Td className="text-sm">{opcion(regla, 'severity') || '—'}</Td>
-        <Td className="text-sm">{atributo(regla, 'project') ? t('reglasDeAlerta.alcances.proyecto') : t('reglasDeAlerta.alcances.organizacion')}</Td>
-        <Td className="text-sm">{activa ? t('reglasDeAlerta.estados.activa') : t('reglasDeAlerta.estados.desactivada')}</Td>
-        <Td className="space-x-2 whitespace-nowrap text-sm">
+      <tr className={FILA}>
+        <Td className={`${CELDA} whitespace-normal font-semibold`}>{texto(regla, 'name')}</Td>
+        <Td className={CELDA}>{opcion(regla, 'rule_kind')}</Td>
+        <Td className={`${CELDA} text-right tabular-nums`}>{texto(regla, 'threshold') || '—'}</Td>
+        <Td className={`${CELDA} text-right tabular-nums`}>{texto(regla, 'window_days') || '7'}</Td>
+        <Td className={CELDA}>
+          <Nivel valor={texto(regla, 'severity')} nombre={t('reglasDeAlerta.columnas.severidad')} />
+        </Td>
+        <Td className={CELDA}>{atributo(regla, 'project') ? t('reglasDeAlerta.alcances.proyecto') : t('reglasDeAlerta.alcances.organizacion')}</Td>
+        <Td className={CELDA}>{activa ? t('reglasDeAlerta.estados.activa') : t('reglasDeAlerta.estados.desactivada')}</Td>
+        <Td className={`${CELDA} space-x-2`}>
           {edita ? (
             <>
               <Button size="sm" variant="secondary" aria-label={`${t('reglasDeAlerta.editar')} ${texto(regla, 'name')}`} onClick={alEditar}>

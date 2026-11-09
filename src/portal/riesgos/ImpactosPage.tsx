@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { PaginasDeRiesgos } from './PaginasDeRiesgos'
+import { ContenedorDePagina, EncabezadoDePagina } from '../componentes/Pagina'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { RegistrosSimples, type ColumnaSimple } from '../componentes/RegistrosSimples'
@@ -60,13 +61,10 @@ export function ImpactosPage() {
   const { t } = useTranslation(NS)
   const { projectId = '' } = useParams()
   return (
-    <section className="mx-auto max-w-[1200px] space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-sg-h1 font-semibold">{t('registrosDeAlerta.impactos.titulo')}</h1>
-        <PaginasDeRiesgos actual="impacts" />
-      </div>
-      <p className="text-sm text-sg-text-secondary">{t('registrosDeAlerta.impactos.ayuda')}</p>
+    <ContenedorDePagina elemento="section">
+      <EncabezadoDePagina titulo={t('registrosDeAlerta.impactos.titulo')} descripcion={t('registrosDeAlerta.impactos.ayuda')} />
+      <PaginasDeRiesgos actual="impacts" />
       <Impactos proyecto={projectId} />
-    </section>
+    </ContenedorDePagina>
   )
 }
