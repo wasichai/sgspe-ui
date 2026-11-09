@@ -182,7 +182,7 @@ export function CajaDeBusqueda({
       />
     </span>
   )
-  if (enBarra) return <div className="w-full md:w-64">{caja}</div>
+  if (enBarra) return <div className="w-full md:w-60">{caja}</div>
   return (
     <label className="flex w-full flex-col gap-1.5 md:w-64">
       <span className="block text-sg-label font-bold">{etiqueta}</span>

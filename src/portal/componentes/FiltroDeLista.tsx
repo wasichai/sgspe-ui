@@ -31,7 +31,7 @@ export function FiltroDeLista({ etiqueta, className, ...select }: { etiqueta: st
         <SelectNativo
           textoVacio={t('comun.todos')}
           sinCaja
-          className={cn('h-full min-w-0 cursor-pointer appearance-none bg-transparent pr-7 pl-1.5', aplicado && 'font-bold')}
+          className={cn('field-sizing-content h-full min-w-0 cursor-pointer appearance-none bg-transparent pr-7 pl-1.5', aplicado && 'font-bold')}
           {...select}
         />
         <ChevronDown aria-hidden className="pointer-events-none absolute right-2 size-4 text-sg-text-secondary" />

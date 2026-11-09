@@ -146,7 +146,9 @@ test('el ojo de la vista previa aparece al pasar sobre la fila o con el foco, y 
   await expect(ojo).toHaveCSS('opacity', '1')
   await ojo.click()
   await expect(page).toHaveURL(/[?&]peek=stakeholder%3As/)
-  await expect(page.getByRole('dialog')).toBeVisible()
+  // a 1440 px la vista previa va acoplada junto a la tabla (design-system.md §5.3): un panel complementario, no un diálogo
+  await expect(page.getByRole('complementary').getByRole('link', { name: 'Abrir ficha' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 // 05-especificacion §1.6: a 1440 px una opcional no se ve hasta que se elige en «Columnas», y la elección sobrevive a recargar
@@ -175,6 +177,8 @@ test('Espacio en una fila enfocada abre la vista previa sin desplazar la página
   const antes = await page.evaluate(() => window.scrollY)
   await page.keyboard.press('Space')
   await expect(page).toHaveURL(/[?&]peek=stakeholder%3As/)
-  await expect(page.getByRole('dialog')).toBeVisible()
+  // a 1440 px la vista previa va acoplada junto a la tabla (design-system.md §5.3): un panel complementario, no un diálogo
+  await expect(page.getByRole('complementary').getByRole('link', { name: 'Abrir ficha' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(await page.evaluate(() => window.scrollY)).toBe(antes)
 })
