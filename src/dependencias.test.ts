@@ -65,9 +65,9 @@ describe('dependencias de F8', () => {
 describe('dependencias de las presentaciones', () => {
   const laminas = leer('node_modules/@wasichai/sgspe-slides/package.json')
 
-  it('@wasichai/sgspe-slides va fijado en 3.2.0', () => {
-    expect(paquete.dependencies['@wasichai/sgspe-slides']).toBe('3.2.0')
-    expect(laminas.version).toBe('3.2.0')
+  it('@wasichai/sgspe-slides va fijado en 3.3.0', () => {
+    expect(paquete.dependencies['@wasichai/sgspe-slides']).toBe('3.3.0')
+    expect(laminas.version).toBe('3.3.0')
   })
 
   it.each(['remotion', '@remotion/player'])('%s va fijado en la versión de Remotion que pide el paquete', (nombre) => {
