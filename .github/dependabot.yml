@@ -15,6 +15,7 @@ updates:
       - .github/actions/packages-token/**
       - .github/workflows/commits.yml
       - .github/workflows/release-please.yml
+      - .github/workflows/secretos.yml
     schedule:
       interval: weekly
     commit-message:
