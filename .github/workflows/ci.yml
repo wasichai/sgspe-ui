@@ -18,13 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     # a hung yarn install or vite build must not burn the default 6 h
     timeout-minutes: 20
-    # @wasichai/* are private packages of wasichai-ui: the workflow token cannot read them, a read:packages PAT can
-    # (repo secret PACKAGES_TOKEN). job level, not only on the install step:
-    # setup-node writes an .npmrc that reads ${NODE_AUTH_TOKEN} and, with cache: yarn, runs yarn right away
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # los paquetes de GitHub Packages de wasichai piden un token read:packages: packages-token lo pide a Infisical por OIDC, sin secretos en el repo
+      # antes de setup-node, que con cache: yarn ya corre yarn
+      - uses: ./.github/actions/packages-token
       # spec F6 §3.3: src/portal/mapa/paleta.json es copia de model/styles/palette.json de sgspe (repositorio público); la
       # prueba de la paleta compara los bytes con este checkout
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
