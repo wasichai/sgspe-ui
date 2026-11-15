@@ -37,7 +37,7 @@
         "@wasichai/forms": "1.8.2",
         "@wasichai/gis": "1.8.2",
         "@wasichai/pages": "1.8.2",
-        "@wasichai/sgspe-slides": "3.2.0",
+        "@wasichai/sgspe-slides": "3.3.0",
         "@wasichai/ui": "1.8.2",
         "@wasichai/views": "1.8.2",
         "@wasichai/workflow": "1.8.2",

@@ -1625,10 +1625,10 @@
     "@dnd-kit/core" "6.3.1"
     lucide-react "^1.68.0"
 
-"@wasichai/sgspe-slides@3.2.0":
-  version "3.2.0"
-  resolved "https://npm.pkg.github.com/download/@wasichai/sgspe-slides/3.2.0/36002db053baff386d05ac27e52e49cf0f4a4fad#36002db053baff386d05ac27e52e49cf0f4a4fad"
-  integrity sha512-v49eFWaecMnWA+a3lzwaI4/w8FInilhH8Hj0AcgJOSRiTPCpouU2OB4Pdl6+9A1IH9sNM4SjZTbAwYlgm6UNOQ==
+"@wasichai/sgspe-slides@3.3.0":
+  version "3.3.0"
+  resolved "https://npm.pkg.github.com/download/@wasichai/sgspe-slides/3.3.0/004054598555207f7ec876df805a6fe3d05c5175#004054598555207f7ec876df805a6fe3d05c5175"
+  integrity sha512-Mjmt0coSewOznwm2+DTYwjJ23WQGECmsEA5BEEHg4dGQGMbscIjhydPoaOpyYiWTfasEExJHkQA0ydQkP9hVmg==
   dependencies:
     zod "4.6.5"
 
