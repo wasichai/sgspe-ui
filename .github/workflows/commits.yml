@@ -1,4 +1,5 @@
-# Llega por sync desde wasichai/wasichai-sync (files/workflows/commits.yml): se cambia allá, no aquí.
+# Llega por sync desde wasichai/wasichai-sync (files/.github/workflows/commits-packages.yml): se cambia allá, no aquí.
+# Igual que commits.yml, más el token de GitHub Packages: para los repos que bajan @wasichai/*.
 name: Commits
 
 on:
